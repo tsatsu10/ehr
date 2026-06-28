@@ -1,0 +1,47 @@
+---
+description: Always read the full picture before touching any New Clinic module code
+alwaysApply: true
+---
+
+# New Clinic Module — Big Picture First
+
+## Rule
+
+Before making ANY change to the New Clinic module, do a **global search first**.
+Never fix one call site in isolation and ship it. Find every call site, then fix
+them all in a single pass.
+
+## How to apply this
+
+When a feature touches rendering, formatting, state, or data:
+
+1. **Grep the whole module** for every occurrence of the thing you are changing.
+   Example: changing how wait time renders → search for `wait_minutes` / `WaitTimeSpan` across `frontend/src/` first.
+2. **List every affected file** before writing a single line of code.
+3. **Fix all of them together** in one batch — not one file at a time.
+4. **Bump the asset version once** at the end, not after each partial fix.
+
+## Files that render wait time (reference example)
+
+When any wait-time logic changes, update the shared component and every desk that uses it:
+
+- `frontend/src/components/WaitTimeSpan.tsx` — shared wait label + long/medium CSS classes
+- `frontend/src/components/QueueCard.tsx` — default card subtitle
+- `frontend/src/islands/visit-board/` — board cards + detail modal/drawer
+- `frontend/src/islands/triage-desk/TriageQueue.tsx` — custom suffix (` waiting`)
+- `frontend/src/islands/doctor-desk/DoctorQueue.tsx` — custom suffix
+- `frontend/src/islands/cashier-desk/CashierQueue.tsx`
+- `frontend/src/islands/lab-desk/LabQueue.tsx`
+- `frontend/src/islands/pharmacy-desk/PharmacyQueue.tsx`
+- `public/assets/js/ui-components.js` — legacy shell helpers still used outside React islands
+
+Every desk queue should use `<WaitTimeSpan />` (or `QueueCard`) — do not inline wait formatting.
+
+## General principle
+
+> If a feature has N rendering paths, fixing N-1 of them is not done.
+> Search first, count paths, fix all paths, ship once.
+
+This rule exists because partial fixes require the user to hard-refresh multiple
+times and report the same bug repeatedly. That is wasteful and frustrating.
+Respect the user's time. Read the big picture. Ship the whole fix.
