@@ -29,6 +29,12 @@ $service = $clientApp::getServiceType();
 $serviceEnum = ServiceType::fromValue($service);
 $title = $serviceEnum?->getTranslatedDisplayName() ?? '';
 $tabTitle = $serviceType == "sms" ? xlt('SMS') : ($serviceType == "email" ? xlt('Email') : xlt('FAX'));
+
+$newClinicComHub = false;
+if (class_exists(\OpenEMR\Modules\NewClinic\Services\ClinicConfigService::class)) {
+    $ncConfig = new \OpenEMR\Modules\NewClinic\Services\ClinicConfigService();
+    $newClinicComHub = $ncConfig->isEnabled('communications_hub_enable', 0);
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -692,9 +698,17 @@ $tabTitle = $serviceType == "sms" ? xlt('SMS') : ($serviceType == "email" ? xlt(
         function notifyUser(e, faxId, recordId, pid = 0) {
             e.preventDefault();
             let btnClose = <?php echo xlj("Exit"); ?>;
-            let url = top.webroot_url +
-                '/interface/main/messages/messages.php?showall=no&task=addnew&form_active=1&gptype=9&attach=' +
-                encodeURIComponent(recordId) + "&jobId=" + encodeURIComponent(faxId) + "&pid=" + encodeURIComponent(pid);
+            let useNewClinicHub = <?php echo $newClinicComHub ? 'true' : 'false'; ?>;
+            let url;
+            if (useNewClinicHub) {
+                url = top.webroot_url +
+                    '/interface/modules/custom_modules/oe-module-new-clinic/public/communications.php?task=addnew&gptype=9&attach=' +
+                    encodeURIComponent(recordId) + "&jobId=" + encodeURIComponent(faxId) + "&pid=" + encodeURIComponent(pid);
+            } else {
+                url = top.webroot_url +
+                    '/interface/main/messages/messages.php?showall=no&task=addnew&form_active=1&gptype=9&attach=' +
+                    encodeURIComponent(recordId) + "&jobId=" + encodeURIComponent(faxId) + "&pid=" + encodeURIComponent(pid);
+            }
             dlgopen(url, 'attach_fax', 'modal-mlg', 800, '', '', {buttons: [{text: btnClose, close: true, style: 'primary'}]});
             return false;
         }
