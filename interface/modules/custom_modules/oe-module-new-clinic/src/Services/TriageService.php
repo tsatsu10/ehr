@@ -26,6 +26,7 @@ class TriageService
         private readonly VisitRowEnricher $rowEnricher = new VisitRowEnricher(),
         private readonly VitalsValidationService $vitalsValidation = new VitalsValidationService(),
         private readonly VitalsPreviewBuilder $vitalsPreview = new VitalsPreviewBuilder(),
+        private readonly ClinicDateService $clinicDate = new ClinicDateService(),
     ) {
     }
 
@@ -34,20 +35,29 @@ class TriageService
      */
     public function getTriageQueue(int $facilityId, ?string $visitDate, int $actorUserId): array
     {
-        $visitDate = $visitDate ?? date('Y-m-d');
-        $facilityId = $this->visitScope->resolveQueueFacilityId($facilityId > 0 ? $facilityId : null);
-        $this->visitScope->repairOrphanVisits($facilityId, $visitDate);
+        $facilityId = $this->visitScope->resolveActorFacilityId($facilityId > 0 ? $facilityId : null);
+        $today = $this->clinicDate->today();
+        $this->visitScope->repairOrphanVisits($facilityId, $today);
 
+        $bind = [$facilityId];
         $sql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid, pd.sex, pd.DOB,
                        vt.label AS visit_type_label
                 FROM new_visit v
                 INNER JOIN patient_data pd ON pd.pid = v.pid
                 LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
-                WHERE v.facility_id = ? AND v.visit_date = ?
-                AND v.state IN ('waiting', 'in_triage')
-                ORDER BY v.is_urgent DESC, v.queue_number ASC, v.started_at ASC";
+                WHERE v.facility_id = ?
+                AND v.state IN ('waiting', 'in_triage')";
 
-        $rows = QueryUtils::fetchRecords($sql, [$facilityId, $visitDate]) ?: [];
+        // Match Visit Board: active triage queue has no date cap unless caller
+        // explicitly requests a historical date (carry-over visits stay visible).
+        if ($visitDate !== null && trim($visitDate) !== '') {
+            $sql .= " AND v.visit_date = ?";
+            $bind[] = $visitDate;
+        }
+
+        $sql .= " ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC";
+
+        $rows = QueryUtils::fetchRecords($sql, $bind) ?: [];
         $visitIds = array_map(fn (array $row) => (int) ($row['id'] ?? 0), $rows);
         $holders = $this->rowEnricher->batchTriageHolders($visitIds);
 
@@ -72,7 +82,8 @@ class TriageService
                 'in_triage' => $inTriageCount,
                 'total' => count($visits),
             ],
-            'visit_date' => $visitDate,
+            'visit_date' => $visitDate ?? $today,
+            'queue_date_filter' => $visitDate,
             'last_updated' => date('c'),
             'vitals_unit_label' => $this->vitalsValidation->formTemperatureUnitLabel(),
             'vitals_form_rules' => $this->vitalsValidation->getFormRules(),

@@ -1,0 +1,2 @@
+import{n as e,t}from"./chunks/mountIsland-B4qeCTWm.js";var n=e();function r({label:e=`Phase 0`}){return(0,n.jsxs)(`div`,{role:`status`,"aria-live":`polite`,className:`oe-island-hello`,children:[(0,n.jsx)(`span`,{className:`oe-island-hello__dot`,"aria-hidden":`true`}),(0,n.jsxs)(`span`,{children:[`React island OK — `,e]})]})}t(`visit-board-hello`,r);
+//# sourceMappingURL=visit-board-hello.js.map

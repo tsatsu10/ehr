@@ -27,6 +27,7 @@ if (!$config->isEnabled('enable_patient_registry', 0, $facilityId)) {
 }
 
 $moduleUrl = $GLOBALS['webroot'] . '/interface/modules/custom_modules/oe-module-new-clinic/public';
+$reactPatientRegistry = $config->get('enable_react_patient_registry', '1') === '1';
 
 (new PageController())->renderForAnyClinicRole('patient-registry.html.twig', 'Patient Registry', [
     'new_doctor',
@@ -38,4 +39,5 @@ $moduleUrl = $GLOBALS['webroot'] . '/interface/modules/custom_modules/oe-module-
     'module_url' => $moduleUrl,
     'chart_url_base' => $moduleUrl . '/patient-chart.php',
     'billing_threshold' => (new \OpenEMR\Modules\NewClinic\Services\PatientCompletionService())->getBillingThreshold(),
+    'enable_react_patient_registry' => $reactPatientRegistry,
 ]);

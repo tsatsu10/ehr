@@ -83,14 +83,19 @@ class VisitBoardAuditTimelineMandatoryTest extends TestCase
 
     public function test41VisitDetailDrawerUsesAuditTimelineRenderer(): void
     {
-        $moduleRoot = dirname(__DIR__, 5) . '/interface/modules/custom_modules/oe-module-new-clinic';
-        $js = (string) file_get_contents($moduleRoot . '/public/assets/js/visit-board.js');
-        $twig = (string) file_get_contents($moduleRoot . '/templates/visit-board.html.twig');
+        $drawer = $this->readFrontendSource('src/islands/visit-board/VisitDetailDrawer.tsx');
 
-        $this->assertStringContainsString('audit_timeline', $js);
-        $this->assertStringContainsString('renderAuditTimeline', $js);
-        $this->assertStringContainsString('chart_history_url', $js);
-        $this->assertStringContainsString('nc-visit-drawer-history', $js);
-        $this->assertStringContainsString('View full history', $twig);
+        $this->assertStringContainsString('audit_timeline', $drawer);
+        $this->assertStringContainsString('AuditTimeline', $drawer);
+        $this->assertStringContainsString('chart_history_url', $drawer);
+        $this->assertStringContainsString('View full history', $drawer);
+    }
+
+    private function readFrontendSource(string $relativePath): string
+    {
+        $path = dirname(__DIR__, 5) . '/frontend/' . ltrim($relativePath, '/');
+        $this->assertFileExists($path, 'Expected frontend file: ' . $relativePath);
+
+        return (string) file_get_contents($path);
     }
 }

@@ -28,6 +28,7 @@ class LabService
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly EncounterSignService $signService = new EncounterSignService(),
         private readonly LabOpsOrderMetaService $orderMeta = new LabOpsOrderMetaService(),
+        private readonly ClinicDateService $clinicDate = new ClinicDateService(),
     ) {
     }
 
@@ -36,9 +37,9 @@ class LabService
      */
     public function getLabQueue(int $facilityId, ?string $visitDate, int $actorUserId): array
     {
-        $visitDate = $visitDate ?? date('Y-m-d');
         $facilityId = $this->visitScope->resolveActorFacilityId($facilityId > 0 ? $facilityId : null);
         $this->assertLabRoleEnabled($facilityId);
+        $visitDate = $visitDate ?? $this->clinicDate->today();
         $this->visitScope->repairOrphanVisits($facilityId, $visitDate);
 
         $sql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid, pd.sex, pd.DOB,
@@ -46,11 +47,11 @@ class LabService
                 FROM new_visit v
                 INNER JOIN patient_data pd ON pd.pid = v.pid
                 LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
-                WHERE v.facility_id = ? AND v.visit_date = ?
+                WHERE v.facility_id = ?
                 AND v.state IN ('ready_for_lab', 'in_lab')
-                ORDER BY v.is_urgent DESC, v.queue_number ASC, v.started_at ASC";
+                ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC";
 
-        $rows = QueryUtils::fetchRecords($sql, [$facilityId, $visitDate]) ?: [];
+        $rows = QueryUtils::fetchRecords($sql, [$facilityId]) ?: [];
         $visitIds = array_map(fn (array $row) => (int) ($row['id'] ?? 0), $rows);
         $holders = $this->rowEnricher->batchLabHolders($visitIds);
         $orderCounts = $this->rowEnricher->batchLabOrderCounts($visitIds);
@@ -69,7 +70,7 @@ class LabService
             }
         }
 
-        $activeWork = $this->findActiveLabWork($facilityId, $visitDate, $actorUserId);
+        $activeWork = $this->findActiveLabWork($facilityId, $actorUserId);
 
         return [
             'visits' => $visits,
@@ -130,9 +131,8 @@ class LabService
 
         $visit = $this->queueService->getVisitForActor($visitId);
         $facilityId = (int) ($visit['facility_id'] ?? 0);
-        $visitDate = (string) ($visit['visit_date'] ?? date('Y-m-d'));
 
-        $existing = $this->findActiveLabWork($facilityId, $visitDate, $actorUserId);
+        $existing = $this->findActiveLabWork($facilityId, $actorUserId);
         if (!empty($existing) && (int) ($existing['id'] ?? 0) !== $visitId) {
             throw new VisitNotTakeableException(
                 'Complete or release your current patient before taking another'
@@ -432,7 +432,7 @@ class LabService
     /**
      * @return array<string, mixed>|null
      */
-    private function findActiveLabWork(int $facilityId, string $visitDate, int $actorUserId): ?array
+    private function findActiveLabWork(int $facilityId, int $actorUserId): ?array
     {
         $row = QueryUtils::querySingleRow(
             "SELECT v.*, pd.fname, pd.lname, pd.pubpid, pd.sex, pd.DOB,
@@ -440,10 +440,10 @@ class LabService
              FROM new_visit v
              INNER JOIN patient_data pd ON pd.pid = v.pid
              LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
-             WHERE v.facility_id = ? AND v.visit_date = ?
+             WHERE v.facility_id = ?
              AND v.state = 'in_lab' AND v.assigned_provider_id = ?
              ORDER BY v.updated_at DESC LIMIT 1",
-            [$facilityId, $visitDate, $actorUserId]
+            [$facilityId, $actorUserId]
         );
 
         if (!is_array($row) || empty($row['id'])) {

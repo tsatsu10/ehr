@@ -38,4 +38,47 @@ class ClinicAdminServiceTest extends TestCase
         $this->assertSame('0', $defaults['enable_similar_surname_queue_warning']);
         $this->assertSame('0', $defaults['enable_pinned_reception_preview']);
     }
+
+    public function testReactIslandFlagsDefaultOnAfterCutover(): void
+    {
+        $defaults = ClinicAdminService::globalMigrationDefaults();
+        $reactKeys = array_filter(
+            array_keys($defaults),
+            static fn (string $key): bool => str_starts_with($key, 'enable_react_')
+                && $key !== 'enable_react_islands_dev'
+        );
+
+        $this->assertNotEmpty($reactKeys);
+        foreach ($reactKeys as $key) {
+            $this->assertSame(
+                '1',
+                $defaults[$key],
+                "Expected {$key} default ON after w50react cutover"
+            );
+        }
+        $this->assertSame('0', $defaults['enable_react_islands_dev']);
+    }
+
+    public function testApplySettingDependenciesEnablesChartDepthMasterWhenSubFlagOn(): void
+    {
+        $normalized = ClinicAdminService::applySettingDependencies([
+            'enable_chart_depth' => '0',
+            'enable_chart_depth_finance' => '1',
+        ]);
+
+        $this->assertSame('1', $normalized['enable_chart_depth']);
+        $this->assertSame('1', $normalized['enable_chart_depth_finance']);
+    }
+
+    public function testApplySettingDependenciesLeavesMasterOffWhenAllSubFlagsOff(): void
+    {
+        $normalized = ClinicAdminService::applySettingDependencies([
+            'enable_chart_depth' => '0',
+            'enable_chart_depth_finance' => '0',
+            'enable_chart_depth_referral' => '0',
+            'enable_chart_depth_export' => '0',
+        ]);
+
+        $this->assertSame('0', $normalized['enable_chart_depth']);
+    }
 }

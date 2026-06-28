@@ -43,6 +43,19 @@ class WrongPatientPreventionMandatoryTest extends TestCase
         return (string) file_get_contents($path);
     }
 
+    private function frontendRoot(): string
+    {
+        return dirname(__DIR__, 5) . '/frontend';
+    }
+
+    private function readFrontendSource(string $relativePath): string
+    {
+        $path = $this->frontendRoot() . '/' . ltrim($relativePath, '/');
+        $this->assertFileExists($path, 'Expected frontend file: ' . $relativePath);
+
+        return (string) file_get_contents($path);
+    }
+
     private function methodBody(string $class, string $method): string
     {
         $reflection = new ReflectionMethod($class, $method);
@@ -114,7 +127,7 @@ class WrongPatientPreventionMandatoryTest extends TestCase
     /** 43c — M3-F16 triage dirty vitals switch */
     public function test43cTriageDirtyVitalsSwitchShowsConfirm(): void
     {
-        $source = $this->readSource('public/assets/js/triage.js');
+        $source = $this->readFrontendSource('src/islands/triage-desk/TriageDesk.tsx');
 
         $this->assertStringContainsString('formDirty', $source);
         $this->assertStringContainsString(
@@ -126,20 +139,20 @@ class WrongPatientPreventionMandatoryTest extends TestCase
     /** 43d — M1a-F14 Front Desk Start visit switch guard */
     public function test43dFrontDeskStartVisitSwitchShowsConfirm(): void
     {
-        $source = $this->readSource('public/assets/js/patient-search.js');
+        $source = $this->readFrontendSource('src/islands/front-desk/FrontDesk.tsx');
 
         $this->assertStringContainsString('confirmStartVisitSwitch', $source);
         $this->assertStringContainsString('Discard changes and switch to', $source);
-        $this->assertStringContainsString('startVisitDirty', $source);
+        $this->assertStringContainsString('startVisitDirtyRef', $source);
     }
 
     /** 43e — M5-F15 cashier payment confirm identity */
     public function test43eCashierPaymentConfirmShowsIdentityAndTotal(): void
     {
-        $source = $this->readSource('public/assets/js/cashier.js');
+        $source = $this->readFrontendSource('src/islands/cashier-desk/PayConfirmModal.tsx');
 
-        $this->assertStringContainsString('renderPaymentConfirmBody', $source);
-        $this->assertStringContainsString('renderPaymentIdentityBlock', $source);
+        $this->assertStringContainsString('identity.display_name', $source);
+        $this->assertStringContainsString('identity.pubpid', $source);
         $this->assertStringContainsString('Total due', $source);
         $this->assertStringContainsString('Queue #', $source);
         $this->assertStringContainsString('MRN', $source);
@@ -193,10 +206,10 @@ class WrongPatientPreventionMandatoryTest extends TestCase
     /** 43j — M1a-F14b Quick Add / registration dirty switch */
     public function test43jRegistrationFormDirtySwitchShowsConfirm(): void
     {
-        $source = $this->readSource('public/assets/js/patient-search.js');
-        $formSource = $this->readSource('public/assets/js/registration-form.js');
+        $deskSource = $this->readFrontendSource('src/islands/front-desk/FrontDesk.tsx');
+        $formSource = $this->readFrontendSource('src/islands/front-desk/RegistrationForm.tsx');
 
-        $this->assertStringContainsString('confirmRegistrationSwitch', $source);
+        $this->assertStringContainsString('confirmRegistrationSwitch', $deskSource);
         $this->assertStringContainsString('confirmDiscard', $formSource);
         $this->assertStringContainsString('Discard unsaved registration changes?', $formSource);
     }
@@ -204,12 +217,15 @@ class WrongPatientPreventionMandatoryTest extends TestCase
     /** 43k — M5-F16 terminal modals repeat Patient · MRN · Queue # */
     public function test43kCashierTerminalModalsRepeatPatientIdentity(): void
     {
-        $source = $this->readSource('public/assets/js/cashier.js');
+        $markUnpaid = $this->readFrontendSource('src/islands/cashier-desk/MarkUnpaidModal.tsx');
+        $discount = $this->readFrontendSource('src/islands/cashier-desk/DiscountConfirmModal.tsx');
+        $payConfirm = $this->readFrontendSource('src/islands/cashier-desk/PayConfirmModal.tsx');
 
-        $this->assertStringContainsString('openTerminalActionModal', $source);
-        $this->assertStringContainsString('openMarkUnpaidModal', $source);
-        $this->assertStringContainsString('openCloseZeroModal', $source);
-        $this->assertStringContainsString('renderPaymentIdentityBlock(activePreview, activeVisit)', $source);
+        $this->assertStringContainsString('identity.display_name', $markUnpaid);
+        $this->assertStringContainsString('identity.pubpid', $markUnpaid);
+        $this->assertStringContainsString('Queue #', $markUnpaid);
+        $this->assertStringContainsString('identity.display_name', $discount);
+        $this->assertStringContainsString('MRN', $payConfirm);
     }
 
     /** 43l — stale complete_consult maps to stale_visit, not taken_elsewhere */

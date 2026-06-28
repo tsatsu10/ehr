@@ -27,6 +27,17 @@
         <label class="form-check-label small" for="nc-comm-show-all">{{ 'All users'|xlt }}</label>
     </div>
     {% endif %}
+    <select class="form-control form-control-sm mr-2 mb-1 d-none" id="nc-comm-sort-by" aria-label="{{ 'Sort by'|xlt }}" style="width:auto;">
+        <option value="pnotes.date">{{ 'Date'|xlt }}</option>
+        <option value="users.lname">{{ 'From'|xlt }}</option>
+        <option value="patient_data.lname">{{ 'Patient'|xlt }}</option>
+        <option value="pnotes.title">{{ 'Type'|xlt }}</option>
+        <option value="pnotes.message_status">{{ 'Status'|xlt }}</option>
+    </select>
+    <select class="form-control form-control-sm mr-2 mb-1 d-none" id="nc-comm-sort-order" aria-label="{{ 'Sort order'|xlt }}" style="width:auto;">
+        <option value="desc">{{ 'Newest first'|xlt }}</option>
+        <option value="asc">{{ 'Oldest first'|xlt }}</option>
+    </select>
     <button type="button" class="btn btn-outline-secondary btn-sm mb-1" id="nc-comm-refresh" aria-label="{{ 'Refresh'|xlt }}">
         <i class="fa fa-refresh" aria-hidden="true"></i>
     </button>
@@ -34,61 +45,31 @@
 {% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{{ assets_url }}/css/communications-hub.css?v={{ asset_version }}">
-
-<div id="nc-communications-hub"
-     class="oe-nc-comm-hub"
-     data-ajax-url="{{ ajax_url }}"
-     data-csrf-token="{{ csrf_token }}"
-     data-can-view-all="{{ can_view_all_users ? '1' : '0' }}"
-     data-initial-lens="{{ initial_lens|attr }}"
-     data-reminder-add-url="{{ reminder_add_url|attr }}"
-     data-reminder-log-url="{{ reminder_log_url|attr }}"
-     data-legacy-compose-url="{{ legacy_compose_url|attr }}"
-     data-webroot="{{ webroot|attr }}">
-
-    <div class="oe-nc-comm-split">
-        <section class="oe-nc-comm-list-pane" aria-label="{{ 'List'|xlt }}">
-            <div class="oe-nc-comm-list" id="nc-comm-list" role="listbox" aria-label="{{ 'Items'|xlt }}"></div>
-            <div class="oe-nc-comm-pagination d-flex justify-content-between align-items-center" id="nc-comm-pagination"></div>
-        </section>
-
-        <section class="oe-nc-comm-detail-pane" id="nc-comm-detail-pane" aria-label="{{ 'Detail'|xlt }}">
-            <button type="button" class="btn btn-link btn-sm d-md-none oe-nc-comm-back" id="nc-comm-back">
-                <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'Back to list'|xlt }}
-            </button>
-            <div id="nc-comm-detail" class="oe-nc-comm-detail">
-                <div class="oe-nc-comm-empty text-muted">
-                    <p class="mb-0">{{ 'Select an item to read details.'|xlt }}</p>
-                </div>
-            </div>
-        </section>
-    </div>
-
-    <footer class="oe-nc-comm-footer" id="nc-comm-footer">
-        <button type="button" class="btn btn-primary btn-sm d-none" id="nc-comm-mark-done">{{ 'Mark done'|xlt }}</button>
-        <button type="button" class="btn btn-primary btn-sm d-none" id="nc-comm-reminder-complete">{{ 'Mark completed'|xlt }}</button>
-        <button type="button" class="btn btn-outline-secondary btn-sm" id="nc-comm-create-reminder">{{ 'Create reminder'|xlt }}</button>
-        <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="nc-comm-view-log">{{ 'View log'|xlt }}</button>
-        <a class="btn btn-outline-primary btn-sm" id="nc-comm-compose-link" href="{{ legacy_compose_url|attr }}" target="_top">{{ 'Compose (legacy)'|xlt }}</a>
-    </footer>
-</div>
+{% if enable_react_communications_hub|default(true) %}
+<div
+    data-island="communications-hub"
+    data-props="{{ {
+        ajaxUrl: ajax_url,
+        csrfToken: csrf_token,
+        canViewAllUsers: can_view_all_users ? true : false,
+        initialLens: initial_lens,
+        preferences: preferences,
+        reminderAddUrl: reminder_add_url,
+        reminderLogUrl: reminder_log_url,
+        legacyComposeUrl: legacy_compose_url,
+        webroot: webroot,
+        composeLaunch: compose_launch
+    }|json_encode|e('html_attr') }}"
+></div>
+{% else %}
+{% include 'partials/react-island-disabled.html.twig' with { desk_label: 'Communications Hub' } %}
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ assets_url }}/js/communications-hub.js?v={{ asset_version }}"></script>
-<script>
-(function () {
-    function bootCommunications() {
-        if (window.NewClinicCommunications) {
-            window.NewClinicCommunications.init(document.getElementById('nc-communications-hub'));
-        }
-    }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', bootCommunications);
-    } else {
-        bootCommunications();
-    }
-})();
-</script>
+{% if enable_react_communications_hub|default(true) %}
+<link rel="stylesheet" href="{{ assets_url }}/css/communications-hub.css?v={{ asset_version }}">
+<link rel="stylesheet" href="{{ assets_url }}/modern/communications-hub.css?v={{ asset_version }}">
+<script type="module" src="{{ assets_url }}/modern/communications-hub.js?v={{ asset_version }}"></script>
+{% endif %}
 {% endblock %}

@@ -61,6 +61,8 @@ $chartUrl = $GLOBALS['webroot']
     . urlencode((string) $pid)
     . '&tab=visits';
 
+$reactChartDepth = $config->get('enable_react_chart_depth', '1') === '1';
+
 (new PageController())->renderForAnyAcl(
     'chart-depth/export.html.twig',
     'Export chart',
@@ -70,6 +72,7 @@ $chartUrl = $GLOBALS['webroot']
         'preset' => $preset,
         'encounter_id' => $encounterId > 0 ? $encounterId : null,
         'chart_url' => $chartUrl,
+        'enable_react_chart_depth' => $reactChartDepth,
         'shell_nav_id' => 'clinicchart',
         'visit_board_url' => $GLOBALS['webroot']
             . '/interface/modules/custom_modules/oe-module-new-clinic/public/visit-board.php',

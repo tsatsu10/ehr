@@ -172,7 +172,7 @@ class PatientActivityFeedService
         $visit = QueryUtils::querySingleRow(
             "SELECT id, state, queue_number, encounter, facility_id
              FROM new_visit
-             WHERE pid = ? AND visit_date = CURDATE()
+             WHERE pid = ?
              AND state NOT IN ('completed', 'closed_unpaid', 'cancelled')
              ORDER BY id DESC LIMIT 1",
             [$pid]

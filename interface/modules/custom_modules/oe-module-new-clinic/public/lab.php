@@ -27,6 +27,8 @@ if (!$config->isEnabled('enable_lab_role', 0)) {
 $labOpsEnabled = $config->isEnabled('enable_lab_ops', 0, $facilityId);
 $labOpsAccess = new LabOpsAccessService();
 
+$reactLabDesk = $config->get('enable_react_lab_desk', '1') === '1';
+
 (new PageController())->render('lab.html.twig', 'Lab Desk', 'new_lab', [
     'desk_id' => 'lab',
     'module_url' => $moduleUrl,
@@ -37,4 +39,6 @@ $labOpsAccess = new LabOpsAccessService();
     'lab_ops_enabled' => $labOpsEnabled,
     'can_enter_results' => $labOpsEnabled && $labOpsAccess->canEnterResults(),
     'can_release_results' => $labOpsEnabled && $labOpsAccess->canReleaseResults(),
+    'enable_react_lab_desk' => $reactLabDesk,
+    'can_esign_override' => AclMain::aclCheckCore('new_clinic', 'new_esign_skip_complete'),
 ]);

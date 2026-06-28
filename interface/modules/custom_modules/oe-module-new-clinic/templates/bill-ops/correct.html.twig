@@ -1,0 +1,24 @@
+{% extends 'base.html.twig' %}
+
+{% block content %}
+{% if enable_react_bill_ops|default(true) %}
+<div
+    data-island="bill-ops-correct"
+    data-props="{{ {
+        ajaxUrl: ajax_url,
+        csrfToken: csrf_token,
+        visitId: visit_id|number_format(0, '', ''),
+        billOpsUrl: bill_ops_url,
+        visitBoardUrl: visit_board_url
+    }|json_encode|e('html_attr') }}"
+></div>
+{% else %}
+{% include 'partials/react-island-disabled.html.twig' with { desk_label: 'Billing Back Office' } %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if enable_react_bill_ops|default(true) %}
+<script type="module" src="{{ assets_url }}/modern/bill-ops-correct.js?v={{ asset_version }}"></script>
+{% endif %}
+{% endblock %}

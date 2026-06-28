@@ -37,6 +37,26 @@ class AjaxActionPolicyTest extends TestCase
         $this->assertSame('new_cashier', $this->policy->requiresSingleAcl('cashier.pay'));
     }
 
+    public function testCashierResolvePatientRequiresCashierAcl(): void
+    {
+        $this->assertSame('new_cashier', $this->policy->requiresSingleAcl('cashier.resolve_patient'));
+    }
+
+    public function testDoctorLabPanelCatalogRequiresDoctorAcl(): void
+    {
+        $this->assertSame('new_doctor', $this->policy->requiresSingleAcl('doctor.lab_panel_catalog'));
+    }
+
+    public function testDoctorLabPanelPlaceRequiresDoctorAcl(): void
+    {
+        $this->assertSame('new_doctor', $this->policy->requiresSingleAcl('doctor.lab_panel_place'));
+    }
+
+    public function testLabTakeRequiresLabAcl(): void
+    {
+        $this->assertSame('new_lab', $this->policy->requiresSingleAcl('lab.take'));
+    }
+
     public function testDoctorTakeRequiresDoctorAcl(): void
     {
         $this->assertSame('new_doctor', $this->policy->requiresSingleAcl('doctor.take'));
@@ -50,11 +70,6 @@ class AjaxActionPolicyTest extends TestCase
     public function testCloseZeroRequiresSupervisorAcl(): void
     {
         $this->assertSame('new_close_without_charge', $this->policy->requiresSingleAcl('cashier.close_zero'));
-    }
-
-    public function testLabTakeRequiresLabAcl(): void
-    {
-        $this->assertSame('new_lab', $this->policy->requiresSingleAcl('lab.take'));
     }
 
     public function testLabSkipRequiresSkipQueueAcl(): void
@@ -246,6 +261,24 @@ class AjaxActionPolicyTest extends TestCase
         $this->assertSame('core_notes_acl', $desc['type']);
     }
 
+    public function testCommunicationsMessageStatusUsesCoreNotesAcl(): void
+    {
+        $desc = $this->policy->describe('communications.message_status');
+        $this->assertSame('core_notes_acl', $desc['type']);
+    }
+
+    public function testCommunicationsAssignPatientUsesCoreNotesAcl(): void
+    {
+        $desc = $this->policy->describe('communications.assign_patient');
+        $this->assertSame('core_notes_acl', $desc['type']);
+    }
+
+    public function testCommunicationsMessageDeleteUsesCoreNotesAcl(): void
+    {
+        $desc = $this->policy->describe('communications.message_delete');
+        $this->assertSame('core_notes_acl', $desc['type']);
+    }
+
     public function testCohortExportUsesCohortExportAcl(): void
     {
         $desc = $this->policy->describe('cohort.export');
@@ -255,5 +288,29 @@ class AjaxActionPolicyTest extends TestCase
     public function testVisitStartFromAppointmentRequiresReceptionAcl(): void
     {
         $this->assertSame('new_reception', $this->policy->requiresSingleAcl('visit.start_from_appointment'));
+    }
+
+    public function testBillOpsDaysheetUsesCloseAcl(): void
+    {
+        $desc = $this->policy->describe('bill_ops.daysheet');
+        $this->assertSame('bill_ops_close_acl', $desc['type']);
+    }
+
+    public function testBillOpsChargeCorrectUsesCorrectAcl(): void
+    {
+        $desc = $this->policy->describe('bill_ops.charge_correct');
+        $this->assertSame('bill_ops_correct_acl', $desc['type']);
+    }
+
+    public function testBillOpsPaymentsSearchUsesPaymentAcl(): void
+    {
+        $desc = $this->policy->describe('bill_ops.payments_search');
+        $this->assertSame('bill_ops_payment_acl', $desc['type']);
+    }
+
+    public function testBillOpsDaysheetExportUsesCloseAcl(): void
+    {
+        $desc = $this->policy->describe('bill_ops.daysheet_export');
+        $this->assertSame('bill_ops_close_acl', $desc['type']);
     }
 }

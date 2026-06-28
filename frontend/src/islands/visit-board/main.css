@@ -1,0 +1,96 @@
+/*
+ * visit-board island styles
+ *
+ * CASCADE RULE: All component styles are non-layered BEM CSS (beats Bootstrap).
+ * Atom styles (oe-nc-status-pill, oe-nc-cell-identity, oe-nc-queue-card, etc.)
+ * are already defined in the module's components.css — do NOT duplicate them here.
+ * Only island-specific layout that doesn't exist in legacy CSS goes below.
+ *
+ * See: Documentation/FRONTEND_MODULE_GUIDE.md §5.2
+ */
+
+@import '../../core/tokens.css';
+
+/* ── Visit Board wrapper ──────────────────────────────────────────────── */
+
+.oe-nc-vb {
+  /* Outer wrapper; the host page provides .oe-nc-t1 background. */
+}
+
+/* ── Toolbar / filter bar ─────────────────────────────────────────────── */
+
+.oe-nc-vb__toolbar {
+  gap: 0.5rem;
+}
+
+.oe-nc-vb__stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ── Column ───────────────────────────────────────────────────────────── */
+
+.oe-nc-vb-column {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.oe-nc-vb-column__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.5rem 0.4rem 0;
+  margin-bottom: 0.5rem;
+  border-bottom: 2px solid var(--oe-nc-border, #e2e8f0);
+}
+
+.oe-nc-vb-column__label {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--oe-nc-text, #164e63);
+  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+}
+
+.oe-nc-vb-column__count {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.oe-nc-vb-column__body {
+  flex: 1;
+}
+
+/* ── Skeleton loader ──────────────────────────────────────────────────── */
+
+.oe-nc-vb-skeleton {
+  border-radius: var(--oe-nc-radius, 0.25rem);
+  background: linear-gradient(
+    90deg,
+    var(--oe-nc-border, #e2e8f0) 25%,
+    #f1f5f9 50%,
+    var(--oe-nc-border, #e2e8f0) 75%
+  );
+  background-size: 200% 100%;
+  animation: oe-nc-shimmer 1.4s infinite;
+  height: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.oe-nc-vb-skeleton--card {
+  height: 4.5rem;
+  margin-bottom: 0.5rem;
+}
+
+@keyframes oe-nc-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oe-nc-vb-skeleton {
+    animation: none;
+    background: var(--oe-nc-border, #e2e8f0);
+  }
+}

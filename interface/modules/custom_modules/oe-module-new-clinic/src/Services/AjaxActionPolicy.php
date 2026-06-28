@@ -31,8 +31,12 @@ class AjaxActionPolicy
         'doctor.active' => 'new_doctor',
         'doctor.complete' => 'new_doctor',
         'doctor.reopen' => 'new_visit_reopen',
+        'doctor.set_supervisor' => 'new_doctor',
+        'doctor.search_providers' => 'new_doctor',
         'doctor.shortcut_preflight' => 'new_doctor',
         'doctor.restore_session' => 'new_doctor',
+        'doctor.lab_panel_catalog' => 'new_doctor',
+        'doctor.lab_panel_place' => 'new_doctor',
         'triage.restore_session' => 'new_nurse',
         'triage.select' => 'new_nurse',
         'triage.start' => 'new_nurse',
@@ -40,6 +44,7 @@ class AjaxActionPolicy
         'triage.send_doctor' => 'new_nurse',
         'triage.auto_start' => 'new_nurse',
         'cashier.select' => 'new_cashier',
+        'cashier.resolve_patient' => 'new_cashier',
         'cashier.charges.post' => 'new_cashier',
         'cashier.pay' => 'new_cashier',
         'cashier.mark_unpaid' => 'new_visit_mark_outstanding',
@@ -106,7 +111,16 @@ class AjaxActionPolicy
         'communications.message_detail',
         'communications.reminders_list',
         'communications.message_done',
+        'communications.message_status',
+        'communications.assign_patient',
+        'communications.message_delete',
         'communications.reminder_done',
+        'communications.compose_options',
+        'communications.message_send',
+        'communications.reminder_create_options',
+        'communications.reminder_create',
+        'communications.reminder_log',
+        'communications.save_preferences',
     ];
 
     /** @var array<int, string> */
@@ -135,6 +149,57 @@ class AjaxActionPolicy
     ];
 
     /** @var array<int, string> */
+    private const BILL_OPS_CORRECT_READ_ACTIONS = [
+        'bill_ops.visit_charges',
+    ];
+
+    /** @var array<int, string> */
+    private const BILL_OPS_CORRECT_WRITE_ACTIONS = [
+        'bill_ops.charge_correct',
+    ];
+
+    /** @var array<int, string> */
+    private const BILL_OPS_PAYMENT_ACTIONS = [
+        'bill_ops.payments_search',
+        'bill_ops.payment_reverse',
+    ];
+
+    /** @var array<int, string> */
+    private const BILL_OPS_CLOSE_ACTIONS = [
+        'bill_ops.daysheet',
+        'bill_ops.daysheet_export',
+    ];
+
+    /** @var array<int, string> */
+    private const BILL_OPS_OUTSTANDING_ACTIONS = [
+        'bill_ops.outstanding_list',
+    ];
+
+    /** @var array<int, string> */
+    private const BILL_OPS_CORRECT_ACLS = [
+        'new_bill_ops_correct',
+        'new_admin',
+    ];
+
+    /** @var array<int, string> */
+    private const BILL_OPS_PAYMENT_ACLS = [
+        'new_bill_ops_payment',
+        'new_admin',
+    ];
+
+    /** @var array<int, string> */
+    private const BILL_OPS_CLOSE_ACLS = [
+        'new_bill_ops_close',
+        'new_admin',
+    ];
+
+    /** @var array<int, string> */
+    private const BILL_OPS_OUTSTANDING_ACLS = [
+        'new_bill_ops_outstanding',
+        'new_admin',
+    ];
+
+    /** @var array<int, string> */
     private const LAB_OPS_READ_ACLS = [
         'new_lab_ops',
         'new_lab',
@@ -159,6 +224,13 @@ class AjaxActionPolicy
     ];
 
     /** @var array<int, string> */
+    private const RECEIPT_REPRINT_ACLS = [
+        'new_receipt_reprint',
+        'new_chart_depth_finance',
+        'new_admin',
+    ];
+
+    /** @var array<int, string> */
     private const EXPORT_ACTIONS = [
         'chart_depth.export_builder',
         'chart_depth.export_generate',
@@ -169,6 +241,11 @@ class AjaxActionPolicy
         'new_chart_depth_export',
         'new_chart_depth_export_full',
         'new_admin',
+    ];
+
+    /** @var array<int, string> */
+    private const RECEIPT_REPRINT_ACTIONS = [
+        'chart_depth.receipt_reprint',
     ];
 
     /** @var array<int, string> */
@@ -237,6 +314,23 @@ class AjaxActionPolicy
             return ['type' => 'lab_ops_catalog_acl'];
         }
 
+        if (in_array($action, self::BILL_OPS_CORRECT_READ_ACTIONS, true)
+            || in_array($action, self::BILL_OPS_CORRECT_WRITE_ACTIONS, true)) {
+            return ['type' => 'bill_ops_correct_acl'];
+        }
+
+        if (in_array($action, self::BILL_OPS_PAYMENT_ACTIONS, true)) {
+            return ['type' => 'bill_ops_payment_acl'];
+        }
+
+        if (in_array($action, self::BILL_OPS_CLOSE_ACTIONS, true)) {
+            return ['type' => 'bill_ops_close_acl'];
+        }
+
+        if (in_array($action, self::BILL_OPS_OUTSTANDING_ACTIONS, true)) {
+            return ['type' => 'bill_ops_outstanding_acl'];
+        }
+
         if (in_array($action, self::COHORT_ACTIONS, true)) {
             return ['type' => 'cohort_acl'];
         }
@@ -247,6 +341,10 @@ class AjaxActionPolicy
 
         if (in_array($action, self::CHART_READ_ACTIONS, true)) {
             return ['type' => 'any_acl', 'acls' => self::CHART_READ_ACLS];
+        }
+
+        if (in_array($action, self::RECEIPT_REPRINT_ACTIONS, true)) {
+            return ['type' => 'any_acl', 'acls' => self::RECEIPT_REPRINT_ACLS];
         }
 
         if ($action === 'patients.update') {

@@ -1,3 +1,15 @@
+.nc-registration-form .form-row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: -0.5rem;
+    margin-left: -0.5rem;
+}
+
+.nc-registration-form .form-row > .form-group {
+    padding-right: 0.5rem;
+    padding-left: 0.5rem;
+}
+
 .nc-registration-form .card-header {
     cursor: pointer;
     background: #f8fafc;

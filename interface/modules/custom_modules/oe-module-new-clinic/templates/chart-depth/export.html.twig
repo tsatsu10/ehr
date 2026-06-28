@@ -1,38 +1,27 @@
 {% extends 'base.html.twig' %}
 
 {% block content %}
-<div class="oe-nc-chart-depth-export" id="nc-chart-depth-export"
-     data-pid="{{ pid }}"
-     data-preset="{{ preset|e('html_attr') }}"
-     data-encounter-id="{{ encounter_id|default('') }}"
-     data-chart-url="{{ chart_url|e('html_attr') }}">
-    <div class="oe-nc-widget-card mb-3">
-        <div class="oe-nc-widget-card__header d-flex justify-content-between align-items-center flex-wrap">
-            <h2 class="oe-nc-widget-card__title mb-0">{{ 'Export chart'|xlt }}</h2>
-            <div class="btn-group btn-group-sm mt-2 mt-md-0">
-                <a href="{{ chart_url }}" class="btn btn-outline-primary" target="_top">{{ 'Back to chart'|xlt }}</a>
-                <a href="{{ visit_board_url }}" class="btn btn-outline-secondary" target="_top">{{ 'Visit Board'|xlt }}</a>
-            </div>
-        </div>
-        <div class="oe-nc-widget-card__body oe-nc-widget-card__body--pad">
-            <div id="nc-chart-depth-banner" class="mb-3"></div>
-            <div id="nc-export-builder"><em>{{ 'Loading export options…'|xlt }}</em></div>
-        </div>
-    </div>
-</div>
+{% if enable_react_chart_depth|default(true) %}
+<div
+    data-island="chart-depth"
+    data-props="{{ {
+        mode: 'export',
+        ajaxUrl: ajax_url,
+        csrfToken: csrf_token,
+        pid: pid,
+        preset: preset|default(''),
+        encounterId: encounter_id|default(0)|number_format(0, '', ''),
+        chartUrl: chart_url,
+        visitBoardUrl: visit_board_url
+    }|json_encode|e('html_attr') }}"
+></div>
+{% else %}
+{% include 'partials/react-island-disabled.html.twig' with { desk_label: 'Chart Depth' } %}
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ assets_url }}/js/chart-depth-export.js?v={{ asset_version }}"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    if (window.NewClinicChartDepthExport) {
-        window.NewClinicChartDepthExport.init({
-            root: document.getElementById('nc-chart-depth-export'),
-            ajaxUrl: {{ ajax_url|json_encode|raw }},
-            csrfToken: {{ csrf_token|json_encode|raw }}
-        });
-    }
-});
-</script>
+{% if enable_react_chart_depth|default(true) %}
+<script type="module" src="{{ assets_url }}/modern/chart-depth.js?v={{ asset_version }}"></script>
+{% endif %}
 {% endblock %}

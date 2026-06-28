@@ -25,7 +25,9 @@ class VisitRowEnricher
         $visitId = $visitId ?? (int) ($row['id'] ?? 0);
         $row['display_name'] = trim(($row['fname'] ?? '') . ' ' . ($row['lname'] ?? ''));
         $row['age_years'] = self::ageFromDob($row['DOB'] ?? null);
-        $row['wait_minutes'] = self::waitMinutes($row['started_at'] ?? null);
+        $waitMins = self::waitMinutes($row['started_at'] ?? null);
+        $row['wait_minutes'] = $waitMins;
+        $row['wait_label'] = self::formatWaitLabel($waitMins);
         if ($skippedTriageMap !== null) {
             $row['skipped_triage'] = !empty($skippedTriageMap[$visitId]);
         } else {
@@ -318,5 +320,27 @@ class VisitRowEnricher
         }
 
         return max(0, (int) floor((time() - $start) / 60));
+    }
+
+    /**
+     * Converts raw minutes into a compact human-readable label.
+     * Under 60 min → "45m", over → "2h 15m", over 24h → "1d 2h".
+     */
+    public static function formatWaitLabel(int $minutes): string
+    {
+        if ($minutes < 1) {
+            return '< 1m';
+        }
+        if ($minutes < 60) {
+            return $minutes . 'm';
+        }
+        $hours = intdiv($minutes, 60);
+        $mins  = $minutes % 60;
+        if ($hours < 24) {
+            return $mins > 0 ? $hours . 'h ' . $mins . 'm' : $hours . 'h';
+        }
+        $days     = intdiv($hours, 24);
+        $remHours = $hours % 24;
+        return $remHours > 0 ? $days . 'd ' . $remHours . 'h' : $days . 'd';
     }
 }

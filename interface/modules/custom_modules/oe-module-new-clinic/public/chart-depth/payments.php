@@ -57,6 +57,8 @@ $chartUrl = $GLOBALS['webroot']
     . urlencode((string) $pid)
     . '&tab=profile';
 
+$reactChartDepth = $config->get('enable_react_chart_depth', '1') === '1';
+
 (new PageController())->renderForAnyAcl(
     'chart-depth/payments.html.twig',
     'Payment history',
@@ -65,6 +67,7 @@ $chartUrl = $GLOBALS['webroot']
         'pid' => $pid,
         'visit_id' => $visitId > 0 ? $visitId : null,
         'chart_url' => $chartUrl,
+        'enable_react_chart_depth' => $reactChartDepth,
         'shell_nav_id' => 'clinicchart',
         'visit_board_url' => $GLOBALS['webroot']
             . '/interface/modules/custom_modules/oe-module-new-clinic/public/visit-board.php',

@@ -45,6 +45,7 @@ try {
 $webroot = $GLOBALS['webroot'] ?? '';
 $moduleUrl = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public';
 $access = new LabOpsAccessService();
+$reactLabOps = $config->get('enable_react_lab_ops', '1') === '1';
 
 (new PageController())->renderForAnyAcl(
     'lab-ops/index.html.twig',
@@ -64,5 +65,6 @@ $access = new LabOpsAccessService();
             || AclMain::aclCheckCore('new_clinic', 'new_admin'),
         'can_show_advanced' => AclMain::aclCheckCore('new_clinic', 'new_admin')
             || AclMain::aclCheckCore('admin', 'super'),
+        'enable_react_lab_ops' => $reactLabOps,
     ]
 );

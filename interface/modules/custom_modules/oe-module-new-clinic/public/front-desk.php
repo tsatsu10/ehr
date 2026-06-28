@@ -24,6 +24,9 @@ $facilityId = $visitScope->resolveDeskFacilityId(
 $scheduledIntegration = new ScheduledIntegrationService();
 $appointmentToday = new AppointmentTodayService();
 $deskConfig = new ClinicConfigService();
+$config = $deskConfig;
+
+$reactFrontDesk = $config->get('enable_react_front_desk', '1') === '1';
 
 (new PageController())->render('front-desk.html.twig', 'Front Desk', 'new_reception', [
     'desk_id' => 'front-desk',
@@ -36,4 +39,5 @@ $deskConfig = new ClinicConfigService();
         ? $appointmentToday->countTodayAtFacility($facilityId)
         : 0,
     'calendar_url' => $GLOBALS['webroot'] . '/interface/main/main_info.php',
+    'enable_react_front_desk' => $reactFrontDesk,
 ]);

@@ -10,129 +10,26 @@
 {% endblock %}
 
 {% block content %}
-<div id="nc-reports-desk"
-     data-ajax-url="{{ ajax_url }}"
-     data-csrf-token="{{ csrf_token }}"
-     data-visit-board-url="{{ visit_board_url }}"
-     data-can-cancel="{{ can_cancel_visit ? '1' : '0' }}"
-     data-can-mark-unpaid="{{ can_mark_unpaid ? '1' : '0' }}">
-    <ul class="nav nav-tabs mb-3" role="tablist">
-        <li class="nav-item">
-            <a class="nav-link active" data-toggle="tab" href="#nc-reports-tab-visits" role="tab">{{ 'Visits'|xlt }}</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" data-toggle="tab" href="#nc-reports-tab-cash" role="tab">{{ 'Cash'|xlt }}</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" data-toggle="tab" href="#nc-reports-tab-open" role="tab">{{ 'EOD open'|xlt }}</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" data-toggle="tab" href="#nc-reports-tab-unpaid" role="tab">{{ 'Unpaid'|xlt }}</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" data-toggle="tab" href="#nc-reports-tab-quality" role="tab">{{ 'Data quality'|xlt }}</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" data-toggle="tab" href="#nc-reports-tab-unsigned" role="tab">{{ 'Unsigned'|xlt }}</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" data-toggle="tab" href="#nc-reports-tab-bypass" role="tab">{{ 'Queue bypass'|xlt }}</a>
-        </li>
-    </ul>
-
-    <div class="tab-content">
-        <div class="tab-pane fade show active" id="nc-reports-tab-visits" role="tabpanel">
-            <div id="nc-reports-visits"></div>
-        </div>
-        <div class="tab-pane fade" id="nc-reports-tab-cash" role="tabpanel">
-            <div id="nc-reports-cash"></div>
-        </div>
-        <div class="tab-pane fade" id="nc-reports-tab-open" role="tabpanel">
-            <div id="nc-reports-open"></div>
-        </div>
-        <div class="tab-pane fade" id="nc-reports-tab-unpaid" role="tabpanel">
-            <div id="nc-reports-unpaid"></div>
-        </div>
-        <div class="tab-pane fade" id="nc-reports-tab-quality" role="tabpanel">
-            <div id="nc-reports-quality"></div>
-        </div>
-        <div class="tab-pane fade" id="nc-reports-tab-unsigned" role="tabpanel">
-            <div id="nc-reports-unsigned"></div>
-        </div>
-        <div class="tab-pane fade" id="nc-reports-tab-bypass" role="tabpanel">
-            <div id="nc-reports-bypass"></div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="nc-reports-cancel-modal" tabindex="-1" role="dialog"
-     aria-labelledby="nc-reports-cancel-title" aria-modal="true" aria-hidden="true" style="display:none;">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="nc-reports-cancel-title">{{ 'Cancel visit'|xlt }}</h5>
-                <button type="button" class="close nc-modal-close" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p id="nc-reports-cancel-patient" class="mb-2"></p>
-                <div class="form-group">
-                    <label for="nc-reports-cancel-reason">{{ 'Reason (required)'|xlt }}</label>
-                    <textarea class="form-control" id="nc-reports-cancel-reason" rows="2"></textarea>
-                </div>
-                <div class="alert alert-danger mt-2 d-none" id="nc-reports-cancel-error"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary nc-modal-close">{{ 'Close'|xlt }}</button>
-                <button type="button" class="btn btn-danger" id="nc-reports-cancel-confirm">{{ 'Cancel visit'|xlt }}</button>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="modal fade" id="nc-reports-mark-unpaid-modal" tabindex="-1" role="dialog"
-     aria-labelledby="nc-reports-mark-unpaid-title" aria-modal="true" aria-hidden="true" style="display:none;">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="nc-reports-mark-unpaid-title">{{ 'Mark visit unpaid'|xlt }}</h5>
-                <button type="button" class="close nc-modal-close" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p id="nc-reports-mark-unpaid-patient" class="mb-2"></p>
-                <div class="form-group">
-                    <label for="nc-reports-mark-unpaid-reason">{{ 'Reason (required)'|xlt }}</label>
-                    <textarea class="form-control" id="nc-reports-mark-unpaid-reason" rows="2"></textarea>
-                </div>
-                <div class="alert alert-danger mt-2 d-none" id="nc-reports-mark-unpaid-error"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary nc-modal-close">{{ 'Close'|xlt }}</button>
-                <button type="button" class="btn btn-warning" id="nc-reports-mark-unpaid-confirm">{{ 'Mark unpaid'|xlt }}</button>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="modal-backdrop fade" id="nc-reports-modal-backdrop" style="display:none;"></div>
+{% if enable_react_daily_reports|default(true) %}
+<div
+    data-island="daily-reports"
+    data-props="{{ {
+        ajaxUrl: ajax_url,
+        csrfToken: csrf_token,
+        facilityId: desk_facility_id|default(0)|number_format(0, '', ''),
+        visitBoardUrl: visit_board_url,
+        canCancelVisit: can_cancel_visit ? true : false,
+        canMarkUnpaid: can_mark_unpaid ? true : false
+    }|json_encode|e('html_attr') }}"
+></div>
+{% else %}
+{% include 'partials/react-island-disabled.html.twig' with { desk_label: 'Daily Reports' } %}
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ assets_url }}/js/modal-a11y.js?v={{ asset_version }}"></script>
-<script src="{{ assets_url }}/js/reports.js?v={{ asset_version }}"></script>
-<script>
-(function () {
-    function bootReports() {
-        if (window.NewClinicReports) {
-            window.NewClinicReports.init(document.getElementById('nc-reports-desk'));
-        }
-    }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', bootReports);
-    } else {
-        bootReports();
-    }
-})();
-</script>
+{% if enable_react_daily_reports|default(true) %}
+<link rel="stylesheet" href="{{ assets_url }}/modern/daily-reports.css?v={{ asset_version }}">
+<script type="module" src="{{ assets_url }}/modern/daily-reports.js?v={{ asset_version }}"></script>
+{% endif %}
 {% endblock %}

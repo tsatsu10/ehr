@@ -526,6 +526,39 @@
     cursor: not-allowed;
 }
 
+/* Stale-visit badge — shown on cards whose visit_date is before today */
+.oe-nc-stale-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1;
+    padding: 0.18rem 0.45rem;
+    border-radius: 0.25rem;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+    vertical-align: middle;
+    margin-left: 0.35rem;
+    white-space: nowrap;
+}
+
+/* Wait-time color coding — must beat parent .text-muted */
+.oe-nc-queue-card__meta .oe-nc-wait-long,
+.text-muted .oe-nc-wait-long,
+.nc-visit-summary .oe-nc-wait-long {
+    color: #dc2626 !important;
+    font-weight: 700;
+}
+
+.oe-nc-queue-card__meta .oe-nc-wait-medium,
+.text-muted .oe-nc-wait-medium,
+.nc-visit-summary .oe-nc-wait-medium {
+    color: #d97706 !important;
+    font-weight: 700;
+}
+
 .oe-nc-wall-display .oe-nc-queue-card {
     font-size: 1.05rem;
     padding: 0.85rem 1rem;

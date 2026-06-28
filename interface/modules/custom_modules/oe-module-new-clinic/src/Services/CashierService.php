@@ -27,6 +27,8 @@ class CashierService
         private readonly ClinicConfigService $configService = new ClinicConfigService(),
         private readonly EncounterSignService $signService = new EncounterSignService(),
         private readonly CashierChargeService $chargeService = new CashierChargeService(),
+        private readonly ClinicDateService $clinicDate = new ClinicDateService(),
+        private readonly BillOpsAccessService $billOpsAccess = new BillOpsAccessService(),
     ) {
     }
 
@@ -35,8 +37,8 @@ class CashierService
      */
     public function getCashierQueue(int $facilityId, ?string $visitDate, int $actorUserId): array
     {
-        $visitDate = $visitDate ?? date('Y-m-d');
         $facilityId = $this->visitScope->resolveActorFacilityId($facilityId > 0 ? $facilityId : null);
+        $visitDate = $visitDate ?? $this->clinicDate->today();
         $this->visitScope->repairOrphanVisits($facilityId, $visitDate);
 
         $sql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid, pd.sex, pd.DOB,
@@ -47,11 +49,11 @@ class CashierService
                 FROM new_visit v
                 INNER JOIN patient_data pd ON pd.pid = v.pid
                 LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
-                WHERE v.facility_id = ? AND v.visit_date = ?
+                WHERE v.facility_id = ?
                 AND v.state = 'ready_for_payment'
-                ORDER BY v.is_urgent DESC, v.queue_number ASC, v.started_at ASC";
+                ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC";
 
-        $rows = QueryUtils::fetchRecords($sql, [$facilityId, $visitDate]) ?: [];
+        $rows = QueryUtils::fetchRecords($sql, [$facilityId]) ?: [];
         $visits = array_map(function (array $row): array {
             $enriched = $this->rowEnricher->enrichVisitRow($row);
             $enriched['charges_total'] = round((float) ($row['charges_total'] ?? 0), 2);
@@ -96,6 +98,12 @@ class CashierService
         $charges = $this->getEncounterCharges((int) $visit['pid'], (int) $visit['encounter']);
         $completionGate = $this->assessCompletionGate((int) $visit['pid'], false);
         $picker = $this->chargeService->buildPickerPayload($visitId);
+        $facilityId = (int) ($visit['facility_id'] ?? 0);
+        $advancedBilling = $this->billOpsAccess->advancedBillingLink(
+            $visitId,
+            (int) $visit['encounter'],
+            $facilityId > 0 ? $facilityId : null
+        );
 
         return [
             'visit' => $detail['visit'],
@@ -108,6 +116,9 @@ class CashierService
             'can_skip_completion' => $completionGate['can_skip'],
             'can_close_without_charge' => $this->canCloseWithoutCharge(),
             'fee_sheet_url' => $this->feeSheetUrl((int) $visit['pid'], (int) $visit['encounter']),
+            'advanced_billing_url' => $advancedBilling['url'],
+            'advanced_billing_label' => $advancedBilling['label'],
+            'advanced_billing_external' => $advancedBilling['external'],
             'front_payment_url' => $this->frontPaymentUrl((int) $visit['pid']),
             'encounter_signed' => $this->signService->isProfileSigned($visitId),
             'unsigned_message' => $this->signService->getProfileUnsignedReason($visitId),
@@ -122,7 +133,7 @@ class CashierService
     }
 
     /**
-     * M1a-F15 — resolve today's payment-queue visits for a patient (never checkout by pid alone).
+     * M1a-F15 — resolve payment-queue visits for a patient (never checkout by pid alone).
      *
      * @return array<string, mixed>
      */
@@ -134,7 +145,6 @@ class CashierService
 
         $facilityId = $this->visitScope->resolveActorFacilityId($facilityId > 0 ? $facilityId : null);
         $this->visitScope->assertPatientAccessible($pid);
-        $visitDate = date('Y-m-d');
 
         $readySql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid, pd.sex, pd.DOB,
                             vt.label AS visit_type_label,
@@ -144,11 +154,11 @@ class CashierService
                      FROM new_visit v
                      INNER JOIN patient_data pd ON pd.pid = v.pid
                      LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
-                     WHERE v.pid = ? AND v.facility_id = ? AND v.visit_date = ?
+                     WHERE v.pid = ? AND v.facility_id = ?
                      AND v.state = 'ready_for_payment'
-                     ORDER BY v.queue_number ASC";
+                     ORDER BY v.visit_date ASC, v.queue_number ASC";
 
-        $readyRows = QueryUtils::fetchRecords($readySql, [$pid, $facilityId, $visitDate]) ?: [];
+        $readyRows = QueryUtils::fetchRecords($readySql, [$pid, $facilityId]) ?: [];
         $ready = array_map(function (array $row): array {
             $enriched = $this->rowEnricher->enrichVisitRow($row);
             $enriched['charges_total'] = round((float) ($row['charges_total'] ?? 0), 2);
@@ -162,12 +172,12 @@ class CashierService
                       FROM new_visit v
                       INNER JOIN patient_data pd ON pd.pid = v.pid
                       LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
-                      WHERE v.pid = ? AND v.facility_id = ? AND v.visit_date = ?
+                      WHERE v.pid = ? AND v.facility_id = ?
                       AND v.state NOT IN ({$placeholders})
                       AND v.state <> 'ready_for_payment'
                       ORDER BY v.started_at DESC
                       LIMIT 5";
-        $activeBind = array_merge([$pid, $facilityId, $visitDate], $terminal);
+        $activeBind = array_merge([$pid, $facilityId], $terminal);
         $activeRows = QueryUtils::fetchRecords($activeSql, $activeBind) ?: [];
         $active = array_map(
             fn (array $row): array => $this->rowEnricher->enrichVisitRow($row),
@@ -626,7 +636,16 @@ class CashierService
 
         $rows = QueryUtils::fetchRecords($sql, [$facilityId, $visitDate]) ?: [];
 
-        return array_map(fn (array $row) => $this->rowEnricher->enrichVisitRow($row), $rows);
+        return array_map(function (array $row) use ($facilityId): array {
+            $enriched = $this->rowEnricher->enrichVisitRow($row);
+            $correction = $this->billOpsAccess->addCorrectionLink((int) ($row['id'] ?? 0), $facilityId);
+            if ($correction['visible']) {
+                $enriched['charge_correction_url'] = $correction['url'];
+                $enriched['charge_correction_label'] = $correction['label'];
+            }
+
+            return $enriched;
+        }, $rows);
     }
 
     /**

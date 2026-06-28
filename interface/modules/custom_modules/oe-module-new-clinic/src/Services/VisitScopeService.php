@@ -147,6 +147,27 @@ class VisitScopeService
         return is_array($row) ? (int) ($row['id'] ?? 0) : 0;
     }
 
+    /**
+     * Resolve encounter for clinical strips: explicit id wins, else latest active visit.
+     */
+    public function resolveActiveEncounterId(int $pid, ?int $encounterId = null): int
+    {
+        if ($encounterId !== null && $encounterId > 0) {
+            return $encounterId;
+        }
+
+        $row = QueryUtils::querySingleRow(
+            "SELECT encounter FROM new_visit
+             WHERE pid = ?
+             AND state NOT IN ('completed', 'closed_unpaid', 'cancelled')
+             AND encounter > 0
+             ORDER BY id DESC LIMIT 1",
+            [$pid]
+        );
+
+        return is_array($row) ? (int) ($row['encounter'] ?? 0) : 0;
+    }
+
     public function buildOrphanRepairKey(int $facilityId, string $visitDate): string
     {
         return $facilityId . ':' . $visitDate;
@@ -163,6 +184,13 @@ class VisitScopeService
     /**
      * Visits created before facility scoping may have facility_id = 0.
      * Encounters from OpenEMR insert may also have facility_id = 0 even when the visit row is scoped.
+     *
+     * Since queues now show all active visits regardless of date, we run two
+     * repair passes per request:
+     *   1. Date-scoped pass for $visitDate (fast, covers the common same-day case).
+     *   2. Active-visits-only pass with no date filter (catches midnight carry-over
+     *      and any visits left unrepaired from previous days).
+     * Both passes are deduplicated with static caches to stay cheap.
      */
     public function repairOrphanVisits(int $facilityId, string $visitDate): void
     {
@@ -172,36 +200,51 @@ class VisitScopeService
 
         $this->assertFacilityAccessible($facilityId);
 
+        // Pass 1 — date-scoped (same as before)
         $key = $this->buildOrphanRepairKey($facilityId, $visitDate);
-        if (isset(self::$repairedKeys[$key])) {
-            return;
-        }
-        self::$repairedKeys[$key] = true;
+        if (!isset(self::$repairedKeys[$key])) {
+            self::$repairedKeys[$key] = true;
 
-        sqlStatement(
-            "UPDATE new_visit v
-             INNER JOIN form_encounter fe ON fe.encounter = v.encounter AND fe.pid = v.pid
-             SET v.facility_id = fe.facility_id, v.updated_at = NOW()
-             WHERE v.facility_id = 0 AND v.visit_date = ?
-             AND fe.facility_id = ?
-             AND v.state NOT IN ('completed', 'closed_unpaid', 'cancelled')",
-            [$visitDate, $facilityId]
-        );
-
-        if ($this->shouldRunAggressiveOrphanRepair()) {
-            // Encounter facility unset (common after insertEncounter) — attach today's orphans to this desk.
             sqlStatement(
                 "UPDATE new_visit v
                  INNER JOIN form_encounter fe ON fe.encounter = v.encounter AND fe.pid = v.pid
-                 SET v.facility_id = ?, v.updated_at = NOW()
+                 SET v.facility_id = fe.facility_id, v.updated_at = NOW()
                  WHERE v.facility_id = 0 AND v.visit_date = ?
-                 AND (fe.facility_id = 0 OR fe.facility_id IS NULL)
+                 AND fe.facility_id = ?
                  AND v.state NOT IN ('completed', 'closed_unpaid', 'cancelled')",
-                [$facilityId, $visitDate]
+                [$visitDate, $facilityId]
             );
+
+            if ($this->shouldRunAggressiveOrphanRepair()) {
+                sqlStatement(
+                    "UPDATE new_visit v
+                     INNER JOIN form_encounter fe ON fe.encounter = v.encounter AND fe.pid = v.pid
+                     SET v.facility_id = ?, v.updated_at = NOW()
+                     WHERE v.facility_id = 0 AND v.visit_date = ?
+                     AND (fe.facility_id = 0 OR fe.facility_id IS NULL)
+                     AND v.state NOT IN ('completed', 'closed_unpaid', 'cancelled')",
+                    [$facilityId, $visitDate]
+                );
+            }
+
+            $this->syncEncounterFacilitiesForDesk($facilityId, $visitDate);
         }
 
-        $this->syncEncounterFacilitiesForDesk($facilityId, $visitDate);
+        // Pass 2 — active orphans from any date (handles midnight carry-over visits)
+        $allActiveKey = $this->buildOrphanRepairKey($facilityId, '__active__');
+        if (!isset(self::$repairedKeys[$allActiveKey])) {
+            self::$repairedKeys[$allActiveKey] = true;
+
+            sqlStatement(
+                "UPDATE new_visit v
+                 INNER JOIN form_encounter fe ON fe.encounter = v.encounter AND fe.pid = v.pid
+                 SET v.facility_id = fe.facility_id, v.updated_at = NOW()
+                 WHERE v.facility_id = 0
+                 AND fe.facility_id = ?
+                 AND v.state NOT IN ('completed', 'closed_unpaid', 'cancelled')",
+                [$facilityId]
+            );
+        }
     }
 
     private function shouldRunAggressiveOrphanRepair(): bool

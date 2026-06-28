@@ -66,6 +66,21 @@ class ShellService
             'acos' => ['new_cashier'],
         ],
         [
+            'id' => 'clinicbillops',
+            'label' => 'Billing',
+            'path' => 'bill-ops/index.php',
+            'acos' => [
+                'new_bill_ops',
+                'new_bill_ops_correct',
+                'new_bill_ops_payment',
+                'new_bill_ops_close',
+                'new_bill_ops_outstanding',
+                'new_bill_ops_insurance',
+                'new_admin',
+            ],
+            'config' => 'enable_bill_ops',
+        ],
+        [
             'id' => 'clinicvb',
             'label' => 'Visit Board',
             'path' => 'visit-board.php',

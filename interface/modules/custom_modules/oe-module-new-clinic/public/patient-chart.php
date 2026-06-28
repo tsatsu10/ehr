@@ -52,6 +52,9 @@ try {
 $_SESSION['pid'] = $pid;
 $GLOBALS['pid'] = $pid;
 
+$config = new ClinicConfigService();
+$reactPatientChart = $config->get('enable_react_patient_chart', '1') === '1';
+
 (new PageController())->renderForAnyClinicRole(
     'patient-chart.html.twig',
     'Patient chart',
@@ -60,7 +63,8 @@ $GLOBALS['pid'] = $pid;
         'pid' => $pid,
         'active_tab' => $tab,
         'clinical_anchor' => $clinicalAnchor,
-        'registration_mode' => (new ClinicConfigService())->get('registration_mode', 'desk_full_form') ?? 'desk_full_form',
+        'registration_mode' => $config->get('registration_mode', 'desk_full_form') ?? 'desk_full_form',
+        'enable_react_patient_chart' => $reactPatientChart,
         'shell_nav_id' => 'clinicchart',
         'visit_board_url' => $GLOBALS['webroot']
             . '/interface/modules/custom_modules/oe-module-new-clinic/public/visit-board.php',

@@ -1,101 +1,30 @@
 {% extends 'base.html.twig' %}
 
 {% block content %}
-<div class="oe-nc-patient-chart" id="nc-patient-chart"
-     data-pid="{{ pid }}"
-     data-active-tab="{{ active_tab|e('html_attr') }}"
-     data-clinical-anchor="{{ clinical_anchor|default('')|e('html_attr') }}"
-     data-visit-board-url="{{ visit_board_url|e('html_attr') }}">
-    <div class="oe-nc-widget-card mb-3">
-        <div class="oe-nc-widget-card__header d-flex justify-content-between align-items-center flex-wrap">
-            <h2 class="oe-nc-widget-card__title mb-0">{{ 'Patient chart'|xlt }}</h2>
-            <div class="btn-group btn-group-sm mt-2 mt-md-0">
-                {% if export_chart_url %}
-                <a href="{{ export_chart_url }}" class="btn btn-outline-secondary" target="_top">{{ 'Export chart'|xlt }}</a>
-                {% endif %}
-                <a href="{{ module_url }}/front-desk.php" class="btn btn-outline-secondary" target="_top">{{ 'Front Desk'|xlt }}</a>
-                <a href="{{ visit_board_url }}" class="btn btn-outline-primary" target="_top">{{ 'Visit Board'|xlt }}</a>
-            </div>
-        </div>
-        <div class="oe-nc-widget-card__body oe-nc-widget-card__body--pad">
-            <div id="nc-chart-banner" class="mb-3"></div>
-
-            <ul class="nav nav-tabs mb-3" id="nc-chart-tabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <a class="nav-link{% if active_tab == 'overview' %} active{% endif %}"
-                       href="#nc-chart-tab-overview" data-tab="overview" role="tab"
-                       aria-controls="nc-chart-tab-overview"
-                       aria-selected="{{ active_tab == 'overview' ? 'true' : 'false' }}">{{ 'Overview'|xlt }}</a>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <a class="nav-link{% if active_tab == 'profile' %} active{% endif %}"
-                       href="#nc-chart-tab-profile" data-tab="profile" role="tab"
-                       aria-controls="nc-chart-tab-profile"
-                       aria-selected="{{ active_tab == 'profile' ? 'true' : 'false' }}">{{ 'Profile'|xlt }}</a>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <a class="nav-link{% if active_tab == 'visits' %} active{% endif %}"
-                       href="#nc-chart-tab-visits" data-tab="visits" role="tab"
-                       aria-controls="nc-chart-tab-visits"
-                       aria-selected="{{ active_tab == 'visits' ? 'true' : 'false' }}">{{ 'Visits'|xlt }}</a>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <a class="nav-link{% if active_tab == 'clinical' %} active{% endif %}"
-                       href="#nc-chart-tab-clinical" data-tab="clinical" role="tab"
-                       aria-controls="nc-chart-tab-clinical"
-                       aria-selected="{{ active_tab == 'clinical' ? 'true' : 'false' }}">{{ 'Clinical'|xlt }}</a>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <a class="nav-link{% if active_tab == 'messages' %} active{% endif %}"
-                       href="#nc-chart-tab-messages" data-tab="messages" role="tab"
-                       aria-controls="nc-chart-tab-messages"
-                       aria-selected="{{ active_tab == 'messages' ? 'true' : 'false' }}">{{ 'Messages'|xlt }}</a>
-                </li>
-            </ul>
-
-            <div class="tab-content" id="nc-chart-tab-panes">
-                <div class="tab-pane fade{% if active_tab == 'overview' %} show active{% endif %}"
-                     id="nc-chart-tab-overview" role="tabpanel">
-                    <div id="nc-chart-overview-pane"><em>{{ 'Loading overview…'|xlt }}</em></div>
-                </div>
-                <div class="tab-pane fade{% if active_tab == 'profile' %} show active{% endif %}"
-                     id="nc-chart-tab-profile" role="tabpanel">
-                    <div id="nc-profile-payments-strip" class="mb-3"></div>
-                    <div id="nc-profile-checklist" class="mb-3"></div>
-                    <div id="nc-chart-profile-pane"><em>{{ 'Loading profile…'|xlt }}</em></div>
-                </div>
-                <div class="tab-pane fade{% if active_tab == 'visits' %} show active{% endif %}"
-                     id="nc-chart-tab-visits" role="tabpanel">
-                    <div id="nc-chart-visits-pane"><em>{{ 'Loading visits…'|xlt }}</em></div>
-                </div>
-                <div class="tab-pane fade{% if active_tab == 'clinical' %} show active{% endif %}"
-                     id="nc-chart-tab-clinical" role="tabpanel">
-                    <div id="nc-chart-clinical-pane"><em>{{ 'Loading clinical summary…'|xlt }}</em></div>
-                </div>
-                <div class="tab-pane fade{% if active_tab == 'messages' %} show active{% endif %}"
-                     id="nc-chart-tab-messages" role="tabpanel">
-                    <div id="nc-chart-messages-pane"><em>{{ 'Loading messages…'|xlt }}</em></div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+{% if enable_react_patient_chart|default(true) %}
+<div
+    data-island="patient-chart"
+    data-props="{{ {
+        ajaxUrl: ajax_url,
+        csrfToken: csrf_token,
+        pid: pid,
+        activeTab: active_tab,
+        clinicalAnchor: clinical_anchor|default(''),
+        visitBoardUrl: visit_board_url,
+        frontDeskUrl: module_url ~ '/front-desk.php',
+        exportChartUrl: export_chart_url|default(''),
+        registrationMode: registration_mode
+    }|json_encode|e('html_attr') }}"
+></div>
+{% else %}
+{% include 'partials/react-island-disabled.html.twig' with { desk_label: 'Patient Chart' } %}
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
+{% if enable_react_patient_chart|default(true) %}
 <link rel="stylesheet" href="{{ assets_url }}/css/registration-form.css?v={{ asset_version }}">
-<script src="{{ assets_url }}/js/registration-form.js?v={{ asset_version }}"></script>
-<script src="{{ assets_url }}/js/patient-chart.js?v={{ asset_version }}"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    if (window.NewClinicPatientChart) {
-        window.NewClinicPatientChart.init({
-            root: document.getElementById('nc-patient-chart'),
-            ajaxUrl: {{ ajax_url|json_encode|raw }},
-            csrfToken: {{ csrf_token|json_encode|raw }},
-            registrationMode: {{ registration_mode|json_encode|raw }}
-        });
-    }
-});
-</script>
+<link rel="stylesheet" href="{{ assets_url }}/modern/patient-chart.css?v={{ asset_version }}">
+<script type="module" src="{{ assets_url }}/modern/patient-chart.js?v={{ asset_version }}"></script>
+{% endif %}
 {% endblock %}

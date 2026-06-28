@@ -1,69 +1,31 @@
 {% extends 'base.html.twig' %}
 
 {% block content %}
-{% if scheduled_integration_enabled|default(false) %}
-<div class="alert alert-info py-2 mb-3 d-flex flex-wrap align-items-center justify-content-between" role="status">
-    <span>
-        {{ 'Scheduling linked'|xlt }} —
-        {% if appointments_today_count|default(0) > 0 %}
-            {{ appointments_today_count }} {{ 'appointment(s) today'|xlt }}.
-            {{ 'Search a scheduled patient to see Appointment today and Start visit & check in.'|xlt }}
-        {% else %}
-            {{ 'No appointments booked for today yet.'|xlt }}
-            {{ 'Book in Calendar, then search the patient here.'|xlt }}
-        {% endif %}
-    </span>
-    <a class="btn btn-sm btn-outline-primary mt-2 mt-md-0" href="{{ calendar_url|attr }}" target="_top">
-        {{ 'Open Calendar'|xlt }}
-    </a>
-</div>
+{% if enable_react_front_desk|default(true) %}
+<div
+    data-island="front-desk"
+    data-props="{{ {
+        ajaxUrl:                       ajax_url,
+        csrfToken:                     csrf_token,
+        facilityId:                    desk_facility_id|default(0)|number_format(0, '', ''),
+        moduleUrl:                     module_url,
+        registrationMode:              registration_mode,
+        pinnedPreview:                 enable_pinned_reception_preview ? true : false,
+        printQueueSlip:                print_queue_slip_on_start_visit ? true : false,
+        scheduledIntegrationEnabled:   scheduled_integration_enabled ? true : false,
+        appointmentsTodayCount:        appointments_today_count|default(0)|number_format(0, '', ''),
+        calendarUrl:                   calendar_url
+    }|json_encode|e('html_attr') }}"
+></div>
+{% else %}
+{% include 'partials/react-island-disabled.html.twig' with { desk_label: 'Front Desk' } %}
 {% endif %}
-<div class="oe-nc-desk-split" id="nc-front-desk" data-desk="{{ desk_id }}">
-    <div class="row">
-        <div class="col-lg-5 mb-3">
-            {% include 'components/patient-search.html.twig' with {
-                host: 'front-desk',
-                primary_action: 'start_visit',
-                autofocus: true,
-                show_add_new: true,
-                add_patient_label: 'Register patient'
-            } %}
-        </div>
-        <div class="col-lg-7 mb-3">
-            <div class="oe-nc-widget-card oe-nc-desk-split__preview">
-                <div class="oe-nc-widget-card__header">
-                    <h2 class="oe-nc-widget-card__title">{{ 'Patient preview'|xlt }}</h2>
-                </div>
-                <div class="oe-nc-widget-card__body oe-nc-widget-card__body--pad" id="nc-preview-pane">
-                    {% include 'partials/ui/empty-state.html.twig' with {
-                        icon: 'fa-search',
-                        title: 'No patient selected',
-                        message: 'Search by name, phone, NHIS, National ID, or MRN — then pick a row to preview.'
-                    } %}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
+{% if enable_react_front_desk|default(true) %}
+<link rel="stylesheet" href="{{ assets_url }}/modern/front-desk.css?v={{ asset_version }}">
 <link rel="stylesheet" href="{{ assets_url }}/css/registration-form.css?v={{ asset_version }}">
-<script src="{{ assets_url }}/js/registration-form.js?v={{ asset_version }}"></script>
-<script src="{{ assets_url }}/js/patient-search.js?v={{ asset_version }}"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    if (window.NewClinicPatientSearch) {
-        window.NewClinicPatientSearch.init({
-            root: document.getElementById('nc-patient-search'),
-            previewPane: document.getElementById('nc-preview-pane'),
-            showStartVisit: true,
-            registrationMode: {{ registration_mode|json_encode|raw }},
-            pinnedPreview: {{ enable_pinned_reception_preview|default(false) ? 'true' : 'false' }},
-            printQueueSlip: {{ print_queue_slip_on_start_visit|default(true) ? 'true' : 'false' }},
-            moduleUrl: {{ module_url|json_encode|raw }}
-        });
-    }
-});
-</script>
+<script type="module" src="{{ assets_url }}/modern/front-desk.js?v={{ asset_version }}"></script>
+{% endif %}
 {% endblock %}

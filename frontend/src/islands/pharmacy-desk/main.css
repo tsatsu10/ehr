@@ -1,0 +1,9 @@
+@import '../../core/tokens.css';
+
+.nc-pharmacy-queue-panel {
+  @apply rounded border bg-white p-3 shadow-sm;
+}
+
+.oe-nc-pharmacy-react-active .oe-nc-queue-card--claim-lost {
+  opacity: 0.65;
+}

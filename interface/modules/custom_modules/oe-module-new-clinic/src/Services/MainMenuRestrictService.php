@@ -16,6 +16,17 @@ use OpenEMR\Menu\MenuEvent;
 
 class MainMenuRestrictService
 {
+    /** @var array<int, string> Stock Fees children hidden when M14 hub is ON (M14-F06) */
+    public const STOCK_FEES_MENU_IDS = [
+        'cod2', 'cod1', 'pay1', 'bil1', 'bil0', 'npa0', 'eob', 'edi0', 'biltrk0',
+    ];
+
+    /** @var array<int, string> Clinic desk ACLs — users with any of these get Fees cutover */
+    private const CLINIC_DESK_ACLS = [
+        'new_reception', 'new_nurse', 'new_doctor', 'new_lab',
+        'new_pharmacy', 'new_cashier',
+    ];
+
     /** @var array<int, string> Clinical roles that retain legacy Finder (D-CTX-10) */
     private const CLINICAL_FINDER_ACLS = [
         'new_doctor',
@@ -45,6 +56,10 @@ class MainMenuRestrictService
                 '/interface/orders/pending_followup.php',
                 '/interface/orders/load_compendium.php',
             ]);
+        }
+
+        if ($this->shouldHideStockFeesMenusForCurrentUser()) {
+            $menu = $this->filterMainMenu($menu, self::STOCK_FEES_MENU_IDS);
         }
 
         $event->setMenu($menu);
@@ -83,6 +98,21 @@ class MainMenuRestrictService
         $facilityId = $facilityId ?? $this->visitScope->resolveDefaultFacilityId();
 
         return $this->config->isEnabled('enable_lab_ops', 0, $facilityId);
+    }
+
+    public function shouldHideStockFeesMenusForCurrentUser(?int $facilityId = null): bool
+    {
+        if (AclMain::aclCheckCore('new_clinic', 'new_admin') || AclMain::aclCheckCore('admin', 'super')) {
+            return false;
+        }
+
+        if (!$this->currentUserHasClinicDeskAcl()) {
+            return false;
+        }
+
+        $facilityId = $facilityId ?? $this->visitScope->resolveDefaultFacilityId();
+
+        return $this->config->isEnabled('enable_bill_ops', 0, $facilityId);
     }
 
     /**
@@ -144,6 +174,17 @@ class MainMenuRestrictService
     private function currentUserHasClinicalFinderAccess(): bool
     {
         foreach (self::CLINICAL_FINDER_ACLS as $aco) {
+            if (AclMain::aclCheckCore('new_clinic', $aco)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function currentUserHasClinicDeskAcl(): bool
+    {
+        foreach (self::CLINIC_DESK_ACLS as $aco) {
             if (AclMain::aclCheckCore('new_clinic', $aco)) {
                 return true;
             }

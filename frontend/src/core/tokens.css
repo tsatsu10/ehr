@@ -1,0 +1,155 @@
+/*
+ * OpenEMR 2026 — React island design tokens
+ * ============================================================
+ * Source of truth: design-system/openemr-2026/MASTER.md
+ * Module-level CSS:  oe-module-new-clinic/public/assets/css/tokens.css
+ *
+ * This file is imported by every island's main.css. Its job:
+ *
+ *   1. Import web fonts (Figtree + Noto Sans).
+ *   2. Expose the full --oe-nc-* token set (same as the module legacy CSS)
+ *      on :root so islands share one source of truth.
+ *   3. Register Tailwind @theme aliases so that CSS variables are available
+ *      as Tailwind custom-property references inside @theme.
+ *
+ * CASCADE RULE: Tailwind 4 wraps all utility classes in @layer utilities,
+ * which always loses to Bootstrap 4 (unlayered). Write island component
+ * styles as non-layered BEM CSS — see FRONTEND_MODULE_GUIDE.md §5.
+ * These :root declarations are unaffected (variables propagate globally).
+ */
+
+/* 1. Fonts ---------------------------------------------------------------- */
+/*
+ * Loaded conditionally: skip if the host page already includes them
+ * (OpenEMR shell may add them via the global theme). The @import must
+ * be at the very top per CSS spec.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;700&display=swap');
+
+/* 2. Tailwind base + @theme ------------------------------------------------
+ *
+ * @theme creates Tailwind CSS variable slots — they are available as
+ * var(--color-oe-primary) etc. inside non-layered CSS even though the
+ * resulting utility classes (bg-oe-primary, text-oe-primary …) lose to
+ * Bootstrap. We keep them so island styles can reference them cleanly.
+ */
+@import 'tailwindcss';
+
+@theme {
+  /* Core palette — mirrors MASTER.md "Color Palette" */
+  --color-oe-primary:   #0891b2;   /* Primary — calm cyan */
+  --color-oe-secondary: #22d3ee;   /* Secondary — hover / highlight */
+  --color-oe-cta:       #059669;   /* CTA / Success / Confirm */
+  --color-oe-bg:        #ecfeff;   /* Background tint (cyan-50) */
+  --color-oe-text:      #164e63;   /* Body copy */
+  --color-oe-muted:     #475569;   /* Muted / meta text */
+  --color-oe-border:    #e2e8f0;   /* Default border */
+  --color-oe-surface:   #ffffff;   /* Card / panel surface */
+
+  /* Danger / Warning — map to Bootstrap vars where available */
+  --color-oe-danger:    #dc2626;
+  --color-oe-warning:   #ea580c;
+
+  /* Role accent colors (§6 shell) */
+  --color-oe-role-reception: #0891b2;
+  --color-oe-role-nurse:     #2563eb;
+  --color-oe-role-doctor:    #059669;
+  --color-oe-role-lab:       #f59e0b;
+  --color-oe-role-pharmacy:  #7c3aed;
+  --color-oe-role-cashier:   #ea580c;
+  --color-oe-role-admin:     #64748b;
+
+  /* Typography — MASTER.md §Typography */
+  --font-sans:    'Noto Sans', system-ui, sans-serif;
+  --font-display: 'Figtree', system-ui, sans-serif;
+
+  /* Spacing — MASTER.md §Spacing (matches --space-* names) */
+  --spacing-xs:  0.25rem;   /* 4px  — tight gaps */
+  --spacing-sm:  0.5rem;    /* 8px  — icon gaps */
+  --spacing-md:  1rem;      /* 16px — standard padding */
+  --spacing-lg:  1.5rem;    /* 24px — section padding */
+  --spacing-xl:  2rem;      /* 32px — large gaps */
+  --spacing-2xl: 3rem;      /* 48px — section margins */
+  --spacing-3xl: 4rem;      /* 64px — hero padding */
+
+  /* Shadows — MASTER.md §Shadow Depths */
+  --shadow-oe-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-oe-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-oe-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-oe-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+
+  /* Radius — §3 "0.25rem to match Bootstrap 4 cards" */
+  --radius-oe-sm: 0.25rem;   /* Bootstrap default card radius */
+  --radius-oe-md: 0.5rem;    /* Inputs, badges */
+  --radius-oe-lg: 0.75rem;   /* Modals, slide-overs */
+
+  /* Motion */
+  --duration-oe-fast:   150ms;
+  --duration-oe-normal: 200ms;
+}
+
+/* 3. :root custom property declarations -----------------------------------
+ *
+ * These are NON-LAYERED — they sit outside @layer so they beat Bootstrap
+ * at equal specificity and are readable by all island component CSS.
+ *
+ * Names mirror the existing module tokens.css (--oe-nc-*) so the
+ * legacy Twig/SCSS layer and React islands share one token vocabulary.
+ * MASTER.md short-form aliases (--color-primary etc.) are also exposed
+ * for components that quote the spec directly.
+ */
+:root {
+  /* Primary palette — --oe-nc-* (module convention) */
+  --oe-nc-primary:    #0891b2;
+  --oe-nc-secondary:  #22d3ee;
+  --oe-nc-cta:        #059669;
+  --oe-nc-bg-tint:    #ecfeff;
+  --oe-nc-text:       #164e63;
+  --oe-nc-text-muted: #475569;
+  --oe-nc-border:     #e2e8f0;
+  --oe-nc-surface:    #ffffff;
+
+  /* MASTER.md short-form aliases */
+  --color-primary:    var(--oe-nc-primary);
+  --color-secondary:  var(--oe-nc-secondary);
+  --color-cta:        var(--oe-nc-cta);
+  --color-background: var(--oe-nc-bg-tint);
+  --color-text:       var(--oe-nc-text);
+
+  /* Interaction tokens */
+  --oe-nc-radius:     0.25rem;
+  --oe-nc-transition: 150ms ease;
+  --oe-nc-focus-ring: 0 0 0 3px rgba(8, 145, 178, 0.35);
+
+  /* Role accents */
+  --oe-nc-role-reception: #0891b2;
+  --oe-nc-role-nurse:     #2563eb;
+  --oe-nc-role-doctor:    #059669;
+  --oe-nc-role-lab:       #f59e0b;
+  --oe-nc-role-pharmacy:  #7c3aed;
+  --oe-nc-role-cashier:   #ea580c;
+  --oe-nc-role-admin:     #64748b;
+
+  /* Spacing — aligns with MASTER.md --space-* */
+  --space-xs:  0.25rem;
+  --space-sm:  0.5rem;
+  --space-md:  1rem;
+  --space-lg:  1.5rem;
+  --space-xl:  2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4rem;
+
+  /* Shadows — aligns with MASTER.md --shadow-* */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --oe-nc-transition: 0ms;
+    --duration-oe-fast:   0ms;
+    --duration-oe-normal: 0ms;
+  }
+}

@@ -5,201 +5,36 @@
 {% endblock %}
 
 {% block page_heading_actions %}
-<button type="button" class="btn btn-outline-primary btn-sm" id="nc-cashier-refresh">
-    {{ 'Refresh'|xlt }}
+<button type="button" class="btn btn-outline-primary btn-sm" id="nc-cashier-refresh" aria-label="{{ 'Refresh'|xlt }}">
+    <i class="fa fa-refresh" aria-hidden="true"></i>
 </button>
 <span class="text-muted small" id="nc-cashier-updated"></span>
 {% endblock %}
 
 {% block content %}
-<div id="nc-cashier-desk"
-     data-ajax-url="{{ ajax_url }}"
-     data-csrf-token="{{ csrf_token }}"
-     data-module-url="{{ module_url }}"
-     data-facility-id="{{ desk_facility_id }}"
-     data-visit-board-url="{{ visit_board_url }}"
-     data-can-mark-unpaid="{{ can_mark_unpaid ? '1' : '0' }}"
-     data-can-skip-completion="{{ can_skip_completion ? '1' : '0' }}"
-     data-can-apply-discount="{{ can_apply_discount ? '1' : '0' }}"
-     data-can-esign-override="{{ can_esign_override ? '1' : '0' }}"
-     data-shared-device-warning="{{ enable_shared_device_session_warning ? '1' : '0' }}">
-    {% include 'partials/shared-device-session-banner.html.twig' with { prefix: 'nc-cashier' } only %}
-    <div class="row">
-        <div class="col-lg-4 mb-3">
-            <div class="nc-cashier-queue-panel">
-                <div class="mb-3">
-                    <label class="small font-weight-bold mb-1" for="nc-cashier-patient-search">{{ 'Find patient'|xlt }}</label>
-                    <input type="search" class="form-control form-control-sm" id="nc-cashier-patient-search"
-                           placeholder="{{ 'Name or MRN'|xla }}" autocomplete="off">
-                    <div class="list-group position-absolute w-100 shadow-sm" id="nc-cashier-search-results"
-                         style="display:none; z-index: 20; max-height: 240px; overflow-y: auto;"></div>
-                    <div class="small mt-2" id="nc-cashier-search-hint" style="display:none;"></div>
-                </div>
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <strong>{{ 'Payment queue'|xlt }}</strong>
-                    <span class="text-muted small" id="nc-cashier-counts"></span>
-                </div>
-                <div id="nc-cashier-queue-list"></div>
-                <div class="mt-3">
-                    <button type="button" class="btn btn-link btn-sm p-0" id="nc-cashier-done-toggle">
-                        {{ 'Paid today'|xlt }} (<span id="nc-cashier-paid-count">0</span>)
-                    </button>
-                    <div id="nc-cashier-paid-list" class="mt-2" style="display:none;"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-8 mb-3">
-            <div id="nc-cashier-active-pane">
-                <div class="card">
-                    <div class="card-body text-muted text-center py-5">
-                        <em>{{ 'Select a visit from the payment queue.'|xlt }}</em>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="nc-cashier-receipt-modal" tabindex="-1" role="dialog"
-     aria-labelledby="nc-cashier-receipt-title" aria-modal="true" aria-hidden="true" style="display:none;">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="nc-cashier-receipt-title">{{ 'Receipt'|xlt }}</h5>
-                <button type="button" class="close nc-modal-close" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body" id="nc-cashier-receipt-body"></div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" id="nc-cashier-print-receipt">{{ 'Print'|xlt }}</button>
-                <button type="button" class="btn btn-secondary nc-modal-close">{{ 'Close'|xlt }}</button>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="modal-backdrop fade" id="nc-cashier-modal-backdrop" style="display:none;"></div>
-
-<div class="modal fade" id="nc-cashier-esign-modal" tabindex="-1" role="dialog"
-     aria-labelledby="nc-cashier-esign-title" aria-modal="true" aria-hidden="true" style="display:none;">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="nc-cashier-esign-title">{{ 'E-Sign override'|xlt }}</h5>
-                <button type="button" class="close nc-esign-modal-close" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div id="nc-cashier-esign-identity" class="mb-3"></div>
-                <p class="small text-muted">{{ 'Supervisor override — reason is recorded in the audit log.'|xlt }}</p>
-                <div class="form-group mb-0">
-                    <label for="nc-cashier-esign-reason">{{ 'Reason'|xlt }}</label>
-                    <textarea class="form-control" id="nc-cashier-esign-reason" rows="3" maxlength="200"></textarea>
-                </div>
-                <div class="alert alert-danger d-none mt-2 mb-0" id="nc-cashier-esign-error"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary nc-esign-modal-close">{{ 'Cancel'|xlt }}</button>
-                <button type="button" class="btn btn-warning" id="nc-cashier-esign-confirm">{{ 'Pay with override'|xlt }}</button>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="modal-backdrop fade" id="nc-cashier-esign-backdrop" style="display:none;"></div>
-
-<div class="modal fade" id="nc-cashier-pay-confirm-modal" tabindex="-1" role="dialog"
-     aria-labelledby="nc-cashier-pay-confirm-title" aria-modal="true" aria-hidden="true" style="display:none;">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="nc-cashier-pay-confirm-title">{{ 'Confirm payment'|xlt }}</h5>
-                <button type="button" class="close nc-pay-confirm-close" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body" id="nc-cashier-pay-confirm-body"></div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary nc-pay-confirm-close">{{ 'Cancel'|xlt }}</button>
-                <button type="button" class="btn btn-success" id="nc-cashier-pay-confirm-btn">{{ 'Confirm payment'|xlt }}</button>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="modal-backdrop fade" id="nc-cashier-pay-confirm-backdrop" style="display:none;"></div>
-
-<div class="modal fade" id="nc-cashier-terminal-modal" tabindex="-1" role="dialog"
-     aria-labelledby="nc-cashier-terminal-title" aria-modal="true" aria-hidden="true" style="display:none;">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="nc-cashier-terminal-title">{{ 'Confirm action'|xlt }}</h5>
-                <button type="button" class="close nc-terminal-modal-close" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div id="nc-cashier-terminal-body"></div>
-                <div class="form-group mb-0 mt-3 d-none" id="nc-cashier-terminal-reason-wrap">
-                    <label for="nc-cashier-terminal-reason">{{ 'Reason'|xlt }}</label>
-                    <textarea class="form-control" id="nc-cashier-terminal-reason" rows="3" maxlength="200"></textarea>
-                </div>
-                <div class="alert alert-danger d-none mt-2 mb-0" id="nc-cashier-terminal-error"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary nc-terminal-modal-close">{{ 'Cancel'|xlt }}</button>
-                <button type="button" class="btn btn-primary" id="nc-cashier-terminal-confirm">{{ 'Confirm'|xlt }}</button>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="modal-backdrop fade" id="nc-cashier-terminal-backdrop" style="display:none;"></div>
-
-<div class="modal fade" id="nc-cashier-pick-visit-modal" tabindex="-1" role="dialog"
-     aria-labelledby="nc-cashier-pick-visit-title" aria-modal="true" aria-hidden="true" style="display:none;">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="nc-cashier-pick-visit-title">{{ 'Select visit to pay'|xlt }}</h5>
-                <button type="button" class="close nc-pick-visit-close" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body list-group list-group-flush" id="nc-cashier-pick-visit-body"></div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary nc-pick-visit-close">{{ 'Cancel'|xlt }}</button>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="modal-backdrop fade" id="nc-cashier-pick-visit-backdrop" style="display:none;"></div>
+{% if enable_react_cashier_desk|default(true) %}
+<div
+    data-island="cashier-desk"
+    data-props="{{ {
+        ajaxUrl:             ajax_url,
+        csrfToken:           csrf_token,
+        facilityId:          desk_facility_id|default(0)|number_format(0, '', ''),
+        visitBoardUrl:       visit_board_url,
+        canMarkUnpaid:       can_mark_unpaid ? true : false,
+        canSkipCompletion:   can_skip_completion ? true : false,
+        canApplyDiscount:    can_apply_discount ? true : false,
+        canEsignOverride:    can_esign_override ? true : false,
+        sharedDeviceWarning: enable_shared_device_session_warning ? true : false
+    }|json_encode|e('html_attr') }}"
+></div>
+{% else %}
+{% include 'partials/react-island-disabled.html.twig' with { desk_label: 'Cashier Desk' } %}
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ assets_url }}/js/modal-a11y.js?v={{ asset_version }}"></script>
-<script src="{{ assets_url }}/js/cashier.js?v={{ asset_version }}"></script>
-<script>
-(function () {
-    function bootCashier() {
-        var root = document.getElementById('nc-cashier-desk');
-        if (!root) {
-            return;
-        }
-        if (window.NewClinicCashier) {
-            window.NewClinicCashier.init(root);
-            return;
-        }
-        var listEl = root.querySelector('#nc-cashier-queue-list');
-        if (listEl) {
-            listEl.innerHTML = '<div class="alert alert-danger mb-0">Cashier script failed to load. Hard refresh (Ctrl+F5).</div>';
-        }
-    }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', bootCashier);
-    } else {
-        bootCashier();
-    }
-})();
-</script>
+{% if enable_react_cashier_desk|default(true) %}
+<link rel="stylesheet" href="{{ assets_url }}/modern/cashier-desk.css?v={{ asset_version }}">
+<script type="module" src="{{ assets_url }}/modern/cashier-desk.js?v={{ asset_version }}"></script>
+{% endif %}
 {% endblock %}

@@ -30,6 +30,7 @@ class VisitBoardService
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
         private readonly VisitRowEnricher $rowEnricher = new VisitRowEnricher(),
+        private readonly ClinicDateService $clinicDate = new ClinicDateService(),
     ) {
     }
 
@@ -38,8 +39,8 @@ class VisitBoardService
      */
     public function getBoard(int $facilityId, ?string $visitDate = null): array
     {
-        $visitDate = $visitDate ?? date('Y-m-d');
         $facilityId = $this->visitScope->resolveActorFacilityId($facilityId > 0 ? $facilityId : null);
+        $visitDate = $visitDate ?? $this->clinicDate->today();
         $this->visitScope->repairOrphanVisits($facilityId, $visitDate);
 
         $active = $this->fetchVisits($facilityId, $visitDate, false);
@@ -61,6 +62,12 @@ class VisitBoardService
         $counts['cancelled'] = count($cancelled);
         $counts['closed_unpaid'] = count($closedUnpaid);
 
+        // Count active visits whose visit_date is before today (carry-over patients)
+        $staleCount = count(array_filter(
+            $active,
+            fn (array $row) => ($row['visit_date'] ?? '') < $visitDate
+        ));
+
         return [
             'config' => [
                 'enable_lab_role' => $this->config->isEnabled('enable_lab_role', 0),
@@ -72,6 +79,7 @@ class VisitBoardService
             'cancelled' => $cancelled,
             'closed_unpaid' => $closedUnpaid,
             'counts' => $counts,
+            'stale_count' => $staleCount,
             'visit_date' => $visitDate,
             'last_updated' => date('c'),
         ];
@@ -159,6 +167,8 @@ class VisitBoardService
             'visit_type_label' => (string) ($visit['visit_type_label'] ?? 'Visit'),
             'started_at_label' => self::formatTimeLabel($visit['started_at'] ?? null),
             'wait_minutes' => (int) ($visit['wait_minutes'] ?? 0),
+            'wait_label' => VisitRowEnricher::formatWaitLabel((int) ($visit['wait_minutes'] ?? 0)),
+            'visit_date' => (string) ($visit['visit_date'] ?? ''),
             'provider_hint' => $providerHint,
             'chief_complaint' => $visit['chief_complaint'] ?? null,
             'badges' => $badges,
@@ -255,6 +265,14 @@ class VisitBoardService
     }
 
     /**
+     * Fetches visits for board columns.
+     *
+     * Active states (patient still in clinic): no date filter — visible
+     * until the visit is explicitly closed.
+     *
+     * Terminal states (completed, cancelled, closed_unpaid): date-bounded
+     * to today so the Done / Cancelled / Unpaid lanes reset each morning.
+     *
      * @return array<int, array<string, mixed>>
      */
     private function fetchVisits(int $facilityId, string $visitDate, bool $cancelledOnly): array
@@ -269,14 +287,19 @@ class VisitBoardService
                     ORDER BY v.cancelled_at DESC, v.queue_number ASC";
             $rows = QueryUtils::fetchRecords($sql, [$facilityId, $visitDate]) ?: [];
         } else {
+            // Active states: no date cap. Completed: today only.
             $sql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid, pd.sex, pd.DOB,
                            vt.label AS visit_type_label
                     FROM new_visit v
                     INNER JOIN patient_data pd ON pd.pid = v.pid
                     LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
-                    WHERE v.facility_id = ? AND v.visit_date = ?
+                    WHERE v.facility_id = ?
                     AND v.state NOT IN ('cancelled', 'closed_unpaid')
-                    ORDER BY v.is_urgent DESC, v.queue_number ASC, v.started_at ASC";
+                    AND (
+                        v.state != 'completed'
+                        OR v.visit_date = ?
+                    )
+                    ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC";
             $rows = QueryUtils::fetchRecords($sql, [$facilityId, $visitDate]) ?: [];
         }
 
@@ -303,12 +326,18 @@ class VisitBoardService
     }
 
     /**
+     * Closed-unpaid lane shows today's unpaid closures. Historic unpaid
+     * records belong in reports, not the live board.
+     *
      * @return array<int, array<string, mixed>>
      */
     private function fetchClosedUnpaid(int $facilityId, string $visitDate): array
     {
         $sql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid, pd.sex, pd.DOB,
-                       vt.label AS visit_type_label
+                       vt.label AS visit_type_label,
+                       (SELECT l.reason FROM new_visit_state_log l
+                        WHERE l.visit_id = v.id AND l.to_state = 'closed_unpaid'
+                        ORDER BY l.id DESC LIMIT 1) AS unpaid_reason
                 FROM new_visit v
                 INNER JOIN patient_data pd ON pd.pid = v.pid
                 LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
@@ -316,8 +345,13 @@ class VisitBoardService
                 ORDER BY v.left_unpaid_at DESC, v.queue_number ASC";
 
         $rows = QueryUtils::fetchRecords($sql, [$facilityId, $visitDate]) ?: [];
+        return array_map(function (array $row): array {
+            $enriched = $this->enrichVisitRows([$row])[0] ?? $row;
 
-        return $this->enrichVisitRows($rows);
+            return array_merge($enriched, [
+                'unpaid_reason' => (string) ($row['unpaid_reason'] ?? ''),
+            ]);
+        }, $rows);
     }
 
     /**

@@ -2,40 +2,42 @@
 
 {% block page_heading_actions %}
 <div class="d-flex flex-wrap align-items-center oe-nc-labops-toolbar" id="nc-labops-toolbar">
-    <div class="btn-group btn-group-sm mr-2 mb-1" role="group" aria-label="{{ 'Worklist'|xlt }}">
-        <button type="button" class="btn btn-outline-primary active" data-tab="pending" id="nc-labops-tab-pending">
+    <div class="btn-group btn-group-sm mr-2 mb-1" role="group" aria-label="{{ 'Worklist tabs'|xlt }}">
+        <button type="button"
+                class="btn btn-outline-primary{% if initial_tab == 'pending' %} active{% endif %}"
+                id="nc-labops-tab-pending">
             {{ 'Pending'|xlt }} <span class="badge badge-light" id="nc-labops-count-pending">0</span>
         </button>
-        <button type="button" class="btn btn-outline-primary" data-tab="in_progress" id="nc-labops-tab-progress">
+        <button type="button"
+                class="btn btn-outline-primary{% if initial_tab == 'in_progress' %} active{% endif %}"
+                id="nc-labops-tab-progress">
             {{ 'In progress'|xlt }} <span class="badge badge-light" id="nc-labops-count-progress">0</span>
         </button>
-        <button type="button" class="btn btn-outline-primary" data-tab="send_out" id="nc-labops-tab-sendout">
+        <button type="button"
+                class="btn btn-outline-primary{% if initial_tab == 'send_out' %} active{% endif %}"
+                id="nc-labops-tab-sendout">
             {{ 'Send-out'|xlt }} <span class="badge badge-light" id="nc-labops-count-sendout">0</span>
         </button>
     </div>
-    <input type="date" class="form-control form-control-sm mr-2 mb-1" id="nc-labops-date" aria-label="{{ 'Date'|xlt }}" style="width:auto;">
-    <select class="form-control form-control-sm mr-2 mb-1" id="nc-labops-fulfillment" aria-label="{{ 'Fulfillment'|xlt }}" style="width:auto;">
-        <option value="all">{{ 'All tests'|xlt }}</option>
-        <option value="in_house">{{ 'In-house only'|xlt }}</option>
-        <option value="send_out">{{ 'Send-out only'|xlt }}</option>
+    <input type="date"
+           class="form-control form-control-sm mr-2 mb-1"
+           id="nc-labops-date"
+           aria-label="{{ 'Worklist date'|xlt }}"
+           style="width:auto;">
+    <select class="form-control form-control-sm mr-2 mb-1"
+            id="nc-labops-fulfillment"
+            aria-label="{{ 'Fulfillment filter'|xlt }}"
+            style="width:auto;">
+        <option value="all">{{ 'All fulfillment'|xlt }}</option>
+        <option value="in_house">{{ 'In-house'|xlt }}</option>
+        <option value="send_out">{{ 'Send-out'|xlt }}</option>
     </select>
     <div class="form-check form-check-inline mb-1 mr-2">
         <input type="checkbox" class="form-check-input" id="nc-labops-urgent-first" checked>
         <label class="form-check-label small" for="nc-labops-urgent-first">{{ 'Urgent first'|xlt }}</label>
     </div>
     <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ lab_desk_url|attr }}">{{ 'Lab Desk'|xlt }}</a>
-    {% if can_show_advanced %}
-    <div class="dropdown d-inline-block mb-1 mr-1">
-        <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            {{ 'Advanced'|xlt }}
-        </button>
-        <div class="dropdown-menu dropdown-menu-right">
-            <a class="dropdown-item" href="{{ webroot }}/interface/orders/pending_orders.php" target="_top">{{ 'Pending orders (core)'|xlt }}</a>
-            <a class="dropdown-item" href="{{ webroot }}/interface/orders/load_compendium.php" target="_top">{{ 'Load compendium (core)'|xlt }}</a>
-            <a class="dropdown-item" href="{{ webroot }}/interface/super/edit_list.php?list=proc_type" target="_top">{{ 'Procedure providers (core)'|xlt }}</a>
-        </div>
-    </div>
-    {% endif %}
+    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ visit_board_url|attr }}">{{ 'Visit Board'|xlt }}</a>
     <button type="button" class="btn btn-outline-secondary btn-sm mb-1" id="nc-labops-refresh" aria-label="{{ 'Refresh'|xlt }}">
         <i class="fa fa-refresh" aria-hidden="true"></i>
     </button>
@@ -44,65 +46,33 @@
 {% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{{ assets_url }}/css/lab-ops.css?v={{ asset_version }}">
-
-<div id="nc-lab-ops-hub"
-     class="oe-nc-labops"
-     data-ajax-url="{{ ajax_url }}"
-     data-csrf-token="{{ csrf_token }}"
-     data-module-url="{{ module_url }}"
-     data-lab-desk-url="{{ lab_desk_url|attr }}"
-     data-initial-tab="{{ initial_tab|attr }}"
-     data-can-enter="{{ can_enter ? '1' : '0' }}"
-     data-can-release="{{ can_release ? '1' : '0' }}"
-     data-can-catalog="{{ can_manage_catalog ? '1' : '0' }}">
-
-    <div id="nc-labops-setup"></div>
-    <div id="nc-labops-list" class="oe-nc-labops-list" role="list" aria-label="{{ 'Lab worklist'|xlt }}"></div>
-</div>
-
-<div class="oe-nc-labops-drawer-backdrop d-none" id="nc-labops-drawer-backdrop" aria-hidden="true"></div>
-<div class="modal fade" id="nc-labops-accession-modal" tabindex="-1" role="dialog" aria-labelledby="nc-labops-accession-title" aria-hidden="true">
-    <div class="modal-dialog modal-sm" role="document">
-        <div class="modal-content">
-            <div class="modal-header py-2">
-                <h3 class="h6 modal-title" id="nc-labops-accession-title">{{ 'Mark collected'|xlt }}</h3>
-                <button type="button" class="close" data-dismiss="modal" aria-label="{{ 'Close'|xlt }}">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <label class="small font-weight-bold" for="nc-labops-accession-input">{{ 'Accession number (optional)'|xlt }}</label>
-                <input type="text" class="form-control form-control-sm" id="nc-labops-accession-input" autocomplete="off">
-            </div>
-            <div class="modal-footer py-2">
-                <button type="button" class="btn btn-outline-secondary btn-sm" data-dismiss="modal">{{ 'Cancel'|xlt }}</button>
-                <button type="button" class="btn btn-primary btn-sm" id="nc-labops-accession-confirm">{{ 'Mark collected'|xlt }}</button>
-            </div>
-        </div>
-    </div>
-</div>
-<aside class="oe-nc-labops-drawer d-none" id="nc-labops-drawer" aria-labelledby="nc-labops-drawer-title" role="dialog" aria-modal="true">
-    <header class="oe-nc-labops-drawer__header">
-        <h2 class="h6 mb-0" id="nc-labops-drawer-title">{{ 'Enter results'|xlt }}</h2>
-        <button type="button" class="close" id="nc-labops-drawer-close" aria-label="{{ 'Close'|xlt }}">
-            <span aria-hidden="true">&times;</span>
-        </button>
-    </header>
-    <div class="oe-nc-labops-drawer__body" id="nc-labops-drawer-body"></div>
-    <footer class="oe-nc-labops-drawer__footer" id="nc-labops-drawer-footer"></footer>
-</aside>
+{% if enable_react_lab_ops|default(true) %}
+<div
+    data-island="lab-ops"
+    data-props="{{ {
+        ajaxUrl: ajax_url,
+        csrfToken: csrf_token,
+        moduleUrl: module_url,
+        labDeskUrl: lab_desk_url,
+        visitBoardUrl: visit_board_url,
+        facilityId: desk_facility_id|default(0)|number_format(0, '', ''),
+        initialTab: initial_tab,
+        canEnter: can_enter ? true : false,
+        canRelease: can_release ? true : false,
+        canManageCatalog: can_manage_catalog ? true : false,
+        canShowAdvanced: can_show_advanced ? true : false,
+        webroot: webroot
+    }|json_encode|e('html_attr') }}"
+></div>
+{% else %}
+{% include 'partials/react-island-disabled.html.twig' with { desk_label: 'Lab Operations' } %}
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ assets_url }}/js/lab-result-validation.js?v={{ asset_version }}"></script>
-<script src="{{ assets_url }}/js/lab-ops-entry.js?v={{ asset_version }}"></script>
-<script src="{{ assets_url }}/js/lab-ops.js?v={{ asset_version }}"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    if (window.NewClinicLabOps && window.NewClinicLabOps.init) {
-        window.NewClinicLabOps.init(document.getElementById('nc-lab-ops-hub'));
-    }
-});
-</script>
+{% if enable_react_lab_ops|default(true) %}
+<link rel="stylesheet" href="{{ assets_url }}/css/lab-ops.css?v={{ asset_version }}">
+<link rel="stylesheet" href="{{ assets_url }}/modern/lab-ops.css?v={{ asset_version }}">
+<script type="module" src="{{ assets_url }}/modern/lab-ops.js?v={{ asset_version }}"></script>
+{% endif %}
 {% endblock %}

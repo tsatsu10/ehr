@@ -1,0 +1,2 @@
+import{r as e}from"./mountIsland-B4qeCTWm.js";var t=e();function n(e,n){let r=(0,t.useRef)(e);(0,t.useEffect)(()=>{r.current=e},[e]),(0,t.useEffect)(()=>{if(n===null)return;let e=window.setInterval(()=>{document.hidden||r.current()},n);return()=>window.clearInterval(e)},[n])}export{n as t};
+//# sourceMappingURL=useInterval-D91G9uEb.js.map

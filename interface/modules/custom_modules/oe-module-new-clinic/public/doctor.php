@@ -17,6 +17,8 @@ $config = new ClinicConfigService();
 $multiDoctor = $config->isEnabled('enable_multi_doctor_filters', 0);
 $deskFacilityId = (new VisitScopeService())->resolveDeskFacilityId();
 
+$reactDoctorDesk = $config->get('enable_react_doctor_desk', '1') === '1';
+
 (new PageController())->render('doctor.html.twig', 'Doctor Desk', 'new_doctor', [
     'desk_id' => 'doctor',
     'module_url' => $moduleUrl,
@@ -24,4 +26,5 @@ $deskFacilityId = (new VisitScopeService())->resolveDeskFacilityId();
     'enable_multi_doctor_filters' => $multiDoctor,
     'lab_panel_order_enabled' => (new LabPanelOrderService())->isFeatureEnabled($deskFacilityId),
     'webroot' => $GLOBALS['webroot'],
+    'enable_react_doctor_desk' => $reactDoctorDesk,
 ]);

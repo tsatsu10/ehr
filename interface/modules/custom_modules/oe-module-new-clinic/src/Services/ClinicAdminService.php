@@ -54,6 +54,26 @@ class ClinicAdminService
         'enable_legacy_patient_context_overlay' => ['type' => 'bool', 'default' => '0'],
         'enable_legacy_strip_clinical_chips' => ['type' => 'bool', 'default' => '0'],
         'enable_legacy_strip_desk_return' => ['type' => 'bool', 'default' => '1'],
+        'enable_react_islands_dev' => ['type' => 'bool', 'default' => '0'],
+        'enable_react_visit_board' => ['type' => 'bool', 'default' => '1'],
+        'enable_react_triage_desk' => ['type' => 'bool', 'default' => '1'],
+        'enable_react_doctor_desk' => ['type' => 'bool', 'default' => '1'],
+        'enable_react_cashier_desk' => ['type' => 'bool', 'default' => '1'],
+        'enable_react_lab_desk' => ['type' => 'bool', 'default' => '1'],
+        'enable_react_pharmacy_desk' => ['type' => 'bool', 'default' => '1'],
+        'enable_react_front_desk' => ['type' => 'bool', 'default' => '1'],
+        'enable_react_patient_registry' => ['type' => 'bool', 'default' => '1'],
+        'enable_react_daily_reports' => ['type' => 'bool', 'default' => '1'],
+        'enable_react_communications_hub' => ['type' => 'bool', 'default' => '1'],
+        'enable_react_admin_hub' => ['type' => 'bool', 'default' => '1'],
+        'enable_react_patient_chart' => ['type' => 'bool', 'default' => '1'],
+        'enable_react_lab_ops' => ['type' => 'bool', 'default' => '1'],
+        'enable_react_chart_depth' => ['type' => 'bool', 'default' => '1'],
+        'enable_bill_ops' => ['type' => 'bool', 'default' => '0'],
+        'enable_bill_ops_outstanding' => ['type' => 'bool', 'default' => '0'],
+        'bill_ops_reopen_on_correction' => ['type' => 'bool', 'default' => '0'],
+        'enable_insurance' => ['type' => 'bool', 'default' => '0'],
+        'enable_react_bill_ops' => ['type' => 'bool', 'default' => '1'],
         'pediatric_exact_dob_age' => ['type' => 'int', 'default' => '5', 'min' => 0, 'max' => 18],
     ];
 
@@ -122,6 +142,7 @@ class ClinicAdminService
     public function saveSettings(string $scope, array $input, int $actorUserId, ?int $requestedFacilityId = null): array
     {
         $facilityId = $this->resolveSettingsFacilityId($scope, $requestedFacilityId);
+        $input = self::applySettingDependencies($input);
         $changed = [];
 
         foreach (self::EDITABLE_SETTINGS as $key => $meta) {
@@ -253,6 +274,43 @@ class ClinicAdminService
         }
 
         return $this->facilityLabel($facilityId);
+    }
+
+    /**
+     * Normalize coupled flags before persist (e.g. chart depth master + sub-flags).
+     *
+     * @param array<string, mixed> $input
+     * @return array<string, mixed>
+     */
+    public static function applySettingDependencies(array $input): array
+    {
+        $chartDepthSubKeys = [
+            'enable_chart_depth_finance',
+            'enable_chart_depth_referral',
+            'enable_chart_depth_export',
+        ];
+
+        $anyChartDepthSubOn = false;
+        foreach ($chartDepthSubKeys as $subKey) {
+            if (!array_key_exists($subKey, $input)) {
+                continue;
+            }
+            if (self::rawBoolish($input[$subKey])) {
+                $anyChartDepthSubOn = true;
+                break;
+            }
+        }
+
+        if ($anyChartDepthSubOn) {
+            $input['enable_chart_depth'] = '1';
+        }
+
+        return $input;
+    }
+
+    private static function rawBoolish(mixed $raw): bool
+    {
+        return !empty($raw) && $raw !== '0' && $raw !== 'false' && $raw !== false;
     }
 
     /**

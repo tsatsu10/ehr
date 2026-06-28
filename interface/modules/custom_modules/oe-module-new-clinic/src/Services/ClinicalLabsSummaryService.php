@@ -225,18 +225,7 @@ class ClinicalLabsSummaryService
 
     private function resolveEncounterId(int $pid, ?int $encounterId): int
     {
-        if ($encounterId !== null && $encounterId > 0) {
-            return $encounterId;
-        }
-
-        $row = QueryUtils::querySingleRow(
-            "SELECT encounter FROM new_visit
-             WHERE pid = ? AND visit_date = CURDATE() AND encounter > 0
-             ORDER BY id DESC LIMIT 1",
-            [$pid]
-        );
-
-        return is_array($row) ? (int) ($row['encounter'] ?? 0) : 0;
+        return $this->visitScope->resolveActiveEncounterId($pid, $encounterId);
     }
 
     /**

@@ -232,7 +232,7 @@ class PatientSearchService
             "SELECT v.id AS visit_id, v.state, v.queue_number, vt.label AS visit_type_label
              FROM new_visit v
              LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
-             WHERE v.pid = ? AND v.visit_date = CURDATE()
+             WHERE v.pid = ?
              AND v.state NOT IN ('completed', 'closed_unpaid', 'cancelled')
              ORDER BY v.id DESC LIMIT 1",
             [$pid]

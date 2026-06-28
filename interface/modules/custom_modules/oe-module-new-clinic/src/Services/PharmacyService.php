@@ -27,6 +27,7 @@ class PharmacyService
         private readonly VisitRowEnricher $rowEnricher = new VisitRowEnricher(),
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly EncounterSignService $signService = new EncounterSignService(),
+        private readonly ClinicDateService $clinicDate = new ClinicDateService(),
     ) {
     }
 
@@ -35,9 +36,9 @@ class PharmacyService
      */
     public function getPharmacyQueue(int $facilityId, ?string $visitDate, int $actorUserId): array
     {
-        $visitDate = $visitDate ?? date('Y-m-d');
         $facilityId = $this->visitScope->resolveActorFacilityId($facilityId > 0 ? $facilityId : null);
         $this->assertPharmacyRoleEnabled($facilityId);
+        $visitDate = $visitDate ?? $this->clinicDate->today();
         $this->visitScope->repairOrphanVisits($facilityId, $visitDate);
 
         $sql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid, pd.sex, pd.DOB,
@@ -45,11 +46,11 @@ class PharmacyService
                 FROM new_visit v
                 INNER JOIN patient_data pd ON pd.pid = v.pid
                 LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
-                WHERE v.facility_id = ? AND v.visit_date = ?
+                WHERE v.facility_id = ?
                 AND v.state IN ('ready_for_pharmacy', 'in_pharmacy')
-                ORDER BY v.is_urgent DESC, v.queue_number ASC, v.started_at ASC";
+                ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC";
 
-        $rows = QueryUtils::fetchRecords($sql, [$facilityId, $visitDate]) ?: [];
+        $rows = QueryUtils::fetchRecords($sql, [$facilityId]) ?: [];
         $visitIds = array_map(fn (array $row) => (int) ($row['id'] ?? 0), $rows);
         $holders = $this->rowEnricher->batchPharmacyHolders($visitIds);
         $rxCounts = $this->rowEnricher->batchRxCounts($visitIds);
@@ -67,7 +68,7 @@ class PharmacyService
             }
         }
 
-        $activeWork = $this->findActivePharmacyWork($facilityId, $visitDate, $actorUserId);
+        $activeWork = $this->findActivePharmacyWork($facilityId, $actorUserId);
 
         return [
             'visits' => $visits,
@@ -126,9 +127,8 @@ class PharmacyService
 
         $visit = $this->queueService->getVisitForActor($visitId);
         $facilityId = (int) ($visit['facility_id'] ?? 0);
-        $visitDate = (string) ($visit['visit_date'] ?? date('Y-m-d'));
 
-        $existing = $this->findActivePharmacyWork($facilityId, $visitDate, $actorUserId);
+        $existing = $this->findActivePharmacyWork($facilityId, $actorUserId);
         if (!empty($existing) && (int) ($existing['id'] ?? 0) !== $visitId) {
             throw new VisitNotTakeableException(
                 'Complete or release your current patient before taking another'
@@ -353,7 +353,7 @@ class PharmacyService
     /**
      * @return array<string, mixed>|null
      */
-    private function findActivePharmacyWork(int $facilityId, string $visitDate, int $actorUserId): ?array
+    private function findActivePharmacyWork(int $facilityId, int $actorUserId): ?array
     {
         $row = QueryUtils::querySingleRow(
             "SELECT v.*, pd.fname, pd.lname, pd.pubpid, pd.sex, pd.DOB,
@@ -361,10 +361,10 @@ class PharmacyService
              FROM new_visit v
              INNER JOIN patient_data pd ON pd.pid = v.pid
              LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
-             WHERE v.facility_id = ? AND v.visit_date = ?
+             WHERE v.facility_id = ?
              AND v.state = 'in_pharmacy' AND v.assigned_provider_id = ?
              ORDER BY v.updated_at DESC LIMIT 1",
-            [$facilityId, $visitDate, $actorUserId]
+            [$facilityId, $actorUserId]
         );
 
         if (!is_array($row) || empty($row['id'])) {

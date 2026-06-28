@@ -1,0 +1,53 @@
+@import '../../core/tokens.css';
+
+.oe-nc-front-desk-react-active .oe-nc-search-row.active {
+  background-color: var(--oe-nc-bg-tint);
+}
+
+.oe-nc-front-desk-react-active .oe-nc-search-input__clear {
+  position: absolute;
+  right: 0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  line-height: 1;
+  padding: 0.15rem 0.45rem;
+}
+
+.oe-nc-front-desk-react-active .oe-nc-search-input__icon {
+  position: absolute;
+  left: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--oe-nc-text-muted);
+  pointer-events: none;
+}
+
+.oe-nc-front-desk-react-active .oe-nc-progress-bar {
+  height: 0.5rem;
+  background: var(--oe-nc-border);
+  border-radius: var(--oe-nc-radius);
+  overflow: hidden;
+}
+
+.oe-nc-front-desk-react-active .oe-nc-progress-bar__fill {
+  height: 100%;
+  background: var(--oe-nc-primary);
+}
+
+.oe-nc-front-desk-react-active .oe-nc-chip {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  margin: 0 0.25rem 0.25rem 0;
+}
+
+.oe-nc-front-desk-react-active .oe-nc-chip--severe {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.oe-nc-front-desk-react-active .oe-nc-chip--warn {
+  background: #fef3c7;
+  color: #92400e;
+}

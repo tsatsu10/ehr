@@ -4,6 +4,39 @@
 (function (window) {
     'use strict';
 
+    /** Today's date in YYYY-MM-DD, computed once at module load. */
+    var TODAY_DATE = (function () {
+        var d = new Date();
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + day;
+    }());
+
+    /**
+     * Client-side wait label formatter (fallback when server doesn't provide wait_label).
+     * Mirrors PHP VisitRowEnricher::formatWaitLabel for resilience during cache transitions.
+     *
+     * @param {number} minutes
+     * @returns {string}
+     */
+    function formatWaitLabel(minutes) {
+        if (minutes < 1) {
+            return '< 1m';
+        }
+        if (minutes < 60) {
+            return minutes + 'm';
+        }
+        var hours = Math.floor(minutes / 60);
+        var mins = minutes % 60;
+        if (hours < 24) {
+            return mins > 0 ? hours + 'h ' + mins + 'm' : hours + 'h';
+        }
+        var days = Math.floor(hours / 24);
+        var remHours = hours % 24;
+        return remHours > 0 ? days + 'd ' + remHours + 'h' : days + 'd';
+    }
+
     var VISIT_STATE = {
         waiting: { variant: 'info', label: 'Waiting' },
         in_triage: { variant: 'info', label: 'In triage' },
@@ -481,6 +514,85 @@
         return parts[0] + ' ' + parts[parts.length - 1].charAt(0) + '.';
     }
 
+    /**
+     * Returns a small amber badge when the visit was opened on a previous day.
+     * Gives staff a clear visual signal without the system acting on it.
+     *
+     * @param {object} card
+     * @returns {string} HTML or empty string
+     */
+    function staleDateBadge(card) {
+        var vd = (card.visit_date || '').slice(0, 10);
+        if (!vd || vd >= TODAY_DATE) {
+            return '';
+        }
+        // Format as "Jun 26" for compactness
+        var parts = vd.split('-');
+        var label = vd;
+        if (parts.length === 3) {
+            var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            var mon = months[parseInt(parts[1], 10) - 1] || parts[1];
+            label = mon + ' ' + parseInt(parts[2], 10);
+        }
+        return '<span class="oe-nc-stale-badge" title="Visit opened on ' + escapeHtml(vd) + '">' +
+            '<i class="fa fa-clock-o" aria-hidden="true"></i> ' + escapeHtml(label) +
+            '</span>';
+    }
+
+    function resolveWaitLabel(source) {
+        source = source || {};
+        if (source.wait_label) {
+            return source.wait_label;
+        }
+        return formatWaitLabel(parseInt(source.wait_minutes, 10) || 0);
+    }
+
+    /**
+     * CSS class for wait-time severity: red (4h+ or carry-over), amber (2h+), none.
+     *
+     * @param {number|string} minutes
+     * @param {string} [visitDate]
+     * @returns {string}
+     */
+    function getWaitTimeClass(minutes, visitDate) {
+        var waitMins = parseInt(minutes, 10) || 0;
+        var vd = (visitDate || '').slice(0, 10);
+        if (vd && vd < TODAY_DATE) {
+            return 'oe-nc-wait-long';
+        }
+        if (waitMins >= 240) {
+            return 'oe-nc-wait-long';
+        }
+        if (waitMins >= 120) {
+            return 'oe-nc-wait-medium';
+        }
+        return '';
+    }
+
+    /**
+     * Renders wait label wrapped in a colored span when threshold exceeded.
+     * Returns safe HTML (do not escapeHtml the result).
+     *
+     * @param {object} source  Card or visit_summary with wait_minutes, wait_label, visit_date
+     * @param {object} [options]
+     * @param {string} [options.prefix]  e.g. "Wait "
+     * @param {string} [options.suffix]  e.g. " waiting"
+     * @returns {string}
+     */
+    function renderWaitTimeSpan(source, options) {
+        options = options || {};
+        source = source || {};
+        var prefix = options.prefix || '';
+        var suffix = options.suffix || '';
+        var label = resolveWaitLabel(source);
+        var cls = getWaitTimeClass(source.wait_minutes, source.visit_date);
+        var text = prefix + label + suffix;
+        if (cls) {
+            return '<span class="' + cls + '">' + escapeHtml(text) + '</span>';
+        }
+        return escapeHtml(text);
+    }
+
     function renderQueueCard(card, options) {
         var opts = options || {};
         var interactive = opts.interactive !== false;
@@ -507,14 +619,16 @@
 
         var displayName = opts.privacyMode ? privacyDisplayName(card.display_name) : (card.display_name || '');
         var surnameBadge = similarSurnameBadge(card);
+        var staleBadge = staleDateBadge(card);
         var titleHtml = opts.titleHtml
-            ? (opts.titleHtml + surnameBadge)
+            ? (opts.titleHtml + surnameBadge + staleBadge)
             : ('<strong>#' + escapeHtml(card.queue_number) + ' ' + escapeHtml(displayName) + '</strong>' +
-                (opts.badgesHtml || '') + surnameBadge);
+                (opts.badgesHtml || '') + surnameBadge + staleBadge);
+        var waitLabel = resolveWaitLabel(card);
         var subtitleHtml = opts.subtitleHtml || (
             '<div class="oe-nc-queue-card__meta small text-muted">' +
             escapeHtml(card.sex || '') + ' · ' + escapeHtml(card.age_years || '—') +
-            ' · ' + escapeHtml(card.wait_minutes) + 'm waiting' +
+            ' · ' + renderWaitTimeSpan(card, { suffix: ' waiting' }) +
             '</div>'
         );
         var cc = card.chief_complaint && opts.showChiefComplaint !== false
@@ -877,6 +991,12 @@
         isSharedDeviceBlocked: isSharedDeviceBlocked,
         wireSharedDeviceSessionWarning: wireSharedDeviceSessionWarning,
         renderPatientContextBannerTier1: renderPatientContextBannerTier1,
-        renderAuditTimeline: renderAuditTimeline
+        renderAuditTimeline: renderAuditTimeline,
+        staleDateBadge: staleDateBadge,
+        todayDate: TODAY_DATE,
+        formatWaitLabel: formatWaitLabel,
+        resolveWaitLabel: resolveWaitLabel,
+        getWaitTimeClass: getWaitTimeClass,
+        renderWaitTimeSpan: renderWaitTimeSpan
     };
 }(window));

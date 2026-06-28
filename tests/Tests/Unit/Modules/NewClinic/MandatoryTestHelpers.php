@@ -29,6 +29,19 @@ trait MandatoryTestHelpers
         return (string) file_get_contents($path);
     }
 
+    protected function frontendRoot(): string
+    {
+        return dirname(__DIR__, 5) . '/frontend';
+    }
+
+    protected function readFrontendSource(string $relativePath): string
+    {
+        $path = $this->frontendRoot() . '/' . ltrim($relativePath, '/');
+        Assert::assertFileExists($path, 'Expected frontend file: ' . $relativePath);
+
+        return (string) file_get_contents($path);
+    }
+
     protected function methodBody(string $class, string $method): string
     {
         $reflection = new ReflectionMethod($class, $method);

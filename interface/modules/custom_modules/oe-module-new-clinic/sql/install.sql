@@ -254,6 +254,7 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_legacy_patient_context_overlay', '0'),
 (0, 'enable_legacy_strip_clinical_chips', '0'),
 (0, 'enable_legacy_strip_desk_return', '1'),
+(0, 'enable_react_islands_dev', '0'),
 (0, 'enable_shared_device_session_warning', '0'),
 (0, 'module_enabled', '1');
 #EndIf
@@ -288,6 +289,14 @@ CREATE INDEX `new_idx_pd_pubpid` ON `patient_data` (`pubpid`);
 
 #IfNotIndex patient_data new_idx_pd_dob
 CREATE INDEX `new_idx_pd_dob` ON `patient_data` (`DOB`);
+#EndIf
+
+#IfNotIndex new_visit idx_facility_state_active
+CREATE INDEX `idx_facility_state_active` ON `new_visit` (`facility_id`, `state`);
+#EndIf
+
+#IfNotIndex new_visit idx_queue_sort_stateless
+CREATE INDEX `idx_queue_sort_stateless` ON `new_visit` (`facility_id`, `is_urgent`, `visit_date`, `queue_number`, `started_at`);
 #EndIf
 
 #IfNotRow2D new_completion_field_weight field_key fname level 1
@@ -428,6 +437,106 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_legacy_strip_desk_return', '1');
 #EndIf
 
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_islands_dev
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_react_islands_dev', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_visit_board
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_react_visit_board', '1');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_triage_desk
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_react_triage_desk', '1');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_doctor_desk
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_react_doctor_desk', '1');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_cashier_desk
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_react_cashier_desk', '1');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_lab_desk
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_react_lab_desk', '1');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_pharmacy_desk
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_react_pharmacy_desk', '1');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_front_desk
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_react_front_desk', '1');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_patient_registry
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_react_patient_registry', '1');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_daily_reports
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_react_daily_reports', '1');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_communications_hub
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_react_communications_hub', '1');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_admin_hub
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_react_admin_hub', '1');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_patient_chart
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_react_patient_chart', '1');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_lab_ops
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_react_lab_ops', '1');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_chart_depth
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_react_chart_depth', '1');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_bill_ops
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_bill_ops', '0'),
+(0, 'enable_bill_ops_outstanding', '0'),
+(0, 'bill_ops_reopen_on_correction', '0'),
+(0, 'enable_react_bill_ops', '1');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_insurance
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_insurance', '0');
+#EndIf
+
+#IfMissingColumn new_receipt reversed_at
+ALTER TABLE `new_receipt` ADD COLUMN `reversed_at` DATETIME NULL AFTER `created_at`;
+#EndIf
+
+#IfMissingColumn new_receipt reversal_reason
+ALTER TABLE `new_receipt` ADD COLUMN `reversal_reason` VARCHAR(255) NULL AFTER `reversed_at`;
+#EndIf
+
+#IfMissingColumn new_receipt reversal_actor_user_id
+ALTER TABLE `new_receipt` ADD COLUMN `reversal_actor_user_id` INT NULL AFTER `reversal_reason`;
+#EndIf
+
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_shared_device_session_warning
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_shared_device_session_warning', '0');
@@ -550,4 +659,28 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'reconciliation_cron_time', '23:55'),
 (0, 'reconciliation_tolerance', '0.01'),
 (0, 'reconciliation_enabled', '1');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key react_migration_cutover_v1
+UPDATE `new_clinic_config`
+SET `config_value` = '1'
+WHERE `config_key` IN (
+    'enable_react_visit_board',
+    'enable_react_triage_desk',
+    'enable_react_doctor_desk',
+    'enable_react_cashier_desk',
+    'enable_react_lab_desk',
+    'enable_react_pharmacy_desk',
+    'enable_react_front_desk',
+    'enable_react_patient_registry',
+    'enable_react_daily_reports',
+    'enable_react_communications_hub',
+    'enable_react_admin_hub',
+    'enable_react_patient_chart',
+    'enable_react_lab_ops',
+    'enable_react_chart_depth',
+    'enable_react_bill_ops'
+) AND `config_value` = '0';
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'react_migration_cutover_v1', '1');
 #EndIf

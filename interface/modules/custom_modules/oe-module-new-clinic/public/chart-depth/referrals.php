@@ -58,6 +58,8 @@ $chartUrl = $GLOBALS['webroot']
     . urlencode((string) $pid)
     . '&tab=clinical';
 
+$reactChartDepth = $config->get('enable_react_chart_depth', '1') === '1';
+
 (new PageController())->renderForAnyAcl(
     'chart-depth/referrals.html.twig',
     'Referrals',
@@ -67,6 +69,7 @@ $chartUrl = $GLOBALS['webroot']
         'encounter_id' => $encounterId > 0 ? $encounterId : null,
         'chart_url' => $chartUrl,
         'can_manage_referrals' => AclMain::aclCheckCore('new_clinic', 'new_chart_depth_referral'),
+        'enable_react_chart_depth' => $reactChartDepth,
         'shell_nav_id' => 'clinicchart',
         'visit_board_url' => $GLOBALS['webroot']
             . '/interface/modules/custom_modules/oe-module-new-clinic/public/visit-board.php',

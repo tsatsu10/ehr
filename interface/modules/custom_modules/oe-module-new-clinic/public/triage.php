@@ -20,9 +20,12 @@ if (!$config->isEnabled('enable_triage', 1)) {
     exit;
 }
 
+$reactTriageDesk = $config->get('enable_react_triage_desk', '1') === '1';
+
 (new PageController())->render('triage.html.twig', 'Triage', 'new_nurse', [
     'desk_id' => 'triage',
     'module_url' => $moduleUrl,
     'can_cancel_visit' => AclMain::aclCheckCore('new_clinic', 'new_visit_cancel'),
     'vitals_form_rules' => (new VitalsValidationService())->getFormRules(),
+    'enable_react_triage_desk' => $reactTriageDesk,
 ]);

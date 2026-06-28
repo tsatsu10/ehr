@@ -1,0 +1,18 @@
+@import '../../core/tokens.css';
+
+.nc-cashier-queue-panel {
+  position: sticky;
+  top: 1rem;
+}
+
+#nc-cashier-active-pane .card {
+  min-height: 12rem;
+}
+
+.nc-patient-context-banner {
+  border-radius: var(--oe-nc-radius, 0.25rem);
+}
+
+.oe-nc-cashier-react-active .modal-backdrop {
+  display: block !important;
+}

@@ -27,6 +27,7 @@ class VisitQueueService
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly FacilityScopeService $facilityScope = new FacilityScopeService(),
+        private readonly ClinicDateService $clinicDate = new ClinicDateService(),
     ) {
     }
 
@@ -38,17 +39,29 @@ class VisitQueueService
         }
         $this->visitScope->assertFacilityAccessible($facilityId);
 
-        $visitDate = $filters['visit_date'] ?? date('Y-m-d');
-        $this->visitScope->repairOrphanVisits($facilityId, $visitDate);
-        $state = $filters['state'] ?? null;
+        // Active visits: no date cap — visible until explicitly closed.
+        // Terminal visits (completed / cancelled / closed_unpaid): date-bounded
+        // to today so done lists reset each morning.
+        // An explicit visit_date from the caller overrides this (historical view).
+        $visitDate = $filters['visit_date'] ?? null;
+        $today = $this->clinicDate->today();
+        $this->visitScope->repairOrphanVisits($facilityId, $visitDate ?? $today);
 
-        $bind = [$facilityId, $visitDate];
-        $sql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid
-                FROM new_visit v
-                INNER JOIN patient_data pd ON pd.pid = v.pid
-                WHERE v.facility_id = ? AND v.visit_date = ?";
+        $state = $filters['state'] ?? null;
+        $bind = [$facilityId];
 
         if (!empty($state)) {
+            // Explicit state filter — caller knows what they want; honour it.
+            $sql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid
+                    FROM new_visit v
+                    INNER JOIN patient_data pd ON pd.pid = v.pid
+                    WHERE v.facility_id = ?";
+
+            if ($visitDate !== null) {
+                $sql .= " AND v.visit_date = ?";
+                $bind[] = $visitDate;
+            }
+
             if (is_array($state)) {
                 $placeholders = implode(',', array_fill(0, count($state), '?'));
                 $sql .= " AND v.state IN ($placeholders)";
@@ -58,13 +71,20 @@ class VisitQueueService
                 $bind[] = $state;
             }
         } else {
-            $terminal = VisitFsm::TERMINAL_STATES;
-            $placeholders = implode(',', array_fill(0, count($terminal), '?'));
-            $sql .= " AND v.state NOT IN ($placeholders)";
-            $bind = array_merge($bind, $terminal);
+            // Default: all active states (no date cap) + terminal states for today only.
+            $dateScope = $visitDate ?? $today;
+            $sql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid
+                    FROM new_visit v
+                    INNER JOIN patient_data pd ON pd.pid = v.pid
+                    WHERE v.facility_id = ?
+                    AND (
+                        v.state NOT IN ('completed', 'closed_unpaid', 'cancelled')
+                        OR v.visit_date = ?
+                    )";
+            $bind[] = $dateScope;
         }
 
-        $sql .= " ORDER BY v.is_urgent DESC, v.queue_number ASC, v.started_at ASC";
+        $sql .= " ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC";
 
         return QueryUtils::fetchRecords($sql, $bind) ?: [];
     }
@@ -76,13 +96,20 @@ class VisitQueueService
      */
     public function getCounts(int $facilityId = 0, ?string $visitDate = null): array
     {
-        $visitDate = $visitDate ?? date('Y-m-d');
         $facilityId = $this->visitScope->resolveActorFacilityId($facilityId > 0 ? $facilityId : null);
-        $this->visitScope->repairOrphanVisits($facilityId, $visitDate);
+        $canonicalDate = $visitDate ?? $this->clinicDate->today();
+        $this->visitScope->repairOrphanVisits($facilityId, $canonicalDate);
 
+        // Counts cover all open visits (no date cap) + date-bounded terminal states
+        // so the stats strip accurately reflects the live workload.
         $rows = QueryUtils::fetchRecords(
-            'SELECT state, COUNT(*) AS cnt FROM new_visit WHERE facility_id = ? AND visit_date = ? GROUP BY state',
-            [$facilityId, $visitDate]
+            "SELECT state, COUNT(*) AS cnt FROM new_visit
+             WHERE facility_id = ? AND (
+                 state NOT IN ('completed', 'closed_unpaid', 'cancelled')
+                 OR visit_date = ?
+             )
+             GROUP BY state",
+            [$facilityId, $canonicalDate]
         ) ?: [];
 
         $byState = [];
@@ -133,19 +160,22 @@ class VisitQueueService
     {
         $allowMultiple = $this->config->getInt('allow_multiple_visits_per_day', 1, $facilityId) === 1;
 
+        $today = $this->clinicDate->today();
         if ($allowMultiple) {
             $sql = "SELECT * FROM new_visit
-                    WHERE pid = ? AND facility_id = ? AND visit_date = CURDATE()
+                    WHERE pid = ? AND facility_id = ?
                     AND state NOT IN ('completed', 'closed_unpaid', 'cancelled')
                     ORDER BY id DESC LIMIT 1";
+            $bind = [$pid, $facilityId];
         } else {
             $sql = "SELECT * FROM new_visit
-                    WHERE pid = ? AND facility_id = ? AND visit_date = CURDATE()
+                    WHERE pid = ? AND facility_id = ? AND visit_date = ?
                     AND state != 'cancelled'
                     ORDER BY id DESC LIMIT 1";
+            $bind = [$pid, $facilityId, $today];
         }
 
-        $row = QueryUtils::querySingleRow($sql, [$pid, $facilityId]);
+        $row = QueryUtils::querySingleRow($sql, $bind);
         if (empty($row)) {
             return null;
         }
@@ -375,7 +405,7 @@ class VisitQueueService
         $encounterData = [
             'pc_catid' => (int) $visitType['pc_catid'],
             'class_code' => 'AMB',
-            'date' => date('Y-m-d'),
+            'date' => $this->clinicDate->today(),
             'provider_id' => $encounterProviderId ?? $actorUserId,
             'user' => $actorUserId,
             'group' => 'Default',
@@ -406,9 +436,10 @@ class VisitQueueService
             $chiefComplaint = null;
         }
 
+        $visitDate = $this->clinicDate->today();
         $visitId = QueryUtils::sqlInsert(
             "INSERT INTO new_visit SET
-                pid = ?, encounter = ?, facility_id = ?, visit_date = CURDATE(),
+                pid = ?, encounter = ?, facility_id = ?, visit_date = ?,
                 visit_type_id = ?, queue_number = ?, state = ?, service_profile = ?,
                 chief_complaint = ?, is_urgent = ?,
                 pc_eid = ?, appt_date = ?, assigned_provider_id = ?,
@@ -417,6 +448,7 @@ class VisitQueueService
                 $pid,
                 $encounter,
                 $facilityId,
+                $visitDate,
                 $visitTypeId,
                 $queueNumber,
                 $initialState,
@@ -672,7 +704,7 @@ class VisitQueueService
 
     private function nextQueueNumber(int $facilityId): int
     {
-        $today = date('Y-m-d');
+        $today = $this->clinicDate->today();
         sqlStatement(
             "INSERT INTO new_visit_queue_counter (facility_id, counter_date, last_seq)
              VALUES (?, ?, 1)

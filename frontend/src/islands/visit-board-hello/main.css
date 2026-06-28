@@ -1,0 +1,66 @@
+/*
+ * visit-board-hello island styles
+ *
+ * CASCADE RULE (MANDATORY — read before editing):
+ * -----------------------------------------------
+ * Tailwind 4 puts utility classes inside @layer utilities { }.
+ * Bootstrap 4 (OpenEMR theme) uses NO @layer — it is "unlayered".
+ * Per CSS cascade: unlayered beats layered regardless of source order.
+ * Therefore Tailwind utility classes lose to Bootstrap on every page.
+ *
+ * FIX: write all island component styles as NON-LAYERED BEM CSS (below).
+ * Non-layered rules win over other non-layered rules by source order, and
+ * our <link> loads last. Design token CSS variables from @layer theme/:root
+ * still propagate globally — var() always works.
+ *
+ * See: Documentation/FRONTEND_MODULE_GUIDE.md §5 (cascade rule)
+ */
+
+/*
+ * Import design tokens.
+ * tokens.css sets all --oe-nc-* and --color-* variables on :root (non-layered)
+ * and registers Tailwind @theme aliases. The Google Fonts import lives there too.
+ */
+@import '../../core/tokens.css';
+
+/*
+ * .oe-island-hello — Phase 0 badge confirming the React island pipeline is live.
+ *
+ * Design system usage:
+ *   bg  →  --oe-nc-bg-tint  (#ecfeff) — system background tint (cyan-50)
+ *   border → --oe-nc-primary (#0891b2) at 35% — primary cyan
+ *   text → --oe-nc-text (#164e63) — body copy
+ *   dot  → --oe-nc-cta (#059669) — success / CTA green (= "React is alive")
+ *   font → Noto Sans (body font per MASTER.md)
+ *   radius → --oe-nc-radius (0.25rem, Bootstrap 4 card radius per §3)
+ *   transition → --oe-nc-transition (150ms, respects prefers-reduced-motion)
+ *   shadow → --shadow-sm
+ *
+ * Non-layered rule → beats Bootstrap's unlayered styles by load order.
+ */
+.oe-island-hello {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm, 0.5rem);
+  margin-bottom: var(--space-md, 1rem);
+  padding: var(--space-sm, 0.5rem) var(--space-md, 1rem);
+  border: 1px solid rgba(8, 145, 178, 0.35);     /* --oe-nc-primary / 35% */
+  border-radius: var(--oe-nc-radius, 0.25rem);
+  background-color: var(--oe-nc-bg-tint, #ecfeff);
+  color: var(--oe-nc-text, #164e63);
+  font-size: 0.875rem;
+  font-family: var(--font-sans, 'Noto Sans', system-ui, sans-serif);
+  font-weight: 500;
+  line-height: 1.25;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  transition: box-shadow var(--oe-nc-transition, 150ms ease);
+}
+
+.oe-island-hello__dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: var(--oe-nc-cta, #059669);   /* success / CTA green */
+}

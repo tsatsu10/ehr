@@ -20,6 +20,7 @@ class PatientChartClinicalService
         private readonly VitalsPreviewBuilder $vitalsPreview = new VitalsPreviewBuilder(),
         private readonly PatientCompletionService $completionService = new PatientCompletionService(),
         private readonly ProcedureOrderDeepLinkService $procedureOrderLinks = new ProcedureOrderDeepLinkService(),
+        private readonly VisitScopeService $visitScope = new VisitScopeService(),
     ) {
     }
 
@@ -30,7 +31,7 @@ class PatientChartClinicalService
     {
         $this->facilityScope->assertPatientAccessible($pid);
 
-        $encounterId = $this->resolveTodayEncounterId($pid);
+        $encounterId = $this->visitScope->resolveActiveEncounterId($pid);
         $webroot = $GLOBALS['webroot'] ?? '';
 
         return [
@@ -44,18 +45,6 @@ class PatientChartClinicalService
             'vitals' => $this->buildVitalsSection($pid, $encounterId),
             'this_visit' => $this->buildThisVisitSection($pid, $encounterId, $webroot),
         ];
-    }
-
-    private function resolveTodayEncounterId(int $pid): int
-    {
-        $row = QueryUtils::querySingleRow(
-            "SELECT encounter FROM new_visit
-             WHERE pid = ? AND visit_date = CURDATE() AND encounter > 0
-             ORDER BY id DESC LIMIT 1",
-            [$pid]
-        );
-
-        return is_array($row) ? (int) ($row['encounter'] ?? 0) : 0;
     }
 
     /**

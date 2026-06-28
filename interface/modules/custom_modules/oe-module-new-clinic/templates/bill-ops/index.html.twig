@@ -1,0 +1,85 @@
+{% extends 'base.html.twig' %}
+
+{% block page_heading_actions %}
+<div class="d-flex flex-wrap align-items-center oe-nc-billops-toolbar" id="nc-billops-toolbar">
+    <div class="btn-group btn-group-sm mr-2 mb-1" role="group" aria-label="{{ 'Billing tabs'|xlt }}">
+        {% if can_correct %}
+        <button type="button" class="btn btn-outline-primary{% if initial_tab == 'corrections' %} active{% endif %}" data-tab="corrections">
+            {{ 'Corrections'|xlt }}
+        </button>
+        {% endif %}
+        {% if can_payment %}
+        <button type="button" class="btn btn-outline-primary{% if initial_tab == 'payments' %} active{% endif %}" data-tab="payments">
+            {{ 'Payments'|xlt }}
+        </button>
+        {% endif %}
+        {% if can_close %}
+        <button type="button" class="btn btn-outline-primary{% if initial_tab == 'close' %} active{% endif %}" data-tab="close">
+            {{ 'Close day'|xlt }}
+        </button>
+        {% endif %}
+        {% if can_outstanding %}
+        <button type="button" class="btn btn-outline-primary{% if initial_tab == 'outstanding' %} active{% endif %}" data-tab="outstanding">
+            {{ 'Outstanding'|xlt }}
+        </button>
+        {% endif %}
+        {% if can_insurance %}
+        <button type="button" class="btn btn-outline-primary{% if initial_tab == 'insurance' %} active{% endif %}" data-tab="insurance">
+            {{ 'Insurance'|xlt }}
+        </button>
+        {% endif %}
+    </div>
+    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ cashier_url|attr }}">{{ 'Cashier'|xlt }}</a>
+    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ reports_url|attr }}">{{ 'Reports'|xlt }}</a>
+    {% if can_show_advanced %}
+    <div class="dropdown d-inline-block mb-1 mr-1">
+        <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            {{ 'Advanced'|xlt }}
+        </button>
+        <div class="dropdown-menu dropdown-menu-right">
+            <a class="dropdown-item" href="{{ webroot }}/interface/billing/billing_report.php" target="_top">{{ 'Billing Manager (core)'|xlt }}</a>
+            <a class="dropdown-item" href="{{ webroot }}/interface/billing/search_payments.php" target="_top">{{ 'Search payments (core)'|xlt }}</a>
+            <a class="dropdown-item" href="{{ webroot }}/interface/reports/pat_ledger.php" target="_top">{{ 'Patient ledger (core)'|xlt }}</a>
+        </div>
+    </div>
+    {% endif %}
+    <button type="button" class="btn btn-outline-secondary btn-sm mb-1" id="nc-billops-refresh" aria-label="{{ 'Refresh'|xlt }}">
+        <i class="fa fa-refresh" aria-hidden="true"></i>
+    </button>
+    <span class="text-muted small mb-1" id="nc-billops-updated"></span>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if enable_react_bill_ops|default(true) %}
+<div
+    data-island="bill-ops"
+    data-props="{{ {
+        ajaxUrl: ajax_url,
+        csrfToken: csrf_token,
+        moduleUrl: module_url,
+        cashierUrl: cashier_url,
+        reportsUrl: reports_url,
+        visitBoardUrl: visit_board_url,
+        facilityId: desk_facility_id|default(0)|number_format(0, '', ''),
+        initialTab: initial_tab,
+        canCorrect: can_correct ? true : false,
+        canPayment: can_payment ? true : false,
+        canClose: can_close ? true : false,
+        canOutstanding: can_outstanding ? true : false,
+        canInsurance: can_insurance ? true : false,
+        canShowAdvanced: can_show_advanced ? true : false,
+        reopenOnCorrection: reopen_on_correction ? true : false,
+        webroot: webroot
+    }|json_encode|e('html_attr') }}"
+></div>
+{% else %}
+{% include 'partials/react-island-disabled.html.twig' with { desk_label: 'Billing Back Office' } %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if enable_react_bill_ops|default(true) %}
+<script type="module" src="{{ assets_url }}/modern/bill-ops.js?v={{ asset_version }}"></script>
+{% endif %}
+{% endblock %}

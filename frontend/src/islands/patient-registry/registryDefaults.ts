@@ -1,0 +1,43 @@
+import type { RegistryFilters } from './registryTypes';
+
+export const DEFAULT_REGISTRY_FILTERS: RegistryFilters = {
+  record_status: 'active_only',
+  sex: 'any',
+  age_today_min: '',
+  age_today_max: '',
+  name_contains: '',
+  mrn: '',
+  national_id: '',
+  nhis_number: '',
+  phone: '',
+  completion_min: '',
+  completion_max: '',
+  active_visit_today: '',
+  visit_states: [],
+  visit_type_id: '',
+  visit_date_from: '',
+  visit_date_to: '',
+  payment_status: 'any',
+  last_visit_from: '',
+  last_visit_to: '',
+  condition_key: '',
+  problem_title_contains: '',
+  icd_prefix: '',
+  lab_test_contains: '',
+  confirmation_source: '',
+  age_at_diagnosis_min: '',
+  age_at_diagnosis_max: '',
+  diagnosis_date_from: '',
+  diagnosis_date_to: '',
+  appointment_today: '',
+  appointment_date_from: '',
+  appointment_date_to: '',
+  recall_due: 'any',
+  recall_date_from: '',
+  recall_date_to: '',
+  my_provider_today: false,
+};
+
+export function emptyRegistryFilters(): RegistryFilters {
+  return { ...DEFAULT_REGISTRY_FILTERS, visit_states: [] };
+}

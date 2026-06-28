@@ -54,6 +54,12 @@ $acos = [
     'new_lab_ops_enter' => 'Lab Operations Enter Results',
     'new_lab_ops_release' => 'Lab Operations Release Results',
     'new_lab_ops_catalog' => 'Lab Operations Catalog Admin',
+    'new_bill_ops' => 'Billing Back Office Hub',
+    'new_bill_ops_correct' => 'Billing Charge Corrections',
+    'new_bill_ops_payment' => 'Billing Payment Search',
+    'new_bill_ops_close' => 'Billing Close Day',
+    'new_bill_ops_outstanding' => 'Billing Outstanding Balances',
+    'new_bill_ops_insurance' => 'Billing Insurance Vault',
     'reports' => 'Daily Reports',
 ];
 
@@ -110,7 +116,7 @@ $extraGrants = [
     'new_nurse_lead' => ['new_nurse', 'new_skip_triage', 'new_cohort_share_filter'],
     'new_lab_lead' => ['new_lab', 'new_lab_ops', 'new_lab_ops_enter', 'new_lab_ops_release'],
     'new_pharmacy_lead' => ['new_pharmacy'],
-    'new_cashier_lead' => ['new_cashier', 'new_billing_skip_completion', 'new_discount', 'new_visit_mark_outstanding', 'new_close_without_charge', 'new_receipt_reprint', 'new_esign_skip_complete', 'new_chart_depth', 'new_chart_depth_finance', 'new_chart_depth_referral'],
+    'new_cashier_lead' => ['new_cashier', 'new_billing_skip_completion', 'new_discount', 'new_visit_mark_outstanding', 'new_close_without_charge', 'new_receipt_reprint', 'new_esign_skip_complete', 'new_chart_depth', 'new_chart_depth_finance', 'new_chart_depth_referral', 'new_bill_ops', 'new_bill_ops_correct', 'new_bill_ops_payment'],
     'new_admin' => array_keys($acos),
     'new_doctor' => ['new_doctor', 'new_visit_reopen', 'new_visit_skip_queue', 'new_chart_depth', 'new_chart_depth_referral', 'new_chart_depth_export', 'new_registry', 'new_registry_export', 'new_lab_ops'],
     'new_nurse' => ['new_nurse', 'new_registry', 'new_registry_export'],

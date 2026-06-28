@@ -1,0 +1,111 @@
+/*
+ * Triage Desk island styles
+ *
+ * CASCADE RULE: non-layered BEM CSS only (beats Bootstrap's unlayered styles).
+ * Atom styles (oe-nc-queue-card, oe-nc-status-pill, etc.) live in
+ * the module's components.css — do NOT duplicate here.
+ * Only triage-specific layout additions go below.
+ *
+ * See: Documentation/FRONTEND_MODULE_GUIDE.md §5.2
+ */
+
+@import '../../core/tokens.css';
+
+/* ── Queue panel ───────────────────────────────────────────────────────── */
+
+.nc-triage-queue-panel {
+  /* Sticky within viewport on tall screens */
+  position: sticky;
+  top: 1rem;
+}
+
+/* "mine" modifier: green left border, slight tint */
+.oe-nc-triage-card--mine {
+  border-left: 3px solid var(--oe-nc-success, #059669) !important;
+  background-color: #f0fdf4 !important;
+}
+
+/* "muted" modifier: desaturated, reduced opacity */
+.oe-nc-triage-card--muted {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* ── Active pane ───────────────────────────────────────────────────────── */
+
+#nc-triage-active-pane .card {
+  min-height: 12rem;
+}
+
+/* ── Patient context banner ────────────────────────────────────────────── */
+
+.nc-patient-context-banner {
+  border-radius: var(--oe-nc-radius, 0.25rem);
+}
+
+/* Completion progress bar (thin strip at top of banner) */
+.oe-nc-completion-bar {
+  height: 4px;
+  background: var(--oe-nc-border, #e2e8f0);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.oe-nc-completion-bar__fill {
+  height: 100%;
+  background: var(--oe-nc-warning, #f59e0b);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* ── Vitals form ──────────────────────────────────────────────────────── */
+
+.nc-triage-vitals-form .nc-vitals-range-hint {
+  color: var(--oe-nc-text-muted, #64748b);
+  font-size: 0.72rem;
+}
+
+/* Amber border for out-of-normal-range but saveable values */
+.nc-vitals-warning {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 0.2rem rgba(245, 158, 11, 0.25) !important;
+}
+
+.nc-vitals-feedback--warning {
+  color: #92400e;
+  font-size: 0.875rem;
+}
+
+.nc-vitals-required-note {
+  font-size: 0.8rem;
+}
+
+/* ── Saved vitals panel ────────────────────────────────────────────────── */
+
+.nc-triage-vitals-saved {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--oe-nc-border, #e2e8f0);
+  border-radius: var(--oe-nc-radius, 0.25rem);
+  background: #f8fafc;
+}
+
+.nc-triage-vitals-saved__summary {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.875rem;
+  color: var(--oe-nc-text, #164e63);
+}
+
+/* ── Auto-start modal ─────────────────────────────────────────────────── */
+
+/* React renders its own backdrop — prevent double backdrop from Bootstrap */
+.oe-nc-triage-react-active .modal-backdrop {
+  display: none !important;
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .oe-nc-completion-bar__fill {
+    transition: none;
+  }
+}

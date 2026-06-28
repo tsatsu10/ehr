@@ -23,14 +23,21 @@ use OpenEMR\Modules\NewClinic\Services\ClinicalExportService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalLabsSummaryService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalMedsSummaryService;
 use OpenEMR\Modules\NewClinic\Services\CommunicationsHubService;
+use OpenEMR\Modules\NewClinic\Services\CommHubUserSettingsService;
 use OpenEMR\Modules\NewClinic\Services\CohortSavedFilterService;
 use OpenEMR\Modules\NewClinic\Services\PatientCohortSearchService;
 use OpenEMR\Modules\NewClinic\Services\RegistryAuditService;
 use OpenEMR\Modules\NewClinic\Services\CashierService;
 use OpenEMR\Modules\NewClinic\Services\ConsultShortcutService;
 use OpenEMR\Modules\NewClinic\Services\DoctorService;
+use OpenEMR\Modules\NewClinic\Services\LabPanelOrderService;
 use OpenEMR\Modules\NewClinic\Services\LabService;
 use OpenEMR\Modules\NewClinic\Services\LabShortcutService;
+use OpenEMR\Modules\NewClinic\Services\BillOpsAccessService;
+use OpenEMR\Modules\NewClinic\Services\BillOpsChargeCorrectionService;
+use OpenEMR\Modules\NewClinic\Services\BillOpsDaysheetService;
+use OpenEMR\Modules\NewClinic\Services\BillOpsOutstandingService;
+use OpenEMR\Modules\NewClinic\Services\BillOpsPaymentsSearchService;
 use OpenEMR\Modules\NewClinic\Services\LabOpsAccessService;
 use OpenEMR\Modules\NewClinic\Services\LabOpsOrderMetaService;
 use OpenEMR\Modules\NewClinic\Services\LabOpsResultService;
@@ -90,6 +97,7 @@ class AjaxController
         private readonly EncounterSessionService $encounterSessionService = new EncounterSessionService(),
         private readonly TriageService $triageService = new TriageService(),
         private readonly DoctorService $doctorService = new DoctorService(),
+        private readonly LabPanelOrderService $labPanelOrderService = new LabPanelOrderService(),
         private readonly CashierService $cashierService = new CashierService(),
         private readonly LabService $labService = new LabService(),
         private readonly ConsultShortcutService $consultShortcutService = new ConsultShortcutService(),
@@ -112,6 +120,7 @@ class AjaxController
         private readonly ClinicalMedsSummaryService $clinicalMedsSummaryService = new ClinicalMedsSummaryService(),
         private readonly ClinicalExportService $clinicalExportService = new ClinicalExportService(),
         private readonly CommunicationsHubService $communicationsHubService = new CommunicationsHubService(),
+        private readonly CommHubUserSettingsService $commHubUserSettingsService = new CommHubUserSettingsService(),
         private readonly PatientCohortSearchService $cohortSearchService = new PatientCohortSearchService(),
         private readonly CohortSavedFilterService $cohortSavedFilterService = new CohortSavedFilterService(),
         private readonly RegistryAuditService $registryAuditService = new RegistryAuditService(),
@@ -122,6 +131,10 @@ class AjaxController
         private readonly SimilarSurnameQueueService $similarSurnameQueueService = new SimilarSurnameQueueService(),
         private readonly SharedDeviceSessionService $sharedDeviceSessionService = new SharedDeviceSessionService(),
         private readonly ReconciliationService $reconciliationService = new ReconciliationService(),
+        private readonly BillOpsChargeCorrectionService $billOpsChargeCorrectionService = new BillOpsChargeCorrectionService(),
+        private readonly BillOpsPaymentsSearchService $billOpsPaymentsSearchService = new BillOpsPaymentsSearchService(),
+        private readonly BillOpsDaysheetService $billOpsDaysheetService = new BillOpsDaysheetService(),
+        private readonly BillOpsOutstandingService $billOpsOutstandingService = new BillOpsOutstandingService(),
         private readonly QueueSlipService $queueSlipService = new QueueSlipService(),
     ) {
     }
@@ -237,13 +250,32 @@ class AjaxController
                     $offset = max(0, (int) ($_REQUEST['offset'] ?? 0));
                     $limit = (int) ($_REQUEST['limit'] ?? PaymentHistoryService::PAGE_SIZE);
                     $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                    $filter = (string) ($_REQUEST['filter'] ?? '');
+                    if ($filter === '' && $visitId > 0) {
+                        $filter = 'this_visit';
+                    }
                     $list = $this->paymentHistoryService->getPaymentsList(
                         $pid,
                         $offset,
                         $limit,
-                        $visitId > 0 ? $visitId : null
+                        $visitId > 0 ? $visitId : null,
+                        $filter !== '' ? $filter : 'all_visits',
+                        trim((string) ($_REQUEST['date_from'] ?? '')) ?: null,
+                        trim((string) ($_REQUEST['date_to'] ?? '')) ?: null,
                     );
                     $this->respond(true, 'ok', $list);
+                    break;
+                case 'chart_depth.receipt_reprint':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $pid = (int) ($body['pid'] ?? 0);
+                    $receiptId = (int) ($body['receipt_id'] ?? 0);
+                    $this->authorizeReceiptReprint($pid);
+                    $payload = $this->paymentHistoryService->getReceiptReprintPayload($receiptId, $pid, $userId);
+                    $this->respond(true, 'ok', $payload);
                     break;
                 case 'mrd.clinical_referrals_strip':
                     $pid = (int) ($_REQUEST['pid'] ?? 0);
@@ -407,9 +439,10 @@ class AjaxController
                     $this->respond(true, 'ok', ['fee_schedule' => $fees]);
                     break;
                 case 'queue.list':
+                    $visitDate = trim((string) ($_REQUEST['visit_date'] ?? ''));
                     $visits = $this->visitQueueService->getQueue([
                         'facility_id' => $this->resolveRequestFacilityId(),
-                        'visit_date' => $_REQUEST['visit_date'] ?? date('Y-m-d'),
+                        'visit_date' => $visitDate !== '' ? $visitDate : null,
                         'state' => $_REQUEST['state'] ?? null,
                     ]);
                     $this->respond(true, 'ok', ['visits' => $visits]);
@@ -521,9 +554,10 @@ class AjaxController
                     break;
                 case 'triage.queue':
                     $facilityId = $this->resolveRequestFacilityId();
+                    $visitDate = trim((string) ($_REQUEST['visit_date'] ?? ''));
                     $queue = $this->triageService->getTriageQueue(
                         $facilityId,
-                        $_REQUEST['visit_date'] ?? date('Y-m-d'),
+                        $visitDate !== '' ? $visitDate : null,
                         $userId
                     );
                     $queue = $this->enrichQueuePayload($queue, $userId, $facilityId);
@@ -680,6 +714,28 @@ class AjaxController
                     );
                     $this->respond(true, 'Consult reopened', $result);
                     break;
+                case 'doctor.set_supervisor':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $encounterId = (int) ($body['encounter_id'] ?? 0);
+                    $supervisorId = isset($body['supervisor_id']) && $body['supervisor_id'] !== null
+                        ? (int) $body['supervisor_id']
+                        : null;
+                    $result = $this->doctorService->setSupervisor($encounterId, $supervisorId, $userId);
+                    $this->respond(true, 'Supervisor updated', $result);
+                    break;
+                case 'doctor.search_providers':
+                    if ($method !== 'GET') {
+                        $this->respond(false, 'GET required', [], 405);
+                    }
+                    $query = (string) ($_REQUEST['q'] ?? '');
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $results = $this->doctorService->searchProviders($query, $facilityId, $userId);
+                    $this->respond(true, 'ok', ['providers' => $results]);
+                    break;
                 case 'doctor.shortcut_preflight':
                     if ($method !== 'POST') {
                         $this->respond(false, 'POST required', [], 405);
@@ -705,6 +761,27 @@ class AjaxController
                     );
                     $this->respond(true, 'Session restored', ['session' => $session->toArray()]);
                     break;
+                case 'doctor.lab_panel_catalog':
+                    if ($method !== 'GET') {
+                        $this->respond(false, 'GET required', [], 405);
+                    }
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $catalog = $this->labPanelOrderService->getCatalogPayload($facilityId);
+                    $this->respond(true, 'ok', $catalog);
+                    break;
+                case 'doctor.lab_panel_place':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $result = $this->labPanelOrderService->placeOrder(
+                        (int) ($body['visit_id'] ?? 0),
+                        (array) ($body['procedure_type_ids'] ?? []),
+                        $userId
+                    );
+                    $this->respond(true, 'Lab order placed', $result);
+                    break;
                 case 'cashier.queue':
                     $facilityId = $this->resolveRequestFacilityId();
                     $queue = $this->cashierService->getCashierQueue(
@@ -723,6 +800,20 @@ class AjaxController
                     $this->verifyCsrf($body);
                     $payload = $this->cashierService->selectVisit(
                         (int) ($body['visit_id'] ?? 0),
+                        $userId
+                    );
+                    $this->respond(true, 'ok', $payload);
+                    break;
+                case 'cashier.resolve_patient':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $payload = $this->cashierService->resolvePatientCheckout(
+                        (int) ($body['pid'] ?? 0),
+                        $facilityId,
                         $userId
                     );
                     $this->respond(true, 'ok', $payload);
@@ -1169,6 +1260,41 @@ class AjaxController
                     $this->communicationsHubService->markMessageDone($noteId, $authUser);
                     $this->respond(true, 'ok', ['id' => $noteId]);
                     break;
+                case 'communications.message_status':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $noteId = (int) ($body['noteid'] ?? $body['id'] ?? 0);
+                    $messageStatus = trim((string) ($body['message_status'] ?? ''));
+                    $authUser = (string) ($_SESSION['authUser'] ?? '');
+                    $this->communicationsHubService->setMessageStatus($noteId, $messageStatus, $authUser);
+                    $this->respond(true, 'ok', ['id' => $noteId, 'message_status' => $messageStatus]);
+                    break;
+                case 'communications.assign_patient':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $noteId = (int) ($body['noteid'] ?? $body['id'] ?? 0);
+                    $pid = (int) ($body['pid'] ?? 0);
+                    $authUser = (string) ($_SESSION['authUser'] ?? '');
+                    $result = $this->communicationsHubService->assignMessagePatient($noteId, $pid, $authUser);
+                    $this->respond(true, 'ok', $result);
+                    break;
+                case 'communications.message_delete':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $noteId = (int) ($body['noteid'] ?? $body['id'] ?? 0);
+                    $authUser = (string) ($_SESSION['authUser'] ?? '');
+                    $this->communicationsHubService->deleteMessage($noteId, $authUser);
+                    $this->respond(true, 'ok', ['id' => $noteId]);
+                    break;
                 case 'communications.reminder_done':
                     if ($method !== 'POST') {
                         $this->respond(false, 'POST required', [], 405);
@@ -1178,6 +1304,63 @@ class AjaxController
                     $reminderId = (int) ($body['dr_id'] ?? $body['id'] ?? 0);
                     $this->communicationsHubService->markReminderProcessed($reminderId, $userId);
                     $this->respond(true, 'ok', ['id' => $reminderId]);
+                    break;
+                case 'communications.compose_options':
+                    $authUser = (string) ($_SESSION['authUser'] ?? '');
+                    $replyNoteId = (int) ($_REQUEST['reply_note_id'] ?? 0);
+                    $options = $this->communicationsHubService->getComposeOptions(
+                        $replyNoteId > 0 ? $replyNoteId : null,
+                        $authUser
+                    );
+                    $this->respond(true, 'ok', $options);
+                    break;
+                case 'communications.message_send':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $authUser = (string) ($_SESSION['authUser'] ?? '');
+                    $result = $this->communicationsHubService->sendMessage($body, $authUser, $userId);
+                    $this->respond(true, 'ok', $result);
+                    break;
+                case 'communications.reminder_create_options':
+                    $forwardReminderId = (int) ($_REQUEST['forward_reminder_id'] ?? 0);
+                    $options = $this->communicationsHubService->getReminderCreateOptions(
+                        $userId,
+                        $forwardReminderId > 0 ? $forwardReminderId : null
+                    );
+                    $this->respond(true, 'ok', $options);
+                    break;
+                case 'communications.reminder_create':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $result = $this->communicationsHubService->createReminder($body, $userId);
+                    $this->respond(true, 'ok', $result);
+                    break;
+                case 'communications.reminder_log':
+                    $filters = [
+                        'sent_by' => $_REQUEST['sent_by'] ?? null,
+                        'sent_to' => $_REQUEST['sent_to'] ?? null,
+                        'processed' => $_REQUEST['processed'] ?? null,
+                        'date_from' => $_REQUEST['date_from'] ?? null,
+                        'date_to' => $_REQUEST['date_to'] ?? null,
+                    ];
+                    $log = $this->communicationsHubService->listReminderLog($userId, $filters);
+                    $this->respond(true, 'ok', $log);
+                    break;
+                case 'communications.save_preferences':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $canViewAll = AclMain::aclCheckCore('admin', 'super');
+                    $prefs = $this->commHubUserSettingsService->savePreferences($body, $canViewAll);
+                    $this->respond(true, 'ok', $prefs);
                     break;
                 case 'cohort.presets':
                     $this->cohortSearchService->assertRegistryAccess();
@@ -1292,6 +1475,84 @@ class AjaxController
                     );
                     $this->respond(true, 'ok', $collected);
                     break;
+                case 'bill_ops.visit_charges':
+                    $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                    if ($method === 'POST') {
+                        $body = $this->readJsonBody();
+                        $visitId = (int) ($body['visit_id'] ?? $visitId);
+                    }
+                    $charges = $this->billOpsChargeCorrectionService->getVisitCharges($visitId, $userId);
+                    $this->respond(true, 'ok', $charges);
+                    break;
+                case 'bill_ops.charge_correct':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $corrected = $this->billOpsChargeCorrectionService->applyCorrection(
+                        (int) ($body['visit_id'] ?? 0),
+                        is_array($body['add'] ?? null) ? $body['add'] : [],
+                        is_array($body['remove'] ?? null) ? array_map('intval', $body['remove']) : [],
+                        (string) ($body['reason'] ?? ''),
+                        $userId
+                    );
+                    $this->respond(true, 'ok', $corrected);
+                    break;
+                case 'bill_ops.payments_search':
+                    $params = $method === 'POST' ? $this->readJsonBody() : $_REQUEST;
+                    $search = $this->billOpsPaymentsSearchService->search(
+                        (string) ($params['q'] ?? ''),
+                        isset($params['date_from']) ? (string) $params['date_from'] : null,
+                        isset($params['date_to']) ? (string) $params['date_to'] : null,
+                        (int) ($params['offset'] ?? 0),
+                        (int) ($params['limit'] ?? BillOpsPaymentsSearchService::PAGE_SIZE)
+                    );
+                    $this->respond(true, 'ok', $search);
+                    break;
+                case 'bill_ops.payment_reverse':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $reversed = $this->billOpsPaymentsSearchService->reverse(
+                        (int) ($body['payment_id'] ?? $body['receipt_id'] ?? 0),
+                        (string) ($body['reason'] ?? ''),
+                        $userId
+                    );
+                    $this->respond(true, 'ok', $reversed);
+                    break;
+                case 'bill_ops.daysheet':
+                    $params = $method === 'POST' ? $this->readJsonBody() : $_REQUEST;
+                    $daysheet = $this->billOpsDaysheetService->getDaysheet(
+                        (int) ($params['facility_id'] ?? 0),
+                        (string) ($params['date'] ?? '')
+                    );
+                    $this->respond(true, 'ok', $daysheet);
+                    break;
+                case 'bill_ops.daysheet_export':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $exported = $this->billOpsDaysheetService->recordExport(
+                        (int) ($body['facility_id'] ?? 0),
+                        (string) ($body['date'] ?? ''),
+                        $userId
+                    );
+                    $this->respond(true, 'ok', $exported);
+                    break;
+                case 'bill_ops.outstanding_list':
+                    $params = $method === 'POST' ? $this->readJsonBody() : $_REQUEST;
+                    $list = $this->billOpsOutstandingService->listOutstanding(
+                        isset($params['bucket']) ? (string) $params['bucket'] : null,
+                        (int) ($params['offset'] ?? 0),
+                        (int) ($params['limit'] ?? BillOpsOutstandingService::PAGE_SIZE)
+                    );
+                    $this->respond(true, 'ok', $list);
+                    break;
                 default:
                     $this->respond(false, 'Unknown action', [], 400);
             }
@@ -1369,6 +1630,10 @@ class AjaxController
             'lab_ops_enter_acl' => $this->requireLabOpsEnterAcl(),
             'lab_ops_release_acl' => $this->requireLabOpsReleaseAcl(),
             'lab_ops_catalog_acl' => $this->requireLabOpsEnterAcl(),
+            'bill_ops_correct_acl' => $this->requireBillOpsCorrectAcl(),
+            'bill_ops_payment_acl' => $this->requireBillOpsPaymentAcl(),
+            'bill_ops_close_acl' => $this->requireBillOpsCloseAcl(),
+            'bill_ops_outstanding_acl' => $this->requireBillOpsOutstandingAcl(),
             'deprecated' => $this->respond(
                 false,
                 'Use role-specific workflow actions (triage, doctor, cashier)',
@@ -1457,6 +1722,42 @@ class AjaxController
         }
     }
 
+    private function requireBillOpsCorrectAcl(): void
+    {
+        try {
+            (new BillOpsAccessService())->assertCorrectAccess();
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requireBillOpsPaymentAcl(): void
+    {
+        try {
+            (new BillOpsAccessService())->assertPaymentAccess();
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requireBillOpsCloseAcl(): void
+    {
+        try {
+            (new BillOpsAccessService())->assertCloseAccess();
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requireBillOpsOutstandingAcl(): void
+    {
+        try {
+            (new BillOpsAccessService())->assertOutstandingAccess();
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
     private function requireSearchAcl(): void
     {
         $this->requireAnyAcl(AjaxActionPolicy::CHART_READ_ACLS);
@@ -1480,6 +1781,19 @@ class AjaxController
     private function authorizePaymentHistory(int $pid = 0): void
     {
         if (!AclMain::aclCheckCore('new_clinic', 'new_chart_depth_finance')) {
+            if ($pid > 0) {
+                $this->respond(false, 'Patient not found', ['code' => 'not_found'], 404);
+            }
+            $this->respond(false, 'Forbidden', ['code' => 'forbidden'], 403);
+        }
+
+        $this->authorizeChartRead($pid);
+    }
+
+    private function authorizeReceiptReprint(int $pid = 0): void
+    {
+        if (!AclMain::aclCheckCore('new_clinic', 'new_receipt_reprint')
+            && !AclMain::aclCheckCore('new_clinic', 'new_chart_depth_finance')) {
             if ($pid > 0) {
                 $this->respond(false, 'Patient not found', ['code' => 'not_found'], 404);
             }
@@ -1593,6 +1907,7 @@ class AjaxController
     {
         $token = $body['csrf_token_form']
             ?? $body['csrf_token']
+            ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '')
             ?? ($_POST['csrf_token_form'] ?? ($_POST['csrf_token'] ?? ''));
         if (!CsrfUtils::verifyCsrfToken($token)) {
             $this->respond(false, 'Invalid CSRF token', ['code' => 'csrf'], 403);

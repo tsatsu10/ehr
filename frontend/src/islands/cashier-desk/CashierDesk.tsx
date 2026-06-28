@@ -1,0 +1,622 @@
+/**
+ * CashierDesk — Phase 4A/4B React island replacing jQuery NewClinicCashier.
+ */
+
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { oeFetch } from '@core/oeFetch';
+import { resolveActionConflict, type DeskInterrupt } from '@core/deskConflict';
+import { useInterval } from '@core/useInterval';
+import { usePageHeadingToolbar } from '@core/usePageHeadingToolbar';
+import { getDeskActiveVisitId, clearDeskActiveVisitId } from '@core/deskSessionStorage';
+import { useSharedDeviceSession } from '@core/useSharedDeviceSession';
+import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
+import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
+import type {
+  CashierDeskProps,
+  CashierPayResult,
+  CashierQueueCard,
+  CashierQueueData,
+  CashierResolveData,
+  CashierSelectData,
+  CashierSignMeta,
+  CashierStagedLine,
+} from '@core/types';
+import { CashierQueue } from './CashierQueue';
+import { CashierActivePane, type CashierActiveMode } from './CashierActivePane';
+import { PayConfirmModal } from './PayConfirmModal';
+import { ReceiptModal } from './ReceiptModal';
+import { CloseZeroModal } from './CloseZeroModal';
+import { DiscountConfirmModal } from './DiscountConfirmModal';
+import { EsignOverrideModal } from '@components/EsignOverrideModal';
+import { PickVisitModal } from './PickVisitModal';
+import { MarkUnpaidModal } from './MarkUnpaidModal';
+import { postCashierAction } from './postCashierAction';
+import {
+  buildStagedFromSuggestions,
+  getDiscountLines,
+  newClientRequestId,
+  stagedLinesHaveDiscount,
+} from './cashierUtils';
+import type { PatientSearchHint } from './PatientSearchPanel';
+
+const STORAGE_KEY = 'cashier_desk_active_visit_id';
+
+function selectToSignMeta(data: CashierSelectData, canEsignOverride: boolean): CashierSignMeta {
+  return {
+    encounter_signed: data.encounter_signed === true,
+    unsigned_message: data.unsigned_message,
+    encounter_url: data.encounter_url,
+    can_esign_override: data.can_esign_override ?? canEsignOverride,
+  };
+}
+
+function mergeSelectData(
+  data: CashierSelectData,
+  canSkipCompletion: boolean,
+  canApplyDiscount: boolean,
+): CashierSelectData {
+  return {
+    ...data,
+    can_skip_completion: data.can_skip_completion || canSkipCompletion,
+    can_apply_discount: data.can_apply_discount ?? canApplyDiscount,
+  };
+}
+
+export function CashierDesk({
+  ajaxUrl,
+  csrfToken,
+  facilityId,
+  pollMs = 30_000,
+  visitBoardUrl,
+  canMarkUnpaid = false,
+  canSkipCompletion = false,
+  canApplyDiscount = false,
+  canEsignOverride = false,
+  sharedDeviceWarning = false,
+}: CashierDeskProps) {
+  const [cards, setCards] = useState<CashierQueueCard[]>([]);
+  const [counts, setCounts] = useState<CashierQueueData['counts'] | null>(null);
+  const [visitDate, setVisitDate] = useState<string | null>(null);
+  const [paidToday, setPaidToday] = useState<CashierQueueData['paid_today']>([]);
+  const [queueLoading, setQueueLoading] = useState(true);
+  const [queueError, setQueueError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [searchHint, setSearchHint] = useState<PatientSearchHint | null>(null);
+
+  const [mode, setMode] = useState<CashierActiveMode>('idle');
+  const [selectData, setSelectData] = useState<CashierSelectData | null>(null);
+  const [signMeta, setSignMeta] = useState<CashierSignMeta | null>(null);
+  const [staged, setStaged] = useState<CashierStagedLine[]>([]);
+  const [paneError, setPaneError] = useState<string | null>(null);
+  const [interrupt, setInterrupt] = useState<DeskInterrupt | null>(null);
+  const [posting, setPosting] = useState(false);
+
+  const [payConfirmOpen, setPayConfirmOpen] = useState(false);
+  const [payAmount, setPayAmount] = useState(0);
+  const [payReceiptNote, setPayReceiptNote] = useState('');
+  const [payEsignReason, setPayEsignReason] = useState<string | null>(null);
+  const [paySubmitting, setPaySubmitting] = useState(false);
+  const clientRequestIdRef = useRef<string | null>(null);
+
+  const [esignOpen, setEsignOpen] = useState(false);
+  const [discountOpen, setDiscountOpen] = useState(false);
+
+  const [pickVisits, setPickVisits] = useState<CashierResolveData['ready_for_payment']>([]);
+  const [pickOpen, setPickOpen] = useState(false);
+
+  const [receiptPreview, setReceiptPreview] = useState<CashierSelectData['preview'] | null>(null);
+  const [receipt, setReceipt] = useState<CashierPayResult['receipt'] | null>(null);
+
+  const [closeZeroOpen, setCloseZeroOpen] = useState(false);
+  const [closeZeroError, setCloseZeroError] = useState<string | null>(null);
+  const [closeZeroSubmitting, setCloseZeroSubmitting] = useState(false);
+
+  const [markUnpaidOpen, setMarkUnpaidOpen] = useState(false);
+  const [markUnpaidError, setMarkUnpaidError] = useState<string | null>(null);
+  const [markUnpaidSubmitting, setMarkUnpaidSubmitting] = useState(false);
+
+  const queueSeq = useRef(0);
+  const activeVisitIdRef = useRef<number | null>(null);
+
+  const facilityParams = useMemo(
+    () => (facilityId > 0 ? { facility_id: facilityId } : undefined),
+    [facilityId],
+  );
+
+  const resetActivePane = useCallback(() => {
+    setMode('idle');
+    setSelectData(null);
+    setSignMeta(null);
+    setStaged([]);
+    setPaneError(null);
+    activeVisitIdRef.current = null;
+    clearDeskActiveVisitId(STORAGE_KEY);
+  }, []);
+
+  const sharedSession = useSharedDeviceSession({
+    enabled: sharedDeviceWarning,
+    ajaxUrl,
+    csrfToken,
+    facilityId,
+    storageKey: STORAGE_KEY,
+    compareMode: 'pid_only',
+    onReturnToQueue: resetActivePane,
+  });
+
+  const applySelectData = useCallback((data: CashierSelectData) => {
+    const merged = mergeSelectData(data, canSkipCompletion, canApplyDiscount);
+    setSelectData(merged);
+    setSignMeta(selectToSignMeta(merged, canEsignOverride));
+    sharedSession.setActiveVisitId(merged.visit.id);
+    activeVisitIdRef.current = merged.visit.id;
+    setStaged((prev) => {
+      if (prev.length > 0) return prev;
+      return buildStagedFromSuggestions(merged.suggested_fees ?? [], merged.charges ?? []);
+    });
+    setMode('checkout');
+    setSearchHint(null);
+  }, [canApplyDiscount, canEsignOverride, canSkipCompletion, sharedSession]);
+
+  const fetchQueue = useCallback(async () => {
+    queueSeq.current += 1;
+    const token = queueSeq.current;
+
+    try {
+      const data = await oeFetch<CashierQueueData>('cashier.queue', {
+        ajaxUrl,
+        csrfToken,
+        params: facilityParams,
+      });
+
+      if (token !== queueSeq.current) return;
+
+      setCards(data.visits ?? []);
+      setCounts(data.counts ?? null);
+      setVisitDate(data.visit_date ?? null);
+      setPaidToday(data.paid_today ?? []);
+      setQueueError(null);
+      setLastUpdated(new Date());
+
+      const activeId = activeVisitIdRef.current;
+      if (activeId) {
+        const match = (data.visits ?? []).find((c) => c.id === activeId);
+        if (match?.row_version != null) {
+          setSelectData((prev) =>
+            prev && prev.visit.id === activeId
+              ? { ...prev, visit: { ...prev.visit, row_version: match.row_version } }
+              : prev
+          );
+        }
+        if (!match) resetActivePane();
+      }
+    } catch (err) {
+      if (token !== queueSeq.current) return;
+      setQueueError(err instanceof Error ? err.message : 'Queue load failed');
+    } finally {
+      if (token === queueSeq.current) setQueueLoading(false);
+    }
+  }, [ajaxUrl, csrfToken, facilityParams, resetActivePane]);
+
+  const fetchQueueRef = useRef(fetchQueue);
+  useEffect(() => {
+    fetchQueueRef.current = fetchQueue;
+  }, [fetchQueue]);
+
+  const selectVisit = useCallback(async (visitId: number) => {
+    if (sharedSession.blocked) return;
+
+    setMode('loading');
+    setPaneError(null);
+    setInterrupt(null);
+
+    try {
+      const data = await oeFetch<CashierSelectData>('cashier.select', {
+        ajaxUrl,
+        csrfToken,
+        method: 'POST',
+        json: { visit_id: visitId },
+      });
+      applySelectData(data);
+    } catch (err) {
+      const conflict = resolveActionConflict(err, {
+        onSessionMismatch: () => void sharedSession.probe(),
+      });
+      if (conflict) {
+        setInterrupt(conflict);
+        resetActivePane();
+        void fetchQueueRef.current();
+        return;
+      }
+      setMode('error');
+      setPaneError(err instanceof Error ? err.message : 'Load failed');
+    }
+  }, [ajaxUrl, applySelectData, csrfToken, resetActivePane, sharedSession]);
+
+  const handleResolvePatient = useCallback(async (pid: number) => {
+    if (sharedSession.blocked) return;
+
+    setSearchHint(null);
+
+    try {
+      const data = await oeFetch<CashierResolveData>('cashier.resolve_patient', {
+        ajaxUrl,
+        csrfToken,
+        method: 'POST',
+        json: { pid },
+      });
+
+      if (data.message) {
+        setSearchHint({
+          text: data.message,
+          variant: data.resolution === 'not_ready' || data.resolution === 'preview_only' ? 'warning' : 'muted',
+        });
+      }
+
+      if (data.resolution === 'single') {
+        const single = data.ready_for_payment[0];
+        if (single?.id) void selectVisit(single.id);
+        return;
+      }
+
+      if (data.resolution === 'pick_visit' && data.ready_for_payment.length > 0) {
+        setPickVisits(data.ready_for_payment);
+        setPickOpen(true);
+      }
+    } catch (err) {
+      setSearchHint({
+        text: err instanceof Error ? err.message : 'Lookup failed',
+        variant: 'warning',
+      });
+    }
+  }, [ajaxUrl, csrfToken, selectVisit, sharedSession.blocked]);
+
+  useEffect(() => {
+    void fetchQueue();
+  }, [fetchQueue]);
+
+  useInterval(() => {
+    if (!document.hidden) void fetchQueue();
+  }, pollMs);
+
+  usePageHeadingToolbar({
+    dateElementId: 'nc-cashier-date',
+    updatedElementId: 'nc-cashier-updated',
+    refreshButtonId: 'nc-cashier-refresh',
+    visitDate,
+    lastUpdated,
+    onRefresh: fetchQueue,
+  });
+
+  useEffect(() => {
+    const storedId = getDeskActiveVisitId(STORAGE_KEY);
+    if (storedId > 0 && mode === 'idle') {
+      void selectVisit(storedId);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const executePostCharges = useCallback(async () => {
+    if (!selectData || sharedSession.blocked || posting || staged.length === 0) return;
+
+    setPosting(true);
+    setPaneError(null);
+
+    const result = await postCashierAction<CashierSelectData>({
+      ajaxUrl,
+      csrfToken,
+      facilityId,
+      action: 'cashier.charges.post',
+      body: {
+        visit_id: selectData.visit.id,
+        lines: staged.map((line) => ({
+          fee_schedule_id: line.fee_schedule_id,
+          units: line.units,
+          ...(line.unit_price !== undefined ? { unit_price: line.unit_price } : {}),
+        })),
+      },
+    });
+
+    setPosting(false);
+    setDiscountOpen(false);
+
+    if (!result.ok) {
+      setPaneError(result.message || 'Failed to post charges');
+      return;
+    }
+
+    setStaged([]);
+    applySelectData(result.data);
+    void fetchQueueRef.current();
+  }, [ajaxUrl, applySelectData, csrfToken, facilityId, posting, selectData, sharedSession.blocked, staged]);
+
+  const handlePostChargesClick = useCallback(() => {
+    if (!selectData) return;
+    const allowDiscount = !!(selectData.can_apply_discount ?? canApplyDiscount);
+    if (stagedLinesHaveDiscount(staged, selectData.fee_schedule, allowDiscount)) {
+      setDiscountOpen(true);
+      return;
+    }
+    void executePostCharges();
+  }, [canApplyDiscount, executePostCharges, selectData, staged]);
+
+  const handleTakePaymentClick = useCallback((amountReceived: number, receiptNote: string) => {
+    if (sharedSession.blocked || !selectData) return;
+    setPayAmount(amountReceived);
+    setPayReceiptNote(receiptNote);
+    setPayEsignReason(null);
+    clientRequestIdRef.current = newClientRequestId();
+    setPayConfirmOpen(true);
+  }, [selectData, sharedSession.blocked]);
+
+  const handleEsignOverrideClick = useCallback((amountReceived: number, receiptNote: string) => {
+    if (sharedSession.blocked || !selectData) return;
+    setPayAmount(amountReceived);
+    setPayReceiptNote(receiptNote);
+    setEsignOpen(true);
+  }, [selectData, sharedSession.blocked]);
+
+  const handleConfirmPayment = useCallback(async () => {
+    if (!selectData || paySubmitting) return;
+
+    setPaySubmitting(true);
+    setPaneError(null);
+
+    const result = await postCashierAction<CashierPayResult>({
+      ajaxUrl,
+      csrfToken,
+      facilityId,
+      action: 'cashier.pay',
+      body: {
+        visit_id: selectData.visit.id,
+        row_version: selectData.visit.row_version ?? 0,
+        amount_received: payAmount,
+        receipt_note: payReceiptNote,
+        client_request_id: clientRequestIdRef.current,
+        ...(payEsignReason ? { esign_override_reason: payEsignReason } : {}),
+      },
+    });
+
+    setPaySubmitting(false);
+    setPayConfirmOpen(false);
+    setEsignOpen(false);
+
+    if (!result.ok) {
+      const data = result.data as { code?: string; encounter_url?: string } | undefined;
+      if (result.status === 409 && data?.code === 'encounter_unsigned' && data.encounter_url) {
+        window.open(data.encounter_url, '_blank', 'noopener,noreferrer');
+      }
+      setPaneError(result.message || 'Payment failed');
+      return;
+    }
+
+    setReceiptPreview(selectData.preview);
+    setReceipt(result.data.receipt);
+    resetActivePane();
+    void fetchQueueRef.current();
+  }, [
+    ajaxUrl,
+    csrfToken,
+    facilityId,
+    payAmount,
+    payEsignReason,
+    payReceiptNote,
+    paySubmitting,
+    resetActivePane,
+    selectData,
+  ]);
+
+  const handleCloseZero = useCallback(async (reason: string) => {
+    if (!selectData || closeZeroSubmitting) return;
+
+    setCloseZeroSubmitting(true);
+    setCloseZeroError(null);
+
+    const result = await postCashierAction<{ visit?: unknown }>({
+      ajaxUrl,
+      csrfToken,
+      facilityId,
+      action: 'cashier.close_zero',
+      body: {
+        visit_id: selectData.visit.id,
+        row_version: selectData.visit.row_version ?? 0,
+        reason,
+      },
+    });
+
+    setCloseZeroSubmitting(false);
+
+    if (!result.ok) {
+      setCloseZeroError(result.message || 'Close failed');
+      return;
+    }
+
+    setCloseZeroOpen(false);
+    resetActivePane();
+    void fetchQueueRef.current();
+  }, [ajaxUrl, closeZeroSubmitting, csrfToken, facilityId, resetActivePane, selectData]);
+
+  const handleMarkUnpaid = useCallback(async (reason: string) => {
+    if (!selectData || markUnpaidSubmitting) return;
+
+    setMarkUnpaidSubmitting(true);
+    setMarkUnpaidError(null);
+
+    const result = await postCashierAction<{ visit?: unknown }>({
+      ajaxUrl,
+      csrfToken,
+      facilityId,
+      action: 'cashier.mark_unpaid',
+      body: {
+        visit_id: selectData.visit.id,
+        row_version: selectData.visit.row_version ?? 0,
+        reason,
+      },
+    });
+
+    setMarkUnpaidSubmitting(false);
+
+    if (!result.ok) {
+      setMarkUnpaidError(result.message || 'Mark unpaid failed');
+      return;
+    }
+
+    setMarkUnpaidOpen(false);
+    resetActivePane();
+    void fetchQueueRef.current();
+  }, [ajaxUrl, csrfToken, facilityId, markUnpaidSubmitting, resetActivePane, selectData]);
+
+  const mergedSelectData = selectData
+    ? mergeSelectData(selectData, canSkipCompletion, canApplyDiscount)
+    : null;
+
+  const discountLines = mergedSelectData
+    ? getDiscountLines(staged, mergedSelectData.fee_schedule)
+    : [];
+
+  const esignOverrideAllowed = !!(signMeta?.can_esign_override ?? canEsignOverride);
+
+  return (
+    <div id="nc-cashier-desk" className="oe-nc-cashier-react-active">
+      <DeskInterruptBanner
+        interrupt={interrupt}
+        onDismiss={() => {
+          setInterrupt(null);
+          resetActivePane();
+          void fetchQueue();
+        }}
+      />
+
+      {sharedSession.probeData && (
+        <DeskSharedDeviceBanner
+          prefix="nc-cashier"
+          probeData={sharedSession.probeData}
+          compareMode="pid_only"
+          hint="Return to the queue before posting payment."
+          onReturnToQueue={sharedSession.returnToQueue}
+        />
+      )}
+
+      <div className="row">
+        <div className="col-lg-4 mb-3">
+          <CashierQueue
+            ajaxUrl={ajaxUrl}
+            csrfToken={csrfToken}
+            cards={cards}
+            counts={counts}
+            paidToday={paidToday ?? []}
+            loading={queueLoading}
+            error={queueError}
+            blocked={sharedSession.blocked}
+            searchHint={searchHint}
+            onSelectVisit={(card) => void selectVisit(card.id)}
+            onSelectPatient={(pid) => void handleResolvePatient(pid)}
+          />
+        </div>
+
+        <div className="col-lg-8 mb-3">
+          <CashierActivePane
+            mode={mode}
+            data={mergedSelectData}
+            staged={staged}
+            signMeta={signMeta}
+            visitBoardUrl={visitBoardUrl}
+            canMarkUnpaid={canMarkUnpaid}
+            esignOverrideAllowed={esignOverrideAllowed}
+            blocked={sharedSession.blocked}
+            posting={posting}
+            paneError={paneError}
+            onStagedChange={setStaged}
+            onPostCharges={() => void handlePostChargesClick()}
+            onTakePayment={handleTakePaymentClick}
+            onEsignOverride={handleEsignOverrideClick}
+            onMarkUnpaid={() => setMarkUnpaidOpen(true)}
+            onCloseZero={() => setCloseZeroOpen(true)}
+          />
+        </div>
+      </div>
+
+      <PayConfirmModal
+        open={payConfirmOpen}
+        preview={mergedSelectData?.preview ?? null}
+        visit={mergedSelectData?.visit ?? null}
+        total={mergedSelectData?.charges_total ?? 0}
+        amountReceived={payAmount}
+        completionBlocked={!!mergedSelectData?.completion_blocked}
+        canSkipCompletion={!!mergedSelectData?.can_skip_completion}
+        esignOverride={!!payEsignReason}
+        submitting={paySubmitting}
+        onClose={() => setPayConfirmOpen(false)}
+        onConfirm={() => void handleConfirmPayment()}
+      />
+
+      <EsignOverrideModal
+        open={esignOpen}
+        preview={mergedSelectData?.preview ?? null}
+        visit={mergedSelectData?.visit ?? null}
+        confirmLabel="Pay with override"
+        reasonFieldId="nc-cashier-esign-reason"
+        onClose={() => setEsignOpen(false)}
+        onConfirm={(reason) => {
+          setPayEsignReason(reason);
+          setEsignOpen(false);
+          clientRequestIdRef.current = newClientRequestId();
+          setPayConfirmOpen(true);
+        }}
+      />
+
+      <DiscountConfirmModal
+        open={discountOpen}
+        preview={mergedSelectData?.preview ?? null}
+        visit={mergedSelectData?.visit ?? null}
+        lines={discountLines}
+        submitting={posting}
+        onClose={() => setDiscountOpen(false)}
+        onConfirm={() => void executePostCharges()}
+      />
+
+      <PickVisitModal
+        open={pickOpen}
+        visits={pickVisits}
+        onClose={() => setPickOpen(false)}
+        onPick={(visitId) => {
+          setPickOpen(false);
+          void selectVisit(visitId);
+        }}
+      />
+
+      <ReceiptModal
+        open={receipt !== null}
+        preview={receiptPreview}
+        receipt={receipt}
+        onClose={() => {
+          setReceipt(null);
+          setReceiptPreview(null);
+        }}
+      />
+
+      <CloseZeroModal
+        open={closeZeroOpen}
+        submitting={closeZeroSubmitting}
+        error={closeZeroError}
+        onClose={() => {
+          setCloseZeroOpen(false);
+          setCloseZeroError(null);
+        }}
+        onConfirm={(reason) => void handleCloseZero(reason)}
+      />
+
+      <MarkUnpaidModal
+        open={markUnpaidOpen}
+        preview={mergedSelectData?.preview ?? null}
+        visit={mergedSelectData?.visit ?? null}
+        submitting={markUnpaidSubmitting}
+        error={markUnpaidError}
+        onClose={() => {
+          setMarkUnpaidOpen(false);
+          setMarkUnpaidError(null);
+        }}
+        onConfirm={(reason) => void handleMarkUnpaid(reason)}
+      />
+    </div>
+  );
+}

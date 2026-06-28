@@ -89,7 +89,7 @@ class PatientContextService
 
         $visit = QueryUtils::querySingleRow(
             "SELECT id, state, queue_number, chief_complaint, encounter, facility_id FROM new_visit
-             WHERE pid = ? AND visit_date = CURDATE()
+             WHERE pid = ?
              AND state NOT IN ('completed', 'closed_unpaid', 'cancelled')
              ORDER BY id DESC LIMIT 1",
             [$pid]
@@ -201,7 +201,9 @@ class PatientContextService
     {
         $encounterRow = QueryUtils::querySingleRow(
             "SELECT encounter FROM new_visit
-             WHERE pid = ? AND visit_date = CURDATE() AND encounter > 0
+             WHERE pid = ?
+             AND state NOT IN ('completed', 'closed_unpaid', 'cancelled')
+             AND encounter > 0
              ORDER BY id DESC LIMIT 1",
             [$pid]
         );

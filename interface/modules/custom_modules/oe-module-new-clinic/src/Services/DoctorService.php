@@ -28,6 +28,7 @@ class DoctorService
         private readonly VitalsPreviewBuilder $vitalsPreview = new VitalsPreviewBuilder(),
         private readonly EncounterSignService $signService = new EncounterSignService(),
         private readonly LabResultsReadinessService $labReadiness = new LabResultsReadinessService(),
+        private readonly ClinicDateService $clinicDate = new ClinicDateService(),
     ) {
     }
 
@@ -40,8 +41,8 @@ class DoctorService
         int $actorUserId,
         string $scope = 'me'
     ): array {
-        $visitDate = $visitDate ?? date('Y-m-d');
         $facilityId = $this->visitScope->resolveActorFacilityId($facilityId > 0 ? $facilityId : null);
+        $visitDate = $visitDate ?? $this->clinicDate->today();
         $this->visitScope->repairOrphanVisits($facilityId, $visitDate);
 
         $scope = $scope === 'all' ? 'all' : 'me';
@@ -49,7 +50,7 @@ class DoctorService
             $scope = 'all';
         }
 
-        $bind = [$facilityId, $visitDate];
+        $bind = [$facilityId];
         $sql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid, pd.sex, pd.DOB,
                        vt.label AS visit_type_label,
                        u.fname AS provider_fname, u.lname AS provider_lname
@@ -57,7 +58,7 @@ class DoctorService
                 INNER JOIN patient_data pd ON pd.pid = v.pid
                 LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
                 LEFT JOIN users u ON u.id = v.assigned_provider_id
-                WHERE v.facility_id = ? AND v.visit_date = ?
+                WHERE v.facility_id = ?
                 AND v.state = 'ready_for_doctor'";
 
         if ($scope === 'me') {
@@ -65,7 +66,7 @@ class DoctorService
             $bind[] = $actorUserId;
         }
 
-        $sql .= " ORDER BY v.is_urgent DESC, v.queue_number ASC, v.started_at ASC";
+        $sql .= " ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC";
 
         $rows = QueryUtils::fetchRecords($sql, $bind) ?: [];
         $routingByVisit = $this->labReadiness->batchRoutingChipsForVisits($rows, $facilityId);
@@ -77,7 +78,7 @@ class DoctorService
             $rows
         );
 
-        $activeConsult = $this->findActiveConsult($facilityId, $visitDate, $actorUserId, $routingByVisit);
+        $activeConsult = $this->findActiveConsult($facilityId, $actorUserId, $routingByVisit);
         $doneToday = $this->fetchDoneToday($facilityId, $visitDate, $actorUserId);
         $canReopenAny = AclMain::aclCheckCore('new_clinic', 'new_admin')
             || AclMain::aclCheckCore('admin', 'super');
@@ -130,9 +131,8 @@ class DoctorService
     {
         $visit = $this->queueService->getVisitForActor($visitId);
         $facilityId = (int) ($visit['facility_id'] ?? 0);
-        $visitDate = (string) ($visit['visit_date'] ?? date('Y-m-d'));
 
-        $existing = $this->findActiveConsult($facilityId, $visitDate, $actorUserId);
+        $existing = $this->findActiveConsult($facilityId, $actorUserId);
         if (!empty($existing) && (int) ($existing['id'] ?? 0) !== $visitId) {
             throw new VisitNotTakeableException(
                 'Complete or release your current patient before taking another'
@@ -242,8 +242,7 @@ class DoctorService
         }
 
         $facilityId = (int) ($visit['facility_id'] ?? 0);
-        $visitDate = (string) ($visit['visit_date'] ?? date('Y-m-d'));
-        $existing = $this->findActiveConsult($facilityId, $visitDate, $actorUserId);
+        $existing = $this->findActiveConsult($facilityId, $actorUserId);
         if (!empty($existing) && (int) ($existing['id'] ?? 0) !== $visitId) {
             throw new VisitNotTakeableException(
                 'Complete or release your current patient before reopening another'
@@ -349,7 +348,6 @@ class DoctorService
      */
     private function findActiveConsult(
         int $facilityId,
-        string $visitDate,
         int $actorUserId,
         array $routingByVisit = []
     ): ?array {
@@ -359,10 +357,10 @@ class DoctorService
              FROM new_visit v
              INNER JOIN patient_data pd ON pd.pid = v.pid
              LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
-             WHERE v.facility_id = ? AND v.visit_date = ?
+             WHERE v.facility_id = ?
              AND v.state = 'with_doctor' AND v.assigned_provider_id = ?
              ORDER BY v.updated_at DESC LIMIT 1",
-            [$facilityId, $visitDate, $actorUserId]
+            [$facilityId, $actorUserId]
         );
 
         if (!is_array($row) || empty($row['id'])) {
@@ -451,6 +449,8 @@ class DoctorService
             $facilityId
         );
 
+        $supervisorMeta = $this->getSupervisorMeta((int) $visit['encounter'], $actorUserId);
+
         return [
             'visit' => $visit,
             'preview' => $preview,
@@ -470,6 +470,9 @@ class DoctorService
                 (int) $visit['pid'],
                 (int) $visit['encounter']
             ),
+            'supervisor_id' => $supervisorMeta['supervisor_id'],
+            'supervisor_display_name' => $supervisorMeta['supervisor_display_name'],
+            'supervisor_from_profile' => $supervisorMeta['supervisor_from_profile'],
         ];
     }
 
@@ -477,5 +480,147 @@ class DoctorService
     {
         return trim((string) $reason) !== ''
             && AclMain::aclCheckCore('new_clinic', 'new_esign_skip_complete');
+    }
+
+    /**
+     * Get supervisor metadata for encounter
+     * Returns supervisor_id from encounter, display name, and whether it came from profile default
+     *
+     * @param int $encounterId
+     * @param int $actorUserId
+     * @return array{supervisor_id: int|null, supervisor_display_name: string|null, supervisor_from_profile: bool}
+     */
+    private function getSupervisorMeta(int $encounterId, int $actorUserId): array
+    {
+        $encounter = sqlQuery(
+            "SELECT supervisor_id FROM form_encounter WHERE encounter = ?",
+            [$encounterId]
+        );
+
+        $supervisorId = isset($encounter['supervisor_id']) && (int) $encounter['supervisor_id'] > 0
+            ? (int) $encounter['supervisor_id']
+            : null;
+
+        if ($supervisorId === null) {
+            return [
+                'supervisor_id' => null,
+                'supervisor_display_name' => null,
+                'supervisor_from_profile' => false,
+            ];
+        }
+
+        $supervisor = sqlQuery(
+            "SELECT fname, lname FROM users WHERE id = ?",
+            [$supervisorId]
+        );
+
+        $displayName = $supervisor
+            ? trim(($supervisor['fname'] ?? '') . ' ' . ($supervisor['lname'] ?? ''))
+            : null;
+
+        // Check if this supervisor came from actor's profile default
+        $actorProfile = sqlQuery(
+            "SELECT supervisor_id FROM users WHERE id = ?",
+            [$actorUserId]
+        );
+        $fromProfile = isset($actorProfile['supervisor_id'])
+            && (int) $actorProfile['supervisor_id'] === $supervisorId;
+
+        return [
+            'supervisor_id' => $supervisorId,
+            'supervisor_display_name' => $displayName,
+            'supervisor_from_profile' => $fromProfile,
+        ];
+    }
+
+    /**
+     * Set or clear supervising provider for an encounter
+     *
+     * @param int $encounterId
+     * @param int|null $supervisorId - Provider user ID or null to clear
+     * @param int $actorUserId - User making the change
+     * @return array<string, mixed>
+     */
+    public function setSupervisor(int $encounterId, ?int $supervisorId, int $actorUserId): array
+    {
+        if (!AclMain::aclCheckCore('new_clinic', 'new_doctor')) {
+            throw new \InvalidArgumentException('Not authorized to set supervisor');
+        }
+
+        if ($encounterId <= 0) {
+            throw new \InvalidArgumentException('Invalid encounter ID');
+        }
+
+        // If setting a supervisor, validate that the supervisor exists and is a provider
+        if ($supervisorId !== null && $supervisorId > 0) {
+            $supervisor = sqlQuery(
+                "SELECT id, fname, lname FROM users WHERE id = ? AND active = 1",
+                [$supervisorId]
+            );
+
+            if (!$supervisor) {
+                throw new \InvalidArgumentException('Invalid supervisor ID');
+            }
+
+            // Don't allow doctor to supervise themselves
+            $encounter = sqlQuery(
+                "SELECT provider_id FROM form_encounter WHERE encounter = ?",
+                [$encounterId]
+            );
+
+            if ($encounter && (int) ($encounter['provider_id'] ?? 0) === $supervisorId) {
+                throw new \InvalidArgumentException('Cannot supervise own consult');
+            }
+        }
+
+        // Update encounter supervisor
+        sqlStatement(
+            "UPDATE form_encounter SET supervisor_id = ? WHERE encounter = ?",
+            [$supervisorId, $encounterId]
+        );
+
+        // Audit the change
+        $this->queueService->audit('form_encounter', 'supervisor_set', 0, $encounterId, [
+            'supervisor_id' => $supervisorId,
+            'actor' => $actorUserId,
+        ]);
+
+        return $this->getSupervisorMeta($encounterId, $actorUserId);
+    }
+
+    /**
+     * Search providers for supervisor combobox
+     *
+     * @param string $query - Search term
+     * @param int $facilityId - Facility to scope search
+     * @param int $excludeUserId - User ID to exclude (consulting doctor)
+     * @return array<int, array<string, mixed>>
+     */
+    public function searchProviders(string $query, int $facilityId, int $excludeUserId): array
+    {
+        $query = trim($query);
+        if ($query === '') {
+            return [];
+        }
+
+        $likeQuery = '%' . $query . '%';
+
+        $sql = "SELECT u.id, u.fname, u.lname, u.username
+                FROM users u
+                WHERE u.active = 1
+                AND u.id != ?
+                AND (u.fname LIKE ? OR u.lname LIKE ? OR u.username LIKE ?)
+                ORDER BY u.lname, u.fname
+                LIMIT 20";
+
+        $rows = QueryUtils::fetchRecords($sql, [$excludeUserId, $likeQuery, $likeQuery, $likeQuery]) ?: [];
+
+        return array_map(function ($row) {
+            return [
+                'id' => (int) $row['id'],
+                'display_name' => trim(($row['fname'] ?? '') . ' ' . ($row['lname'] ?? '')),
+                'username' => $row['username'] ?? '',
+            ];
+        }, $rows);
     }
 }
