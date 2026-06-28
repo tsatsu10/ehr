@@ -73,7 +73,7 @@ $pilotUsers = [
     'cashier_user' => [
         'fname' => 'Pilot',
         'lname' => 'Cashier',
-        'groups' => ['Clinicians', 'New Clinic Cashier'],
+        'groups' => ['Clinicians', 'New Clinic Cashier', 'New Clinic Cashier Lead'],
     ],
 ];
 
@@ -129,6 +129,28 @@ foreach ($pilotUsers as $username => $profile) {
         AclExtended::addUserAros($username, $group);
     }
     echo "Granted groups for {$username}: " . implode(', ', $profile['groups']) . "\n";
+
+    ensureUserInDefaultGroup($username);
+}
+
+/**
+ * OpenEMR login requires a row in `groups` (auth group), separate from phpGACL.
+ */
+function ensureUserInDefaultGroup(string $username, string $groupName = 'Default'): void
+{
+    $existing = QueryUtils::querySingleRow(
+        "SELECT id FROM `groups` WHERE BINARY `user` = ?",
+        [$username]
+    );
+    if (!empty($existing)) {
+        return;
+    }
+
+    sqlStatement(
+        "INSERT INTO `groups` SET name = ?, user = ?",
+        [$groupName, $username]
+    );
+    echo "Added {$username} to OpenEMR group \"{$groupName}\".\n";
 }
 
 echo $dryRun ? "\nDry run complete.\n" : "\nPilot users ready. Default password: (see NEW_CLINIC_PILOT_PASS or --password)\n";

@@ -8,10 +8,7 @@
  */
 
 const { test, expect } = require('@playwright/test');
-
-const BASE_URL = (process.env.TEST_BASE_URL || 'http://localhost/openemr').replace(/\/$/, '');
-const MODULE_BASE =
-  BASE_URL + '/interface/modules/custom_modules/oe-module-new-clinic/public';
+const { BASE_URL, MODULE_BASE, login: loginAsAdmin } = require('../helpers/auth');
 
 const ADMIN_USER = process.env.TEST_USERNAME_ADMIN || 'Adminstrator';
 const ADMIN_PASS = process.env.TEST_PASSWORD_ADMIN || 'passpass1';
@@ -37,27 +34,13 @@ const MODULE_PAGES = [
   ['bill-ops', `${MODULE_BASE}/bill-ops/index.php`],
 ];
 
-async function loginAsAdmin(page) {
-  await page.goto(`${BASE_URL}/interface/login/login.php?site=default`);
-  const hasForm = await page.locator('#authUser').isVisible({ timeout: 5000 }).catch(() => false);
-  if (!hasForm) {
-    test.skip(true, 'Login form not reachable — start Apache/MySQL (XAMPP) first');
-  }
-  await page.fill('#authUser', ADMIN_USER);
-  await page.fill('#clearPass', ADMIN_PASS);
-  await Promise.all([
-    page.waitForLoadState('domcontentloaded'),
-    page.locator('#login-button, #login_button').first().click(),
-  ]);
-  const url = page.url();
-  if (url.includes('login.php') || url.includes('login_screen')) {
-    test.skip(true, `Admin login failed for ${ADMIN_USER} — check credentials`);
-  }
+async function loginAsAdminPage(page) {
+  await loginAsAdmin(page, ADMIN_USER, ADMIN_PASS);
 }
 
 test.describe('New Clinic module pages (authenticated)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAsAdmin(page);
+    await loginAsAdminPage(page);
   });
 
   for (const [label, url] of MODULE_PAGES) {
