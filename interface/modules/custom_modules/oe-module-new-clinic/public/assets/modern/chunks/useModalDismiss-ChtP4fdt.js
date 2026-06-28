@@ -1,0 +1,2 @@
+import{s as e}from"./oeFetch-rLN2p01_.js";var t=e();function n(e,n){(0,t.useEffect)(()=>{if(!e)return;let t=e=>{e.key===`Escape`&&(e.preventDefault(),n())};return document.addEventListener(`keydown`,t),()=>document.removeEventListener(`keydown`,t)},[e,n])}export{n as t};
+//# sourceMappingURL=useModalDismiss-ChtP4fdt.js.map

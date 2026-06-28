@@ -1,0 +1,2 @@
+import{s as e}from"./oeFetch-rLN2p01_.js";var t=e();function n(e,n){let r=(0,t.useRef)(e);(0,t.useEffect)(()=>{r.current=e},[e]),(0,t.useEffect)(()=>{if(n===null)return;let e=window.setInterval(()=>{document.hidden||r.current()},n);return()=>window.clearInterval(e)},[n])}export{n as t};
+//# sourceMappingURL=useInterval-DpDhafOq.js.map

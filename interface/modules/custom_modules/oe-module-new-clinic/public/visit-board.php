@@ -18,10 +18,9 @@ use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 $moduleUrl = $GLOBALS['webroot'] . '/interface/modules/custom_modules/oe-module-new-clinic/public';
 $boardProfile = (string) ($_GET['profile'] ?? '') === 'wall' ? 'wall' : 'default';
 
-// Modernization gates — both default OFF; page is byte-identical without them.
-$configService     = new ClinicConfigService();
-$reactIslandsDev   = $configService->get('enable_react_islands_dev', '0') === '1';
-$reactVisitBoard   = $configService->get('enable_react_visit_board',  '1') === '1';
+// React visit board — kill-switch defaults ON after w50react cutover.
+$configService   = new ClinicConfigService();
+$reactVisitBoard = $configService->get('enable_react_visit_board', '1') === '1';
 
 (new PageController())->renderForAnyClinicRole('visit-board.html.twig', 'Visit Board', [
     'new_reception',
@@ -37,7 +36,6 @@ $reactVisitBoard   = $configService->get('enable_react_visit_board',  '1') === '
     'shell_nav_id' => 'clinicvb',
     'board_profile' => $boardProfile,
     'shell_minimal' => $boardProfile === 'wall',
-    'enable_react_islands_dev' => $reactIslandsDev,
     'enable_react_visit_board' => $reactVisitBoard,
     'can_cancel_visit' => AclMain::aclCheckCore('new_clinic', 'new_visit_cancel'),
     'desk_urls' => [

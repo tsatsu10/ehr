@@ -45,7 +45,6 @@ class ClinicAdminServiceTest extends TestCase
         $reactKeys = array_filter(
             array_keys($defaults),
             static fn (string $key): bool => str_starts_with($key, 'enable_react_')
-                && $key !== 'enable_react_islands_dev'
         );
 
         $this->assertNotEmpty($reactKeys);
@@ -56,7 +55,6 @@ class ClinicAdminServiceTest extends TestCase
                 "Expected {$key} default ON after w50react cutover"
             );
         }
-        $this->assertSame('0', $defaults['enable_react_islands_dev']);
     }
 
     public function testApplySettingDependenciesEnablesChartDepthMasterWhenSubFlagOn(): void

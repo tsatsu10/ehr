@@ -43,7 +43,6 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'faster_queue_interrupt_poll_seconds',
   'enable_similar_surname_queue_warning',
   'enable_pinned_reception_preview',
-  'enable_react_islands_dev',
   'enable_react_visit_board',
   'enable_react_triage_desk',
   'enable_react_doctor_desk',
@@ -225,19 +224,13 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
     ],
   },
   {
-    title: 'Frontend modernization (Phase 0)',
+    title: 'React islands (kill-switches)',
     fields: [
-      {
-        key: 'enable_react_islands_dev',
-        type: 'bool',
-        label: 'Enable React hello-world badge (Phase 0)',
-        hint: 'Renders the Vite + React proof-of-concept badge on the Visit Board. Default OFF.',
-      },
       {
         key: 'enable_react_visit_board',
         type: 'bool',
-        label: 'Enable React Visit Board (Phase 1)',
-        hint: 'Replaces the jQuery queue board with a React island. Default OFF. Requires frontend build.',
+        label: 'Enable React Visit Board',
+        hint: 'Kill-switch for the React visit board island. Default ON after w50react cutover.',
       },
       {
         key: 'enable_react_triage_desk',

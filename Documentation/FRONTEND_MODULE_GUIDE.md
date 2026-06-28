@@ -1,10 +1,10 @@
-# OpenEMR Frontend Module Guide (Phase 0)
+# OpenEMR Frontend Module Guide
 
-> **Status:** Phase 0 scaffold · **Updated:** 2026-06-27
+> **Status:** React islands shipped (w50react cutover) · **Updated:** 2026-06-28
 > **Workspace:** [`frontend/`](../frontend/) · **Plan:** [`Documentation/NewClinic/FRONTEND_2026_MODERNIZATION_PLAN.md`](./NewClinic/FRONTEND_2026_MODERNIZATION_PLAN.md)
 
 This guide explains how OpenEMR modules add React + TypeScript islands to
-their existing PHP/Twig pages. It is the contract Phase 1 islands follow.
+their existing PHP/Twig pages.
 
 ---
 
@@ -18,8 +18,8 @@ OpenEMR's modernization uses the **strangler-fig + islands** pattern:
   template wherever React should render.
 - A Vite-built JavaScript bundle finds those mount nodes at runtime and
   hydrates them with React.
-- Every island ships behind a **per-feature config flag** so legacy and
-  modern paths coexist on the same page.
+- Each island ships behind a **per-feature config flag** (kill-switch; defaults
+  ON after the New Clinic w50react cutover).
 
 No island ever:
 
@@ -44,11 +44,10 @@ frontend/
 │   │   ├── oeFetch.ts                     ← CSRF-aware AJAX wrapper
 │   │   └── mountIsland.tsx                ← React mount helper
 │   └── islands/
-│       ├── visit-board-hello/             ← Phase 0 proof-of-concept
+│       ├── visit-board/                   ← example production island
 │       │   ├── index.tsx                  ← entry — calls mountIsland(...)
-│       │   ├── VisitBoardHello.tsx        ← React component
-│       │   ├── VisitBoardHello.test.tsx
-│       │   └── main.css                   ← imports core/tokens.css
+│       │   ├── VisitBoard.tsx             ← React component
+│       │   └── ...
 │       └── <next-island>/                 ← follow the same shape
 ```
 
@@ -110,21 +109,21 @@ mountIsland('my-island', MyIsland);
 build: {
   rollupOptions: {
     input: {
-      'visit-board-hello': resolve(here, 'src/islands/visit-board-hello/index.tsx'),
-      'my-island':         resolve(here, 'src/islands/my-island/index.tsx'),
+      'visit-board': resolve(here, 'src/islands/visit-board/index.tsx'),
+      'my-island':   resolve(here, 'src/islands/my-island/index.tsx'),
     },
   },
 }
 ```
 
-### Step 3 — Add a config flag (one per island, default OFF)
+### Step 3 — Add a config flag (one per island, default ON for New Clinic)
 
 In the consuming module's `sql/install.sql`:
 
 ```sql
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_my_island
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
-(0, 'enable_my_island', '0');
+(0, 'enable_my_island', '1');
 #EndIf
 ```
 

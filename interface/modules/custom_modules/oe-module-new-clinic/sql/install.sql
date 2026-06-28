@@ -254,7 +254,6 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_legacy_patient_context_overlay', '0'),
 (0, 'enable_legacy_strip_clinical_chips', '0'),
 (0, 'enable_legacy_strip_desk_return', '1'),
-(0, 'enable_react_islands_dev', '0'),
 (0, 'enable_shared_device_session_warning', '0'),
 (0, 'module_enabled', '1');
 #EndIf
@@ -435,11 +434,6 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_legacy_patient_context_overlay', '0'),
 (0, 'enable_legacy_strip_clinical_chips', '0'),
 (0, 'enable_legacy_strip_desk_return', '1');
-#EndIf
-
-#IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_islands_dev
-INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
-(0, 'enable_react_islands_dev', '0');
 #EndIf
 
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_visit_board

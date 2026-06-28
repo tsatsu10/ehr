@@ -54,7 +54,6 @@ class ClinicAdminService
         'enable_legacy_patient_context_overlay' => ['type' => 'bool', 'default' => '0'],
         'enable_legacy_strip_clinical_chips' => ['type' => 'bool', 'default' => '0'],
         'enable_legacy_strip_desk_return' => ['type' => 'bool', 'default' => '1'],
-        'enable_react_islands_dev' => ['type' => 'bool', 'default' => '0'],
         'enable_react_visit_board' => ['type' => 'bool', 'default' => '1'],
         'enable_react_triage_desk' => ['type' => 'bool', 'default' => '1'],
         'enable_react_doctor_desk' => ['type' => 'bool', 'default' => '1'],

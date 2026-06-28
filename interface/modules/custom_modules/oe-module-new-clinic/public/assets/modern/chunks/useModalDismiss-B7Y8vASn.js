@@ -1,2 +1,0 @@
-import{r as e}from"./mountIsland-B4qeCTWm.js";var t=e();function n(e,n){(0,t.useEffect)(()=>{if(!e)return;let t=e=>{e.key===`Escape`&&(e.preventDefault(),n())};return document.addEventListener(`keydown`,t),()=>document.removeEventListener(`keydown`,t)},[e,n])}export{n as t};
-//# sourceMappingURL=useModalDismiss-B7Y8vASn.js.map

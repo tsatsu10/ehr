@@ -35,7 +35,6 @@ const moduleAssetsModern = resolve(
  * the New Clinic admin config (see Documentation/FRONTEND_MODULE_GUIDE.md).
  */
 const islands: Record<string, string> = {
-  'visit-board-hello': resolve(here, 'src/islands/visit-board-hello/index.tsx'),
   'visit-board':       resolve(here, 'src/islands/visit-board/index.tsx'),
   'triage-desk':       resolve(here, 'src/islands/triage-desk/index.tsx'),
   'doctor-desk':       resolve(here, 'src/islands/doctor-desk/index.tsx'),
@@ -77,7 +76,7 @@ export default defineConfig({
         chunkFileNames: 'chunks/[name]-[hash].js',
         /**
          * Island CSS gets a predictable unhashed name matching its JS entry
-         * (`visit-board-hello.js` → `visit-board-hello.css`) so Twig pages
+         * (`visit-board.js` → `visit-board.css`) so Twig pages
          * can add a <link> tag without reading the manifest at runtime.
          *
          * Other assets (fonts, images, shared chunk CSS) keep the hashed

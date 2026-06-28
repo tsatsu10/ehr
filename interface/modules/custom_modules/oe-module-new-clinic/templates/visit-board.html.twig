@@ -16,12 +16,6 @@
 {% endblock %}
 
 {% block content %}
-{% if enable_react_islands_dev|default(false) %}
-{# Phase 0 React proof-of-concept badge. Default OFF. #}
-<div data-island="visit-board-hello"
-     data-props="{{ {'label': 'Visit Board'}|json_encode|e('html_attr') }}"></div>
-{% endif %}
-
 {% if board_profile|default('default') == 'wall' %}
 <div class="oe-nc-wall-banner" id="nc-wall-now-serving" aria-live="polite"
      data-clinic-name="{{ shell.brand.clinic_name|e('html_attr') }}">
@@ -46,11 +40,6 @@
 {% endblock %}
 
 {% block scripts %}
-{% if enable_react_islands_dev|default(false) %}
-<link rel="stylesheet" href="{{ assets_url }}/modern/visit-board-hello.css?v={{ asset_version }}">
-<script type="module" src="{{ assets_url }}/modern/visit-board-hello.js?v={{ asset_version }}"></script>
-{% endif %}
-
 {% if enable_react_visit_board|default(true) %}
 <link rel="stylesheet" href="{{ assets_url }}/modern/visit-board.css?v={{ asset_version }}">
 <script type="module" src="{{ assets_url }}/modern/visit-board.js?v={{ asset_version }}"></script>

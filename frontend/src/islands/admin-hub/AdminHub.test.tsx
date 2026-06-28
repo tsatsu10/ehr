@@ -50,7 +50,6 @@ const configPayload = {
     faster_queue_interrupt_poll_seconds: 10,
     enable_similar_surname_queue_warning: false,
     enable_pinned_reception_preview: false,
-    enable_react_islands_dev: false,
     enable_react_visit_board: false,
     enable_react_triage_desk: false,
     enable_react_doctor_desk: false,

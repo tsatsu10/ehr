@@ -1,5 +1,5 @@
 /**
- * Phase 0 / Phase 1 React island bundle smoke tests.
+ * React island bundle smoke tests.
  *
  * Verifies Vite build output is published at the expected URLs so Twig pages
  * can load the bundles when the relevant feature flags are on.
@@ -21,27 +21,7 @@ const ASSET_BASE =
 
 test.describe('React island bundle assets', () => {
 
-  // ── Phase 0 — visit-board-hello ──────────────────────────────────────────
-
-  test('visit-board-hello.js entry is served by Apache', async ({ request }) => {
-    const response = await request.get(`${ASSET_BASE}/visit-board-hello.js`);
-    expect(response.status(), 'bundle should be reachable via webroot').toBe(200);
-
-    const body = await response.text();
-    // Entry stubs are small (~400 B) — they import from the shared chunk
-    expect(body.length, 'bundle should not be empty').toBeGreaterThan(50);
-  });
-
-  test('visit-board-hello.css is served by Apache', async ({ request }) => {
-    const response = await request.get(`${ASSET_BASE}/visit-board-hello.css`);
-    expect(response.status(), 'CSS should be reachable via webroot').toBe(200);
-
-    const body = await response.text();
-    expect(body.length, 'CSS should not be empty').toBeGreaterThan(100);
-    expect(body, 'CSS should contain design tokens or Tailwind output').toMatch(/\.[a-z]|@layer|:root/);
-  });
-
-  // ── Phase 1 — visit-board ─────────────────────────────────────────────────
+  // ── visit-board ───────────────────────────────────────────────────────────
 
   test('visit-board.js entry is served by Apache', async ({ request }) => {
     const response = await request.get(`${ASSET_BASE}/visit-board.js`);
@@ -183,11 +163,11 @@ test.describe('React island bundle assets', () => {
     expect(manifestRes.status()).toBe(200);
 
     const manifest = await manifestRes.json();
-    const helloEntry = manifest['src/islands/visit-board-hello/index.tsx'];
-    expect(helloEntry?.imports?.length, 'entry should import at least one chunk').toBeGreaterThan(0);
+    const boardEntry = manifest['src/islands/visit-board/index.tsx'];
+    expect(boardEntry?.imports?.length, 'entry should import at least one chunk').toBeGreaterThan(0);
 
     // imports[] contains manifest keys, not file paths — look up the entry
-    const chunkKey = helloEntry.imports[0];
+    const chunkKey = boardEntry.imports[0];
     const chunkEntry = manifest[chunkKey];
     expect(chunkEntry, 'shared chunk manifest entry should exist').toBeDefined();
     const chunkRes = await request.get(`${ASSET_BASE}/${chunkEntry.file}`);
@@ -205,13 +185,6 @@ test.describe('React island bundle assets', () => {
     expect(response.status()).toBe(200);
 
     const manifest = await response.json();
-
-    // visit-board-hello entry
-    const helloEntry = manifest['src/islands/visit-board-hello/index.tsx'];
-    expect(helloEntry, 'manifest should list visit-board-hello').toBeDefined();
-    expect(helloEntry.isEntry, 'isEntry should be true').toBe(true);
-    expect(helloEntry.file, 'file should be unhashed entry').toBe('visit-board-hello.js');
-    expect(helloEntry.css, 'manifest should list the island CSS').toEqual(['visit-board-hello.css']);
 
     // visit-board entry
     const boardEntry = manifest['src/islands/visit-board/index.tsx'];

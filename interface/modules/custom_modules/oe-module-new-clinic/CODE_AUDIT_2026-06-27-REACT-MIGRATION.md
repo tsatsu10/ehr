@@ -2,8 +2,26 @@
 
 **Date:** June 27, 2026  
 **Baseline:** `CODE_AUDIT_2026-06-27.md` (legacy jQuery, asset `20260626g12s`, 61 PHPUnit tests)  
-**Current asset version:** `20260628w54restore`  
+**Current asset version:** `20260628w55cleanup`  
 **Scope:** Phases 1–10 React island migration, audit follow-up fixes (June 27–28)
+
+---
+
+## Addendum — June 28 Phase 0 cleanup (`20260628w55cleanup`)
+
+Removed the obsolete Phase 0 `visit-board-hello` island and `enable_react_islands_dev` flag.
+Legacy jQuery desk JS was already deleted in w50react; this completes frontend cleanup.
+
+| Item | Resolution |
+|------|------------|
+| Phase 0 hello badge | Deleted `frontend/src/islands/visit-board-hello/` + built bundles |
+| `enable_react_islands_dev` | Removed from admin, install.sql, ClinicAdminService |
+| E2E | Dropped `phase0-island-render.spec.js`; smoke spec no longer checks hello bundle |
+| Docs | Updated `frontend/README.md` and `FRONTEND_MODULE_GUIDE.md` |
+
+**Current snapshot:** 16 Vite entries · 14 `enable_react_*` kill-switches default **ON** · 172 Vitest · 349 PHPUnit New Clinic · asset `20260628w55cleanup`
+
+**Migration status:** **Complete.** React is the only UI path; turning a flag OFF shows `react-island-disabled.html.twig` (no jQuery fallback).
 
 ---
 
