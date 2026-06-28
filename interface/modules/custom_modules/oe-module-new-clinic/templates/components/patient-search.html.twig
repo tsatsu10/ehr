@@ -1,0 +1,36 @@
+<div class="oe-nc-widget-card nc-patient-search"
+     id="nc-patient-search"
+     data-host="{{ host|default('front-desk') }}"
+     data-primary-action="{{ primary_action|default('start_visit') }}"
+     data-ajax-url="{{ ajax_url }}"
+     data-csrf-token="{{ csrf_token }}">
+    <div class="oe-nc-widget-card__header">
+        <h2 class="oe-nc-widget-card__title">{{ 'Patient search'|xlt }}</h2>
+        {% if show_add_new|default(true) %}
+        <button type="button" class="btn btn-sm btn-outline-success" id="nc-add-patient">
+            <i class="fa fa-user-plus mr-1" aria-hidden="true"></i>
+            {{ add_patient_label|default('Register patient')|xlt }}
+        </button>
+        {% endif %}
+    </div>
+    <div class="oe-nc-widget-card__body oe-nc-widget-card__body--flush">
+        <div class="p-3 border-bottom">
+            {% include 'partials/ui/search-input.html.twig' with {
+                id: 'nc-search-input',
+                placeholder: 'Search by name, phone, NHIS, National ID, MRN',
+                autofocus: autofocus|default(false),
+                hint_id: 'nc-search-hint',
+                hint_text: 'Type at least 2 characters · press / to focus'
+            } %}
+            <div class="alert alert-danger mt-2 d-none" id="nc-search-error" role="alert"></div>
+        </div>
+        <div id="nc-search-results"
+             class="list-group list-group-flush nc-search-results oe-nc-desk-split__search"
+             role="listbox"
+             aria-label="{{ 'Search results'|xlt }}">
+            <div class="list-group-item text-muted" id="nc-search-empty" role="option">
+                {{ 'Results appear here'|xlt }}
+            </div>
+        </div>
+    </div>
+</div>

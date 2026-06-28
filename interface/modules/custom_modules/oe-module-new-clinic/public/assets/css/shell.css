@@ -1,0 +1,294 @@
+/**
+ * T1 shell — New Clinic module chrome
+ */
+.oe-nc-t1 {
+    --oe-nc-role-accent: var(--oe-nc-primary);
+    color: var(--oe-nc-text);
+    background: var(--oe-nc-bg-tint);
+    min-height: 100vh;
+}
+
+.oe-nc-t1[data-role-accent="reception"] { --oe-nc-role-accent: var(--oe-nc-role-reception); }
+.oe-nc-t1[data-role-accent="nurse"] { --oe-nc-role-accent: var(--oe-nc-role-nurse); }
+.oe-nc-t1[data-role-accent="doctor"] { --oe-nc-role-accent: var(--oe-nc-role-doctor); }
+.oe-nc-t1[data-role-accent="lab"] { --oe-nc-role-accent: var(--oe-nc-role-lab); }
+.oe-nc-t1[data-role-accent="pharmacy"] { --oe-nc-role-accent: var(--oe-nc-role-pharmacy); }
+.oe-nc-t1[data-role-accent="cashier"] { --oe-nc-role-accent: var(--oe-nc-role-cashier); }
+.oe-nc-t1[data-role-accent="admin"] { --oe-nc-role-accent: var(--oe-nc-role-admin); }
+
+.oe-nc-brand-strip {
+    background: var(--oe-nc-surface);
+    border-bottom: 1px solid var(--oe-nc-border);
+    padding: 0.5rem 1rem;
+}
+
+.oe-nc-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.oe-nc-brand__logo,
+.oe-nc-brand__initials {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--oe-nc-radius);
+    flex-shrink: 0;
+}
+
+.oe-nc-brand__logo {
+    object-fit: contain;
+    max-height: 40px;
+}
+
+.oe-nc-brand__initials {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--oe-nc-bg-tint);
+    color: var(--oe-nc-primary);
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.oe-nc-brand__name {
+    font-weight: 600;
+    font-size: 1rem;
+    line-height: 1.2;
+    margin: 0;
+}
+
+.oe-nc-brand__facility {
+    font-size: 0.8125rem;
+    color: var(--oe-nc-text-muted);
+}
+
+.oe-nc-brand__date {
+    font-size: 0.8125rem;
+    color: var(--oe-nc-text-muted);
+}
+
+.oe-nc-role-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.65rem;
+    border: 2px solid var(--oe-nc-role-accent);
+    border-radius: 999px;
+    background: var(--oe-nc-surface);
+    color: var(--oe-nc-text);
+    cursor: pointer;
+    transition: background var(--oe-nc-transition), border-color var(--oe-nc-transition);
+    min-height: 44px;
+}
+
+.oe-nc-role-pill:hover,
+.oe-nc-role-pill[aria-expanded="true"] {
+    background: var(--oe-nc-bg-tint);
+}
+
+.oe-nc-role-pill:focus-visible {
+    outline: none;
+    box-shadow: var(--oe-nc-focus-ring);
+}
+
+.oe-nc-role-pill__avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--oe-nc-role-accent);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.oe-nc-role-pill__label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.oe-nc-role-pill__caret {
+    color: var(--oe-nc-text-muted);
+    font-size: 0.75rem;
+}
+
+.oe-nc-module-nav {
+    background: var(--oe-nc-surface);
+    border-bottom: 1px solid var(--oe-nc-border);
+}
+
+.oe-nc-module-nav__toggle {
+    display: none;
+    min-height: 44px;
+    min-width: 44px;
+}
+
+.oe-nc-module-nav__list {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.25rem;
+    list-style: none;
+    margin: 0;
+    padding: 0.35rem 1rem;
+    overflow-x: auto;
+}
+
+.oe-nc-module-nav__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: var(--oe-nc-radius);
+    color: var(--oe-nc-text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: color var(--oe-nc-transition), background var(--oe-nc-transition), border-color var(--oe-nc-transition);
+    min-height: 44px;
+}
+
+.oe-nc-module-nav__link:hover {
+    color: var(--oe-nc-primary);
+    background: var(--oe-nc-bg-tint);
+    text-decoration: none;
+}
+
+.oe-nc-module-nav__link.is-active {
+    color: var(--oe-nc-primary);
+    background: var(--oe-nc-bg-tint);
+    border-bottom-color: var(--oe-nc-primary);
+    font-weight: 600;
+}
+
+.oe-nc-queue-stats {
+    background: var(--oe-nc-surface);
+    border-bottom: 1px solid var(--oe-nc-border);
+    padding: 0.5rem 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    font-size: 0.8125rem;
+}
+
+.oe-nc-queue-stats__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.oe-nc-queue-stats__label {
+    color: var(--oe-nc-text-muted);
+}
+
+.oe-nc-queue-stats__count {
+    font-weight: 600;
+    color: var(--oe-nc-text);
+    min-width: 1.25rem;
+}
+
+.oe-nc-main {
+    padding: 0 0 2rem;
+}
+
+.oe-nc-page-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    padding: 1rem 1rem 0.5rem;
+}
+
+.oe-nc-page-heading__title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--oe-nc-text);
+}
+
+.oe-nc-page-heading__subtitle {
+    font-size: 0.8125rem;
+    color: var(--oe-nc-text-muted);
+    margin-top: 0.15rem;
+}
+
+.oe-nc-page-heading__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.oe-nc-content {
+    padding: 0 1rem;
+}
+
+.oe-nc-role-menu .dropdown-item {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+}
+
+.oe-nc-role-picker-role {
+    min-height: 44px;
+}
+
+@media (max-width: 991.98px) {
+    .oe-nc-brand__date {
+        display: none;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .oe-nc-module-nav__toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0.35rem 0 0 1rem;
+    }
+
+    .oe-nc-module-nav__list {
+        display: none;
+        flex-direction: column;
+        padding-top: 0;
+    }
+
+    .oe-nc-module-nav.is-open .oe-nc-module-nav__list {
+        display: flex;
+    }
+
+    .oe-nc-role-pill__label {
+        display: none;
+    }
+
+    .oe-nc-queue-stats__label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+    }
+
+    .oe-nc-queue-stats__item::before {
+        content: attr(data-short);
+        font-weight: 600;
+        color: var(--oe-nc-text-muted);
+        margin-right: 0.15rem;
+        text-transform: uppercase;
+        font-size: 0.6875rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .oe-nc-brand__facility {
+        display: none;
+    }
+}

@@ -1,0 +1,106 @@
+{% extends 'base.html.twig' %}
+
+{% block page_subtitle %}
+{% if board_profile|default('default') != 'wall' %}
+<div class="oe-nc-page-heading__subtitle" id="nc-board-date"></div>
+{% endif %}
+{% endblock %}
+
+{% block page_heading_actions %}
+{% if board_profile|default('default') != 'wall' %}
+<input type="search" class="form-control form-control-sm" style="max-width: 220px;"
+       id="nc-board-search" placeholder="{{ 'Search name, MRN, queue #'|xlt }}">
+<label class="mb-0">
+    <input type="checkbox" id="nc-board-urgent-only"> {{ 'Urgent only'|xlt }}
+</label>
+<button type="button" class="btn btn-outline-primary btn-sm" id="nc-refresh-queue">
+    {{ 'Refresh'|xlt }}
+</button>
+<span class="text-muted small" id="nc-board-updated"></span>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div id="nc-visit-board"
+     class="{% if board_profile|default('default') == 'wall' %}oe-nc-wall-display{% endif %}"
+     data-ajax-url="{{ ajax_url }}"
+     data-csrf-token="{{ csrf_token }}"
+     data-module-url="{{ module_url }}"
+     data-facility-id="{{ desk_facility_id }}"
+     data-board-profile="{{ board_profile|default('default') }}"
+     data-privacy-mode="{{ board_profile|default('default') == 'wall' ? '1' : '0' }}"
+     data-can-cancel="{{ can_cancel_visit ? '1' : '0' }}"
+     data-desk-urls="{{ desk_urls|json_encode|e('html_attr') }}">
+    {% if board_profile|default('default') == 'wall' %}
+    <div class="oe-nc-wall-banner" id="nc-wall-now-serving" aria-live="polite">
+        {{ shell.brand.clinic_name|text }}
+    </div>
+    {% endif %}
+
+    <div class="nc-board-stats mb-3" id="nc-board-stats"></div>
+
+    <div class="nc-board-columns row" id="nc-board-columns"></div>
+
+    {% if board_profile|default('default') != 'wall' %}
+    <div class="mt-4">
+        <button class="btn btn-link p-0" type="button" data-toggle="collapse" data-target="#nc-cancelled-section">
+            {{ 'Cancelled today'|xlt }} (<span id="nc-cancelled-count">0</span>)
+        </button>
+        <div class="collapse mt-2" id="nc-cancelled-section">
+            <div id="nc-cancelled-list" class="small"></div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if board_profile|default('default') != 'wall' %}
+<div class="modal fade nc-visit-detail-modal" id="nc-visit-modal" tabindex="-1" role="dialog"
+     aria-modal="true" aria-labelledby="nc-visit-modal-title" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="nc-visit-modal-title">{{ 'Visit detail'|xlt }}</h5>
+                <button type="button" class="close" id="nc-visit-modal-close" aria-label="{{ 'Close'|xla }}">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="nc-visit-modal-body">
+                <em>{{ 'Loading…'|xlt }}</em>
+            </div>
+            <div class="modal-footer flex-wrap justify-content-start" id="nc-visit-modal-footer"></div>
+        </div>
+    </div>
+</div>
+<div class="modal-backdrop fade" id="nc-visit-modal-backdrop" style="display:none;"></div>
+<div class="nc-visit-detail-drawer" id="nc-visit-detail-drawer" aria-hidden="true" style="display:none;">
+    <div class="nc-visit-detail-drawer__panel" role="dialog" aria-labelledby="nc-visit-drawer-title">
+        <div class="nc-visit-detail-drawer__header">
+            <h5 class="mb-0" id="nc-visit-drawer-title">{{ 'Visit details'|xlt }}</h5>
+            <button type="button" class="close" id="nc-visit-drawer-close" aria-label="{{ 'Close drawer'|xla }}">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="nc-visit-detail-drawer__body" id="nc-visit-drawer-body"></div>
+        <div class="nc-visit-detail-drawer__footer">
+            <button type="button" class="btn btn-secondary btn-sm" id="nc-visit-drawer-close-btn">
+                {{ 'Close drawer'|xlt }}
+            </button>
+            <a class="btn btn-outline-primary btn-sm" id="nc-visit-drawer-history" href="#" target="_blank"
+               rel="noopener noreferrer" style="display:none;">{{ 'View full history'|xlt }}</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ assets_url }}/js/modal-a11y.js?v={{ asset_version }}"></script>
+<script src="{{ assets_url }}/js/visit-board.js?v={{ asset_version }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (window.NewClinicVisitBoard) {
+        window.NewClinicVisitBoard.init(document.getElementById('nc-visit-board'));
+    }
+});
+</script>
+{% endblock %}

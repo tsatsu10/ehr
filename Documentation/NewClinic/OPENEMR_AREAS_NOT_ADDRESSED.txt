@@ -1,0 +1,20 @@
+OpenEMR area	Path / menu	Why it may matter
+Patient portal	Portal Dashboard (Miscellaneous)	Patient self-scheduling, results, messaging — PRD §5.3 non-goal
+Portal mail	portal/messaging/	Separate from COM; staff may expect unified inbox
+Telehealth	oe-module-comlink-telehealth (if installed)	Non-goal
+Group therapy	interface/therapy_groups/, Groups menu	Behavioral health clinics
+Prior authorization	oe-module-prior-authorizations	Insurer workflows — NG1
+Claims connector	oe-module-claimrev-connect	US-style claims — NG1
+Weno eRx	oe-module-weno	Alternative to stock eRx.php — no New Clinic wrapper
+REST / FHIR / SMART	apis/, interface/smart/	D13: staff API is ajax.php only; OAuth clients untouched
+EHI export	oe-module-ehi-exporter	Compliance exports
+Clinical decision rules	Practice → Rules/Alerts	Disabled in cash profile (enable_cdr=0) — not redesigned
+Patient/clinical reminders	patient_file/reminder/	Different from COM dated reminders
+Batch communications	interface/batchcom/	Outreach campaigns
+Chart tracker	Chart Tracker menu	Paper-chart clinics
+Fax/scan	Fax menu, oe-module-faxsms	COM preserves deep links only
+DICOM viewer	Miscellaneous	Imaging practices
+De-identification	Admin export/re-identify	Research / compliance
+Direct messaging log	Reports	HIE workflows
+Language / i18n	interface/language/	No localization strategy for New Clinic UI
+Product registration	interface/product_registration/	OpenEMR housekeeping

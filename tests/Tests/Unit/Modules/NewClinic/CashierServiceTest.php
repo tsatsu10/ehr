@@ -1,0 +1,59 @@
+<?php
+
+/**
+ * Unit tests for cashier payment helpers
+ *
+ * @package   OpenEMR
+ * @link      https://www.open-emr.org
+ * @copyright Copyright (c) 2026 OpenEMR contributors
+ * @license   https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
+ */
+
+namespace OpenEMR\Tests\Unit\Modules\NewClinic;
+
+require_once __DIR__ . '/ModuleAutoload.php';
+
+use OpenEMR\Modules\NewClinic\Services\CashierService;
+use PHPUnit\Framework\TestCase;
+
+class CashierServiceTest extends TestCase
+{
+    public function testSumChargeLines(): void
+    {
+        $total = CashierService::sumChargeLines([
+            ['amount' => 10.5],
+            ['amount' => 5.25],
+        ]);
+
+        $this->assertSame(15.75, $total);
+    }
+
+    public function testSumChargeLinesEmpty(): void
+    {
+        $this->assertSame(0.0, CashierService::sumChargeLines([]));
+    }
+
+    public function testRecordPaymentRejectsNonPositiveAmount(): void
+    {
+        $method = new \ReflectionMethod(CashierService::class, 'recordPayment');
+        $source = file_get_contents($method->getFileName());
+        $start = $method->getStartLine();
+        $end = $method->getEndLine();
+        $body = implode('', array_slice(explode("\n", $source), $start - 1, $end - $start + 1));
+
+        $this->assertStringContainsString('Payment amount must be greater than zero', $body);
+    }
+
+    public function testResolvePatientCheckoutRequiresPid(): void
+    {
+        $method = new \ReflectionMethod(CashierService::class, 'resolvePatientCheckout');
+        $source = file_get_contents($method->getFileName());
+        $start = $method->getStartLine();
+        $end = $method->getEndLine();
+        $body = implode('', array_slice(explode("\n", $source), $start - 1, $end - $start + 1));
+
+        $this->assertStringContainsString("state = 'ready_for_payment'", $body);
+        $this->assertStringContainsString('pick_visit', $body);
+        $this->assertStringContainsString('assertPatientAccessible', $body);
+    }
+}

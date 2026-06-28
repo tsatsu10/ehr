@@ -1,0 +1,11 @@
+{# btn-primary-lg — min 44px, icon-left optional #}
+<button type="{{ type|default('button') }}"
+        class="oe-nc-btn-primary-lg{% if class is defined %} {{ class }}{% endif %}"
+        {% if id is defined %}id="{{ id }}"{% endif %}
+        {% if disabled|default(false) %}disabled{% endif %}
+        {% if aria_label is defined %}aria-label="{{ aria_label|xlt }}"{% endif %}>
+    {% if icon is defined %}
+        <i class="fa {{ icon }}" aria-hidden="true"></i>
+    {% endif %}
+    <span>{{ label|xlt }}</span>
+</button>

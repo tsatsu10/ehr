@@ -1,0 +1,106 @@
+{% extends 'base.html.twig' %}
+
+{% block page_subtitle %}
+<div class="oe-nc-page-heading__subtitle" id="nc-pharmacy-date"></div>
+{% endblock %}
+
+{% block page_heading_actions %}
+<button type="button" class="btn btn-outline-primary btn-sm" id="nc-pharmacy-refresh">
+    {{ 'Refresh'|xlt }}
+</button>
+<span class="text-muted small" id="nc-pharmacy-updated"></span>
+{% endblock %}
+
+{% block content %}
+<div id="nc-pharmacy-desk"
+     data-ajax-url="{{ ajax_url }}"
+     data-csrf-token="{{ csrf_token }}"
+     data-module-url="{{ module_url }}"
+     data-visit-board-url="{{ visit_board_url }}"
+     data-webroot="{{ webroot }}"
+     data-can-skip="{{ can_skip_to_payment ? '1' : '0' }}"
+     data-shared-device-warning="{{ enable_shared_device_session_warning ? '1' : '0' }}">
+    <div id="nc-pharmacy-interrupt" class="alert alert-warning d-none mb-3" role="alert">
+        <div class="d-flex justify-content-between flex-wrap">
+            <span id="nc-pharmacy-interrupt-text"></span>
+            <button type="button" class="btn btn-sm btn-outline-secondary ml-2" id="nc-pharmacy-interrupt-dismiss">
+                {{ 'Return to queue'|xlt }}
+            </button>
+        </div>
+    </div>
+
+    {% include 'partials/shared-device-session-banner.html.twig' with { prefix: 'nc-pharmacy' } only %}
+
+    <div class="row">
+        <div class="col-lg-4 mb-3">
+            <div class="nc-pharmacy-queue-panel">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <strong>{{ 'Pharmacy queue'|xlt }}</strong>
+                    <span class="text-muted small" id="nc-pharmacy-counts"></span>
+                </div>
+                <div id="nc-pharmacy-queue-list"></div>
+                <p class="text-muted small mt-3 mb-0">
+                    {{ 'Skipped pharmacy patients appear on Visit Board under Payment.'|xlt }}
+                </p>
+            </div>
+        </div>
+
+        <div class="col-lg-8 mb-3">
+            <div id="nc-pharmacy-active-pane">
+                <div class="card">
+                    <div class="card-body text-muted text-center py-5">
+                        <em>{{ 'Select a patient from the pharmacy queue.'|xlt }}</em>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="nc-pharmacy-skip-modal" tabindex="-1" role="dialog"
+     aria-labelledby="nc-pharmacy-skip-title" aria-modal="true" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="nc-pharmacy-skip-title">{{ 'Skip pharmacy queue'|xlt }}</h5>
+                <button type="button" class="close nc-modal-close" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="nc-pharmacy-skip-patient" class="mb-2"></p>
+                <p class="text-muted small">{{ 'Sends visit to payment, bypassing pharmacy.'|xlt }}</p>
+                <div class="form-group">
+                    <label for="nc-pharmacy-skip-reason">{{ 'Reason (required)'|xlt }}</label>
+                    <textarea class="form-control" id="nc-pharmacy-skip-reason" rows="2"></textarea>
+                </div>
+                <div class="alert alert-danger mt-2 d-none" id="nc-pharmacy-skip-error"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary nc-modal-close">{{ 'Cancel'|xlt }}</button>
+                <button type="button" class="btn btn-warning" id="nc-pharmacy-skip-confirm">{{ 'Skip to payment'|xlt }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal-backdrop fade" id="nc-pharmacy-modal-backdrop" style="display:none;"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ assets_url }}/js/modal-a11y.js?v={{ asset_version }}"></script>
+<script src="{{ assets_url }}/js/pharmacy.js?v={{ asset_version }}"></script>
+<script>
+(function () {
+    function bootPharmacy() {
+        if (window.NewClinicPharmacy) {
+            window.NewClinicPharmacy.init(document.getElementById('nc-pharmacy-desk'));
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootPharmacy);
+    } else {
+        bootPharmacy();
+    }
+})();
+</script>
+{% endblock %}

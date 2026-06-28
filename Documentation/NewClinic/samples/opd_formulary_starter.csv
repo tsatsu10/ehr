@@ -1,0 +1,11 @@
+drug_name,generic_name,form,strength,unit,route,dosage_text,period_days,quantity,reorder_point,fee_amount,eml_category
+Amoxicillin,Amoxicillin,Capsule,500,mg,oral,500 mg PO TID,7,21,50,18.00,Antibiotic
+Paracetamol,Paracetamol,Tablet,500,mg,oral,500 mg PO QID PRN,5,20,100,5.00,Analgesic
+Artemether-Lumefantrine,Artemether-Lumefantrine,Tablet,20/120,mg,oral,4 tabs BD × 3 days,3,24,30,25.00,Antimalarial
+ORS,Oral rehydration salts,Sachet,1,sachet,oral,1 sachet in 1L water,1,5,40,3.00,Rehydration
+Metronidazole,Metronidazole,Tablet,400,mg,oral,400 mg PO TID,7,21,40,12.00,Antibiotic
+Ibuprofen,Ibuprofen,Tablet,400,mg,oral,400 mg PO TID PRN,5,15,60,8.00,Analgesic
+Omeprazole,Omeprazole,Capsule,20,mg,oral,20 mg PO OD,14,14,30,15.00,GI
+Salbutamol,Salbutamol,Inhaler,100,mcg,inhalation,2 puffs PRN,30,1,10,35.00,Respiratory
+Chlorhexidine,Chlorhexidine,Solution,0.2,percent,topical,Apply BD,7,1,10,12.00,Topical
+Metformin,Metformin,Tablet,500,mg,oral,500 mg PO BD,30,60,40,10.00,Chronic

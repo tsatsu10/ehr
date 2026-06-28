@@ -33,13 +33,35 @@ cd docker/development-easy
 docker compose exec openemr npx playwright test tests/e2e/new-clinic/specs/golden-path.spec.js
 ```
 
-**Run (XAMPP):** set `PLAYWRIGHT_BASE_URL=http://localhost/openemr` and use your local test credentials.
+**Run (XAMPP):** set `TEST_BASE_URL=http://localhost/openemr` and use your local test credentials.
+
+**Module page smoke (17 surfaces, authenticated):**
+
+```bash
+npx playwright test tests/e2e/new-clinic/specs/module-pages-smoke.spec.js
+```
 
 ---
 
 ## Task 2: Pilot role users
 
-Create one user per desk ACL (`new_reception`, `new_nurse`, `new_doctor`, `new_lab`, `new_pharmacy`, `new_cashier`) for multi-desk E2E and UAT. Adminstrator can exercise all desks but does not mirror production role separation.
+Seed one user per desk (matches `golden-path.spec.js` env vars):
+
+```bash
+# From project root (Apache + MySQL running)
+php interface/modules/custom_modules/oe-module-new-clinic/acl/seed_pilot_users.php
+php interface/modules/custom_modules/oe-module-new-clinic/acl/seed_pilot_users.php --password=YourPass123
+php interface/modules/custom_modules/oe-module-new-clinic/acl/seed_pilot_users.php --dry-run
+```
+
+Creates: `reception_user`, `nurse_user`, `doctor_user`, `lab_user`, `pharmacy_user`, `cashier_user`  
+Default password: `test_pass` (or `NEW_CLINIC_PILOT_PASS` env). Each user gets **Clinicians** + their desk group.
+
+Grant all desks to an existing admin user:
+
+```bash
+php interface/modules/custom_modules/oe-module-new-clinic/acl/install_and_grant.php Adminstrator
+```
 
 ---
 

@@ -1,0 +1,56 @@
+- generic [ref=e3]:
+  - paragraph [ref=e6]: The most popular open-source Electronic Health Record and Medical Practice Management solution.
+  - paragraph [ref=e8]: Invalid username or password
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e11]: Username
+      - textbox "Username" [ref=e13]: Adminstrator
+    - generic [ref=e14]:
+      - generic [ref=e15]: Password
+      - generic [ref=e16]:
+        - textbox "Password" [ref=e17]: pass
+        - generic [ref=e20] [cursor=pointer]: 
+    - generic [ref=e21]:
+      - generic [ref=e22]: Language
+      - combobox [active] [ref=e24]:
+        - option "Default - English (Standard)" [selected]
+        - option "Albanian"
+        - option "Arabic"
+        - option "Armenian"
+        - option "Bahasa Indonesia"
+        - option "Chinese (Simplified)"
+        - option "Chinese (Traditional)"
+        - option "Czech"
+        - option "Danish"
+        - option "Dutch"
+        - option "English (Australian)"
+        - option "English (Indian)"
+        - option "English (Standard)"
+        - option "Finnish"
+        - option "French (Canadian)"
+        - option "French (Standard)"
+        - option "German"
+        - option "Greek"
+        - option "Hebrew"
+        - option "Hindi"
+        - option "Italian"
+        - option "Japanese"
+        - option "Marathi"
+        - option "Persian"
+        - option "Polish"
+        - option "Portuguese (Angolan)"
+        - option "Portuguese (Brazilian)"
+        - option "Portuguese (European)"
+        - option "Romanian"
+        - option "Russian"
+        - option "Spanish (Latin American)"
+        - option "Spanish (Spain)"
+        - option "Swedish"
+        - option "Tamil"
+        - option "Turkish"
+        - option "Ukrainian"
+        - option "Vietnamese"
+    - button "Login" [ref=e26] [cursor=pointer]
+  - paragraph [ref=e27]:
+    - link "Acknowledgments, Licensing and Certification" [ref=e28] [cursor=pointer]:
+      - /url: ../../acknowledge_license_cert.html

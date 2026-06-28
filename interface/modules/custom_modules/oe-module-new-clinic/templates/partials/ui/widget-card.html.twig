@@ -1,0 +1,14 @@
+{# widget-card — header + body shell #}
+<div class="oe-nc-widget-card{% if class is defined %} {{ class }}{% endif %}"{% if id is defined %} id="{{ id }}"{% endif %}>
+    {% if title is defined %}
+        <div class="oe-nc-widget-card__header">
+            <h2 class="oe-nc-widget-card__title">{{ title|xlt }}</h2>
+            {% if actions is defined %}
+                <div class="oe-nc-widget-card__actions">{{ actions|raw }}</div>
+            {% endif %}
+        </div>
+    {% endif %}
+    <div class="oe-nc-widget-card__body oe-nc-widget-card__body--{{ body_pad|default('flush') }}">
+        {% block body %}{% endblock %}
+    </div>
+</div>

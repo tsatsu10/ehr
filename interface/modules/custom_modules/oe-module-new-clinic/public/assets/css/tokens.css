@@ -1,0 +1,30 @@
+/**
+ * New Clinic design tokens (aligns with design-system/openemr-2026/MASTER.md)
+ */
+:root {
+    --oe-nc-primary: #0891b2;
+    --oe-nc-secondary: #22d3ee;
+    --oe-nc-cta: #059669;
+    --oe-nc-bg-tint: #ecfeff;
+    --oe-nc-text: #164e63;
+    --oe-nc-text-muted: #475569;
+    --oe-nc-border: #e2e8f0;
+    --oe-nc-surface: #ffffff;
+    --oe-nc-radius: 0.25rem;
+    --oe-nc-transition: 150ms ease;
+    --oe-nc-focus-ring: 0 0 0 3px rgba(8, 145, 178, 0.35);
+
+    --oe-nc-role-reception: #0891b2;
+    --oe-nc-role-nurse: #2563eb;
+    --oe-nc-role-doctor: #059669;
+    --oe-nc-role-lab: #f59e0b;
+    --oe-nc-role-pharmacy: #7c3aed;
+    --oe-nc-role-cashier: #ea580c;
+    --oe-nc-role-admin: #64748b;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --oe-nc-transition: 0ms;
+    }
+}

@@ -1,0 +1,55 @@
+- generic [ref=e3]:
+  - paragraph [ref=e6]: The most popular open-source Electronic Health Record and Medical Practice Management solution.
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]: Username
+      - textbox "Username" [ref=e11]
+    - generic [ref=e12]:
+      - generic [ref=e13]: Password
+      - generic [ref=e14]:
+        - textbox "Password" [ref=e15]
+        - generic [ref=e18] [cursor=pointer]: 
+    - generic [ref=e19]:
+      - generic [ref=e20]: Language
+      - combobox [ref=e22]:
+        - option "Default - English (Standard)" [selected]
+        - option "Albanian"
+        - option "Arabic"
+        - option "Armenian"
+        - option "Bahasa Indonesia"
+        - option "Chinese (Simplified)"
+        - option "Chinese (Traditional)"
+        - option "Czech"
+        - option "Danish"
+        - option "Dutch"
+        - option "English (Australian)"
+        - option "English (Indian)"
+        - option "English (Standard)"
+        - option "Finnish"
+        - option "French (Canadian)"
+        - option "French (Standard)"
+        - option "German"
+        - option "Greek"
+        - option "Hebrew"
+        - option "Hindi"
+        - option "Italian"
+        - option "Japanese"
+        - option "Marathi"
+        - option "Persian"
+        - option "Polish"
+        - option "Portuguese (Angolan)"
+        - option "Portuguese (Brazilian)"
+        - option "Portuguese (European)"
+        - option "Romanian"
+        - option "Russian"
+        - option "Spanish (Latin American)"
+        - option "Spanish (Spain)"
+        - option "Swedish"
+        - option "Tamil"
+        - option "Turkish"
+        - option "Ukrainian"
+        - option "Vietnamese"
+    - button "Login" [ref=e24] [cursor=pointer]
+  - paragraph [ref=e25]:
+    - link "Acknowledgments, Licensing and Certification" [ref=e26] [cursor=pointer]:
+      - /url: ../../acknowledge_license_cert.html

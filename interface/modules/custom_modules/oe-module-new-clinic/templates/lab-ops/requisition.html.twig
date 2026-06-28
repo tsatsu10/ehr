@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ 'Lab requisition'|xlt }} — {{ requisition.patient.name|attr }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 1.5rem; color: #222; }
+        h1 { font-size: 1.25rem; margin: 0 0 0.25rem; }
+        .muted { color: #666; font-size: 0.9rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
+        th { background: #f5f5f5; }
+        .total { font-weight: bold; text-align: right; margin-top: 0.75rem; }
+        @media print {
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="margin-bottom:1rem;">
+        <button type="button" onclick="window.print()">{{ 'Print'|xlt }}</button>
+        <button type="button" onclick="window.close()">{{ 'Close'|xlt }}</button>
+    </div>
+
+    <h1>{{ requisition.clinic.name|text }}</h1>
+    <div class="muted">
+        {% if requisition.clinic.address %}{{ requisition.clinic.address|text }}<br>{% endif %}
+        {% if requisition.clinic.phone %}{{ 'Phone'|xlt }}: {{ requisition.clinic.phone|text }}{% endif %}
+    </div>
+
+    <h2 style="margin-top:1.25rem;font-size:1.1rem;">{{ 'Laboratory requisition'|xlt }}</h2>
+    <p>
+        <strong>{{ 'Patient'|xlt }}:</strong> {{ requisition.patient.name|text }}<br>
+        <strong>{{ 'MRN'|xlt }}:</strong> {{ requisition.patient.pubpid|text }}<br>
+        {% if requisition.patient.dob %}
+        <strong>{{ 'DOB'|xlt }}:</strong> {{ requisition.patient.dob|text }}<br>
+        {% endif %}
+        <strong>{{ 'Ordered'|xlt }}:</strong> {{ requisition.order.date_ordered|text }}<br>
+        <strong>{{ 'Send to'|xlt }}:</strong> {{ requisition.order.lab_name|text }}
+        {% if requisition.order.accession_no %}
+        <br><strong>{{ 'Accession'|xlt }}:</strong> {{ requisition.order.accession_no|text }}
+        {% endif %}
+    </p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>{{ 'Test'|xlt }}</th>
+                <th>{{ 'Code'|xlt }}</th>
+                <th>{{ 'Est. price'|xlt }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for test in requisition.tests %}
+            <tr>
+                <td>{{ test.title|text }}</td>
+                <td>{{ test.code|text }}</td>
+                <td>{{ test.price_display ? test.price_display|text : '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if requisition.total_display %}
+    <div class="total">{{ 'Estimated total'|xlt }}: {{ requisition.total_display|text }}</div>
+    {% endif %}
+
+    <p class="muted" style="margin-top:2rem;">{{ 'Patient carries sample to external lab. Results to be entered when received.'|xlt }}</p>
+
+    {% if auto_print %}
+    <script>window.addEventListener('load', function () { window.print(); });</script>
+    {% endif %}
+</body>
+</html>

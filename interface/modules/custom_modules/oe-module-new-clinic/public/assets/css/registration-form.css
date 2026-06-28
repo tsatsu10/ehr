@@ -1,0 +1,14 @@
+.nc-registration-form .card-header {
+    cursor: pointer;
+    background: #f8fafc;
+    border-color: var(--oe-nc-border, #e2e8f0);
+}
+
+.nc-registration-form .section-complete {
+    color: var(--oe-nc-cta, #059669);
+    font-size: 0.85rem;
+}
+
+.nc-registration-form .nc-tag-input {
+    min-height: 38px;
+}

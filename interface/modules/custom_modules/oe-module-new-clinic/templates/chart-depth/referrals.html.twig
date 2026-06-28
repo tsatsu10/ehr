@@ -1,0 +1,38 @@
+{% extends 'base.html.twig' %}
+
+{% block content %}
+<div class="oe-nc-chart-depth-referrals" id="nc-chart-depth-referrals"
+     data-pid="{{ pid }}"
+     data-encounter-id="{{ encounter_id|default('') }}"
+     data-can-manage="{{ can_manage_referrals ? '1' : '0' }}"
+     data-chart-url="{{ chart_url|e('html_attr') }}">
+    <div class="oe-nc-widget-card mb-3">
+        <div class="oe-nc-widget-card__header d-flex justify-content-between align-items-center flex-wrap">
+            <h2 class="oe-nc-widget-card__title mb-0">{{ 'Referrals'|xlt }}</h2>
+            <div class="btn-group btn-group-sm mt-2 mt-md-0">
+                <a href="{{ chart_url }}" class="btn btn-outline-primary" target="_top">{{ 'Back to chart'|xlt }}</a>
+                <a href="{{ visit_board_url }}" class="btn btn-outline-secondary" target="_top">{{ 'Visit Board'|xlt }}</a>
+            </div>
+        </div>
+        <div class="oe-nc-widget-card__body oe-nc-widget-card__body--pad">
+            <div id="nc-chart-depth-banner" class="mb-3"></div>
+            <div id="nc-referrals-actions" class="mb-3"></div>
+            <div id="nc-referrals-list"><em>{{ 'Loading referrals…'|xlt }}</em></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ assets_url }}/js/chart-depth-referrals.js?v={{ asset_version }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (window.NewClinicChartDepthReferrals) {
+        window.NewClinicChartDepthReferrals.init({
+            root: document.getElementById('nc-chart-depth-referrals'),
+            ajaxUrl: {{ ajax_url|json_encode|raw }}
+        });
+    }
+});
+</script>
+{% endblock %}

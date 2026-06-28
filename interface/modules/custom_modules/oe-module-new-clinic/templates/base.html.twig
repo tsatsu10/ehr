@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ page_title|xlt }}</title>
+    {{ header_html|raw }}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700&family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ assets_url }}/css/tokens.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="{{ assets_url }}/css/shell.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="{{ assets_url }}/css/components.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="{{ assets_url }}/css/new-clinic.css?v={{ asset_version }}">
+</head>
+<body class="body_top">
+<div id="oe-nc-t1"
+     class="oe-nc-t1"
+     data-role-accent="{{ shell.role.accent }}"
+     data-ajax-url="{{ ajax_url }}"
+     data-csrf-token="{{ csrf_token }}"
+     data-facility-id="{{ desk_facility_id }}"
+     data-queue-poll-ms="{{ queue_poll_ms|default(30000) }}">
+
+    <header class="oe-nc-brand-strip">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col">
+                    <div class="oe-nc-brand">
+                        {% if shell.brand.logo_url %}
+                            <img src="{{ shell.brand.logo_url|attr }}" alt="" class="oe-nc-brand__logo">
+                        {% else %}
+                            <span class="oe-nc-brand__initials" aria-hidden="true">{{ shell.brand.initials }}</span>
+                        {% endif %}
+                        <div class="oe-nc-brand__text">
+                            <p class="oe-nc-brand__name mb-0">{{ shell.brand.clinic_name|text }}</p>
+                            {% if shell.brand.show_facility %}
+                                <div class="oe-nc-brand__facility">{{ shell.brand.facility_name|text }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-auto d-none d-md-block">
+                    <div class="oe-nc-brand__date" id="oe-nc-today-label">{{ shell.today_label|text }}</div>
+                </div>
+                <div class="col-auto">
+                    <div class="dropdown">
+                        <button type="button"
+                                class="oe-nc-role-pill dropdown-toggle"
+                                id="oe-nc-role-pill"
+                                data-toggle="dropdown"
+                                aria-haspopup="true"
+                                aria-expanded="false"
+                                aria-label="{{ 'Active role menu'|xlt }}">
+                            <span class="oe-nc-role-pill__avatar" aria-hidden="true">{{ shell.user.initials }}</span>
+                            <span class="oe-nc-role-pill__label">
+                                {{ shell.user.first_name|text }} — {{ shell.role.label }}
+                            </span>
+                            <span class="oe-nc-role-pill__caret" aria-hidden="true"><i class="fa fa-chevron-down"></i></span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right oe-nc-role-menu" aria-labelledby="oe-nc-role-pill">
+                            {% if shell.role.available|length > 1 %}
+                                <h6 class="dropdown-header">{{ 'Switch role'|xlt }}</h6>
+                                {% for role in shell.role.available %}
+                                    <button type="button"
+                                            class="dropdown-item oe-nc-role-picker-role"
+                                            data-toggle="modal"
+                                            data-target="#oe-nc-role-picker-modal">
+                                        <i class="fa {{ role.icon }} mr-2 text-muted" aria-hidden="true"></i>
+                                        {{ role.desk_label|xlt }}
+                                    </button>
+                                {% endfor %}
+                                <div class="dropdown-divider"></div>
+                            {% endif %}
+                            <a class="dropdown-item" href="{{ shell.profile_url|attr }}" target="_top">{{ 'My profile'|xlt }}</a>
+                            <a class="dropdown-item text-danger" href="{{ shell.logout_url|attr }}" target="_top">{{ 'Logout'|xlt }}</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    {% if not shell_minimal|default(false) %}
+    <nav class="oe-nc-module-nav" aria-label="{{ 'Clinic navigation'|xlt }}">
+        <button type="button"
+                class="btn btn-outline-secondary btn-sm oe-nc-module-nav__toggle"
+                id="oe-nc-nav-toggle"
+                aria-expanded="false"
+                aria-controls="oe-nc-nav-list">
+            <i class="fa fa-bars" aria-hidden="true"></i>
+            <span class="sr-only">{{ 'Menu'|xlt }}</span>
+        </button>
+        <ul class="oe-nc-module-nav__list" id="oe-nc-nav-list" role="list">
+            {% for item in shell.nav %}
+                <li role="listitem">
+                    <a href="{{ item.url|attr }}"
+                       class="oe-nc-module-nav__link{% if item.active %} is-active{% endif %}"
+                       target="_top"
+                       {% if item.active %}aria-current="page"{% endif %}>
+                        {{ item.label }}
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    {% if not shell_minimal|default(false) %}
+    <div class="oe-nc-queue-stats" id="oe-nc-queue-stats" aria-live="polite">
+        <span class="oe-nc-queue-stats__label font-weight-bold mr-1">{{ 'Queue'|xlt }}:</span>
+        {% for stat in shell.queue_stats %}
+            <span class="oe-nc-queue-stats__item" data-stat-key="{{ stat.key }}" data-short="{{ stat.key|slice(0, 3) }}">
+                <span class="oe-nc-queue-stats__label">{{ stat.label }}</span>
+                <span class="oe-nc-queue-stats__count">{{ stat.count }}</span>
+            </span>
+            {% if not loop.last %}<span class="text-muted" aria-hidden="true">·</span>{% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <main class="oe-nc-main" id="oe-nc-main">
+        {% if desk_facility_fallback|default(false) %}
+        <div class="alert alert-warning py-2 mx-3 mt-2 mb-0 small" role="status">
+            {{ 'Your session facility is not available — showing the default clinic desk.'|xlt }}
+        </div>
+        {% endif %}
+        <header class="oe-nc-page-heading">
+            <div class="oe-nc-page-heading__main">
+                <h1 class="oe-nc-page-heading__title">{{ page_title|xlt }}</h1>
+                {% block page_subtitle %}{% endblock %}
+            </div>
+            <div class="oe-nc-page-heading__actions">
+                {% block page_heading_actions %}{% endblock %}
+            </div>
+        </header>
+        <div class="oe-nc-content">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+</div>
+
+{% if shell.role.available|length > 1 %}
+<div class="modal fade" id="oe-nc-role-picker-modal" tabindex="-1" role="dialog" aria-labelledby="oe-nc-role-picker-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="oe-nc-role-picker-title">{{ 'Switch role'|xlt }}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="{{ 'Close'|xlt }}">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">{{ 'Choose the desk you are working at on this device.'|xlt }}</p>
+                <div class="list-group">
+                    {% for role in shell.role.available %}
+                        <button type="button"
+                                class="list-group-item list-group-item-action oe-nc-role-picker-role"
+                                data-role-aco="{{ role.aco }}">
+                            <i class="fa {{ role.icon }} mr-2" aria-hidden="true"></i>
+                            {{ role.desk_label|xlt }}
+                        </button>
+                    {% endfor %}
+                </div>
+                <div class="alert alert-danger d-none mt-3" id="oe-nc-role-switch-error" role="alert"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script src="{{ assets_url }}/js/ui-components.js?v={{ asset_version }}"></script>
+<script src="{{ assets_url }}/js/shell.js?v={{ asset_version }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

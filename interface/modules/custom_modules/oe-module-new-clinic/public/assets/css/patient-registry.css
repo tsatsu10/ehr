@@ -1,0 +1,11 @@
+.oe-nc-registry-summary {
+    min-height: 1.25rem;
+}
+
+.oe-nc-registry .oe-nc-registry-visit-filters summary {
+    cursor: pointer;
+}
+
+.oe-nc-registry .oe-nc-registry-visit-filters select[multiple] {
+    min-height: 6.5rem;
+}

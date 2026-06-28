@@ -1,0 +1,205 @@
+{
+  "country": "GH",
+  "country_label": "Ghana",
+  "regions": [
+    {
+      "code": "GAR",
+      "label": "Greater Accra",
+      "districts": [
+        { "code": "GAR-ACC", "label": "Accra Metropolitan" },
+        { "code": "GAR-TMA", "label": "Tema Metropolitan" },
+        { "code": "GAR-ADA", "label": "Ada East" },
+        { "code": "GAR-ADW", "label": "Ada West" },
+        { "code": "GAR-GAE", "label": "Ga East" },
+        { "code": "GAR-GAC", "label": "Ga Central" },
+        { "code": "GAR-GAW", "label": "Ga West" },
+        { "code": "GAR-GAS", "label": "Ga South" },
+        { "code": "GAR-KPO", "label": "Kpone Katamanso" },
+        { "code": "GAR-NPR", "label": "Ningo Prampram" },
+        { "code": "GAR-SMA", "label": "Shai Osudoku" },
+        { "code": "GAR-LDA", "label": "La Dade Kotopon" },
+        { "code": "GAR-LNK", "label": "La Nkwantanang Madina" },
+        { "code": "GAR-LED", "label": "Ledzokuku" },
+        { "code": "GAR-KAY", "label": "Krowor" },
+        { "code": "GAR-AYW", "label": "Ayawaso West" }
+      ]
+    },
+    {
+      "code": "ASH",
+      "label": "Ashanti",
+      "districts": [
+        { "code": "ASH-KMA", "label": "Kumasi Metropolitan" },
+        { "code": "ASH-EJU", "label": "Ejisu" },
+        { "code": "ASH-ASB", "label": "Asokore Mampong" },
+        { "code": "ASH-KWA", "label": "Kwabre East" },
+        { "code": "ASH-ATW", "label": "Atwima Kwanwoma" },
+        { "code": "ASH-OBU", "label": "Obuasi" },
+        { "code": "ASH-BEK", "label": "Bekwai Municipal" },
+        { "code": "ASH-MAN", "label": "Mampong Municipal" }
+      ]
+    },
+    {
+      "code": "CEN",
+      "label": "Central",
+      "districts": [
+        { "code": "CEN-CCT", "label": "Cape Coast Metropolitan" },
+        { "code": "CEN-KEE", "label": "Komenda Edina Eguafo Abirem" },
+        { "code": "CEN-MFL", "label": "Mfantsiman Municipal" },
+        { "code": "CEN-ABK", "label": "Abura Asebu Kwamankese" },
+        { "code": "CEN-EKU", "label": "Ekumfi" },
+        { "code": "CEN-GOM", "label": "Gomoa East" },
+        { "code": "CEN-AGN", "label": "Agona East" },
+        { "code": "CEN-ASS", "label": "Assin North" }
+      ]
+    },
+    {
+      "code": "EST",
+      "label": "Eastern",
+      "districts": [
+        { "code": "EST-NKA", "label": "New Juaben North" },
+        { "code": "EST-SKA", "label": "New Juaben South" },
+        { "code": "EST-AKW", "label": "Akwapem North" },
+        { "code": "EST-AKS", "label": "Akwapem South" },
+        { "code": "EST-YKA", "label": "Yilo Krobo" },
+        { "code": "EST-LKA", "label": "Lower Manya Krobo" },
+        { "code": "EST-UKA", "label": "Upper Manya Krobo" },
+        { "code": "EST-KWA", "label": "Kwahu East" }
+      ]
+    },
+    {
+      "code": "WES",
+      "label": "Western",
+      "districts": [
+        { "code": "WES-STMA", "label": "Sekondi Takoradi Metropolitan" },
+        { "code": "WES-AHIA", "label": "Ahanta West" },
+        { "code": "WES-NZEMA", "label": "Nzema East" },
+        { "code": "WES-PRE", "label": "Prestea Huni Valley" },
+        { "code": "WES-TAR", "label": "Tarkwa Nsuaem" },
+        { "code": "WES-WASS", "label": "Wassa Amenfi East" }
+      ]
+    },
+    {
+      "code": "WN",
+      "label": "Western North",
+      "districts": [
+        { "code": "WN-SEF", "label": "Sefwi Wiawso" },
+        { "code": "WN-BIA", "label": "Bia East" },
+        { "code": "WN-BOD", "label": "Bodi" },
+        { "code": "WN-JUAB", "label": "Juaboso" },
+        { "code": "WN-AOW", "label": "Aowin Municipal" }
+      ]
+    },
+    {
+      "code": "VOL",
+      "label": "Volta",
+      "districts": [
+        { "code": "VOL-HO", "label": "Ho Municipal" },
+        { "code": "VOL-KET", "label": "Ketu South" },
+        { "code": "VOL-KEN", "label": "Ketu North" },
+        { "code": "VOL-KPA", "label": "Kpando Municipal" },
+        { "code": "VOL-HOH", "label": "Hohoe Municipal" },
+        { "code": "VOL-ADJ", "label": "Adaklu" }
+      ]
+    },
+    {
+      "code": "OTI",
+      "label": "Oti",
+      "districts": [
+        { "code": "OTI-DAM", "label": "Dambai" },
+        { "code": "OTI-KRJ", "label": "Krachi East" },
+        { "code": "OTI-KRN", "label": "Krachi Nchumuru" },
+        { "code": "OTI-NKW", "label": "Nkwanta North" },
+        { "code": "OTI-NKS", "label": "Nkwanta South" }
+      ]
+    },
+    {
+      "code": "NOR",
+      "label": "Northern",
+      "districts": [
+        { "code": "NOR-TAM", "label": "Tamale Metropolitan" },
+        { "code": "NOR-SAG", "label": "Sagnarigu Municipal" },
+        { "code": "NOR-YEN", "label": "Yendi Municipal" },
+        { "code": "NOR-GUS", "label": "Gushegu Municipal" },
+        { "code": "NOR-KAR", "label": "Karaga" },
+        { "code": "NOR-MAM", "label": "Mamprugu Moagduri" }
+      ]
+    },
+    {
+      "code": "NE",
+      "label": "North East",
+      "districts": [
+        { "code": "NE-NAL", "label": "Nalerigu Gambaga" },
+        { "code": "NE-BNK", "label": "Bunkpurugu Nakpanduri" },
+        { "code": "NE-CHP", "label": "Chereponi" },
+        { "code": "NE-YUN", "label": "Yunyoo Nasuan" },
+        { "code": "NE-WAL", "label": "Walewale" }
+      ]
+    },
+    {
+      "code": "SAV",
+      "label": "Savannah",
+      "districts": [
+        { "code": "SAV-DAM", "label": "Damongo" },
+        { "code": "SAV-BUI", "label": "Buipe" },
+        { "code": "SAV-SAL", "label": "Salaga North" },
+        { "code": "SAV-SAS", "label": "Salaga South" },
+        { "code": "SAV-CEN", "label": "Central Gonja" }
+      ]
+    },
+    {
+      "code": "UE",
+      "label": "Upper East",
+      "districts": [
+        { "code": "UE-BOL", "label": "Bolgatanga Municipal" },
+        { "code": "UE-BAW", "label": "Bawku Municipal" },
+        { "code": "UE-KAS", "label": "Kassena Nankana Municipal" },
+        { "code": "UE-TAL", "label": "Talensi" },
+        { "code": "UE-BGR", "label": "Bongo" }
+      ]
+    },
+    {
+      "code": "UW",
+      "label": "Upper West",
+      "districts": [
+        { "code": "UW-WA", "label": "Wa Municipal" },
+        { "code": "UW-LAW", "label": "Lawra Municipal" },
+        { "code": "UW-JIR", "label": "Jirapa Municipal" },
+        { "code": "UW-NAD", "label": "Nadowli Kaleo" },
+        { "code": "UW-SIS", "label": "Sissala East" }
+      ]
+    },
+    {
+      "code": "BON",
+      "label": "Bono",
+      "districts": [
+        { "code": "BON-SUN", "label": "Sunyani Municipal" },
+        { "code": "BON-BER", "label": "Berekum Municipal" },
+        { "code": "BON-DOR", "label": "Dormaa Municipal" },
+        { "code": "BON-JAM", "label": "Jaman North" },
+        { "code": "BON-TAN", "label": "Tain" }
+      ]
+    },
+    {
+      "code": "BE",
+      "label": "Bono East",
+      "districts": [
+        { "code": "BE-TEC", "label": "Techiman Municipal" },
+        { "code": "BE-KIN", "label": "Kintampo North Municipal" },
+        { "code": "BE-NKR", "label": "Nkoranza North" },
+        { "code": "BE-PRU", "label": "Pru East" },
+        { "code": "BE-AHA", "label": "Atebubu Amanten" }
+      ]
+    },
+    {
+      "code": "AHA",
+      "label": "Ahafo",
+      "districts": [
+        { "code": "AHA-GOA", "label": "Goaso Municipal" },
+        { "code": "AHA-ASU", "label": "Asunafo North Municipal" },
+        { "code": "AHA-TAN", "label": "Tano North Municipal" },
+        { "code": "AHA-TAS", "label": "Tano South Municipal" },
+        { "code": "AHA-ASO", "label": "Asutifi North" }
+      ]
+    }
+  ]
+}

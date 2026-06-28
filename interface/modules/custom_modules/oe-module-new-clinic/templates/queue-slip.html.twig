@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ 'Queue slip'|xlt }} — #{{ slip.queue_number|text }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 1rem;
+            color: #222;
+            max-width: 80mm;
+        }
+        .clinic-name {
+            font-size: 1rem;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+        .queue-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            text-align: center;
+            line-height: 1.1;
+            margin: 0.75rem 0;
+        }
+        .label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #666;
+        }
+        .value {
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+        }
+        .instruction {
+            border-top: 1px dashed #999;
+            margin-top: 1rem;
+            padding-top: 0.75rem;
+            text-align: center;
+            font-size: 0.95rem;
+        }
+        .no-print {
+            margin-bottom: 1rem;
+        }
+        @media print {
+            .no-print { display: none; }
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button type="button" onclick="window.print()">{{ 'Print'|xlt }}</button>
+        <button type="button" onclick="window.close()">{{ 'Close'|xlt }}</button>
+    </div>
+
+    <div class="clinic-name">{{ slip.clinic_name|text }}</div>
+    <div class="label" style="text-align:center;">{{ 'Queue number'|xlt }}</div>
+    <div class="queue-number">#{{ slip.queue_number|text }}</div>
+
+    <div class="label">{{ 'Patient'|xlt }}</div>
+    <div class="value">{{ slip.patient_display|text }}</div>
+
+    <div class="label">{{ 'Visit date'|xlt }}</div>
+    <div class="value">{{ slip.visit_date|text }} {{ slip.started_time_display|text }}</div>
+
+    {% if slip.visit_type_label %}
+    <div class="label">{{ 'Visit type'|xlt }}</div>
+    <div class="value">{{ slip.visit_type_label|text }}</div>
+    {% endif %}
+
+    <div class="instruction">{{ slip.instruction_text|text }}</div>
+
+    {% if auto_print %}
+    <script>window.addEventListener('load', function () { window.print(); });</script>
+    {% endif %}
+</body>
+</html>

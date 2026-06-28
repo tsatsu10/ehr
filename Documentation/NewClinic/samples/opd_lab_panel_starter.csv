@@ -1,0 +1,10 @@
+Order Code,Order Name,Result Code,Result Name
+MAL_RDT,Malaria RDT (Rapid),MAL_RDT,Malaria RDT Result
+HB,Haemoglobin (Hb),HB,Haemoglobin
+UA_DIP,Urinalysis (dipstick),UA_DIP,Urinalysis Result
+GLU_F,Blood glucose (fasting),GLU_F,Glucose
+CBC,Full blood count (FBC),WBC,White blood cell count
+CBC,Full blood count (FBC),HGB,Haemoglobin
+CBC,Full blood count (FBC),HCT,Haematocrit
+CBC,Full blood count (FBC),PLT,Platelet count
+HCG,Pregnancy test (urine),HCG,Pregnancy test result

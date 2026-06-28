@@ -1,0 +1,486 @@
+{% extends 'base.html.twig' %}
+
+{% block page_subtitle %}
+<div class="oe-nc-page-heading__subtitle">{{ 'Queue, roles, and completion thresholds'|xlt }}</div>
+{% endblock %}
+
+{% block page_heading_actions %}
+<button type="button" class="btn btn-primary btn-sm" id="nc-admin-save" disabled>
+    {{ 'Save changes'|xlt }}
+</button>
+<span class="text-muted small" id="nc-admin-status"></span>
+{% endblock %}
+
+{% block content %}
+<div id="nc-admin-desk"
+     data-ajax-url="{{ ajax_url }}"
+     data-csrf-token="{{ csrf_token }}"
+     data-visit-board-url="{{ visit_board_url }}"
+     data-webroot="{{ webroot }}"
+     data-clinic-facility-id="{{ desk_facility_id }}">
+    <div class="alert alert-success d-none" id="nc-admin-success"></div>
+    <div class="alert alert-danger d-none" id="nc-admin-error"></div>
+
+    <div class="d-flex flex-wrap align-items-center mb-3">
+        <label class="mb-0 mr-2" for="nc-admin-scope">{{ 'Settings for'|xlt }}:</label>
+        <select class="form-control form-control-sm w-auto mr-2" id="nc-admin-scope">
+            <option value="facility">{{ 'This clinic'|xlt }}</option>
+            <option value="global">{{ 'All facilities (global default)'|xlt }}</option>
+        </select>
+        <span class="text-muted small" id="nc-admin-scope-hint"></span>
+    </div>
+
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" data-toggle="tab" href="#nc-admin-tab-queue" role="tab">
+                {{ 'Queue & roles'|xlt }}
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-toggle="tab" href="#nc-admin-tab-roles" role="tab">
+                {{ 'Roles & ACL'|xlt }}
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-toggle="tab" href="#nc-admin-tab-completion" role="tab">
+                {{ 'Completion'|xlt }}
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-toggle="tab" href="#nc-admin-tab-clinic" role="tab">
+                {{ 'Clinic'|xlt }}
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-toggle="tab" href="#nc-admin-tab-types" role="tab">
+                {{ 'Visit types'|xlt }}
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-toggle="tab" href="#nc-admin-tab-fees" role="tab">
+                {{ 'Fees'|xlt }}
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="nc-admin-tab-queue" role="tabpanel">
+            <div class="card">
+                <div class="card-body">
+                    <p class="text-muted">{{ 'Enable optional desks and queue behavior.'|xlt }}</p>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_triage" data-key="enable_triage">
+                        <label class="form-check-label" for="cfg-enable_triage">{{ 'Enable triage desk'|xlt }}</label>
+                    </div>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_scheduled_integration" data-key="enable_scheduled_integration">
+                        <label class="form-check-label" for="cfg-enable_scheduled_integration">{{ 'Link Front Desk to OpenEMR calendar (appointment check-in)'|xlt }}</label>
+                        <small class="form-text text-muted">{{ 'When on, patients with an appointment today show an Appointment today chip and Start visit & check in on Front Desk. Book appointments in Calendar first.'|xlt }}</small>
+                    </div>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_lab_role" data-key="enable_lab_role">
+                        <label class="form-check-label" for="cfg-enable_lab_role">{{ 'Enable lab desk'|xlt }}</label>
+                    </div>
+                    <div class="form-check mb-2 ml-3">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_lab_ops" data-key="enable_lab_ops">
+                        <label class="form-check-label" for="cfg-enable_lab_ops">{{ 'Enable lab ops strip on patient chart Clinical (M12)'|xlt }}</label>
+                    </div>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_pharmacy_role" data-key="enable_pharmacy_role">
+                        <label class="form-check-label" for="cfg-enable_pharmacy_role">{{ 'Enable pharmacy desk'|xlt }}</label>
+                    </div>
+                    <div class="form-check mb-2 ml-3">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_pharm_ops" data-key="enable_pharm_ops">
+                        <label class="form-check-label" for="cfg-enable_pharm_ops">{{ 'Enable pharmacy ops strip on patient chart Clinical (M13)'|xlt }}</label>
+                    </div>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-allow_multiple_visits_per_day" data-key="allow_multiple_visits_per_day">
+                        <label class="form-check-label" for="cfg-allow_multiple_visits_per_day">{{ 'Allow multiple visits per patient per day'|xlt }}</label>
+                    </div>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_multi_doctor_filters" data-key="enable_multi_doctor_filters">
+                        <label class="form-check-label" for="cfg-enable_multi_doctor_filters">{{ 'Enable doctor queue Me/All filters'|xlt }}</label>
+                    </div>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_aggressive_orphan_facility_repair" data-key="enable_aggressive_orphan_facility_repair">
+                        <label class="form-check-label" for="cfg-enable_aggressive_orphan_facility_repair">{{ 'Claim zero-facility visits to this desk (multi-site only)'|xlt }}</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-auto_dismiss_product_registration" data-key="auto_dismiss_product_registration">
+                        <label class="form-check-label" for="cfg-auto_dismiss_product_registration">{{ 'Auto-dismiss OpenEMR product registration prompt'|xlt }}</label>
+                        <small class="form-text text-muted">{{ 'Runs once per session when enabled. Disable to keep the stock OpenEMR registration modal.'|xlt }}</small>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_chart_depth" data-key="enable_chart_depth">
+                        <label class="form-check-label" for="cfg-enable_chart_depth">{{ 'Enable chart depth (M11 master)'|xlt }}</label>
+                    </div>
+                    <div class="form-check mb-2 ml-3">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_chart_depth_finance" data-key="enable_chart_depth_finance">
+                        <label class="form-check-label" for="cfg-enable_chart_depth_finance">{{ 'Enable payment history strip on patient chart Profile'|xlt }}</label>
+                    </div>
+                    <div class="form-check mb-2 ml-3">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_chart_depth_referral" data-key="enable_chart_depth_referral">
+                        <label class="form-check-label" for="cfg-enable_chart_depth_referral">{{ 'Enable referrals strip on patient chart Clinical'|xlt }}</label>
+                    </div>
+                    <div class="form-check mb-2 ml-3">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_chart_depth_export" data-key="enable_chart_depth_export">
+                        <label class="form-check-label" for="cfg-enable_chart_depth_export">{{ 'Enable clinical export builder and visit summary export (CDc)'|xlt }}</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-communications_hub_enable" data-key="communications_hub_enable">
+                        <label class="form-check-label" for="cfg-communications_hub_enable">{{ 'Enable Communications Hub (staff messages + reminders)'|xlt }}</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_patient_registry" data-key="enable_patient_registry">
+                        <label class="form-check-label" for="cfg-enable_patient_registry">{{ 'Enable Patient Registry cohort search (M10)'|xlt }}</label>
+                    </div>
+                    <div class="form-check mb-2 ml-3">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-registry_redirect_global_search" data-key="registry_redirect_global_search">
+                        <label class="form-check-label" for="cfg-registry_redirect_global_search">{{ 'Redirect global search (#anySearchBox) to Front Desk when registry is on (reception)'|xlt }}</label>
+                    </div>
+                    <hr class="my-3">
+                    <h6 class="text-muted text-uppercase small">{{ 'Safety & chart integration'|xlt }}</h6>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_shared_device_session_warning" data-key="enable_shared_device_session_warning">
+                        <label class="form-check-label" for="cfg-enable_shared_device_session_warning">{{ 'Shared-device session warning on desks (T1-F19)'|xlt }}</label>
+                        <small class="form-text text-muted">{{ 'Shows a banner when another user may still be logged in on a shared PC. Blocks save actions until acknowledged or session is cleared.'|xlt }}</small>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_legacy_patient_context_overlay" data-key="enable_legacy_patient_context_overlay">
+                        <label class="form-check-label" for="cfg-enable_legacy_patient_context_overlay">{{ 'Legacy patient context strip on stock chart pages (T1-F18)'|xlt }}</label>
+                        <small class="form-text text-muted">{{ 'Injects identity + visit state banner on core OpenEMR patient_file pages when staff open legacy chart screens.'|xlt }}</small>
+                    </div>
+                    <div class="form-check mb-2 ml-3">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_legacy_strip_clinical_chips" data-key="enable_legacy_strip_clinical_chips">
+                        <label class="form-check-label" for="cfg-enable_legacy_strip_clinical_chips">{{ 'Show severe allergy chips on legacy strip'|xlt }}</label>
+                    </div>
+                    <div class="form-check mb-2 ml-3">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_legacy_strip_desk_return" data-key="enable_legacy_strip_desk_return">
+                        <label class="form-check-label" for="cfg-enable_legacy_strip_desk_return">{{ 'Show return-to-desk link on legacy strip'|xlt }}</label>
+                    </div>
+                    <hr class="my-3">
+                    <h6 class="text-muted text-uppercase small">{{ 'Ops polish (V1.1-OPS)'|xlt }}</h6>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_faster_queue_interrupts" data-key="enable_faster_queue_interrupts">
+                        <label class="form-check-label" for="cfg-enable_faster_queue_interrupts">{{ 'Faster queue interrupts (10–30s poll)'|xlt }}</label>
+                        <small class="form-text text-muted">{{ 'Polls role desks every 10s when the tab is visible; immediate poll when returning to the tab.'|xlt }}</small>
+                    </div>
+                    <div class="form-group ml-3">
+                        <label for="cfg-faster_queue_interrupt_poll_seconds">{{ 'Queue poll interval (seconds)'|xlt }}</label>
+                        <input type="number" min="10" max="30" class="form-control nc-admin-field w-auto"
+                               id="cfg-faster_queue_interrupt_poll_seconds" data-key="faster_queue_interrupt_poll_seconds" data-type="int">
+                    </div>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_similar_surname_queue_warning" data-key="enable_similar_surname_queue_warning">
+                        <label class="form-check-label" for="cfg-enable_similar_surname_queue_warning">{{ 'Similar surname warning on queue cards'|xlt }}</label>
+                        <small class="form-text text-muted">{{ 'Amber Same surname today chip when another patient in today\'s queue shares the normalized last name.'|xlt }}</small>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enable_pinned_reception_preview" data-key="enable_pinned_reception_preview">
+                        <label class="form-check-label" for="cfg-enable_pinned_reception_preview">{{ 'Pinned reception preview (Front Desk)'|xlt }}</label>
+                        <small class="form-text text-muted">{{ 'Keeps the patient banner visible while Register patient or Edit profile is open.'|xlt }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="nc-admin-tab-roles" role="tabpanel">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <p class="text-muted mb-2">{{ 'Manage staff accounts and ACL assignments in core OpenEMR admin.'|xlt }}</p>
+                    <p class="alert alert-info py-2 small">{{ 'To turn on Lab or Pharmacy desks, use the Queue & roles tab and check Enable lab desk / Enable pharmacy desk, then Save changes.'|xlt }}</p>
+                    <a class="btn btn-outline-primary btn-sm mr-2" id="nc-admin-link-users" href="#" target="_blank" rel="noopener noreferrer">
+                        {{ 'Manage users'|xlt }}
+                    </a>
+                    <a class="btn btn-outline-secondary btn-sm mr-2" id="nc-admin-link-acl" href="#" target="_blank" rel="noopener noreferrer">
+                        {{ 'ACL editor'|xlt }}
+                    </a>
+                    <button type="button" class="btn btn-warning btn-sm" id="nc-admin-grant-self-roles">
+                        {{ 'Grant New Clinic roles to my account'|xlt }}
+                    </button>
+                    <small class="form-text text-muted mt-2">{{ 'Grants desk groups for pilot testing. Log out and back in afterward.'|xlt }}</small>
+                </div>
+            </div>
+            <div id="nc-admin-roles"></div>
+            <h5 class="mt-4">{{ 'Sensitive permissions'|xlt }}</h5>
+            <div id="nc-admin-sensitive"></div>
+            <h5 class="mt-4">{{ 'ACL inventory'|xlt }}</h5>
+            <div id="nc-admin-acl-inventory"></div>
+        </div>
+
+        <div class="tab-pane fade" id="nc-admin-tab-completion" role="tabpanel">
+            <div class="card">
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="cfg-completion_required_for_billing">{{ 'Completion required for billing (%)'|xlt }}</label>
+                        <input type="number" min="0" max="100" class="form-control nc-admin-field"
+                               id="cfg-completion_required_for_billing" data-key="completion_required_for_billing" data-type="int">
+                    </div>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-enforce_completion_on_revisit" data-key="enforce_completion_on_revisit">
+                        <label class="form-check-label" for="cfg-enforce_completion_on_revisit">{{ 'Enforce completion on revisit'|xlt }}</label>
+                    </div>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-allow_billing_completion_override" data-key="allow_billing_completion_override">
+                        <label class="form-check-label" for="cfg-allow_billing_completion_override">{{ 'Allow billing completion override'|xlt }}</label>
+                    </div>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-require_esign_before_complete_consult" data-key="require_esign_before_complete_consult">
+                        <label class="form-check-label" for="cfg-require_esign_before_complete_consult">{{ 'Require E-Sign before Complete consult'|xlt }}</label>
+                        <small class="form-text text-muted">{{ 'When off, doctors may hand off unsigned; payment is still blocked until signed.'|xlt }}</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="cfg-pediatric_exact_dob_age">{{ 'Pediatric exact DOB age (years)'|xlt }}</label>
+                        <input type="number" min="0" max="18" class="form-control nc-admin-field"
+                               id="cfg-pediatric_exact_dob_age" data-key="pediatric_exact_dob_age" data-type="int">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="nc-admin-tab-clinic" role="tabpanel">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <p class="text-muted">{{ 'Currency display settings (read-only in V1).'|xlt }}</p>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">{{ 'Currency code'|xlt }}</dt>
+                        <dd class="col-sm-8" id="nc-admin-currency-code">—</dd>
+                        <dt class="col-sm-4">{{ 'Symbol'|xlt }}</dt>
+                        <dd class="col-sm-8" id="nc-admin-currency-symbol">—</dd>
+                        <dt class="col-sm-4">{{ 'Decimal places'|xlt }}</dt>
+                        <dd class="col-sm-8" id="nc-admin-currency-decimals">—</dd>
+                    </dl>
+                </div>
+            </div>
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">{{ 'Queue slip & receipt print'|xlt }}</h5>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-print_queue_slip_on_start_visit" data-key="print_queue_slip_on_start_visit">
+                        <label class="form-check-label" for="cfg-print_queue_slip_on_start_visit">{{ 'Offer queue slip print after Start visit'|xlt }}</label>
+                    </div>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-print_queue_number_on_receipt" data-key="print_queue_number_on_receipt">
+                        <label class="form-check-label" for="cfg-print_queue_number_on_receipt">{{ 'Show queue number on cashier receipt'|xlt }}</label>
+                    </div>
+                    <div class="form-group">
+                        <label for="cfg-queue_slip_instruction_text">{{ 'Queue slip instruction text'|xlt }}</label>
+                        <input type="text" class="form-control nc-admin-field" id="cfg-queue_slip_instruction_text"
+                               data-key="queue_slip_instruction_text" data-type="string" maxlength="255">
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ 'Cashier reconciliation'|xlt }}</h5>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input nc-admin-field" id="cfg-reconciliation_enabled" data-key="reconciliation_enabled">
+                        <label class="form-check-label" for="cfg-reconciliation_enabled">{{ 'Enable scheduled reconciliation'|xlt }}</label>
+                    </div>
+                    <div class="form-group">
+                        <label for="cfg-reconciliation_tolerance">{{ 'Warning tolerance (clinic currency)'|xlt }}</label>
+                        <input type="text" class="form-control nc-admin-field" id="cfg-reconciliation_tolerance"
+                               data-key="reconciliation_tolerance" data-type="string">
+                    </div>
+                    <div class="form-group">
+                        <label for="cfg-reconciliation_cron_time">{{ 'Scheduled run time (HH:MM)'|xlt }}</label>
+                        <input type="text" class="form-control nc-admin-field" id="cfg-reconciliation_cron_time"
+                               data-key="reconciliation_cron_time" data-type="string">
+                    </div>
+                    <p class="text-muted small mb-2" id="nc-admin-reconciliation-status">{{ 'Last run: not loaded yet'|xlt }}</p>
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="nc-admin-run-reconciliation">
+                        {{ 'Run reconciliation now'|xlt }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="nc-admin-tab-types" role="tabpanel">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <p class="text-muted mb-0">{{ 'Visit types map to calendar categories for encounters.'|xlt }}</p>
+                        <button type="button" class="btn btn-primary btn-sm" id="nc-admin-add-visit-type">
+                            {{ 'Add visit type'|xlt }}
+                        </button>
+                    </div>
+                    <div id="nc-admin-visit-types"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="nc-admin-tab-fees" role="tabpanel">
+            <div class="alert alert-info" id="nc-admin-fee-guidelines">
+                <strong>{{ 'How fee lines work'|xlt }}</strong>
+                <ul class="mb-2 pl-3 small">
+                    <li>{{ 'Each line is a shortcut the cashier can post to the patient fee sheet.'|xlt }}</li>
+                    <li>{{ 'Billing code must already exist in OpenEMR (Administration → Codes) for the selected code type.'|xlt }}</li>
+                    <li>{{ 'Category groups charges on daily cash reports — pick the closest match.'|xlt }}</li>
+                    <li>{{ 'Use a starter template when adding common items, then adjust price and codes.'|xlt }}</li>
+                </ul>
+                <a class="btn btn-outline-primary btn-sm" id="nc-admin-link-codes" href="#" target="_blank" rel="noopener noreferrer">
+                    {{ 'Open OpenEMR Codes admin'|xlt }}
+                </a>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <p class="text-muted mb-0">{{ 'Cash fee schedule for cashier charges and billing codes.'|xlt }}</p>
+                        <button type="button" class="btn btn-primary btn-sm" id="nc-admin-add-fee">
+                            {{ 'Add fee line'|xlt }}
+                        </button>
+                    </div>
+                    <div id="nc-admin-fee-schedule"></div>
+                    <hr>
+                    <h6>{{ 'Import from CSV'|xlt }}</h6>
+                    <p class="small text-muted mb-2">{{ 'Columns: code, name, category, price_amount, code_type, billing_code, sort_order (optional).'|xlt }}</p>
+                    <textarea class="form-control form-control-sm mb-2" id="nc-admin-fee-csv" rows="4" placeholder="OPD_CONSULT,OPD consultation,consult,50,CPT4,OPD_CONSULT,10"></textarea>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="nc-admin-fee-import">{{ 'Import CSV'|xlt }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="nc-admin-fee-modal" tabindex="-1" role="dialog"
+     aria-labelledby="nc-admin-fee-title" aria-modal="true" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="nc-admin-fee-title">{{ 'Fee line'|xlt }}</h5>
+                <button type="button" class="btn btn-link close" id="nc-admin-fee-close" aria-label="{{ 'Close'|xlt }}">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="nc-admin-fee-id" value="">
+                <div class="form-group" id="nc-admin-fee-template-wrap">
+                    <label for="nc-admin-fee-template">{{ 'Start from template (optional)'|xlt }}</label>
+                    <select class="form-control" id="nc-admin-fee-template">
+                        <option value="">{{ 'Blank fee line'|xlt }}</option>
+                    </select>
+                    <small class="form-text text-muted" id="nc-admin-fee-template-hint"></small>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="nc-admin-fee-code">{{ 'Schedule code'|xlt }}</label>
+                        <input type="text" class="form-control" id="nc-admin-fee-code" maxlength="32">
+                        <small class="form-text text-muted">{{ 'Short ID used in this clinic module (e.g. OPD_CONSULT).'|xlt }}</small>
+                    </div>
+                    <div class="form-group col-md-8">
+                        <label for="nc-admin-fee-name">{{ 'Description'|xlt }}</label>
+                        <input type="text" class="form-control" id="nc-admin-fee-name" maxlength="128">
+                        <small class="form-text text-muted">{{ 'Shown to cashier when picking charges.'|xlt }}</small>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="nc-admin-fee-category">{{ 'Category'|xlt }}</label>
+                        <select class="form-control" id="nc-admin-fee-category"></select>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="nc-admin-fee-price">{{ 'Default price'|xlt }}</label>
+                        <input type="number" min="0" step="0.01" class="form-control" id="nc-admin-fee-price">
+                        <small class="form-text text-muted" id="nc-admin-fee-price-hint"></small>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="nc-admin-fee-sort">{{ 'Sort order'|xlt }}</label>
+                        <input type="number" min="0" step="1" class="form-control" id="nc-admin-fee-sort" value="0">
+                        <small class="form-text text-muted">{{ 'Lower numbers appear first in lists.'|xlt }}</small>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="nc-admin-fee-code-type">{{ 'OpenEMR code type'|xlt }}</label>
+                        <select class="form-control" id="nc-admin-fee-code-type"></select>
+                        <small class="form-text text-muted" id="nc-admin-fee-code-type-hint"></small>
+                    </div>
+                    <div class="form-group col-md-8">
+                        <label for="nc-admin-fee-billing-code">{{ 'Billing code'|xlt }}</label>
+                        <select class="form-control" id="nc-admin-fee-billing-code"></select>
+                        <small class="form-text text-muted" id="nc-admin-fee-billing-hint">
+                            {{ 'Must match an active code in OpenEMR for the selected type.'|xlt }}
+                        </small>
+                    </div>
+                </div>
+                <div class="alert alert-danger d-none" id="nc-admin-fee-error"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="nc-admin-fee-cancel">{{ 'Cancel'|xlt }}</button>
+                <button type="button" class="btn btn-primary" id="nc-admin-fee-save">{{ 'Save fee line'|xlt }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="nc-admin-visit-type-modal" tabindex="-1" role="dialog"
+     aria-labelledby="nc-admin-visit-type-title" aria-modal="true" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="nc-admin-visit-type-title">{{ 'Visit type'|xlt }}</h5>
+                <button type="button" class="btn btn-link close" id="nc-admin-visit-type-close" aria-label="{{ 'Close'|xlt }}">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="nc-admin-visit-type-id" value="">
+                <div class="form-group">
+                    <label for="nc-admin-visit-type-label">{{ 'Name'|xlt }}</label>
+                    <input type="text" class="form-control" id="nc-admin-visit-type-label" maxlength="128">
+                </div>
+                <div class="form-group">
+                    <label for="nc-admin-visit-type-category">{{ 'Calendar category'|xlt }}</label>
+                    <select class="form-control" id="nc-admin-visit-type-category"></select>
+                </div>
+                <div class="form-group">
+                    <label for="nc-admin-visit-type-profile">{{ 'Service profile'|xlt }}</label>
+                    <select class="form-control" id="nc-admin-visit-type-profile">
+                        <option value="full_opd">{{ 'Full OPD'|xlt }}</option>
+                        <option value="lab_direct">{{ 'Lab direct'|xlt }}</option>
+                        <option value="pharmacy_walkin">{{ 'Pharmacy walk-in'|xlt }}</option>
+                    </select>
+                </div>
+                <div class="form-group form-check">
+                    <input type="checkbox" class="form-check-input" id="nc-admin-visit-type-referral">
+                    <label class="form-check-label" for="nc-admin-visit-type-referral">{{ 'Referral required'|xlt }}</label>
+                </div>
+                <div class="form-group form-check">
+                    <input type="checkbox" class="form-check-input" id="nc-admin-visit-type-default">
+                    <label class="form-check-label" for="nc-admin-visit-type-default">{{ 'Default for Front Desk'|xlt }}</label>
+                </div>
+                <div class="form-group">
+                    <label for="nc-admin-visit-type-fee-hints">{{ 'Suggested cashier fees'|xlt }}</label>
+                    <select class="form-control" id="nc-admin-visit-type-fee-hints" multiple size="5"></select>
+                    <small class="form-text text-muted">{{ 'Pre-selects fee lines when a visit reaches cashier (hold Ctrl to select multiple).'|xlt }}</small>
+                </div>
+                <div class="alert alert-danger d-none" id="nc-admin-visit-type-error"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="nc-admin-visit-type-cancel">{{ 'Cancel'|xlt }}</button>
+                <button type="button" class="btn btn-primary" id="nc-admin-visit-type-save">{{ 'Save visit type'|xlt }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="nc-admin-modal-backdrop" class="modal-backdrop fade" style="display:none;"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ assets_url }}/js/modal-a11y.js?v={{ asset_version }}"></script>
+<script src="{{ assets_url }}/js/admin.js?v={{ asset_version }}"></script>
+<script>
+(function () {
+    function bootAdmin() {
+        if (window.NewClinicAdmin) {
+            window.NewClinicAdmin.init(document.getElementById('nc-admin-desk'));
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootAdmin);
+    } else {
+        bootAdmin();
+    }
+})();
+</script>
+{% endblock %}

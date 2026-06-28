@@ -1,0 +1,17 @@
+{# T1-F19 — shared device session mismatch banner (module desks) #}
+<div id="{{ prefix }}-session-banner" class="alert alert-danger d-none mb-3 nc-shared-device-banner" role="alert">
+    <div class="d-flex justify-content-between align-items-start flex-wrap">
+        <div id="{{ prefix }}-session-banner-text">
+            <strong>{{ 'Browser session is on another patient.'|xlt }}</strong>
+            <div class="small mt-1">{{ 'Restore encounter session or return to the queue before saving.'|xlt }}</div>
+        </div>
+        <div class="mt-2 mt-md-0 text-nowrap">
+            <button type="button" class="btn btn-sm btn-outline-light mr-2" id="{{ prefix }}-restore-session">
+                {{ 'Restore encounter session'|xlt }}
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="{{ prefix }}-return-queue">
+                {{ 'Return to queue'|xlt }}
+            </button>
+        </div>
+    </div>
+</div>

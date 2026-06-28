@@ -1,0 +1,136 @@
+{% extends 'base.html.twig' %}
+
+{% block page_subtitle %}
+<div class="oe-nc-page-heading__subtitle" id="nc-triage-date"></div>
+{% endblock %}
+
+{% block page_heading_actions %}
+<button type="button" class="btn btn-outline-secondary btn-sm" id="nc-triage-find-patient">
+    {{ '+ Find patient'|xlt }}
+</button>
+<button type="button" class="btn btn-outline-primary btn-sm" id="nc-triage-refresh">
+    {{ 'Refresh'|xlt }}
+</button>
+<span class="text-muted small" id="nc-triage-updated"></span>
+{% endblock %}
+
+{% block content %}
+<div id="nc-triage-desk"
+     data-ajax-url="{{ ajax_url }}"
+     data-csrf-token="{{ csrf_token }}"
+     data-facility-id="{{ desk_facility_id }}"
+     data-module-url="{{ module_url }}"
+     data-can-cancel="{{ can_cancel_visit ? '1' : '0' }}"
+     data-visit-board-url="{{ module_url }}/visit-board.php"
+     data-shared-device-warning="{{ enable_shared_device_session_warning ? '1' : '0' }}"
+     data-vitals-rules="{{ vitals_form_rules|json_encode|e('html_attr') }}">
+    <div id="nc-triage-interrupt" class="alert alert-warning d-none mb-3" role="alert">
+        <div class="d-flex justify-content-between align-items-start flex-wrap">
+            <span id="nc-triage-interrupt-text"></span>
+            <button type="button" class="btn btn-sm btn-outline-secondary ml-2" id="nc-triage-interrupt-dismiss">
+                {{ 'Return to queue'|xlt }}
+            </button>
+        </div>
+    </div>
+
+    {% include 'partials/shared-device-session-banner.html.twig' with { prefix: 'nc-triage' } only %}
+
+    <div class="row">
+        <div class="col-lg-4 mb-3">
+            <div class="nc-triage-queue-panel">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <strong>{{ 'Queue'|xlt }}</strong>
+                    <span class="text-muted small" id="nc-triage-counts"></span>
+                </div>
+                <div id="nc-triage-queue-list"></div>
+                <p class="text-muted small mt-3 mb-0" id="nc-triage-empty-hint" style="display:none;">
+                    {{ 'Patients sent Skipped triage appear on Visit Board → Doctor, not here.'|xlt }}
+                </p>
+            </div>
+        </div>
+
+        <div class="col-lg-8 mb-3">
+            <div id="nc-triage-active-pane">
+                <div class="card">
+                    <div class="card-body text-muted text-center py-5" id="nc-triage-placeholder">
+                        <em>{{ 'Select a patient from the queue or use Find patient.'|xlt }}</em>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="nc-triage-find-drawer" class="nc-triage-drawer" style="display:none;">
+    <div class="nc-triage-drawer-backdrop" id="nc-triage-drawer-backdrop"></div>
+    <div class="nc-triage-drawer-panel card shadow">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>{{ 'Find patient'|xlt }}</strong>
+            <button type="button" class="close" id="nc-triage-drawer-close" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="card-body">
+            {% include 'components/patient-search.html.twig' with {
+                host: 'triage',
+                primary_action: 'start_triage',
+                autofocus: true,
+                show_add_new: false,
+                ajax_url: ajax_url,
+                csrf_token: csrf_token
+            } %}
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="nc-triage-auto-start-modal" tabindex="-1" role="dialog" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ 'Start visit at triage'|xlt }}</h5>
+                <button type="button" class="close nc-modal-close" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="nc-auto-start-patient"></p>
+                <p class="text-muted small">{{ 'No visit was started at Front Desk. Start one now and begin triage?'|xlt }}</p>
+                <div class="form-group">
+                    <label for="nc-auto-start-visit-type">{{ 'Visit type'|xlt }}</label>
+                    <select class="form-control" id="nc-auto-start-visit-type"></select>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="nc-auto-start-urgent">
+                    <label class="form-check-label" for="nc-auto-start-urgent">{{ 'Urgent'|xlt }}</label>
+                </div>
+                <div class="alert alert-danger mt-2" id="nc-auto-start-error" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary nc-modal-close">{{ 'Cancel'|xlt }}</button>
+                <button type="button" class="btn btn-primary" id="nc-auto-start-confirm">{{ 'Start and triage'|xlt }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal-backdrop fade" id="nc-triage-modal-backdrop" style="display:none;"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ assets_url }}/js/patient-search.js?v={{ asset_version }}"></script>
+<script src="{{ assets_url }}/js/vitals-form-validation.js?v={{ asset_version }}"></script>
+<script src="{{ assets_url }}/js/triage.js?v={{ asset_version }}"></script>
+<script>
+(function () {
+    function bootTriage() {
+        if (window.NewClinicTriage) {
+            window.NewClinicTriage.init(document.getElementById('nc-triage-desk'));
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootTriage);
+    } else {
+        bootTriage();
+    }
+})();
+</script>
+{% endblock %}
