@@ -63,7 +63,17 @@ npx playwright test tests/e2e/new-clinic/specs/report-hub.spec.js --config tests
 
 ## Task 2: Ship to remote
 
-Push branch and open PR.
+Branch: **`feat/new-clinic-pharm-ops-report-hub`** (commit `004445d` on top of `master`).
+
+This workspace has **no git remote** configured and **GitHub CLI (`gh`) is not installed** — push and PR must be done from your fork:
+
+```bash
+git remote add origin <your-fork-url>   # once
+git push -u origin feat/new-clinic-pharm-ops-report-hub
+gh pr create --title "feat(new-clinic): pharm ops hub and reporting hub (M13/M16)" --body "..."
+```
+
+Or open a PR manually on GitHub after push.
 
 ---
 
