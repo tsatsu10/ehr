@@ -1,7 +1,7 @@
 # New Clinic V1 — Next Steps
 
-**Current status (June 30, 2026):** React cutover complete · V1.2-PHARM shipped · **M16 Reporting Hub** (V1.1-REP) complete · **M17 Clinical Documentation Hub** (V1.1-DOC P1) shipped · pilot rollout on facilities **0 + 3**  
-**Remaining work:** Push/PR, optional M17 follow-ons (LBF wizard, MRD cutover, doc status chip)
+**Current status (June 30, 2026):** React cutover complete · V1.2-PHARM shipped · **M16 Reporting Hub** (V1.1-REP) complete · **M17 Clinical Documentation Hub** (V1.1-DOC) complete · pilot rollout on facilities **0 + 3**  
+**Remaining work:** Push/PR (no git remote in this workspace)
 
 ---
 
@@ -10,7 +10,7 @@
 - React migration — all desks + hubs (`frontend/src/islands/`, **18** Vite entries incl. `report-hub`, `clinical-doc`)
 - **M13 Pharm Ops Hub** — worklist, dispense, receive, OTC, destroy, reports, controlled register, labels, formulary quick Rx
 - **M16 Reporting Hub (complete)** — Today lens (M7 embed), lens catalog, native immunization + destroyed-drugs cards, async export (`reports.export` / `reports.export_status`), export audit
-- **M17 Clinical Documentation Hub (P1)** — lens shell (visit/consult/screening/nursing/orders/specialty), catalog + visit summary APIs, form open via `clinical-form-bridge`, Visit Forms menu cutover, doctor encounter shortcut → hub when flag ON
+- **M17 Clinical Documentation Hub (complete)** — lens shell, catalog + visit summary APIs, form open via `clinical-form-bridge`, Visit Forms menu cutover; **M4-F40** doc status chip, **M4-F41** Open documentation shortcut, **M4-F42** Quick forms drawer; **MRD** hub link cutover; **M17-F08** Ghana OPD LBF wizard (Admin Hub); audit remediation + PHPUnit (473 tests)
 - Legacy desk jQuery removed (w50react); Phase 0 hello island removed
 - Deep-link session bridge (Rx, encounter, lab results, chart depth)
 - Playwright: module page smoke, golden-path E2E (skip + pharm dispense + lab + close day), pharm-ops hub smoke, **report-hub smoke**, **clinical-doc smoke**, island bundle smoke
@@ -65,15 +65,21 @@ npx playwright test tests/e2e/new-clinic/specs/report-hub.spec.js --config tests
 
 ## Task 2: Ship to remote
 
-Branch: **`feat/new-clinic-pharm-ops-report-hub`** (commit `004445d` on top of `master`).
+Branch: **`feat/new-clinic-pharm-ops-report-hub`** (HEAD `d4a182a` — 3 commits ahead of `master`).
 
 This workspace has **no git remote** configured and **GitHub CLI (`gh`) is not installed** — push and PR must be done from your fork:
 
 ```bash
 git remote add origin <your-fork-url>   # once
 git push -u origin feat/new-clinic-pharm-ops-report-hub
-gh pr create --title "feat(new-clinic): pharm ops hub and reporting hub (M13/M16)" --body "..."
 ```
+
+Suggested PR title: `feat(new-clinic): M13/M16/M17 hubs and clinical doc PRD follow-ons`
+
+Commits on branch:
+- `004445d` — M13 pharm ops + M16 reporting hub
+- `c8da76b` — M16 native exports + M17 clinical doc hub P1
+- `d4a182a` — M17 PRD follow-ons + audit remediation
 
 Or open a PR manually on GitHub after push.
 
@@ -81,10 +87,10 @@ Or open a PR manually on GitHub after push.
 
 ## Task 3: Optional follow-ups
 
-- **M17 Clinical Doc Hub** — curated encounter forms (V1.1-DOC)
 - O-PHARM-1: optional `pharm_require_lot_on_receive` config (product decision)
 - National controlled-substance schedule alignment (O-PHARM-5 register ships; schedule codes TBD)
 - V1.2 flags: `enable_hard_provider_assignment`, legacy chart strip tuning
+- Install **Ghana OPD LBF** on pilot via Admin Hub → Queue & roles → Import template (if not using stock SOAP)
 
 ---
 
