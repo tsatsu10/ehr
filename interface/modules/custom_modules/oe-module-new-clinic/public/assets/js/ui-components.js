@@ -381,11 +381,21 @@
     }
 
     function postJson(url, body) {
+        var shell = document.getElementById('oe-nc-t1');
+        var csrfToken = shell ? (shell.getAttribute('data-csrf-token') || '') : '';
+        var payload = Object.assign({}, body || {});
+        if (!payload.csrf_token_form && !payload.csrf_token && csrfToken) {
+            payload.csrf_token_form = csrfToken;
+        }
+        var headers = { 'Content-Type': 'application/json' };
+        if (csrfToken) {
+            headers['X-CSRF-Token'] = csrfToken;
+        }
         return fetch(url, {
             method: 'POST',
             credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
+            headers: headers,
+            body: JSON.stringify(payload)
         }).then(parseJsonResponse).catch(networkErrorResult);
     }
 
@@ -514,6 +524,17 @@
         return parts[0] + ' ' + parts[parts.length - 1].charAt(0) + '.';
     }
 
+    function patientInitials(displayName) {
+        var parts = String(displayName || '').trim().split(/\s+/).filter(Boolean);
+        if (!parts.length) {
+            return '—';
+        }
+        if (parts.length === 1) {
+            return parts[0].charAt(0).toUpperCase();
+        }
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+
     /**
      * Returns a small amber badge when the visit was opened on a previous day.
      * Gives staff a clear visual signal without the system acting on it.
@@ -622,7 +643,8 @@
         var staleBadge = staleDateBadge(card);
         var titleHtml = opts.titleHtml
             ? (opts.titleHtml + surnameBadge + staleBadge)
-            : ('<strong>#' + escapeHtml(card.queue_number) + ' ' + escapeHtml(displayName) + '</strong>' +
+            : ('<span class="oe-nc-queue-card__queue-num">#' + escapeHtml(card.queue_number) + '</span>' +
+                '<span class="oe-nc-queue-card__name">' + escapeHtml(displayName) + '</span>' +
                 (opts.badgesHtml || '') + surnameBadge + staleBadge);
         var waitLabel = resolveWaitLabel(card);
         var subtitleHtml = opts.subtitleHtml || (
@@ -635,6 +657,8 @@
             ? '<div class="oe-nc-queue-card__cc small text-muted text-truncate">CC: ' +
             escapeHtml(card.chief_complaint) + '</div>' : '';
         var footerHtml = opts.footerHtml || '';
+        var avatarHtml = '<span class="oe-nc-queue-card__avatar" aria-hidden="true">' +
+            escapeHtml(patientInitials(card.display_name)) + '</span>';
 
         var dataAttrs = '';
         Object.keys(opts.dataAttributes || {}).forEach(function (key) {
@@ -649,10 +673,13 @@
         return '<' + tag + typeAttr +
             ' class="oe-nc-queue-card nc-queue-card' + btnClasses + ' w-100 mb-2' + modifierClass + '"' +
             dataAttrs + claimTitle + disabledTitle + disabledAttr + '>' +
-            '<div class="oe-nc-queue-card__header d-flex justify-content-between align-items-start flex-wrap">' +
-            titleHtml +
-            '</div>' +
-            subtitleHtml + cc + footerHtml +
+            '<div class="oe-nc-queue-card__row">' +
+            avatarHtml +
+            '<div class="oe-nc-queue-card__body">' +
+            '<div class="oe-nc-queue-card__header">' + titleHtml + '</div>' +
+            subtitleHtml + cc +
+            (footerHtml ? '<div class="oe-nc-queue-card__footer">' + footerHtml + '</div>' : '') +
+            '</div></div>' +
             '</' + tag + '>';
     }
 
@@ -821,9 +848,13 @@
                 if (visitId <= 0) {
                     return;
                 }
+                var shell = document.getElementById('oe-nc-t1');
+                var restoreCsrf = root.dataset.csrfToken
+                    || (shell ? shell.getAttribute('data-csrf-token') : '')
+                    || '';
                 postJson(root.dataset.ajaxUrl + '?action=' + restoreAction, {
                     visit_id: visitId,
-                    csrf_token_form: root.dataset.csrfToken
+                    csrf_token_form: restoreCsrf
                 }).then(function (result) {
                     if (result.payload.success) {
                         hideBanner();

@@ -1,4 +1,4 @@
-export type AdminFieldType = 'bool' | 'int' | 'string';
+export type AdminFieldType = 'bool' | 'int' | 'string' | 'select';
 
 export interface AdminFieldDef {
   key: string;
@@ -9,12 +9,37 @@ export interface AdminFieldDef {
   max?: number;
   maxLength?: number;
   indent?: number;
+  choices?: { value: string; label: string }[];
 }
 
 export interface AdminFieldSection {
   title?: string;
   fields: AdminFieldDef[];
 }
+
+/**
+ * React migration kill-switches — still persisted on save/load but hidden from Admin Hub
+ * UI after w50react cutover (React is the only supported desk path).
+ */
+export const REACT_KILL_SWITCH_KEYS: string[] = [
+  'enable_react_visit_board',
+  'enable_react_triage_desk',
+  'enable_react_doctor_desk',
+  'enable_react_cashier_desk',
+  'enable_react_lab_desk',
+  'enable_react_pharmacy_desk',
+  'enable_react_front_desk',
+  'enable_react_patient_registry',
+  'enable_react_daily_reports',
+  'enable_react_communications_hub',
+  'enable_react_admin_hub',
+  'enable_react_patient_chart',
+  'enable_react_lab_ops',
+  'enable_react_pharm_ops',
+  'enable_react_chart_depth',
+  'enable_react_bill_ops',
+  'enable_react_report_hub',
+];
 
 /** All editable keys collected on save (matches legacy nc-admin-field set + admin hub flag). */
 export const ADMIN_SETTING_KEYS: string[] = [
@@ -24,6 +49,10 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'enable_lab_ops',
   'enable_pharmacy_role',
   'enable_pharm_ops',
+  'enable_pharm_rx_favorites',
+  'enable_rx_print',
+  'enable_dispense_label',
+  'pharm_expiry_warn_days',
   'allow_multiple_visits_per_day',
   'enable_multi_doctor_filters',
   'enable_aggressive_orphan_facility_repair',
@@ -43,25 +72,13 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'faster_queue_interrupt_poll_seconds',
   'enable_similar_surname_queue_warning',
   'enable_pinned_reception_preview',
-  'enable_react_visit_board',
-  'enable_react_triage_desk',
-  'enable_react_doctor_desk',
-  'enable_react_cashier_desk',
-  'enable_react_lab_desk',
-  'enable_react_pharmacy_desk',
-  'enable_react_front_desk',
-  'enable_react_patient_registry',
-  'enable_react_daily_reports',
-  'enable_react_communications_hub',
-  'enable_react_admin_hub',
-  'enable_react_patient_chart',
-  'enable_react_lab_ops',
-  'enable_react_chart_depth',
+  ...REACT_KILL_SWITCH_KEYS,
   'enable_bill_ops',
   'enable_bill_ops_outstanding',
+  'enable_report_hub',
+  'report_hub_show_us_quality',
   'bill_ops_reopen_on_correction',
   'enable_insurance',
-  'enable_react_bill_ops',
   'completion_required_for_billing',
   'enforce_completion_on_revisit',
   'allow_billing_completion_override',
@@ -73,6 +90,10 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'reconciliation_enabled',
   'reconciliation_tolerance',
   'reconciliation_cron_time',
+  'currency_code',
+  'currency_symbol',
+  'currency_decimals',
+  'currency_symbol_position',
 ];
 
 export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
@@ -89,15 +110,47 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
       {
         key: 'enable_lab_ops',
         type: 'bool',
-        label: 'Enable lab ops strip on patient chart Clinical (M12)',
+        label: 'Enable Lab Operations hub (M12)',
+        hint: 'Shows Lab Ops in the clinic sidebar and enables the Clinical labs strip on patient chart.',
         indent: 1,
       },
       { key: 'enable_pharmacy_role', type: 'bool', label: 'Enable pharmacy desk' },
       {
         key: 'enable_pharm_ops',
         type: 'bool',
-        label: 'Enable pharmacy ops strip on patient chart Clinical (M13)',
+        label: 'Enable Pharmacy Operations hub (M13)',
+        hint: 'Requires Pharmacy desk and OpenEMR in-house pharmacy. Shows Pharm Ops in the sidebar and clinic-wide pending dispense worklist.',
         indent: 1,
+      },
+      {
+        key: 'enable_pharm_rx_favorites',
+        type: 'bool',
+        label: 'Doctor Desk formulary quick prescribe (M4-F37)',
+        hint: 'Requires Pharmacy Operations and imported OPD formulary. Replaces Prescribe shortcut with Quick prescribe drawer.',
+        indent: 2,
+      },
+      {
+        key: 'enable_rx_print',
+        type: 'bool',
+        label: 'Print Rx pack (community pharmacy)',
+        hint: 'Type A Rx PDF for external pharmacies. Independent of Pharmacy Operations hub.',
+        indent: 1,
+      },
+      {
+        key: 'enable_dispense_label',
+        type: 'bool',
+        label: 'Post-dispense patient labels',
+        hint: 'Requires Pharmacy Operations. Opens label PDF after in-house dispense.',
+        indent: 2,
+      },
+      {
+        key: 'pharm_expiry_warn_days',
+        type: 'int',
+        label: 'Expiring lot warning window (days)',
+        hint: 'Lots expiring within this many days appear on the Pharm Ops write-off worklist.',
+        min: 1,
+        max: 365,
+        indent: 2,
       },
       {
         key: 'allow_multiple_visits_per_day',
@@ -224,92 +277,8 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
     ],
   },
   {
-    title: 'React islands (kill-switches)',
+    title: 'Billing back office (M14)',
     fields: [
-      {
-        key: 'enable_react_visit_board',
-        type: 'bool',
-        label: 'Enable React Visit Board',
-        hint: 'Kill-switch for the React visit board island. Default ON after w50react cutover.',
-      },
-      {
-        key: 'enable_react_triage_desk',
-        type: 'bool',
-        label: 'Enable React Triage Desk (Phase 2A)',
-        hint: 'Replaces the jQuery triage desk with a React island (queue, vitals, Find patient drawer). Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_doctor_desk',
-        type: 'bool',
-        label: 'Enable React Doctor Desk (Phase 3A)',
-        hint: 'Replaces the jQuery doctor desk with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_cashier_desk',
-        type: 'bool',
-        label: 'Enable React Cashier Desk (Phase 4A)',
-        hint: 'Replaces the jQuery cashier desk with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_lab_desk',
-        type: 'bool',
-        label: 'Enable React Lab Desk (Phase 5A)',
-        hint: 'Replaces the jQuery lab desk with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_pharmacy_desk',
-        type: 'bool',
-        label: 'Enable React Pharmacy Desk (Phase 6A)',
-        hint: 'Replaces the jQuery pharmacy desk with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_front_desk',
-        type: 'bool',
-        label: 'Enable React Front Desk (Phase 7A)',
-        hint: 'Replaces the jQuery front desk with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_patient_registry',
-        type: 'bool',
-        label: 'Enable React Patient Registry (Phase 8A)',
-        hint: 'Replaces the jQuery patient registry with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_daily_reports',
-        type: 'bool',
-        label: 'Enable React Daily Reports (Phase 9A)',
-        hint: 'Replaces the jQuery daily reports page with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_communications_hub',
-        type: 'bool',
-        label: 'Enable React Communications Hub (Phase 10A)',
-        hint: 'Replaces the jQuery communications hub with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_admin_hub',
-        type: 'bool',
-        label: 'Enable React Admin Hub (Phase 11A)',
-        hint: 'Replaces the jQuery clinic setup page with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_patient_chart',
-        type: 'bool',
-        label: 'Enable React Patient Chart (Phase 12A)',
-        hint: 'Replaces the jQuery patient chart/MRD page with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_lab_ops',
-        type: 'bool',
-        label: 'Enable React Lab Operations Hub (Phase 13A)',
-        hint: 'Replaces the jQuery lab operations hub with a React island. Requires enable_lab_ops. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_chart_depth',
-        type: 'bool',
-        label: 'Enable React Chart Depth (Phase 14A)',
-        hint: 'Replaces jQuery chart depth pages (payments, referrals, export) with a React island. Requires enable_chart_depth sub-flags. Default OFF. Requires frontend build.',
-      },
       {
         key: 'enable_bill_ops',
         type: 'bool',
@@ -337,11 +306,23 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         hint: 'Shows M14 Insurance vault tab and legacy billing gateways. Cash clinics leave OFF.',
         indent: 1,
       },
+    ],
+  },
+  {
+    title: 'Reporting Operations Hub (M16)',
+    fields: [
       {
-        key: 'enable_react_bill_ops',
+        key: 'enable_report_hub',
         type: 'bool',
-        label: 'Enable React Billing Back Office (Phase 15A)',
-        hint: 'React island for M14 hub tabs. Requires enable_bill_ops. Default OFF. Requires frontend build.',
+        label: 'Enable Reporting Operations Hub (M16)',
+        hint: 'Curated periodic and compliance reporting; embeds Daily Reports as Today lens. Default OFF.',
+      },
+      {
+        key: 'report_hub_show_us_quality',
+        type: 'bool',
+        label: 'Show US quality reports (CQM/AMC) in audit lens',
+        hint: 'Cash clinics leave OFF. Requires enable_report_hub.',
+        indent: 1,
       },
     ],
   },
@@ -377,6 +358,39 @@ export const COMPLETION_FIELDS: AdminFieldDef[] = [
     label: 'Pediatric exact DOB age (years)',
     min: 0,
     max: 18,
+  },
+];
+
+export const CLINIC_CURRENCY_FIELDS: AdminFieldDef[] = [
+  {
+    key: 'currency_code',
+    type: 'string',
+    label: 'Currency code (ISO 4217)',
+    maxLength: 3,
+    hint: 'Examples: GHS, NGN, XOF, USD',
+  },
+  {
+    key: 'currency_symbol',
+    type: 'string',
+    label: 'Currency symbol',
+    maxLength: 16,
+    hint: 'Synced to OpenEMR gbl_currency_symbol when you save.',
+  },
+  {
+    key: 'currency_decimals',
+    type: 'int',
+    label: 'Decimal places',
+    min: 0,
+    max: 4,
+  },
+  {
+    key: 'currency_symbol_position',
+    type: 'select',
+    label: 'Symbol position',
+    choices: [
+      { value: 'before', label: 'Before amount (GH₵ 160.00)' },
+      { value: 'after', label: 'After amount (160.00 GH₵)' },
+    ],
   },
 ];
 
@@ -423,4 +437,9 @@ export function collectAdminSettings(settings: Record<string, unknown>): Record<
     out[key] = settings[key];
   }
   return out;
+}
+
+/** Flatten visible queue-tab field keys (excludes hidden React kill-switches). */
+export function visibleQueueFieldKeys(): string[] {
+  return QUEUE_FIELD_SECTIONS.flatMap((section) => section.fields.map((field) => field.key));
 }

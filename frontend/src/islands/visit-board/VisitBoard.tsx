@@ -12,6 +12,8 @@ import { useInterval } from '@core/useInterval';
 import { usePageHeadingToolbar } from '@core/usePageHeadingToolbar';
 import type { BoardData, ColumnKey, VisitCard, VisitBoardProps, VisitDetailData } from '@core/types';
 import { VisitBoardColumn } from './VisitBoardColumn';
+import { SegmentedControl } from '@components/SegmentedControl';
+import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import { VisitDetailModal } from './VisitDetailModal';
 import { VisitDetailDrawer } from './VisitDetailDrawer';
 import { CancelledTodaySection } from './CancelledTodaySection';
@@ -206,12 +208,20 @@ export function VisitBoard({
   const searchText = search.trim().toLowerCase();
   const columnKeys = visibleColumnKeys(data);
 
+  const allCards = columnKeys.flatMap((key) => data.columns[key] ?? []);
+  const urgentCards = allCards.filter((card) => card.is_urgent);
+  const filterMode = urgentOnly ? 'urgent' : 'all';
+
   const filteredColumns = columnKeys.map((key) => ({
     key,
     cards: (data.columns[key] ?? []).filter((c) => matchesFilter(c, searchText, urgentOnly)),
   }));
 
   const totalVisible = filteredColumns.reduce((sum, col) => sum + col.cards.length, 0);
+  const statusItems = columnKeys.map((key) => ({
+    label: COLUMN_LABELS[key],
+    value: (data.columns[key] ?? []).length,
+  }));
 
   return (
     <div className="oe-nc-vb" data-profile={profile}>
@@ -254,16 +264,17 @@ export function VisitBoard({
 
       {/* Stats + filter bar (desktop only, not wall) */}
       {!isWall && (
-        <div className="oe-nc-vb__toolbar mb-3 d-flex flex-wrap align-items-center">
-          {/* Per-column counts */}
-          <div className="oe-nc-vb__stats flex-grow-1">
-            {filteredColumns.map(({ key, cards }) => (
-              <span key={key} className="badge badge-light border mr-2 mb-1">
-                {COLUMN_LABELS[key]}: {cards.length}
-              </span>
-            ))}
-          </div>
+        <>
+          <DeskQueueStatusBar
+            id="nc-board-status-bar"
+            ariaLabel="Visit board status"
+            items={statusItems}
+            loading={initialLoading}
+            onRefresh={() => { void fetchBoard(); }}
+            compact
+          />
 
+          <div className="oe-nc-vb__toolbar mb-3 d-flex flex-wrap align-items-center justify-content-end">
           {/* Search */}
           <div className="oe-nc-search-input__wrap mr-2" style={{ maxWidth: 220 }}>
             <i className="fa fa-search oe-nc-search-input__icon" aria-hidden="true" />
@@ -287,17 +298,19 @@ export function VisitBoard({
             )}
           </div>
 
-          {/* Urgent filter */}
-          <label className="mb-0 small mr-3">
-            <input
-              type="checkbox"
-              className="mr-1"
-              checked={urgentOnly}
-              onChange={(e) => setUrgentOnly(e.target.checked)}
-            />
-            Urgent only
-          </label>
-        </div>
+          {/* Filter: all vs urgent */}
+          <SegmentedControl
+            className="mr-2 mb-1"
+            ariaLabel="Visit board filter"
+            value={filterMode}
+            onChange={(id) => setUrgentOnly(id === 'urgent')}
+            segments={[
+              { id: 'all', label: 'All', count: allCards.length },
+              { id: 'urgent', label: 'Urgent', count: urgentCards.length },
+            ]}
+          />
+          </div>
+        </>
       )}
 
       {/* No results message */}

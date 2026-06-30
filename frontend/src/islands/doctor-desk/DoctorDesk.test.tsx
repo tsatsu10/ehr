@@ -103,7 +103,11 @@ describe('DoctorDesk', () => {
     await waitFor(() => {
       expect(screen.getByText(/Kwame Mensah/)).toBeInTheDocument();
     });
-    expect(screen.getByText(/1 waiting/)).toBeInTheDocument();
+    await waitFor(() => {
+      const bar = screen.getByLabelText(/Doctor desk status/i);
+      expect(bar).toHaveTextContent('1');
+      expect(bar).toHaveTextContent('Waiting');
+    });
   });
 
   it('takes patient and shows consult pane', async () => {
@@ -130,7 +134,7 @@ describe('DoctorDesk', () => {
     });
     expect(screen.getByText(/Supervising provider/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Complete consult/i })).toBeEnabled();
-    expect(screen.getByText(/Allergy: Penicillin/)).toBeInTheDocument();
+    expect(screen.getByText('Penicillin')).toBeInTheDocument();
   });
 
   it('disables complete when e-sign required and unsigned', async () => {
@@ -161,5 +165,45 @@ describe('DoctorDesk', () => {
     await waitFor(() => {
       expect(document.getElementById('nc-doctor-scope')).toBeInTheDocument();
     });
+  });
+
+  it('shows prescription stock badges when pharm ops enabled', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [waitingPatient],
+        counts: { waiting: 1, done_today: 0, reopenable_today: 0 },
+      })
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [waitingPatient],
+        counts: { waiting: 1, done_today: 0, reopenable_today: 0 },
+      })
+      .mockResolvedValueOnce({
+        ...consultPayload,
+        pharm_ops_enabled: true,
+        prescriptions: [
+          {
+            id: 55,
+            drug: 'Amoxicillin 500mg',
+            sig: '1 cap q8h',
+            quantity: '21',
+            status: 'to_dispense',
+            stock_status: 'low',
+            qoh_display: 'QOH 8 · reorder 20',
+          },
+        ],
+      });
+
+    render(<DoctorDesk {...props} />);
+
+    await waitFor(() => screen.getByText(/Kwame Mensah/));
+    fireEvent.click(screen.getByText(/Kwame Mensah/));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Prescriptions \(stock\)/)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Low stock/)).toBeInTheDocument();
+    expect(screen.getByText(/Amoxicillin 500mg/)).toBeInTheDocument();
   });
 });

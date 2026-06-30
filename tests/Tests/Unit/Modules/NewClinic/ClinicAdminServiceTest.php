@@ -79,4 +79,79 @@ class ClinicAdminServiceTest extends TestCase
 
         $this->assertSame('0', $normalized['enable_chart_depth']);
     }
+
+    public function testSaveRejectsPharmOpsWithoutPharmacyRole(): void
+    {
+        $service = new ClinicAdminService();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Pharmacy Operations requires Pharmacy desk to be enabled');
+        $service->saveSettings('global', [
+            'enable_pharm_ops' => '1',
+            'enable_pharmacy_role' => '0',
+        ], 1);
+    }
+
+    public function testSaveRejectsPharmOpsWithoutInhousePharmacyGlobal(): void
+    {
+        $previous = $GLOBALS['inhouse_pharmacy'] ?? null;
+        $GLOBALS['inhouse_pharmacy'] = false;
+
+        try {
+            $service = new ClinicAdminService();
+            $this->expectException(\InvalidArgumentException::class);
+            $this->expectExceptionMessage('in-house pharmacy');
+            $service->saveSettings('global', [
+                'enable_pharm_ops' => '1',
+                'enable_pharmacy_role' => '1',
+            ], 1);
+        } finally {
+            if ($previous === null) {
+                unset($GLOBALS['inhouse_pharmacy']);
+            } else {
+                $GLOBALS['inhouse_pharmacy'] = $previous;
+            }
+        }
+    }
+
+    public function testSaveRejectsLabOpsWithoutLabRole(): void
+    {
+        $service = new ClinicAdminService();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Lab Operations requires Lab role to be enabled');
+        $service->saveSettings('global', [
+            'enable_lab_ops' => '1',
+            'enable_lab_role' => '0',
+        ], 1);
+    }
+
+    public function testGlobalMigrationDefaultsIncludesReactPharmOps(): void
+    {
+        $defaults = ClinicAdminService::globalMigrationDefaults();
+
+        $this->assertArrayHasKey('enable_react_pharm_ops', $defaults);
+        $this->assertSame('1', $defaults['enable_react_pharm_ops']);
+    }
+
+    public function testGlobalMigrationDefaultsIncludesReportHubFlags(): void
+    {
+        $defaults = ClinicAdminService::globalMigrationDefaults();
+
+        $this->assertArrayHasKey('enable_report_hub', $defaults);
+        $this->assertSame('0', $defaults['enable_report_hub']);
+        $this->assertArrayHasKey('report_hub_show_us_quality', $defaults);
+        $this->assertSame('0', $defaults['report_hub_show_us_quality']);
+        $this->assertArrayHasKey('enable_react_report_hub', $defaults);
+        $this->assertSame('1', $defaults['enable_react_report_hub']);
+    }
+
+    public function testApplySettingDependenciesEnablesReportHubWhenUsQualityOn(): void
+    {
+        $normalized = ClinicAdminService::applySettingDependencies([
+            'enable_report_hub' => '0',
+            'report_hub_show_us_quality' => '1',
+        ]);
+
+        $this->assertSame('1', $normalized['enable_report_hub']);
+        $this->assertSame('1', $normalized['report_hub_show_us_quality']);
+    }
 }

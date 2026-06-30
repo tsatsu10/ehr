@@ -1485,7 +1485,7 @@ Not blocking Phase 1 sign-off if manual Appendix D passes.
 |------|---------------------|
 | H1 | No recall writes from Communications Hub |
 | §6.5.2 advisory routing | Hub does not route messages to doctors; optional visit-state chip in message detail only (§5.4) |
-| FRONTEND_2026 | Bootstrap 4 / jQuery — no new SPA framework |
+| FRONTEND_2026 | New Clinic hub/desk UI is **React islands** (Bootstrap 4 shell chrome only); stock OpenEMR pages remain legacy |
 | PRD §19 Phase C | Hide legacy Recalls menu when S1 at parity |
 
 ---

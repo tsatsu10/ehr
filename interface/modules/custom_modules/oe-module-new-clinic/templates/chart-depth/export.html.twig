@@ -12,7 +12,8 @@
         preset: preset|default(''),
         encounterId: encounter_id|default(0)|number_format(0, '', ''),
         chartUrl: chart_url,
-        visitBoardUrl: visit_board_url
+        visitBoardUrl: visit_board_url,
+        currencyFormat: currency_format|default({})
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}

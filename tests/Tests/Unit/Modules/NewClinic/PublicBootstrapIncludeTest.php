@@ -46,4 +46,16 @@ class PublicBootstrapIncludeTest extends TestCase
 
         $this->assertSame([], $missing, 'Public PHP files must require bootstrap.php');
     }
+
+    public function testBootstrapSeedsCsrfKeyWhenSessionAuthenticated(): void
+    {
+        $bootstrap = (string) file_get_contents(
+            dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/public/bootstrap.php'
+        );
+
+        $this->assertStringContainsString('CsrfUtils::setupCsrfKey', $bootstrap);
+        $this->assertStringContainsString('csrf_private_key', $bootstrap);
+        $this->assertStringContainsString('authUserID', $bootstrap);
+    }
 }

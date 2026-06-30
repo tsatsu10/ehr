@@ -1,5 +1,6 @@
 import type { CommLens, CommListRow, MessageListRow, ReminderListRow } from './communicationsTypes';
 import { COMM_PAGE_SIZE } from './communicationsTypes';
+import { PaginationBar } from '@components/PaginationBar';
 
 interface CommunicationsListProps {
   lens: CommLens;
@@ -101,37 +102,33 @@ export function CommunicationsPagination({
   begin: number;
   onPageChange: (begin: number) => void;
 }) {
-  if (lens !== 'messages' || total <= COMM_PAGE_SIZE) {
+  if (lens !== 'messages') {
     return total > 0 ? (
-      <div className="oe-nc-comm-pagination d-flex justify-content-between align-items-center">
-        <span>{total} item(s)</span>
-        <span />
+      <div className="oe-nc-comm-pagination px-2 py-1 text-muted small">
+        {total} item(s)
       </div>
     ) : null;
   }
 
-  const from = begin + 1;
-  const to = Math.min(begin + COMM_PAGE_SIZE, total);
+  if (total <= COMM_PAGE_SIZE) {
+    return total > 0 ? (
+      <div className="oe-nc-comm-pagination px-2 py-1 text-muted small">
+        {total} item(s)
+      </div>
+    ) : null;
+  }
+
+  const page = Math.floor(begin / COMM_PAGE_SIZE) + 1;
 
   return (
-    <div className="oe-nc-comm-pagination d-flex justify-content-between align-items-center" id="nc-comm-pagination">
-      <button
-        type="button"
-        className="btn btn-link btn-sm p-0"
-        disabled={begin <= 0}
-        onClick={() => onPageChange(Math.max(0, begin - COMM_PAGE_SIZE))}
-      >
-        &laquo; Prev
-      </button>
-      <span>{from}–{to} of {total}</span>
-      <button
-        type="button"
-        className="btn btn-link btn-sm p-0"
-        disabled={begin + COMM_PAGE_SIZE >= total}
-        onClick={() => onPageChange(begin + COMM_PAGE_SIZE)}
-      >
-        Next &raquo;
-      </button>
+    <div className="oe-nc-comm-pagination px-2">
+      <PaginationBar
+        id="nc-comm-pagination"
+        page={page}
+        pageSize={COMM_PAGE_SIZE}
+        total={total}
+        onPageChange={(nextPage) => onPageChange((nextPage - 1) * COMM_PAGE_SIZE)}
+      />
     </div>
   );
 }

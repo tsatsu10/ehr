@@ -20,6 +20,7 @@ class LabOpsRequisitionService
         private readonly FacilityScopeService $facilityScope = new FacilityScopeService(),
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
+        private readonly MoneyFormatService $moneyFormat = new MoneyFormatService(),
     ) {
     }
 
@@ -146,9 +147,6 @@ class LabOpsRequisitionService
 
     private function formatMoney(float $amount, int $facilityId): string
     {
-        $symbol = (string) $this->config->get('currency_symbol', 'GH₵', $facilityId);
-        $decimals = (int) $this->config->get('currency_decimals', '2', $facilityId);
-
-        return $symbol . number_format($amount, max(0, $decimals));
+        return $this->moneyFormat->formatMoney($amount, $facilityId);
     }
 }

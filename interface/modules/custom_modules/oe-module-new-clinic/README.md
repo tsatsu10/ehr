@@ -44,6 +44,21 @@ A comprehensive private outpatient clinic layer for OpenEMR, designed for West A
 
 ## Architecture
 
+### Tech stack
+
+| Layer | Technology |
+|-------|------------|
+| Backend | PHP 8.2+, PSR-4 services, Symfony events |
+| Page shell | Twig 3.x templates, `PageController` |
+| Desk / hub UI | **React 19 + TypeScript** — Vite islands in [`frontend/`](../../../../frontend/) |
+| Built assets | `public/assets/modern/*.js` (Vite output) |
+| Module shell JS | `public/assets/js/shell.js`, `ui-components.js` only |
+| AJAX | `public/ajax.php` — consumed by `oeFetch` from React |
+| CSS | Bootstrap 4.6 chrome + island BEM + `--oe-nc-*` design tokens |
+| Tests | PHPUnit 349 (New Clinic), Vitest 172, Playwright E2E |
+
+See [`Documentation/FRONTEND_MODULE_GUIDE.md`](../../../../Documentation/FRONTEND_MODULE_GUIDE.md) for island development.
+
 ```
 oe-module-new-clinic/
 ├── src/
@@ -61,7 +76,9 @@ oe-module-new-clinic/
 ├── public/                 # Entry points
 │   ├── ajax.php            # AJAX dispatcher
 │   ├── doctor.php, cashier.php, ...  # Desk pages
-│   └── assets/             # CSS, JS, images
+│   └── assets/
+│       ├── modern/         # Vite-built React island bundles
+│       └── js/             # shell.js + ui-components.js (module chrome only)
 ├── templates/              # Twig 3.x templates
 │   ├── doctor.html.twig, cashier.html.twig, ...
 │   └── partials/           # Reusable components
@@ -72,7 +89,7 @@ oe-module-new-clinic/
 │   ├── upgrade_sql.php     # Apply migrations
 │   └── install_acl.php     # ACL setup
 ├── tests/                  # (Located in core OpenEMR tests/)
-│   └── Unit/Modules/NewClinic/  # 61 mandatory tests + unit tests
+│   └── Unit/Modules/NewClinic/  # 349 PHPUnit tests + mandatory contract tests
 └── composer.json           # PSR-4 autoload
 ```
 
@@ -193,30 +210,23 @@ Access: `/openemr/interface/modules/custom_modules/oe-module-new-clinic/public/a
 From OpenEMR root directory:
 
 ```bash
-# All New Clinic mandatory tests (61 tests)
-composer test:new-clinic-mandatory
+# All New Clinic PHPUnit tests
+vendor/bin/phpunit -c phpunit.xml --filter NewClinic
 
-# Specific test file
-vendor/bin/phpunit -c phpunit.xml tests/Tests/Unit/Modules/NewClinic/VisitFsmTest.php
+# Frontend (Vitest)
+cd frontend && npm run check
 
-# With coverage
-vendor/bin/phpunit -c phpunit.xml --coverage-html coverage/ tests/Tests/Unit/Modules/NewClinic/
+# E2E golden path (XAMPP — seed pilot users first)
+php interface/modules/custom_modules/oe-module-new-clinic/acl/seed_pilot_users.php
+npx playwright test tests/e2e/new-clinic/specs/golden-path.spec.js --config tests/e2e/new-clinic/playwright.config.js
 ```
 
 ### Test Suites
 
-- **Mandatory contract tests** (`NewClinicMandatoryContractTests.php`): 40 PRD §16.1 items
+- **Mandatory contract tests** (`NewClinicMandatoryContractTest.php`): PRD §16.1 items
 - **Unit tests**: Service-layer logic (FSM, payment, reopen, reconciliation)
-- **Integration tests**: Cross-service workflows (wrong-patient prevention, visit board audit)
-- **E2E tests**: ⚠️ Not yet implemented (Playwright suite planned)
-
-### Test Coverage
-
-**Current status:** 58/61 passing (95%)  
-**Skipped tests:**
-- Test 23 — E2E golden path (requires Playwright)
-- Test 33 — Supervising provider combobox (not yet implemented)
-- Test 37 — Concurrent vitals+SOAP (integration test pending)
+- **Integration tests**: Cross-service workflows
+- **E2E**: Playwright — module page smoke, golden-path workflow, island bundle smoke
 
 ## Development
 
@@ -239,16 +249,22 @@ composer install
 
 ### Asset Building
 
-Frontend assets are built via Gulp (from OpenEMR root):
+New Clinic UI is built from the repo-root **`frontend/`** workspace (not Gulp):
 
 ```bash
-npm install
-npm run build      # Production build
-npm run dev        # Development with file watching
+# From OpenEMR root
+npm run frontend:install   # once
+npm run frontend:build     # production → public/assets/modern/
+npm run frontend:dev       # watch mode
+
+# Or from frontend/
+cd frontend && npm run check && npm run build
 ```
 
+Core OpenEMR themes still use Gulp from the repo root (`npm run build`).
+
 **Asset versioning:** `ModuleAssetVersion::VERSION` (cache-busting constant)  
-**Current version:** `20260626g12q`
+**Current version:** `20260628w55cleanup`
 
 ### Code Quality
 

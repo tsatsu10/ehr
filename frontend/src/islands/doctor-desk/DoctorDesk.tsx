@@ -7,7 +7,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { oeFetch } from '@core/oeFetch';
+import { oeFetch, OeFetchError } from '@core/oeFetch';
 import { resolveActionConflict, type DeskInterrupt } from '@core/deskConflict';
 import { useInterval } from '@core/useInterval';
 import { usePageHeadingToolbar } from '@core/usePageHeadingToolbar';
@@ -22,16 +22,23 @@ import type {
   DoctorReopenableRow,
   DoctorSupervisorMeta,
   LabPanelPlaceResult,
+  FormularyRxPlaceResult,
+  PharmacyPrescriptionLine,
   RoutingPreview,
 } from '@core/types';
 import { DoctorQueue } from './DoctorQueue';
 import { DoctorActivePane, type ActiveMode } from './DoctorActivePane';
 import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
+import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import { RoutingModal } from './RoutingModal';
 import { ReopenModal } from './ReopenModal';
 import { LabPanelModal, labPanelPlaceNotice, labReturnNotice } from './LabPanelModal';
+import { FormularyRxModal, formularyRxPlaceNotice } from './FormularyRxModal';
+import { rxReturnNotice } from './doctorDeskUtils';
+import { printRxWithNotice } from '../pharm-ops/pharmOpsPrintRx';
 import { DOCTOR_LEFT_VIA_KEY } from './ConsultShortcuts';
+import { setDoctorDeskCurrencyFormat } from './doctorDeskUtils';
 import type { DoctorSignMeta } from './DoctorPatientBanner';
 
 const STORAGE_KEY = 'doctor_desk_active_visit_id';
@@ -57,12 +64,26 @@ function applyConsultPayload(
   setRoutingPreview: (r: RoutingPreview | null) => void,
   setSignMeta: (s: DoctorSignMeta) => void,
   setActiveVisitId: (id: number) => void,
+  setPharmOpsConsult: (value: {
+    pharm_ops_enabled?: boolean;
+    rx_print_enabled?: boolean;
+    can_print_rx?: boolean;
+    prescriptions?: PharmacyPrescriptionLine[];
+    rx_list_url?: string;
+  }) => void,
 ) {
   setActiveVisit(data.visit);
   setActivePreview(data.preview);
   setRoutingPreview(data.routing_preview ?? null);
   setSignMeta(payloadToSignMeta(data));
   setActiveVisitId(data.visit.id);
+  setPharmOpsConsult({
+    pharm_ops_enabled: data.pharm_ops_enabled,
+    rx_print_enabled: data.rx_print_enabled,
+    can_print_rx: data.can_print_rx,
+    prescriptions: data.prescriptions,
+    rx_list_url: data.rx_list_url,
+  });
 }
 
 export function DoctorDesk({
@@ -74,7 +95,18 @@ export function DoctorDesk({
   multiDoctorFilters = false,
   sharedDeviceWarning = false,
   labPanelOrderEnabled = false,
+  formularyRxEnabled = false,
+  currencyFormat,
 }: DoctorDeskProps) {
+  useEffect(() => {
+    if (currencyFormat) {
+      setDoctorDeskCurrencyFormat({
+        currency_symbol: currencyFormat.currency_symbol ?? '',
+        currency_decimals: currencyFormat.currency_decimals ?? 2,
+        currency_symbol_position: currencyFormat.currency_symbol_position === 'after' ? 'after' : 'before',
+      });
+    }
+  }, [currencyFormat]);
   const [scope, setScope] = useState<'me' | 'all'>(multiDoctorFilters ? 'me' : 'all');
   const [cards, setCards] = useState<DoctorQueueCard[]>([]);
   const [counts, setCounts] = useState<DoctorQueueData['counts'] | null>(null);
@@ -92,11 +124,19 @@ export function DoctorDesk({
   const [activePreview, setActivePreview] = useState<DoctorConsultPayload['preview'] | null>(null);
   const [routingPreview, setRoutingPreview] = useState<RoutingPreview | null>(null);
   const [signMeta, setSignMeta] = useState<DoctorSignMeta | null>(null);
+  const [pharmOpsConsult, setPharmOpsConsult] = useState<{
+    pharm_ops_enabled?: boolean;
+    rx_print_enabled?: boolean;
+    can_print_rx?: boolean;
+    prescriptions?: PharmacyPrescriptionLine[];
+    rx_list_url?: string;
+  }>({});
   const [interrupt, setInterrupt] = useState<DeskInterrupt | null>(null);
   const [notice, setNotice] = useState<DeskNotice | null>(null);
 
   const [routingOpen, setRoutingOpen] = useState(false);
   const [labPanelOpen, setLabPanelOpen] = useState(false);
+  const [formularyRxOpen, setFormularyRxOpen] = useState(false);
   const [reopenTarget, setReopenTarget] = useState<DoctorReopenableRow | null>(null);
 
   const queueSeq = useRef(0);
@@ -116,8 +156,10 @@ export function DoctorDesk({
     setActivePreview(null);
     setRoutingPreview(null);
     setSignMeta(null);
+    setPharmOpsConsult({});
     setRoutingOpen(false);
     setLabPanelOpen(false);
+    setFormularyRxOpen(false);
   }, []);
 
   const sharedSession = useSharedDeviceSession({
@@ -154,6 +196,7 @@ export function DoctorDesk({
         setRoutingPreview,
         setSignMeta,
         sharedSession.setActiveVisitId,
+        setPharmOpsConsult,
       );
       setMode('consult');
       return data;
@@ -166,6 +209,10 @@ export function DoctorDesk({
         resetActivePane();
         sharedSession.clearActiveVisitId();
         return null;
+      }
+      // Stale stored visit (e.g. consult completed elsewhere) — stop retrying on every mount.
+      if (err instanceof OeFetchError && err.status === 400) {
+        sharedSession.clearActiveVisitId();
       }
       setMode('error');
       return null;
@@ -276,11 +323,22 @@ export function DoctorDesk({
       if (storedId <= 0) return;
 
       void loadActiveConsultRef.current(storedId).then((payload) => {
-        if (!payload || leftVia !== 'lab') return;
-        window.sessionStorage.removeItem(DOCTOR_LEFT_VIA_KEY);
-        const returnNotice = labReturnNotice(payload.routing_chips);
-        if (returnNotice) setNotice(returnNotice);
-        void fetchQueueRef.current();
+        if (!payload) return;
+
+        if (leftVia === 'lab') {
+          window.sessionStorage.removeItem(DOCTOR_LEFT_VIA_KEY);
+          const returnNotice = labReturnNotice(payload.routing_chips);
+          if (returnNotice) setNotice(returnNotice);
+          void fetchQueueRef.current();
+          return;
+        }
+
+        if (leftVia === 'rx') {
+          window.sessionStorage.removeItem(DOCTOR_LEFT_VIA_KEY);
+          const returnNotice = rxReturnNotice(payload);
+          if (returnNotice) setNotice(returnNotice);
+          void fetchQueueRef.current();
+        }
       });
     };
 
@@ -327,6 +385,7 @@ export function DoctorDesk({
         setRoutingPreview,
         setSignMeta,
         sharedSession.setActiveVisitId,
+        setPharmOpsConsult,
       );
       setMode('consult');
       void fetchQueue();
@@ -387,6 +446,7 @@ export function DoctorDesk({
       setRoutingPreview,
       setSignMeta,
       sharedSession.setActiveVisitId,
+      setPharmOpsConsult,
     );
     setMode('consult');
     void fetchQueue();
@@ -408,6 +468,22 @@ export function DoctorDesk({
     void fetchQueue();
   }, [fetchQueue]);
 
+  const handleFormularyRxPlaced = useCallback((result: FormularyRxPlaceResult) => {
+    setFormularyRxOpen(false);
+    setPharmOpsConsult((prev) => ({
+      ...prev,
+      prescriptions: result.prescriptions ?? prev.prescriptions,
+    }));
+    setNotice(formularyRxPlaceNotice(result));
+    void fetchQueue();
+  }, [fetchQueue]);
+
+  const handlePrintRx = useCallback(async (prescriptionId: number) => {
+    await printRxWithNotice(ajaxUrl, csrfToken, prescriptionId, (message) => {
+      setNotice({ variant: 'danger', message });
+    });
+  }, [ajaxUrl, csrfToken]);
+
   const consultPayload: DoctorConsultPayload | null =
     activeVisit && activePreview
       ? {
@@ -421,6 +497,11 @@ export function DoctorDesk({
           supervisor_id: signMeta?.supervisor_id,
           supervisor_display_name: signMeta?.supervisor_display_name,
           supervisor_from_profile: signMeta?.supervisor_from_profile,
+          pharm_ops_enabled: pharmOpsConsult.pharm_ops_enabled,
+          rx_print_enabled: pharmOpsConsult.rx_print_enabled,
+          can_print_rx: pharmOpsConsult.can_print_rx,
+          prescriptions: pharmOpsConsult.prescriptions,
+          rx_list_url: pharmOpsConsult.rx_list_url,
         }
       : null;
 
@@ -445,6 +526,39 @@ export function DoctorDesk({
         />
       )}
 
+      <DeskQueueStatusBar
+        id="nc-doctor-status-bar"
+        ariaLabel="Doctor desk status"
+        items={[
+          {
+            label: 'Waiting',
+            value: counts?.waiting ?? 0,
+            href: (counts?.waiting ?? 0) > 0 ? visitBoardUrl : undefined,
+          },
+          { label: 'Done today', value: counts?.done_today ?? 0 },
+          ...(canReopenConsult
+            ? [{ label: 'Reopenable', value: counts?.reopenable_today ?? 0 }]
+            : []),
+        ]}
+        loading={queueLoading}
+        onRefresh={() => { void fetchQueue(); }}
+        trailing={
+          multiDoctorFilters ? (
+            <select
+              className="form-control form-control-sm"
+              style={{ maxWidth: 120, height: 28 }}
+              id="nc-doctor-scope"
+              value={scope}
+              onChange={(e) => setScope(e.target.value === 'all' ? 'all' : 'me')}
+              aria-label="Queue scope"
+            >
+              <option value="me">Me</option>
+              <option value="all">All</option>
+            </select>
+          ) : undefined
+        }
+      />
+
       <div className="row">
         <div className="col-lg-8 mb-3">
           <DoctorActivePane
@@ -457,9 +571,12 @@ export function DoctorDesk({
             visitBoardUrl={visitBoardUrl}
             blocked={sharedSession.blocked}
             labPanelOrderEnabled={labPanelOrderEnabled}
+            formularyRxEnabled={formularyRxEnabled}
             onComplete={handleComplete}
             onOpenLabPanel={() => setLabPanelOpen(true)}
+            onOpenFormularyRx={() => setFormularyRxOpen(true)}
             onShortcutError={(msg) => setNotice({ message: msg, variant: 'danger' })}
+            onPrintRx={(id) => { void handlePrintRx(id); }}
             onSupervisorUpdated={handleSupervisorUpdated}
             onSupervisorNotice={(message, variant) => setNotice({ message, variant })}
           />
@@ -468,16 +585,12 @@ export function DoctorDesk({
         <div className="col-lg-4 mb-3">
           <DoctorQueue
             cards={cards}
-            counts={counts}
             doneToday={doneToday}
             reopenableToday={reopenableToday}
             canReopenConsult={canReopenConsult}
             hasActiveConsult={hasActiveConsult}
             loading={queueLoading}
             error={queueError}
-            multiDoctorFilters={multiDoctorFilters}
-            scope={scope}
-            onScopeChange={setScope}
             onTakePatient={(card) => void handleTakePatient(card)}
             onReopenClick={setReopenTarget}
           />
@@ -532,6 +645,37 @@ export function DoctorDesk({
               csrfToken,
               method: 'POST',
               json: { visit_id: activeVisit.id, shortcut: 'lab' },
+            }).then((data) => {
+              window.location.assign(data.redirect_url);
+            }).catch((err) => {
+              setNotice({
+                message: err instanceof Error ? err.message : 'Shortcut failed',
+                variant: 'danger',
+              });
+            });
+          }
+        }}
+      />
+
+      <FormularyRxModal
+        open={formularyRxOpen}
+        visit={activeVisit}
+        ajaxUrl={ajaxUrl}
+        csrfToken={csrfToken}
+        facilityId={facilityId}
+        blocked={sharedSession.blocked}
+        onClose={() => setFormularyRxOpen(false)}
+        onPlaced={handleFormularyRxPlaced}
+        onFullRxForm={() => {
+          setFormularyRxOpen(false);
+          if (activeVisit) {
+            setDeskActiveVisitId(STORAGE_KEY, activeVisit.id);
+            window.sessionStorage.setItem(DOCTOR_LEFT_VIA_KEY, 'rx');
+            void oeFetch<{ redirect_url: string }>('doctor.shortcut_preflight', {
+              ajaxUrl,
+              csrfToken,
+              method: 'POST',
+              json: { visit_id: activeVisit.id, shortcut: 'rx' },
             }).then((data) => {
               window.location.assign(data.redirect_url);
             }).catch((err) => {

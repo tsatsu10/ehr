@@ -19,7 +19,8 @@
         facilityId: desk_facility_id|default(0)|number_format(0, '', ''),
         visitBoardUrl: visit_board_url,
         canCancelVisit: can_cancel_visit ? true : false,
-        canMarkUnpaid: can_mark_unpaid ? true : false
+        canMarkUnpaid: can_mark_unpaid ? true : false,
+        canRunReconciliation: can_run_reconciliation ? true : false
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}

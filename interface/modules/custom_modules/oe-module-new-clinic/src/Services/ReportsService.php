@@ -21,6 +21,9 @@ class ReportsService
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
         private readonly VisitRowEnricher $rowEnricher = new VisitRowEnricher(),
         private readonly EncounterSignService $signService = new EncounterSignService(),
+        private readonly ReconciliationService $reconciliation = new ReconciliationService(),
+        private readonly ClinicConfigService $config = new ClinicConfigService(),
+        private readonly MoneyFormatService $moneyFormat = new MoneyFormatService(),
     ) {
     }
 
@@ -41,6 +44,7 @@ class ReportsService
             'facility_id' => $facilityId,
             'visits' => $this->visitSummary($facilityId, $visitDate),
             'cash' => $this->cashSummary($facilityId, $visitDate),
+            'reconciliation' => $this->buildReconciliationSummary($facilityId, $visitDate),
             'open_visits' => $openVisits,
             'eod_open' => self::summarizeOpenVisits($openVisits),
             'unsigned_alerts' => self::summarizeUnsignedAlerts($unsignedVisits),
@@ -49,6 +53,7 @@ class ReportsService
             'unsigned_visits' => $unsignedVisits,
             'queue_bypass' => $this->queueBypassLog($facilityId, $visitDate),
             'last_updated' => date('c'),
+            'currency' => $this->moneyFormat->getFormatPayload($facilityId),
         ];
     }
 
@@ -281,6 +286,7 @@ class ReportsService
                 'from_70_to_99' => (int) ($buckets['from_70_to_99'] ?? 0),
                 'complete_100' => (int) ($buckets['complete_100'] ?? 0),
             ],
+            'by_registering_user' => $this->completionByRegisteringUser($facilityId, $visitDate),
             'stale_incomplete' => array_map(static function (array $row): array {
                 return [
                     'pid' => (int) ($row['pid'] ?? 0),
@@ -355,7 +361,125 @@ class ReportsService
         return [
             'receipt_count' => is_array($row) ? (int) ($row['receipt_count'] ?? 0) : 0,
             'total_collected' => round((float) (is_array($row) ? ($row['total_collected'] ?? 0) : 0), 2),
+            'by_category' => $this->cashByCategory($facilityId, $visitDate),
         ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function cashByCategory(int $facilityId, string $visitDate): array
+    {
+        $rows = QueryUtils::fetchRecords(
+            "SELECT COALESCE(fs.category, 'other') AS category_key,
+                    COALESCE(SUM(b.fee * GREATEST(b.units, 1)), 0) AS amount
+             FROM new_visit v
+             INNER JOIN billing b ON b.pid = v.pid AND b.encounter = v.encounter AND b.activity = 1
+             LEFT JOIN new_fee_schedule fs ON fs.id = (
+                 SELECT fs2.id FROM new_fee_schedule fs2
+                 WHERE fs2.billing_code = b.code AND fs2.code_type = b.code_type
+                 AND fs2.facility_id IN (0, v.facility_id) AND fs2.is_active = 1
+                 ORDER BY fs2.facility_id DESC, fs2.id ASC
+                 LIMIT 1
+             )
+             WHERE v.facility_id = ? AND v.visit_date = ? AND v.state = 'completed'
+             GROUP BY category_key
+             ORDER BY amount DESC",
+            [$facilityId, $visitDate]
+        ) ?: [];
+
+        $labels = FeeScheduleAdminService::CATEGORIES;
+
+        return array_map(static function (array $row) use ($labels): array {
+            $key = (string) ($row['category_key'] ?? 'other');
+
+            return [
+                'category' => $key,
+                'label' => $labels[$key] ?? ucfirst($key),
+                'amount' => round((float) ($row['amount'] ?? 0), 2),
+            ];
+        }, $rows);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildReconciliationSummary(int $facilityId, string $visitDate): array
+    {
+        $totals = $this->reconciliation->fetchTotals($facilityId, $visitDate);
+        $tolerance = (float) ($this->config->get('reconciliation_tolerance', '0.01', $facilityId) ?? '0.01');
+        $moduleTotal = (float) ($totals['module_total'] ?? 0);
+        $coreTotal = (float) ($totals['core_total'] ?? 0);
+        $delta = ReconciliationService::calculateDelta($moduleTotal, $coreTotal);
+        $status = ReconciliationService::evaluateStatus($moduleTotal, $coreTotal, $tolerance);
+        $latestRun = $this->reconciliation->getLatestRunForDate($facilityId, $visitDate);
+
+        $payload = $this->moneyFormat->getFormatPayload($facilityId);
+
+        return [
+            'status' => $status,
+            'module_total' => $moduleTotal,
+            'core_total' => $coreTotal,
+            'delta_amount' => $delta,
+            'tolerance' => $tolerance,
+            'currency_symbol' => (string) $payload['currency_symbol'],
+            'currency_decimals' => (int) $payload['currency_decimals'],
+            'currency_symbol_position' => (string) $payload['currency_symbol_position'],
+            'latest_run' => $latestRun,
+            'recent_runs' => $this->reconciliation->listRecentRuns($facilityId, 30),
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function completionByRegisteringUser(int $facilityId, string $visitDate): array
+    {
+        $rows = QueryUtils::fetchRecords(
+            "SELECT reg.registrar_username,
+                    COALESCE(u.fname, '') AS fname,
+                    COALESCE(u.lname, '') AS lname,
+                    COUNT(DISTINCT reg.pid) AS patients_registered,
+                    SUM(CASE WHEN COALESCE(pc.completion_score, 0) < 40 THEN 1 ELSE 0 END) AS under_40,
+                    SUM(CASE WHEN COALESCE(pc.completion_score, 0) BETWEEN 40 AND 69 THEN 1 ELSE 0 END) AS from_40_to_69,
+                    SUM(CASE WHEN COALESCE(pc.completion_score, 0) BETWEEN 70 AND 99 THEN 1 ELSE 0 END) AS from_70_to_99,
+                    SUM(CASE WHEN COALESCE(pc.completion_score, 0) = 100 THEN 1 ELSE 0 END) AS complete_100
+             FROM (
+                 SELECT pd.pid,
+                        COALESCE(
+                            (SELECT l.user FROM log l
+                             WHERE l.patient_id = pd.pid
+                             AND l.event IN ('new_patient', 'patient_record_add')
+                             ORDER BY l.date ASC, l.id ASC
+                             LIMIT 1),
+                            ''
+                        ) AS registrar_username
+                 FROM patient_data pd
+                 INNER JOIN new_visit v ON v.pid = pd.pid AND v.facility_id = ? AND v.visit_date = ?
+                 WHERE DATE(pd.regdate) = ?
+             ) reg
+             LEFT JOIN new_patient_completion pc ON pc.pid = reg.pid
+             LEFT JOIN users u ON u.username = reg.registrar_username
+             GROUP BY reg.registrar_username, u.fname, u.lname
+             ORDER BY patients_registered DESC, u.lname ASC, reg.registrar_username ASC",
+            [$facilityId, $visitDate, $visitDate]
+        ) ?: [];
+
+        return array_map(static function (array $row): array {
+            $name = trim(trim((string) ($row['fname'] ?? '')) . ' ' . trim((string) ($row['lname'] ?? '')));
+            $username = (string) ($row['registrar_username'] ?? '');
+
+            return [
+                'registrar' => $name !== '' ? $name : ($username !== '' ? $username : 'Unknown'),
+                'patients_registered' => (int) ($row['patients_registered'] ?? 0),
+                'completion_buckets' => [
+                    'under_40' => (int) ($row['under_40'] ?? 0),
+                    'from_40_to_69' => (int) ($row['from_40_to_69'] ?? 0),
+                    'from_70_to_99' => (int) ($row['from_70_to_99'] ?? 0),
+                    'complete_100' => (int) ($row['complete_100'] ?? 0),
+                ],
+            ];
+        }, $rows);
     }
 
     /**

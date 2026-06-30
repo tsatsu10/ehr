@@ -28,6 +28,7 @@ class PharmacyService
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly EncounterSignService $signService = new EncounterSignService(),
         private readonly ClinicDateService $clinicDate = new ClinicDateService(),
+        private readonly PharmOpsAccessService $pharmOpsAccess = new PharmOpsAccessService(),
     ) {
     }
 
@@ -54,12 +55,24 @@ class PharmacyService
         $visitIds = array_map(fn (array $row) => (int) ($row['id'] ?? 0), $rows);
         $holders = $this->rowEnricher->batchPharmacyHolders($visitIds);
         $rxCounts = $this->rowEnricher->batchRxCounts($visitIds);
+        $pharmOpsEnabled = $this->pharmOpsAccess->isHubEnabled($facilityId);
+        $inhousePharmacy = $this->isInhousePharmacyEnabled();
+        $undispensedCounts = $inhousePharmacy
+            ? $this->rowEnricher->batchUndispensedRxCounts($visitIds)
+            : [];
 
         $visits = [];
         $waitingCount = 0;
         $inPharmacyCount = 0;
         foreach ($rows as $row) {
-            $enriched = $this->enrichQueueRow($row, $actorUserId, $holders, $rxCounts);
+            $enriched = $this->enrichQueueRow(
+                $row,
+                $actorUserId,
+                $holders,
+                $rxCounts,
+                $inhousePharmacy,
+                $undispensedCounts
+            );
             $visits[] = $enriched;
             if ($enriched['state'] === 'ready_for_pharmacy') {
                 $waitingCount++;
@@ -81,6 +94,7 @@ class PharmacyService
             'has_active_work' => !empty($activeWork),
             'visit_date' => $visitDate,
             'last_updated' => date('c'),
+            'pharm_ops_enabled' => $pharmOpsEnabled,
         ];
     }
 
@@ -106,16 +120,21 @@ class PharmacyService
             'pharmacy'
         );
         $prescriptions = $this->getPrescriptionsForEncounter((int) $visit['pid'], (int) $visit['encounter']);
+        $facilityId = (int) ($visit['facility_id'] ?? 0);
 
-        return [
-            'visit' => $detail['visit'],
-            'preview' => $preview,
-            'prescriptions' => $prescriptions,
-            'rx_list_url' => $this->rxListUrl((int) $visit['pid']),
-            'skipped_triage' => $detail['skipped_triage'],
-            'session_bound' => false,
-            'can_skip_to_payment' => AclMain::aclCheckCore('new_clinic', 'new_visit_skip_queue'),
-        ];
+        return array_merge(
+            [
+                'visit' => $detail['visit'],
+                'preview' => $preview,
+                'prescriptions' => $this->enrichPrescriptionsWithStock($prescriptions, $facilityId),
+                'rx_list_url' => $this->rxListUrl((int) $visit['pid']),
+                'skipped_triage' => $detail['skipped_triage'],
+                'session_bound' => false,
+                'can_skip_to_payment' => AclMain::aclCheckCore('new_clinic', 'new_visit_skip_queue'),
+            ],
+            $this->pharmOpsDeskFlags($facilityId),
+            $this->undispensedDeskFlags((int) $visit['pid'], (int) $visit['encounter'])
+        );
     }
 
     /**
@@ -161,8 +180,13 @@ class PharmacyService
     /**
      * @return array<string, mixed>
      */
-    public function completePharmacy(int $visitId, int $actorUserId, int $expectedVersion, ?string $esignOverrideReason = null): array
-    {
+    public function completePharmacy(
+        int $visitId,
+        int $actorUserId,
+        int $expectedVersion,
+        ?string $esignOverrideReason = null,
+        ?string $undispensedOverrideReason = null,
+    ): array {
         $this->assertPharmacyRoleEnabled();
         $visit = $this->queueService->getVisitForActor($visitId);
         if ($visit['state'] !== 'in_pharmacy') {
@@ -171,6 +195,7 @@ class PharmacyService
 
         $this->assertActorMayWorkPharmacy($visit, $actorUserId);
         $this->signService->assertProfileSigned($visitId, $esignOverrideReason);
+        $this->assertUndispensedGateResolved($visitId, $visit, $actorUserId, $undispensedOverrideReason);
 
         require_once dirname(__DIR__, 6) . '/library/sql.inc.php';
 
@@ -271,7 +296,7 @@ class PharmacyService
     public function getPrescriptionsForEncounter(int $pid, int $encounter): array
     {
         $rows = QueryUtils::fetchRecords(
-            "SELECT id, drug, dosage, quantity, route, `interval`, refills,
+            "SELECT id, drug, drug_id, dosage, quantity, route, `interval`, refills,
                     start_date, end_date, filled_date, active, note
              FROM prescriptions
              WHERE patient_id = ? AND encounter = ? AND active = 1
@@ -290,6 +315,7 @@ class PharmacyService
             return [
                 'id' => (int) ($row['id'] ?? 0),
                 'drug' => (string) ($row['drug'] ?? 'Medication'),
+                'drug_id' => (int) ($row['drug_id'] ?? 0),
                 'sig' => implode(' ', $sigParts),
                 'quantity' => (string) ($row['quantity'] ?? ''),
                 'refills' => (int) ($row['refills'] ?? 0),
@@ -298,6 +324,62 @@ class PharmacyService
                 'end_date' => $row['end_date'] ?? null,
             ];
         }, $rows);
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $prescriptions
+     * @return array<int, array<string, mixed>>
+     */
+    private function enrichPrescriptionsWithStock(array $prescriptions, int $facilityId): array
+    {
+        if (!$this->pharmOpsAccess->isHubEnabled($facilityId)) {
+            return array_map(static function (array $row): array {
+                unset($row['drug_id']);
+
+                return $row;
+            }, $prescriptions);
+        }
+
+        return array_map(static function (array $row): array {
+            $drugId = (int) ($row['drug_id'] ?? 0);
+            unset($row['drug_id']);
+            if ($drugId > 0) {
+                $stock = PharmOpsWorklistService::stockSummaryForDrug($drugId);
+                $row['stock_status'] = $stock['stock_status'];
+                if (!empty($stock['qoh_display'])) {
+                    $row['qoh_display'] = $stock['qoh_display'];
+                }
+            }
+
+            return $row;
+        }, $prescriptions);
+    }
+
+    /**
+     * @return array{pharm_ops_enabled: bool, can_dispense: bool, rx_print_enabled: bool, can_print_rx: bool}
+     */
+    private function pharmOpsDeskFlags(int $facilityId): array
+    {
+        $enabled = $this->pharmOpsAccess->isHubEnabled($facilityId);
+        $rxPrintEnabled = $this->pharmOpsAccess->isRxPrintEnabled($facilityId);
+
+        return [
+            'pharm_ops_enabled' => $enabled,
+            'can_dispense' => $enabled && $this->pharmOpsAccess->canDispense(),
+            'rx_print_enabled' => $rxPrintEnabled,
+            'can_print_rx' => $rxPrintEnabled && $this->pharmOpsAccess->canPrintRx(),
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function getPrescriptionsWithStockForEncounter(int $pid, int $encounter, int $facilityId): array
+    {
+        return $this->enrichPrescriptionsWithStock(
+            $this->getPrescriptionsForEncounter($pid, $encounter),
+            $facilityId
+        );
     }
 
     public function rxListUrl(int $pid): string
@@ -336,8 +418,14 @@ class PharmacyService
      * @param array<int, int> $rxCounts
      * @return array<string, mixed>
      */
-    private function enrichQueueRow(array $row, int $actorUserId, array $holders, array $rxCounts): array
-    {
+    private function enrichQueueRow(
+        array $row,
+        int $actorUserId,
+        array $holders,
+        array $rxCounts,
+        bool $inhousePharmacy = false,
+        array $undispensedCounts = [],
+    ): array {
         $visitId = (int) ($row['id'] ?? 0);
         $row = $this->rowEnricher->enrichVisitRow($row, $visitId);
         $holder = $holders[$visitId] ?? null;
@@ -346,6 +434,9 @@ class PharmacyService
         $row['pharmacy_mine'] = !empty($holder['actor_user_id'])
             && (int) $holder['actor_user_id'] === $actorUserId;
         $row['rx_count'] = $rxCounts[$visitId] ?? 0;
+        if ($inhousePharmacy) {
+            $row['undispensed_rx_count'] = $undispensedCounts[$visitId] ?? 0;
+        }
 
         return $row;
     }
@@ -387,15 +478,115 @@ class PharmacyService
             'pharmacy'
         );
         $prescriptions = $this->getPrescriptionsForEncounter((int) $visit['pid'], (int) $visit['encounter']);
+        $facilityId = (int) ($visit['facility_id'] ?? 0);
+
+        return array_merge(
+            [
+                'visit' => $visit,
+                'preview' => $preview,
+                'prescriptions' => $this->enrichPrescriptionsWithStock($prescriptions, $facilityId),
+                'rx_list_url' => $this->rxListUrl((int) $visit['pid']),
+                'skipped_triage' => $detail['skipped_triage'],
+                'session_bound' => true,
+                'can_skip_to_payment' => AclMain::aclCheckCore('new_clinic', 'new_visit_skip_queue'),
+            ],
+            $this->pharmOpsDeskFlags($facilityId),
+            $this->undispensedDeskFlags((int) $visit['pid'], (int) $visit['encounter'])
+        );
+    }
+
+    public function countUndispensedForEncounter(int $pid, int $encounter): int
+    {
+        if ($pid <= 0 || $encounter <= 0) {
+            return 0;
+        }
+
+        $rows = QueryUtils::fetchRecords(
+            "SELECT rx.quantity, rx.filled_date, COALESCE(ds.qty_dispensed, 0) AS qty_dispensed
+             FROM prescriptions rx
+             LEFT JOIN (
+                 SELECT prescription_id, SUM(quantity) AS qty_dispensed
+                 FROM drug_sales
+                 WHERE prescription_id > 0
+                 GROUP BY prescription_id
+             ) ds ON ds.prescription_id = rx.id
+             WHERE rx.patient_id = ? AND rx.encounter = ? AND rx.active = 1",
+            [$pid, $encounter]
+        ) ?: [];
+
+        $count = 0;
+        foreach ($rows as $row) {
+            $qtyOrdered = PharmOpsWorklistService::parseQuantity((string) ($row['quantity'] ?? ''));
+            $qtyDispensed = (int) ($row['qty_dispensed'] ?? 0);
+            $filledDate = (string) ($row['filled_date'] ?? '');
+            $filled = $filledDate !== '' && !str_starts_with($filledDate, '0000-00-00');
+            if (PharmOpsWorklistService::classifyDispenseStatus($qtyOrdered, $qtyDispensed, $filled) !== null) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    private function isInhousePharmacyEnabled(): bool
+    {
+        return !empty($GLOBALS['inhouse_pharmacy']);
+    }
+
+    /**
+     * @return array{undispensed_rx_count: int, can_undispensed_override: bool}
+     */
+    private function undispensedDeskFlags(int $pid, int $encounter): array
+    {
+        if (!$this->isInhousePharmacyEnabled()) {
+            return [
+                'undispensed_rx_count' => 0,
+                'can_undispensed_override' => false,
+            ];
+        }
 
         return [
-            'visit' => $visit,
-            'preview' => $preview,
-            'prescriptions' => $prescriptions,
-            'rx_list_url' => $this->rxListUrl((int) $visit['pid']),
-            'skipped_triage' => $detail['skipped_triage'],
-            'session_bound' => true,
-            'can_skip_to_payment' => AclMain::aclCheckCore('new_clinic', 'new_visit_skip_queue'),
+            'undispensed_rx_count' => $this->countUndispensedForEncounter($pid, $encounter),
+            'can_undispensed_override' => AclMain::aclCheckCore(
+                'new_clinic',
+                'new_pharmacy_undispensed_override'
+            ),
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $visit
+     */
+    private function assertUndispensedGateResolved(
+        int $visitId,
+        array $visit,
+        int $actorUserId,
+        ?string $overrideReason,
+    ): void {
+        $pid = (int) ($visit['pid'] ?? 0);
+        $encounter = (int) ($visit['encounter'] ?? 0);
+        $undispensedCount = $this->countUndispensedForEncounter($pid, $encounter);
+        $hasOverrideAcl = AclMain::aclCheckCore('new_clinic', 'new_pharmacy_undispensed_override');
+
+        PharmOpsUndispensedGate::assertResolved(
+            $this->isInhousePharmacyEnabled(),
+            $undispensedCount,
+            $overrideReason,
+            $hasOverrideAcl
+        );
+
+        if ($undispensedCount > 0 && PharmOpsUndispensedGate::isOverrideAllowed($overrideReason, $hasOverrideAcl)) {
+            EventAuditLogger::getInstance()->newEvent(
+                'new_clinic',
+                'pharmacy_ops.complete_with_undispensed',
+                $actorUserId,
+                1,
+                'visit_id=' . $visitId
+                    . ' pid=' . $pid
+                    . ' encounter=' . $encounter
+                    . ' undispensed=' . $undispensedCount
+                    . ' reason=' . mb_substr(trim((string) $overrideReason), 0, 200)
+            );
+        }
     }
 }

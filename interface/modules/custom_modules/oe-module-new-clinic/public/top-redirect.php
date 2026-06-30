@@ -11,6 +11,12 @@
 
 require_once __DIR__ . '/bootstrap.php';
 
+if (empty($_SESSION['authUserID'])) {
+    $login = ($GLOBALS['webroot'] ?? '') . '/interface/login/login.php';
+    header('Location: ' . $login);
+    exit;
+}
+
 $allowed = [
     'front-desk.php',
     'triage.php',

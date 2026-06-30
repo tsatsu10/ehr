@@ -107,8 +107,6 @@ export function ChargeCorrectionForm({
     }
   };
 
-  const symbol = data?.currency_symbol ?? 'GH₵';
-
   return (
     <div className="oe-nc-billops-correction-form">
       {showVisitLookup && (
@@ -140,7 +138,7 @@ export function ChargeCorrectionForm({
           <div className="mb-3 small text-muted">
             Visit #{data.visit.queue_number} · {data.visit.patient_name ?? ''} · {data.visit.state}
             {' · '}
-            Due {formatBillMoney(symbol, data.balance_due)} (paid {formatBillMoney(symbol, data.paid_total)})
+            Due {formatBillMoney(data.balance_due)} (paid {formatBillMoney(data.paid_total)})
           </div>
 
           <h3 className="h6">Existing charges</h3>
@@ -164,7 +162,7 @@ export function ChargeCorrectionForm({
                     />
                   </td>
                   <td>{line.description}</td>
-                  <td className="text-right">{formatBillMoney(symbol, line.amount)}</td>
+                  <td className="text-right">{formatBillMoney(line.amount)}</td>
                 </tr>
               ))}
             </tbody>
@@ -181,7 +179,7 @@ export function ChargeCorrectionForm({
                 <option value="">Fee schedule…</option>
                 {data.fee_schedule.map((fee: FeeScheduleItem) => (
                   <option key={fee.id} value={fee.id}>
-                    {fee.name} — {formatBillMoney(symbol, fee.price_amount)}
+                    {fee.name} — {formatBillMoney(fee.price_amount)}
                   </option>
                 ))}
               </select>

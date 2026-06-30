@@ -83,6 +83,7 @@ const configPayload = {
     currency_code: 'GHS',
     currency_symbol: 'GH₵',
     currency_decimals: 2,
+    currency_symbol_position: 'before',
   },
   visit_types: [],
   calendar_categories: [{ pc_catid: 1, name: 'Office Visit' }],
@@ -138,6 +139,9 @@ describe('AdminHub', () => {
       expect.objectContaining({ params: { scope: 'facility' } })
     );
     expect(await screen.findByLabelText(/Enable triage desk/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Enable React Visit Board/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Enable React Front Desk/i)).not.toBeInTheDocument();
+    expect(await screen.findByLabelText(/Enable Billing Back Office hub/i)).toBeInTheDocument();
   });
 
   it('saves settings when save is clicked', async () => {

@@ -501,6 +501,11 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_react_lab_ops', '1');
 #EndIf
 
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_pharm_ops
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_react_pharm_ops', '1');
+#EndIf
+
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_chart_depth
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_react_chart_depth', '1');
@@ -512,6 +517,13 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_bill_ops_outstanding', '0'),
 (0, 'bill_ops_reopen_on_correction', '0'),
 (0, 'enable_react_bill_ops', '1');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_report_hub
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_report_hub', '0'),
+(0, 'report_hub_show_us_quality', '0'),
+(0, 'enable_react_report_hub', '1');
 #EndIf
 
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_insurance
@@ -672,9 +684,87 @@ WHERE `config_key` IN (
     'enable_react_admin_hub',
     'enable_react_patient_chart',
     'enable_react_lab_ops',
+    'enable_react_pharm_ops',
     'enable_react_chart_depth',
-    'enable_react_bill_ops'
+    'enable_react_bill_ops',
+    'enable_react_report_hub'
 ) AND `config_value` = '0';
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'react_migration_cutover_v1', '1');
+#EndIf
+
+#IfNotTable new_config_log
+CREATE TABLE IF NOT EXISTS `new_config_log` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `config_scope` VARCHAR(32) NOT NULL DEFAULT 'openemr_global',
+    `config_key` VARCHAR(128) NOT NULL,
+    `prev_value` TEXT NULL,
+    `new_value` TEXT NULL,
+    `actor_user_id` INT NULL,
+    `applied_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_config_key_applied` (`config_key`, `applied_at`)
+) ENGINE=InnoDB COMMENT='Audit log for cash clinic profile and config changes (M6-F07)';
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key clinic_tz
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'clinic_tz', 'Africa/Accra');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_rx_print
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_rx_print', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_dispense_label
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_dispense_label', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_pharm_rx_favorites
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_pharm_rx_favorites', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key pharm_expiry_warn_days
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'pharm_expiry_warn_days', '90');
+#EndIf
+
+#IfNotTable new_drug_meta
+CREATE TABLE IF NOT EXISTS `new_drug_meta` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `drug_id` INT NOT NULL,
+    `fda_reg_no` VARCHAR(32) NULL,
+    `eml_code` VARCHAR(16) NULL,
+    `local_brand_name` VARCHAR(128) NULL,
+    `is_controlled` TINYINT(1) NOT NULL DEFAULT 0,
+    `controlled_schedule_code` VARCHAR(32) NULL COMMENT 'National schedule placeholder (O-PHARM-5)',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_drug` (`drug_id`),
+    KEY `idx_controlled` (`is_controlled`)
+) ENGINE=InnoDB COMMENT='Optional drug metadata for M13 pharmacy ops (PRD §12.1)';
+#EndIf
+
+#IfNotTable report_hub_export_run
+CREATE TABLE IF NOT EXISTS `report_hub_export_run` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `facility_id` INT NOT NULL,
+    `report_key` VARCHAR(64) NOT NULL,
+    `date_from` DATE NULL,
+    `date_to` DATE NULL,
+    `row_count` INT NULL,
+    `file_path` VARCHAR(512) NULL,
+    `status` ENUM('ok','failed','running') NOT NULL,
+    `actor_user_id` BIGINT NOT NULL,
+    `started_at` DATETIME NOT NULL,
+    `finished_at` DATETIME NULL,
+    `message` TEXT NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_facility_started` (`facility_id`, `started_at`),
+    KEY `idx_report_key` (`report_key`)
+) ENGINE=InnoDB COMMENT='M16 export audit (V1.1-REP)';
 #EndIf

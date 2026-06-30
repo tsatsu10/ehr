@@ -3,6 +3,8 @@ import { ExportPane } from './ExportPane';
 import { PaymentsPane } from './PaymentsPane';
 import { ReferralsPane } from './ReferralsPane';
 import type { ChartDepthProps } from './chartDepthTypes';
+import { useEffect } from 'react';
+import { setChartDepthCurrencyFormat } from './chartDepthUtils';
 
 export function ChartDepthPage({
   mode,
@@ -14,7 +16,17 @@ export function ChartDepthPage({
   preset,
   chartUrl,
   visitBoardUrl,
+  currencyFormat,
 }: ChartDepthProps) {
+  useEffect(() => {
+    if (currencyFormat) {
+      setChartDepthCurrencyFormat({
+        currency_symbol: currencyFormat.currency_symbol ?? '',
+        currency_decimals: currencyFormat.currency_decimals ?? 2,
+        currency_symbol_position: currencyFormat.currency_symbol_position === 'after' ? 'after' : 'before',
+      });
+    }
+  }, [currencyFormat]);
   return (
     <ChartDepthShell
       mode={mode}

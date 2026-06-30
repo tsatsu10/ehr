@@ -2,7 +2,7 @@
  * PharmacyDesk — Phase 6A React island replacing jQuery NewClinicPharmacy.
  */
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { oeFetch } from '@core/oeFetch';
 import { resolveActionConflict, applyPostDeskConflict, type DeskInterrupt } from '@core/deskConflict';
 import { useInterval } from '@core/useInterval';
@@ -10,7 +10,9 @@ import { usePageHeadingToolbar } from '@core/usePageHeadingToolbar';
 import { setDeskActiveVisitId, clearDeskActiveVisitId } from '@core/deskSessionStorage';
 import { useSharedDeviceSession } from '@core/useSharedDeviceSession';
 import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
+import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
+import { UndispensedRxModal } from '@components/UndispensedRxModal';
 import { EsignOverrideModal } from '@components/EsignOverrideModal';
 import { SkipToPaymentModal } from '@components/SkipToPaymentModal';
 import { handleDeskCompleteResult } from '@core/deskCompleteAction';
@@ -23,6 +25,20 @@ import type {
 } from '@core/types';
 import { PharmacyQueue } from './PharmacyQueue';
 import { PharmacyActivePane, type PharmacyActiveMode } from './PharmacyActivePane';
+import type { OtcSaleInitialContext } from '../pharm-ops/pharmOpsTypes';
+import { printRxWithNotice } from '../pharm-ops/pharmOpsPrintRx';
+
+const PharmOpsOtcSaleDrawer = lazy(() =>
+  import('../pharm-ops/PharmOpsOtcSaleDrawer').then((module) => ({
+    default: module.PharmOpsOtcSaleDrawer,
+  }))
+);
+
+const PharmOpsDispenseDrawer = lazy(() =>
+  import('../pharm-ops/PharmOpsDispenseDrawer').then((module) => ({
+    default: module.PharmOpsDispenseDrawer,
+  }))
+);
 
 const STORAGE_KEY = 'pharmacy_desk_active_visit_id';
 
@@ -35,6 +51,10 @@ export function PharmacyDesk({
   canSkipToPayment = false,
   sharedDeviceWarning = false,
   canEsignOverride = false,
+  canSellOtc = false,
+  pharmOpsEnabled: pharmOpsEnabledProp = false,
+  canDispense: canDispenseProp = false,
+  canUndispensedOverride: canUndispensedOverrideProp = false,
 }: PharmacyDeskProps) {
   const [cards, setCards] = useState<PharmacyQueueCard[]>([]);
   const [counts, setCounts] = useState<PharmacyQueueData['counts'] | null>(null);
@@ -53,6 +73,14 @@ export function PharmacyDesk({
   const [skipOpen, setSkipOpen] = useState(false);
   const [skipError, setSkipError] = useState<string | null>(null);
   const [esignOpen, setEsignOpen] = useState(false);
+  const [otcOpen, setOtcOpen] = useState(false);
+  const [dispenseRxId, setDispenseRxId] = useState<number | null>(null);
+  const [pharmOpsEnabled, setPharmOpsEnabled] = useState(pharmOpsEnabledProp);
+  const [canDispense, setCanDispense] = useState(canDispenseProp);
+  const [canUndispensedOverride, setCanUndispensedOverride] = useState(canUndispensedOverrideProp);
+  const [undispensedOpen, setUndispensedOpen] = useState(false);
+  const [undispensedCount, setUndispensedCount] = useState(0);
+  const [undispensedError, setUndispensedError] = useState<string | null>(null);
 
   const queueSeq = useRef(0);
   const activeVisitIdRef = useRef<number | null>(null);
@@ -62,6 +90,16 @@ export function PharmacyDesk({
     () => (facilityId > 0 ? { facility_id: facilityId } : undefined),
     [facilityId],
   );
+
+  const otcInitialContext = useMemo<OtcSaleInitialContext | null>(() => {
+    if (!selectData?.visit?.pid) return null;
+    return {
+      pid: selectData.visit.pid,
+      encounterId: selectData.visit.encounter,
+      patientLabel: selectData.preview.identity.display_name,
+      mrn: selectData.preview.identity.pubpid,
+    };
+  }, [selectData]);
 
   const resetActivePane = useCallback(() => {
     setMode('idle');
@@ -96,6 +134,15 @@ export function PharmacyDesk({
     setSelectData(data);
     setMode('active');
     setInterrupt(null);
+    if (data.pharm_ops_enabled != null) {
+      setPharmOpsEnabled(data.pharm_ops_enabled);
+    }
+    if (data.can_dispense != null) {
+      setCanDispense(data.can_dispense);
+    }
+    if (data.can_undispensed_override != null) {
+      setCanUndispensedOverride(data.can_undispensed_override);
+    }
     sharedSession.setActiveVisitId(data.visit.id);
     activeVisitIdRef.current = data.visit.id;
   }, [sharedSession]);
@@ -124,6 +171,9 @@ export function PharmacyDesk({
       hasActiveWorkRef.current = !!data.has_active_work;
       setQueueError(null);
       setLastUpdated(new Date());
+      if (data.pharm_ops_enabled != null) {
+        setPharmOpsEnabled(data.pharm_ops_enabled);
+      }
 
       const activeId = activeVisitIdRef.current;
       if (activeId) {
@@ -245,11 +295,15 @@ export function PharmacyDesk({
     onRefresh: fetchQueue,
   });
 
-  const handleComplete = useCallback(async (esignOverrideReason?: string) => {
+  const handleComplete = useCallback(async (options?: {
+    esignOverrideReason?: string;
+    undispensedOverrideReason?: string;
+  }) => {
     if (!selectData || sharedSession.blocked || submitting) return;
 
     setSubmitting(true);
     setActionError(null);
+    setUndispensedError(null);
 
     const result = await postDeskAction({
       ajaxUrl,
@@ -259,7 +313,10 @@ export function PharmacyDesk({
       body: {
         visit_id: selectData.visit.id,
         row_version: selectData.visit.row_version ?? 0,
-        ...(esignOverrideReason ? { esign_override_reason: esignOverrideReason } : {}),
+        ...(options?.esignOverrideReason ? { esign_override_reason: options.esignOverrideReason } : {}),
+        ...(options?.undispensedOverrideReason
+          ? { undispensed_override_reason: options.undispensedOverrideReason }
+          : {}),
       },
     });
 
@@ -279,17 +336,27 @@ export function PharmacyDesk({
     handleDeskCompleteResult(result, {
       canEsignOverride,
       onSuccess: () => {
+        setUndispensedOpen(false);
         resetActivePane();
         setHasActiveWork(false);
         hasActiveWorkRef.current = false;
         void fetchQueueRef.current();
       },
       onEsignRequired: () => setEsignOpen(true),
+      onUndispensedRx: (data) => {
+        setUndispensedCount(data.undispensed_count ?? selectData.undispensed_rx_count ?? 1);
+        setUndispensedOpen(true);
+      },
       onError: (message) => {
-        if (esignOverrideReason) {
+        if (options?.esignOverrideReason) {
           setEsignOpen(true);
         }
-        setActionError(message);
+        if (options?.undispensedOverrideReason) {
+          setUndispensedError(message);
+          setUndispensedOpen(true);
+        } else {
+          setActionError(message);
+        }
       },
     });
   }, [ajaxUrl, canEsignOverride, csrfToken, facilityId, resetActivePane, selectData, sharedSession, submitting]);
@@ -331,6 +398,21 @@ export function PharmacyDesk({
     }
   }, [ajaxUrl, csrfToken, resetActivePane, selectData, submitting]);
 
+  const refreshActiveVisit = useCallback(async () => {
+    if (!activeVisitIdRef.current) return;
+    try {
+      const data = await oeFetch<PharmacySelectData>('pharmacy.select', {
+        ajaxUrl,
+        csrfToken,
+        method: 'POST',
+        json: { visit_id: activeVisitIdRef.current },
+      });
+      applySelectData(data);
+    } catch {
+      // Queue poll will reconcile stale state.
+    }
+  }, [ajaxUrl, applySelectData, csrfToken]);
+
   const runShortcut = useCallback(async (shortcut: string) => {
     if (!selectData || sharedSession.blocked) return;
 
@@ -348,6 +430,21 @@ export function PharmacyDesk({
       setActionError(err instanceof Error ? err.message : 'Shortcut failed');
     }
   }, [ajaxUrl, csrfToken, selectData, sharedSession]);
+
+  const handlePrintRx = useCallback(async (prescriptionId: number) => {
+    setActionError(null);
+    await printRxWithNotice(ajaxUrl, csrfToken, prescriptionId, setActionError);
+  }, [ajaxUrl, csrfToken]);
+
+  const openFirstUndispensedDispense = useCallback(() => {
+    const firstId = selectData?.prescriptions?.find((line) => line.status === 'to_dispense')?.id;
+    setUndispensedOpen(false);
+    if (firstId && pharmOpsEnabled && canDispense) {
+      setDispenseRxId(firstId);
+      return;
+    }
+    void runShortcut('dispense');
+  }, [canDispense, pharmOpsEnabled, runShortcut, selectData]);
 
   return (
     <div id="nc-pharmacy-desk" className="oe-nc-pharmacy-react-active">
@@ -372,11 +469,38 @@ export function PharmacyDesk({
         />
       )}
 
+      <DeskQueueStatusBar
+        id="nc-pharmacy-status-bar"
+        ariaLabel="Pharmacy desk status"
+        items={[
+          {
+            label: 'Waiting',
+            value: counts?.waiting ?? 0,
+            href: (counts?.waiting ?? 0) > 0 ? visitBoardUrl : undefined,
+          },
+          { label: 'In pharmacy', value: counts?.in_pharmacy ?? 0 },
+        ]}
+        loading={queueLoading}
+        onRefresh={() => { void fetchQueue(); }}
+      />
+
+      {canSellOtc ? (
+        <div className="mb-3">
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            id="nc-pharmacy-sell-otc"
+            onClick={() => setOtcOpen(true)}
+          >
+            Sell OTC
+          </button>
+        </div>
+      ) : null}
+
       <div className="row">
         <div className="col-lg-4 mb-3">
           <PharmacyQueue
             cards={cards}
-            counts={counts}
             hasActiveWork={hasActiveWork}
             loading={queueLoading}
             error={queueError}
@@ -394,6 +518,8 @@ export function PharmacyDesk({
             blocked={sharedSession.blocked}
             actionError={actionError}
             submitting={submitting}
+            pharmOpsEnabled={pharmOpsEnabled}
+            canDispense={canDispense}
             onTakePatient={() => {
               if (selectData) void takePatient(selectData.visit.id, selectData.visit.row_version ?? 0);
             }}
@@ -401,6 +527,8 @@ export function PharmacyDesk({
             onSkip={() => setSkipOpen(true)}
             onOpenDispense={() => void runShortcut('dispense')}
             onOpenRxEdit={() => void runShortcut('rx_edit')}
+            onDispenseRx={(prescriptionId) => setDispenseRxId(prescriptionId)}
+            onPrintRx={(prescriptionId) => { void handlePrintRx(prescriptionId); }}
           />
         </div>
       </div>
@@ -426,8 +554,54 @@ export function PharmacyDesk({
         confirmLabel="Complete with override"
         reasonFieldId="nc-pharmacy-esign-reason"
         onClose={() => setEsignOpen(false)}
-        onConfirm={(reason) => void handleComplete(reason)}
+        onConfirm={(reason) => void handleComplete({ esignOverrideReason: reason })}
       />
+
+      <UndispensedRxModal
+        open={undispensedOpen}
+        preview={selectData?.preview ?? null}
+        visit={selectData?.visit ?? null}
+        undispensedCount={undispensedCount || selectData?.undispensed_rx_count || 1}
+        canOverride={canUndispensedOverride}
+        submitting={submitting}
+        error={undispensedError}
+        onClose={() => {
+          setUndispensedOpen(false);
+          setUndispensedError(null);
+        }}
+        onOpenDispense={openFirstUndispensedDispense}
+        onOverrideComplete={(reason) => void handleComplete({ undispensedOverrideReason: reason })}
+      />
+
+      {otcOpen ? (
+        <Suspense fallback={null}>
+          <PharmOpsOtcSaleDrawer
+            open
+            ajaxUrl={ajaxUrl}
+            csrfToken={csrfToken}
+            canDispense={canSellOtc}
+            initialContext={otcInitialContext}
+            onClose={() => setOtcOpen(false)}
+          />
+        </Suspense>
+      ) : null}
+
+      {dispenseRxId != null ? (
+        <Suspense fallback={null}>
+          <PharmOpsDispenseDrawer
+            open
+            prescriptionId={dispenseRxId}
+            ajaxUrl={ajaxUrl}
+            csrfToken={csrfToken}
+            canDispense={canDispense}
+            onClose={() => setDispenseRxId(null)}
+            onDispensed={() => {
+              void refreshActiveVisit();
+              void fetchQueue();
+            }}
+          />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

@@ -27,6 +27,8 @@ class PatientContextService
         private readonly PatientActivityFeedService $activityFeed = new PatientActivityFeedService(),
         private readonly AppointmentTodayService $appointmentToday = new AppointmentTodayService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
+        private readonly RevisitCompletionGateService $revisitGate = new RevisitCompletionGateService(),
+        private readonly ClinicDateService $clinicDate = new ClinicDateService(),
     ) {
     }
 
@@ -88,7 +90,8 @@ class PatientContextService
         $problemCount = is_array($problemRow) ? (int) ($problemRow['cnt'] ?? 0) : 0;
 
         $visit = QueryUtils::querySingleRow(
-            "SELECT id, state, queue_number, chief_complaint, encounter, facility_id FROM new_visit
+            "SELECT id, state, queue_number, chief_complaint, encounter, facility_id, row_version
+             FROM new_visit
              WHERE pid = ?
              AND state NOT IN ('completed', 'closed_unpaid', 'cancelled')
              ORDER BY id DESC LIMIT 1",
@@ -117,6 +120,7 @@ class PatientContextService
                 'visit_id' => (int) $visit['id'],
                 'state' => $visit['state'],
                 'queue_number' => (int) $visit['queue_number'],
+                'row_version' => (int) ($visit['row_version'] ?? 0),
                 'chief_complaint' => $visit['chief_complaint'] ?? null,
                 'encounter_id' => $encounterId > 0 ? $encounterId : null,
                 'encounter_signed' => $encounterId > 0
@@ -189,8 +193,39 @@ class PatientContextService
             'appointment_today' => $payload['appointment_today'],
             'recall_due' => false,
         ];
+        $payload['visits_today'] = $this->loadVisitsToday($pid, $facilityId);
+        $payload['revisit_gate'] = $this->revisitGate->assess($pid, $facilityId);
 
         return $payload;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function loadVisitsToday(int $pid, int $facilityId): array
+    {
+        $today = $this->clinicDate->today();
+        $rows = QueryUtils::fetchRecords(
+            "SELECT v.id AS visit_id, v.queue_number, v.state, vt.label AS visit_type_label
+             FROM new_visit v
+             LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
+             WHERE v.pid = ? AND v.facility_id = ? AND v.visit_date = ?
+             ORDER BY v.queue_number ASC, v.id ASC",
+            [$pid, $facilityId, $today]
+        ) ?: [];
+
+        return array_map(static function (array $row): array {
+            $state = (string) ($row['state'] ?? '');
+            $terminal = in_array($state, ['completed', 'closed_unpaid', 'cancelled'], true);
+
+            return [
+                'visit_id' => (int) ($row['visit_id'] ?? 0),
+                'queue_number' => (int) ($row['queue_number'] ?? 0),
+                'state' => $state,
+                'visit_type_label' => (string) ($row['visit_type_label'] ?? ''),
+                'is_finished' => $terminal,
+            ];
+        }, $rows);
     }
 
     /**

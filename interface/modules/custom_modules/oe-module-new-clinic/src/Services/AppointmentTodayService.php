@@ -82,6 +82,58 @@ class AppointmentTodayService
     }
 
     /**
+     * Today's scheduled patients for Front Desk search idle state (M1a).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function listTodayAppointments(int $facilityId, int $limit = 50): array
+    {
+        $facilityId = $this->visitScope->resolveActorFacilityId($facilityId);
+        if (!$this->scheduledIntegration->isEnabled($facilityId)) {
+            return [];
+        }
+
+        $this->visitScope->assertFacilityAccessible($facilityId);
+        $limit = max(1, min($limit, 100));
+
+        $bind = [];
+        $sql = "SELECT pce.pc_eid, pce.pc_pid, pce.pc_startTime,
+                       TRIM(CONCAT(pd.fname, ' ', pd.lname)) AS display_name,
+                       pd.pubpid,
+                       u.fname AS provider_fname, u.lname AS provider_lname
+                FROM openemr_postcalendar_events pce
+                INNER JOIN patient_data pd ON pd.pid = pce.pc_pid
+                LEFT JOIN users u ON u.id = pce.pc_aid
+                WHERE pce.pc_eventDate = CURDATE()
+                  AND pce.pc_eventstatus = 1
+                  AND pce.pc_apptstatus NOT IN ('*', '%', 'x', 'X')
+                  AND pce.pc_pid IS NOT NULL AND pce.pc_pid != '' AND pce.pc_pid != '0'";
+
+        if ($facilityId > 0) {
+            $sql .= ' AND (pce.pc_facility = ? OR pce.pc_facility = 0)';
+            $bind[] = $facilityId;
+        }
+
+        $sql .= ' ORDER BY COALESCE(pce.pc_startTime, \'00:00:00\') ASC, pd.lname ASC, pd.fname ASC
+                  LIMIT ' . $limit;
+
+        $rows = QueryUtils::fetchRecords($sql, $bind) ?: [];
+
+        return array_map(function (array $row): array {
+            $providerName = trim((string) ($row['provider_fname'] ?? '') . ' ' . (string) ($row['provider_lname'] ?? ''));
+
+            return [
+                'pid' => (int) ($row['pc_pid'] ?? 0),
+                'display_name' => (string) ($row['display_name'] ?? ''),
+                'pubpid' => (string) ($row['pubpid'] ?? ''),
+                'pc_eid' => (int) ($row['pc_eid'] ?? 0),
+                'start_time_label' => $this->formatStartTime($row['pc_startTime'] ?? null),
+                'provider_name' => $providerName !== '' ? $providerName : null,
+            ];
+        }, $rows);
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     public function findNearestTodayAppointment(int $pid, int $facilityId): ?array

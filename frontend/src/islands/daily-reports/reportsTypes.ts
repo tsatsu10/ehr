@@ -7,6 +7,7 @@ export interface DailyReportsProps {
   visitBoardUrl: string;
   canCancelVisit: boolean;
   canMarkUnpaid: boolean;
+  canRunReconciliation?: boolean;
 }
 
 export interface VisitSummary {
@@ -20,6 +21,36 @@ export interface VisitSummary {
 export interface CashSummary {
   total_collected: number;
   receipt_count: number;
+  by_category?: CashCategoryRow[];
+}
+
+export interface CashCategoryRow {
+  category: string;
+  label: string;
+  amount: number;
+}
+
+export interface ReconciliationRunRow {
+  id: number;
+  run_date: string;
+  trigger: string;
+  module_total: number;
+  core_total: number;
+  delta_amount: number;
+  status: string;
+  completed_at: string;
+  actor_user_id: number | null;
+}
+
+export interface ReconciliationSummary {
+  status: string;
+  module_total: number;
+  core_total: number;
+  delta_amount: number;
+  tolerance: number;
+  currency_symbol: string;
+  latest_run: ReconciliationRunRow | null;
+  recent_runs: ReconciliationRunRow[];
 }
 
 export interface OpenVisitRow {
@@ -63,11 +94,18 @@ export interface StaleIncompleteRow {
   completion_score: number;
 }
 
+export interface RegisteringUserQualityRow {
+  registrar: string;
+  patients_registered: number;
+  completion_buckets: CompletionBuckets;
+}
+
 export interface DataQualitySummary {
   patients_registered_today: number;
   dup_overrides_today: number;
   billing_threshold: number;
   completion_buckets: CompletionBuckets;
+  by_registering_user?: RegisteringUserQualityRow[];
   stale_incomplete: StaleIncompleteRow[];
 }
 
@@ -95,6 +133,7 @@ export interface DailyReportData {
   facility_id: number;
   visits: VisitSummary;
   cash: CashSummary;
+  reconciliation: ReconciliationSummary;
   open_visits: OpenVisitRow[];
   eod_open: Record<string, EodStateSummary>;
   unsigned_alerts: UnsignedAlerts;
@@ -103,11 +142,18 @@ export interface DailyReportData {
   unsigned_visits: UnsignedVisitRow[];
   queue_bypass: BypassLogRow[];
   last_updated: string;
+  currency?: {
+    currency_code?: string;
+    currency_symbol: string;
+    currency_decimals?: number;
+    currency_symbol_position?: 'before' | 'after';
+  };
 }
 
 export type ReportTabId =
   | 'visits'
   | 'cash'
+  | 'reconciliation'
   | 'open'
   | 'unpaid'
   | 'quality'
@@ -117,6 +163,7 @@ export type ReportTabId =
 export const REPORT_TABS: { id: ReportTabId; label: string }[] = [
   { id: 'visits', label: 'Visits' },
   { id: 'cash', label: 'Cash' },
+  { id: 'reconciliation', label: 'Reconciliation' },
   { id: 'open', label: 'EOD open' },
   { id: 'unpaid', label: 'Unpaid' },
   { id: 'quality', label: 'Data quality' },

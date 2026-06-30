@@ -1,10 +1,13 @@
 import { formatMoney, formatWaitMinutes } from './reportsFormatters';
+import { DataTable } from '@components/DataTable';
+import { StatCard } from '@components/StatCard';
 import type {
   BypassLogRow,
   DailyReportData,
   DataQualitySummary,
   OpenVisitRow,
   PendingVisitAction,
+  ReconciliationSummary,
   UnpaidVisitRow,
   UnsignedAlerts,
   UnsignedVisitRow,
@@ -47,13 +50,8 @@ export function VisitsSection({ visits }: { visits: VisitSummary }) {
           ['Still open', visits.still_open],
           ['Cancelled', visits.cancelled],
         ].map(([label, value]) => (
-          <div className="col-md-3" key={label}>
-            <div className="card text-center">
-              <div className="card-body">
-                <div className="h3 mb-0">{value}</div>
-                <div className="small text-muted">{label}</div>
-              </div>
-            </div>
+          <div className="col-md-3 mb-2" key={label}>
+            <StatCard label={String(label)} value={value} />
           </div>
         ))}
       </div>
@@ -61,44 +59,143 @@ export function VisitsSection({ visits }: { visits: VisitSummary }) {
       {!states.length ? (
         <div className="text-muted"><em>No visits on this date.</em></div>
       ) : (
-        <table className="table table-sm table-bordered">
-          <thead>
-            <tr><th>State</th><th>Count</th></tr>
-          </thead>
-          <tbody>
-            {states.map((state) => (
-              <tr key={state}>
-                <td>{state}</td>
-                <td>{visits.by_state[state]}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          bordered
+          header={<tr><th>State</th><th>Count</th></tr>}
+        >
+          {states.map((state) => (
+            <tr key={state}>
+              <td>{state}</td>
+              <td>{visits.by_state[state]}</td>
+            </tr>
+          ))}
+        </DataTable>
       )}
     </>
   );
 }
 
 export function CashSection({ cash }: { cash: DailyReportData['cash'] }) {
+  const categories = cash.by_category ?? [];
+
   return (
-    <div className="row">
-      <div className="col-md-4">
-        <div className="card">
-          <div className="card-body">
-            <div className="h4 mb-0">{formatMoney(cash.total_collected)}</div>
-            <div className="small text-muted">Total collected</div>
+    <>
+      <div className="row">
+        <div className="col-md-4 mb-2">
+          <StatCard label="Total collected" value={formatMoney(cash.total_collected)} />
+        </div>
+        <div className="col-md-4 mb-2">
+          <StatCard label="Completed visits with payment" value={cash.receipt_count} />
+        </div>
+      </div>
+      <h5 className="mb-2">By fee category</h5>
+      {!categories.length ? (
+        <div className="text-muted"><em>No completed visit charges for this date.</em></div>
+      ) : (
+        <DataTable
+          bordered
+          header={<tr><th>Category</th><th className="text-right">Amount</th></tr>}
+        >
+          {categories.map((row) => (
+            <tr key={row.category}>
+              <td>{row.label}</td>
+              <td className="text-right">{formatMoney(row.amount)}</td>
+            </tr>
+          ))}
+        </DataTable>
+      )}
+    </>
+  );
+}
+
+export function ReconciliationSection({
+  reconciliation,
+  canRun,
+  running,
+  runError,
+  onRun,
+}: {
+  reconciliation: ReconciliationSummary;
+  canRun: boolean;
+  running: boolean;
+  runError: string | null;
+  onRun: () => void;
+}) {
+  const isOk = reconciliation.status === 'ok';
+  const recentRuns = reconciliation.recent_runs ?? [];
+
+  return (
+    <>
+      <div className="row mb-3">
+        <div className="col-md-3 col-6 mb-2">
+          <StatCard label="Module receipts" value={formatMoney(reconciliation.module_total)} />
+        </div>
+        <div className="col-md-3 col-6 mb-2">
+          <StatCard label="Core payments" value={formatMoney(reconciliation.core_total)} />
+        </div>
+        <div className="col-md-3 col-6 mb-2">
+          <StatCard
+            label="Delta"
+            value={formatMoney(reconciliation.delta_amount)}
+          />
+        </div>
+        <div className="col-md-3 col-6 mb-2">
+          <div className="card h-100">
+            <div className="card-body py-2">
+              <div className="small text-muted">Status</div>
+              <div className={`h5 mb-0 ${isOk ? 'text-success' : 'text-warning'}`}>
+                {isOk ? 'OK' : 'Warning'}
+              </div>
+              <div className="small text-muted">
+                Tolerance {formatMoney(reconciliation.tolerance)}
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      <div className="col-md-4">
-        <div className="card">
-          <div className="card-body">
-            <div className="h4 mb-0">{cash.receipt_count}</div>
-            <div className="small text-muted">Completed visits with payment</div>
-          </div>
+
+      {canRun && (
+        <div className="mb-3">
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-primary"
+            onClick={onRun}
+            disabled={running}
+          >
+            {running ? 'Running…' : 'Run reconciliation now'}
+          </button>
+          {runError && <div className="text-danger small mt-2">{runError}</div>}
         </div>
-      </div>
-    </div>
+      )}
+
+      <h5 className="mb-2">Recent runs</h5>
+      {!recentRuns.length ? (
+        <div className="text-muted"><em>No reconciliation runs recorded yet.</em></div>
+      ) : (
+        <DataTable
+          bordered
+          header={(
+            <tr>
+              <th>Date</th>
+              <th>Trigger</th>
+              <th>Status</th>
+              <th className="text-right">Delta</th>
+              <th>Completed</th>
+            </tr>
+          )}
+        >
+          {recentRuns.map((run) => (
+            <tr key={run.id}>
+              <td>{run.run_date}</td>
+              <td>{run.trigger}</td>
+              <td className={run.status === 'ok' ? 'text-success' : 'text-warning'}>{run.status}</td>
+              <td className="text-right">{formatMoney(run.delta_amount)}</td>
+              <td>{run.completed_at || '—'}</td>
+            </tr>
+          ))}
+        </DataTable>
+      )}
+    </>
   );
 }
 
@@ -131,20 +228,18 @@ export function EodOpenSection({
     <>
       <UnsignedAlertsBanner alerts={unsignedAlerts} />
       <h5 className="mb-2">By state</h5>
-      <table className="table table-sm table-bordered mb-3">
-        <thead>
-          <tr><th>State</th><th>Count</th><th>Oldest wait</th></tr>
-        </thead>
-        <tbody>
-          {states.map((state) => (
-            <tr key={state}>
-              <td>{state}</td>
-              <td>{summary[state].count}</td>
-              <td>{formatWaitMinutes(summary[state].oldest_wait_minutes)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable
+        bordered
+        header={<tr><th>State</th><th>Count</th><th>Oldest wait</th></tr>}
+      >
+        {states.map((state) => (
+          <tr key={state}>
+            <td>{state}</td>
+            <td>{summary[state].count}</td>
+            <td>{formatWaitMinutes(summary[state].oldest_wait_minutes)}</td>
+          </tr>
+        ))}
+      </DataTable>
       <h5 className="mb-2">Open visit list</h5>
       <OpenVisitList
         visits={visits}
@@ -171,43 +266,41 @@ function OpenVisitList({
   }
 
   return (
-    <table className="table table-sm table-bordered">
-      <thead>
-        <tr><th>Patient</th><th>State</th><th>Age</th><th>Actions</th></tr>
-      </thead>
-      <tbody>
-        {visits.map((row) => (
-          <tr key={row.id}>
-            <td>#{row.queue_number} {row.display_name}</td>
-            <td>{row.state}</td>
-            <td>{row.wait_minutes}m</td>
-            <td className="text-nowrap">
-              <a className="btn btn-sm btn-outline-secondary mr-1" href={visitBoardUrl} target="_top">
-                Visit Board
-              </a>
-              {canMarkUnpaid && row.state === 'ready_for_payment' && (
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-warning mr-1"
-                  onClick={() => onMarkUnpaid(row)}
-                >
-                  Mark unpaid
-                </button>
-              )}
-              {canCancel && (
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-danger"
-                  onClick={() => onCancel(row)}
-                >
-                  Cancel
-                </button>
-              )}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <DataTable
+      bordered
+      header={<tr><th>Patient</th><th>State</th><th>Age</th><th>Actions</th></tr>}
+    >
+      {visits.map((row) => (
+        <tr key={row.id}>
+          <td>#{row.queue_number} {row.display_name}</td>
+          <td>{row.state}</td>
+          <td>{row.wait_minutes}m</td>
+          <td className="text-nowrap">
+            <a className="btn btn-sm btn-outline-secondary mr-1" href={visitBoardUrl} target="_top">
+              Visit Board
+            </a>
+            {canMarkUnpaid && row.state === 'ready_for_payment' && (
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-warning mr-1"
+                onClick={() => onMarkUnpaid(row)}
+              >
+                Mark unpaid
+              </button>
+            )}
+            {canCancel && (
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-danger"
+                onClick={() => onCancel(row)}
+              >
+                Cancel
+              </button>
+            )}
+          </td>
+        </tr>
+      ))}
+    </DataTable>
   );
 }
 
@@ -217,21 +310,19 @@ export function UnpaidSection({ rows }: { rows: UnpaidVisitRow[] }) {
   }
 
   return (
-    <table className="table table-sm table-bordered">
-      <thead>
-        <tr><th>Patient</th><th>Charges</th><th>Reason</th><th>Marked at</th></tr>
-      </thead>
-      <tbody>
-        {rows.map((row, idx) => (
-          <tr key={`${row.queue_number}-${idx}`}>
-            <td>#{row.queue_number} {row.display_name}</td>
-            <td>{formatMoney(row.charges_total)}</td>
-            <td>{row.unpaid_reason || '—'}</td>
-            <td>{row.left_unpaid_at || '—'}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <DataTable
+      bordered
+      header={<tr><th>Patient</th><th>Charges</th><th>Reason</th><th>Marked at</th></tr>}
+    >
+      {rows.map((row, idx) => (
+        <tr key={`${row.queue_number}-${idx}`}>
+          <td>#{row.queue_number} {row.display_name}</td>
+          <td>{formatMoney(row.charges_total)}</td>
+          <td>{row.unpaid_reason || '—'}</td>
+          <td>{row.left_unpaid_at || '—'}</td>
+        </tr>
+      ))}
+    </DataTable>
   );
 }
 
@@ -264,37 +355,64 @@ export function DataQualitySection({ quality }: { quality: DataQualitySummary })
         ))}
       </div>
       <h5>New registrations today — completion buckets</h5>
-      <table className="table table-sm table-bordered mb-3">
-        <thead>
-          <tr><th>&lt; 40%</th><th>40–69%</th><th>70–99%</th><th>100%</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>{buckets.under_40}</td>
-            <td>{buckets.from_40_to_69}</td>
-            <td>{buckets.from_70_to_99}</td>
-            <td>{buckets.complete_100}</td>
-          </tr>
-        </tbody>
-      </table>
-      <h5>Visits today below {threshold}% completion</h5>
+      <DataTable
+        bordered
+        header={<tr><th>&lt; 40%</th><th>40–69%</th><th>70–99%</th><th>100%</th></tr>}
+      >
+        <tr>
+          <td>{buckets.under_40}</td>
+          <td>{buckets.from_40_to_69}</td>
+          <td>{buckets.from_70_to_99}</td>
+          <td>{buckets.complete_100}</td>
+        </tr>
+      </DataTable>
+
+      {(quality.by_registering_user?.length ?? 0) > 0 && (
+        <>
+          <h5 className="mt-4 mb-2">By registering user</h5>
+          <DataTable
+            bordered
+            header={(
+              <tr>
+                <th>Registrar</th>
+                <th>Registered</th>
+                <th>&lt; 40%</th>
+                <th>40–69%</th>
+                <th>70–99%</th>
+                <th>100%</th>
+              </tr>
+            )}
+          >
+            {quality.by_registering_user!.map((row) => (
+              <tr key={row.registrar}>
+                <td>{row.registrar}</td>
+                <td>{row.patients_registered}</td>
+                <td>{row.completion_buckets.under_40}</td>
+                <td>{row.completion_buckets.from_40_to_69}</td>
+                <td>{row.completion_buckets.from_70_to_99}</td>
+                <td>{row.completion_buckets.complete_100}</td>
+              </tr>
+            ))}
+          </DataTable>
+        </>
+      )}
+
+      <h5 className="mt-4 mb-2">Visits today below {threshold}% completion</h5>
       {!stale.length ? (
         <div className="text-muted"><em>No patients below billing threshold on visits today.</em></div>
       ) : (
-        <table className="table table-sm table-bordered">
-          <thead>
-            <tr><th>Patient</th><th>MRN</th><th>Score</th></tr>
-          </thead>
-          <tbody>
-            {stale.map((row, idx) => (
-              <tr key={`${row.pubpid}-${idx}`}>
-                <td>{row.display_name}</td>
-                <td>{row.pubpid}</td>
-                <td>{row.completion_score}%</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          bordered
+          header={<tr><th>Patient</th><th>MRN</th><th>Score</th></tr>}
+        >
+          {stale.map((row, idx) => (
+            <tr key={`${row.pubpid}-${idx}`}>
+              <td>{row.display_name}</td>
+              <td>{row.pubpid}</td>
+              <td>{row.completion_score}%</td>
+            </tr>
+          ))}
+        </DataTable>
       )}
     </>
   );
@@ -312,37 +430,37 @@ export function UnsignedSection({
   }
 
   return (
-    <table className="table table-sm table-bordered">
-      <thead>
+    <DataTable
+      bordered
+      header={(
         <tr>
           <th>Patient</th><th>State</th><th>Doctor</th><th>Hours unsigned</th><th>Profile</th><th>Actions</th>
         </tr>
-      </thead>
-      <tbody>
-        {rows.map((row, idx) => (
-          <tr key={`${row.queue_number}-${idx}`}>
-            <td>#{row.queue_number} {row.display_name}</td>
-            <td>{row.state}</td>
-            <td>{row.provider_name || '—'}</td>
-            <td>{row.hours_unsigned}h</td>
-            <td>{row.service_profile || 'full_opd'}</td>
-            <td className="text-nowrap">
-              <a
-                className="btn btn-sm btn-outline-primary mr-1"
-                href={row.encounter_url}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Encounter
-              </a>
-              <a className="btn btn-sm btn-outline-secondary" href={visitBoardUrl} target="_top">
-                Visit Board
-              </a>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+      )}
+    >
+      {rows.map((row, idx) => (
+        <tr key={`${row.queue_number}-${idx}`}>
+          <td>#{row.queue_number} {row.display_name}</td>
+          <td>{row.state}</td>
+          <td>{row.provider_name || '—'}</td>
+          <td>{row.hours_unsigned}h</td>
+          <td>{row.service_profile || 'full_opd'}</td>
+          <td className="text-nowrap">
+            <a
+              className="btn btn-sm btn-outline-primary mr-1"
+              href={row.encounter_url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Encounter
+            </a>
+            <a className="btn btn-sm btn-outline-secondary" href={visitBoardUrl} target="_top">
+              Visit Board
+            </a>
+          </td>
+        </tr>
+      ))}
+    </DataTable>
   );
 }
 
@@ -352,22 +470,20 @@ export function BypassSection({ rows }: { rows: BypassLogRow[] }) {
   }
 
   return (
-    <table className="table table-sm table-bordered">
-      <thead>
-        <tr><th>Patient</th><th>Queue</th><th>From</th><th>Reason</th><th>By</th></tr>
-      </thead>
-      <tbody>
-        {rows.map((row, idx) => (
-          <tr key={`${row.queue_number}-${idx}`}>
-            <td>#{row.queue_number} {row.display_name}</td>
-            <td>{row.bypass_type}</td>
-            <td>{row.from_state}</td>
-            <td>{row.reason}</td>
-            <td>{row.actor_name || '—'}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <DataTable
+      bordered
+      header={<tr><th>Patient</th><th>Queue</th><th>From</th><th>Reason</th><th>By</th></tr>}
+    >
+      {rows.map((row, idx) => (
+        <tr key={`${row.queue_number}-${idx}`}>
+          <td>#{row.queue_number} {row.display_name}</td>
+          <td>{row.bypass_type}</td>
+          <td>{row.from_state}</td>
+          <td>{row.reason}</td>
+          <td>{row.actor_name || '—'}</td>
+        </tr>
+      ))}
+    </DataTable>
   );
 }
 

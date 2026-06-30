@@ -22,4 +22,14 @@ class PharmacyServiceTest extends TestCase
     {
         $this->assertSame('ready_for_payment', PharmacyService::resolvePostPharmacyState());
     }
+
+    public function testCompletePharmacyEnforcesUndispensedGate(): void
+    {
+        $reflection = new \ReflectionClass(PharmacyService::class);
+        $method = $reflection->getMethod('completePharmacy');
+        $source = file_get_contents($reflection->getFileName());
+        $this->assertIsString($source);
+        $this->assertStringContainsString('PharmOpsUndispensedGate::assertResolved', $source);
+        $this->assertStringContainsString('pharmacy_ops.complete_with_undispensed', $source);
+    }
 }

@@ -1,7 +1,7 @@
 /**
  * New Clinic E2E Golden Path Test (Test 23)
  *
- * Registration → triage vitals → doctor consult/route → cashier payment (or zero close).
+ * Registration → triage vitals → doctor route to pharmacy → pharmacy skip → cashier payment.
  *
  * @group e2e
  * @group new-clinic-mandatory
@@ -11,6 +11,8 @@ const { execSync } = require('child_process');
 const path = require('path');
 const { test, expect } = require('@playwright/test');
 const { MODULE_BASE, login, logout } = require('../helpers/auth');
+const { registerAndStartVisit } = require('../helpers/registration');
+const { completeCashierVisit } = require('../helpers/cashier');
 
 test.describe.configure({ timeout: 300_000 });
 
@@ -24,14 +26,6 @@ function generatePatientName() {
     phone: `0244${suffix.slice(-6).padStart(6, '0')}`,
     nationalId: `GHA${timestamp}`,
   };
-}
-
-async function confirmDupIfNeeded(page) {
-  const dupCheckbox = page.getByRole('checkbox', { name: /Different patient/i });
-  if (await dupCheckbox.isVisible().catch(() => false)) {
-    await dupCheckbox.setChecked(true);
-    await expect(dupCheckbox).toBeChecked();
-  }
 }
 
 async function waitForQueueCard(page, lname) {
@@ -79,6 +73,10 @@ async function prepareDoctorDesk(page) {
       if (await labCheckbox.isChecked().catch(() => false)) {
         await labCheckbox.uncheck();
       }
+      const rxCheckbox = page.locator('#nc-routing-rx');
+      if (await rxCheckbox.isChecked().catch(() => false)) {
+        await rxCheckbox.uncheck();
+      }
       await page.locator('#nc-routing-confirm').click();
       await expect(page.locator('#nc-doctor-routing-modal')).toBeHidden({ timeout: 15000 });
       await page.getByRole('button', { name: 'Refresh' }).click();
@@ -103,6 +101,10 @@ function credentials() {
       username: process.env.TEST_USERNAME_DOCTOR || 'doctor_user',
       password: process.env.TEST_PASSWORD_DOCTOR || 'test_pass',
     },
+    pharmacy: {
+      username: process.env.TEST_USERNAME_PHARMACY || 'pharmacy_user',
+      password: process.env.TEST_PASSWORD_PHARMACY || 'test_pass',
+    },
     cashier: {
       username: process.env.TEST_USERNAME_CASHIER || 'cashier_user',
       password: process.env.TEST_PASSWORD_CASHIER || 'test_pass',
@@ -114,7 +116,7 @@ test.describe('New Clinic Golden Path Workflow', () => {
   test.beforeAll(() => {
     const script = path.join(
       __dirname,
-      '../../../../interface/modules/custom_modules/oe-module-new-clinic/scripts/e2e-reset-doctor-consults.php',
+      '../../../../interface/modules/custom_modules/oe-module-new-clinic/scripts/e2e-prep-golden-path.php',
     );
     const php = process.env.PHP_BIN || 'C:\\xampp\\php\\php.exe';
     execSync(`"${php}" "${script}"`, { stdio: 'inherit' });
@@ -129,52 +131,8 @@ test.describe('New Clinic Golden Path Workflow', () => {
     await test.step('Register patient and start visit', async () => {
       await login(page, creds.reception.username, creds.reception.password);
       await page.goto(`${MODULE_BASE}/front-desk.php`);
-
-      await page.locator('#nc-add-patient').click();
-      await page.locator('#nc-reg-fname').waitFor({ state: 'visible' });
-
-      await page.fill('#nc-reg-fname', patient.fname);
-      await page.fill('#nc-reg-lname', patient.lname);
-      await page.fill('#nc-reg-dob-s1', '1990-01-01');
-      await page.selectOption('#nc-reg-sex', { label: 'Male' });
-      await page.fill('#nc-reg-phone', patient.phone);
-      const dupWait = page.waitForResponse(
-        (resp) => resp.url().includes('dup_check') && resp.ok(),
-        { timeout: 15000 },
-      ).catch(() => {});
-      await page.fill('#nc-reg-national-id', patient.nationalId);
-      await page.locator('#nc-reg-national-id').blur();
-      await dupWait;
-      await page.waitForTimeout(400);
-
-      for (let attempt = 0; attempt < 3; attempt += 1) {
-        await confirmDupIfNeeded(page);
-        await page.locator('#nc-reg-save-start').click();
-        const regError = page.locator('#nc-reg-error');
-        if (!(await regError.isVisible().catch(() => false))) {
-          break;
-        }
-        const message = (await regError.textContent()) ?? '';
-        if (!/different patient/i.test(message)) {
-          throw new Error(`Registration failed: ${message}`);
-        }
-        await page.waitForTimeout(500);
-      }
-
-      const regError = page.locator('#nc-reg-error');
-      await expect(regError).toBeHidden({ timeout: 15000 }).catch(async () => {
-        throw new Error(`Registration failed: ${await regError.textContent()}`);
-      });
-
-      const startSuccess = page.locator('#nc-start-visit-success');
-      const startError = page.locator('#nc-start-visit-error');
-      await expect(startSuccess).toBeVisible({ timeout: 60000 });
-      if (await startError.isVisible().catch(() => false)) {
-        throw new Error(`Start visit failed: ${await startError.textContent()}`);
-      }
-
-      const successText = await startSuccess.textContent();
-      queueNumber = successText?.match(/#(\d+)/)?.[1];
+      const result = await registerAndStartVisit(page, patient);
+      queueNumber = result.queueNumber;
     });
 
     await test.step('Enter vitals in triage', async () => {
@@ -206,7 +164,7 @@ test.describe('New Clinic Golden Path Workflow', () => {
       await expect(page.locator('.alert-success, #nc-triage-active-pane')).toBeVisible({ timeout: 10000 });
     });
 
-    await test.step('Doctor consultation and routing', async () => {
+    await test.step('Doctor consultation and pharmacy routing', async () => {
       await logout(page);
       await login(page, creds.doctor.username, creds.doctor.password);
       await page.goto(`${MODULE_BASE}/doctor.php`);
@@ -230,8 +188,37 @@ test.describe('New Clinic Golden Path Workflow', () => {
         await labCheckbox.uncheck();
       }
 
+      const rxCheckbox = page.locator('#nc-routing-rx');
+      await rxCheckbox.check();
+      await expect(rxCheckbox).toBeChecked();
+
       await page.locator('#nc-routing-confirm').click();
       await expect(page.locator('.alert-success, #nc-doctor-routing-modal')).toBeHidden({ timeout: 15000 });
+    });
+
+    await test.step('Pharmacy desk skip to payment', async () => {
+      await logout(page);
+      await login(page, creds.pharmacy.username, creds.pharmacy.password);
+      await page.goto(`${MODULE_BASE}/pharmacy.php`);
+
+      const pharmacyCard = await waitForQueueCard(page, patient.lname);
+      await pharmacyCard.click();
+      await expect(page.locator('#nc-pharmacy-active-pane')).toContainText(
+        patient.lname,
+        { timeout: 15000 },
+      );
+
+      const skipBtn = page.locator('#nc-pharmacy-skip-btn');
+      await expect(skipBtn).toBeVisible({ timeout: 10000 });
+      await skipBtn.click();
+
+      await expect(page.locator('#nc-pharmacy-skip-modal')).toBeVisible();
+      await page.fill('#nc-pharmacy-skip-reason', 'E2E golden path — skip pharmacy queue');
+      await page.locator('#nc-pharmacy-skip-modal').getByRole('button', { name: 'Skip to payment' }).click();
+      await expect(page.locator('#nc-pharmacy-skip-modal')).toBeHidden({ timeout: 15000 });
+      await expect(page.locator(`.nc-queue-card:has-text("${patient.lname}")`)).toHaveCount(0, {
+        timeout: 15000,
+      });
     });
 
     await test.step('Cashier payment or zero close', async () => {
@@ -241,37 +228,7 @@ test.describe('New Clinic Golden Path Workflow', () => {
 
       const cashierCard = await waitForQueueCard(page, patient.lname);
       await cashierCard.click();
-      await expect(page.locator('#nc-cashier-active-pane')).toContainText(patient.lname, { timeout: 15000 });
-
-      const closeZeroBtn = page.locator('#nc-cashier-close-zero-btn');
-      if (await closeZeroBtn.isVisible().catch(() => false)) {
-        await closeZeroBtn.click();
-        await expect(page.getByRole('heading', { name: 'Close without charge' })).toBeVisible();
-        await page.fill('#nc-cashier-close-zero-reason', 'E2E golden path — no charges on visit');
-        await page.locator('.modal.show').getByRole('button', { name: 'Confirm' }).click();
-        await expect(page.getByRole('heading', { name: 'Close without charge' })).toBeHidden({
-          timeout: 15000,
-        });
-        await expect(page.locator(`.nc-queue-card:has-text("${patient.lname}")`)).toHaveCount(0, {
-          timeout: 15000,
-        });
-        visitClosed = true;
-        return;
-      }
-
-      const totalDue = await page.locator('#nc-cashier-active-pane input[readonly]').first().inputValue();
-      const amount = totalDue && parseFloat(totalDue.replace(/[^\d.]/g, '')) > 0
-        ? totalDue.replace(/[^\d.]/g, '')
-        : '50.00';
-
-      await page.fill('#nc-cash-received', amount);
-      await page.locator('#nc-cashier-pay-btn').click();
-
-      if (await page.locator('#nc-cashier-pay-confirm-modal').isVisible().catch(() => false)) {
-        await page.locator('#nc-cashier-pay-confirm-btn').click();
-      }
-
-      await expect(page.locator('#nc-cashier-receipt-modal, .alert-success')).toBeVisible({ timeout: 15000 });
+      await completeCashierVisit(page, patient, 'E2E golden path — no charges on visit');
       visitClosed = true;
     });
 

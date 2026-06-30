@@ -172,6 +172,61 @@ class ReconciliationService
     }
 
     /**
+     * @return array<string, mixed>|null
+     */
+    public function getLatestRunForDate(int $facilityId, string $runDate): ?array
+    {
+        $facilityId = $this->visitScope->resolveDeskFacilityId($facilityId > 0 ? $facilityId : null);
+        $runDate = self::normalizeRunDate($runDate);
+        $row = QueryUtils::querySingleRow(
+            "SELECT * FROM new_reconciliation_run
+             WHERE facility_id = ? AND run_date = ?
+             ORDER BY id DESC
+             LIMIT 1",
+            [$facilityId, $runDate]
+        );
+
+        return is_array($row) && !empty($row['id']) ? $this->formatRunRow($row) : null;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function listRecentRuns(int $facilityId, int $limit = 30): array
+    {
+        $facilityId = $this->visitScope->resolveDeskFacilityId($facilityId > 0 ? $facilityId : null);
+        $limit = max(1, min(30, $limit));
+        $rows = QueryUtils::fetchRecords(
+            "SELECT * FROM new_reconciliation_run
+             WHERE facility_id = ?
+             ORDER BY id DESC
+             LIMIT " . $limit,
+            [$facilityId]
+        ) ?: [];
+
+        return array_map(fn (array $row): array => $this->formatRunRow($row), $rows);
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private function formatRunRow(array $row): array
+    {
+        return [
+            'id' => (int) ($row['id'] ?? 0),
+            'run_date' => (string) ($row['run_date'] ?? ''),
+            'trigger' => (string) ($row['trigger'] ?? ''),
+            'module_total' => round((float) ($row['module_total_amount'] ?? 0), 2),
+            'core_total' => round((float) ($row['core_total_amount'] ?? 0), 2),
+            'delta_amount' => round((float) ($row['delta_amount'] ?? 0), 2),
+            'status' => (string) ($row['status'] ?? ''),
+            'completed_at' => (string) ($row['completed_at'] ?? ''),
+            'actor_user_id' => isset($row['actor_user_id']) ? (int) $row['actor_user_id'] : null,
+        ];
+    }
+
+    /**
      * @return array{module_total: float, core_total: float}
      */
     public function fetchTotals(int $facilityId, string $runDate): array

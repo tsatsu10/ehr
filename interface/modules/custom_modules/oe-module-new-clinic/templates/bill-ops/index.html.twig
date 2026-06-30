@@ -70,7 +70,8 @@
         canInsurance: can_insurance ? true : false,
         canShowAdvanced: can_show_advanced ? true : false,
         reopenOnCorrection: reopen_on_correction ? true : false,
-        webroot: webroot
+        webroot: webroot,
+        currencyFormat: currency_format|default({})
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}

@@ -3,7 +3,6 @@ import { WaitTimeSpan } from '@components/WaitTimeSpan';
 
 interface LabQueueProps {
   cards: LabQueueCard[];
-  counts: { waiting: number; in_lab: number } | null;
   hasActiveWork: boolean;
   loading: boolean;
   error: string | null;
@@ -13,7 +12,6 @@ interface LabQueueProps {
 
 export function LabQueue({
   cards,
-  counts,
   hasActiveWork,
   loading,
   error,
@@ -22,13 +20,8 @@ export function LabQueue({
 }: LabQueueProps) {
   return (
     <div className="nc-lab-queue-panel">
-      <div className="d-flex justify-content-between align-items-center mb-2">
+      <div className="mb-2">
         <strong>Lab queue</strong>
-        {counts && (
-          <span className="text-muted small" id="nc-lab-counts">
-            {counts.waiting} waiting
-          </span>
-        )}
       </div>
 
       {labOpsUrl && (

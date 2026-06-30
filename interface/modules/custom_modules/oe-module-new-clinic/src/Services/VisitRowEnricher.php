@@ -131,6 +131,54 @@ class VisitRowEnricher
     }
 
     /**
+     * Undispensed Rx lines per visit (M9-F18 / M13-F03).
+     *
+     * @param array<int, int> $visitIds
+     * @return array<int, int>
+     */
+    public function batchUndispensedRxCounts(array $visitIds): array
+    {
+        $visitIds = array_values(array_unique(array_filter($visitIds, fn ($id) => $id > 0)));
+        if (empty($visitIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($visitIds), '?'));
+        $rows = QueryUtils::fetchRecords(
+            "SELECT v.id AS visit_id, rx.quantity, rx.filled_date,
+                    COALESCE(ds.qty_dispensed, 0) AS qty_dispensed
+             FROM new_visit v
+             INNER JOIN prescriptions rx
+                ON rx.patient_id = v.pid AND rx.encounter = v.encounter AND rx.active = 1
+             LEFT JOIN (
+                 SELECT prescription_id, SUM(quantity) AS qty_dispensed
+                 FROM drug_sales
+                 WHERE prescription_id > 0
+                 GROUP BY prescription_id
+             ) ds ON ds.prescription_id = rx.id
+             WHERE v.id IN ({$placeholders})",
+            $visitIds
+        ) ?: [];
+
+        $counts = array_fill_keys($visitIds, 0);
+        foreach ($rows as $row) {
+            $visitId = (int) ($row['visit_id'] ?? 0);
+            if ($visitId <= 0) {
+                continue;
+            }
+            $qtyOrdered = PharmOpsWorklistService::parseQuantity((string) ($row['quantity'] ?? ''));
+            $qtyDispensed = (int) ($row['qty_dispensed'] ?? 0);
+            $filledDate = (string) ($row['filled_date'] ?? '');
+            $filled = $filledDate !== '' && !str_starts_with($filledDate, '0000-00-00');
+            if (PharmOpsWorklistService::classifyDispenseStatus($qtyOrdered, $qtyDispensed, $filled) !== null) {
+                $counts[$visitId] = ($counts[$visitId] ?? 0) + 1;
+            }
+        }
+
+        return $counts;
+    }
+
+    /**
      * @param array<int, int> $visitIds
      * @return array<int, int>
      */

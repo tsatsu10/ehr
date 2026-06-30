@@ -99,7 +99,11 @@ describe('PharmacyDesk', () => {
     await waitFor(() => {
       expect(screen.getByText(/Ama Mensah/)).toBeInTheDocument();
     });
-    expect(screen.getByText(/1 waiting/)).toBeInTheDocument();
+    await waitFor(() => {
+      const bar = screen.getByLabelText(/Pharmacy desk status/i);
+      expect(bar).toHaveTextContent('1');
+      expect(bar).toHaveTextContent('Waiting');
+    });
   });
 
   it('auto-takes and shows prescriptions when ready visit selected', async () => {

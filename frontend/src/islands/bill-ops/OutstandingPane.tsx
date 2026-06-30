@@ -32,8 +32,6 @@ export function OutstandingPane({ fetchOptions, moduleUrl }: Props) {
     void load();
   }, [load]);
 
-  const symbol = data?.currency_symbol ?? 'GH₵';
-
   return (
     <div className="oe-nc-billops-pane">
       <div className="form-inline mb-3">
@@ -57,7 +55,7 @@ export function OutstandingPane({ fetchOptions, moduleUrl }: Props) {
       {data && (
         <>
           <p className="mb-2">
-            {data.rows.length} patients · Total owed {formatBillMoney(symbol, data.total_owed)}
+            {data.rows.length} patients · Total owed {formatBillMoney(data.total_owed)}
           </p>
           <table className="table table-sm table-hover">
             <thead>
@@ -77,7 +75,7 @@ export function OutstandingPane({ fetchOptions, moduleUrl }: Props) {
                     <span className="text-muted small d-block">{row.pubpid}</span>
                   </td>
                   <td>{row.phone ?? '—'}</td>
-                  <td className="text-right">{formatBillMoney(symbol, row.owed)}</td>
+                  <td className="text-right">{formatBillMoney(row.owed)}</td>
                   <td>{row.visit_date}</td>
                   <td>
                     <a

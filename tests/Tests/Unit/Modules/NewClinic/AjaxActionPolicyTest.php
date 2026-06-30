@@ -52,6 +52,16 @@ class AjaxActionPolicyTest extends TestCase
         $this->assertSame('new_doctor', $this->policy->requiresSingleAcl('doctor.lab_panel_place'));
     }
 
+    public function testDoctorFormularyRxCatalogRequiresDoctorAcl(): void
+    {
+        $this->assertSame('new_doctor', $this->policy->requiresSingleAcl('doctor.formulary_rx_catalog'));
+    }
+
+    public function testDoctorFormularyRxPlaceRequiresDoctorAcl(): void
+    {
+        $this->assertSame('new_doctor', $this->policy->requiresSingleAcl('doctor.formulary_rx_place'));
+    }
+
     public function testLabTakeRequiresLabAcl(): void
     {
         $this->assertSame('new_lab', $this->policy->requiresSingleAcl('lab.take'));
@@ -312,5 +322,23 @@ class AjaxActionPolicyTest extends TestCase
     {
         $desc = $this->policy->describe('bill_ops.daysheet_export');
         $this->assertSame('bill_ops_close_acl', $desc['type']);
+    }
+
+    public function testLabOpsSetupModelUsesCatalogAcl(): void
+    {
+        $desc = $this->policy->describe('lab_ops.setup_model');
+        $this->assertSame('lab_ops_catalog_acl', $desc['type']);
+    }
+
+    public function testLabOpsMarkSendOutUsesEnterAcl(): void
+    {
+        $desc = $this->policy->describe('lab_ops.mark_send_out');
+        $this->assertSame('lab_ops_enter_acl', $desc['type']);
+    }
+
+    public function testFrontDeskDeskStatsUsesDeskAcl(): void
+    {
+        $desc = $this->policy->describe('front_desk.desk_stats');
+        $this->assertSame('desk_acl', $desc['type']);
     }
 }

@@ -12,7 +12,6 @@ export function PaymentsPane({ fetchOptions, facilityId }: Props) {
   const [query, setQuery] = useState('');
   const [date, setDate] = useState(localDateString());
   const [rows, setRows] = useState<PaymentRow[]>([]);
-  const [symbol, setSymbol] = useState('GH₵');
   const [selected, setSelected] = useState<PaymentRow | null>(null);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +34,6 @@ export function PaymentsPane({ fetchOptions, facilityId }: Props) {
         json: body,
       });
       setRows(data.rows ?? []);
-      setSymbol(data.currency_symbol ?? 'GH₵');
       setSelected(null);
     } catch {
       setError('Search failed');
@@ -117,7 +115,7 @@ export function PaymentsPane({ fetchOptions, facilityId }: Props) {
                 {row.reversed_at && <span className="badge badge-secondary ml-1">Reversed</span>}
               </td>
               <td>{row.patient_name}</td>
-              <td className="text-right">{formatBillMoney(symbol, row.amount_paid)}</td>
+              <td className="text-right">{formatBillMoney(row.amount_paid)}</td>
               <td>{row.cashier ?? '—'}</td>
               <td>#{row.queue_number}</td>
             </tr>
@@ -130,7 +128,7 @@ export function PaymentsPane({ fetchOptions, facilityId }: Props) {
           <h3 className="h6">Payment detail</h3>
           <p className="small mb-2">
             Receipt {selected.receipt_number} · Visit #{selected.queue_number} ·{' '}
-            {formatBillMoney(symbol, selected.amount_paid)}
+            {formatBillMoney(selected.amount_paid)}
           </p>
           {selected.reversed_at ? (
             <p className="small text-muted mb-0">Reversed: {selected.reversal_reason}</p>

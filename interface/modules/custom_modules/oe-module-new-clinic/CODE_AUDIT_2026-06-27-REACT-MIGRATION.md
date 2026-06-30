@@ -2,8 +2,314 @@
 
 **Date:** June 27, 2026  
 **Baseline:** `CODE_AUDIT_2026-06-27.md` (legacy jQuery, asset `20260626g12s`, 61 PHPUnit tests)  
-**Current asset version:** `20260628w55cleanup`  
-**Scope:** Phases 1–10 React island migration, audit follow-up fixes (June 27–28)
+**Current asset version:** `20260630worephubauditfix`  
+**Scope:** Phases 1–10 React island migration, Front Desk modernization (June 29), M13 Pharm Ops hub + V1.2-PHARM slices
+
+---
+
+## Addendum — June 30 M16 audit remediation (`20260630worephubaudit`)
+
+Follow-up to M16 Reporting Hub shell ship and post-ship code audit.
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| **P1** | `enable_report_hub` Admin toggle non-persistent | Added `enable_report_hub`, `report_hub_show_us_quality`, `enable_react_report_hub` to `ClinicAdminService::EDITABLE_SETTINGS` + `install.sql` + `ClinicAdminServiceTest` |
+| **P1** | `PharmOpsRxPrintServiceTest` age flake | Fixed DOB strings (`1996-01-15`, `2021-06-01`) instead of `strtotime('-30 years')` |
+| **P2** | `ensureTableExists()` DDL on every export | Static `$schemaEnsured` guard in `ReportHubExportService` |
+| **P2** | No export service tests | `ReportHubExportServiceTest` — empty key, bad date, unknown `report_key` |
+| **P2** | No Vitest for report hub | `ReportHub.test.tsx` — lens helpers + `ReportHubLensPane` filter |
+| **P2** | Catalog over-fetch | `fetchHubCatalog(..., tab)` passes active lens to API |
+| **P2** | Today lens double shell in iframe | M7 `reports.php?embed=1` sets `shell_minimal` on Twig shell |
+| **P2** | Pilot seed coupling | `scripts/lib/pilot-common-seed.php` — `pilotFacilityIds()`, `pilotEnsureNewClinicAclObjects()` |
+| **P3** | Misnamed access test | Renamed to `testPharmacyLensAclsIncludeLeadTier` |
+| **P3** | Narrow menu restrict test | `MainMenuRestrictReportHubTest` — `STOCK_REPORTS_MENU_IDS` + prune branch |
+
+### Verification snapshot (June 30)
+
+| Check | Result |
+|-------|--------|
+| Vitest | **224+** pass (incl. `ReportHub.test.tsx`) |
+| PHPUnit New Clinic | **443+** pass · **0** fail |
+| E2E `report-hub.spec.js` | **1/1** green |
+| Asset version | `20260630worephubaudit` |
+
+### Still open (PRD scope)
+
+- **M16-F10** async export (`reports.export` / `export_status`)
+- **M16-F02 P2** native immunization / destroyed-drugs cards
+- **Pilot rollout** facility 3 + push/PR
+
+---
+
+## Addendum — June 30 M16 audit remediation (`20260630worephubauditfix`)
+
+Follow-up to M16 Reporting Hub shell ship + post-audit review (`20260629worephub3`).
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| **P1** | `enable_report_hub` / `report_hub_show_us_quality` in Admin UI but not `ClinicAdminService` | Added to `EDITABLE_SETTINGS`, `install.sql`, coupling validation + `applySettingDependencies` |
+| **P1** | `enable_react_report_hub` missing from backend defaults | Added to `EDITABLE_SETTINGS` + react cutover migration list |
+| **P1** | `PharmOpsRxPrintServiceTest` age flake (`30y` vs `29y`) | Fixed DOB strings (`1996-01-15`, `2021-06-01`) |
+| **P2** | `QueryUtils::sqlStatement()` in export audit (runtime 500) | `sqlStatement()` global + static `$schemaEnsured` guard |
+| **P2** | Open report audit raced navigation | `<button>` + await audit before `location.href` |
+| **P2** | Catalog refetched all lenses on tab switch | `fetchHubCatalog(..., tab)` passes `lens` query param |
+| **P2** | Today lens double shell in iframe | `reports.php?embed=1` → `shell_minimal` |
+| **P2** | Pilot report hub coupled to pharm seed file | `scripts/lib/pilot-common-seed.php` (`pilotFacilityIds`, `pilotEnsureNewClinicAclObjects`) |
+| **P2** | Missing `ReportHubExportServiceTest` | Validation tests (empty key, bad date, unknown key) |
+| **P2** | No Vitest for report-hub | `ReportHub.test.tsx` (lens helpers + card filter) |
+| **P2** | Narrow menu restrict test | `MainMenuRestrictReportHubTest` — constants + prune |
+| **P3** | Misnamed access test | Renamed to `testPharmacyLensAclsIncludeLeadTier` |
+| **P3** | Stale audit snapshot | This addendum |
+
+### Verification snapshot (June 30)
+
+| Check | Result |
+|-------|--------|
+| Vitest | **224+** pass (incl. `ReportHub.test.tsx`) |
+| PHPUnit New Clinic | **443+** pass · **0** fail (after age + export tests) |
+| E2E | `report-hub.spec.js` **1/1** · pharm-ops-hub **3/3** |
+| Asset version | `20260630worephubauditfix` |
+
+### Still open (PRD scope)
+
+- **M16-F10** — async export (`reports.export` / `export_status`, 5000-row threshold)
+- **M16-F02 P2** — native immunization / destroyed-drugs cards (stock deep-links today)
+- **Pilot rollout facility 3** — operational
+- **DB integration** — export row insert assertion against live DB
+
+---
+
+## Addendum — June 29 V1.2-PHARM ship (`20260629wm4f37formrx`)
+
+Follow-up to V1.1-PHARM stable — reports, destruction, print/label, doctor formulary quick prescribe.
+
+| Slice | What shipped |
+|-------|----------------|
+| **M13-F08** | `PharmOpsReportsService` + Reports tab — embed `inventory_list` / `inventory_transactions` via `pharm_ops.reports_embed` |
+| **M13-F09** | Write-off / lot destruction — `PharmOpsDestroyService`, Write-off tab, `pharm_ops.destroy_get` / `destroy_confirm`, audit `pharmacy_ops.lot_destroyed` |
+| **M13-F11** | Expired/expiring lots worklist — `pharm_expiry_warn_days` (default 90), FEFO-aware destroy drawer |
+| **M13-F10** | Print Rx pack (V1.1-PRINT-RX) — `PharmOpsRxPrintService`, `pharm_ops.rx_print_pdf`, `rx-print.php`; gate `enable_rx_print`; entry points Doctor Desk, Pharmacy Desk, Pharm Ops worklist |
+| **M13-F15** | Dispense label — `PharmOpsDispenseLabelService`, `pharm_ops.dispense_label_pdf`, `dispense-label.php`; gate `enable_dispense_label`; post-dispense auto-open + reprint in dispense drawer |
+| **M4-F37** | Formulary quick prescribe (V1.2-PHARM-RX) — `PharmFormularyRxService`, `doctor.formulary_rx_catalog` / `formulary_rx_place`, `FormularyRxModal`; gate `enable_pharm_rx_favorites` (requires `enable_pharm_ops` + imported formulary) |
+
+### Config gates (new)
+
+| Key | Default | Notes |
+|-----|---------|-------|
+| `enable_dispense_label` | `0` | Post-dispense patient label; requires hub + dispense ACL |
+| `enable_pharm_rx_favorites` | `0` | Doctor Desk quick prescribe drawer; requires hub + formulary import |
+
+### Verification snapshot (June 29 — V1.2-PHARM)
+
+| Check | Result |
+|-------|--------|
+| Vitest pharm-ops + doctor-desk | **22+** pass |
+| PHPUnit PharmOps* + PharmFormularyRx | **55+** pass (filter) |
+| Vite build | Green — `doctor-desk.js` ~40 KB, `pharm-ops.js` ~17 KB |
+| Asset version | `20260629wm4f37formrx` |
+| E2E golden path | **1/1** — registration → triage → doctor route pharmacy → pharmacy skip → cashier (`e2e-prep-golden-path.php`) |
+
+### Still open (deferred scope)
+
+- ~~**O-PHARM-5** — Controlled drugs register~~ → **Shipped** (`PharmOpsControlledRegisterService`, controlled catalog in setup, `controlled-register.php`)
+- ~~**E2E pharm ops deep path**~~ → **Shipped** (`golden-path-pharm-dispense.spec.js`, `pharm-ops-hub.spec.js`, `pilot-enable-pharm-ops.php`, `PharmOpsWorklistServiceIntegrationTest`)
+- **M16 Reporting Hub pharmacy lens** — V1.1-REP epic (`report-hub/pharmacy.php`); M13-F08 in-hub reports remain the bench embed (D-REP-2)
+- **DB integration tests** — destroy/dispense row assertions against seeded prescriptions (worklist envelope test shipped)
+- **O-PHARM-1** — require lot # on every receive (product decision; optional config TBD)
+- **National controlled schedule alignment** — register ships; schedule codes TBD
+
+---
+
+## Addendum — June 29 PM lab + close day golden path (`20260629wlabcloseday`)
+
+| Item | Resolution |
+|------|------------|
+| E2E lab + bill ops close day | `golden-path-lab-close-day.spec.js` — register → triage → doctor lab route → lab skip → cashier → admin close day daysheet |
+| E2E prep lib | `scripts/lib/golden-path-e2e-prep.php` — `enable_bill_ops`, lab skip ACLs, stale visit release |
+| Mandatory contract | `testMandatory46LabCloseDayGoldenPathE2e` |
+| Shared E2E helpers | `helpers/registration.js`, `helpers/cashier.js` — used by all golden-path specs |
+
+---
+
+## Addendum — June 29 PM pharm ops closure (`20260629wpharmopsclose`)
+
+| Item | Resolution |
+|------|------------|
+| Pilot seed CLI | `scripts/pilot-enable-pharm-ops.php` + `scripts/lib/pharm-ops-pilot-seed.php` |
+| E2E deep golden path | `golden-path-pharm-dispense.spec.js` |
+| E2E hub smoke | `pharm-ops-hub.spec.js` |
+| DB integration | `PharmOpsWorklistServiceIntegrationTest` |
+| Mandatory contract | `testMandatory45PharmOpsDeepGoldenPathE2e` |
+| Formulary import SQL | `QueryUtils::sqlStatementThrowException` + drop invalid `template_id` column refs |
+
+---
+
+## Addendum — June 29 PM V1.1-PHARM audit remediation (`20260629wpharmauditfix`)
+
+Follow-up to V1.1-PHARM ship (M13-F03–F07, F04–F06, F13; M9-F16–F21; M4-F39) — audit findings from post-ship review.
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| **P1** | M13-F14 partial dispense always audited as `pharmacy_ops.dispensed` | `PharmOpsUndispensedGate::dispenseAuditEvent()` — partial → `pharmacy_ops.partial_dispensed` |
+| **P1** | Undispensed gate only source-grep tested | `PharmOpsUndispensedGate` + `PharmOpsUndispensedGateTest` (throw / override / skip) |
+| **P2** | Duplicated inventory preview in dispense + OTC services | Extracted `PharmOpsInventoryPreviewService` (documents `pharm_ops.stock_summary` deferral) |
+| **P2** | Empty Reports → Inventory submenu after URL filter | `MainMenuRestrictService::pruneEmptyMenuBranches()` after all filters |
+| **P2** | Menu cutover missed `new_pharm_ops`-only holders | `shouldHideStockPharmMenusForCurrentUser()` includes `new_pharm_ops` ACL |
+| **P2** | Doctor return from prescribe — no return notice | `rxReturnNotice()` + `pageshow` handler for `leftVia === 'rx'` |
+| **P2** | Hardcoded `#2563eb` in desk CSS | `var(--oe-nc-primary)` in `front-desk/main.css`, `DeskQueueStatusBar.css` |
+| **P3** | Worklist SQL bind contract | `prescriptionRowBindParams()` + PHPUnit bind-order test |
+| **P3** | `pharm-ops` missing from E2E smoke manifest | Added to `phase0-island-smoke.spec.js` |
+| **P3** | Stale audit snapshot | This addendum |
+
+### Verification snapshot (June 29 PM — post-remediation)
+
+| Check | Result |
+|-------|--------|
+| Vitest | **209+** passed (see `npm run test` in `frontend/`) |
+| PHPUnit New Clinic | **395+** pass · **0** fail · **4** skip |
+| Pharm-related PHPUnit | `PharmOpsUndispensedGateTest`, `MainMenuRestrictPharmOpsTest`, worklist bind test |
+| Asset version | `20260629wpharmauditfix` |
+
+### Still open (feature scope, not bugs)
+
+- ~~**M13-F08+** — reports façade, destruction, expiry (V1.2-PHARM)~~ → **Shipped** (see V1.2-PHARM addendum above)
+- ~~**M4-F37** — formulary quick prescribe (V1.2)~~ → **Shipped**
+- ~~**E2E golden path**~~ → **Shipped** — skip (`golden-path.spec.js`), pharm dispense deep (`golden-path-pharm-dispense.spec.js`), lab + close day (`golden-path-lab-close-day.spec.js`); shared `helpers/registration.js` + `helpers/cashier.js`
+- **DB integration tests** — worklist rows against pilot seed data
+
+---
+
+## Addendum — June 29 audit remediation (`20260629wpharmopsauditfix`)
+
+Follow-up to M13 Pharm Ops addendum — all P1–P3 audit items addressed except deferred M13 feature slices.
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| **P0** | Worklist SQL bind off-by-one | Already fixed (`$bind = [$visitDate]`) |
+| **P1** | 3 mandatory contract PHPUnit failures | Updated `NewClinicMandatoryContractTest` + `WrongPatientPreventionMandatoryTest` to match shipped symbols |
+| **P1** | Hardcoded `ConfirmModal-*.css` in pharm-ops Twig | Removed; `ui-primitives.css` imported via `pharm-ops/main.css` |
+| **P2** | `enable_react_pharm_ops` missing from `install.sql` | Added `#IfNotRow2D` insert + `react_migration_cutover_v1` list |
+| **P2** | No pharm ops admin coupling tests | `ClinicAdminServiceTest` — pharm ops + lab ops rejection + `enable_react_pharm_ops` default |
+| **P2** | Naive allergy substring match | Extracted `PharmOpsSafetyService` — token-based matching + unit tests |
+| **P2** | Dispense visit join ≠ worklist | Shared `PharmOpsVisitMatch::todayVisitSubquerySql()` used by worklist + dispense |
+| **P3** | Eager ConfirmModal import at hub mount | `PharmOpsDispenseDrawer` lazy-loaded via `React.lazy` + `Suspense` |
+| **P3** | No worklist SQL contract test | `PharmOpsSafetyServiceTest::testVisitSubqueryUsesSingleDateBind` |
+
+### Verification snapshot (June 29 PM — post-remediation)
+
+| Check | Result |
+|-------|--------|
+| Vitest | **198** passed (45 files) |
+| PHPUnit New Clinic | **379** pass · **0** fail · **4** skip |
+| Vite build | Green — `pharm-ops.js` **7.45 KB** gzip (drawer in async chunk) |
+| Asset version | `20260629wpharmopsauditfix` |
+
+### Still open (feature scope, not bugs)
+
+- **M13-F04–F07** — OTC sell, receive stock, setup wizard, low-stock tab
+- **E2E golden path** — seeded role users + XAMPP base URL
+- **PRD palette alignment** — Front Desk `#2563eb` vs spec tokens
+
+---
+
+## Addendum — June 29 M13 Pharm Ops + bugfixes (`20260629wpharmopsfix2`)
+
+### Shipped (uncommitted workspace)
+
+| Area | What changed |
+|------|----------------|
+| **M13-F01** | Pharmacy Operations Hub React island (`pharm-ops/`): pending dispense worklist, page-heading toolbar, `pharm_ops.worklist` |
+| **M13-F02** | Dispense slide-over: `pharm_ops.dispense_get` / `dispense_confirm` via `DrugSalesService::sellDrug()`, allergy ack, FEFO preview, audit `pharmacy_ops.dispensed` |
+| **M13 backend** | `PharmOpsAccessService`, `PharmOpsWorklistService`, `PharmOpsDispenseService`; ACLs `new_pharm_ops`, `new_pharm_ops_dispense` in `acl_setup.php` |
+| **M13 gates** | `enable_pharm_ops` + `inhouse_pharmacy` + pharmacy role; `ClinicAdminService` rejects orphan pharm ops toggle |
+| **Activity feed** | `PatientActivityFeedService` — `pharmacy_dispensed` events from `drug_sales` |
+| **Triage desk** | Queue cards clickable again — `oe-nc-triage-card--muted` only when held by another nurse (not orphan/unclaimed) |
+| **Doctor desk** | Stale `doctor.active` on return from lab — `sessionStorage` left-via key clears orphan active visit |
+| **Pharm Ops empty page** | **P0 fix:** worklist SQL had `$bind = [$visitDate, $visitDate]` but only one `?` — facility filter received date string → zero rows |
+| **Pharm Ops UX** | Loading state, empty card, API error banner; relaxed visit join for encounter mismatch + `facility_id = 0` legacy rows |
+
+### Verification snapshot (June 29 PM)
+
+| Check | Result |
+|-------|--------|
+| Vitest | **198** passed (45 files) |
+| Vite production build | Green — **18** entries (17 islands + `bill-ops-correct`) |
+| PHPUnit New Clinic filter | **368** pass · **3** fail · **4** skip |
+| Pharm Ops unit tests | `PharmOpsAccessServiceTest`, `PharmOpsWorklistServiceTest`, `PharmOpsHub.test.tsx` — green |
+| Asset version | `20260629wpharmopsfix2` |
+
+### Issues found in this audit
+
+| Priority | Issue | Root cause | Resolution / status |
+|----------|-------|------------|---------------------|
+| **P0** | Pharm Ops worklist always empty with facility set | Extra `$visitDate` in SQL bind shifted facility `IN (...)` params | **Fixed** — `$bind = [$visitDate]` only |
+| **P1** | 3 mandatory contract PHPUnit tests fail | `PatientContextBanner` no longer uses `nc-patient-context-banner`; Front Desk switch uses `resolveSwitchTarget` / `pendingConfirm` not `confirmStartVisitSwitch` / `confirmRegistrationSwitch` | **Open** — update contract tests to match shipped UX |
+| **P1** | Hardcoded `ConfirmModal-F0Be-mJK.css` in `pharm-ops/index.html.twig` | Manual link to Vite chunk hash | **Open** — use manifest lookup or import CSS from island entry only |
+| **P2** | `enable_react_pharm_ops` not in `install.sql` | Flag added in `ClinicAdminService` only | **Open** — add install migration row |
+| **P2** | No `ClinicAdminServiceTest` for pharm ops coupling | Still deferred from prior audit | **Open** — mirror `enable_lab_ops` test |
+| **P2** | `PharmOpsDispenseService` ~400 lines | Single-class façade with inventory, allergy, fee logic | Acceptable for V1; split if M13-F04+ grows |
+| **P2** | Allergy warning is naive substring match | `hasAllergyWarning()` compares drug name ↔ allergy title | Document limitation; tighten before pilot if needed |
+| **P2** | Dispense `loadPrescriptionRow` visit join ≠ worklist join | Worklist uses today-visit subquery; dispense uses `nv.encounter = rx.encounter` only | Edge case: dispense drawer may miss visit context for orphan Rx |
+| **P3** | M13-F04–F07 not built | OTC sell, receive stock, setup wizard, low-stock tab | Deferred per PRD |
+| **P3** | No integration test for worklist SQL | Only static classify/parse unit tests | Add DB integration test when pilot data seeded |
+| **P3** | `PharmOpsDispenseDrawer` eager-imports Radix/ConfirmModal at hub mount | Top-level import in `PharmOpsHub.tsx` | Optional lazy-load to trim initial bundle |
+
+### Resolved since prior addendum (`20260629w89pharmopsnav`)
+
+| Prior issue | Status |
+|-------------|--------|
+| M13 worklist hub not built (placeholder only) | **Shipped** F01 + F02 |
+| `new_pharm_ops` ACL missing | **Shipped** in `acl_setup.php` |
+| No server validation for pharm ops coupling | **Shipped** in `ClinicAdminService` |
+| Pharm Ops not in sidebar | Already fixed in prior pass; now functional hub |
+
+### Still open (carry-forward)
+
+- **E2E golden path** — seeded role users + XAMPP base URL
+- **PRD palette alignment** — Front Desk `#2563eb` vs PRD tokens
+- **Contract test drift** — 3 PHPUnit failures block clean `NewClinic` filter run
+- **M13 remainder** — low stock, OTC, receive, setup (V1.1-PHARM)
+
+---
+
+## Addendum — June 29 Front Desk + status bar pass (`20260629w89pharmopsnav`)
+
+### Shipped (uncommitted workspace)
+
+| Area | What changed |
+|------|----------------|
+| **M1a Front Desk** | Search-first layout: `DeskStatusBar`, `RecentlyViewed` (server sync via `front_desk.recently_viewed*`), `TodaysAppointmentsList`, idle vs selected split, desk-focus shell, sticky Start Visit footer |
+| **M1b Registration** | Full-width registration on tablet/desktop (search column hidden); **4-section accordion restored** (3-step intake wizard reverted per user feedback) |
+| **Shared `DeskQueueStatusBar`** | Rolled to Triage, Doctor, Lab, Pharmacy, Cashier, Visit Board — counts moved out of queue panel headers |
+| **Visual tokens** | MedTrackr-style white surfaces, `#2563eb` primary, shell/sidebar polish |
+| **shadcn primitives** | Button, Card, Input, Badge, etc. wired into shared components |
+| **Docs** | `NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md` v2.0.5 |
+
+### Verification snapshot (June 29)
+
+| Check | Result |
+|-------|--------|
+| Vitest | **194** passed (44 files) |
+| Vite production build | Green |
+| Asset version | `20260629w89pharmopsnav` |
+
+### Issues found in this audit
+
+| Priority | Issue | Root cause | Resolution |
+|----------|-------|------------|------------|
+| **P1** | **Pharm Ops not in sidebar after enabling hub** | `enable_pharm_ops` only gated patient-chart meds strip; no `ShellService` nav item and no `pharm-ops/index.php` (M13 hub UI never wired) | Added `clinicpharmops` nav entry, `public/pharm-ops/index.php` + placeholder Twig, fixed `ClinicalMedsSummaryService` URL, clarified admin labels |
+| **P2** | Admin toggle labels misleading | `enable_lab_ops` / `enable_pharm_ops` described as "chart strip only" while Lab Ops menu uses same flag | Labels + hints updated in `adminFieldDefs.ts` |
+| **P2** | No server validation for pharm ops coupling | `enable_pharm_ops` could be saved without `enable_pharmacy_role` | `ClinicAdminService::saveSettings` now rejects orphan pharm ops |
+| **P3** | M13 worklist hub not built | Spec'd in PRD/PAGE_DESIGNS §7.21–7.24; no React island | Placeholder page links to Pharmacy Desk; full M13 remains **Not started** |
+| **P3** | `new_pharm_ops` ACL missing | Only `new_lab_ops` exists in `acl_setup.php` | Deferred — nav uses `new_pharmacy` / `new_pharmacy_lead` / `new_admin` for now |
+| **P3** | OpenEMR top-level Clinic menu omits ops hubs | `Bootstrap.php` lists desks only; Lab Ops / Bill Ops / Pharm Ops live in T1 shell sidebar via `ShellService` | By design — document for operators |
+
+### Still open
+
+- **M13 full hub** — dispense worklist, receive, setup wizard (V1.1-PHARM)
+- **E2E golden path** — needs seeded role users + base URL on XAMPP
+- **PRD palette alignment** — Front Desk uses `#2563eb`; confirm against PRD tokens before pilot sign-off
+- **PHPUnit** — add `enable_pharm_ops` coupling test mirroring lab ops
 
 ---
 

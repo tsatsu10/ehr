@@ -8,7 +8,6 @@ interface CashierQueueProps {
   ajaxUrl: string;
   csrfToken: string;
   cards: CashierQueueCard[];
-  counts: { waiting: number; paid_today: number } | null;
   paidToday: CashierPaidTodayRow[];
   loading: boolean;
   error: string | null;
@@ -22,7 +21,6 @@ export function CashierQueue({
   ajaxUrl,
   csrfToken,
   cards,
-  counts,
   paidToday,
   loading,
   error,
@@ -45,11 +43,6 @@ export function CashierQueue({
 
       <div className="d-flex justify-content-between align-items-center mb-2">
         <strong>Payment queue</strong>
-        {counts && (
-          <span className="text-muted small" id="nc-cashier-counts">
-            {counts.waiting} waiting
-          </span>
-        )}
       </div>
 
       {error && <div className="alert alert-danger py-2 small">{error}</div>}
@@ -96,7 +89,7 @@ export function CashierQueue({
           id="nc-cashier-done-toggle"
           onClick={() => setPaidOpen((v) => !v)}
         >
-          Paid today ({counts?.paid_today ?? paidToday.length})
+          Paid today ({paidToday.length})
         </button>
         {paidOpen && (
           <div id="nc-cashier-paid-list" className="mt-2">

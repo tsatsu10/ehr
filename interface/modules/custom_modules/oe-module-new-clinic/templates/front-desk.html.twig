@@ -1,5 +1,8 @@
 {% extends 'base.html.twig' %}
 
+{# Desk-focus: sidebar already shows active page — skip duplicate h1 chrome #}
+{% block page_heading %}{% endblock %}
+
 {% block content %}
 {% if enable_react_front_desk|default(true) %}
 <div
@@ -9,9 +12,14 @@
         csrfToken:                     csrf_token,
         facilityId:                    desk_facility_id|default(0)|number_format(0, '', ''),
         moduleUrl:                     module_url,
+        visitBoardUrl:                 visit_board_url,
         registrationMode:              registration_mode,
         pinnedPreview:                 enable_pinned_reception_preview ? true : false,
         printQueueSlip:                print_queue_slip_on_start_visit ? true : false,
+        canSkipTriage:                 can_skip_triage ? true : false,
+        canCancelVisit:                can_cancel_visit ? true : false,
+        canRevisitOverride:            can_revisit_override ? true : false,
+        enforceCompletionOnRevisit:    enforce_completion_on_revisit ? true : false,
         scheduledIntegrationEnabled:   scheduled_integration_enabled ? true : false,
         appointmentsTodayCount:        appointments_today_count|default(0)|number_format(0, '', ''),
         calendarUrl:                   calendar_url

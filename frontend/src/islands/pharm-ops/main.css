@@ -1,0 +1,104 @@
+@import '../../core/tokens.css';
+@import '../../components/ui/ui-primitives.css';
+
+.oe-nc-pharmops-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.oe-nc-pharmops-row {
+  border: 1px solid var(--oe-nc-border, #dee2e6);
+  border-radius: 0.35rem;
+  padding: 0.75rem 1rem;
+  background: #fff;
+}
+
+.oe-nc-pharmops-row--urgent {
+  border-left: 4px solid #dc3545;
+}
+
+.oe-nc-pharmops-row__title {
+  font-weight: 600;
+}
+
+.oe-nc-pharmops-row__meta {
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.oe-nc-pharmops-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.oe-nc-pharmops-empty {
+  color: #6c757d;
+  padding: 1.5rem 0;
+}
+
+.oe-nc-pharmops-empty--loading {
+  font-style: italic;
+}
+
+.oe-nc-pharmops-empty-card {
+  border: 1px dashed var(--oe-nc-border, #dee2e6);
+  border-radius: 0.5rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--oe-nc-bg-tint, #f8f9fa);
+  color: #495057;
+}
+
+.oe-nc-pharmops-empty-card__title {
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.oe-nc-pharmops-empty-card__body {
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.oe-nc-pharmops-alert {
+  margin-bottom: 1rem;
+}
+
+.oe-nc-pharmops-dispense__rx {
+  border-top: 1px solid var(--oe-nc-border, #dee2e6);
+  padding-top: 0.75rem;
+}
+
+.oe-nc-pharmops-dispense__stock {
+  color: #6c757d;
+}
+
+.oe-nc-pharmops-reports__select {
+  max-width: 28rem;
+}
+
+.oe-nc-pharmops-reports__frame {
+  width: 100%;
+  min-height: 70vh;
+  border: 1px solid var(--oe-nc-border, #dee2e6);
+  border-radius: 0.35rem;
+  background: #fff;
+}
+
+.oe-nc-pharmops-destroy-form__meta {
+  display: grid;
+  gap: 0.5rem 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+}
+
+.oe-nc-pharmops-destroy-form__meta dt {
+  font-size: 0.75rem;
+  color: #6c757d;
+  margin-bottom: 0.125rem;
+}
+
+.oe-nc-pharmops-destroy-form__meta dd {
+  margin: 0;
+  font-weight: 500;
+}

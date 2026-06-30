@@ -281,8 +281,124 @@ class NewClinicMandatoryContractTest extends TestCase
         $this->assertStringContainsString('complete patient journey', $spec);
         $this->assertStringContainsString('Register patient and start visit', $spec);
         $this->assertStringContainsString('Enter vitals in triage', $spec);
-        $this->assertStringContainsString('Doctor consultation and routing', $spec);
+        $this->assertStringContainsString('Doctor consultation and pharmacy routing', $spec);
+        $this->assertStringContainsString('Pharmacy desk skip to payment', $spec);
         $this->assertStringContainsString('Cashier payment or zero close', $spec);
+        $this->assertStringContainsString('e2e-prep-golden-path.php', $spec);
+    }
+
+    public function testMandatory45PharmOpsDeepGoldenPathE2e(): void
+    {
+        $e2eDir = dirname(__DIR__, 4) . '/e2e/new-clinic';
+        $specPath = $e2eDir . '/specs/golden-path-pharm-dispense.spec.js';
+        $this->assertFileExists($specPath, 'Pharm ops deep golden path spec must exist');
+
+        $spec = file_get_contents($specPath);
+        $this->assertStringContainsString('New Clinic Pharm Ops Golden Path', $spec);
+        $this->assertStringContainsString('Quick prescribe', $spec);
+        $this->assertStringContainsString('nc-pharmops-dispense-drawer', $spec);
+        $this->assertStringContainsString('formulary_rx_place', $spec);
+        $this->assertStringContainsString('Pharmacy dispense with label', $spec);
+        $this->assertStringContainsString('e2e-prep-golden-path.php', $spec);
+
+        $hubSpecPath = $e2eDir . '/specs/pharm-ops-hub.spec.js';
+        $this->assertFileExists($hubSpecPath, 'Pharm ops hub smoke spec must exist');
+        $hubSpec = file_get_contents($hubSpecPath);
+        $this->assertStringContainsString('pharm_ops.worklist', $hubSpec);
+        $this->assertStringContainsString('pharm_ops.receive_save', $hubSpec);
+        $this->assertStringContainsString('pharm_ops.destroy_confirm', $hubSpec);
+        $this->assertStringContainsString('nc-pharmops-otc-drawer', $hubSpec);
+        $this->assertStringContainsString('pharmacy_lead_user', $hubSpec);
+        $this->assertStringContainsString('pilot-enable-pharm-ops.php', $hubSpec);
+
+        $pilotScript = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-pharm-ops.php';
+        $this->assertFileExists($pilotScript, 'Pilot pharm ops enable script must exist');
+
+        $rolloutScript = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-rollout.php';
+        $this->assertFileExists($rolloutScript, 'Pilot rollout script must exist');
+
+        $rolloutLib = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/lib/pilot-rollout-seed.php';
+        $this->assertFileExists($rolloutLib, 'Pilot rollout seed lib must exist');
+        $rolloutBody = file_get_contents($rolloutLib);
+        $this->assertStringContainsString('pilotRolloutEnsureProductFlags', $rolloutBody);
+        $this->assertStringContainsString('enable_bill_ops', $rolloutBody);
+
+        $seedLib = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/lib/pharm-ops-pilot-seed.php';
+        $this->assertFileExists($seedLib, 'Shared pharm ops pilot seed lib must exist');
+
+        $integrationTest = __DIR__ . '/PharmOpsWorklistServiceIntegrationTest.php';
+        $this->assertFileExists($integrationTest, 'Pharm ops worklist integration test must exist');
+    }
+
+    public function testMandatory47ReportHubSmokeE2e(): void
+    {
+        $e2eDir = dirname(__DIR__, 4) . '/e2e/new-clinic';
+        $specPath = $e2eDir . '/specs/report-hub.spec.js';
+        $this->assertFileExists($specPath, 'Report hub smoke spec must exist');
+
+        $spec = file_get_contents($specPath);
+        $this->assertStringContainsString('Reporting Operations Hub', $spec);
+        $this->assertStringContainsString('reports.catalog', $spec);
+        $this->assertStringContainsString('reports.export_run', $spec);
+        $this->assertStringContainsString('Immunizations given', $spec);
+        $this->assertStringContainsString('Open report', $spec);
+        $this->assertStringContainsString('pilot-enable-report-hub.php', $spec);
+        $this->assertStringContainsString('embed=1', file_get_contents(
+            dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/public/report-hub/index.php'
+        ));
+
+        $pilotScript = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-report-hub.php';
+        $this->assertFileExists($pilotScript, 'Pilot report hub enable script must exist');
+
+        $commonSeed = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/lib/pilot-common-seed.php';
+        $this->assertFileExists($commonSeed, 'Shared pilot common seed lib must exist');
+        $commonBody = file_get_contents($commonSeed);
+        $this->assertStringContainsString('pilotFacilityIds', $commonBody);
+        $this->assertStringContainsString('pilotEnsureNewClinicAclObjects', $commonBody);
+
+        $rolloutLib = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/lib/pilot-rollout-seed.php';
+        $rolloutBody = file_get_contents($rolloutLib);
+        $this->assertStringContainsString('enable_report_hub', $rolloutBody);
+
+        $accessTest = __DIR__ . '/ReportHubAccessServiceTest.php';
+        $this->assertFileExists($accessTest, 'Report hub access service test must exist');
+
+        $menuTest = __DIR__ . '/MainMenuRestrictReportHubTest.php';
+        $this->assertFileExists($menuTest, 'Report hub menu restrict test must exist');
+
+        $exportTest = __DIR__ . '/ReportHubExportServiceTest.php';
+        $this->assertFileExists($exportTest, 'Report hub export service test must exist');
+    }
+
+    public function testMandatory46LabCloseDayGoldenPathE2e(): void
+    {
+        $e2eDir = dirname(__DIR__, 4) . '/e2e/new-clinic';
+        $specPath = $e2eDir . '/specs/golden-path-lab-close-day.spec.js';
+        $this->assertFileExists($specPath, 'Lab + close day golden path spec must exist');
+
+        $spec = file_get_contents($specPath);
+        $this->assertStringContainsString('Lab + Close Day Golden Path', $spec);
+        $this->assertStringContainsString('Doctor consultation and lab routing', $spec);
+        $this->assertStringContainsString('Lab desk skip to payment', $spec);
+        $this->assertStringContainsString('Bill ops close day daysheet', $spec);
+        $this->assertStringContainsString('bill_ops.daysheet', $spec);
+        $this->assertStringContainsString('e2e-prep-golden-path.php', $spec);
+
+        $prepLib = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/lib/golden-path-e2e-prep.php';
+        $this->assertFileExists($prepLib, 'Golden path E2E prep lib must exist');
+
+        $prepBody = file_get_contents($prepLib);
+        $this->assertStringContainsString('enable_bill_ops', $prepBody);
+        $this->assertStringContainsString('New Clinic Lab', $prepBody);
     }
 
     public function testMandatory24DoctorDeskCoreRoundTrip(): void
@@ -443,9 +559,12 @@ class NewClinicMandatoryContractTest extends TestCase
 
     public function testMandatory38ConsultReadyBannerContract(): void
     {
-        $source = $this->readFrontendSource('src/islands/doctor-desk/DoctorPatientBanner.tsx');
+        $banner = $this->readFrontendSource('src/islands/doctor-desk/DoctorPatientBanner.tsx');
+        $context = $this->readFrontendSource('src/components/PatientContextBanner.tsx');
 
-        $this->assertStringContainsString('nc-patient-context-banner', $source);
+        $this->assertStringContainsString('PatientContextBanner', $banner);
+        $this->assertStringContainsString('oe-nc-patient-banner', $context);
+        $this->assertStringContainsString("layout?: 'full' | 'compact'", $context);
     }
 
     public function testMandatory39MrdActivityFeedPaginationContract(): void

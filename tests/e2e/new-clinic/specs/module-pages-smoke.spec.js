@@ -28,10 +28,12 @@ const MODULE_PAGES = [
   ['admin', `${MODULE_BASE}/admin.php`],
   ['patient-chart', `${MODULE_BASE}/patient-chart.php?pid=4`],
   ['lab-ops', `${MODULE_BASE}/lab-ops/index.php`],
+  ['pharm-ops', `${MODULE_BASE}/pharm-ops/index.php`],
   ['chart-payments', `${MODULE_BASE}/chart-depth/payments.php?pid=4`],
   ['chart-referrals', `${MODULE_BASE}/chart-depth/referrals.php?pid=4`],
   ['chart-export', `${MODULE_BASE}/chart-depth/export.php?pid=4`],
   ['bill-ops', `${MODULE_BASE}/bill-ops/index.php`],
+  ['report-hub', `${MODULE_BASE}/report-hub/index.php`],
 ];
 
 async function loginAsAdminPage(page) {

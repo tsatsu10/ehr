@@ -2189,11 +2189,12 @@ flowchart TB
 
 | Layer | Choice | Rationale |
 |-------|--------|-----------|
-| Server UI | PHP + Twig in module `public/` | Matches OpenEMR; fast to ship |
-| Interactivity | Vanilla JS or existing jQuery (consistent with core) | Avoid new framework in V1 |
-| Styling | Module SCSS + theme overrides | Isolated from core gulp initially |
+| Server UI | PHP 8.2 + Twig in module `public/` | Matches OpenEMR; owns auth, ACL, CSRF |
+| Module interactivity | **React 19 + TypeScript** islands (Vite) | Shipped June 2026 — all desks and hubs |
+| Module shell JS | `shell.js` + `ui-components.js` | Nav, role switch, queue stats, shared POST helpers |
+| Styling | Bootstrap 4.6 page chrome + island CSS (`--oe-nc-*` tokens) | Isolated from core Gulp themes |
 | Data | MySQL tables owned by module + core tables for clinical/billing | Clear ownership |
-| APIs | Session-auth JSON in `public/ajax.php` (V1 staff UI); optional `RestApiCreateEvent` for OAuth clients (V1.1) | Doctor mobile later |
+| APIs | Session-auth JSON in `public/ajax.php` (staff UI); optional `RestApiCreateEvent` for OAuth clients (V1.1) | Doctor mobile later |
 
 ### 7.4 Reference implementation in codebase
 

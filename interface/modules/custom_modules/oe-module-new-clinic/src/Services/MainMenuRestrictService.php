@@ -21,6 +21,25 @@ class MainMenuRestrictService
         'cod2', 'cod1', 'pay1', 'bil1', 'bil0', 'npa0', 'eob', 'edi0', 'biltrk0',
     ];
 
+    /** @var array<int, string> Top-level Inventory menu hidden when M13 hub is ON (M13-F13) */
+    public const STOCK_PHARM_MENU_IDS = [
+        'invimg',
+    ];
+
+    /** @var array<int, string> Top-level Reports menu hidden when M16 hub is ON (M16-F07) */
+    public const STOCK_REPORTS_MENU_IDS = [
+        'repimg',
+    ];
+
+    /** @var array<int, string> Stock inventory report URLs hidden when M13 hub is ON (M13-F13) */
+    public const STOCK_PHARM_MENU_URLS = [
+        '/interface/drugs/drug_inventory.php',
+        '/interface/reports/destroyed_drugs_report.php',
+        '/interface/reports/inventory_list.php',
+        '/interface/reports/inventory_activity.php',
+        '/interface/reports/inventory_transactions.php',
+    ];
+
     /** @var array<int, string> Clinic desk ACLs — users with any of these get Fees cutover */
     private const CLINIC_DESK_ACLS = [
         'new_reception', 'new_nurse', 'new_doctor', 'new_lab',
@@ -61,6 +80,17 @@ class MainMenuRestrictService
         if ($this->shouldHideStockFeesMenusForCurrentUser()) {
             $menu = $this->filterMainMenu($menu, self::STOCK_FEES_MENU_IDS);
         }
+
+        if ($this->shouldHideStockPharmMenusForCurrentUser()) {
+            $menu = $this->filterMainMenu($menu, self::STOCK_PHARM_MENU_IDS);
+            $menu = $this->filterMainMenuByUrl($menu, self::STOCK_PHARM_MENU_URLS);
+        }
+
+        if ($this->shouldHideStockReportsMenusForCurrentUser()) {
+            $menu = $this->filterMainMenu($menu, self::STOCK_REPORTS_MENU_IDS);
+        }
+
+        $menu = $this->pruneEmptyMenuBranches($menu);
 
         $event->setMenu($menu);
 
@@ -113,6 +143,40 @@ class MainMenuRestrictService
         $facilityId = $facilityId ?? $this->visitScope->resolveDefaultFacilityId();
 
         return $this->config->isEnabled('enable_bill_ops', 0, $facilityId);
+    }
+
+    public function shouldHideStockPharmMenusForCurrentUser(?int $facilityId = null): bool
+    {
+        if (AclMain::aclCheckCore('new_clinic', 'new_admin') || AclMain::aclCheckCore('admin', 'super')) {
+            return false;
+        }
+
+        if (
+            !AclMain::aclCheckCore('new_clinic', 'new_pharmacy')
+            && !AclMain::aclCheckCore('new_clinic', 'new_pharmacy_lead')
+            && !AclMain::aclCheckCore('new_clinic', 'new_pharm_ops')
+        ) {
+            return false;
+        }
+
+        $facilityId = $facilityId ?? $this->visitScope->resolveDefaultFacilityId();
+
+        return $this->config->isEnabled('enable_pharm_ops', 0, $facilityId);
+    }
+
+    public function shouldHideStockReportsMenusForCurrentUser(?int $facilityId = null): bool
+    {
+        if (AclMain::aclCheckCore('new_clinic', 'new_admin') || AclMain::aclCheckCore('admin', 'super')) {
+            return false;
+        }
+
+        if (!$this->currentUserHasClinicDeskAcl() && !AclMain::aclCheckCore('new_clinic', 'reports')) {
+            return false;
+        }
+
+        $facilityId = $facilityId ?? $this->visitScope->resolveDefaultFacilityId();
+
+        return $this->config->isEnabled('enable_report_hub', 0, $facilityId);
     }
 
     /**
@@ -169,6 +233,32 @@ class MainMenuRestrictService
         }
 
         return $filtered;
+    }
+
+    /**
+     * Remove menu nodes that have no URL and no remaining children (e.g. empty Reports → Inventory).
+     *
+     * @param array<int, object> $menu
+     * @return array<int, object>
+     */
+    public function pruneEmptyMenuBranches(array $menu): array
+    {
+        $pruned = [];
+        foreach ($menu as $item) {
+            if (!empty($item->children) && is_array($item->children)) {
+                $item->children = $this->pruneEmptyMenuBranches($item->children);
+            }
+
+            $hasUrl = (string) ($item->url ?? '') !== '';
+            $hasChildren = !empty($item->children) && is_array($item->children) && count($item->children) > 0;
+            if (!$hasUrl && !$hasChildren) {
+                continue;
+            }
+
+            $pruned[] = $item;
+        }
+
+        return $pruned;
     }
 
     private function currentUserHasClinicalFinderAccess(): bool

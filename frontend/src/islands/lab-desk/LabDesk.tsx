@@ -10,6 +10,7 @@ import { usePageHeadingToolbar } from '@core/usePageHeadingToolbar';
 import { setDeskActiveVisitId, clearDeskActiveVisitId } from '@core/deskSessionStorage';
 import { useSharedDeviceSession } from '@core/useSharedDeviceSession';
 import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
+import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
 import { EsignOverrideModal } from '@components/EsignOverrideModal';
 import { SkipToPaymentModal } from '@components/SkipToPaymentModal';
@@ -388,11 +389,25 @@ export function LabDesk({
         />
       )}
 
+      <DeskQueueStatusBar
+        id="nc-lab-status-bar"
+        ariaLabel="Lab desk status"
+        items={[
+          {
+            label: 'Waiting',
+            value: counts?.waiting ?? 0,
+            href: (counts?.waiting ?? 0) > 0 ? visitBoardUrl : undefined,
+          },
+          { label: 'In lab', value: counts?.in_lab ?? 0 },
+        ]}
+        loading={queueLoading}
+        onRefresh={() => { void fetchQueue(); }}
+      />
+
       <div className="row">
         <div className="col-lg-4 mb-3">
           <LabQueue
             cards={cards}
-            counts={counts}
             hasActiveWork={hasActiveWork}
             loading={queueLoading}
             error={queueError}

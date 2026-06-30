@@ -1,21 +1,16 @@
 import { useRef } from 'react';
 import type { ReceiptReprintPayload } from './chartDepthTypes';
+import { formatChartMoney } from './chartDepthUtils';
 
 interface ReprintReceiptModalProps {
   open: boolean;
   payload: ReceiptReprintPayload | null;
-  currencySymbol: string;
   onClose: () => void;
-}
-
-function formatMoney(symbol: string, amount: number | undefined): string {
-  return `${symbol}${Number(amount ?? 0).toFixed(2)}`;
 }
 
 export function ReprintReceiptModal({
   open,
   payload,
-  currencySymbol,
   onClose,
 }: ReprintReceiptModalProps) {
   const printRef = useRef<HTMLDivElement>(null);
@@ -50,7 +45,7 @@ export function ReprintReceiptModal({
                 <br />
                 Patient: {patient?.display_name ?? '—'} · MRN {patient?.pubpid ?? '—'}
                 <br />
-                Amount: {formatMoney(currencySymbol, receipt.amount_paid)} · {receipt.paid_at_label ?? '—'}
+                Amount: {formatChartMoney(receipt.amount_paid)} · {receipt.paid_at_label ?? '—'}
               </p>
               <div className="nc-receipt-print border rounded p-3" ref={printRef}>
                 <p className="mb-0">
@@ -60,9 +55,9 @@ export function ReprintReceiptModal({
                   <br />
                   Queue #{receipt.queue_number ?? '—'}
                   <br />
-                  Paid: {formatMoney(currencySymbol, receipt.amount_paid)}
+                  Paid: {formatChartMoney(receipt.amount_paid)}
                   <br />
-                  Change: {formatMoney(currencySymbol, receipt.change_due)}
+                  Change: {formatChartMoney(receipt.change_due)}
                   <br />
                   {receipt.paid_at_label ?? ''}
                 </p>

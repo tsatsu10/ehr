@@ -242,6 +242,7 @@ test.describe('React island bundle assets', () => {
       ['admin-hub', 'src/islands/admin-hub/index.tsx'],
       ['patient-chart', 'src/islands/patient-chart/index.tsx'],
       ['lab-ops', 'src/islands/lab-ops/index.tsx'],
+      ['pharm-ops', 'src/islands/pharm-ops/index.tsx'],
       ['chart-depth', 'src/islands/chart-depth/index.tsx'],
       ['bill-ops', 'src/islands/bill-ops/index.tsx'],
       ['bill-ops-correct', 'src/islands/bill-ops/index-correct.tsx'],
@@ -255,6 +256,45 @@ test.describe('React island bundle assets', () => {
     }
   });
 
+  // ── pharm-ops (M13) ───────────────────────────────────────────────────────
+
+  test('pharm-ops.js entry is served by Apache', async ({ request }) => {
+    const response = await request.get(`${ASSET_BASE}/pharm-ops.js`);
+    expect(response.status(), 'pharm-ops bundle should be reachable').toBe(200);
+
+    const body = await response.text();
+    expect(body.length, 'bundle should not be empty').toBeGreaterThan(50);
+  });
+
+  test('pharm-ops.css is served by Apache', async ({ request }) => {
+    const response = await request.get(`${ASSET_BASE}/pharm-ops.css`);
+    expect(response.status(), 'pharm-ops CSS should be reachable').toBe(200);
+
+    const body = await response.text();
+    expect(body.length, 'CSS should not be empty').toBeGreaterThan(100);
+    expect(body, 'CSS should contain pharm ops hub styles').toContain('oe-nc-pharmops');
+  });
+
+  test('pharm-ops lazy chunks resolve relative to the entry bundle', async ({ request }) => {
+    const entryResponse = await request.get(`${ASSET_BASE}/pharm-ops.js`);
+    expect(entryResponse.status()).toBe(200);
+
+    const entryBody = await entryResponse.text();
+    const chunkMatch = entryBody.match(/\.\/chunks\/[^"']+\.js/);
+    expect(chunkMatch, 'pharm-ops should reference a relative lazy chunk').toBeTruthy();
+
+    const chunkUrl = `${ASSET_BASE}/${chunkMatch[0].replace(/^\.\//, '')}`;
+    const chunkResponse = await request.get(chunkUrl);
+    expect(chunkResponse.status(), `lazy chunk should load: ${chunkUrl}`).toBe(200);
+
+    const cssMatch = entryBody.match(/\.\/assets\/[^"']+\.css/);
+    if (cssMatch) {
+      const cssUrl = `${ASSET_BASE}/${cssMatch[0].replace(/^\.\//, '')}`;
+      const cssResponse = await request.get(cssUrl);
+      expect(cssResponse.status(), `shared chunk CSS should load: ${cssUrl}`).toBe(200);
+    }
+  });
+
   test('post-pilot island bundles are served by Apache', async ({ request }) => {
     const islands = [
       'patient-registry',
@@ -263,6 +303,7 @@ test.describe('React island bundle assets', () => {
       'admin-hub',
       'patient-chart',
       'lab-ops',
+      'pharm-ops',
       'chart-depth',
       'bill-ops',
       'bill-ops-correct',

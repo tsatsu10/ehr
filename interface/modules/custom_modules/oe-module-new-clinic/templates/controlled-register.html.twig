@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ 'Controlled substances register'|xlt }}</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            margin: 0;
+            padding: 1rem;
+            color: #111;
+            background: #fff;
+        }
+        h1 {
+            font-size: 1.1rem;
+            margin: 0 0 0.25rem;
+        }
+        .subtitle {
+            color: #555;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: flex-end;
+            margin-bottom: 1rem;
+        }
+        .toolbar label {
+            font-size: 0.8rem;
+            display: block;
+            margin-bottom: 0.15rem;
+        }
+        .toolbar input[type="date"] {
+            padding: 0.35rem 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .toolbar button {
+            padding: 0.4rem 0.75rem;
+            border: 1px solid #2563eb;
+            background: #2563eb;
+            color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 0.45rem 0.5rem;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #f5f5f5;
+        }
+        .empty {
+            padding: 1.5rem;
+            border: 1px dashed #ccc;
+            border-radius: 6px;
+            color: #555;
+            font-size: 0.9rem;
+        }
+        .note {
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            color: #666;
+        }
+        @media print {
+            .toolbar { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ 'Controlled substances register'|xlt }}</h1>
+    <p class="subtitle">
+        {{ 'Placeholder log for national controlled-substances schedule alignment (O-PHARM-5).'|xlt }}
+        {{ register.controlled_drug_count }} {{ 'product(s) flagged as controlled.'|xlt }}
+    </p>
+
+    <form class="toolbar" method="get">
+        <div>
+            <label for="nc-controlled-from">{{ 'From'|xlt }}</label>
+            <input id="nc-controlled-from" type="date" name="from" value="{{ register.from_date|attr }}">
+        </div>
+        <div>
+            <label for="nc-controlled-to">{{ 'To'|xlt }}</label>
+            <input id="nc-controlled-to" type="date" name="to" value="{{ register.to_date|attr }}">
+        </div>
+        <button type="submit">{{ 'Apply'|xlt }}</button>
+        <button type="button" onclick="window.print()">{{ 'Print'|xlt }}</button>
+    </form>
+
+    {% if register.rows|length %}
+    <table>
+        <thead>
+            <tr>
+                <th scope="col">{{ 'Date'|xlt }}</th>
+                <th scope="col">{{ 'Event'|xlt }}</th>
+                <th scope="col">{{ 'Drug'|xlt }}</th>
+                <th scope="col">{{ 'Qty'|xlt }}</th>
+                <th scope="col">{{ 'Lot'|xlt }}</th>
+                <th scope="col">{{ 'Schedule'|xlt }}</th>
+                <th scope="col">{{ 'Patient'|xlt }}</th>
+                <th scope="col">{{ 'Witness / notes'|xlt }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in register.rows %}
+            <tr>
+                <td>{{ row.event_date|text }}</td>
+                <td>{{ row.event_label|text }}</td>
+                <td>{{ row.drug_name|text }}</td>
+                <td>{{ row.quantity|text }}</td>
+                <td>{{ row.lot_number|default('—')|text }}</td>
+                <td>{{ row.schedule_code|default('—')|text }}</td>
+                <td>
+                    {% if row.patient_label %}
+                        {{ row.patient_label|text }}
+                        {% if row.mrn %}<span class="text-muted"> · {{ row.mrn|text }}</span>{% endif %}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>
+                    {% if row.witness %}{{ 'Witness:'|xlt }} {{ row.witness|text }}{% endif %}
+                    {% if row.destroy_method %}<div>{{ row.destroy_method|text }}</div>{% endif %}
+                    {% if row.destroy_notes %}<div>{{ row.destroy_notes|text }}</div>{% endif %}
+                    {% if row.actor_name and row.event_type == 'dispensed' %}{{ row.actor_name|text }}{% endif %}
+                    {% if not row.witness and not row.destroy_method and not row.destroy_notes and not row.actor_name %}—{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty">
+        {% if register.controlled_drug_count == 0 %}
+            {{ 'No drugs are flagged as controlled yet. Catalog admins can mark products in Pharmacy setup.'|xlt }}
+        {% else %}
+            {{ 'No dispense or destruction events for controlled drugs in this date range.'|xlt }}
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <p class="note">
+        {{ 'Mark controlled products under Pharmacy setup. Schedule codes are clinic-defined placeholders until national alignment is configured.'|xlt }}
+    </p>
+</body>
+</html>

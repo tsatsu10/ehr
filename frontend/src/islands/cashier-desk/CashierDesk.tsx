@@ -11,6 +11,7 @@ import { getDeskActiveVisitId, clearDeskActiveVisitId } from '@core/deskSessionS
 import { useSharedDeviceSession } from '@core/useSharedDeviceSession';
 import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
+import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import type {
   CashierDeskProps,
   CashierPayResult,
@@ -35,6 +36,7 @@ import {
   buildStagedFromSuggestions,
   getDiscountLines,
   newClientRequestId,
+  setCashierCurrencyFormat,
   stagedLinesHaveDiscount,
 } from './cashierUtils';
 import type { PatientSearchHint } from './PatientSearchPanel';
@@ -73,7 +75,18 @@ export function CashierDesk({
   canApplyDiscount = false,
   canEsignOverride = false,
   sharedDeviceWarning = false,
+  currencyFormat,
 }: CashierDeskProps) {
+  useEffect(() => {
+    if (currencyFormat) {
+      setCashierCurrencyFormat({
+        currency_symbol: currencyFormat.currency_symbol ?? '',
+        currency_decimals: currencyFormat.currency_decimals ?? 2,
+        currency_symbol_position: currencyFormat.currency_symbol_position === 'after' ? 'after' : 'before',
+      });
+    }
+  }, [currencyFormat]);
+
   const [cards, setCards] = useState<CashierQueueCard[]>([]);
   const [counts, setCounts] = useState<CashierQueueData['counts'] | null>(null);
   const [visitDate, setVisitDate] = useState<string | null>(null);
@@ -496,13 +509,27 @@ export function CashierDesk({
         />
       )}
 
+      <DeskQueueStatusBar
+        id="nc-cashier-status-bar"
+        ariaLabel="Cashier desk status"
+        items={[
+          {
+            label: 'Waiting for payment',
+            value: counts?.waiting ?? 0,
+            href: (counts?.waiting ?? 0) > 0 ? visitBoardUrl : undefined,
+          },
+          { label: 'Paid today', value: counts?.paid_today ?? 0 },
+        ]}
+        loading={queueLoading}
+        onRefresh={() => { void fetchQueue(); }}
+      />
+
       <div className="row">
         <div className="col-lg-4 mb-3">
           <CashierQueue
             ajaxUrl={ajaxUrl}
             csrfToken={csrfToken}
             cards={cards}
-            counts={counts}
             paidToday={paidToday ?? []}
             loading={queueLoading}
             error={queueError}

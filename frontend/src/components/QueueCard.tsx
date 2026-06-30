@@ -24,6 +24,13 @@ function privacyDisplayName(name: string): string {
   return `${parts[0]} ${parts[parts.length - 1].charAt(0)}.`;
 }
 
+function patientInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '—';
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+}
+
 /** ISO date (YYYY-MM-DD) for the current local day. */
 function todayIso(): string {
   const d = new Date();
@@ -67,44 +74,46 @@ export function QueueCard({ card, privacyMode = false, onClick, selected = false
       onClick={onClick && !isClaimLost ? () => onClick(card) : undefined}
       aria-pressed={selected}
     >
-      {/* Header: queue # + name + badges */}
-      <div className="oe-nc-queue-card__header d-flex justify-content-between align-items-start flex-wrap">
-        <span>
-          <strong>#{card.queue_number} {displayName}</strong>
-          {isUrgent && (
-            <span className="badge badge-warning ml-1">URGENT</span>
-          )}
-          {card.skipped_triage && (
-            <span className="badge badge-secondary ml-1" title="Skipped triage">Skipped triage</span>
-          )}
-          {hasSimilarSurname && (
-            <span className="badge badge-warning ml-1" title="Another patient in today's queue shares this surname">
-              Same surname today
-            </span>
-          )}
-          {isStale && (
-            <span className="oe-nc-stale-badge" title={`Visit opened on ${card.visit_date.slice(0, 10)}`}>
-              <i className="fa fa-clock-o" aria-hidden="true" /> {formatStaleDate(card.visit_date)}
-            </span>
-          )}
+      <div className="oe-nc-queue-card__row">
+        <span className="oe-nc-queue-card__avatar" aria-hidden="true">
+          {patientInitials(card.display_name)}
         </span>
-      </div>
+        <div className="oe-nc-queue-card__body">
+          <div className="oe-nc-queue-card__header">
+            <span className="oe-nc-queue-card__queue-num">#{card.queue_number}</span>
+            <span className="oe-nc-queue-card__name">{displayName}</span>
+            {isUrgent && (
+              <span className="badge badge-warning">URGENT</span>
+            )}
+            {card.skipped_triage && (
+              <span className="badge badge-secondary" title="Skipped triage">Skipped triage</span>
+            )}
+            {hasSimilarSurname && (
+              <span className="badge badge-warning" title="Another patient in today's queue shares this surname">
+                Same surname today
+              </span>
+            )}
+            {isStale && (
+              <span className="oe-nc-stale-badge" title={`Visit opened on ${card.visit_date.slice(0, 10)}`}>
+                <i className="fa fa-clock-o" aria-hidden="true" /> {formatStaleDate(card.visit_date)}
+              </span>
+            )}
+          </div>
 
-      {/* Subtitle: sex · age · wait · visit type */}
-      <div className="oe-nc-queue-card__meta small text-muted">
-        {card.sex} · {card.age_years} · <WaitTimeSpan card={card} suffix=" waiting" /> · {card.visit_type_label}
-      </div>
+          <div className="oe-nc-queue-card__meta small text-muted">
+            {card.sex} · {card.age_years} · <WaitTimeSpan card={card} suffix=" waiting" /> · {card.visit_type_label}
+          </div>
 
-      {/* Chief complaint (if present) */}
-      {card.chief_complaint && (
-        <div className="oe-nc-queue-card__cc small text-muted text-truncate">
-          CC: {card.chief_complaint}
+          {card.chief_complaint && (
+            <div className="oe-nc-queue-card__cc small text-muted text-truncate">
+              CC: {card.chief_complaint}
+            </div>
+          )}
+
+          <div className="oe-nc-queue-card__footer">
+            <StatusPill state={card.state} />
+          </div>
         </div>
-      )}
-
-      {/* Footer: FSM state pill */}
-      <div className="mt-1">
-        <StatusPill state={card.state} />
       </div>
     </button>
   );

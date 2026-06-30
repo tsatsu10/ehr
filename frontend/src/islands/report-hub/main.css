@@ -1,0 +1,35 @@
+.oe-nc-reporthub {
+  min-height: 24rem;
+}
+
+.oe-nc-reporthub-embed {
+  width: 100%;
+  min-height: 70vh;
+  border: 1px solid var(--oe-nc-border, #e2e8f0);
+  border-radius: 0.375rem;
+  background: #fff;
+}
+
+.oe-nc-reporthub-cards {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+}
+
+.oe-nc-reporthub-card {
+  border: 1px solid var(--oe-nc-border, #e2e8f0);
+  border-radius: 0.5rem;
+  padding: 0.875rem 1rem;
+  background: #fff;
+}
+
+.oe-nc-reporthub-card__title {
+  margin-bottom: 0.35rem;
+}
+
+.oe-nc-reporthub-empty {
+  padding: 1.5rem;
+  border: 1px dashed var(--oe-nc-border, #e2e8f0);
+  border-radius: 0.5rem;
+  background: #f8fafc;
+}

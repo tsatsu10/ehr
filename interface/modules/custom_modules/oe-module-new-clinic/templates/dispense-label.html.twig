@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ 'Dispense label'|xlt }} — {{ label.patient.display_name|text }}</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
+            padding: 1rem;
+            color: #111;
+        }
+        .no-print {
+            margin-bottom: 1rem;
+        }
+        .label-sheet {
+            width: 200pt;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .label-top {
+            font-size: 7pt;
+            line-height: 1.35;
+            padding-bottom: 4pt;
+        }
+        .label-rule {
+            background: #000;
+            height: 4pt;
+            margin: 2pt 0;
+        }
+        .label-body {
+            font-size: 9pt;
+            line-height: 1.4;
+            padding-top: 4pt;
+            text-align: left;
+        }
+        .drug-name {
+            font-size: 11pt;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 6pt;
+        }
+        .counseling {
+            margin-top: 8pt;
+            font-size: 8pt;
+            border-top: 1px dashed #666;
+            padding-top: 6pt;
+        }
+        .counseling-twi {
+            color: #333;
+            font-style: italic;
+            margin-top: 4pt;
+        }
+        @media print {
+            .no-print { display: none; }
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button type="button" onclick="window.print()">{{ 'Print'|xlt }}</button>
+        <button type="button" onclick="window.close()">{{ 'Close'|xlt }}</button>
+    </div>
+
+    <div class="label-sheet">
+        <div class="label-top">
+            <div><strong>{{ label.clinic.name|text }}</strong></div>
+            {% if label.clinic.address or label.clinic.phone %}
+            <div>
+                {% if label.clinic.address %}{{ label.clinic.address|text }}{% endif %}
+                {% if label.clinic.phone %} · {{ label.clinic.phone|text }}{% endif %}
+            </div>
+            {% endif %}
+            {% if label.prescriber.display_name %}
+            <div>{{ label.prescriber.display_name|text }}</div>
+            {% endif %}
+        </div>
+
+        <div class="label-rule"></div>
+
+        <div class="label-body">
+            <div>
+                <strong>{{ label.patient.display_name|text }}</strong>
+                {% if label.patient.mrn %} · {{ 'MRN'|xlt }} {{ label.patient.mrn|text }}{% endif %}
+                {% if label.prescription_id %} · RX#{{ '%06d'|format(label.prescription_id) }}{% endif %}
+            </div>
+            {% if label.dispensed_at %}
+            <div class="small">{{ label.dispensed_at|text }}</div>
+            {% endif %}
+
+            <div class="drug-name">{{ label.drug.display_name|text }}</div>
+
+            {% if label.drug.sig %}
+            <div><strong>{{ 'Sig'|xlt }}:</strong> {{ label.drug.sig|text }}</div>
+            {% endif %}
+
+            <div>
+                <strong>{{ 'Qty'|xlt }}:</strong> {{ label.drug.quantity|text }}
+                {% if label.drug.size %} · {{ label.drug.size|text }}{% endif %}
+                {% if label.drug.form %} {{ label.drug.form|text }}{% endif %}
+            </div>
+
+            {% if label.lot.lot_number or label.lot.expiration %}
+            <div>
+                {% if label.lot.lot_number %}<strong>{{ 'Lot'|xlt }}:</strong> {{ label.lot.lot_number|text }}{% endif %}
+                {% if label.lot.expiration %} · <strong>{{ 'Exp'|xlt }}:</strong> {{ label.lot.expiration|text }}{% endif %}
+            </div>
+            {% endif %}
+
+            {% if label.lot.manufacturer %}
+            <div>{{ label.lot.manufacturer|text }}</div>
+            {% endif %}
+
+            {% if label.drug.ndc %}
+            <div><strong>{{ 'NDC'|xlt }}:</strong> {{ label.drug.ndc|text }}</div>
+            {% endif %}
+
+            <div class="counseling">
+                <div>{{ label.counseling.english|text }}</div>
+                <div class="counseling-twi">{{ label.counseling.twi|text }}</div>
+            </div>
+        </div>
+    </div>
+
+    {% if auto_print %}
+    <script>window.addEventListener('load', function () { window.print(); });</script>
+    {% endif %}
+</body>
+</html>

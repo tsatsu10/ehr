@@ -51,12 +51,13 @@ class ClinicalMedsSummaryService
             && $prescriptions === []
             && !$hasHistory;
 
-        $canOpenPharmOps = AclMain::aclCheckCore('new_clinic', 'new_pharmacy')
+        $canOpenPharmOps = AclMain::aclCheckCore('new_clinic', 'new_pharm_ops')
+            || AclMain::aclCheckCore('new_clinic', 'new_pharmacy')
             || AclMain::aclCheckCore('new_clinic', 'new_pharmacy_lead')
             || AclMain::aclCheckCore('new_clinic', 'new_admin');
 
         $pharmOpsUrl = $webroot
-            . '/interface/modules/custom_modules/oe-module-new-clinic/public/pharmacy.php';
+            . '/interface/modules/custom_modules/oe-module-new-clinic/public/pharm-ops/index.php';
 
         return [
             'hidden' => $hidden,

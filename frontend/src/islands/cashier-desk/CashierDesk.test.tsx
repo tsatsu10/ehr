@@ -102,7 +102,11 @@ describe('CashierDesk', () => {
     await waitFor(() => {
       expect(screen.getByText(/Ama Boateng/)).toBeInTheDocument();
     });
-    expect(screen.getByText(/1 waiting/)).toBeInTheDocument();
+    await waitFor(() => {
+      const bar = screen.getByLabelText(/Cashier desk status/i);
+      expect(bar).toHaveTextContent('1');
+      expect(bar).toHaveTextContent('Waiting for payment');
+    });
   });
 
   it('loads checkout pane when queue card clicked', async () => {

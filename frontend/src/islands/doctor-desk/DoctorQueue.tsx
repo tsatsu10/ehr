@@ -13,16 +13,13 @@ import { RoutingChips } from '@components/RoutingChips';
 
 interface DoctorQueueProps {
   cards: DoctorQueueCard[];
-  counts: { waiting: number; done_today: number; reopenable_today: number } | null;
   doneToday: DoctorDoneTodayRow[];
   reopenableToday: DoctorReopenableRow[];
   canReopenConsult: boolean;
   hasActiveConsult: boolean;
   loading: boolean;
   error: string | null;
-  multiDoctorFilters?: boolean;
-  scope?: 'me' | 'all';
-  onScopeChange?: (scope: 'me' | 'all') => void;
+  hasActiveConsult: boolean;
   onTakePatient: (card: DoctorQueueCard) => void;
   onReopenClick: (row: DoctorReopenableRow) => void;
 }
@@ -90,16 +87,12 @@ function DoctorQueueCardButton({
 
 export function DoctorQueue({
   cards,
-  counts,
   doneToday,
   reopenableToday,
   canReopenConsult,
   hasActiveConsult,
   loading,
   error,
-  multiDoctorFilters = false,
-  scope = 'me',
-  onScopeChange,
   onTakePatient,
   onReopenClick,
 }: DoctorQueueProps) {
@@ -110,26 +103,6 @@ export function DoctorQueue({
     <div className="nc-doctor-queue-panel">
       <div className="d-flex justify-content-between align-items-center mb-2">
         <strong>My queue</strong>
-        <div className="d-flex align-items-center">
-          {counts && (
-            <span className="text-muted small mr-2" id="nc-doctor-counts">
-              {counts.waiting} waiting
-            </span>
-          )}
-          {multiDoctorFilters && onScopeChange && (
-            <select
-              className="form-control form-control-sm mr-2"
-              style={{ maxWidth: 120 }}
-              id="nc-doctor-scope"
-              value={scope}
-              onChange={(e) => onScopeChange(e.target.value === 'all' ? 'all' : 'me')}
-              aria-label="Queue scope"
-            >
-              <option value="me">Me</option>
-              <option value="all">All</option>
-            </select>
-          )}
-        </div>
       </div>
 
       {error && (
@@ -165,7 +138,7 @@ export function DoctorQueue({
             id="nc-doctor-reopen-toggle"
             onClick={() => setReopenOpen((v) => !v)}
           >
-            Reopen consult ({counts?.reopenable_today ?? reopenableToday.length})
+            Reopen consult ({reopenableToday.length})
           </button>
           {reopenOpen && (
             <div id="nc-doctor-reopen-list" className="mt-2">
@@ -204,7 +177,7 @@ export function DoctorQueue({
           id="nc-doctor-done-toggle"
           onClick={() => setDoneOpen((v) => !v)}
         >
-          Done today ({counts?.done_today ?? doneToday.length})
+          Done today ({doneToday.length})
         </button>
         {doneOpen && (
           <div id="nc-doctor-done-list" className="mt-2">

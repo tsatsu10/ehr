@@ -28,7 +28,9 @@
         visitBoardUrl:         visit_board_url,
         multiDoctorFilters:    enable_multi_doctor_filters ? true : false,
         sharedDeviceWarning:   enable_shared_device_session_warning ? true : false,
-        labPanelOrderEnabled:  lab_panel_order_enabled ? true : false
+        labPanelOrderEnabled:  lab_panel_order_enabled ? true : false,
+        formularyRxEnabled:    formulary_rx_enabled ? true : false,
+        currencyFormat:        currency_format|default({})
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}

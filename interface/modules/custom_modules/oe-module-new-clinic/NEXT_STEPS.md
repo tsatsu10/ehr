@@ -1,90 +1,86 @@
 # New Clinic V1 — Next Steps
 
-**Current status (June 28, 2026):** React cutover complete · 349 PHPUnit New Clinic · 175+ Vitest · asset `20260628w54restore`  
-**Remaining work:** E2E golden path (ops setup), optional pilot hardening
+**Current status (June 30, 2026):** React cutover complete · V1.2-PHARM shipped · **M16 Reporting Hub shell** (V1.1-REP) shipped · audit remediation complete · pilot rollout on facilities **0 + 3**  
+**Remaining work:** Push/PR, M16 async export + native P2 cards
 
 ---
 
-## Completed since prior draft
+## Completed
 
-- React migration (all 7 desks + admin, chart depth, comms, bill ops, lab ops)
-- Deep-link session bridge: Rx, encounter, lab results, chart-depth stock pages
-- Admin config cascade for `enable_chart_depth`
-- HTTP 200 smoke on all 17 module entry points
+- React migration — all desks + hubs (`frontend/src/islands/`, 17 Vite entries incl. `report-hub`)
+- **M13 Pharm Ops Hub** — worklist, dispense, receive, OTC, destroy, reports, controlled register, labels, formulary quick Rx
+- **M16 Reporting Hub (shell)** — Today lens (M7 embed), clinical/pharmacy/financial/public-health/audit catalog lenses, export audit (`reports.export_run`), menu cutover (`enable_report_hub`), pilot CLI `pilot-enable-report-hub.php`
+- Legacy desk jQuery removed (w50react); Phase 0 hello island removed
+- Deep-link session bridge (Rx, encounter, lab results, chart depth)
+- Playwright: module page smoke, golden-path E2E (skip + pharm dispense + lab + close day), pharm-ops hub smoke, **report-hub smoke**, island bundle smoke
+- E2E helpers: `helpers/registration.js` (Save & Start + dup confirm), `helpers/cashier.js` (zero close or payment)
+- Pilot pharm ops seed: `scripts/pilot-enable-pharm-ops.php` + shared `scripts/lib/pharm-ops-pilot-seed.php`
+- Pilot report hub seed: `scripts/pilot-enable-report-hub.php` + shared `scripts/lib/pilot-common-seed.php` + `enable_report_hub` in `pilot-rollout.php`
+- **M16 audit remediation** — admin flag persistence, export schema guard, lens-scoped catalog, M7 embed mode, PHPUnit/Vitest coverage
+- E2E npm scripts use `tests/e2e/new-clinic/playwright.config.js` (120s timeout, single worker)
+- PHPUnit: `PharmOpsWorklistServiceIntegrationTest`, `ReportHubAccessServiceTest`, `MainMenuRestrictReportHubTest`
+- Pilot user seed script + PHPUnit/Vitest green
 
 ---
 
-## Task 1: Playwright E2E golden path (Test 23)
+## Task 1: Pilot rollout (facility 3) — done
 
-**Goal:** Full patient workflow: registration → triage → doctor → lab → pharmacy → cashier → close day
+Product flags enabled via `scripts/pilot-rollout.php` for facilities **0** and **3** (default clinic).
 
-**Spec exists:** `tests/e2e/new-clinic/specs/golden-path.spec.js`
-
-**Blockers:**
-
-1. Seeded role users (`reception_user`, `nurse_user`, `doctor_user`, etc.) or env vars
-2. Base URL: Docker uses `http://localhost:8300`; XAMPP uses `http://localhost/openemr`
-3. Playwright: `npm install --save-dev @playwright/test && npx playwright install`
-
-**Run (Docker):**
+Re-run if needed:
 
 ```bash
-cd docker/development-easy
-docker compose exec openemr npx playwright test tests/e2e/new-clinic/specs/golden-path.spec.js
+php interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-rollout.php
 ```
 
-**Run (XAMPP):** set `TEST_BASE_URL=http://localhost/openemr` and use your local test credentials.
-
-**Module page smoke (17 surfaces, authenticated):**
+Pharm ops only (subset):
 
 ```bash
-npx playwright test tests/e2e/new-clinic/specs/module-pages-smoke.spec.js
+php interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-pharm-ops.php
 ```
 
----
-
-## Task 2: Pilot role users
-
-Seed one user per desk (matches `golden-path.spec.js` env vars):
+Report hub only (subset):
 
 ```bash
-# From project root (Apache + MySQL running)
+php interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-report-hub.php
+```
+
+Also enable as needed via Admin Hub: `communications_hub_enable`, `enable_chart_depth`, `enable_bill_ops`, `enable_report_hub` (included in `pilot-rollout.php`).
+
+Seed desk users and smoke:
+
+```bash
 php interface/modules/custom_modules/oe-module-new-clinic/acl/seed_pilot_users.php
-php interface/modules/custom_modules/oe-module-new-clinic/acl/seed_pilot_users.php --password=YourPass123
-php interface/modules/custom_modules/oe-module-new-clinic/acl/seed_pilot_users.php --dry-run
-```
-
-Creates: `reception_user`, `nurse_user`, `doctor_user`, `lab_user`, `pharmacy_user`, `cashier_user`  
-Default password: `test_pass` (or `NEW_CLINIC_PILOT_PASS` env). Each user gets **Clinicians** + their desk group.
-
-Grant all desks to an existing admin user:
-
-```bash
-php interface/modules/custom_modules/oe-module-new-clinic/acl/install_and_grant.php Adminstrator
+npx playwright test tests/e2e/new-clinic/specs/module-pages-smoke.spec.js --config tests/e2e/new-clinic/playwright.config.js
+npx playwright test tests/e2e/new-clinic/specs/golden-path.spec.js --config tests/e2e/new-clinic/playwright.config.js
+npx playwright test tests/e2e/new-clinic/specs/golden-path-pharm-dispense.spec.js --config tests/e2e/new-clinic/playwright.config.js
+npx playwright test tests/e2e/new-clinic/specs/golden-path-lab-close-day.spec.js --config tests/e2e/new-clinic/playwright.config.js
+npx playwright test tests/e2e/new-clinic/specs/pharm-ops-hub.spec.js --config tests/e2e/new-clinic/playwright.config.js
+npx playwright test tests/e2e/new-clinic/specs/report-hub.spec.js --config tests/e2e/new-clinic/playwright.config.js
 ```
 
 ---
 
-## Task 3: Optional V1.2 flags (default OFF)
+## Task 2: Ship to remote
 
-- `enable_hard_provider_assignment` — hard doctor assignment
-- `enable_bill_ops` — billing back office (enable when pilot ready)
-- `enable_admin_hub` — admin hub (enable when pilot ready)
+Push branch and open PR.
 
-Document per-facility scope: facility rows override global; use Admin Hub scope selector when toggling.
+---
+
+## Task 3: Optional follow-ups
+
+- **M16 deferred** — async export (`reports.export` / `reports.export_status`, 5000-row threshold); native immunization / destroyed-drugs cards (P2)
+- O-PHARM-1: optional `pharm_require_lot_on_receive` config (product decision)
+- National controlled-substance schedule alignment (O-PHARM-5 register ships; schedule codes TBD)
+- V1.2 flags: `enable_hard_provider_assignment`, legacy chart strip tuning
 
 ---
 
 ## Verification commands
 
 ```bash
-# Host (XAMPP)
 vendor/bin/phpunit -c phpunit.xml --filter NewClinic
 cd frontend && npm run check && npm run build
-
-# Docker full suite
-cd docker/development-easy
-docker compose exec openemr /root/devtools unit-test
 ```
 
 ---
@@ -92,5 +88,6 @@ docker compose exec openemr /root/devtools unit-test
 ## Reference
 
 - PRD & page designs: `Documentation/NewClinic/README.md`
-- React migration audit: `CODE_AUDIT_2026-06-27-REACT-MIGRATION.md`
+- React islands: `Documentation/FRONTEND_MODULE_GUIDE.md`
+- Migration audit: `CODE_AUDIT_2026-06-27-REACT-MIGRATION.md`
 - Module URL (XAMPP): http://localhost/openemr/interface/modules/custom_modules/oe-module-new-clinic/public/

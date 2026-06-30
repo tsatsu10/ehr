@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { PatientPreview } from '@core/types';
-import { useModalDismiss } from './useModalDismiss';
+import { ConfirmModal, IdentityConfirmBanner } from './ConfirmModal';
 
 interface EsignOverrideModalProps {
   open: boolean;
@@ -46,52 +46,35 @@ function EsignOverrideModalBody({
   };
 
   return (
-    <>
-      <div className="modal fade show d-block" tabIndex={-1} role="dialog" aria-modal="true">
-        <div className="modal-dialog" role="document">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5 className="modal-title">{title}</h5>
-              <button type="button" className="close" aria-label="Close" onClick={onClose}>
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="nc-patient-context-banner p-3 border rounded bg-light mb-3">
-                <strong>{identity.display_name}</strong> · MRN {identity.pubpid}
-                {visit.queue_number !== undefined && (
-                  <> · Queue #{visit.queue_number}</>
-                )}
-              </div>
-              <p className="small text-muted">Supervisor override — reason is recorded in the audit log.</p>
-              <div className="form-group mb-0">
-                <label htmlFor={reasonFieldId}>Reason</label>
-                <textarea
-                  className="form-control"
-                  id={reasonFieldId}
-                  rows={3}
-                  maxLength={200}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                />
-              </div>
-              {error && <div className="alert alert-danger mt-2 mb-0">{error}</div>}
-            </div>
-            <div className="modal-footer">
-              <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-              <button type="button" className="btn btn-warning" onClick={handleConfirm}>
-                {confirmLabel}
-              </button>
-            </div>
-          </div>
-        </div>
+    <ConfirmModal
+      open
+      onClose={onClose}
+      title={title}
+      confirmLabel={confirmLabel}
+      confirmVariant="warning"
+      onConfirm={handleConfirm}
+      identityBanner={(
+        <IdentityConfirmBanner
+          displayName={identity.display_name}
+          pubpid={identity.pubpid}
+          queueNumber={visit.queue_number}
+        />
+      )}
+    >
+      <p className="small text-muted">Supervisor override — reason is recorded in the audit log.</p>
+      <div className="form-group mb-0">
+        <label htmlFor={reasonFieldId}>Reason</label>
+        <textarea
+          className="form-control"
+          id={reasonFieldId}
+          rows={3}
+          maxLength={200}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
       </div>
-      <div
-        className="modal-backdrop fade show"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-    </>
+      {error && <div className="alert alert-danger mt-2 mb-0">{error}</div>}
+    </ConfirmModal>
   );
 }
 
@@ -105,8 +88,6 @@ export function EsignOverrideModal({
   onClose,
   onConfirm,
 }: EsignOverrideModalProps) {
-  useModalDismiss(open, onClose);
-
   if (!open || !preview || !visit) return null;
 
   return (

@@ -25,7 +25,8 @@ const baseCard: VisitCard = {
 describe('QueueCard', () => {
   it('renders queue number and patient name', () => {
     render(<QueueCard card={baseCard} />);
-    expect(screen.getByText(/#3 Jane Doe/)).toBeInTheDocument();
+    expect(screen.getByText('#3')).toBeInTheDocument();
+    expect(screen.getByText('Jane Doe')).toBeInTheDocument();
   });
 
   it('shows the visit type in subtitle', () => {
@@ -40,8 +41,8 @@ describe('QueueCard', () => {
 
   it('masks name in privacy mode', () => {
     render(<QueueCard card={baseCard} privacyMode />);
-    expect(screen.getByText(/#3 Jane D\./)).toBeInTheDocument();
-    expect(screen.queryByText(/Jane Doe/)).not.toBeInTheDocument();
+    expect(screen.getByText('Jane D.')).toBeInTheDocument();
+    expect(screen.queryByText('Jane Doe')).not.toBeInTheDocument();
   });
 
   it('shows URGENT badge for urgent cards', () => {

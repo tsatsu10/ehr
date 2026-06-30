@@ -53,12 +53,35 @@ describe('RegistrationForm', () => {
 
     it('switches accordion sections in react state', () => {
         render(<RegistrationForm {...props} />);
-        expect(document.getElementById('nc-reg-section-1')).not.toHaveClass('d-none');
-        expect(document.getElementById('nc-reg-section-2')).toHaveClass('d-none');
+        expect(document.getElementById('nc-reg-section-1')).toHaveAttribute('data-state', 'open');
+        expect(document.getElementById('nc-reg-section-2')).toHaveAttribute('data-state', 'closed');
 
-        fireEvent.click(screen.getByText(/Section 2: Contact & identity/i));
-        expect(document.getElementById('nc-reg-section-2')).not.toHaveClass('d-none');
-        expect(document.getElementById('nc-reg-section-1')).toHaveClass('d-none');
+        fireEvent.click(screen.getByText(/Contact & identity/i));
+        expect(document.getElementById('nc-reg-section-2')).toHaveAttribute('data-state', 'open');
+        expect(document.getElementById('nc-reg-section-1')).toHaveAttribute('data-state', 'closed');
+    });
+
+    it('switches accordion sections when editing existing patient', async () => {
+        mockFetch.mockImplementation(async (action: string) => {
+            if (action === 'admin.geo.regions') return { regions: [] };
+            if (action === 'patients.registration.get') {
+                return {
+                    section_1: { fname: 'Ada', lname: 'Mensah' },
+                    completion: { score: 60, missing: [] },
+                };
+            }
+            return {};
+        });
+
+        render(<RegistrationForm {...props} pid={42} />);
+        await waitFor(() => {
+            expect(document.getElementById('nc-reg-section-1')).toHaveAttribute('data-state', 'open');
+        });
+        expect(document.getElementById('nc-reg-section-2')).toHaveAttribute('data-state', 'closed');
+
+        fireEvent.click(screen.getByText(/Contact & identity/i));
+        expect(document.getElementById('nc-reg-section-2')).toHaveAttribute('data-state', 'open');
+        expect(document.getElementById('nc-reg-section-1')).toHaveAttribute('data-state', 'closed');
     });
 
     it('does not show dup panel until meaningful input', async () => {
@@ -88,7 +111,7 @@ describe('RegistrationForm', () => {
             return {};
         });
 
-        render(<RegistrationForm {...props} />);
+        render(<RegistrationForm {...props} wizardMode />);
         fireEvent.change(screen.getByLabelText(/First name/i), { target: { value: 'Kwame' } });
 
         await waitFor(() => {
@@ -115,7 +138,7 @@ describe('RegistrationForm', () => {
             return {};
         });
 
-        render(<RegistrationForm {...props} registrationMode="desk_full_form" />);
+        render(<RegistrationForm {...props} registrationMode="desk_full_form" wizardMode />);
         fireEvent.change(screen.getByLabelText(/First name/i), { target: { value: 'Kwame' } });
         fireEvent.change(screen.getByLabelText(/Last name/i), { target: { value: 'Boateng' } });
 

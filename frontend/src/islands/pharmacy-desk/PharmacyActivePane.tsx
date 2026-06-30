@@ -12,11 +12,15 @@ interface PharmacyActivePaneProps {
   blocked: boolean;
   actionError: string | null;
   submitting: boolean;
+  pharmOpsEnabled?: boolean;
+  canDispense?: boolean;
   onTakePatient: () => void;
   onComplete: () => void;
   onSkip: () => void;
   onOpenDispense: () => void;
   onOpenRxEdit: () => void;
+  onDispenseRx?: (prescriptionId: number) => void;
+  onPrintRx?: (prescriptionId: number) => void;
 }
 
 function PatientBanner({ data }: { data: PharmacySelectData }) {
@@ -57,11 +61,15 @@ export function PharmacyActivePane({
   blocked,
   actionError,
   submitting,
+  pharmOpsEnabled = false,
+  canDispense = false,
   onTakePatient,
   onComplete,
   onSkip,
   onOpenDispense,
   onOpenRxEdit,
+  onDispenseRx,
+  onPrintRx,
 }: PharmacyActivePaneProps) {
   if (mode === 'idle') {
     return (
@@ -104,8 +112,28 @@ export function PharmacyActivePane({
         <div className="card-body">
           <PatientBanner data={data} />
 
+          {(data.undispensed_rx_count ?? 0) > 0 ? (
+            <div className="alert alert-warning py-2 mb-3" role="alert">
+              <strong>
+                {data.undispensed_rx_count === 1
+                  ? '1 Rx undispensed'
+                  : `${data.undispensed_rx_count} Rx undispensed`}
+              </strong>
+              {' '}
+              — Pharmacy complete is blocked until dispensed, skipped to payment, or supervisor override.
+            </div>
+          ) : null}
+
           <h5>Prescriptions for this visit</h5>
-          <PharmacyPrescriptionsTable prescriptions={data.prescriptions ?? []} />
+          <PharmacyPrescriptionsTable
+            prescriptions={data.prescriptions ?? []}
+            showStockBadges={pharmOpsEnabled}
+            canDispense={pharmOpsEnabled && canDispense}
+            canPrintRx={!!data.can_print_rx}
+            dispenseBlocked={blocked || !inPharmacy}
+            onDispense={onDispenseRx}
+            onPrintRx={onPrintRx}
+          />
 
           <div className="d-flex flex-wrap mt-3 mb-3">
             <a
@@ -117,15 +145,28 @@ export function PharmacyActivePane({
             >
               Open Rx list (core)
             </a>
-            <button
-              type="button"
-              className="btn btn-outline-secondary btn-sm mr-2"
-              id="nc-pharmacy-open-dispense"
-              disabled={blocked || !inPharmacy}
-              onClick={onOpenDispense}
-            >
-              Open encounter / dispense
-            </button>
+            {pharmOpsEnabled ? (
+              <button
+                type="button"
+                className="btn btn-outline-secondary btn-sm mr-2"
+                id="nc-pharmacy-open-dispense"
+                disabled={blocked || !inPharmacy}
+                onClick={onOpenDispense}
+                title="Legacy stock dispense screen"
+              >
+                Advanced dispense (core)
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-outline-secondary btn-sm mr-2"
+                id="nc-pharmacy-open-dispense"
+                disabled={blocked || !inPharmacy}
+                onClick={onOpenDispense}
+              >
+                Open encounter / dispense
+              </button>
+            )}
             <button
               type="button"
               className="btn btn-outline-secondary btn-sm mr-2"

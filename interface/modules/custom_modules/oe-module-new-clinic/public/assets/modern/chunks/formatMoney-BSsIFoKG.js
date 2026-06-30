@@ -1,0 +1,2 @@
+var e={currency_symbol:``,currency_decimals:2,currency_symbol_position:`before`};function t(t,n=e){let r=n.currency_decimals??2,i=Number(t??0).toFixed(r),a=n.currency_symbol??``;return a?n.currency_symbol_position===`after`?`${i} ${a}`:`${a} ${i}`:i}export{t};
+//# sourceMappingURL=formatMoney-BSsIFoKG.js.map

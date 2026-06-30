@@ -11,11 +11,12 @@ import {
   DataQualitySection,
   EodOpenSection,
   openVisitToPending,
+  ReconciliationSection,
   UnpaidSection,
   UnsignedSection,
   VisitsSection,
 } from './ReportsSections';
-import { initialReportTab, initialVisitDate } from './reportsFormatters';
+import { initialReportTab, initialVisitDate, setReportCurrencyFormat } from './reportsFormatters';
 import type {
   DailyReportData,
   DailyReportsProps,
@@ -31,7 +32,17 @@ const EMPTY_REPORT: DailyReportData = {
   visit_date: '',
   facility_id: 0,
   visits: { started: 0, completed: 0, still_open: 0, cancelled: 0, by_state: {} },
-  cash: { total_collected: 0, receipt_count: 0 },
+  cash: { total_collected: 0, receipt_count: 0, by_category: [] },
+  reconciliation: {
+    status: 'ok',
+    module_total: 0,
+    core_total: 0,
+    delta_amount: 0,
+    tolerance: 0.01,
+    currency_symbol: 'GH₵',
+    latest_run: null,
+    recent_runs: [],
+  },
   open_visits: [],
   eod_open: {},
   unsigned_alerts: { with_doctor: 0, ready_for_payment: 0 },
@@ -41,6 +52,7 @@ const EMPTY_REPORT: DailyReportData = {
     dup_overrides_today: 0,
     billing_threshold: 70,
     completion_buckets: { under_40: 0, from_40_to_69: 0, from_70_to_99: 0, complete_100: 0 },
+    by_registering_user: [],
     stale_incomplete: [],
   },
   unsigned_visits: [],
@@ -59,6 +71,7 @@ export function DailyReports({
   visitBoardUrl,
   canCancelVisit,
   canMarkUnpaid,
+  canRunReconciliation = false,
 }: DailyReportsProps) {
   const [visitDate, setVisitDate] = useState(initialVisitDate);
   const [activeTab, setActiveTab] = useState<ReportTabId>(() => {
@@ -75,6 +88,8 @@ export function DailyReports({
   const [actionSubmitting, setActionSubmitting] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [markUnpaidError, setMarkUnpaidError] = useState<string | null>(null);
+  const [reconRunning, setReconRunning] = useState(false);
+  const [reconError, setReconError] = useState<string | null>(null);
 
   const fetchOptions = useMemo(
     () => ({ ajaxUrl, csrfToken }),
@@ -93,6 +108,9 @@ export function DailyReports({
         ...fetchOptions,
         params,
       });
+      if (data.currency) {
+        setReportCurrencyFormat(data.currency);
+      }
       setReport(data);
       setLastUpdated(new Date());
     } catch (err) {
@@ -136,6 +154,26 @@ export function DailyReports({
   const handleRefresh = useCallback(() => {
     void loadReport();
   }, [loadReport]);
+
+  const handleRunReconciliation = useCallback(async () => {
+    setReconRunning(true);
+    setReconError(null);
+    try {
+      const body: Record<string, unknown> = { run_date: visitDate };
+      const id = Number(facilityId ?? 0);
+      if (id > 0) body.facility_id = id;
+      await oeFetch('admin.reconciliation.run', {
+        ...fetchOptions,
+        method: 'POST',
+        json: body,
+      });
+      await loadReport();
+    } catch (err) {
+      setReconError(err instanceof Error ? err.message : 'Reconciliation failed');
+    } finally {
+      setReconRunning(false);
+    }
+  }, [fetchOptions, facilityId, loadReport, visitDate]);
 
   usePageHeadingDateInput('nc-reports-date', visitDate, handleDateChange);
   usePageHeadingRefresh('nc-reports-refresh', handleRefresh);
@@ -223,6 +261,15 @@ export function DailyReports({
     <>
       {activeTab === 'visits' && <VisitsSection visits={report.visits} />}
       {activeTab === 'cash' && <CashSection cash={report.cash} />}
+      {activeTab === 'reconciliation' && (
+        <ReconciliationSection
+          reconciliation={report.reconciliation}
+          canRun={canRunReconciliation}
+          running={reconRunning}
+          runError={reconError}
+          onRun={() => { void handleRunReconciliation(); }}
+        />
+      )}
       {activeTab === 'open' && (
         <EodOpenSection
           summary={report.eod_open}

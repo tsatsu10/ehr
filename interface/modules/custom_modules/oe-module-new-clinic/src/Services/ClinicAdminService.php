@@ -24,6 +24,10 @@ class ClinicAdminService
         'enable_lab_ops' => ['type' => 'bool', 'default' => '0'],
         'enable_lab_panel_order' => ['type' => 'bool', 'default' => '0'],
         'enable_pharm_ops' => ['type' => 'bool', 'default' => '0'],
+        'enable_pharm_rx_favorites' => ['type' => 'bool', 'default' => '0'],
+        'enable_rx_print' => ['type' => 'bool', 'default' => '0'],
+        'enable_dispense_label' => ['type' => 'bool', 'default' => '0'],
+        'pharm_expiry_warn_days' => ['type' => 'int', 'default' => '90', 'min' => 1, 'max' => 365],
         'allow_multiple_visits_per_day' => ['type' => 'bool', 'default' => '1'],
         'enable_multi_doctor_filters' => ['type' => 'bool', 'default' => '0'],
         'enable_aggressive_orphan_facility_repair' => ['type' => 'bool', 'default' => '0'],
@@ -67,20 +71,25 @@ class ClinicAdminService
         'enable_react_admin_hub' => ['type' => 'bool', 'default' => '1'],
         'enable_react_patient_chart' => ['type' => 'bool', 'default' => '1'],
         'enable_react_lab_ops' => ['type' => 'bool', 'default' => '1'],
+        'enable_react_pharm_ops' => ['type' => 'bool', 'default' => '1'],
         'enable_react_chart_depth' => ['type' => 'bool', 'default' => '1'],
         'enable_bill_ops' => ['type' => 'bool', 'default' => '0'],
         'enable_bill_ops_outstanding' => ['type' => 'bool', 'default' => '0'],
+        'enable_report_hub' => ['type' => 'bool', 'default' => '0'],
+        'report_hub_show_us_quality' => ['type' => 'bool', 'default' => '0'],
         'bill_ops_reopen_on_correction' => ['type' => 'bool', 'default' => '0'],
         'enable_insurance' => ['type' => 'bool', 'default' => '0'],
         'enable_react_bill_ops' => ['type' => 'bool', 'default' => '1'],
+        'enable_react_report_hub' => ['type' => 'bool', 'default' => '1'],
         'pediatric_exact_dob_age' => ['type' => 'int', 'default' => '5', 'min' => 0, 'max' => 18],
+        'currency_code' => ['type' => 'currency_code', 'default' => 'GHS'],
+        'currency_symbol' => ['type' => 'currency_symbol', 'default' => 'GH₵'],
+        'currency_decimals' => ['type' => 'int', 'default' => '2', 'min' => 0, 'max' => 4],
+        'currency_symbol_position' => ['type' => 'currency_position', 'default' => 'before'],
     ];
 
     /** @var array<string, array{type: string, default: string, min?: int, max?: int}> */
     private const READONLY_SETTINGS = [
-        'currency_code' => ['type' => 'string', 'default' => 'GHS'],
-        'currency_symbol' => ['type' => 'string', 'default' => 'GH₵'],
-        'currency_decimals' => ['type' => 'int', 'default' => '2', 'min' => 0, 'max' => 4],
     ];
 
     public function __construct(
@@ -89,6 +98,8 @@ class ClinicAdminService
         private readonly ClinicRolesService $rolesService = new ClinicRolesService(),
         private readonly VisitTypeAdminService $visitTypeAdmin = new VisitTypeAdminService(),
         private readonly FeeScheduleAdminService $feeScheduleAdmin = new FeeScheduleAdminService(),
+        private readonly CashClinicProfileService $cashProfile = new CashClinicProfileService(),
+        private readonly MoneyFormatService $moneyFormat = new MoneyFormatService(),
     ) {
     }
 
@@ -105,7 +116,12 @@ class ClinicAdminService
             $raw = $this->config->get($key, $default, $facilityId) ?? $default;
             if ($meta['type'] === 'bool') {
                 $settings[$key] = (int) $raw === 1;
-            } elseif ($meta['type'] === 'string') {
+            } elseif (
+                $meta['type'] === 'string'
+                || $meta['type'] === 'currency_code'
+                || $meta['type'] === 'currency_symbol'
+                || $meta['type'] === 'currency_position'
+            ) {
                 $settings[$key] = (string) $raw;
             } else {
                 $settings[$key] = (int) $raw;
@@ -131,7 +147,22 @@ class ClinicAdminService
             'fee_schedule' => $this->feeScheduleAdmin->listForAdmin($facilityId),
             'fee_form' => $this->feeScheduleAdmin->getFormMeta(),
             'roles' => $this->rolesService->getRolesPayload(),
+            'cash_profile' => $this->cashProfile->getProfileStatus($facilityId),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function applyCashClinicProfile(string $scope, int $actorUserId, ?int $requestedFacilityId = null): array
+    {
+        $facilityId = $this->resolveSettingsFacilityId($scope, $requestedFacilityId);
+        $result = $this->cashProfile->apply($facilityId, $actorUserId);
+
+        return array_merge(
+            $this->getSettingsPayload($scope, $requestedFacilityId),
+            ['cash_profile_result' => $result]
+        );
     }
 
     /**
@@ -158,12 +189,41 @@ class ClinicAdminService
                     throw new \InvalidArgumentException('Lab Operations requires Lab role to be enabled');
                 }
             }
+            if ($key === 'enable_pharm_ops' && $value === '1') {
+                $pharmRole = array_key_exists('enable_pharmacy_role', $input)
+                    ? $this->normalizeValue('enable_pharmacy_role', self::EDITABLE_SETTINGS['enable_pharmacy_role'], $input['enable_pharmacy_role'])
+                    : $this->config->get('enable_pharmacy_role', '0', $facilityId);
+                if ($pharmRole !== '1') {
+                    throw new \InvalidArgumentException('Pharmacy Operations requires Pharmacy desk to be enabled');
+                }
+                if (empty($GLOBALS['inhouse_pharmacy'])) {
+                    throw new \InvalidArgumentException(
+                        'Pharmacy Operations requires in-house pharmacy to be enabled in OpenEMR globals'
+                    );
+                }
+            }
             if ($key === 'enable_lab_panel_order' && $value === '1') {
                 $labOps = array_key_exists('enable_lab_ops', $input)
                     ? $this->normalizeValue('enable_lab_ops', self::EDITABLE_SETTINGS['enable_lab_ops'], $input['enable_lab_ops'])
                     : $this->config->get('enable_lab_ops', '0', $facilityId);
                 if ($labOps !== '1') {
                     throw new \InvalidArgumentException('Lab panel quick order requires Lab Operations to be enabled');
+                }
+            }
+            if ($key === 'enable_pharm_rx_favorites' && $value === '1') {
+                $pharmOps = array_key_exists('enable_pharm_ops', $input)
+                    ? $this->normalizeValue('enable_pharm_ops', self::EDITABLE_SETTINGS['enable_pharm_ops'], $input['enable_pharm_ops'])
+                    : $this->config->get('enable_pharm_ops', '0', $facilityId);
+                if ($pharmOps !== '1') {
+                    throw new \InvalidArgumentException('Formulary quick prescribe requires Pharmacy Operations to be enabled');
+                }
+            }
+            if ($key === 'enable_dispense_label' && $value === '1') {
+                $pharmOps = array_key_exists('enable_pharm_ops', $input)
+                    ? $this->normalizeValue('enable_pharm_ops', self::EDITABLE_SETTINGS['enable_pharm_ops'], $input['enable_pharm_ops'])
+                    : $this->config->get('enable_pharm_ops', '0', $facilityId);
+                if ($pharmOps !== '1') {
+                    throw new \InvalidArgumentException('Dispense labels require Pharmacy Operations to be enabled');
                 }
             }
             $previous = $this->config->get($key, $meta['default'], $facilityId);
@@ -186,6 +246,11 @@ class ClinicAdminService
                 1,
                 'facility_id=' . $facilityId . ' keys=' . implode(',', $changed)
             );
+        }
+
+        $currencyKeys = ['currency_code', 'currency_symbol', 'currency_decimals', 'currency_symbol_position'];
+        if (!empty(array_intersect($changed, $currencyKeys))) {
+            $this->moneyFormat->syncOpenEmrGlobals($facilityId, $actorUserId);
         }
 
         return $this->getSettingsPayload($scope, $requestedFacilityId);
@@ -218,6 +283,33 @@ class ClinicAdminService
      */
     private function normalizeValue(string $key, array $meta, mixed $raw): string
     {
+        if ($meta['type'] === 'currency_code') {
+            $value = strtoupper(trim((string) $raw));
+            if (!preg_match('/^[A-Z]{3}$/', $value)) {
+                throw new \InvalidArgumentException('Invalid ISO 4217 currency code for ' . $key);
+            }
+
+            return $value;
+        }
+
+        if ($meta['type'] === 'currency_symbol') {
+            $value = trim((string) $raw);
+            if ($value === '') {
+                throw new \InvalidArgumentException('Invalid value for ' . $key);
+            }
+
+            return mb_substr($value, 0, 16);
+        }
+
+        if ($meta['type'] === 'currency_position') {
+            $value = strtolower(trim((string) $raw));
+            if ($value !== 'before' && $value !== 'after') {
+                throw new \InvalidArgumentException('Invalid currency symbol position');
+            }
+
+            return $value;
+        }
+
         if ($meta['type'] === 'bool') {
             return !empty($raw) && $raw !== '0' && $raw !== 'false' ? '1' : '0';
         }
@@ -302,6 +394,10 @@ class ClinicAdminService
 
         if ($anyChartDepthSubOn) {
             $input['enable_chart_depth'] = '1';
+        }
+
+        if (self::rawBoolish($input['report_hub_show_us_quality'] ?? false)) {
+            $input['enable_report_hub'] = '1';
         }
 
         return $input;

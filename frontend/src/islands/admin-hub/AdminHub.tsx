@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
+import { ConfirmModal } from '@components/ConfirmModal';
 import { collectAdminSettings } from './adminFieldDefs';
 import { applyAdminSettingCoupling } from './adminSettingCoupling';
 import type {
@@ -9,6 +10,7 @@ import type {
   AdminTabId,
   BillingCode,
   BillingCodeType,
+  CashProfileStatus,
   FeeCategoryOption,
   FeeImportSummary,
   FeeScheduleRow,
@@ -31,6 +33,13 @@ import { useAdminPageHeading } from './useAdminPageHeading';
 function isAdminTabId(value: string): value is AdminTabId {
   return ADMIN_TABS.some((tab) => tab.id === value);
 }
+
+type AdminConfirm =
+  | { type: 'scope_switch'; nextScope: AdminScope }
+  | { type: 'archive_visit_type'; row: VisitTypeRow }
+  | { type: 'archive_fee'; row: FeeScheduleRow }
+  | { type: 'grant_roles' }
+  | { type: 'cash_profile' };
 
 export function AdminHub({
   ajaxUrl,
@@ -63,6 +72,8 @@ export function AdminHub({
   const [roleGroups, setRoleGroups] = useState<AdminConfigPayload['roles']>({});
   const [reconciliationStatus, setReconciliationStatus] = useState('Last run: not loaded yet');
   const [reconciliationRunning, setReconciliationRunning] = useState(false);
+  const [cashProfile, setCashProfile] = useState<CashProfileStatus>({ applied: false });
+  const [cashProfileApplying, setCashProfileApplying] = useState(false);
 
   const [visitTypeModalOpen, setVisitTypeModalOpen] = useState(false);
   const [visitTypeEdit, setVisitTypeEdit] = useState<VisitTypeRow | null>(null);
@@ -79,6 +90,7 @@ export function AdminHub({
   const [feeCsv, setFeeCsv] = useState('');
   const [feeImporting, setFeeImporting] = useState(false);
   const [grantingRoles, setGrantingRoles] = useState(false);
+  const [pendingConfirm, setPendingConfirm] = useState<AdminConfirm | null>(null);
 
   const fetchOptions = useMemo(
     () => ({ ajaxUrl, csrfToken }),
@@ -105,6 +117,7 @@ export function AdminHub({
     setBillingCodeTypes(data.billing_code_types ?? []);
     setDefaultCodeType(data.default_code_type ?? 'CPT4');
     setRoleGroups(data.roles ?? {});
+    setCashProfile(data.cash_profile ?? { applied: false });
     setDirty(false);
   }, [clinicFacilityId]);
 
@@ -188,7 +201,8 @@ export function AdminHub({
   });
 
   const handleScopeChange = useCallback((nextScope: AdminScope) => {
-    if (dirty && !window.confirm('Discard unsaved changes and switch settings scope?')) {
+    if (dirty) {
+      setPendingConfirm({ type: 'scope_switch', nextScope });
       return;
     }
     setScope(nextScope);
@@ -267,7 +281,6 @@ export function AdminHub({
   }, [calendarCategories, facilityId, fetchOptions]);
 
   const archiveVisitType = useCallback(async (row: VisitTypeRow) => {
-    if (!window.confirm(`Archive visit type "${row.label}"?`)) return;
     try {
       const data = await oeFetch<AdminConfigPayload>('admin.visit_type.archive', {
         ...fetchOptions,
@@ -322,7 +335,6 @@ export function AdminHub({
   }, [facilityId, fetchOptions]);
 
   const archiveFee = useCallback(async (row: FeeScheduleRow) => {
-    if (!window.confirm(`Archive fee line "${row.name}"?`)) return;
     try {
       const data = await oeFetch<AdminConfigPayload>('admin.fee.archive', {
         ...fetchOptions,
@@ -365,12 +377,13 @@ export function AdminHub({
   }, [feeCsv, feeSchedule, facilityId, fetchOptions]);
 
   const grantSelfRoles = useCallback(async () => {
-    if (!window.confirm('Grant all New Clinic desk groups to your account? Log out and back in afterward.')) {
-      return;
-    }
     setGrantingRoles(true);
     try {
-      const result = await oeFetch<{ message?: string }>('admin.roles.grant_self', fetchOptions);
+      const result = await oeFetch<{ message?: string }>('admin.roles.grant_self', {
+        ...fetchOptions,
+        method: 'POST',
+        json: {},
+      });
       setSuccessMessage(result.message ?? 'Roles granted.');
       setErrorMessage(null);
     } catch (err) {
@@ -404,6 +417,26 @@ export function AdminHub({
       setReconciliationRunning(false);
     }
   }, [fetchOptions, loadReconciliationStatus]);
+
+  const applyCashProfile = useCallback(async () => {
+    setCashProfileApplying(true);
+    setErrorMessage(null);
+    try {
+      const data = await oeFetch<AdminConfigPayload>('admin.profile.apply_cash_clinic', {
+        ...fetchOptions,
+        json: {
+          scope,
+          facility_id: facilityId,
+        },
+      });
+      applyPayload(data);
+      setSuccessMessage('Cash clinic profile applied.');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Apply cash clinic profile failed');
+    } finally {
+      setCashProfileApplying(false);
+    }
+  }, [applyPayload, facilityId, fetchOptions, scope]);
 
   const roles = roleGroups ?? {};
 
@@ -463,7 +496,7 @@ export function AdminHub({
                 roleGroups={roles.role_groups ?? []}
                 sensitivePermissions={roles.sensitive_permissions ?? []}
                 aclInventory={roles.acl_inventory ?? []}
-                onGrantSelf={() => { void grantSelfRoles(); }}
+                onGrantSelf={() => setPendingConfirm({ type: 'grant_roles' })}
                 granting={grantingRoles}
               />
             )}
@@ -473,9 +506,12 @@ export function AdminHub({
             {activeTab === 'clinic' && (
               <ClinicTab
                 settings={settings}
+                cashProfile={cashProfile}
+                cashProfileApplying={cashProfileApplying}
                 reconciliationStatus={reconciliationStatus}
                 reconciliationRunning={reconciliationRunning}
                 onFieldChange={handleFieldChange}
+                onApplyCashProfile={() => setPendingConfirm({ type: 'cash_profile' })}
                 onRunReconciliation={() => { void runReconciliation(); }}
               />
             )}
@@ -485,7 +521,7 @@ export function AdminHub({
                 calendarCategories={calendarCategories ?? []}
                 onAdd={() => openVisitTypeModal(null)}
                 onEdit={(row) => openVisitTypeModal(row)}
-                onArchive={(row) => { void archiveVisitType(row); }}
+                onArchive={(row) => setPendingConfirm({ type: 'archive_visit_type', row })}
               />
             )}
             {activeTab === 'fees' && (
@@ -498,7 +534,7 @@ export function AdminHub({
                 onCsvChange={setFeeCsv}
                 onAdd={() => { void openFeeModal(null); }}
                 onEdit={(row) => { void openFeeModal(row); }}
-                onArchive={(row) => { void archiveFee(row); }}
+                onArchive={(row) => setPendingConfirm({ type: 'archive_fee', row })}
                 onImport={() => { void importFees(); }}
               />
             )}
@@ -533,6 +569,70 @@ export function AdminHub({
         onCodeTypeChange={(codeType) => { void loadBillingCodes(codeType); }}
         onSave={(payload) => { void saveFee(payload); }}
       />
+
+      <ConfirmModal
+        open={!!pendingConfirm}
+        onClose={() => setPendingConfirm(null)}
+        title={
+          pendingConfirm?.type === 'scope_switch' ? 'Switch settings scope?'
+            : pendingConfirm?.type === 'archive_visit_type' ? 'Archive visit type?'
+              : pendingConfirm?.type === 'archive_fee' ? 'Archive fee line?'
+                : pendingConfirm?.type === 'grant_roles' ? 'Grant desk roles?'
+                  : 'Apply cash clinic profile?'
+        }
+        modalId="nc-admin-confirm-modal"
+        cancelLabel="Cancel"
+        confirmLabel={
+          pendingConfirm?.type === 'scope_switch' ? 'Switch'
+            : pendingConfirm?.type === 'grant_roles' ? 'Grant roles'
+              : pendingConfirm?.type === 'cash_profile' ? 'Apply profile'
+                : 'Archive'
+        }
+        confirmVariant={
+          pendingConfirm?.type === 'archive_visit_type' || pendingConfirm?.type === 'archive_fee'
+            ? 'danger'
+            : 'warning'
+        }
+        onConfirm={() => {
+          if (!pendingConfirm) return;
+          if (pendingConfirm.type === 'scope_switch') {
+            setScope(pendingConfirm.nextScope);
+            setDirty(false);
+            setSuccessMessage(null);
+            setErrorMessage(null);
+          } else if (pendingConfirm.type === 'archive_visit_type') {
+            void archiveVisitType(pendingConfirm.row);
+          } else if (pendingConfirm.type === 'archive_fee') {
+            void archiveFee(pendingConfirm.row);
+          } else if (pendingConfirm.type === 'grant_roles') {
+            void grantSelfRoles();
+          } else if (pendingConfirm.type === 'cash_profile') {
+            void applyCashProfile();
+          }
+          setPendingConfirm(null);
+        }}
+      >
+        {pendingConfirm?.type === 'scope_switch' && (
+          <p className="mb-0">Discard unsaved changes and switch settings scope?</p>
+        )}
+        {pendingConfirm?.type === 'archive_visit_type' && (
+          <p className="mb-0">Archive visit type &quot;{pendingConfirm.row.label}&quot;?</p>
+        )}
+        {pendingConfirm?.type === 'archive_fee' && (
+          <p className="mb-0">Archive fee line &quot;{pendingConfirm.row.name}&quot;?</p>
+        )}
+        {pendingConfirm?.type === 'grant_roles' && (
+          <p className="mb-0">
+            Grant all New Clinic desk groups to your account? Log out and back in afterward.
+          </p>
+        )}
+        {pendingConfirm?.type === 'cash_profile' && (
+          <p className="mb-0">
+            Apply the cash clinic profile? This updates OpenEMR globals (E-Sign, currency symbol,
+            eligibility, search UI) and enables pinned reception preview. Changes are logged.
+          </p>
+        )}
+      </ConfirmModal>
     </div>
   );
 }

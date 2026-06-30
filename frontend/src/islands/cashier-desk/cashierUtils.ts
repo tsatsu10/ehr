@@ -1,7 +1,19 @@
+import type { CurrencyFormat } from '@core/formatMoney';
+import { formatMoney as formatMoneyCore } from '@core/formatMoney';
 import type { CashierChargeLine, CashierDiscountLine, CashierFeeScheduleItem, CashierStagedLine } from '@core/types';
 
+let currencyFormat: CurrencyFormat = {
+  currency_symbol: '',
+  currency_decimals: 2,
+  currency_symbol_position: 'before',
+};
+
+export function setCashierCurrencyFormat(format: CurrencyFormat): void {
+  currencyFormat = format;
+}
+
 export function formatMoney(amount: number | null | undefined): string {
-  return Number(amount ?? 0).toFixed(2);
+  return formatMoneyCore(amount, currencyFormat);
 }
 
 export function newClientRequestId(): string {

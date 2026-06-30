@@ -1,6 +1,6 @@
 # OpenEMR Frontend Modernization Plan (2026)
 
-> **Status:** Proposal · **Date:** 2026-06-15  
+> **Status:** In progress — **New Clinic module islands shipped (June 2026)** · **Date:** 2026-06-15 (updated 2026-06-28)  
 > **Scope:** Frameworks, build tooling, charts, design system, and phased migration strategy  
 > **Design system source:** [ui-ux-pro-max](../../.cursor/skills/ui-ux-pro-max/) — persisted at [`design-system/openemr-2026/MASTER.md`](../../design-system/openemr-2026/MASTER.md)
 
@@ -8,21 +8,24 @@
 
 ## Executive Summary
 
-OpenEMR’s frontend is a **mature, layered legacy stack** (PHP views + Twig, Knockout shell, jQuery, Bootstrap 4, Gulp/SASS) with **three chart libraries**, **no first-party TypeScript/React/Vue source**, and **~1,000 interface PHP files**. A 2026-ready UI cannot be achieved with a single framework swap.
+OpenEMR’s frontend is a **mature, layered legacy stack** (PHP views + Twig, Knockout shell, jQuery, Bootstrap 4, Gulp/SASS) with **three chart libraries** and **~1,000 interface PHP files**. A 2026-ready UI cannot be achieved with a single framework swap.
 
 **Recommended strategy:** **Strangler-fig modernization** — keep PHP/Twig as the server rendering layer, introduce a **Vite + React 19 + TypeScript** “modern shell” for new and high-traffic surfaces, unify **charts and data tables**, adopt a **token-based accessible design system**, and retire legacy libraries incrementally.
 
-| Dimension | Today | 2026 Target |
-|-----------|-------|-------------|
-| App shell | Knockout.js + iframes (`main/tabs`) | React shell (or hybrid) with route-based panels |
-| CSS | Bootstrap 4.6 + 74 SCSS theme files + Gulp | Design tokens + Tailwind 4 + Bootstrap 5 bridge |
-| Build | Gulp 4 (themes/assets only) | Vite 6 (app bundles) + Gulp (themes, transitional) |
-| Charts | Chart.js 4, Dygraphs, Flot | **Chart.js 4** (clinical trends) + **Recharts** (dashboards via shadcn) |
-| Tables | DataTables.net + jQuery | TanStack Table + shadcn DataTable pattern |
-| Forms | jQuery Validation, validate.js, LForms | React Hook Form + Zod (new UI); LForms retained for FHIR |
-| Icons | Font Awesome 6 | Lucide React (new) + FA (legacy bridge) |
-| i18n | i18next (partial) + PHP `xl()` | i18next + ICU messages shared PHP/JS |
-| Browser targets | IE 8+ in `browserslist` | Evergreen only (Chrome, Firefox, Safari, Edge) |
+**New Clinic (`oe-module-new-clinic`) — implemented June 2026:** All role desks and hub pages render via **React islands** (`frontend/` workspace, 16 Vite entries, Vitest). Legacy module desk jQuery was removed; PHP/Twig still owns auth, ACL, and page shell.
+
+| Dimension | Today (core OpenEMR) | New Clinic module (shipped) | 2026 Target (platform-wide) |
+|-----------|----------------------|----------------------------|----------------------------|
+| App shell | Knockout.js + iframes (`main/tabs`) | T1 PHP/Twig shell + React islands | React shell (or hybrid) with route-based panels |
+| CSS | Bootstrap 4.6 + 74 SCSS theme files + Gulp | Bootstrap 4 chrome + island BEM + tokens | Design tokens + Tailwind 4 + Bootstrap 5 bridge |
+| Build | Gulp 4 (themes/assets only) | **Vite 8** (`frontend/` → module `assets/modern/`) | Vite (app bundles) + Gulp (themes, transitional) |
+| Desk / queue UI | jQuery + Knockout | **React 19 + TypeScript** | Same pattern extended to other modules |
+| Charts | Chart.js 4, Dygraphs, Flot | Stock deep links unchanged | **Chart.js 4** + **Recharts** dashboards |
+| Tables | DataTables.net + jQuery | Custom React tables / queue cards | TanStack Table + shadcn DataTable pattern |
+| Forms | jQuery Validation, validate.js, LForms | React forms in islands; stock encounter forms via deep link | React Hook Form + Zod (new UI); LForms retained for FHIR |
+| Icons | Font Awesome 6 | FA in shell; Lucide optional in islands | Lucide React (new) + FA (legacy bridge) |
+| i18n | i18next (partial) + PHP `xl()` | PHP `xl()` + React props from Twig | i18next + ICU messages shared PHP/JS |
+| Browser targets | IE 8+ in `browserslist` (core) | Evergreen only (`frontend/package.json`) | Evergreen only |
 
 ---
 
@@ -36,7 +39,7 @@ OpenEMR’s frontend is a **mature, layered legacy stack** (PHP views + Twig, Kn
 | Twig templates | ~269 files | Modern template path (forms, portal, clinical notes) |
 | Interface JS | ~137 files | Mostly vanilla jQuery / Knockout view models |
 | SCSS themes | 74 files under `interface/themes/` | Color themes, tabs, patient modules |
-| TypeScript/React/Vue (first-party) | **0** | Only vendor `.d.ts` in `public/assets/` |
+| TypeScript/React (first-party) | **`frontend/` workspace** | New Clinic: 16 Vite island entries, Vitest; core OpenEMR still 0 SPA source |
 
 ### 1.2 Core technology stack (from `package.json` + `CLAUDE.md`)
 
@@ -121,25 +124,26 @@ Patient portal (`portal/`, `templates/portal/`) is **Twig-forward** with legacy 
 - **CKEditor 5**, **i18next**, **DOMPurify** are modern
 - **Symfony events** for module asset injection
 - **REST/FHIR APIs** (`/api/`, FHIR) can back a SPA data layer
-- Internal PRDs (e.g. `NEW_CLINIC_V1_PRD.md`) intentionally defer new frameworks in V1 — this plan picks up **after** that pragmatic phase
-- **New Clinic V1 UI/UX:** consolidated in [`NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md`](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) — Bootstrap 4 + jQuery + T1 Twig shell for pilot; design tokens optional via scoped CSS (see COM §15)
+- **New Clinic React islands** — `frontend/` + [`FRONTEND_MODULE_GUIDE.md`](../FRONTEND_MODULE_GUIDE.md) (desks + hubs shipped June 2026)
+- Internal PRDs (e.g. `NEW_CLINIC_V1_PRD.md`) originally deferred new frameworks in V1 — **module UI has since migrated to React islands** while core OpenEMR tab shell remains legacy
+- **New Clinic V1 UI/UX:** [`NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md`](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) **(v2.0.0)** — Bootstrap 4 page chrome + React island components; tokens via `frontend/src/core/tokens.css`; module-scoped shadcn migration plan in §9
 
-### 1.10 New Clinic V1 bridge (pilot UI)
+### 1.10 New Clinic module — current UI stack (June 2026)
 
-The New Clinic module (`oe-module-new-clinic`) ships **before** the React shell migration. V1 UI constraints:
+The New Clinic module (`oe-module-new-clinic`) is the **first production consumer** of the Vite + React island pattern:
 
-| Area | V1 implementation | FRONTEND_2026 phase |
-|------|-------------------|---------------------|
-| App shell | T1 PHP/Twig top bar + module nav | Phase 3 — modern shell |
-| Role desks, Visit Board | Bootstrap 4 + jQuery + module SCSS | Phase 1–2 islands where high value |
-| Communications Hub | Standalone hub → T1 wrap (COM Phase 4) | Phase 2 |
-| MRD / chart | Server-render + lazy AJAX tabs | Phase 1 patient summary island |
-| Design tokens | `design-system/openemr-2026/MASTER.md` — optional; scoped under module classes | Phase 0 — canonical |
-| Charts (vitals/labs) | Stock Dygraphs / Chart.js | Phase 1 — unified Chart.js |
+| Area | Implementation |
+|------|----------------|
+| App shell | T1 PHP/Twig top bar + module nav (`shell.js` for nav/role switch only) |
+| Role desks, Visit Board, Front Desk | React islands — `frontend/src/islands/*-desk/`, `visit-board/` |
+| Hubs (admin, comms, registry, reports, chart depth, bill ops, lab ops, MRD) | React islands behind **product** flags (`enable_bill_ops`, etc.) |
+| AJAX / auth | PHP `public/ajax.php` + `oeFetch` (CSRF-aware) from React |
+| Design tokens | `frontend/src/core/tokens.css` + module SCSS for shell |
+| Build / test | `npm run frontend:build` · Vitest · Playwright smoke + golden-path E2E |
 
-**Authoritative docs:** [UI/UX Design Plan](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) (principles + map) · [PAGE_DESIGNS](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (wireframes) · 19 feature `*_REDESIGN.md` specs (domain depth).
+**Authoritative docs:** [FRONTEND_MODULE_GUIDE.md](../FRONTEND_MODULE_GUIDE.md) · [UI/UX Design Plan](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) · [PAGE_DESIGNS](./NEW_CLINIC_V1_PAGE_DESIGNS.md)
 
-**Do not** introduce React/Vite bundles into V1 pilot pages without an explicit post-pilot slice decision — breaks the PRD §5.6 legacy-fallback rule.
+Legacy module desk jQuery was **removed** (w50react). Stock OpenEMR deep-link pages (encounter, Rx, lab results) remain core jQuery/Knockout with optional legacy patient context strip injection.
 
 ---
 
@@ -284,6 +288,8 @@ flowchart TB
 | Full SPA (Next.js) | Rejected — fights OpenEMR’s PHP session model and iframe history |
 
 ### 3.3 UI component library: shadcn/ui + Tailwind CSS 4
+
+> **New Clinic-specific cutover:** The phased migration of New Clinic's shipped React islands from BEM (`oe-nc-*`) to shadcn primitives is detailed in [NEW_CLINIC_V1_UI_UX_DESIGN_PLAN §9](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md#9-shadcnui-migration-plan) (Phase A tokens → Phase B drop-in wrappers → Phase C behavior-bearing primitives → Phase D composites/greenfield → Phase E retire BEM). That doc is the source of truth for module shadcn work; this section gives the platform-wide rationale.
 
 Why shadcn (per ui-ux-pro-max stack guidance):
 

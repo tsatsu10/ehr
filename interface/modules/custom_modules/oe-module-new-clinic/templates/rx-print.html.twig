@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ 'Prescription'|xlt }} — {{ rx.patient.display_name|text }}</title>
+    <style>
+        body {
+            font-family: Georgia, 'Times New Roman', serif;
+            margin: 0;
+            padding: 1.25rem;
+            color: #111;
+            max-width: 210mm;
+        }
+        .clinic-header {
+            text-align: center;
+            border-bottom: 2px solid #111;
+            padding-bottom: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .clinic-name {
+            font-size: 1.25rem;
+            font-weight: bold;
+            letter-spacing: 0.02em;
+        }
+        .clinic-meta {
+            font-size: 0.85rem;
+            color: #444;
+            margin-top: 0.25rem;
+        }
+        .rx-title {
+            text-align: center;
+            font-size: 1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin: 1rem 0;
+        }
+        .patient-block {
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+        .patient-block strong {
+            display: inline-block;
+            min-width: 5rem;
+        }
+        .drug-block {
+            border: 1px solid #222;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .drug-name {
+            font-size: 1.15rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .sig-line {
+            font-size: 1rem;
+            margin: 0.35rem 0;
+        }
+        .prescriber {
+            margin-top: 2rem;
+            border-top: 1px solid #999;
+            padding-top: 1rem;
+        }
+        .prescriber-line {
+            margin: 0.35rem 0;
+        }
+        .footer-note {
+            margin-top: 1.5rem;
+            font-size: 0.8rem;
+            color: #555;
+            text-align: center;
+        }
+        .no-print {
+            margin-bottom: 1rem;
+        }
+        @media print {
+            .no-print { display: none; }
+            body { padding: 0.5in; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button type="button" onclick="window.print()">{{ 'Print'|xlt }}</button>
+        <button type="button" onclick="window.close()">{{ 'Close'|xlt }}</button>
+    </div>
+
+    <header class="clinic-header">
+        <div class="clinic-name">{{ rx.clinic.name|text }}</div>
+        {% if rx.clinic.address or rx.clinic.phone %}
+        <div class="clinic-meta">
+            {% if rx.clinic.address %}{{ rx.clinic.address|text }}{% endif %}
+            {% if rx.clinic.phone %} · {{ rx.clinic.phone|text }}{% endif %}
+        </div>
+        {% endif %}
+    </header>
+
+    <div class="rx-title">{{ 'Prescription'|xlt }}</div>
+
+    <div class="patient-block">
+        <div><strong>{{ 'Patient'|xlt }}:</strong> {{ rx.patient.display_name|text }}</div>
+        {% if rx.patient.mrn %}
+        <div><strong>{{ 'MRN'|xlt }}:</strong> {{ rx.patient.mrn|text }}</div>
+        {% endif %}
+        {% if rx.patient.age_display or rx.patient.sex_display %}
+        <div>
+            <strong>{{ 'Age / Sex'|xlt }}:</strong>
+            {% if rx.patient.age_display %}{{ rx.patient.age_display|text }}{% endif %}
+            {% if rx.patient.sex_display %} · {{ rx.patient.sex_display|text }}{% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="drug-block">
+        <div class="drug-name">℞ {{ rx.drug.display_name|text }}</div>
+        {% if rx.drug.sig %}
+        <div class="sig-line"><strong>{{ 'Sig'|xlt }}:</strong> {{ rx.drug.sig|text }}</div>
+        {% endif %}
+        {% if rx.drug.quantity %}
+        <div class="sig-line"><strong>{{ 'Qty'|xlt }}:</strong> {{ rx.drug.quantity|text }}</div>
+        {% endif %}
+        {% if rx.drug.refills is defined and rx.drug.refills > 0 %}
+        <div class="sig-line"><strong>{{ 'Refills'|xlt }}:</strong> {{ rx.drug.refills|text }}</div>
+        {% endif %}
+        {% if rx.drug.note %}
+        <div class="sig-line"><strong>{{ 'Note'|xlt }}:</strong> {{ rx.drug.note|text }}</div>
+        {% endif %}
+    </div>
+
+    <div class="prescriber">
+        <div class="prescriber-line"><strong>{{ 'Prescriber'|xlt }}:</strong> {{ rx.prescriber.display_name|text }}</div>
+        {% if rx.prescriber.reg_number %}
+        <div class="prescriber-line"><strong>{{ 'Reg #'|xlt }}:</strong> {{ rx.prescriber.reg_number|text }}</div>
+        {% endif %}
+        <div class="prescriber-line"><strong>{{ 'Date'|xlt }}:</strong> {{ rx.printed_at|text }}</div>
+    </div>
+
+    <div class="footer-note">{{ 'For dispensing at a licensed community pharmacy.'|xlt }}</div>
+
+    {% if auto_print %}
+    <script>window.addEventListener('load', function () { window.print(); });</script>
+    {% endif %}
+</body>
+</html>

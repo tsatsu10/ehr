@@ -70,6 +70,11 @@ $pilotUsers = [
         'lname' => 'Pharmacy',
         'groups' => ['Clinicians', 'New Clinic Pharmacy'],
     ],
+    'pharmacy_lead_user' => [
+        'fname' => 'Pilot',
+        'lname' => 'PharmLead',
+        'groups' => ['Clinicians', 'New Clinic Pharmacy Lead'],
+    ],
     'cashier_user' => [
         'fname' => 'Pilot',
         'lname' => 'Cashier',

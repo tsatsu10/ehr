@@ -68,13 +68,23 @@ function envelopeErrorCode(data: unknown): string {
 
 /** Merge csrf_token_form into JSON POST bodies when not already present. */
 export function withCsrfBody(json: unknown, csrfToken: string, method: string): unknown {
-  if (csrfToken === '' || method === 'GET' || json === undefined) return json;
+  if (method === 'GET' || json === undefined) return json;
   if (typeof json !== 'object' || json === null || Array.isArray(json)) return json;
 
   const obj = json as Record<string, unknown>;
-  if (obj.csrf_token_form !== undefined || obj.csrf_token !== undefined) return json;
+  const existing = String(obj.csrf_token_form ?? obj.csrf_token ?? '').trim();
+  if (existing !== '') return json;
+  if (csrfToken.trim() === '') return json;
 
   return { ...obj, csrf_token_form: csrfToken };
+}
+
+function resolveCsrfToken(explicit?: string): string {
+  const fromOptions = explicit?.trim() ?? '';
+  if (fromOptions !== '') return fromOptions;
+
+  const fromShell = readPageContext()?.csrfToken?.trim() ?? '';
+  return fromShell;
 }
 
 function parseEnvelope<T>(raw: string): OeEnvelope<T> | null {
@@ -96,7 +106,7 @@ export async function oeFetch<T>(
 ): Promise<T> {
   const ctx = readPageContext();
   const ajaxUrl = options.ajaxUrl ?? ctx?.ajaxUrl ?? '';
-  const csrfToken = options.csrfToken ?? ctx?.csrfToken ?? '';
+  const csrfToken = resolveCsrfToken(options.csrfToken ?? ctx?.csrfToken);
 
   if (ajaxUrl === '') {
     throw new OeFetchError(

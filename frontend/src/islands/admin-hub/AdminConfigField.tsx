@@ -44,6 +44,25 @@ export function AdminConfigField({ def, value, onChange }: AdminConfigFieldProps
     );
   }
 
+  if (def.type === 'select' && def.choices) {
+    return (
+      <div className={`form-group${indentClass}`}>
+        <label htmlFor={id}>{def.label}</label>
+        <select
+          className="form-control w-auto"
+          id={id}
+          value={value === undefined || value === null ? '' : String(value)}
+          onChange={(e) => onChange(def.key, e.target.value)}
+        >
+          {def.choices.map((choice) => (
+            <option key={choice.value} value={choice.value}>{choice.label}</option>
+          ))}
+        </select>
+        {def.hint && <small className="form-text text-muted">{def.hint}</small>}
+      </div>
+    );
+  }
+
   return (
     <div className={`form-group${indentClass}`}>
       <label htmlFor={id}>{def.label}</label>

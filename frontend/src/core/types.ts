@@ -380,6 +380,11 @@ export interface DoctorConsultPayload {
   supervisor_id?: number | null;
   supervisor_display_name?: string | null;
   supervisor_from_profile?: boolean;
+  pharm_ops_enabled?: boolean;
+  rx_print_enabled?: boolean;
+  can_print_rx?: boolean;
+  prescriptions?: PharmacyPrescriptionLine[];
+  rx_list_url?: string;
 }
 
 export interface DoctorDoneTodayRow {
@@ -421,6 +426,12 @@ export interface DoctorDeskProps {
   multiDoctorFilters?: boolean;
   sharedDeviceWarning?: boolean;
   labPanelOrderEnabled?: boolean;
+  formularyRxEnabled?: boolean;
+  currencyFormat?: {
+    currency_symbol?: string;
+    currency_decimals?: number;
+    currency_symbol_position?: 'before' | 'after';
+  };
 }
 
 /** Provider row from doctor.search_providers */
@@ -456,6 +467,40 @@ export interface LabPanelCatalogData {
   has_catalog: boolean;
   currency_symbol: string;
   auto_bill_on_order: boolean;
+}
+
+/** One drug in the doctor quick formulary catalog */
+export interface FormularyRxCatalogDrug {
+  drug_id: number;
+  name: string;
+  display_name?: string;
+  dosage?: string;
+  quantity?: string;
+  route?: string;
+  period_days?: number;
+  fee_amount?: number | null;
+  has_fee?: boolean;
+  is_starter?: boolean;
+  stock_status?: string;
+  qoh_display?: string | null;
+}
+
+/** Response from doctor.formulary_rx_catalog */
+export interface FormularyRxCatalogData {
+  enabled: boolean;
+  drugs: FormularyRxCatalogDrug[];
+  has_catalog: boolean;
+  currency_symbol?: string;
+  starter_drug_names?: string[];
+  drug_count?: number;
+}
+
+/** Response from doctor.formulary_rx_place */
+export interface FormularyRxPlaceResult {
+  visit_id: number;
+  prescription_ids: number[];
+  prescription_count: number;
+  prescriptions?: PharmacyPrescriptionLine[];
 }
 
 /** Response from doctor.lab_panel_place */
@@ -648,6 +693,12 @@ export interface CashierDeskProps {
   canApplyDiscount?: boolean;
   canEsignOverride?: boolean;
   sharedDeviceWarning?: boolean;
+  currencyFormat?: {
+    currency_code?: string;
+    currency_symbol?: string;
+    currency_decimals?: number;
+    currency_symbol_position?: 'before' | 'after';
+  };
 }
 
 // ── Lab desk domain types ─────────────────────────────────────────────────
@@ -751,6 +802,7 @@ export interface PharmacyQueueCard {
   pharmacy_mine?: boolean;
   pharmacy_actor_name?: string | null;
   rx_count?: number;
+  undispensed_rx_count?: number;
   row_version?: number | null;
   claim_lost?: boolean;
 }
@@ -774,6 +826,8 @@ export interface PharmacyPrescriptionLine {
   status: 'dispensed' | 'to_dispense';
   start_date?: string | null;
   end_date?: string | null;
+  stock_status?: 'in_stock' | 'low' | 'out_of_stock' | 'unknown' | string;
+  qoh_display?: string;
 }
 
 /** Response from pharmacy.queue */
@@ -784,6 +838,7 @@ export interface PharmacyQueueData {
   active_work?: PharmacyVisit | null;
   has_active_work: boolean;
   visit_date?: string;
+  pharm_ops_enabled?: boolean;
 }
 
 /** Response from pharmacy.select / pharmacy.take / pharmacy.complete */
@@ -795,6 +850,12 @@ export interface PharmacySelectData {
   skipped_triage?: boolean;
   session_bound?: boolean;
   can_skip_to_payment?: boolean;
+  pharm_ops_enabled?: boolean;
+  can_dispense?: boolean;
+  rx_print_enabled?: boolean;
+  can_print_rx?: boolean;
+  undispensed_rx_count?: number;
+  can_undispensed_override?: boolean;
 }
 
 /** Pharmacy island props (passed via data-props JSON from Twig) */
@@ -807,6 +868,10 @@ export interface PharmacyDeskProps {
   canSkipToPayment?: boolean;
   sharedDeviceWarning?: boolean;
   canEsignOverride?: boolean;
+  canSellOtc?: boolean;
+  pharmOpsEnabled?: boolean;
+  canDispense?: boolean;
+  canUndispensedOverride?: boolean;
 }
 
 // ── Front desk domain types ───────────────────────────────────────────────
@@ -835,12 +900,56 @@ export interface FrontDeskPreviewData {
     visit_id: number;
     state: VisitState;
     queue_number: number | string;
+    row_version?: number;
     chief_complaint?: string | null;
   } | null;
   appointment_today?: AppointmentTodayChip | null;
   chips?: {
     appointment_today?: AppointmentTodayChip | null;
   };
+  visits_today?: TodayVisitRow[];
+  revisit_gate?: RevisitGate;
+}
+
+export interface TodayVisitRow {
+  visit_id: number;
+  queue_number: number;
+  state: VisitState;
+  visit_type_label?: string;
+  is_finished: boolean;
+}
+
+export interface RevisitGate {
+  applies: boolean;
+  blocked: boolean;
+  score: number;
+  threshold: number;
+  pediatric_dob_block: boolean;
+  missing_labels?: string[];
+  can_manager_override: boolean;
+}
+
+export interface FrontDeskDeskStats {
+  visits_started_today: number;
+  waiting_count: number;
+  recent_starts: Array<{
+    visit_id: number;
+    queue_number: number;
+    state: VisitState;
+    pid: number;
+    display_name: string;
+    pubpid: string;
+  }>;
+}
+
+/** Row from front_desk.todays_appointments */
+export interface TodaysAppointmentRow {
+  pid: number;
+  display_name: string;
+  pubpid: string;
+  pc_eid: number;
+  start_time_label?: string | null;
+  provider_name?: string | null;
 }
 
 export interface DeskVisitType {
@@ -856,6 +965,7 @@ export interface VisitStartData {
     id: number;
     queue_number: string | number;
     state?: VisitState;
+    row_version?: number;
   };
   queue_slip_enabled?: boolean;
   queue_slip_url?: string;
@@ -869,9 +979,14 @@ export interface FrontDeskProps {
   csrfToken: string;
   facilityId: number;
   moduleUrl: string;
+  visitBoardUrl?: string;
   registrationMode?: string;
   pinnedPreview?: boolean;
   printQueueSlip?: boolean;
+  canSkipTriage?: boolean;
+  canCancelVisit?: boolean;
+  canRevisitOverride?: boolean;
+  enforceCompletionOnRevisit?: boolean;
   scheduledIntegrationEnabled?: boolean;
   appointmentsTodayCount?: number;
   calendarUrl?: string;

@@ -99,7 +99,11 @@ describe('LabDesk', () => {
     await waitFor(() => {
       expect(screen.getByText(/Kofi Asante/)).toBeInTheDocument();
     });
-    expect(screen.getByText(/1 waiting/)).toBeInTheDocument();
+    await waitFor(() => {
+      const bar = screen.getByLabelText(/Lab desk status/i);
+      expect(bar).toHaveTextContent('1');
+      expect(bar).toHaveTextContent('Waiting');
+    });
   });
 
   it('auto-takes and shows lab orders when ready visit selected', async () => {

@@ -18,7 +18,9 @@ interface ConsultShortcutsProps {
   csrfToken: string;
   blocked: boolean;
   labPanelOrderEnabled?: boolean;
+  formularyRxEnabled?: boolean;
   onOpenLabPanel?: () => void;
+  onOpenFormularyRx?: () => void;
   onError: (message: string) => void;
 }
 
@@ -28,7 +30,9 @@ export function ConsultShortcuts({
   csrfToken,
   blocked,
   labPanelOrderEnabled = false,
+  formularyRxEnabled = false,
   onOpenLabPanel,
+  onOpenFormularyRx,
   onError,
 }: ConsultShortcutsProps) {
   const runShortcut = useCallback(async (shortcut: ShortcutKind) => {
@@ -109,10 +113,27 @@ export function ConsultShortcuts({
           className="btn btn-outline-primary mr-2 mb-2 nc-shortcut-btn"
           data-shortcut="rx"
           disabled={blocked}
-          onClick={() => void runShortcut('rx')}
+          onClick={() => {
+            if (formularyRxEnabled && onOpenFormularyRx) {
+              onOpenFormularyRx();
+            } else {
+              void runShortcut('rx');
+            }
+          }}
         >
-          Prescribe
+          {formularyRxEnabled ? 'Quick prescribe' : 'Prescribe'}
         </button>
+        {formularyRxEnabled && (
+          <button
+            type="button"
+            className="btn btn-outline-secondary mr-2 mb-2 nc-shortcut-btn"
+            data-shortcut="rx-full"
+            disabled={blocked}
+            onClick={() => void runShortcut('rx')}
+          >
+            Full Rx form
+          </button>
+        )}
         <button
           type="button"
           className="btn btn-outline-secondary mr-2 mb-2 nc-shortcut-btn"

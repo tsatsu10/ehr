@@ -40,7 +40,6 @@ export function CloseDayPane({ fetchOptions, facilityId, reportsUrl }: Props) {
     void load();
   }, [load]);
 
-  const symbol = data?.currency_symbol ?? 'GH₵';
   const reconOk = data?.reconciliation.status === 'ok';
 
   const exportCsv = async () => {
@@ -117,14 +116,14 @@ export function CloseDayPane({ fetchOptions, facilityId, reportsUrl }: Props) {
             </div>
             <div className="col-md-3 col-6 mb-2">
               <div className="small text-muted">Cash collected</div>
-              <div className="h5 mb-0">{formatBillMoney(symbol, data.cash_collected)}</div>
+              <div className="h5 mb-0">{formatBillMoney(data.cash_collected)}</div>
             </div>
           </div>
 
           <p className="mb-3">
             Reconciliation:{' '}
             <span className={reconOk ? 'text-success' : 'text-warning'}>
-              {reconOk ? 'OK' : 'Warning'} (Δ {formatBillMoney(symbol, data.reconciliation.delta_amount)})
+              {reconOk ? 'OK' : 'Warning'} (Δ {formatBillMoney(data.reconciliation.delta_amount)})
             </span>
             {data.reconciliation.latest_run?.completed_at && (
               <span className="text-muted small ml-2">
@@ -139,7 +138,7 @@ export function CloseDayPane({ fetchOptions, facilityId, reportsUrl }: Props) {
               <ul className="list-unstyled small">
                 {data.by_cashier.map((row) => (
                   <li key={row.cashier}>
-                    {row.cashier}: {formatBillMoney(symbol, row.total)}
+                    {row.cashier}: {formatBillMoney(row.total)}
                   </li>
                 ))}
               </ul>
@@ -149,7 +148,7 @@ export function CloseDayPane({ fetchOptions, facilityId, reportsUrl }: Props) {
               <ul className="list-unstyled small">
                 {data.by_visit_type.map((row) => (
                   <li key={row.visit_type_label}>
-                    {row.visit_type_label}: {formatBillMoney(symbol, row.total)}
+                    {row.visit_type_label}: {formatBillMoney(row.total)}
                   </li>
                 ))}
               </ul>

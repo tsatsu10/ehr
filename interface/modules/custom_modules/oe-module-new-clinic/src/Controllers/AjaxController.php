@@ -16,6 +16,7 @@ use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Modules\NewClinic\Exceptions\EncounterSessionMismatchException;
 use OpenEMR\Modules\NewClinic\Exceptions\StaleVisitException;
+use OpenEMR\Modules\NewClinic\Exceptions\UndispensedRxException;
 use OpenEMR\Modules\NewClinic\Exceptions\UnsignedEncounterException;
 use OpenEMR\Modules\NewClinic\Exceptions\VisitNotTakeableException;
 use OpenEMR\Modules\NewClinic\Services\AjaxActionPolicy;
@@ -31,6 +32,7 @@ use OpenEMR\Modules\NewClinic\Services\CashierService;
 use OpenEMR\Modules\NewClinic\Services\ConsultShortcutService;
 use OpenEMR\Modules\NewClinic\Services\DoctorService;
 use OpenEMR\Modules\NewClinic\Services\LabPanelOrderService;
+use OpenEMR\Modules\NewClinic\Services\PharmFormularyRxService;
 use OpenEMR\Modules\NewClinic\Services\LabService;
 use OpenEMR\Modules\NewClinic\Services\LabShortcutService;
 use OpenEMR\Modules\NewClinic\Services\BillOpsAccessService;
@@ -41,13 +43,29 @@ use OpenEMR\Modules\NewClinic\Services\BillOpsPaymentsSearchService;
 use OpenEMR\Modules\NewClinic\Services\LabOpsAccessService;
 use OpenEMR\Modules\NewClinic\Services\LabOpsOrderMetaService;
 use OpenEMR\Modules\NewClinic\Services\LabOpsResultService;
+use OpenEMR\Modules\NewClinic\Services\LabOpsSetupService;
 use OpenEMR\Modules\NewClinic\Services\LabOpsWorklistService;
+use OpenEMR\Modules\NewClinic\Services\PharmDrugMetaService;
+use OpenEMR\Modules\NewClinic\Services\PharmOpsAccessService;
+use OpenEMR\Modules\NewClinic\Services\PharmOpsControlledRegisterService;
+use OpenEMR\Modules\NewClinic\Services\PharmOpsDestroyService;
+use OpenEMR\Modules\NewClinic\Services\PharmOpsDispenseService;
+use OpenEMR\Modules\NewClinic\Services\PharmOpsDispenseLabelService;
+use OpenEMR\Modules\NewClinic\Services\PharmOpsOtcSaleService;
+use OpenEMR\Modules\NewClinic\Services\PharmOpsReceiveService;
+use OpenEMR\Modules\NewClinic\Services\PharmOpsSetupService;
+use OpenEMR\Modules\NewClinic\Services\PharmOpsRxPrintService;
+use OpenEMR\Modules\NewClinic\Services\PharmOpsReportsService;
+use OpenEMR\Modules\NewClinic\Services\PharmOpsWorklistService;
 use OpenEMR\Modules\NewClinic\Services\PharmacyService;
 use OpenEMR\Modules\NewClinic\Services\PharmacyShortcutService;
 use OpenEMR\Modules\NewClinic\Services\PaymentHistoryService;
 use OpenEMR\Modules\NewClinic\Services\ProfilePaymentsSummaryService;
 use OpenEMR\Modules\NewClinic\Services\ReferralCorrespondenceService;
 use OpenEMR\Modules\NewClinic\Services\ReportsService;
+use OpenEMR\Modules\NewClinic\Services\ReportHubAccessService;
+use OpenEMR\Modules\NewClinic\Services\ReportHubCatalogService;
+use OpenEMR\Modules\NewClinic\Services\ReportHubExportService;
 use OpenEMR\Modules\NewClinic\Services\ClinicAdminService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\SessionRoleService;
@@ -67,6 +85,10 @@ use OpenEMR\Modules\NewClinic\Services\QuickAddService;
 use OpenEMR\Modules\NewClinic\Services\QueueSlipService;
 use OpenEMR\Modules\NewClinic\Services\RateLimitService;
 use OpenEMR\Modules\NewClinic\Services\ReconciliationService;
+use OpenEMR\Modules\NewClinic\Services\RevisitCompletionGateService;
+use OpenEMR\Modules\NewClinic\Services\AppointmentTodayService;
+use OpenEMR\Modules\NewClinic\Services\FrontDeskRecentPatientsService;
+use OpenEMR\Modules\NewClinic\Services\FrontDeskStatsService;
 use OpenEMR\Modules\NewClinic\Services\TriageService;
 use OpenEMR\Modules\NewClinic\Services\VisitTypeAdminService;
 use OpenEMR\Modules\NewClinic\Services\FeeScheduleAdminService;
@@ -98,6 +120,7 @@ class AjaxController
         private readonly TriageService $triageService = new TriageService(),
         private readonly DoctorService $doctorService = new DoctorService(),
         private readonly LabPanelOrderService $labPanelOrderService = new LabPanelOrderService(),
+        private readonly PharmFormularyRxService $pharmFormularyRxService = new PharmFormularyRxService(),
         private readonly CashierService $cashierService = new CashierService(),
         private readonly LabService $labService = new LabService(),
         private readonly ConsultShortcutService $consultShortcutService = new ConsultShortcutService(),
@@ -106,6 +129,9 @@ class AjaxController
         private readonly PharmacyShortcutService $pharmacyShortcutService = new PharmacyShortcutService(),
         private readonly ClinicAdminService $clinicAdminService = new ClinicAdminService(),
         private readonly ReportsService $reportsService = new ReportsService(),
+        private readonly ReportHubAccessService $reportHubAccessService = new ReportHubAccessService(),
+        private readonly ReportHubCatalogService $reportHubCatalogService = new ReportHubCatalogService(),
+        private readonly ReportHubExportService $reportHubExportService = new ReportHubExportService(),
         private readonly RateLimitService $rateLimitService = new RateLimitService(),
         private readonly AjaxActionPolicy $actionPolicy = new AjaxActionPolicy(),
         private readonly VisitScopeService $visitScopeService = new VisitScopeService(),
@@ -127,6 +153,18 @@ class AjaxController
         private readonly LabOpsWorklistService $labOpsWorklistService = new LabOpsWorklistService(),
         private readonly LabOpsResultService $labOpsResultService = new LabOpsResultService(),
         private readonly LabOpsOrderMetaService $labOpsOrderMetaService = new LabOpsOrderMetaService(),
+        private readonly LabOpsSetupService $labOpsSetupService = new LabOpsSetupService(),
+        private readonly PharmOpsWorklistService $pharmOpsWorklistService = new PharmOpsWorklistService(),
+        private readonly PharmOpsDispenseService $pharmOpsDispenseService = new PharmOpsDispenseService(),
+        private readonly PharmOpsOtcSaleService $pharmOpsOtcSaleService = new PharmOpsOtcSaleService(),
+        private readonly PharmOpsReceiveService $pharmOpsReceiveService = new PharmOpsReceiveService(),
+        private readonly PharmOpsSetupService $pharmOpsSetupService = new PharmOpsSetupService(),
+        private readonly PharmOpsReportsService $pharmOpsReportsService = new PharmOpsReportsService(),
+        private readonly PharmOpsDestroyService $pharmOpsDestroyService = new PharmOpsDestroyService(),
+        private readonly PharmOpsRxPrintService $pharmOpsRxPrintService = new PharmOpsRxPrintService(),
+        private readonly PharmOpsDispenseLabelService $pharmOpsDispenseLabelService = new PharmOpsDispenseLabelService(),
+        private readonly PharmDrugMetaService $pharmDrugMetaService = new PharmDrugMetaService(),
+        private readonly PharmOpsControlledRegisterService $pharmOpsControlledRegisterService = new PharmOpsControlledRegisterService(),
         private readonly VisitClaimLostService $visitClaimLostService = new VisitClaimLostService(),
         private readonly SimilarSurnameQueueService $similarSurnameQueueService = new SimilarSurnameQueueService(),
         private readonly SharedDeviceSessionService $sharedDeviceSessionService = new SharedDeviceSessionService(),
@@ -136,6 +174,10 @@ class AjaxController
         private readonly BillOpsDaysheetService $billOpsDaysheetService = new BillOpsDaysheetService(),
         private readonly BillOpsOutstandingService $billOpsOutstandingService = new BillOpsOutstandingService(),
         private readonly QueueSlipService $queueSlipService = new QueueSlipService(),
+        private readonly FrontDeskStatsService $frontDeskStatsService = new FrontDeskStatsService(),
+        private readonly FrontDeskRecentPatientsService $frontDeskRecentPatientsService = new FrontDeskRecentPatientsService(),
+        private readonly AppointmentTodayService $appointmentTodayService = new AppointmentTodayService(),
+        private readonly RevisitCompletionGateService $revisitCompletionGateService = new RevisitCompletionGateService(),
     ) {
     }
 
@@ -246,6 +288,7 @@ class AjaxController
                     break;
                 case 'chart_depth.payments_list':
                     $pid = (int) ($_REQUEST['pid'] ?? 0);
+                    $this->assertPatientChartPid($pid);
                     $this->authorizePaymentHistory($pid);
                     $offset = max(0, (int) ($_REQUEST['offset'] ?? 0));
                     $limit = (int) ($_REQUEST['limit'] ?? PaymentHistoryService::PAGE_SIZE);
@@ -497,9 +540,84 @@ class AjaxController
                         $userId,
                         $this->resolveDeskFacilityFromBody($body),
                         isset($body['chief_complaint']) ? (string) $body['chief_complaint'] : null,
-                        !empty($body['is_urgent'])
+                        !empty($body['is_urgent']),
+                        isset($body['revisit_override_reason'])
+                            ? (string) $body['revisit_override_reason']
+                            : null
                     );
                     $this->respond(true, 'Visit started', $this->enrichStartVisitResponse($visit, $userId));
+                    break;
+                case 'visit.skip_triage':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $visit = $this->visitQueueService->skipTriage(
+                        (int) ($body['visit_id'] ?? 0),
+                        $userId,
+                        (int) ($body['row_version'] ?? 0),
+                        isset($body['reason']) ? (string) $body['reason'] : null
+                    );
+                    $this->respond(true, 'Skipped triage', ['visit' => $visit]);
+                    break;
+                case 'front_desk.desk_stats':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $stats = $this->frontDeskStatsService->getDeskStats($userId, $facilityId);
+                    $this->respond(true, 'ok', $stats);
+                    break;
+                case 'front_desk.todays_appointments':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $limit = (int) ($_REQUEST['limit'] ?? 50);
+                    $appointments = $this->appointmentTodayService->listTodayAppointments($facilityId, $limit);
+                    $this->respond(true, 'ok', ['appointments' => $appointments]);
+                    break;
+                case 'front_desk.recently_viewed':
+                    $recent = $this->frontDeskRecentPatientsService->listRecent();
+                    $this->respond(true, 'ok', ['recent' => $recent]);
+                    break;
+                case 'front_desk.recently_viewed.remember':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $pid = (int) ($body['pid'] ?? 0);
+                    $displayName = trim((string) ($body['display_name'] ?? ''));
+                    $pubpid = trim((string) ($body['pubpid'] ?? ''));
+                    try {
+                        $recent = $this->frontDeskRecentPatientsService->remember($pid, $displayName, $pubpid);
+                    } catch (\InvalidArgumentException $exception) {
+                        $this->respond(false, $exception->getMessage(), [], 400);
+                    }
+                    $this->respond(true, 'ok', ['recent' => $recent]);
+                    break;
+                case 'front_desk.recently_viewed.clear':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $this->frontDeskRecentPatientsService->clear();
+                    $this->respond(true, 'ok', ['recent' => []]);
+                    break;
+                case 'front_desk.revisit_awaiting_documents':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $pid = (int) ($body['pid'] ?? 0);
+                    if ($pid <= 0) {
+                        $this->respond(false, 'pid required', [], 400);
+                    }
+                    $this->assertPatientChartPid($pid);
+                    $this->revisitCompletionGateService->logAwaitingDocuments(
+                        $pid,
+                        $userId,
+                        isset($body['note']) ? (string) $body['note'] : null
+                    );
+                    $this->respond(true, 'Patient noted as awaiting documents');
                     break;
                 case 'visit.start_from_appointment':
                     if ($method !== 'POST') {
@@ -515,7 +633,10 @@ class AjaxController
                         isset($body['visit_type_id']) ? (int) $body['visit_type_id'] : null,
                         $this->resolveRequestFacilityId(),
                         isset($body['chief_complaint']) ? (string) $body['chief_complaint'] : null,
-                        !empty($body['is_urgent'])
+                        !empty($body['is_urgent']),
+                        isset($body['revisit_override_reason'])
+                            ? (string) $body['revisit_override_reason']
+                            : null
                     );
                     $visit = (array) ($result['visit'] ?? []);
                     $this->respond(
@@ -782,6 +903,27 @@ class AjaxController
                     );
                     $this->respond(true, 'Lab order placed', $result);
                     break;
+                case 'doctor.formulary_rx_catalog':
+                    if ($method !== 'GET') {
+                        $this->respond(false, 'GET required', [], 405);
+                    }
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $formularyCatalog = $this->pharmFormularyRxService->getCatalogPayload($facilityId);
+                    $this->respond(true, 'ok', $formularyCatalog);
+                    break;
+                case 'doctor.formulary_rx_place':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $rxResult = $this->pharmFormularyRxService->placePrescriptions(
+                        (int) ($body['visit_id'] ?? 0),
+                        (array) ($body['drug_ids'] ?? []),
+                        $userId
+                    );
+                    $this->respond(true, 'Prescriptions added', $rxResult);
+                    break;
                 case 'cashier.queue':
                     $facilityId = $this->resolveRequestFacilityId();
                     $queue = $this->cashierService->getCashierQueue(
@@ -1009,7 +1151,8 @@ class AjaxController
                         (int) ($body['visit_id'] ?? 0),
                         $userId,
                         (int) ($body['row_version'] ?? 0),
-                        $this->esignOverrideReason($body)
+                        $this->esignOverrideReason($body),
+                        $this->undispensedOverrideReason($body)
                     );
                     $this->respond(true, 'Pharmacy completed', $result);
                     break;
@@ -1168,6 +1311,7 @@ class AjaxController
                     }
                     $body = $this->readJsonBody();
                     $this->verifyCsrf($body);
+                    $this->requireSuperAdmin();
                     $username = (string) ($_SESSION['authUser'] ?? '');
                     if ($username === '') {
                         $this->respond(false, 'No logged-in user', [], 401);
@@ -1191,6 +1335,42 @@ class AjaxController
                         'totals' => $this->reconciliationService->fetchTotals($facilityId, $runDate),
                     ]);
                     break;
+                case 'reports.hub_summary':
+                    $this->reportHubAccessService->assertHubAccess();
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $visitDate = (string) ($_REQUEST['visit_date'] ?? date('Y-m-d'));
+                    $daily = $this->reportsService->getDailyReport($facilityId, $visitDate);
+                    $visits = is_array($daily['visits'] ?? null) ? $daily['visits'] : [];
+                    $cash = is_array($daily['cash'] ?? null) ? $daily['cash'] : [];
+                    $currency = is_array($daily['currency'] ?? null)
+                        ? (string) ($daily['currency']['currency_symbol'] ?? 'GH₵')
+                        : 'GH₵';
+                    $this->respond(true, 'ok', [
+                        'visit_date' => (string) ($daily['visit_date'] ?? $visitDate),
+                        'visits_started' => (int) ($visits['started'] ?? 0),
+                        'cash_total' => (float) ($cash['total_collected'] ?? 0),
+                        'receipt_count' => (int) ($cash['receipt_count'] ?? 0),
+                        'currency_symbol' => $currency,
+                    ]);
+                    break;
+                case 'reports.catalog':
+                    $this->reportHubAccessService->assertHubAccess();
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $lens = isset($_REQUEST['lens']) ? (string) $_REQUEST['lens'] : null;
+                    if ($lens === '') {
+                        $lens = null;
+                    }
+                    $this->respond(true, 'ok', $this->reportHubCatalogService->getCatalog($lens, $facilityId));
+                    break;
+                case 'reports.export_run':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $recorded = $this->reportHubExportService->recordExportRun($body, $userId);
+                    $this->respond(true, 'ok', $recorded);
+                    break;
                 case 'admin.reconciliation.run':
                     if ($method !== 'POST') {
                         $this->respond(false, 'POST required', [], 405);
@@ -1201,6 +1381,25 @@ class AjaxController
                     $runDate = (string) ($body['run_date'] ?? date('Y-m-d'));
                     $result = $this->reconciliationService->run($facilityId, $runDate, 'manual', $userId);
                     $this->respond(true, 'Reconciliation complete', $result);
+                    break;
+                case 'admin.profile.apply_cash_clinic':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $this->requireSuperAdmin();
+                    $scope = strtolower(trim((string) ($body['scope'] ?? 'facility')));
+                    if ($scope !== 'global') {
+                        $scope = 'facility';
+                    }
+                    $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    $payload = $this->clinicAdminService->applyCashClinicProfile(
+                        $scope,
+                        $userId,
+                        $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
+                    );
+                    $this->respond(true, 'Cash clinic profile applied', $payload);
                     break;
                 case 'queue.counts':
                     $facilityId = $this->resolveRequestFacilityId();
@@ -1418,7 +1617,7 @@ class AjaxController
                     $this->respond(true, 'ok', $saved);
                     break;
                 case 'lab_ops.worklist':
-                    $body = $method === 'POST' ? $this->readJsonBody() : $_REQUEST;
+                    $body = $this->readRequestParams($method);
                     $worklist = $this->labOpsWorklistService->worklist([
                         'tab' => $body['tab'] ?? LabOpsWorklistService::TAB_PENDING,
                         'date' => $body['date'] ?? '',
@@ -1428,10 +1627,175 @@ class AjaxController
                     ], $userId);
                     $this->respond(true, 'ok', $worklist);
                     break;
+                case 'pharm_ops.worklist':
+                    $body = $this->readRequestParams($method);
+                    $pharmWorklist = $this->pharmOpsWorklistService->worklist([
+                        'tab' => $body['tab'] ?? PharmOpsWorklistService::TAB_PENDING_DISPENSE,
+                        'date' => $body['date'] ?? '',
+                        'facility_id' => $body['facility_id'] ?? 0,
+                        'filters' => is_array($body['filters'] ?? null) ? $body['filters'] : [],
+                        'urgent_first' => $body['urgent_first'] ?? true,
+                    ], $userId);
+                    $this->respond(true, 'ok', $pharmWorklist);
+                    break;
+                case 'pharm_ops.dispense_get':
+                    $body = $this->readRequestParams($method);
+                    $prescriptionId = (int) ($body['prescription_id'] ?? $_REQUEST['prescription_id'] ?? 0);
+                    $form = $this->pharmOpsDispenseService->getDispenseForm($prescriptionId);
+                    $this->respond(true, 'ok', $form);
+                    break;
+                case 'pharm_ops.dispense_confirm':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $confirmed = $this->pharmOpsDispenseService->confirmDispense(
+                        (int) ($body['prescription_id'] ?? 0),
+                        $body,
+                        $userId
+                    );
+                    $this->respond(true, 'ok', $confirmed);
+                    break;
+                case 'pharm_ops.otc_drugs_search':
+                    $body = $this->readRequestParams($method);
+                    $drugSearch = $this->pharmOpsOtcSaleService->searchDrugs(
+                        (string) ($body['q'] ?? $_REQUEST['q'] ?? ''),
+                        (int) ($body['limit'] ?? 20)
+                    );
+                    $this->respond(true, 'ok', $drugSearch);
+                    break;
+                case 'pharm_ops.otc_sale_get':
+                    $body = $this->readRequestParams($method);
+                    $otcForm = $this->pharmOpsOtcSaleService->getSaleForm(
+                        (int) ($body['pid'] ?? 0),
+                        (int) ($body['drug_id'] ?? 0),
+                        isset($body['encounter_id']) ? (int) $body['encounter_id'] : null
+                    );
+                    $this->respond(true, 'ok', $otcForm);
+                    break;
+                case 'pharm_ops.otc_sale_confirm':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $otcSale = $this->pharmOpsOtcSaleService->confirmSale($body, $userId);
+                    $this->respond(true, 'ok', $otcSale);
+                    break;
+                case 'pharm_ops.receive_get':
+                    $body = $this->readRequestParams($method);
+                    $receiveForm = $this->pharmOpsReceiveService->getReceiveForm(
+                        isset($body['drug_id']) ? (int) $body['drug_id'] : null
+                    );
+                    $this->respond(true, 'ok', $receiveForm);
+                    break;
+                case 'pharm_ops.receive_save':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $received = $this->pharmOpsReceiveService->saveReceive($body, $userId);
+                    $this->respond(true, 'ok', $received);
+                    break;
+                case 'pharm_ops.setup_status':
+                    $setupStatus = $this->pharmOpsSetupService->getSetupStatus();
+                    $this->respond(true, 'ok', $setupStatus);
+                    break;
+                case 'pharm_ops.reports_embed':
+                    $reportsEmbed = $this->pharmOpsReportsService->embedCatalog();
+                    $this->respond(true, 'ok', $reportsEmbed);
+                    break;
+                case 'pharm_ops.controlled_catalog':
+                    (new PharmOpsAccessService())->assertCatalogAccess();
+                    $controlledCatalog = [
+                        'drugs' => $this->pharmDrugMetaService->listActiveCatalogFlags(),
+                    ];
+                    $this->respond(true, 'ok', $controlledCatalog);
+                    break;
+                case 'pharm_ops.controlled_catalog_save':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    (new PharmOpsAccessService())->assertCatalogAccess();
+                    $saved = $this->pharmDrugMetaService->saveControlledFlags($body['drugs'] ?? []);
+                    $this->respond(true, 'ok', [
+                        'saved' => $saved,
+                        'drugs' => $this->pharmDrugMetaService->listActiveCatalogFlags(),
+                    ]);
+                    break;
+                case 'pharm_ops.destroy_get':
+                    $body = $this->readRequestParams($method);
+                    $destroyForm = $this->pharmOpsDestroyService->getDestroyForm(
+                        (int) ($body['drug_id'] ?? 0),
+                        (int) ($body['inventory_id'] ?? 0)
+                    );
+                    $this->respond(true, 'ok', $destroyForm);
+                    break;
+                case 'pharm_ops.destroy_confirm':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $destroyed = $this->pharmOpsDestroyService->confirmDestroy($body, $userId);
+                    $this->respond(true, 'ok', $destroyed);
+                    break;
+                case 'pharm_ops.rx_print_pdf':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $rxPrint = $this->pharmOpsRxPrintService->preparePrint(
+                        (int) ($body['prescription_id'] ?? 0),
+                        $userId
+                    );
+                    $this->respond(true, 'ok', $rxPrint);
+                    break;
+                case 'pharm_ops.dispense_label_pdf':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $labelPrint = $this->pharmOpsDispenseLabelService->preparePrint(
+                        (int) ($body['sale_id'] ?? 0),
+                        $userId
+                    );
+                    $this->respond(true, 'ok', $labelPrint);
+                    break;
+                case 'pharm_ops.warehouse_create':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $warehouse = $this->pharmOpsSetupService->createDefaultWarehouse(
+                        (string) ($body['warehouse_title'] ?? ''),
+                        $userId
+                    );
+                    $this->respond(true, 'ok', $warehouse);
+                    break;
+                case 'pharm_ops.formulary_import':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $imported = $this->pharmOpsSetupService->importStarterFormulary(
+                        !empty($body['use_starter']) ? null : (string) ($body['csv'] ?? ''),
+                        $userId
+                    );
+                    $this->respond(true, 'ok', $imported);
+                    break;
                 case 'lab_ops.result_get':
                     $orderId = (int) ($_REQUEST['procedure_order_id'] ?? 0);
                     if ($method === 'POST') {
-                        $body = $this->readJsonBody();
+                        $body = $this->readRequestParams($method);
                         $orderId = (int) ($body['procedure_order_id'] ?? $orderId);
                     }
                     $form = $this->labOpsResultService->getEntryForm($orderId);
@@ -1475,10 +1839,108 @@ class AjaxController
                     );
                     $this->respond(true, 'ok', $collected);
                     break;
+                case 'lab_ops.setup_status':
+                    $status = $this->labOpsSetupService->getSetupStatus();
+                    $this->respond(true, 'ok', $status);
+                    break;
+                case 'lab_ops.setup_model':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $modelResult = $this->labOpsSetupService->setSetupModel(
+                        (string) ($body['setup_model'] ?? ''),
+                        $userId
+                    );
+                    $this->respond(true, 'ok', $modelResult);
+                    break;
+                case 'lab_ops.provider_create':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $providerResult = $this->labOpsSetupService->createInHouseProvider(
+                        isset($body['clinic_name']) ? (string) $body['clinic_name'] : '',
+                        $userId
+                    );
+                    $this->respond(true, 'ok', $providerResult);
+                    break;
+                case 'lab_ops.sendout_provider_create':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $sendOutResult = $this->labOpsSetupService->createSendOutProvider(
+                        (string) ($body['lab_name'] ?? ''),
+                        $userId
+                    );
+                    $this->respond(true, 'ok', $sendOutResult);
+                    break;
+                case 'lab_ops.panel_import':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $providerId = isset($body['provider_id']) ? (int) $body['provider_id'] : null;
+                    if (!empty($body['use_starter'])) {
+                        $importResult = $this->labOpsSetupService->importStarterPanel(
+                            $providerId > 0 ? $providerId : null,
+                            $userId
+                        );
+                    } else {
+                        $importResult = $this->labOpsSetupService->importPanelCsv(
+                            $providerId > 0 ? $providerId : null,
+                            (string) ($body['csv'] ?? ''),
+                            $userId
+                        );
+                    }
+                    $this->respond(true, 'ok', $importResult);
+                    break;
+                case 'lab_ops.fee_map_list':
+                    $providerId = isset($_REQUEST['provider_id']) ? (int) $_REQUEST['provider_id'] : null;
+                    $unmapped = $this->labOpsSetupService->listUnmappedFees(
+                        $providerId > 0 ? $providerId : null
+                    );
+                    $this->respond(true, 'ok', ['rows' => $unmapped]);
+                    break;
+                case 'lab_ops.fee_map_save':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    if (!empty($body['use_starter_defaults'])) {
+                        $providerId = isset($body['provider_id']) ? (int) $body['provider_id'] : null;
+                        $feeResult = $this->labOpsSetupService->applyStarterFeeDefaults(
+                            $providerId > 0 ? $providerId : null,
+                            $userId
+                        );
+                    } else {
+                        $rows = is_array($body['rows'] ?? null) ? $body['rows'] : [];
+                        $feeResult = $this->labOpsSetupService->saveFeeMappings($rows, $userId);
+                    }
+                    $this->respond(true, 'ok', $feeResult);
+                    break;
+                case 'lab_ops.mark_send_out':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $sendOut = $this->labOpsOrderMetaService->markAsSendOut(
+                        (int) ($body['procedure_order_id'] ?? 0),
+                        $userId
+                    );
+                    $this->respond(true, 'ok', $sendOut);
+                    break;
                 case 'bill_ops.visit_charges':
                     $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
                     if ($method === 'POST') {
-                        $body = $this->readJsonBody();
+                        $body = $this->readRequestParams($method);
                         $visitId = (int) ($body['visit_id'] ?? $visitId);
                     }
                     $charges = $this->billOpsChargeCorrectionService->getVisitCharges($visitId, $userId);
@@ -1500,7 +1962,7 @@ class AjaxController
                     $this->respond(true, 'ok', $corrected);
                     break;
                 case 'bill_ops.payments_search':
-                    $params = $method === 'POST' ? $this->readJsonBody() : $_REQUEST;
+                    $params = $this->readRequestParams($method);
                     $search = $this->billOpsPaymentsSearchService->search(
                         (string) ($params['q'] ?? ''),
                         isset($params['date_from']) ? (string) $params['date_from'] : null,
@@ -1524,7 +1986,7 @@ class AjaxController
                     $this->respond(true, 'ok', $reversed);
                     break;
                 case 'bill_ops.daysheet':
-                    $params = $method === 'POST' ? $this->readJsonBody() : $_REQUEST;
+                    $params = $this->readRequestParams($method);
                     $daysheet = $this->billOpsDaysheetService->getDaysheet(
                         (int) ($params['facility_id'] ?? 0),
                         (string) ($params['date'] ?? '')
@@ -1545,7 +2007,7 @@ class AjaxController
                     $this->respond(true, 'ok', $exported);
                     break;
                 case 'bill_ops.outstanding_list':
-                    $params = $method === 'POST' ? $this->readJsonBody() : $_REQUEST;
+                    $params = $this->readRequestParams($method);
                     $list = $this->billOpsOutstandingService->listOutstanding(
                         isset($params['bucket']) ? (string) $params['bucket'] : null,
                         (int) ($params['offset'] ?? 0),
@@ -1572,6 +2034,11 @@ class AjaxController
                 $data['encounter_url'] = $e->getEncounterUrl();
             }
             $this->respond(false, $e->getMessage(), $data, 409);
+        } catch (UndispensedRxException $e) {
+            $this->respond(false, $e->getMessage(), [
+                'code' => 'rx_undispensed',
+                'undispensed_count' => $e->getUndispensedCount(),
+            ], 409);
         } catch (EncounterSessionMismatchException $e) {
             $this->respond(false, $e->getMessage(), ['code' => 'session_mismatch'], 409);
         } catch (\InvalidArgumentException $e) {
@@ -1607,6 +2074,13 @@ class AjaxController
         return $reason !== '' ? $reason : null;
     }
 
+    private function undispensedOverrideReason(array $body): ?string
+    {
+        $reason = trim((string) ($body['undispensed_override_reason'] ?? ''));
+
+        return $reason !== '' ? $reason : null;
+    }
+
     private function authorizeAction(string $action): void
     {
         if ($this->actionPolicy->isDeprecated($action)) {
@@ -1630,10 +2104,19 @@ class AjaxController
             'lab_ops_enter_acl' => $this->requireLabOpsEnterAcl(),
             'lab_ops_release_acl' => $this->requireLabOpsReleaseAcl(),
             'lab_ops_catalog_acl' => $this->requireLabOpsEnterAcl(),
+            'pharm_ops_read_acl' => $this->requirePharmOpsReadAcl(),
+            'pharm_ops_dispense_acl' => $this->requirePharmOpsDispenseAcl(),
+            'pharm_ops_receive_acl' => $this->requirePharmOpsReceiveAcl(),
+            'pharm_ops_destroy_acl' => $this->requirePharmOpsDestroyAcl(),
+            'pharm_ops_rx_print_acl' => $this->requirePharmOpsRxPrintAcl(),
+            'pharm_ops_dispense_label_acl' => $this->requirePharmOpsDispenseLabelAcl(),
+            'pharm_ops_catalog_acl' => $this->requirePharmOpsCatalogAcl(),
             'bill_ops_correct_acl' => $this->requireBillOpsCorrectAcl(),
             'bill_ops_payment_acl' => $this->requireBillOpsPaymentAcl(),
             'bill_ops_close_acl' => $this->requireBillOpsCloseAcl(),
             'bill_ops_outstanding_acl' => $this->requireBillOpsOutstandingAcl(),
+            'report_hub_read_acl' => $this->requireReportHubReadAcl(),
+            'report_hub_export_acl' => $this->requireReportHubExportAcl(),
             'deprecated' => $this->respond(
                 false,
                 'Use role-specific workflow actions (triage, doctor, cashier)',
@@ -1722,6 +2205,69 @@ class AjaxController
         }
     }
 
+    private function requirePharmOpsReadAcl(): void
+    {
+        try {
+            (new PharmOpsAccessService())->assertHubAccess();
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requirePharmOpsDispenseAcl(): void
+    {
+        try {
+            (new PharmOpsAccessService())->assertDispenseAccess();
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requirePharmOpsReceiveAcl(): void
+    {
+        try {
+            (new PharmOpsAccessService())->assertReceiveAccess();
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requirePharmOpsDestroyAcl(): void
+    {
+        try {
+            (new PharmOpsAccessService())->assertDestroyAccess();
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requirePharmOpsRxPrintAcl(): void
+    {
+        try {
+            (new PharmOpsAccessService())->assertRxPrintAccess();
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requirePharmOpsDispenseLabelAcl(): void
+    {
+        try {
+            (new PharmOpsAccessService())->assertDispenseLabelAccess();
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requirePharmOpsCatalogAcl(): void
+    {
+        try {
+            (new PharmOpsAccessService())->assertCatalogAccess();
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
     private function requireBillOpsCorrectAcl(): void
     {
         try {
@@ -1758,9 +2304,44 @@ class AjaxController
         }
     }
 
-    private function requireSearchAcl(): void
+    private function requireReportHubReadAcl(): void
     {
-        $this->requireAnyAcl(AjaxActionPolicy::CHART_READ_ACLS);
+        try {
+            $this->reportHubAccessService->assertHubAccess();
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requireReportHubExportAcl(): void
+    {
+        try {
+            $this->reportHubAccessService->assertHubAccess();
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requireSuperAdmin(): void
+    {
+        if (!AclMain::aclCheckCore('admin', 'super')) {
+            $this->respond(false, 'Super admin access required', ['code' => 'forbidden'], 403);
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function readRequestParams(string $method): array
+    {
+        if ($method === 'POST') {
+            $body = $this->readJsonBody();
+            $this->verifyCsrf($body);
+
+            return $body;
+        }
+
+        return $_REQUEST;
     }
 
     private function authorizeChartRead(int $pid = 0): void
@@ -1905,10 +2486,16 @@ class AjaxController
 
     private function verifyCsrf(array $body): void
     {
-        $token = $body['csrf_token_form']
+        $headerToken = trim((string) ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? ''));
+        $bodyToken = trim((string) (
+            $body['csrf_token_form']
             ?? $body['csrf_token']
-            ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '')
-            ?? ($_POST['csrf_token_form'] ?? ($_POST['csrf_token'] ?? ''));
+            ?? ''
+        ));
+        $postToken = trim((string) ($_POST['csrf_token_form'] ?? ($_POST['csrf_token'] ?? '')));
+
+        $token = $bodyToken !== '' ? $bodyToken : ($headerToken !== '' ? $headerToken : $postToken);
+
         if (!CsrfUtils::verifyCsrfToken($token)) {
             $this->respond(false, 'Invalid CSRF token', ['code' => 'csrf'], 403);
         }

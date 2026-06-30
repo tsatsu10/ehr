@@ -9,7 +9,8 @@
         csrfToken: csrf_token,
         visitId: visit_id|number_format(0, '', ''),
         billOpsUrl: bill_ops_url,
-        visitBoardUrl: visit_board_url
+        visitBoardUrl: visit_board_url,
+        currencyFormat: currency_format|default({})
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}

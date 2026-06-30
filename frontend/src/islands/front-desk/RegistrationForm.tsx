@@ -1,13 +1,13 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
 import type { RegistrationDupResult, RegistrationFormData, RegistrationSaveResult } from '@core/types';
+import { ConfirmModal } from '@components/ConfirmModal';
 import { RegistrationDupPanel } from './RegistrationDupPanel';
 import { RegistrationFormSections, type RegistrationFormValues } from './RegistrationFormSections';
 import { parseSearchQuery, tagsToString } from './registrationFormUtils';
 import { useRegistrationGeo } from './useRegistrationGeo';
 
 export interface RegistrationFormHandle {
-    confirmDiscard: () => boolean;
     isDirty: () => boolean;
 }
 
@@ -17,11 +17,14 @@ interface RegistrationFormProps {
     pid?: number;
     prefill?: string;
     registrationMode?: string;
+    wizardMode?: boolean;
     /** Patient chart profile tab — hides Save & Start and uses chart title. */
     chartMode?: boolean;
     onSaved: (pid: number, startAfter?: boolean) => void;
     onUseExisting: (pid: number) => void;
     onCancel: () => void;
+    /** Parent-owned discard modal (front desk). Falls back to inline ConfirmModal when omitted. */
+    onDiscardConfirm?: (onProceed: () => void) => void;
 }
 
 const DEFAULT_FORM: RegistrationFormValues = {
@@ -196,10 +199,12 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
         pid,
         prefill,
         registrationMode = 'desk_full_form',
+        wizardMode = false,
         chartMode = false,
         onSaved,
         onUseExisting,
         onCancel,
+        onDiscardConfirm,
     },
     ref
 ) {
@@ -216,12 +221,27 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
     const [dupConfirm, setDupConfirm] = useState(false);
     const [dupOverride, setDupOverride] = useState(false);
     const [dupOverrideReason, setDupOverrideReason] = useState('');
+    const [discardOpen, setDiscardOpen] = useState(false);
+    const [discardProceed, setDiscardProceed] = useState<(() => void) | null>(null);
+    const [allergyNoneConfirmOpen, setAllergyNoneConfirmOpen] = useState(false);
     const prefillAppliedRef = useRef(false);
 
     useImperativeHandle(ref, () => ({
-        confirmDiscard: () => (!dirty ? true : window.confirm('Discard registration changes and switch patient?')),
         isDirty: () => dirty,
     }), [dirty]);
+
+    const requestDiscard = useCallback((onProceed: () => void) => {
+        if (!dirty) {
+            onProceed();
+            return;
+        }
+        if (onDiscardConfirm) {
+            onDiscardConfirm(onProceed);
+            return;
+        }
+        setDiscardProceed(() => onProceed);
+        setDiscardOpen(true);
+    }, [dirty, onDiscardConfirm]);
 
     const handleFieldChange = (name: keyof RegistrationFormValues, value: string) => {
         setForm((prev) => {
@@ -250,10 +270,8 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
             }
             if (name === 'allergies_none_known') {
                 if (!checked && prev.allergies.trim() === '' && !prev.allergies_unknown) {
-                    const proceed = window.confirm('No allergies listed. Continue without documenting allergies?');
-                    if (!proceed) {
-                        return prev;
-                    }
+                    setAllergyNoneConfirmOpen(true);
+                    return prev;
                 }
                 if (checked) {
                     next.allergies_unknown = false;
@@ -498,6 +516,7 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
                 regions={regions}
                 districts={districts}
                 loadingDistricts={loadingDistricts}
+                wizardMode={wizardMode}
                 onSectionToggle={setActiveSection}
                 onSaveSection={(section) => {
                     setActiveSection(section);
@@ -550,16 +569,53 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
                     id="nc-reg-cancel"
                     disabled={busy}
                     onClick={() => {
-                        if (dirty && !window.confirm('Discard unsaved registration changes?')) {
-                            return;
-                        }
-                        setDirty(false);
-                        onCancel();
+                        requestDiscard(() => {
+                            setDirty(false);
+                            onCancel();
+                        });
                     }}
                 >
                     Cancel
                 </button>
             </div>
+
+            <ConfirmModal
+                open={discardOpen}
+                onClose={() => {
+                    setDiscardOpen(false);
+                    setDiscardProceed(null);
+                }}
+                title="Discard changes?"
+                modalId="nc-reg-discard-modal"
+                cancelLabel="Keep editing"
+                confirmLabel="Discard"
+                confirmVariant="warning"
+                onConfirm={() => {
+                    discardProceed?.();
+                    setDiscardOpen(false);
+                    setDiscardProceed(null);
+                }}
+            >
+                <p className="mb-0">Discard unsaved registration changes?</p>
+            </ConfirmModal>
+
+            <ConfirmModal
+                open={allergyNoneConfirmOpen}
+                onClose={() => setAllergyNoneConfirmOpen(false)}
+                title="No allergies documented?"
+                modalId="nc-reg-allergy-none-modal"
+                cancelLabel="Go back"
+                confirmLabel="Continue"
+                confirmVariant="warning"
+                onConfirm={() => {
+                    setForm((prev) => ({ ...prev, allergies_none_known: false }));
+                    setDirty(true);
+                    setSuccess('');
+                    setAllergyNoneConfirmOpen(false);
+                }}
+            >
+                <p className="mb-0">No allergies listed. Continue without documenting allergies?</p>
+            </ConfirmModal>
         </div>
     );
 });

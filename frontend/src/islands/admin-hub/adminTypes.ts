@@ -115,6 +115,11 @@ export interface ReconciliationRun {
   delta_amount?: number | string;
 }
 
+export interface CashProfileStatus {
+  last_applied_at?: string | null;
+  applied?: boolean;
+}
+
 export interface AdminConfigPayload {
   facility_id: number;
   scope: AdminScope;
@@ -130,6 +135,7 @@ export interface AdminConfigPayload {
   billing_code_types?: BillingCodeType[];
   default_code_type?: string;
   roles?: RolesPayload;
+  cash_profile?: CashProfileStatus;
 }
 
 export interface FeeImportSummary {

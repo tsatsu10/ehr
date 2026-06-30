@@ -18,6 +18,12 @@ export interface BillOpsHubProps {
   reopenOnCorrection: boolean;
   webroot: string;
   initialVisitId?: number;
+  currencyFormat?: {
+    currency_code?: string;
+    currency_symbol?: string;
+    currency_decimals?: number;
+    currency_symbol_position?: 'before' | 'after';
+  };
 }
 
 export interface ChargeLine {

@@ -6,6 +6,7 @@ import type { DoctorConsultPayload, DoctorSupervisorMeta } from '@core/types';
 import { DoctorPatientBanner, type DoctorSignMeta } from './DoctorPatientBanner';
 import { ConsultShortcuts } from './ConsultShortcuts';
 import { SupervisorCombobox } from './SupervisorCombobox';
+import { PharmacyPrescriptionsTable } from '../pharmacy-desk/PharmacyPrescriptionsTable';
 
 export type ActiveMode = 'idle' | 'loading' | 'consult' | 'error';
 
@@ -19,9 +20,12 @@ interface DoctorActivePaneProps {
   visitBoardUrl?: string;
   blocked: boolean;
   labPanelOrderEnabled?: boolean;
+  formularyRxEnabled?: boolean;
   onComplete: () => void;
   onOpenLabPanel: () => void;
+  onOpenFormularyRx: () => void;
   onShortcutError: (message: string) => void;
+  onPrintRx?: (prescriptionId: number) => void;
   onSupervisorUpdated: (meta: DoctorSupervisorMeta) => void;
   onSupervisorNotice: (message: string, variant: 'success' | 'danger') => void;
 }
@@ -36,9 +40,12 @@ export function DoctorActivePane({
   visitBoardUrl,
   blocked,
   labPanelOrderEnabled,
+  formularyRxEnabled,
   onComplete,
   onOpenLabPanel,
+  onOpenFormularyRx,
   onShortcutError,
+  onPrintRx,
   onSupervisorUpdated,
   onSupervisorNotice,
 }: DoctorActivePaneProps) {
@@ -103,9 +110,41 @@ export function DoctorActivePane({
             csrfToken={csrfToken}
             blocked={blocked}
             labPanelOrderEnabled={labPanelOrderEnabled}
+            formularyRxEnabled={formularyRxEnabled}
             onOpenLabPanel={onOpenLabPanel}
+            onOpenFormularyRx={onOpenFormularyRx}
             onError={onShortcutError}
           />
+          {(payload.pharm_ops_enabled || payload.rx_print_enabled) ? (
+            <div className="mb-3" id="nc-doctor-rx-stock-panel">
+              <div className="d-flex justify-content-between align-items-center mb-2">
+                <h5 className="mb-0">
+                  {payload.pharm_ops_enabled ? 'Prescriptions (stock)' : 'Prescriptions'}
+                </h5>
+                {payload.rx_list_url ? (
+                  <a
+                    className="btn btn-outline-secondary btn-sm"
+                    href={payload.rx_list_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Open Rx list
+                  </a>
+                ) : null}
+              </div>
+              {payload.pharm_ops_enabled ? (
+                <p className="small text-muted mb-2">
+                  Read-only quantity on hand when Pharmacy Operations is enabled.
+                </p>
+              ) : null}
+              <PharmacyPrescriptionsTable
+                prescriptions={payload.prescriptions ?? []}
+                showStockBadges={!!payload.pharm_ops_enabled}
+                canPrintRx={!!payload.can_print_rx}
+                onPrintRx={onPrintRx}
+              />
+            </div>
+          ) : null}
           <div className="d-flex flex-wrap align-items-center">
             <button
               type="button"

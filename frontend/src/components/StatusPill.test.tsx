@@ -12,16 +12,17 @@ describe('StatusPill', () => {
     expect(screen.getByText('#7 With doctor')).toBeInTheDocument();
   });
 
-  it('applies the correct variant class', () => {
+  it('applies a warning variant for ready_for_doctor', () => {
     const { container } = render(<StatusPill state="ready_for_doctor" />);
-    expect(container.firstChild).toHaveClass('oe-nc-status-pill--warning');
+    // Badge now uses Tailwind classes; check for amber (warning) colour token
+    expect(container.firstChild).toHaveClass('bg-amber-100');
   });
 
-  it('renders the dot element', () => {
+  it('renders a coloured dot indicator', () => {
     const { container } = render(<StatusPill state="completed" />);
-    const dot = container.querySelector('.oe-nc-status-pill__dot');
+    // The dot is now a <span> with an inline background-color style
+    const dot = container.querySelector('span[aria-hidden="true"]');
     expect(dot).toBeInTheDocument();
-    expect(dot).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('falls back gracefully for unknown state', () => {

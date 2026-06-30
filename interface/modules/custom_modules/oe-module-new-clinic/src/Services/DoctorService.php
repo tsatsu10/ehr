@@ -29,6 +29,8 @@ class DoctorService
         private readonly EncounterSignService $signService = new EncounterSignService(),
         private readonly LabResultsReadinessService $labReadiness = new LabResultsReadinessService(),
         private readonly ClinicDateService $clinicDate = new ClinicDateService(),
+        private readonly PharmacyService $pharmacyService = new PharmacyService(),
+        private readonly PharmOpsAccessService $pharmOpsAccess = new PharmOpsAccessService(),
     ) {
     }
 
@@ -450,8 +452,12 @@ class DoctorService
         );
 
         $supervisorMeta = $this->getSupervisorMeta((int) $visit['encounter'], $actorUserId);
+        $pharmOpsEnabled = $this->pharmOpsAccess->isHubEnabled($facilityId);
+        $rxPrintEnabled = $this->pharmOpsAccess->isRxPrintEnabled($facilityId);
+        $pid = (int) $visit['pid'];
+        $encounter = (int) $visit['encounter'];
 
-        return [
+        $payload = [
             'visit' => $visit,
             'preview' => $preview,
             'vitals_warnings' => $warnings,
@@ -467,13 +473,27 @@ class DoctorService
             ) === 1,
             'encounter_url' => EncounterSignService::buildEncounterUrl(
                 $GLOBALS['webroot'] ?? '',
-                (int) $visit['pid'],
-                (int) $visit['encounter']
+                $pid,
+                $encounter
             ),
             'supervisor_id' => $supervisorMeta['supervisor_id'],
             'supervisor_display_name' => $supervisorMeta['supervisor_display_name'],
             'supervisor_from_profile' => $supervisorMeta['supervisor_from_profile'],
+            'pharm_ops_enabled' => $pharmOpsEnabled,
+            'rx_print_enabled' => $rxPrintEnabled,
+            'can_print_rx' => $rxPrintEnabled && $this->pharmOpsAccess->canPrintRx(),
         ];
+
+        if ($pharmOpsEnabled || $rxPrintEnabled) {
+            $payload['prescriptions'] = $this->pharmacyService->getPrescriptionsWithStockForEncounter(
+                $pid,
+                $encounter,
+                $facilityId
+            );
+            $payload['rx_list_url'] = $this->pharmacyService->rxListUrl($pid);
+        }
+
+        return $payload;
     }
 
     private function canOverrideEsign(?string $reason): bool

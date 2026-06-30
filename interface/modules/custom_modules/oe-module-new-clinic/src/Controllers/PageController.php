@@ -18,6 +18,7 @@ use OpenEMR\Core\Header;
 use OpenEMR\Core\Kernel;
 use OpenEMR\Modules\NewClinic\ModuleAssetVersion;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
+use OpenEMR\Modules\NewClinic\Services\MoneyFormatService;
 use OpenEMR\Modules\NewClinic\Services\OpenEmrProductRegistrationDismissService;
 use OpenEMR\Modules\NewClinic\Services\PageAccessService;
 use OpenEMR\Modules\NewClinic\Services\ShellService;
@@ -85,6 +86,7 @@ class PageController
         (new OpenEmrProductRegistrationDismissService())->dismissIfPrompting($deskFacilityId);
 
         $deskConfig = new ClinicConfigService();
+        $moneyFormat = new MoneyFormatService();
 
         echo $twig->render($template, array_merge([
             'page_title' => $title,
@@ -103,6 +105,7 @@ class PageController
                 $deskFacilityId
             ),
             'queue_poll_ms' => $deskConfig->resolveQueuePollIntervalMs($deskFacilityId),
+            'currency_format' => $moneyFormat->getFormatPayload($deskFacilityId),
         ], (new ShellService())->buildContext($shellAco, $context['shell_nav_id'] ?? null), $context));
     }
 

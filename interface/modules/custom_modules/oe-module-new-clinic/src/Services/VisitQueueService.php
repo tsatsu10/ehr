@@ -11,6 +11,7 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
+use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Logging\EventAuditLogger;
 use OpenEMR\Common\Uuid\UuidRegistry;
@@ -28,6 +29,7 @@ class VisitQueueService
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly FacilityScopeService $facilityScope = new FacilityScopeService(),
         private readonly ClinicDateService $clinicDate = new ClinicDateService(),
+        private readonly RevisitCompletionGateService $revisitGate = new RevisitCompletionGateService(),
     ) {
     }
 
@@ -189,7 +191,8 @@ class VisitQueueService
         int $actorUserId,
         ?int $facilityId = null,
         ?string $chiefComplaint = null,
-        bool $isUrgent = false
+        bool $isUrgent = false,
+        ?string $revisitOverrideReason = null
     ): array {
         return $this->createVisit(
             $pid,
@@ -197,7 +200,14 @@ class VisitQueueService
             $actorUserId,
             $facilityId,
             $chiefComplaint,
-            $isUrgent
+            $isUrgent,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            $revisitOverrideReason
         );
     }
 
@@ -214,7 +224,8 @@ class VisitQueueService
         ?int $visitTypeId = null,
         ?int $facilityId = null,
         ?string $chiefComplaint = null,
-        bool $isUrgent = false
+        bool $isUrgent = false,
+        ?string $revisitOverrideReason = null
     ): array {
         $facilityId = $facilityId ?? $this->visitScope->resolveActorFacilityId(null);
         $appointmentService = new AppointmentTodayService();
@@ -258,7 +269,8 @@ class VisitQueueService
                 (int) ($appointment['pc_eid'] ?? 0),
                 (string) ($appointment['pc_eventDate'] ?? $apptDate),
                 $assignedProviderId > 0 ? $assignedProviderId : null,
-                $encounterProviderId
+                $encounterProviderId,
+                $revisitOverrideReason
             );
 
             $appointmentStatusUpdated = false;
@@ -357,6 +369,46 @@ class VisitQueueService
         );
     }
 
+    /**
+     * Reception skip triage: waiting → ready_for_doctor (M1d-F07).
+     *
+     * @return array<string, mixed>
+     */
+    public function skipTriage(
+        int $visitId,
+        int $actorUserId,
+        int $expectedVersion,
+        ?string $reason = null
+    ): array {
+        if (!AclMain::aclCheckCore('new_clinic', 'new_skip_triage')) {
+            throw new \InvalidArgumentException('Skip triage not permitted');
+        }
+
+        $visit = $this->getVisitForActor($visitId);
+        if ($visit['state'] !== 'waiting') {
+            throw new \InvalidArgumentException('Visit must be in waiting state to skip triage');
+        }
+
+        $reasonValue = $reason !== null ? mb_substr(trim($reason), 0, 200) : null;
+        if ($reasonValue === '') {
+            $reasonValue = null;
+        }
+
+        $updated = $this->transition(
+            $visitId,
+            'ready_for_doctor',
+            $actorUserId,
+            $expectedVersion,
+            $reasonValue ?? 'skip_triage',
+            null,
+            null,
+            false,
+            ['skip_triage' => 1]
+        );
+
+        return $updated;
+    }
+
     private function createVisit(
         int $pid,
         int $visitTypeId,
@@ -369,10 +421,13 @@ class VisitQueueService
         ?int $pcEid = null,
         ?string $apptDate = null,
         ?int $assignedProviderId = null,
-        ?int $encounterProviderId = null
+        ?int $encounterProviderId = null,
+        ?string $revisitOverrideReason = null
     ): array {
         $facilityId = $facilityId ?? $this->visitScope->resolveActorFacilityId(null);
         $this->visitScope->assertFacilityAccessible($facilityId);
+
+        $this->revisitGate->assertCanStartVisit($pid, $actorUserId, $facilityId, $revisitOverrideReason);
 
         $existing = $this->assertCanStartVisit($pid, $facilityId);
         if ($existing) {
@@ -489,7 +544,8 @@ class VisitQueueService
         ?string $reason = null,
         ?string $chiefComplaint = null,
         ?int $assignedProviderId = null,
-        bool $setPharmacyOrdered = false
+        bool $setPharmacyOrdered = false,
+        array $auditExtra = []
     ): array {
         $visit = $this->getVisitForActor($visitId);
 
@@ -530,11 +586,11 @@ class VisitQueueService
         }
 
         $this->logStateChange($visitId, $fromState, $newState, $actorUserId, $reason);
-        $this->audit('new_visit', 'state_changed', (int) $visit['pid'], $visitId, [
+        $this->audit('new_visit', 'state_changed', (int) $visit['pid'], $visitId, array_merge([
             'from' => $fromState,
             'to' => $newState,
             'reason' => $reason,
-        ]);
+        ], $auditExtra));
 
         return $this->getVisitById($visitId) ?? [];
     }

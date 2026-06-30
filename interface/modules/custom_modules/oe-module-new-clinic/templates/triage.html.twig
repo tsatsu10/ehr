@@ -16,9 +16,6 @@
 
 {% block content %}
 {% if enable_react_triage_desk|default(true) %}
-{% if enable_shared_device_session_warning|default(false) %}
-{% include 'partials/shared-device-session-banner.html.twig' with { prefix: 'nc-triage' } only %}
-{% endif %}
 <div
     data-island="triage-desk"
     data-props="{{ {

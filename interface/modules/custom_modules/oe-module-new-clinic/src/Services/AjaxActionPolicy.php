@@ -26,7 +26,9 @@ class AjaxActionPolicy
         'visit.cancel' => 'new_visit_cancel',
         'visit.start' => 'new_reception',
         'visit.start_from_appointment' => 'new_reception',
+        'visit.skip_triage' => 'new_skip_triage',
         'visit.queue_slip' => 'new_reception',
+        'front_desk.revisit_awaiting_documents' => 'new_reception',
         'doctor.take' => 'new_doctor',
         'doctor.active' => 'new_doctor',
         'doctor.complete' => 'new_doctor',
@@ -37,6 +39,8 @@ class AjaxActionPolicy
         'doctor.restore_session' => 'new_doctor',
         'doctor.lab_panel_catalog' => 'new_doctor',
         'doctor.lab_panel_place' => 'new_doctor',
+        'doctor.formulary_rx_catalog' => 'new_doctor',
+        'doctor.formulary_rx_place' => 'new_doctor',
         'triage.restore_session' => 'new_nurse',
         'triage.select' => 'new_nurse',
         'triage.start' => 'new_nurse',
@@ -71,6 +75,7 @@ class AjaxActionPolicy
         'admin.fee.import' => 'new_fee_schedule_admin',
         'admin.roles.grant_self' => 'new_admin',
         'admin.reconciliation.run' => 'new_admin',
+        'admin.profile.apply_cash_clinic' => 'new_admin',
         'reports.daily' => 'reports',
         'reports.reconciliation' => 'reports',
     ];
@@ -134,6 +139,7 @@ class AjaxActionPolicy
     private const LAB_OPS_ENTER_ACTIONS = [
         'lab_ops.result_save',
         'lab_ops.specimen_collect',
+        'lab_ops.mark_send_out',
     ];
 
     /** @var array<int, string> */
@@ -146,6 +152,73 @@ class AjaxActionPolicy
         'lab_ops.panel_import',
         'lab_ops.fee_map_list',
         'lab_ops.fee_map_save',
+        'lab_ops.setup_model',
+        'lab_ops.provider_create',
+        'lab_ops.sendout_provider_create',
+    ];
+
+    /** @var array<int, string> */
+    private const PHARM_OPS_READ_ACTIONS = [
+        'pharm_ops.worklist',
+        'pharm_ops.dispense_get',
+        'pharm_ops.otc_drugs_search',
+        'pharm_ops.otc_sale_get',
+        'pharm_ops.setup_status',
+        'pharm_ops.reports_embed',
+    ];
+
+    /** @var array<int, string> */
+    private const PHARM_OPS_DESTROY_ACTIONS = [
+        'pharm_ops.destroy_get',
+        'pharm_ops.destroy_confirm',
+    ];
+
+    /** @var array<int, string> */
+    private const PHARM_OPS_RX_PRINT_ACTIONS = [
+        'pharm_ops.rx_print_pdf',
+    ];
+
+    /** @var array<int, string> */
+    private const PHARM_OPS_DISPENSE_LABEL_ACTIONS = [
+        'pharm_ops.dispense_label_pdf',
+    ];
+
+    /** @var array<int, string> */
+    private const PHARM_OPS_DISPENSE_ACTIONS = [
+        'pharm_ops.dispense_confirm',
+        'pharm_ops.otc_sale_confirm',
+    ];
+
+    /** @var array<int, string> */
+    private const PHARM_OPS_RECEIVE_ACTIONS = [
+        'pharm_ops.receive_get',
+        'pharm_ops.receive_save',
+    ];
+
+    /** @var array<int, string> */
+    private const PHARM_OPS_RECEIVE_ACLS = [
+        'new_pharm_ops_receive',
+        'new_pharmacy_lead',
+        'new_admin',
+    ];
+
+    /** @var array<int, string> */
+    private const PHARM_OPS_CATALOG_ACTIONS = [
+        'pharm_ops.warehouse_create',
+        'pharm_ops.formulary_import',
+        'pharm_ops.controlled_catalog',
+        'pharm_ops.controlled_catalog_save',
+    ];
+
+    /** @var array<int, string> */
+    private const REPORT_HUB_READ_ACTIONS = [
+        'reports.hub_summary',
+        'reports.catalog',
+    ];
+
+    /** @var array<int, string> */
+    private const REPORT_HUB_EXPORT_ACTIONS = [
+        'reports.export_run',
     ];
 
     /** @var array<int, string> */
@@ -314,6 +387,34 @@ class AjaxActionPolicy
             return ['type' => 'lab_ops_catalog_acl'];
         }
 
+        if (in_array($action, self::PHARM_OPS_READ_ACTIONS, true)) {
+            return ['type' => 'pharm_ops_read_acl'];
+        }
+
+        if (in_array($action, self::PHARM_OPS_DISPENSE_ACTIONS, true)) {
+            return ['type' => 'pharm_ops_dispense_acl'];
+        }
+
+        if (in_array($action, self::PHARM_OPS_RECEIVE_ACTIONS, true)) {
+            return ['type' => 'pharm_ops_receive_acl'];
+        }
+
+        if (in_array($action, self::PHARM_OPS_DESTROY_ACTIONS, true)) {
+            return ['type' => 'pharm_ops_destroy_acl'];
+        }
+
+        if (in_array($action, self::PHARM_OPS_RX_PRINT_ACTIONS, true)) {
+            return ['type' => 'pharm_ops_rx_print_acl'];
+        }
+
+        if (in_array($action, self::PHARM_OPS_DISPENSE_LABEL_ACTIONS, true)) {
+            return ['type' => 'pharm_ops_dispense_label_acl'];
+        }
+
+        if (in_array($action, self::PHARM_OPS_CATALOG_ACTIONS, true)) {
+            return ['type' => 'pharm_ops_catalog_acl'];
+        }
+
         if (in_array($action, self::BILL_OPS_CORRECT_READ_ACTIONS, true)
             || in_array($action, self::BILL_OPS_CORRECT_WRITE_ACTIONS, true)) {
             return ['type' => 'bill_ops_correct_acl'];
@@ -329,6 +430,14 @@ class AjaxActionPolicy
 
         if (in_array($action, self::BILL_OPS_OUTSTANDING_ACTIONS, true)) {
             return ['type' => 'bill_ops_outstanding_acl'];
+        }
+
+        if (in_array($action, self::REPORT_HUB_READ_ACTIONS, true)) {
+            return ['type' => 'report_hub_read_acl'];
+        }
+
+        if (in_array($action, self::REPORT_HUB_EXPORT_ACTIONS, true)) {
+            return ['type' => 'report_hub_export_acl'];
         }
 
         if (in_array($action, self::COHORT_ACTIONS, true)) {
@@ -358,7 +467,8 @@ class AjaxActionPolicy
         if (in_array($action, [
             'queue.list', 'visit.board', 'visit.detail', 'queue.counts',
             'triage.queue', 'doctor.queue', 'cashier.queue', 'lab.queue', 'pharmacy.queue',
-            'desk.shared_session_probe',
+            'desk.shared_session_probe', 'front_desk.desk_stats', 'front_desk.todays_appointments',
+            'front_desk.recently_viewed', 'front_desk.recently_viewed.remember', 'front_desk.recently_viewed.clear',
         ], true)) {
             return ['type' => 'desk_acl'];
         }

@@ -9,9 +9,14 @@ require_once __DIR__ . '/bootstrap.php';
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Modules\NewClinic\Controllers\PageController;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
+use OpenEMR\Modules\NewClinic\Services\PharmOpsAccessService;
+use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 
 $moduleUrl = $GLOBALS['webroot'] . '/interface/modules/custom_modules/oe-module-new-clinic/public';
 $config = new ClinicConfigService();
+$visitScope = new VisitScopeService();
+$facilityId = $visitScope->resolveDeskFacilityId();
+$pharmOpsAccess = new PharmOpsAccessService();
 
 if (!$config->isEnabled('enable_pharmacy_role', 0)) {
     http_response_code(403);
@@ -20,13 +25,21 @@ if (!$config->isEnabled('enable_pharmacy_role', 0)) {
 }
 
 $reactPharmacyDesk = $config->get('enable_react_pharmacy_desk', '1') === '1';
+$pharmOpsEnabled = $pharmOpsAccess->isHubEnabled($facilityId);
+$canDispense = $pharmOpsEnabled && $pharmOpsAccess->canDispense();
+$canSellOtc = $canDispense;
+$canUndispensedOverride = AclMain::aclCheckCore('new_clinic', 'new_pharmacy_undispensed_override');
 
 (new PageController())->render('pharmacy.html.twig', 'Pharmacy Desk', 'new_pharmacy', [
     'desk_id' => 'pharmacy',
     'module_url' => $moduleUrl,
     'visit_board_url' => $moduleUrl . '/visit-board.php',
     'webroot' => $GLOBALS['webroot'],
-    '  can_skip_to_payment' => AclMain::aclCheckCore('new_clinic', 'new_visit_skip_queue'),
+    'can_skip_to_payment' => AclMain::aclCheckCore('new_clinic', 'new_visit_skip_queue'),
     'enable_react_pharmacy_desk' => $reactPharmacyDesk,
     'can_esign_override' => AclMain::aclCheckCore('new_clinic', 'new_esign_skip_complete'),
+    'can_sell_otc' => $canSellOtc,
+    'pharm_ops_enabled' => $pharmOpsEnabled,
+    'can_dispense' => $canDispense,
+    'can_undispensed_override' => $canUndispensedOverride,
 ]);
