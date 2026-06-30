@@ -68,12 +68,11 @@ class ReportHubCatalogService
     private function clinicalCards(): array
     {
         return [
-            $this->stockCard(
+            $this->nativeCard(
                 'clinical_immunizations',
                 'clinical',
                 'Immunizations given',
                 'Vaccines administered in a date range — export for district EPI review.',
-                'immunization_report.php'
             ),
             $this->stockCard(
                 'clinical_cohort',
@@ -109,12 +108,11 @@ class ReportHubCatalogService
         }
 
         $cards = [
-            $this->stockCard(
+            $this->nativeCard(
                 'pharm_destroyed',
                 'pharmacy',
                 'Destroyed medicines register',
                 'Lots marked destroyed with witness and method — pharmacy council inspections.',
-                'destroyed_drugs_report.php'
             ),
             $this->stockCard(
                 'pharm_inventory_activity',
@@ -255,6 +253,21 @@ class ReportHubCatalogService
         }
 
         return $cards;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function nativeCard(string $id, string $lens, string $title, string $blurb): array
+    {
+        return [
+            'id' => $id,
+            'lens' => $lens,
+            'title' => $title,
+            'blurb' => $blurb,
+            'url' => '',
+            'kind' => 'native',
+        ];
     }
 
     /**

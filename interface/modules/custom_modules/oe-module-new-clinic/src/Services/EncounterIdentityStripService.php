@@ -24,6 +24,7 @@ class EncounterIdentityStripService
     /** @var list<string> */
     private const BUFFER_SCRIPT_SUFFIXES = [
         '/patient_file/encounter/encounter_top.php',
+        '/oe-module-new-clinic/public/clinical-form-bridge.php',
         '/patient_file/summary/labdata.php',
         '/orders/orders_results.php',
         '/drugs/drug_inventory.php',
@@ -31,7 +32,7 @@ class EncounterIdentityStripService
 
     /** @var array<string, list<string>> */
     private const STRIP_SHORTCUTS = [
-        'doctor' => ['encounter', 'lab', 'rx'],
+        'doctor' => ['encounter', 'lab', 'rx', 'form'],
         'lab' => ['orders', 'results'],
         'pharmacy' => ['dispense', 'rx_edit'],
     ];
@@ -88,6 +89,10 @@ class EncounterIdentityStripService
 
     public function shortcutShowsStrip(string $desk, string $shortcut): bool
     {
+        if (str_starts_with($shortcut, 'form:')) {
+            $shortcut = 'form';
+        }
+
         return in_array($shortcut, self::STRIP_SHORTCUTS[$desk] ?? [], true);
     }
 

@@ -74,6 +74,12 @@ $acos = [
     'new_reports_financial' => 'Reporting Financial Lens',
     'new_reports_public_health' => 'Reporting Public Health Lens',
     'new_reports_audit' => 'Reporting Audit Lens',
+    'new_clinical_doc_hub' => 'Clinical Documentation Hub',
+    'new_clinical_doc_consult' => 'Clinical Documentation Consult Lens',
+    'new_clinical_doc_screening' => 'Clinical Documentation Screening Lens',
+    'new_clinical_doc_nursing' => 'Clinical Documentation Nursing Lens',
+    'new_clinical_doc_orders' => 'Clinical Documentation Orders Lens',
+    'new_clinical_doc_specialty' => 'Clinical Documentation Specialty Lens',
 ];
 
 foreach ($acos as $name => $title) {
@@ -139,13 +145,13 @@ if (!empty($groupAcls[$leadTierAco]) && isset($acos[$leadTierAco])) {
 
 $extraGrants = [
     'new_reception_lead' => ['new_reception', 'new_create_despite_dup', 'new_skip_triage', 'new_visit_cancel', 'new_visit_skip_queue'],
-    'new_nurse_lead' => ['new_nurse', 'new_skip_triage', 'new_cohort_share_filter', 'new_reports_clinical'],
+    'new_nurse_lead' => ['new_nurse', 'new_skip_triage', 'new_cohort_share_filter', 'new_reports_clinical', 'new_clinical_doc_screening'],
     'new_lab_lead' => ['new_lab', 'new_lab_ops', 'new_lab_ops_enter', 'new_lab_ops_release'],
     'new_pharmacy_lead' => ['new_pharmacy', 'new_pharm_ops', 'new_pharm_ops_dispense', 'new_pharm_ops_receive', 'new_pharm_ops_destroy', 'new_pharmacy_undispensed_override', 'new_reports_pharmacy'],
     'new_cashier_lead' => ['new_cashier', 'new_billing_skip_completion', 'new_discount', 'new_visit_mark_outstanding', 'new_close_without_charge', 'new_receipt_reprint', 'new_esign_skip_complete', 'new_chart_depth', 'new_chart_depth_finance', 'new_chart_depth_referral', 'new_bill_ops', 'new_bill_ops_correct', 'new_bill_ops_payment', 'new_bill_ops_close', 'new_reports_financial'],
     'new_admin' => array_keys($acos),
-    'new_doctor' => ['new_doctor', 'new_visit_reopen', 'new_visit_skip_queue', 'new_chart_depth', 'new_chart_depth_referral', 'new_chart_depth_export', 'new_registry', 'new_registry_export', 'new_lab_ops'],
-    'new_nurse' => ['new_nurse', 'new_registry', 'new_registry_export'],
+    'new_doctor' => ['new_doctor', 'new_visit_reopen', 'new_visit_skip_queue', 'new_chart_depth', 'new_chart_depth_referral', 'new_chart_depth_export', 'new_registry', 'new_registry_export', 'new_lab_ops', 'new_clinical_doc_hub', 'new_clinical_doc_consult', 'new_clinical_doc_screening', 'new_clinical_doc_orders', 'new_clinical_doc_specialty'],
+    'new_nurse' => ['new_nurse', 'new_registry', 'new_registry_export', 'new_clinical_doc_hub', 'new_clinical_doc_nursing'],
     'new_cashier' => ['new_cashier', 'new_receipt_reprint', 'new_chart_depth', 'new_chart_depth_finance'],
 ];
 

@@ -1,6 +1,7 @@
 import { oeFetch } from '@core/oeFetch';
 import { formatMoney } from '@core/formatMoney';
 import type { ReportHubCard, ReportHubLens } from './reportHubTypes';
+import { ReportHubNativeCard } from './ReportHubNativeCard';
 
 interface ReportHubLensPaneProps {
   lens: ReportHubLens;
@@ -75,7 +76,19 @@ export function ReportHubLensPane({
 
   return (
     <div className="oe-nc-reporthub-cards" role="list">
-      {lensCards.map((card) => (
+      {lensCards.map((card) => {
+        if (card.kind === 'native') {
+          return (
+            <ReportHubNativeCard
+              key={card.id}
+              card={card}
+              ajaxUrl={ajaxUrl}
+              csrfToken={csrfToken}
+            />
+          );
+        }
+
+        return (
         <article key={card.id} className="oe-nc-reporthub-card" role="listitem">
           <h3 className="oe-nc-reporthub-card__title h6">{card.title}</h3>
           <p className="oe-nc-reporthub-card__blurb small text-muted mb-2">{card.blurb}</p>
@@ -100,7 +113,8 @@ export function ReportHubLensPane({
             </button>
           )}
         </article>
-      ))}
+        );
+      })}
     </div>
   );
 }

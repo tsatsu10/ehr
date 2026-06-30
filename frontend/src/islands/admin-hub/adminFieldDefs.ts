@@ -39,6 +39,7 @@ export const REACT_KILL_SWITCH_KEYS: string[] = [
   'enable_react_chart_depth',
   'enable_react_bill_ops',
   'enable_react_report_hub',
+  'enable_react_clinical_doc_hub',
 ];
 
 /** All editable keys collected on save (matches legacy nc-admin-field set + admin hub flag). */
@@ -322,6 +323,38 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         type: 'bool',
         label: 'Show US quality reports (CQM/AMC) in audit lens',
         hint: 'Cash clinics leave OFF. Requires enable_report_hub.',
+        indent: 1,
+      },
+    ],
+  },
+  {
+    title: 'Clinical Documentation Hub (M17)',
+    fields: [
+      {
+        key: 'enable_clinical_doc_hub',
+        type: 'bool',
+        label: 'Enable Clinical Documentation Hub (M17)',
+        hint: 'Curated encounter forms by lens; hides stock Visit Forms menu. Default OFF.',
+      },
+      {
+        key: 'consult_note_formdir',
+        type: 'string',
+        label: 'Primary consult note form directory',
+        hint: 'Registry formdir for the main consult card (default soap).',
+        indent: 1,
+      },
+      {
+        key: 'clinical_doc_show_screening',
+        type: 'bool',
+        label: 'Show screening lens (PHQ-9 / GAD-7)',
+        hint: 'Requires enable_clinical_doc_hub.',
+        indent: 1,
+      },
+      {
+        key: 'clinical_doc_show_specialty',
+        type: 'bool',
+        label: 'Show specialty lens',
+        hint: 'Requires enable_clinical_doc_hub and clinical_doc_specialty_pack JSON.',
         indent: 1,
       },
     ],

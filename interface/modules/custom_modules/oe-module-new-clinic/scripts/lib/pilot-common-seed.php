@@ -37,6 +37,8 @@ function pilotEnsureNewClinicAclObjects(): void
         'new_pharmacy_lead',
         'new_reports_hub',
         'new_reports_clinical',
+        'new_clinical_doc_hub',
+        'new_clinical_doc_consult',
     ];
     foreach ($required as $aco) {
         $row = QueryUtils::querySingleRow(

@@ -27,6 +27,10 @@
   margin-bottom: 0.35rem;
 }
 
+.oe-nc-reporthub-card--native {
+  grid-column: 1 / -1;
+}
+
 .oe-nc-reporthub-empty {
   padding: 1.5rem;
   border: 1px dashed var(--oe-nc-border, #e2e8f0);

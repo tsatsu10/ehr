@@ -66,6 +66,10 @@ use OpenEMR\Modules\NewClinic\Services\ReportsService;
 use OpenEMR\Modules\NewClinic\Services\ReportHubAccessService;
 use OpenEMR\Modules\NewClinic\Services\ReportHubCatalogService;
 use OpenEMR\Modules\NewClinic\Services\ReportHubExportService;
+use OpenEMR\Modules\NewClinic\Services\ClinicalDocAccessService;
+use OpenEMR\Modules\NewClinic\Services\ClinicalDocCatalogService;
+use OpenEMR\Modules\NewClinic\Services\ClinicalDocFormOpenService;
+use OpenEMR\Modules\NewClinic\Services\ClinicalDocVisitSummaryService;
 use OpenEMR\Modules\NewClinic\Services\ClinicAdminService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\SessionRoleService;
@@ -132,6 +136,10 @@ class AjaxController
         private readonly ReportHubAccessService $reportHubAccessService = new ReportHubAccessService(),
         private readonly ReportHubCatalogService $reportHubCatalogService = new ReportHubCatalogService(),
         private readonly ReportHubExportService $reportHubExportService = new ReportHubExportService(),
+        private readonly ClinicalDocAccessService $clinicalDocAccessService = new ClinicalDocAccessService(),
+        private readonly ClinicalDocCatalogService $clinicalDocCatalogService = new ClinicalDocCatalogService(),
+        private readonly ClinicalDocVisitSummaryService $clinicalDocVisitSummaryService = new ClinicalDocVisitSummaryService(),
+        private readonly ClinicalDocFormOpenService $clinicalDocFormOpenService = new ClinicalDocFormOpenService(),
         private readonly RateLimitService $rateLimitService = new RateLimitService(),
         private readonly AjaxActionPolicy $actionPolicy = new AjaxActionPolicy(),
         private readonly VisitScopeService $visitScopeService = new VisitScopeService(),
@@ -1362,6 +1370,65 @@ class AjaxController
                     }
                     $this->respond(true, 'ok', $this->reportHubCatalogService->getCatalog($lens, $facilityId));
                     break;
+                case 'reports.run':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $preview = $this->reportHubExportService->runReportPreview($body, $userId);
+                        $this->respond(true, 'ok', $preview);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'reports.export':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $export = $this->reportHubExportService->requestExport($body, $userId);
+                        if (($export['mode'] ?? '') === 'sync') {
+                            $this->respondCsv((string) $export['filename'], (string) $export['content']);
+                        }
+                        $this->respond(true, 'ok', $export);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'reports.export_status':
+                    $this->requireReportHubExportAcl();
+                    $jobId = (int) ($_REQUEST['job_id'] ?? 0);
+                    try {
+                        $status = $this->reportHubExportService->pollExportStatus($jobId, $userId);
+                        $this->respond(true, 'ok', $status);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'export_status'], (int) ($e->getCode() ?: 400));
+                    }
+                    break;
+                case 'reports.export_download':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $jobId = (int) ($body['job_id'] ?? 0);
+                    try {
+                        $download = $this->reportHubExportService->readExportDownload($jobId, $userId);
+                        $this->respondCsv($download['filename'], $download['content']);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'export_download'], (int) ($e->getCode() ?: 400));
+                    }
+                    break;
                 case 'reports.export_run':
                     if ($method !== 'POST') {
                         $this->respond(false, 'POST required', [], 405);
@@ -1370,6 +1437,59 @@ class AjaxController
                     $this->verifyCsrf($body);
                     $recorded = $this->reportHubExportService->recordExportRun($body, $userId);
                     $this->respond(true, 'ok', $recorded);
+                    break;
+                case 'clinical_doc.visit_summary':
+                    $this->clinicalDocAccessService->assertHubAccess();
+                    $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                    $lens = isset($_REQUEST['lens']) ? (string) $_REQUEST['lens'] : null;
+                    if ($lens === '') {
+                        $lens = null;
+                    }
+                    try {
+                        $summary = $this->clinicalDocVisitSummaryService->getVisitSummary($visitId, $userId, $lens);
+                        $this->respond(true, 'ok', $summary);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 400);
+                        $this->respond(false, $e->getMessage(), ['code' => $code === 409 ? 'no_encounter_on_visit' : 'error'], $code);
+                    }
+                    break;
+                case 'clinical_doc.catalog':
+                    $this->clinicalDocAccessService->assertHubAccess();
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $lens = isset($_REQUEST['lens']) ? (string) $_REQUEST['lens'] : null;
+                    if ($lens === '') {
+                        $lens = null;
+                    }
+                    $this->respond(true, 'ok', $this->clinicalDocCatalogService->getCatalog($lens, $facilityId));
+                    break;
+                case 'clinical_doc.sign_status':
+                    $this->clinicalDocAccessService->assertHubAccess();
+                    $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                    try {
+                        $status = $this->clinicalDocVisitSummaryService->getSignStatus($visitId);
+                        $this->respond(true, 'ok', $status);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 400);
+                        $this->respond(false, $e->getMessage(), ['code' => $code === 409 ? 'no_encounter_on_visit' : 'error'], $code);
+                    }
+                    break;
+                case 'clinical_doc.open_form':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $result = $this->clinicalDocFormOpenService->openForm($body, $userId);
+                        $this->respond(true, 'ok', $result);
+                    } catch (EncounterSessionMismatchException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'session_mismatch'], 409);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
                     break;
                 case 'admin.reconciliation.run':
                     if ($method !== 'POST') {
@@ -2117,6 +2237,8 @@ class AjaxController
             'bill_ops_outstanding_acl' => $this->requireBillOpsOutstandingAcl(),
             'report_hub_read_acl' => $this->requireReportHubReadAcl(),
             'report_hub_export_acl' => $this->requireReportHubExportAcl(),
+            'clinical_doc_read_acl' => $this->requireClinicalDocReadAcl(),
+            'clinical_doc_write_acl' => $this->requireClinicalDocWriteAcl(),
             'deprecated' => $this->respond(
                 false,
                 'Use role-specific workflow actions (triage, doctor, cashier)',
@@ -2317,6 +2439,24 @@ class AjaxController
     {
         try {
             $this->reportHubAccessService->assertHubAccess();
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requireClinicalDocReadAcl(): void
+    {
+        try {
+            $this->clinicalDocAccessService->assertHubAccess();
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requireClinicalDocWriteAcl(): void
+    {
+        try {
+            $this->clinicalDocAccessService->assertHubAccess();
         } catch (\RuntimeException $e) {
             $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
         }

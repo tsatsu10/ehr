@@ -387,6 +387,20 @@
       "_ChartBanner-Bd-KfgV7.js"
     ]
   },
+  "src/islands/clinical-doc/index.tsx": {
+    "file": "clinical-doc.js",
+    "name": "clinical-doc",
+    "src": "src/islands/clinical-doc/index.tsx",
+    "isEntry": true,
+    "imports": [
+      "_oeFetch-DRdCMVG3.js",
+      "_usePageHeadingToolbar-LhNgrmhx.js",
+      "_PatientContextBanner-CTw1Q1Yj.js"
+    ],
+    "css": [
+      "clinical-doc.css"
+    ]
+  },
   "src/islands/communications-hub/index.tsx": {
     "file": "communications-hub.js",
     "name": "communications-hub",
@@ -651,6 +665,7 @@
       "_oeFetch-DRdCMVG3.js",
       "_usePageHeadingToolbar-LhNgrmhx.js",
       "_formatMoney-BSsIFoKG.js",
+      "_DataTable-BHJjAYKu.js",
       "_reportsFormatters-Cl5Kncev.js"
     ],
     "css": [

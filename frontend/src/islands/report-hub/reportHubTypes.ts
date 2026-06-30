@@ -12,7 +12,7 @@ export interface ReportHubCard {
   title: string;
   blurb: string;
   url: string;
-  kind: 'stock' | 'module' | 'placeholder';
+  kind: 'stock' | 'module' | 'placeholder' | 'native';
   note?: string;
 }
 

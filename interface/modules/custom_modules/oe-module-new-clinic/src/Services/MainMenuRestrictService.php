@@ -31,6 +31,11 @@ class MainMenuRestrictService
         'repimg',
     ];
 
+    /** @var array<int, string> Visit Forms submenu label hidden when M17 hub is ON (M17-F07) */
+    public const STOCK_VISIT_FORMS_LABELS = [
+        'Visit Forms',
+    ];
+
     /** @var array<int, string> Stock inventory report URLs hidden when M13 hub is ON (M13-F13) */
     public const STOCK_PHARM_MENU_URLS = [
         '/interface/drugs/drug_inventory.php',
@@ -88,6 +93,10 @@ class MainMenuRestrictService
 
         if ($this->shouldHideStockReportsMenusForCurrentUser()) {
             $menu = $this->filterMainMenu($menu, self::STOCK_REPORTS_MENU_IDS);
+        }
+
+        if ($this->shouldHideStockVisitFormsMenusForCurrentUser()) {
+            $menu = $this->filterMainMenuByLabel($menu, self::STOCK_VISIT_FORMS_LABELS);
         }
 
         $menu = $this->pruneEmptyMenuBranches($menu);
@@ -177,6 +186,49 @@ class MainMenuRestrictService
         $facilityId = $facilityId ?? $this->visitScope->resolveDefaultFacilityId();
 
         return $this->config->isEnabled('enable_report_hub', 0, $facilityId);
+    }
+
+    public function shouldHideStockVisitFormsMenusForCurrentUser(?int $facilityId = null): bool
+    {
+        if (AclMain::aclCheckCore('new_clinic', 'new_admin') || AclMain::aclCheckCore('admin', 'super')) {
+            return false;
+        }
+
+        if (!$this->currentUserHasClinicDeskAcl()) {
+            return false;
+        }
+
+        $facilityId = $facilityId ?? $this->visitScope->resolveDefaultFacilityId();
+
+        return $this->config->isEnabled('enable_clinical_doc_hub', 0, $facilityId);
+    }
+
+    /**
+     * @param array<int, object> $menu
+     * @param array<int, string> $hiddenLabels
+     * @return array<int, object>
+     */
+    public function filterMainMenuByLabel(array $menu, array $hiddenLabels): array
+    {
+        if ($hiddenLabels === []) {
+            return $menu;
+        }
+
+        $filtered = [];
+        foreach ($menu as $item) {
+            $label = (string) ($item->label ?? '');
+            if ($label !== '' && in_array($label, $hiddenLabels, true)) {
+                continue;
+            }
+
+            if (!empty($item->children) && is_array($item->children)) {
+                $item->children = $this->filterMainMenuByLabel($item->children, $hiddenLabels);
+            }
+
+            $filtered[] = $item;
+        }
+
+        return $filtered;
     }
 
     /**

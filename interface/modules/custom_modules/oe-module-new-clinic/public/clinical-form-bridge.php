@@ -23,13 +23,19 @@ use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Twig\TwigContainer;
 use OpenEMR\Core\Header;
 use OpenEMR\Modules\NewClinic\Services\EncounterIdentityStripService;
+use OpenEMR\Modules\NewClinic\Services\ClinicalDocCatalogService;
+use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\FacilityScopeService;
 use OpenEMR\Modules\NewClinic\Services\ProcedureOrderDeepLinkService;
 
 /** @var array<int, string> */
-$allowedForms = [
-    'procedure_order',
-];
+$allowedForms = ['procedure_order'];
+if ((new ClinicConfigService())->isEnabled('enable_clinical_doc_hub', 0)) {
+    $allowedForms = array_values(array_unique(array_merge(
+        $allowedForms,
+        (new ClinicalDocCatalogService())->allowedFormdirs()
+    )));
+}
 
 $pid = (int) ($_GET['pid'] ?? 0);
 $encounter = (int) ($_GET['encounter'] ?? 0);

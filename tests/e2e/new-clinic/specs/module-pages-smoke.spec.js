@@ -34,6 +34,7 @@ const MODULE_PAGES = [
   ['chart-export', `${MODULE_BASE}/chart-depth/export.php?pid=4`],
   ['bill-ops', `${MODULE_BASE}/bill-ops/index.php`],
   ['report-hub', `${MODULE_BASE}/report-hub/index.php`],
+  ['clinical-doc', `${MODULE_BASE}/clinical-doc/index.php`],
 ];
 
 async function loginAsAdminPage(page) {

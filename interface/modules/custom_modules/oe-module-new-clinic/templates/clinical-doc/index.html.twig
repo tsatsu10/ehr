@@ -1,0 +1,82 @@
+{% extends 'base.html.twig' %}
+
+{% block page_heading_actions %}
+<div class="d-flex flex-wrap align-items-center oe-nc-clinicaldoc-toolbar" id="nc-clinicaldoc-toolbar">
+    <div class="btn-group btn-group-sm mr-2 mb-1" role="group" aria-label="{{ 'Documentation lenses'|xlt }}">
+        {% if can_visit %}
+        <button type="button" class="btn btn-outline-primary{% if initial_tab == 'visit' %} active{% endif %}" data-tab="visit">
+            {{ 'This visit'|xlt }}
+        </button>
+        {% endif %}
+        {% if can_consult %}
+        <button type="button" class="btn btn-outline-primary{% if initial_tab == 'consult' %} active{% endif %}" data-tab="consult">
+            {{ 'Consult'|xlt }}
+        </button>
+        {% endif %}
+        {% if can_screening %}
+        <button type="button" class="btn btn-outline-primary{% if initial_tab == 'screening' %} active{% endif %}" data-tab="screening">
+            {{ 'Screening'|xlt }}
+        </button>
+        {% endif %}
+        {% if can_nursing %}
+        <button type="button" class="btn btn-outline-primary{% if initial_tab == 'nursing' %} active{% endif %}" data-tab="nursing">
+            {{ 'Nursing'|xlt }}
+        </button>
+        {% endif %}
+        {% if can_orders %}
+        <button type="button" class="btn btn-outline-primary{% if initial_tab == 'orders' %} active{% endif %}" data-tab="orders">
+            {{ 'Orders'|xlt }}
+        </button>
+        {% endif %}
+        {% if can_specialty %}
+        <button type="button" class="btn btn-outline-primary{% if initial_tab == 'specialty' %} active{% endif %}" data-tab="specialty">
+            {{ 'Specialty'|xlt }}
+        </button>
+        {% endif %}
+    </div>
+    <span class="text-muted small mb-1 mr-2" id="nc-clinicaldoc-context"></span>
+    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ doctor_desk_url|attr }}">{{ 'Doctor Desk'|xlt }}</a>
+    {% if can_show_advanced %}
+    <a class="btn btn-outline-warning btn-sm mb-1 mr-1" id="nc-clinicaldoc-advanced" href="#" target="_top">{{ 'Advanced (stock forms)'|xlt }}</a>
+    {% endif %}
+    <button type="button" class="btn btn-outline-secondary btn-sm mb-1" id="nc-clinicaldoc-refresh" aria-label="{{ 'Refresh'|xlt }}">
+        <i class="fa fa-refresh" aria-hidden="true"></i>
+    </button>
+    <span class="text-muted small mb-1" id="nc-clinicaldoc-updated"></span>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if enable_react_clinical_doc_hub|default(true) %}
+<div
+    id="nc-clinical-doc"
+    data-island="clinical-doc"
+    data-props="{{ {
+        ajaxUrl: ajax_url,
+        csrfToken: csrf_token,
+        moduleUrl: module_url,
+        doctorDeskUrl: doctor_desk_url,
+        visitBoardUrl: visit_board_url,
+        facilityId: desk_facility_id|default(0)|number_format(0, '', ''),
+        initialTab: initial_tab,
+        initialVisitId: initial_visit_id,
+        canVisit: can_visit ? true : false,
+        canConsult: can_consult ? true : false,
+        canScreening: can_screening ? true : false,
+        canNursing: can_nursing ? true : false,
+        canOrders: can_orders ? true : false,
+        canSpecialty: can_specialty ? true : false,
+        canShowAdvanced: can_show_advanced ? true : false,
+        webroot: webroot
+    }|json_encode|e('html_attr') }}"
+></div>
+{% else %}
+{% include 'partials/react-island-disabled.html.twig' with { desk_label: 'Clinical Documentation Hub' } %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if enable_react_clinical_doc_hub|default(true) %}
+<script type="module" src="{{ assets_url }}/modern/clinical-doc.js?v={{ asset_version }}"></script>
+{% endif %}
+{% endblock %}

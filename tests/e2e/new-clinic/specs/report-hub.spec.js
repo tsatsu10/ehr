@@ -47,12 +47,20 @@ test.describe('Reporting Operations Hub', () => {
 
     await expect(page.getByRole('heading', { name: 'Immunizations given' })).toBeVisible({ timeout: 20000 });
 
-    const exportAudit = page.waitForResponse(
-      (resp) => resp.url().includes('reports.export_run') && resp.ok(),
-      { timeout: 20000 },
+    const runResp = page.waitForResponse(
+      (resp) => resp.url().includes('reports.run') && resp.ok(),
+      { timeout: 30000 },
     );
-    await page.getByRole('button', { name: 'Open report' }).first().click();
-    await exportAudit;
-    await expect(page).toHaveURL(/immunization_report\.php/i, { timeout: 15000 });
+    await page.getByRole('button', { name: 'Run report' }).first().click();
+    await runResp;
+
+    const exportResp = page.waitForResponse(
+      (resp) => resp.url().includes('reports.export') && resp.ok(),
+      { timeout: 30000 },
+    );
+    await page.getByRole('button', { name: 'Export CSV' }).first().click();
+    const exportResponse = await exportResp;
+    const exportType = exportResponse.headers()['content-type'] ?? '';
+    expect(exportType.includes('text/csv') || exportType.includes('application/json')).toBeTruthy();
   });
 });

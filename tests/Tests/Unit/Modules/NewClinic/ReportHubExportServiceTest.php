@@ -66,4 +66,16 @@ class ReportHubExportServiceTest extends TestCase
 
         $this->service->recordExportRun(['report_key' => 'not_in_catalog'], 1);
     }
+
+    public function testRejectsExportForStockReportKey(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('native hub reports');
+
+        $this->service->requestExport([
+            'report_key' => 'clinical_cohort',
+            'date_from' => '2026-01-01',
+            'date_to' => '2026-06-01',
+        ], 1);
+    }
 }

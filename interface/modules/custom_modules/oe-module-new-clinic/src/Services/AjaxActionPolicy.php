@@ -219,6 +219,22 @@ class AjaxActionPolicy
     /** @var array<int, string> */
     private const REPORT_HUB_EXPORT_ACTIONS = [
         'reports.export_run',
+        'reports.run',
+        'reports.export',
+        'reports.export_status',
+        'reports.export_download',
+    ];
+
+    /** @var array<int, string> */
+    private const CLINICAL_DOC_READ_ACTIONS = [
+        'clinical_doc.visit_summary',
+        'clinical_doc.catalog',
+        'clinical_doc.sign_status',
+    ];
+
+    /** @var array<int, string> */
+    private const CLINICAL_DOC_WRITE_ACTIONS = [
+        'clinical_doc.open_form',
     ];
 
     /** @var array<int, string> */
@@ -438,6 +454,14 @@ class AjaxActionPolicy
 
         if (in_array($action, self::REPORT_HUB_EXPORT_ACTIONS, true)) {
             return ['type' => 'report_hub_export_acl'];
+        }
+
+        if (in_array($action, self::CLINICAL_DOC_READ_ACTIONS, true)) {
+            return ['type' => 'clinical_doc_read_acl'];
+        }
+
+        if (in_array($action, self::CLINICAL_DOC_WRITE_ACTIONS, true)) {
+            return ['type' => 'clinical_doc_write_acl'];
         }
 
         if (in_array($action, self::COHORT_ACTIONS, true)) {

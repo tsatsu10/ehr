@@ -343,9 +343,11 @@ class NewClinicMandatoryContractTest extends TestCase
         $spec = file_get_contents($specPath);
         $this->assertStringContainsString('Reporting Operations Hub', $spec);
         $this->assertStringContainsString('reports.catalog', $spec);
-        $this->assertStringContainsString('reports.export_run', $spec);
+        $this->assertStringContainsString('reports.run', $spec);
+        $this->assertStringContainsString('reports.export', $spec);
         $this->assertStringContainsString('Immunizations given', $spec);
-        $this->assertStringContainsString('Open report', $spec);
+        $this->assertStringContainsString('Run report', $spec);
+        $this->assertStringContainsString('Export CSV', $spec);
         $this->assertStringContainsString('pilot-enable-report-hub.php', $spec);
         $this->assertStringContainsString('embed=1', file_get_contents(
             dirname(__DIR__, 5)
@@ -376,6 +378,9 @@ class NewClinicMandatoryContractTest extends TestCase
 
         $exportTest = __DIR__ . '/ReportHubExportServiceTest.php';
         $this->assertFileExists($exportTest, 'Report hub export service test must exist');
+
+        $nativeTest = __DIR__ . '/ReportHubNativeReportServiceTest.php';
+        $this->assertFileExists($nativeTest, 'Report hub native report service test must exist');
     }
 
     public function testMandatory46LabCloseDayGoldenPathE2e(): void

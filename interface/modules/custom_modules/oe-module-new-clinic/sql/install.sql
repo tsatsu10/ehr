@@ -523,6 +523,7 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_report_hub', '0'),
 (0, 'report_hub_show_us_quality', '0'),
+(0, 'report_hub_async_export_threshold', '5000'),
 (0, 'enable_react_report_hub', '1');
 #EndIf
 
@@ -767,4 +768,33 @@ CREATE TABLE IF NOT EXISTS `report_hub_export_run` (
     KEY `idx_facility_started` (`facility_id`, `started_at`),
     KEY `idx_report_key` (`report_key`)
 ) ENGINE=InnoDB COMMENT='M16 export audit (V1.1-REP)';
+#EndIf
+
+#IfNotTable clinical_doc_form_open
+CREATE TABLE IF NOT EXISTS `clinical_doc_form_open` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `facility_id` INT NOT NULL,
+    `visit_id` BIGINT NOT NULL,
+    `encounter` INT NOT NULL,
+    `formdir` VARCHAR(64) NOT NULL,
+    `form_id` INT NULL,
+    `actor_user_id` BIGINT NOT NULL,
+    `opened_at` DATETIME NOT NULL,
+    `action` ENUM('open','save','sign') NOT NULL DEFAULT 'open',
+    PRIMARY KEY (`id`),
+    KEY `idx_visit_opened` (`visit_id`, `opened_at`),
+    KEY `idx_facility_opened` (`facility_id`, `opened_at`)
+) ENGINE=InnoDB COMMENT='M17 clinical documentation form open audit (V1.1-DOC)';
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_clinical_doc_hub
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_clinical_doc_hub', '0'),
+(0, 'clinical_doc_bundle', 'ghana_opd_v1'),
+(0, 'clinical_doc_show_screening', '0'),
+(0, 'clinical_doc_show_specialty', '0'),
+(0, 'clinical_doc_show_us_quality', '0'),
+(0, 'clinical_doc_specialty_pack', '[]'),
+(0, 'consult_note_formdir', 'soap'),
+(0, 'enable_react_clinical_doc_hub', '1');
 #EndIf

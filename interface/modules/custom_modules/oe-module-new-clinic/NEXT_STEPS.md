@@ -1,21 +1,23 @@
 # New Clinic V1 — Next Steps
 
-**Current status (June 30, 2026):** React cutover complete · V1.2-PHARM shipped · **M16 Reporting Hub shell** (V1.1-REP) shipped · audit remediation complete · pilot rollout on facilities **0 + 3**  
-**Remaining work:** Push/PR, M16 async export + native P2 cards
+**Current status (June 30, 2026):** React cutover complete · V1.2-PHARM shipped · **M16 Reporting Hub** (V1.1-REP) complete · **M17 Clinical Documentation Hub** (V1.1-DOC P1) shipped · pilot rollout on facilities **0 + 3**  
+**Remaining work:** Push/PR, optional M17 follow-ons (LBF wizard, MRD cutover, doc status chip)
 
 ---
 
 ## Completed
 
-- React migration — all desks + hubs (`frontend/src/islands/`, 17 Vite entries incl. `report-hub`)
+- React migration — all desks + hubs (`frontend/src/islands/`, **18** Vite entries incl. `report-hub`, `clinical-doc`)
 - **M13 Pharm Ops Hub** — worklist, dispense, receive, OTC, destroy, reports, controlled register, labels, formulary quick Rx
-- **M16 Reporting Hub (shell)** — Today lens (M7 embed), clinical/pharmacy/financial/public-health/audit catalog lenses, export audit (`reports.export_run`), menu cutover (`enable_report_hub`), pilot CLI `pilot-enable-report-hub.php`
+- **M16 Reporting Hub (complete)** — Today lens (M7 embed), lens catalog, native immunization + destroyed-drugs cards, async export (`reports.export` / `reports.export_status`), export audit
+- **M17 Clinical Documentation Hub (P1)** — lens shell (visit/consult/screening/nursing/orders/specialty), catalog + visit summary APIs, form open via `clinical-form-bridge`, Visit Forms menu cutover, doctor encounter shortcut → hub when flag ON
 - Legacy desk jQuery removed (w50react); Phase 0 hello island removed
 - Deep-link session bridge (Rx, encounter, lab results, chart depth)
-- Playwright: module page smoke, golden-path E2E (skip + pharm dispense + lab + close day), pharm-ops hub smoke, **report-hub smoke**, island bundle smoke
+- Playwright: module page smoke, golden-path E2E (skip + pharm dispense + lab + close day), pharm-ops hub smoke, **report-hub smoke**, **clinical-doc smoke**, island bundle smoke
 - E2E helpers: `helpers/registration.js` (Save & Start + dup confirm), `helpers/cashier.js` (zero close or payment)
 - Pilot pharm ops seed: `scripts/pilot-enable-pharm-ops.php` + shared `scripts/lib/pharm-ops-pilot-seed.php`
 - Pilot report hub seed: `scripts/pilot-enable-report-hub.php` + shared `scripts/lib/pilot-common-seed.php` + `enable_report_hub` in `pilot-rollout.php`
+- Pilot clinical doc seed: `scripts/pilot-enable-clinical-doc.php`
 - **M16 audit remediation** — admin flag persistence, export schema guard, lens-scoped catalog, M7 embed mode, PHPUnit/Vitest coverage
 - E2E npm scripts use `tests/e2e/new-clinic/playwright.config.js` (120s timeout, single worker)
 - PHPUnit: `PharmOpsWorklistServiceIntegrationTest`, `ReportHubAccessServiceTest`, `MainMenuRestrictReportHubTest`
@@ -79,7 +81,7 @@ Or open a PR manually on GitHub after push.
 
 ## Task 3: Optional follow-ups
 
-- **M16 deferred** — async export (`reports.export` / `reports.export_status`, 5000-row threshold); native immunization / destroyed-drugs cards (P2)
+- **M17 Clinical Doc Hub** — curated encounter forms (V1.1-DOC)
 - O-PHARM-1: optional `pharm_require_lot_on_receive` config (product decision)
 - National controlled-substance schedule alignment (O-PHARM-5 register ships; schedule codes TBD)
 - V1.2 flags: `enable_hard_provider_assignment`, legacy chart strip tuning

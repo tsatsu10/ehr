@@ -31,8 +31,8 @@ describe('ReportHubLensPane', () => {
       lens: 'clinical',
       title: 'Immunizations given',
       blurb: 'Vaccines',
-      url: '/interface/reports/immunization_report.php',
-      kind: 'stock',
+      url: '',
+      kind: 'native',
     },
     {
       id: 'pharm_destroyed',
@@ -60,6 +60,7 @@ describe('ReportHubLensPane', () => {
 
     expect(screen.getByRole('heading', { name: 'Immunizations given' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Destroyed medicines' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open report' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Run report' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeInTheDocument();
   });
 });
