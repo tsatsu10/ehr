@@ -9,6 +9,7 @@ export type ClinicalDocLens =
 export interface ClinicalDocCard {
   id: string;
   lens: ClinicalDocLens;
+  source_lens?: ClinicalDocLens;
   formdir: string;
   kind: 'form' | 'rx';
   title: string;
@@ -21,6 +22,7 @@ export interface ClinicalDocCard {
   last_saved_at?: string | null;
   last_saved_by?: string | null;
   signed?: boolean;
+  pin?: number;
 }
 
 export interface ClinicalDocVisitSummary {
@@ -41,6 +43,7 @@ export interface ClinicalDocVisitSummary {
   };
   lenses: ClinicalDocLens[];
   cards: ClinicalDocCard[];
+  show_us_quality?: boolean;
   advanced_encounter_url?: string;
 }
 

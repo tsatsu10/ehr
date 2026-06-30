@@ -15,6 +15,7 @@ use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\ReportHubAccessService;
 use OpenEMR\Modules\NewClinic\Services\ReportHubCatalogService;
 use OpenEMR\Modules\NewClinic\Services\ReportHubExportService;
+use OpenEMR\Modules\NewClinic\Services\ReportHubNativeReportService;
 use PHPUnit\Framework\TestCase;
 
 class ReportHubExportServiceTest extends TestCase
@@ -77,5 +78,48 @@ class ReportHubExportServiceTest extends TestCase
             'date_from' => '2026-01-01',
             'date_to' => '2026-06-01',
         ], 1);
+    }
+
+    public function testRequestExportReturnsAsyncWhenAboveThreshold(): void
+    {
+        $config = new ClinicConfigService();
+        $config->set('enable_report_hub', '1', 0);
+        $config->set('report_hub_async_export_threshold', '10', 0);
+
+        $access = new ReportHubAccessService(
+            config: $config,
+            aclChecker: static fn (string $section, string $aco): bool =>
+                $section === 'new_clinic'
+                && in_array($aco, ['new_reports_hub', 'new_reports_clinical', 'reports'], true),
+        );
+        $catalog = new ReportHubCatalogService(access: $access, config: $config);
+        $native = new class extends ReportHubNativeReportService {
+            public function countRows(string $reportKey, ?string $dateFrom, ?string $dateTo, int $facilityId = 0): int
+            {
+                return 25;
+            }
+
+            public function isNativeKey(string $reportKey): bool
+            {
+                return $reportKey === ReportHubNativeReportService::KEY_IMMUNIZATIONS;
+            }
+        };
+
+        $service = new ReportHubExportService(
+            access: $access,
+            catalog: $catalog,
+            nativeReports: $native,
+            config: $config,
+        );
+
+        $result = $service->requestExport([
+            'report_key' => ReportHubNativeReportService::KEY_IMMUNIZATIONS,
+            'date_from' => '2099-01-01',
+            'date_to' => '2099-01-02',
+        ], 1);
+
+        $this->assertSame('async', $result['mode']);
+        $this->assertArrayHasKey('job_id', $result);
+        $this->assertSame(25, $result['row_count_estimate']);
     }
 }

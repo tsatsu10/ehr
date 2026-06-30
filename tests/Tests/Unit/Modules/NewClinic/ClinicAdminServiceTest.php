@@ -154,4 +154,25 @@ class ClinicAdminServiceTest extends TestCase
         $this->assertSame('1', $normalized['enable_report_hub']);
         $this->assertSame('1', $normalized['report_hub_show_us_quality']);
     }
+
+    public function testApplySettingDependenciesEnablesClinicalDocHubWhenScreeningOn(): void
+    {
+        $normalized = ClinicAdminService::applySettingDependencies([
+            'enable_clinical_doc_hub' => '0',
+            'clinical_doc_show_screening' => '1',
+        ]);
+
+        $this->assertSame('1', $normalized['enable_clinical_doc_hub']);
+        $this->assertSame('1', $normalized['enable_react_clinical_doc_hub']);
+    }
+
+    public function testGlobalMigrationDefaultsIncludesClinicalDocFlags(): void
+    {
+        $defaults = ClinicAdminService::globalMigrationDefaults();
+
+        $this->assertArrayHasKey('enable_clinical_doc_hub', $defaults);
+        $this->assertSame('0', $defaults['enable_clinical_doc_hub']);
+        $this->assertArrayHasKey('clinical_doc_show_us_quality', $defaults);
+        $this->assertArrayHasKey('enable_react_clinical_doc_hub', $defaults);
+    }
 }

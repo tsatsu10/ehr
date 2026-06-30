@@ -2,8 +2,44 @@
 
 **Date:** June 27, 2026  
 **Baseline:** `CODE_AUDIT_2026-06-27.md` (legacy jQuery, asset `20260626g12s`, 61 PHPUnit tests)  
-**Current asset version:** `20260630worephubauditfix`  
+**Current asset version:** `20260630woclinicaldocp3`  
 **Scope:** Phases 1–10 React island migration, Front Desk modernization (June 29), M13 Pharm Ops hub + V1.2-PHARM slices
+
+---
+
+## Addendum — June 30 M16/M17 post-ship audit remediation (`20260630woclinicaldocauditfix`)
+
+Follow-up to M16 native export + M17 Clinical Documentation Hub ship (`20260630woclinicaldoc2`).
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| **P1** | `clinical_doc.open_form` edit `form_id` not bound to encounter | `assertFormInstanceOnEncounter()` before bridge redirect |
+| **P1** | Native reports site-wide (no facility scope) | Immunizations join `form_encounter.facility_id`; destroyed drugs filter by `pharm_default_warehouse_id` |
+| **P1** | Nurses could open consult forms via visit lens ACL gap | `resolveSourceLensForFormdir()` + `assertLensAccess(source)`; visit tab omits consult primary without consult ACL |
+| **P2** | `encounter` shortcut auto-redirected to hub | Removed; `encounter` → legacy, `encounter_hub` → M17 (D-FORM-8) |
+| **P2** | `buildCsv()` loaded all rows via `PHP_INT_MAX` | Chunked export (`EXPORT_CHUNK_SIZE` 500) |
+| **P2** | Async export could hit time limit on poll | `set_time_limit(0)` in `completeRunningJob`; facility threaded into async CSV |
+| **P2** | CAMOS / registry case mismatch | `resolveRegistryDirectory()` + case-insensitive bridge allowlist |
+| **P2** | Bridge hub check used facility `0` | Per-desk `resolveDeskFacilityId()` |
+| **P2** | `clinical_doc_form_open` `SHOW TABLES` every insert | Static `$schemaEnsured` + `CREATE TABLE IF NOT EXISTS` |
+| **P2** | No `applySettingDependencies` for clinical doc | Coupling for hub + react + screening/specialty/US quality flags |
+| **P2** | Pilot ACL seed incomplete for clinical doc | Extended `pilotEnsureNewClinicAclObjects()` required ACO list |
+| **P2** | Dead `clinical_doc_bundle` branch | `BUNDLES` map with Ghana OPD fallback |
+| **P3** | Menu cutover English label only | `visitFormsHiddenLabels()` includes `xl('Visit Forms')` |
+| **P3** | `clinical_doc_show_us_quality` unused | Wired to catalog + AMC hide script on `clinical-form-bridge.php` |
+| **P3** | No mandatory contract / service tests for M17 | `ClinicalDocCatalogServiceTest`, `testMandatory48ClinicalDocHubContracts` |
+| **P3** | Write ACL same as read at Ajax policy | `assertWriteAccess()` / `canWriteAnyLens()` |
+| **P3** | `consult_note_formdir` unvalidated | Registry active-form check on admin save |
+
+### P3 follow-up (`20260630woclinicaldocp3`)
+
+| Issue | Resolution |
+|-------|------------|
+| Missing `ClinicalDocFormOpenServiceTest` | Write ACL, form_id binding, nurse/consult ACL tests |
+| Missing `ClinicalDocVisitSummaryServiceTest` | Sign status encounter guard + signed flag stub |
+| No async export happy-path test | `ReportHubExportServiceTest::testRequestExportReturnsAsyncWhenAboveThreshold` |
+| Admin clinical-doc coupling untested | `ClinicAdminServiceTest` screening → hub + migration defaults |
+| `show_us_quality` not in visit summary API | Exposed on `clinical_doc.visit_summary` payload + TS types |
 
 ---
 

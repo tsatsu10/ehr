@@ -81,6 +81,7 @@ class ClinicalDocVisitSummaryService
             'lenses' => $this->access->allowedLenses($facilityId),
             'cards' => $cards,
             'consult_note_formdir' => (string) ($catalog['consult_note_formdir'] ?? 'soap'),
+            'show_us_quality' => (bool) ($catalog['show_us_quality'] ?? false),
             'doctor_desk_url' => $modulePublic . 'doctor.php',
             'advanced_encounter_url' => EncounterSignService::buildEncounterUrl($webroot, $pid, $encounterId),
         ];
@@ -102,6 +103,32 @@ class ClinicalDocVisitSummaryService
             'encounter_signed' => $this->signService->isEncounterDocumentationSigned($encounterId),
             'visit_id' => $visitId,
             'encounter' => $encounterId,
+        ];
+    }
+
+    /**
+     * M4-F42 — three-pin bundle favorites for Doctor Desk drawer.
+     *
+     * @return array<string, mixed>
+     */
+    public function getFavorites(int $visitId, int $actorUserId): array
+    {
+        $this->access->assertHubAccess();
+        $visit = $this->queueService->getVisitForActor($visitId);
+        $encounterId = (int) ($visit['encounter'] ?? 0);
+        if ($encounterId <= 0) {
+            throw new \RuntimeException('No encounter on visit', 409);
+        }
+
+        $facilityId = (int) ($visit['facility_id'] ?? $this->visitScope->resolveDeskFacilityId());
+        $pid = (int) ($visit['pid'] ?? 0);
+        $pinCards = $this->catalog->getFavoritePinCards($facilityId);
+        $instances = $this->loadFormInstances($encounterId, $pid);
+
+        return [
+            'visit_id' => $visitId,
+            'favorites' => $this->mergeCardsWithInstances($pinCards, $instances),
+            'documentation_hub_url' => ClinicalDocHubLinkService::buildHubUrl($visitId),
         ];
     }
 
@@ -182,7 +209,7 @@ class ClinicalDocVisitSummaryService
         $placeholders = implode(',', array_fill(0, count($formIds), '?'));
         $rows = QueryUtils::fetchRecords(
             "SELECT tid AS form_row_id FROM esign_signatures
-             WHERE tid IN ($placeholders) AND table = 'forms' AND is_lock = 1",
+             WHERE tid IN ($placeholders) AND `table` = 'forms' AND is_lock = 1",
             $formIds
         ) ?: [];
 

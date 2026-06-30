@@ -120,7 +120,7 @@ class ReportHubExportService
 
         $dateFrom = $this->normalizeDate($body['date_from'] ?? null);
         $dateTo = $this->normalizeDate($body['date_to'] ?? null);
-        $rowCount = $this->nativeReports->countRows($reportKey, $dateFrom, $dateTo);
+        $rowCount = $this->nativeReports->countRows($reportKey, $dateFrom, $dateTo, $facilityId);
         $threshold = $this->asyncExportThreshold($facilityId);
 
         if ($rowCount > $threshold) {
@@ -141,7 +141,7 @@ class ReportHubExportService
             ];
         }
 
-        $csv = $this->nativeReports->buildCsv($reportKey, $dateFrom, $dateTo);
+        $csv = $this->nativeReports->buildCsv($reportKey, $dateFrom, $dateTo, $facilityId);
         $this->recordExportRun([
             'report_key' => $reportKey,
             'facility_id' => $facilityId,
@@ -243,7 +243,7 @@ class ReportHubExportService
         $limit = isset($body['limit']) ? max(1, min(200, (int) $body['limit'])) : 50;
         $offset = isset($body['offset']) ? max(0, (int) $body['offset']) : 0;
 
-        $result = $this->nativeReports->runReport($reportKey, $dateFrom, $dateTo, $limit, $offset);
+        $result = $this->nativeReports->runReport($reportKey, $dateFrom, $dateTo, $limit, $offset, $facilityId);
 
         return [
             'report_key' => $reportKey,
@@ -302,7 +302,12 @@ class ReportHubExportService
      */
     private function completeRunningJob(array $row, int $actorUserId): void
     {
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0);
+        }
+
         $jobId = (int) ($row['id'] ?? 0);
+        $facilityId = (int) ($row['facility_id'] ?? 0);
         $reportKey = (string) ($row['report_key'] ?? '');
         $meta = json_decode((string) ($row['message'] ?? ''), true);
         $dateFrom = is_array($meta) ? ($meta['date_from'] ?? null) : ($row['date_from'] ?? null);
@@ -312,7 +317,8 @@ class ReportHubExportService
             $csv = $this->nativeReports->buildCsv(
                 $reportKey,
                 is_string($dateFrom) ? $dateFrom : null,
-                is_string($dateTo) ? $dateTo : null
+                is_string($dateTo) ? $dateTo : null,
+                $facilityId
             );
             $path = $this->writeExportFile($jobId, $csv['filename'], $csv['content']);
             $now = date('Y-m-d H:i:s');

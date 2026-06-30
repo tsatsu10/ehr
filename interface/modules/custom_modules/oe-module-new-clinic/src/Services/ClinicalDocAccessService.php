@@ -149,6 +149,47 @@ class ClinicalDocAccessService
         return $this->config->getInt('clinical_doc_show_specialty', 0, $facilityId) === 1;
     }
 
+    public function showUsQualityWidgets(?int $facilityId = null): bool
+    {
+        if ($facilityId === null || $facilityId <= 0) {
+            $facilityId = $this->visitScope->resolveDeskFacilityId();
+        }
+
+        return $this->config->getInt('clinical_doc_show_us_quality', 0, $facilityId) === 1;
+    }
+
+    public function canAccessLens(string $lens, ?int $facilityId = null): bool
+    {
+        return match ($lens) {
+            'visit' => $this->canViewVisit(),
+            'consult' => $this->canViewConsult(),
+            'screening' => $this->canViewScreening() && $this->showScreeningLens($facilityId),
+            'nursing' => $this->canViewNursing(),
+            'orders' => $this->canViewOrders(),
+            'specialty' => $this->canViewSpecialty() && $this->showSpecialtyLens($facilityId),
+            default => false,
+        };
+    }
+
+    public function canWriteAnyLens(?int $facilityId = null): bool
+    {
+        foreach ($this->allowedLenses($facilityId) as $lens) {
+            if ($lens !== 'visit') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function assertWriteAccess(): void
+    {
+        $this->assertHubAccess();
+        if (!$this->canWriteAnyLens()) {
+            throw new \RuntimeException('Forbidden', 403);
+        }
+    }
+
     public function assertHubAccess(): void
     {
         $this->assertHubEnabled();

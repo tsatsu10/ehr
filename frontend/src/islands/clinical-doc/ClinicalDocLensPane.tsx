@@ -1,5 +1,6 @@
 import { oeFetch } from '@core/oeFetch';
 import type { ClinicalDocCard, ClinicalDocLens, ClinicalDocVisitSummary } from './clinicalDocTypes';
+import { openClinicalDocForm } from './clinicalDocApi';
 
 interface ClinicalDocLensPaneProps {
   lens: ClinicalDocLens;
@@ -19,19 +20,7 @@ async function openForm(
   card: ClinicalDocCard,
   lens: ClinicalDocLens,
 ): Promise<void> {
-  const data = await oeFetch<{ redirect_url: string }>('clinical_doc.open_form', {
-    ajaxUrl,
-    csrfToken,
-    method: 'POST',
-    json: {
-      visit_id: visitId,
-      formdir: card.formdir,
-      lens,
-      action: card.started && card.form_id ? 'edit' : 'new',
-      form_id: card.form_id ?? undefined,
-    },
-  });
-  window.location.assign(data.redirect_url);
+  await openClinicalDocForm(ajaxUrl, csrfToken, visitId, card, { lens, returnTo: 'hub' });
 }
 
 function statusLine(card: ClinicalDocCard): string {

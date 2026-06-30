@@ -31,10 +31,23 @@ class MainMenuRestrictService
         'repimg',
     ];
 
-    /** @var array<int, string> Visit Forms submenu label hidden when M17 hub is ON (M17-F07) */
+    /** @var array<int, string> Visit Forms submenu labels hidden when M17 hub is ON (M17-F07) */
     public const STOCK_VISIT_FORMS_LABELS = [
         'Visit Forms',
     ];
+
+    /**
+     * Stock + translated Visit Forms labels for menu cutover (i18n-safe).
+     *
+     * @return array<int, string>
+     */
+    public static function visitFormsHiddenLabels(): array
+    {
+        return array_values(array_unique(array_merge(
+            self::STOCK_VISIT_FORMS_LABELS,
+            [xl('Visit Forms')]
+        )));
+    }
 
     /** @var array<int, string> Stock inventory report URLs hidden when M13 hub is ON (M13-F13) */
     public const STOCK_PHARM_MENU_URLS = [
@@ -96,7 +109,7 @@ class MainMenuRestrictService
         }
 
         if ($this->shouldHideStockVisitFormsMenusForCurrentUser()) {
-            $menu = $this->filterMainMenuByLabel($menu, self::STOCK_VISIT_FORMS_LABELS);
+            $menu = $this->filterMainMenuByLabel($menu, self::visitFormsHiddenLabels());
         }
 
         $menu = $this->pruneEmptyMenuBranches($menu);

@@ -21,6 +21,7 @@ class PatientChartClinicalService
         private readonly PatientCompletionService $completionService = new PatientCompletionService(),
         private readonly ProcedureOrderDeepLinkService $procedureOrderLinks = new ProcedureOrderDeepLinkService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
+        private readonly ClinicalDocHubLinkService $docHubLinks = new ClinicalDocHubLinkService(),
     ) {
     }
 
@@ -33,6 +34,7 @@ class PatientChartClinicalService
 
         $encounterId = $this->visitScope->resolveActiveEncounterId($pid);
         $webroot = $GLOBALS['webroot'] ?? '';
+        $facilityId = $this->resolveEncounterFacilityId($pid, $encounterId);
 
         return [
             'active_encounter_id' => $encounterId > 0 ? $encounterId : null,
@@ -43,7 +45,7 @@ class PatientChartClinicalService
             'immunizations' => $this->buildImmunizationsSection($pid, $webroot),
             'labs' => $this->buildLabsSection($pid, $webroot, $encounterId),
             'vitals' => $this->buildVitalsSection($pid, $encounterId),
-            'this_visit' => $this->buildThisVisitSection($pid, $encounterId, $webroot),
+            'this_visit' => $this->buildThisVisitSection($pid, $encounterId, $webroot, $facilityId),
         ];
     }
 
@@ -381,7 +383,7 @@ class PatientChartClinicalService
     /**
      * @return array<string, mixed>
      */
-    private function buildThisVisitSection(int $pid, int $encounterId, string $webroot): array
+    private function buildThisVisitSection(int $pid, int $encounterId, string $webroot, int $facilityId = 0): array
     {
         if ($encounterId <= 0) {
             return [
@@ -438,7 +440,7 @@ class PatientChartClinicalService
             'anchor' => 'clinical-encounter-forms',
             'hidden' => false,
             'encounter_id' => $encounterId,
-            'open_encounter_url' => EncounterSignService::buildEncounterUrl($webroot, $pid, $encounterId),
+            'open_encounter_url' => $this->docHubLinks->buildDocumentationUrl($pid, $encounterId, $facilityId),
             'forms' => $forms,
             'empty' => $forms === [],
         ];
@@ -556,5 +558,27 @@ class PatientChartClinicalService
         } catch (\Exception) {
             return null;
         }
+    }
+
+    private function resolveEncounterFacilityId(int $pid, int $encounterId): int
+    {
+        if ($encounterId <= 0) {
+            return 0;
+        }
+
+        $visitRow = QueryUtils::querySingleRow(
+            'SELECT facility_id FROM new_visit WHERE pid = ? AND encounter = ? ORDER BY id DESC LIMIT 1',
+            [$pid, $encounterId]
+        );
+        if (is_array($visitRow)) {
+            return (int) ($visitRow['facility_id'] ?? 0);
+        }
+
+        $encounterRow = QueryUtils::querySingleRow(
+            'SELECT facility_id FROM form_encounter WHERE pid = ? AND encounter = ? LIMIT 1',
+            [$pid, $encounterId]
+        );
+
+        return is_array($encounterRow) ? (int) ($encounterRow['facility_id'] ?? 0) : 0;
     }
 }

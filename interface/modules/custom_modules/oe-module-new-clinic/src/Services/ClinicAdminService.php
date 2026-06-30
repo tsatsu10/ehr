@@ -109,6 +109,7 @@ class ClinicAdminService
         private readonly FeeScheduleAdminService $feeScheduleAdmin = new FeeScheduleAdminService(),
         private readonly CashClinicProfileService $cashProfile = new CashClinicProfileService(),
         private readonly MoneyFormatService $moneyFormat = new MoneyFormatService(),
+        private readonly ClinicalDocLbfWizardService $clinicalDocLbfWizard = new ClinicalDocLbfWizardService(),
     ) {
     }
 
@@ -157,7 +158,22 @@ class ClinicAdminService
             'fee_form' => $this->feeScheduleAdmin->getFormMeta(),
             'roles' => $this->rolesService->getRolesPayload(),
             'cash_profile' => $this->cashProfile->getProfileStatus($facilityId),
+            'ghana_lbf_pack' => $this->clinicalDocLbfWizard->getPackStatus($facilityId),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function importGhanaOpdLbfPack(string $scope, int $actorUserId, bool $setAsConsultNote, ?int $requestedFacilityId = null): array
+    {
+        $facilityId = $this->resolveSettingsFacilityId($scope, $requestedFacilityId);
+        $result = $this->clinicalDocLbfWizard->importPack($facilityId, $actorUserId, $setAsConsultNote);
+
+        return array_merge(
+            $this->getSettingsPayload($scope, $requestedFacilityId),
+            ['ghana_lbf_pack_result' => $result]
+        );
     }
 
     /**
@@ -233,6 +249,15 @@ class ClinicAdminService
                     : $this->config->get('enable_pharm_ops', '0', $facilityId);
                 if ($pharmOps !== '1') {
                     throw new \InvalidArgumentException('Dispense labels require Pharmacy Operations to be enabled');
+                }
+            }
+            if ($key === 'consult_note_formdir') {
+                $formdir = strtolower(trim($value));
+                if ($formdir === '' || in_array($formdir, ['fee_sheet', 'newpatient'], true)) {
+                    throw new \InvalidArgumentException('consult_note_formdir must be a valid clinical form directory');
+                }
+                if (!$this->isActiveClinicalFormdir($formdir)) {
+                    throw new \InvalidArgumentException('consult_note_formdir must match an active registry or LBF form');
                 }
             }
             $previous = $this->config->get($key, $meta['default'], $facilityId);
@@ -409,6 +434,18 @@ class ClinicAdminService
             $input['enable_report_hub'] = '1';
         }
 
+        if (
+            self::rawBoolish($input['clinical_doc_show_us_quality'] ?? false)
+            || self::rawBoolish($input['clinical_doc_show_screening'] ?? false)
+            || self::rawBoolish($input['clinical_doc_show_specialty'] ?? false)
+        ) {
+            $input['enable_clinical_doc_hub'] = '1';
+        }
+
+        if (self::rawBoolish($input['enable_clinical_doc_hub'] ?? false)) {
+            $input['enable_react_clinical_doc_hub'] = '1';
+        }
+
         return $input;
     }
 
@@ -430,5 +467,30 @@ class ClinicAdminService
         }
 
         return $defaults;
+    }
+
+    private function isActiveClinicalFormdir(string $formdir): bool
+    {
+        $registryRow = QueryUtils::querySingleRow(
+            'SELECT state FROM registry WHERE LOWER(directory) = ? LIMIT 1',
+            [$formdir]
+        );
+        if (is_array($registryRow) && (int) ($registryRow['state'] ?? 0) === 1) {
+            return true;
+        }
+
+        $candidates = str_starts_with($formdir, 'lbf') ? [$formdir] : [$formdir, 'lbf' . $formdir];
+        foreach ($candidates as $candidate) {
+            $lbfRow = QueryUtils::querySingleRow(
+                "SELECT grp_form_id FROM layout_group_properties
+                 WHERE grp_form_id = ? AND grp_group_id = '' AND grp_activity = 1 LIMIT 1",
+                [$candidate]
+            );
+            if (is_array($lbfRow)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

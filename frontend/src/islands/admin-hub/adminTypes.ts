@@ -120,6 +120,14 @@ export interface CashProfileStatus {
   applied?: boolean;
 }
 
+export interface GhanaLbfPackStatus {
+  pack_key?: string;
+  form_id?: string;
+  installed?: boolean;
+  consult_note_formdir?: string;
+  is_primary_consult_note?: boolean;
+}
+
 export interface AdminConfigPayload {
   facility_id: number;
   scope: AdminScope;
@@ -136,6 +144,7 @@ export interface AdminConfigPayload {
   default_code_type?: string;
   roles?: RolesPayload;
   cash_profile?: CashProfileStatus;
+  ghana_lbf_pack?: GhanaLbfPackStatus;
 }
 
 export interface FeeImportSummary {

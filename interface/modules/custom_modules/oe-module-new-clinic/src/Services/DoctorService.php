@@ -31,6 +31,7 @@ class DoctorService
         private readonly ClinicDateService $clinicDate = new ClinicDateService(),
         private readonly PharmacyService $pharmacyService = new PharmacyService(),
         private readonly PharmOpsAccessService $pharmOpsAccess = new PharmOpsAccessService(),
+        private readonly ClinicalDocDocumentationStatusService $docStatus = new ClinicalDocDocumentationStatusService(),
     ) {
     }
 
@@ -492,6 +493,10 @@ class DoctorService
             );
             $payload['rx_list_url'] = $this->pharmacyService->rxListUrl($pid);
         }
+
+        $docStatus = $this->docStatus->getStatusForVisit($visit, $facilityId);
+        $payload['clinical_doc_hub_enabled'] = (bool) ($docStatus['hub_enabled'] ?? false);
+        $payload['documentation_status'] = $docStatus;
 
         return $payload;
     }

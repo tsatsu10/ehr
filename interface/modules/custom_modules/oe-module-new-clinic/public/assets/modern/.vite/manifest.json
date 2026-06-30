@@ -177,6 +177,13 @@
       "_button-CQGS-Gta.js"
     ]
   },
+  "_clinicalDocApi-CLvMMuL7.js": {
+    "file": "chunks/clinicalDocApi-CLvMMuL7.js",
+    "name": "clinicalDocApi",
+    "imports": [
+      "_oeFetch-DRdCMVG3.js"
+    ]
+  },
   "_deskCompleteAction-DPcaoc61.js": {
     "file": "chunks/deskCompleteAction-DPcaoc61.js",
     "name": "deskCompleteAction",
@@ -395,7 +402,8 @@
     "imports": [
       "_oeFetch-DRdCMVG3.js",
       "_usePageHeadingToolbar-LhNgrmhx.js",
-      "_PatientContextBanner-CTw1Q1Yj.js"
+      "_PatientContextBanner-CTw1Q1Yj.js",
+      "_clinicalDocApi-CLvMMuL7.js"
     ],
     "css": [
       "clinical-doc.css"
@@ -452,10 +460,12 @@
       "_useSharedDeviceSession-BN15WEet.js",
       "_deskConflict-Cdc8HZke.js",
       "_PatientContextBanner-CTw1Q1Yj.js",
+      "_SlideOver-DhSO97we.js",
       "_pharmOpsPrintRx-CoMlTzsP.js",
       "_PharmacyPrescriptionsTable-UK-la60u.js",
       "_postDeskAction-B5k18Lga.js",
-      "_formatMoney-BSsIFoKG.js"
+      "_formatMoney-BSsIFoKG.js",
+      "_clinicalDocApi-CLvMMuL7.js"
     ],
     "css": [
       "doctor-desk.css"

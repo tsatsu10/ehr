@@ -24,6 +24,7 @@ interface DoctorActivePaneProps {
   onComplete: () => void;
   onOpenLabPanel: () => void;
   onOpenFormularyRx: () => void;
+  onOpenDocFavorites?: () => void;
   onShortcutError: (message: string) => void;
   onPrintRx?: (prescriptionId: number) => void;
   onSupervisorUpdated: (meta: DoctorSupervisorMeta) => void;
@@ -44,6 +45,7 @@ export function DoctorActivePane({
   onComplete,
   onOpenLabPanel,
   onOpenFormularyRx,
+  onOpenDocFavorites,
   onShortcutError,
   onPrintRx,
   onSupervisorUpdated,
@@ -109,6 +111,8 @@ export function DoctorActivePane({
             ajaxUrl={ajaxUrl}
             csrfToken={csrfToken}
             blocked={blocked}
+            clinicalDocHubEnabled={!!payload.clinical_doc_hub_enabled}
+            onOpenDocFavorites={onOpenDocFavorites}
             labPanelOrderEnabled={labPanelOrderEnabled}
             formularyRxEnabled={formularyRxEnabled}
             onOpenLabPanel={onOpenLabPanel}

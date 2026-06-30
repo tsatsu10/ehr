@@ -76,6 +76,8 @@ class AjaxActionPolicy
         'admin.roles.grant_self' => 'new_admin',
         'admin.reconciliation.run' => 'new_admin',
         'admin.profile.apply_cash_clinic' => 'new_admin',
+        'clinical_doc.ghana_pack_status' => 'new_admin',
+        'clinical_doc.import_ghana_pack' => 'new_admin',
         'reports.daily' => 'reports',
         'reports.reconciliation' => 'reports',
     ];
@@ -230,6 +232,7 @@ class AjaxActionPolicy
         'clinical_doc.visit_summary',
         'clinical_doc.catalog',
         'clinical_doc.sign_status',
+        'clinical_doc.favorites',
     ];
 
     /** @var array<int, string> */

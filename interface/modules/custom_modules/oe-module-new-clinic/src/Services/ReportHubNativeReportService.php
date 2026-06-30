@@ -19,11 +19,18 @@ class ReportHubNativeReportService
 
     public const KEY_DESTROYED_DRUGS = 'pharm_destroyed';
 
+    private const EXPORT_CHUNK_SIZE = 500;
+
     /** @var array<int, string> */
     public const NATIVE_KEYS = [
         self::KEY_IMMUNIZATIONS,
         self::KEY_DESTROYED_DRUGS,
     ];
+
+    public function __construct(
+        private readonly ClinicConfigService $config = new ClinicConfigService(),
+    ) {
+    }
 
     public function isNativeKey(string $reportKey): bool
     {
@@ -39,27 +46,28 @@ class ReportHubNativeReportService
         ?string $dateTo,
         int $limit = 50,
         int $offset = 0,
+        int $facilityId = 0,
     ): array {
         $this->assertNativeKey($reportKey);
         $dateFrom = $this->normalizeDate($dateFrom);
         $dateTo = $this->normalizeDate($dateTo);
 
         return match ($reportKey) {
-            self::KEY_IMMUNIZATIONS => $this->runImmunizations($dateFrom, $dateTo, $limit, $offset),
-            self::KEY_DESTROYED_DRUGS => $this->runDestroyedDrugs($dateFrom, $dateTo, $limit, $offset),
+            self::KEY_IMMUNIZATIONS => $this->runImmunizations($dateFrom, $dateTo, $limit, $offset, $facilityId),
+            self::KEY_DESTROYED_DRUGS => $this->runDestroyedDrugs($dateFrom, $dateTo, $limit, $offset, $facilityId),
             default => throw new \InvalidArgumentException('Unsupported native report'),
         };
     }
 
-    public function countRows(string $reportKey, ?string $dateFrom, ?string $dateTo): int
+    public function countRows(string $reportKey, ?string $dateFrom, ?string $dateTo, int $facilityId = 0): int
     {
         $this->assertNativeKey($reportKey);
         $dateFrom = $this->normalizeDate($dateFrom);
         $dateTo = $this->normalizeDate($dateTo);
 
         return match ($reportKey) {
-            self::KEY_IMMUNIZATIONS => $this->countImmunizations($dateFrom, $dateTo),
-            self::KEY_DESTROYED_DRUGS => $this->countDestroyedDrugs($dateFrom, $dateTo),
+            self::KEY_IMMUNIZATIONS => $this->countImmunizations($dateFrom, $dateTo, $facilityId),
+            self::KEY_DESTROYED_DRUGS => $this->countDestroyedDrugs($dateFrom, $dateTo, $facilityId),
             default => 0,
         };
     }
@@ -67,17 +75,38 @@ class ReportHubNativeReportService
     /**
      * @return array{filename: string, content: string, row_count: int}
      */
-    public function buildCsv(string $reportKey, ?string $dateFrom, ?string $dateTo): array
+    public function buildCsv(string $reportKey, ?string $dateFrom, ?string $dateTo, int $facilityId = 0): array
     {
-        $preview = $this->runReport($reportKey, $dateFrom, $dateTo, PHP_INT_MAX, 0);
+        $preview = $this->runReport($reportKey, $dateFrom, $dateTo, 1, 0, $facilityId);
+        $columns = $preview['columns'];
+        $total = $this->countRows($reportKey, $dateFrom, $dateTo, $facilityId);
+
         $handle = fopen('php://temp', 'r+');
         if ($handle === false) {
             throw new \RuntimeException('Unable to create export buffer');
         }
 
-        fputcsv($handle, $preview['columns']);
-        foreach ($preview['rows'] as $row) {
-            fputcsv($handle, $row);
+        fputcsv($handle, $columns);
+
+        $offset = 0;
+        $written = 0;
+        while ($offset < $total) {
+            $chunk = $this->runReport(
+                $reportKey,
+                $dateFrom,
+                $dateTo,
+                self::EXPORT_CHUNK_SIZE,
+                $offset,
+                $facilityId
+            );
+            if ($chunk['rows'] === []) {
+                break;
+            }
+            foreach ($chunk['rows'] as $row) {
+                fputcsv($handle, $row);
+            }
+            $written += count($chunk['rows']);
+            $offset += self::EXPORT_CHUNK_SIZE;
         }
 
         rewind($handle);
@@ -93,7 +122,7 @@ class ReportHubNativeReportService
         return [
             'filename' => $slug . '-' . date('Ymd-His') . '.csv',
             'content' => $content,
-            'row_count' => (int) $preview['total'],
+            'row_count' => $written,
         ];
     }
 
@@ -120,8 +149,13 @@ class ReportHubNativeReportService
     /**
      * @return array{columns: list<string>, rows: list<list<string>>, total: int}
      */
-    private function runImmunizations(?string $dateFrom, ?string $dateTo, int $limit, int $offset): array
-    {
+    private function runImmunizations(
+        ?string $dateFrom,
+        ?string $dateTo,
+        int $limit,
+        int $offset,
+        int $facilityId,
+    ): array {
         $columns = [
             'Patient',
             'MRN',
@@ -132,8 +166,8 @@ class ReportHubNativeReportService
             'Manufacturer',
         ];
 
-        [$whereSql, $bind] = $this->immunizationWhere($dateFrom, $dateTo);
-        $total = $this->countImmunizations($dateFrom, $dateTo);
+        [$whereSql, $bind] = $this->immunizationWhere($dateFrom, $dateTo, $facilityId);
+        $total = $this->countImmunizations($dateFrom, $dateTo, $facilityId);
 
         $sql = "SELECT CONCAT(p.fname, ' ', p.lname) AS patient_name,
                        COALESCE(p.pubpid, p.pid) AS mrn,
@@ -146,6 +180,7 @@ class ReportHubNativeReportService
                 INNER JOIN patient_data p ON i.patient_id = p.pid
                 INNER JOIN codes c ON i.cvx_code = c.code
                 INNER JOIN code_types ct ON c.code_type = ct.ct_id AND ct.ct_key = 'CVX'
+                LEFT JOIN form_encounter fe ON fe.encounter = i.encounter_id AND fe.pid = i.patient_id
                 WHERE i.added_erroneously = 0 AND {$whereSql}
                 ORDER BY i.vis_date DESC, patient_name ASC
                 LIMIT " . max(1, $limit) . ' OFFSET ' . max(0, $offset);
@@ -171,15 +206,16 @@ class ReportHubNativeReportService
         ];
     }
 
-    private function countImmunizations(?string $dateFrom, ?string $dateTo): int
+    private function countImmunizations(?string $dateFrom, ?string $dateTo, int $facilityId): int
     {
-        [$whereSql, $bind] = $this->immunizationWhere($dateFrom, $dateTo);
+        [$whereSql, $bind] = $this->immunizationWhere($dateFrom, $dateTo, $facilityId);
         $row = QueryUtils::querySingleRow(
             "SELECT COUNT(*) AS cnt
              FROM immunizations i
              INNER JOIN patient_data p ON i.patient_id = p.pid
              INNER JOIN codes c ON i.cvx_code = c.code
              INNER JOIN code_types ct ON c.code_type = ct.ct_id AND ct.ct_key = 'CVX'
+             LEFT JOIN form_encounter fe ON fe.encounter = i.encounter_id AND fe.pid = i.patient_id
              WHERE i.added_erroneously = 0 AND {$whereSql}",
             $bind
         );
@@ -190,7 +226,7 @@ class ReportHubNativeReportService
     /**
      * @return array{0: string, 1: list<mixed>}
      */
-    private function immunizationWhere(?string $dateFrom, ?string $dateTo): array
+    private function immunizationWhere(?string $dateFrom, ?string $dateTo, int $facilityId): array
     {
         $parts = ['1=1'];
         $bind = [];
@@ -202,6 +238,15 @@ class ReportHubNativeReportService
             $parts[] = 'i.vis_date <= ?';
             $bind[] = $dateTo;
         }
+        if ($facilityId > 0) {
+            $parts[] = '(fe.facility_id = ? OR (i.encounter_id IS NULL AND EXISTS (
+                SELECT 1 FROM form_encounter fe2
+                WHERE fe2.pid = i.patient_id AND fe2.facility_id = ?
+                LIMIT 1
+            )))';
+            $bind[] = $facilityId;
+            $bind[] = $facilityId;
+        }
 
         return [implode(' AND ', $parts), $bind];
     }
@@ -209,8 +254,13 @@ class ReportHubNativeReportService
     /**
      * @return array{columns: list<string>, rows: list<list<string>>, total: int}
      */
-    private function runDestroyedDrugs(?string $dateFrom, ?string $dateTo, int $limit, int $offset): array
-    {
+    private function runDestroyedDrugs(
+        ?string $dateFrom,
+        ?string $dateTo,
+        int $limit,
+        int $offset,
+        int $facilityId,
+    ): array {
         $columns = [
             'Drug',
             'NDC',
@@ -222,8 +272,8 @@ class ReportHubNativeReportService
             'Notes',
         ];
 
-        [$whereSql, $bind] = $this->destroyedWhere($dateFrom, $dateTo);
-        $total = $this->countDestroyedDrugs($dateFrom, $dateTo);
+        [$whereSql, $bind] = $this->destroyedWhere($dateFrom, $dateTo, $facilityId);
+        $total = $this->countDestroyedDrugs($dateFrom, $dateTo, $facilityId);
 
         $sql = "SELECT COALESCE(d.name, '') AS drug_name,
                        COALESCE(d.ndc_number, '') AS ndc_number,
@@ -261,9 +311,9 @@ class ReportHubNativeReportService
         ];
     }
 
-    private function countDestroyedDrugs(?string $dateFrom, ?string $dateTo): int
+    private function countDestroyedDrugs(?string $dateFrom, ?string $dateTo, int $facilityId): int
     {
-        [$whereSql, $bind] = $this->destroyedWhere($dateFrom, $dateTo);
+        [$whereSql, $bind] = $this->destroyedWhere($dateFrom, $dateTo, $facilityId);
         $row = QueryUtils::querySingleRow(
             "SELECT COUNT(*) AS cnt
              FROM drug_inventory i
@@ -278,7 +328,7 @@ class ReportHubNativeReportService
     /**
      * @return array{0: string, 1: list<mixed>}
      */
-    private function destroyedWhere(?string $dateFrom, ?string $dateTo): array
+    private function destroyedWhere(?string $dateFrom, ?string $dateTo, int $facilityId): array
     {
         $parts = ['i.destroy_date IS NOT NULL'];
         $bind = [];
@@ -290,7 +340,26 @@ class ReportHubNativeReportService
             $parts[] = 'i.destroy_date <= ?';
             $bind[] = $dateTo;
         }
+        $warehouseId = $this->resolveFacilityWarehouseId($facilityId);
+        if ($warehouseId !== null) {
+            $parts[] = 'i.warehouse_id = ?';
+            $bind[] = $warehouseId;
+        }
 
         return [implode(' AND ', $parts), $bind];
+    }
+
+    private function resolveFacilityWarehouseId(int $facilityId): ?string
+    {
+        if ($facilityId <= 0) {
+            return null;
+        }
+
+        $warehouseId = trim((string) ($this->config->get('pharm_default_warehouse_id', '', $facilityId) ?? ''));
+        if ($warehouseId === '') {
+            $warehouseId = trim((string) ($GLOBALS['gbl_warehouse_id'] ?? ''));
+        }
+
+        return $warehouseId !== '' ? $warehouseId : null;
     }
 }

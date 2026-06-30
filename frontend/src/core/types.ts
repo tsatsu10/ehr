@@ -368,6 +368,20 @@ export interface RoutingPreview {
   rx_count: number;
 }
 
+/** Unsigned required form from documentation_status (M4-F40) */
+export interface DocumentationRequiredForm {
+  formdir: string;
+  title: string;
+  started?: boolean;
+}
+
+export interface DocumentationStatus {
+  hub_enabled: boolean;
+  encounter_signed: boolean;
+  unsigned_required: DocumentationRequiredForm[];
+  documentation_hub_url?: string | null;
+}
+
 /** Response from doctor.take / doctor.active / doctor.reopen */
 export interface DoctorConsultPayload {
   visit: DoctorVisit;
@@ -377,6 +391,8 @@ export interface DoctorConsultPayload {
   encounter_signed: boolean;
   require_esign_before_complete_consult: boolean;
   encounter_url?: string;
+  clinical_doc_hub_enabled?: boolean;
+  documentation_status?: DocumentationStatus;
   supervisor_id?: number | null;
   supervisor_display_name?: string | null;
   supervisor_from_profile?: boolean;

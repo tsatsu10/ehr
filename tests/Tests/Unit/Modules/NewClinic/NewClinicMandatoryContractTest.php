@@ -383,6 +383,46 @@ class NewClinicMandatoryContractTest extends TestCase
         $this->assertFileExists($nativeTest, 'Report hub native report service test must exist');
     }
 
+    public function testMandatory48ClinicalDocHubContracts(): void
+    {
+        $policy = file_get_contents(dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/src/Services/AjaxActionPolicy.php');
+        foreach ([
+            'clinical_doc.visit_summary',
+            'clinical_doc.catalog',
+            'clinical_doc.sign_status',
+            'clinical_doc.open_form',
+        ] as $action) {
+            $this->assertStringContainsString($action, $policy, "Ajax policy must list {$action}");
+        }
+
+        $e2eSpec = dirname(__DIR__, 4) . '/e2e/new-clinic/specs/clinical-doc.spec.js';
+        $this->assertFileExists($e2eSpec, 'Clinical doc hub E2E spec must exist');
+
+        $catalogTest = __DIR__ . '/ClinicalDocCatalogServiceTest.php';
+        $this->assertFileExists($catalogTest, 'Clinical doc catalog service test must exist');
+
+        $formOpenTest = __DIR__ . '/ClinicalDocFormOpenServiceTest.php';
+        $this->assertFileExists($formOpenTest, 'Clinical doc form open service test must exist');
+
+        $summaryTest = __DIR__ . '/ClinicalDocVisitSummaryServiceTest.php';
+        $this->assertFileExists($summaryTest, 'Clinical doc visit summary service test must exist');
+
+        $menuTest = __DIR__ . '/MainMenuRestrictClinicalDocTest.php';
+        $this->assertFileExists($menuTest, 'Clinical doc menu restrict test must exist');
+
+        $pilotScript = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-clinical-doc.php';
+        $this->assertFileExists($pilotScript, 'Pilot clinical doc enable script must exist');
+
+        $shortcutBody = $this->methodBody(
+            \OpenEMR\Modules\NewClinic\Services\ConsultShortcutService::class,
+            'preflight'
+        );
+        $this->assertStringContainsString('encounter_top.php', $shortcutBody);
+        $this->assertStringContainsString('clinical-doc/index.php', $shortcutBody);
+    }
+
     public function testMandatory46LabCloseDayGoldenPathE2e(): void
     {
         $e2eDir = dirname(__DIR__, 4) . '/e2e/new-clinic';

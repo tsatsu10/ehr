@@ -30,6 +30,7 @@ class ClinicalDocCatalogService
     private const BUNDLE_GHANA_OPD = [
         'consult' => [
             ['formdir' => 'soap', 'title' => 'Consult note', 'description' => 'Main visit story — CC, exam, plan.', 'kind' => 'form', 'primary' => true],
+            ['formdir' => 'ghana_opd_consult', 'title' => 'Ghana OPD consult', 'description' => 'Structured OPD template (LBF pack).', 'kind' => 'form'],
             ['formdir' => 'clinical_notes', 'title' => 'Clinical Notes', 'description' => 'Multi-section structured note.', 'kind' => 'form'],
             ['formdir' => 'clinic_note', 'title' => 'Clinic Note', 'description' => 'Short free-text note.', 'kind' => 'form'],
             ['formdir' => 'dictation', 'title' => 'Dictation', 'description' => 'Audio/transcription workflow.', 'kind' => 'form'],
@@ -58,6 +59,14 @@ class ClinicalDocCatalogService
             ['formdir' => 'CAMOS', 'title' => 'CAMOS', 'description' => 'Legacy structured note.', 'kind' => 'form'],
         ],
     ];
+
+    /** @var array<string, array<string, list<array{formdir: string, title: string, description: string, kind: string, primary?: bool}>>> */
+    private const BUNDLES = [
+        'ghana_opd_v1' => self::BUNDLE_GHANA_OPD,
+    ];
+
+    /** @var array<string, list<string>>|null */
+    private ?array $allowedFormdirsCache = null;
 
     public function __construct(
         private readonly ClinicalDocAccessService $access = new ClinicalDocAccessService(),
@@ -90,7 +99,71 @@ class ClinicalDocCatalogService
             'lenses' => $allowedLenses,
             'cards' => $cards,
             'consult_note_formdir' => $this->consultNoteFormdir($facilityId),
+            'show_us_quality' => $this->access->showUsQualityWidgets($facilityId),
         ];
+    }
+
+    /**
+     * M4-F42 — up to three pinned bundle favorites for Doctor Desk quick drawer.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function getFavoritePinCards(?int $facilityId = null): array
+    {
+        if ($facilityId === null || $facilityId <= 0) {
+            $facilityId = $this->visitScope->resolveDeskFacilityId();
+        }
+
+        $primaryFormdir = $this->consultNoteFormdir($facilityId);
+        $pinSpecs = [
+            [
+                'formdir' => $primaryFormdir,
+                'lens' => 'consult',
+                'title' => 'Consult note',
+                'description' => 'Main visit story — CC, exam, plan.',
+                'primary' => true,
+            ],
+            [
+                'formdir' => 'vitals',
+                'lens' => 'nursing',
+                'title' => 'Vitals',
+                'description' => 'BP, temperature, SpO₂, etc.',
+            ],
+            [
+                'formdir' => 'procedure_order',
+                'lens' => 'orders',
+                'title' => 'Lab orders',
+                'description' => 'Order labs and imaging.',
+            ],
+        ];
+
+        $cards = [];
+        $pin = 1;
+        foreach ($pinSpecs as $spec) {
+            if (!$this->access->canAccessLens($spec['lens'], $facilityId)) {
+                continue;
+            }
+
+            $def = [
+                'formdir' => $spec['formdir'],
+                'title' => $spec['title'],
+                'description' => $spec['description'],
+                'kind' => 'form',
+                'primary' => !empty($spec['primary']),
+            ];
+            $card = $this->buildCard($def, $spec['lens'], $facilityId);
+            if ($card === null) {
+                continue;
+            }
+
+            $card['pin'] = $pin++;
+            $cards[] = $card;
+            if ($pin > 3) {
+                break;
+            }
+        }
+
+        return $cards;
     }
 
     /**
@@ -98,6 +171,15 @@ class ClinicalDocCatalogService
      */
     public function allowedFormdirs(?int $facilityId = null): array
     {
+        if ($facilityId === null || $facilityId <= 0) {
+            $facilityId = $this->visitScope->resolveDeskFacilityId();
+        }
+
+        $cacheKey = (string) $facilityId;
+        if ($this->allowedFormdirsCache !== null && isset($this->allowedFormdirsCache[$cacheKey])) {
+            return $this->allowedFormdirsCache[$cacheKey];
+        }
+
         $catalog = $this->getCatalog(null, $facilityId);
         $formdirs = [];
         foreach ($catalog['cards'] as $card) {
@@ -106,11 +188,15 @@ class ClinicalDocCatalogService
             }
             $formdir = trim((string) ($card['formdir'] ?? ''));
             if ($formdir !== '' && $formdir !== 'rx') {
-                $formdirs[] = $formdir;
+                $formdirs[] = $this->resolveRegistryDirectory($formdir);
             }
         }
 
-        return array_values(array_unique($formdirs));
+        $formdirs = array_values(array_unique($formdirs));
+        $this->allowedFormdirsCache ??= [];
+        $this->allowedFormdirsCache[$cacheKey] = $formdirs;
+
+        return $formdirs;
     }
 
     public function isAllowedFormdir(string $formdir, ?int $facilityId = null): bool
@@ -120,7 +206,87 @@ class ClinicalDocCatalogService
             return false;
         }
 
-        return in_array($formdir, $this->allowedFormdirs($facilityId), true);
+        foreach ($this->allowedFormdirs($facilityId) as $allowed) {
+            if (strcasecmp($allowed, $formdir) === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function resolveSourceLensForFormdir(string $formdir, ?int $facilityId = null): ?string
+    {
+        if ($facilityId === null || $facilityId <= 0) {
+            $facilityId = $this->visitScope->resolveDeskFacilityId();
+        }
+
+        $formdir = strtolower(trim($formdir));
+        if ($formdir === '' || $formdir === 'rx') {
+            return $formdir === 'rx' ? 'orders' : null;
+        }
+
+        foreach ($this->bundleLensIds($facilityId) as $lensId) {
+            foreach ($this->lensDefinitions($lensId, $facilityId) as $def) {
+                if (strcasecmp($def['formdir'], $formdir) === 0) {
+                    return $lensId;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public function resolveRegistryDirectory(string $formdir): string
+    {
+        $formdir = strtolower(trim($formdir));
+        if ($formdir === '') {
+            return '';
+        }
+
+        $row = QueryUtils::querySingleRow(
+            'SELECT directory FROM registry WHERE LOWER(directory) = ? AND state = 1 LIMIT 1',
+            [$formdir]
+        );
+
+        if (is_array($row)) {
+            return (string) ($row['directory'] ?? $formdir);
+        }
+
+        foreach ($this->lbfFormIdCandidates($formdir) as $candidate) {
+            $lbfRow = QueryUtils::querySingleRow(
+                "SELECT grp_form_id FROM layout_group_properties
+                 WHERE grp_form_id = ? AND grp_group_id = '' AND grp_activity = 1 LIMIT 1",
+                [$candidate]
+            );
+            if (is_array($lbfRow)) {
+                return (string) ($lbfRow['grp_form_id'] ?? $candidate);
+            }
+        }
+
+        return $formdir;
+    }
+
+    public function clearAllowedFormdirsCache(): void
+    {
+        $this->allowedFormdirsCache = null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function lbfFormIdCandidates(string $formdir): array
+    {
+        $formdir = strtolower(trim($formdir));
+        if ($formdir === '') {
+            return [];
+        }
+
+        if (str_starts_with($formdir, 'lbf')) {
+            return [$formdir];
+        }
+
+        return [$formdir, 'lbf' . $formdir];
     }
 
     /**
@@ -132,15 +298,7 @@ class ClinicalDocCatalogService
             return $this->visitLensCards($facilityId);
         }
 
-        $bundleKey = $this->config->get('clinical_doc_bundle', 'ghana_opd_v1', $facilityId) ?? 'ghana_opd_v1';
-        $defs = $bundleKey === 'ghana_opd_v1' ? (self::BUNDLE_GHANA_OPD[$lens] ?? []) : (self::BUNDLE_GHANA_OPD[$lens] ?? []);
-        if ($lens === 'specialty') {
-            $defs = $this->filterSpecialtyPack($defs, $facilityId);
-        }
-        if ($lens === 'consult') {
-            $defs = $this->applyConsultPrimary($defs, $facilityId);
-        }
-
+        $defs = $this->lensDefinitions($lens, $facilityId);
         $cards = [];
         foreach ($defs as $def) {
             $card = $this->buildCard($def, $lens, $facilityId);
@@ -153,15 +311,48 @@ class ClinicalDocCatalogService
     }
 
     /**
+     * @return list<array{formdir: string, title: string, description: string, kind: string, primary?: bool}>
+     */
+    private function lensDefinitions(string $lens, int $facilityId): array
+    {
+        $bundleKey = $this->config->get('clinical_doc_bundle', 'ghana_opd_v1', $facilityId) ?? 'ghana_opd_v1';
+        $bundle = self::BUNDLES[$bundleKey] ?? self::BUNDLE_GHANA_OPD;
+        $defs = $bundle[$lens] ?? [];
+        if ($lens === 'specialty') {
+            $defs = $this->filterSpecialtyPack($defs, $facilityId);
+        }
+        if ($lens === 'consult') {
+            $defs = $this->applyConsultPrimary($defs, $facilityId);
+        }
+
+        return $defs;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function bundleLensIds(int $facilityId): array
+    {
+        $bundleKey = $this->config->get('clinical_doc_bundle', 'ghana_opd_v1', $facilityId) ?? 'ghana_opd_v1';
+        $bundle = self::BUNDLES[$bundleKey] ?? self::BUNDLE_GHANA_OPD;
+
+        return array_keys($bundle);
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     private function visitLensCards(int $facilityId): array
     {
         $cards = [];
         foreach (['consult', 'nursing', 'orders'] as $sourceLens) {
+            if (!$this->access->canAccessLens($sourceLens, $facilityId)) {
+                continue;
+            }
             foreach ($this->cardsForLens($sourceLens, $facilityId) as $card) {
                 if (!empty($card['primary']) || $sourceLens === 'orders') {
                     $card['lens'] = 'visit';
+                    $card['source_lens'] = $sourceLens;
                     $cards[] = $card;
                 }
             }
@@ -179,7 +370,7 @@ class ClinicalDocCatalogService
         $primary = $this->consultNoteFormdir($facilityId);
         $primarySet = false;
         foreach ($defs as $index => $def) {
-            if ($def['formdir'] === $primary) {
+            if (strcasecmp($def['formdir'], $primary) === 0) {
                 $defs[$index]['primary'] = true;
                 $primarySet = true;
             } elseif (!empty($def['primary'])) {
@@ -218,13 +409,14 @@ class ClinicalDocCatalogService
      */
     private function buildCard(array $def, string $lens, int $facilityId): ?array
     {
-        $formdir = strtolower(trim($def['formdir']));
+        $canonical = $this->resolveRegistryDirectory($def['formdir']);
+        $formdir = strtolower(trim($canonical));
         $kind = $def['kind'];
         if ($kind === 'form') {
             if (!$this->isRegistryFormActive($formdir)) {
                 return null;
             }
-            if (!AclMain::aclCheckForm($formdir)) {
+            if (!AclMain::aclCheckForm($canonical)) {
                 return null;
             }
         }
@@ -232,7 +424,8 @@ class ClinicalDocCatalogService
         return [
             'id' => $lens . '_' . $formdir,
             'lens' => $lens,
-            'formdir' => $formdir,
+            'source_lens' => $lens,
+            'formdir' => $canonical,
             'kind' => $kind,
             'title' => $def['title'],
             'description' => $def['description'],
@@ -255,10 +448,25 @@ class ClinicalDocCatalogService
         }
 
         $row = QueryUtils::querySingleRow(
-            'SELECT state FROM registry WHERE directory = ? LIMIT 1',
-            [$formdir]
+            'SELECT state FROM registry WHERE LOWER(directory) = ? LIMIT 1',
+            [strtolower($formdir)]
         );
 
-        return is_array($row) && (int) ($row['state'] ?? 0) === 1;
+        if (is_array($row) && (int) ($row['state'] ?? 0) === 1) {
+            return true;
+        }
+
+        foreach ($this->lbfFormIdCandidates($formdir) as $candidate) {
+            $lbfRow = QueryUtils::querySingleRow(
+                "SELECT grp_form_id FROM layout_group_properties
+                 WHERE grp_form_id = ? AND grp_group_id = '' AND grp_activity = 1 LIMIT 1",
+                [$candidate]
+            );
+            if (is_array($lbfRow)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

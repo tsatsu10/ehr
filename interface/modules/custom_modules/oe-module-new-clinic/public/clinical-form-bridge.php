@@ -23,27 +23,36 @@ use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Twig\TwigContainer;
 use OpenEMR\Core\Header;
 use OpenEMR\Modules\NewClinic\Services\EncounterIdentityStripService;
+use OpenEMR\Modules\NewClinic\Services\ClinicalDocAccessService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocCatalogService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\FacilityScopeService;
 use OpenEMR\Modules\NewClinic\Services\ProcedureOrderDeepLinkService;
+use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
+
+$config = new ClinicConfigService();
+$visitScope = new VisitScopeService();
+$sessionFacility = !empty($_SESSION['facilityId']) ? (int) $_SESSION['facilityId'] : null;
+$facilityId = $visitScope->resolveDeskFacilityId($sessionFacility);
+$catalog = new ClinicalDocCatalogService();
 
 /** @var array<int, string> */
 $allowedForms = ['procedure_order'];
-if ((new ClinicConfigService())->isEnabled('enable_clinical_doc_hub', 0)) {
+if ($config->isEnabled('enable_clinical_doc_hub', 0, $facilityId)) {
     $allowedForms = array_values(array_unique(array_merge(
         $allowedForms,
-        (new ClinicalDocCatalogService())->allowedFormdirs()
+        $catalog->allowedFormdirs($facilityId)
     )));
 }
 
 $pid = (int) ($_GET['pid'] ?? 0);
 $encounter = (int) ($_GET['encounter'] ?? 0);
 $formId = (int) ($_GET['form_id'] ?? 0);
-$formname = trim((string) ($_GET['formname'] ?? ''));
+$formname = $catalog->resolveRegistryDirectory(trim((string) ($_GET['formname'] ?? '')));
 $returnUrl = (new ProcedureOrderDeepLinkService())->sanitizeReturnUrl((string) ($_GET['return'] ?? ''));
+$allowedLower = array_map(static fn (string $name): string => strtolower($name), $allowedForms);
 
-if ($pid <= 0 || $encounter <= 0 || $formname === '' || !in_array($formname, $allowedForms, true)) {
+if ($pid <= 0 || $encounter <= 0 || $formname === '' || !in_array(strtolower($formname), $allowedLower, true)) {
     http_response_code(400);
     echo (new TwigContainer(null, $GLOBALS['kernel']))->getTwig()->render('core/unauthorized.html.twig', [
         'pageTitle' => xl('Clinical form'),
@@ -108,6 +117,9 @@ if ($stripService->shouldRenderForCurrentRequest()) {
     $identityStripHtml = $stripService->renderHtml();
 }
 
+$hideUsAmc = $config->isEnabled('enable_clinical_doc_hub', 0, $facilityId)
+    && !(new ClinicalDocAccessService())->showUsQualityWidgets($facilityId);
+
 header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate');
 ?>
@@ -130,6 +142,35 @@ header('Cache-Control: no-store, no-cache, must-revalidate');
             }
             window.location.href = <?php echo js_escape($returnUrl); ?>;
         }
+<?php if ($hideUsAmc) : ?>
+        function ncHideUsAmcWidgets() {
+            var frame = document.querySelector('iframe[name="nc-clinical-form"]');
+            if (!frame) {
+                return;
+            }
+            try {
+                var doc = frame.contentDocument;
+                if (!doc) {
+                    return;
+                }
+                var amc = doc.getElementById('amc-requires');
+                if (amc) {
+                    amc.style.display = 'none';
+                }
+                doc.querySelectorAll('[data-target="#amc-requires"], a[data-toggle="collapse"][data-target="#amc-requires"]').forEach(function (node) {
+                    node.style.display = 'none';
+                });
+            } catch (err) {
+                /* cross-origin guard */
+            }
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            var frame = document.querySelector('iframe[name="nc-clinical-form"]');
+            if (frame) {
+                frame.addEventListener('load', ncHideUsAmcWidgets);
+            }
+        });
+<?php endif; ?>
     </script>
 </head>
 <body class="m-0 p-0">

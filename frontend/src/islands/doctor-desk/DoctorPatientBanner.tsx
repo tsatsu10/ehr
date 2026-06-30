@@ -2,10 +2,10 @@
  * DoctorPatientBanner — active consult patient context strip.
  */
 
-import type { ReactNode } from 'react';
-import type { DoctorVisit, PatientPreview, RoutingChips } from '@core/types';
+import type { DoctorVisit, PatientPreview, RoutingChips, DocumentationStatus } from '@core/types';
 import { PatientContextBanner } from '@components/PatientContextBanner';
 import { RoutingChips as RoutingChipsBadges } from '@components/RoutingChips';
+import { DocumentationStatusChip } from './DocumentationStatusChip';
 
 export interface DoctorSignMeta {
   encounter_signed: boolean;
@@ -15,6 +15,7 @@ export interface DoctorSignMeta {
   supervisor_id?: number | null;
   supervisor_display_name?: string | null;
   supervisor_from_profile?: boolean;
+  documentation_status?: DocumentationStatus | null;
 }
 
 interface DoctorPatientBannerProps {
@@ -28,15 +29,6 @@ export function DoctorPatientBanner({ preview, visit, signMeta }: DoctorPatientB
 
   const signed = signMeta.encounter_signed;
   const requireSign = signMeta.require_esign_before_complete_consult;
-
-  let docChip: ReactNode;
-  if (signed) {
-    docChip = <span className="badge badge-success ml-2">Signed</span>;
-  } else if (requireSign) {
-    docChip = <span className="badge badge-danger ml-2">Unsigned — sign before complete</span>;
-  } else {
-    docChip = <span className="badge badge-warning ml-2">Unsigned — payment blocked</span>;
-  }
 
   return (
     <PatientContextBanner
@@ -63,7 +55,11 @@ export function DoctorPatientBanner({ preview, visit, signMeta }: DoctorPatientB
         {vitalsToday?.vitals_abnormal_today && (
           <span className="badge badge-danger ml-1">Vitals abnormal</span>
         )}
-        {docChip}
+        <DocumentationStatusChip
+          documentationStatus={signMeta.documentation_status}
+          requireSign={requireSign}
+          encounterSigned={signed}
+        />
       </div>
 
       <div className="small mt-1">

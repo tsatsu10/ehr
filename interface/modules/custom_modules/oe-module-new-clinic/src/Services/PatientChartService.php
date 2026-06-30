@@ -21,6 +21,7 @@ class PatientChartService
         private readonly FacilityScopeService $facilityScope = new FacilityScopeService(),
         private readonly VisitRowEnricher $rowEnricher = new VisitRowEnricher(),
         private readonly ClinicalExportService $clinicalExportService = new ClinicalExportService(),
+        private readonly ClinicalDocHubLinkService $docHubLinks = new ClinicalDocHubLinkService(),
     ) {
     }
 
@@ -104,7 +105,10 @@ class PatientChartService
         $visitId = (int) ($row['id'] ?? 0);
         $enriched = $this->rowEnricher->enrichVisitRow($row, $visitId, $skippedMap);
         $encounterId = (int) ($row['encounter'] ?? 0);
-        $webroot = $GLOBALS['webroot'] ?? '';
+        $facilityId = (int) ($row['facility_id'] ?? 0);
+        $documentationUrl = $encounterId > 0
+            ? $this->docHubLinks->buildDocumentationUrl($pid, $encounterId, $facilityId)
+            : null;
 
         return [
             'id' => $visitId,
@@ -119,10 +123,8 @@ class PatientChartService
             'is_urgent' => !empty($row['is_urgent']),
             'skipped_triage' => !empty($enriched['skipped_triage']),
             'encounter' => $encounterId,
-            'facility_id' => (int) ($row['facility_id'] ?? 0),
-            'documentation_url' => $encounterId > 0
-                ? EncounterSignService::buildEncounterUrl($webroot, $pid, $encounterId)
-                : null,
+            'facility_id' => $facilityId,
+            'documentation_url' => $documentationUrl,
             'export_visit_summary_url' => $this->clinicalExportService->buildVisitExportUrl($pid, $encounterId),
         ];
     }

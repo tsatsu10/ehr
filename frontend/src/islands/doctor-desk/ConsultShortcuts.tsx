@@ -10,13 +10,15 @@ import { setDeskActiveVisitId } from '@core/deskSessionStorage';
 const STORAGE_KEY = 'doctor_desk_active_visit_id';
 export const DOCTOR_LEFT_VIA_KEY = 'doctor_desk_left_via';
 
-export type ShortcutKind = 'encounter' | 'lab' | 'rx' | 'chart';
+export type ShortcutKind = 'encounter' | 'encounter_hub' | 'lab' | 'rx' | 'chart';
 
 interface ConsultShortcutsProps {
   visit: DoctorVisit;
   ajaxUrl: string;
   csrfToken: string;
   blocked: boolean;
+  clinicalDocHubEnabled?: boolean;
+  onOpenDocFavorites?: () => void;
   labPanelOrderEnabled?: boolean;
   formularyRxEnabled?: boolean;
   onOpenLabPanel?: () => void;
@@ -29,6 +31,8 @@ export function ConsultShortcuts({
   ajaxUrl,
   csrfToken,
   blocked,
+  clinicalDocHubEnabled = false,
+  onOpenDocFavorites,
   labPanelOrderEnabled = false,
   formularyRxEnabled = false,
   onOpenLabPanel,
@@ -82,6 +86,30 @@ export function ConsultShortcuts({
         >
           Open encounter
         </button>
+        {clinicalDocHubEnabled && (
+          <>
+            <button
+              type="button"
+              className="btn btn-primary mr-2 mb-2 nc-shortcut-btn"
+              data-shortcut="encounter_hub"
+              disabled={blocked}
+              onClick={() => void runShortcut('encounter_hub')}
+            >
+              Open documentation
+            </button>
+            {onOpenDocFavorites && (
+              <button
+                type="button"
+                className="btn btn-outline-primary mr-2 mb-2 nc-shortcut-btn"
+                data-shortcut="doc-favorites"
+                disabled={blocked}
+                onClick={onOpenDocFavorites}
+              >
+                Quick forms
+              </button>
+            )}
+          </>
+        )}
         <button
           type="button"
           className="btn btn-outline-primary mr-2 mb-2 nc-shortcut-btn"

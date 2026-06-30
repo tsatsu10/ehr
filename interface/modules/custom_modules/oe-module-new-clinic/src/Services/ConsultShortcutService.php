@@ -22,8 +22,6 @@ class ConsultShortcutService
         private readonly VisitQueueService $queueService = new VisitQueueService(),
         private readonly ProcedureOrderDeepLinkService $procedureOrderLinks = new ProcedureOrderDeepLinkService(),
         private readonly EncounterIdentityStripService $identityStrip = new EncounterIdentityStripService(),
-        private readonly ClinicConfigService $config = new ClinicConfigService(),
-        private readonly VisitScopeService $visitScope = new VisitScopeService(),
     ) {
     }
 
@@ -58,7 +56,6 @@ class ConsultShortcutService
         $encounter = (int) ($visit['encounter'] ?? 0);
         $modulePublic = ($GLOBALS['webroot'] ?? '') . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
 
-        $facilityId = (int) ($visit['facility_id'] ?? $this->visitScope->resolveDeskFacilityId());
         $redirectUrl = match ($shortcut) {
             'encounter' => ($GLOBALS['webroot'] ?? '') . '/interface/patient_file/encounter/encounter_top.php',
             'encounter_hub' => $modulePublic . 'clinical-doc/index.php?visit_id=' . urlencode((string) $visitId) . '&tab=visit',
@@ -70,10 +67,6 @@ class ConsultShortcutService
             'rx' => ($GLOBALS['webroot'] ?? '') . '/controller.php?prescription&edit&id=&pid=' . urlencode((string) $pid),
             'chart' => PatientCompletionService::chartUrl($pid, 'profile'),
         };
-
-        if ($shortcut === 'encounter' && $this->config->isEnabled('enable_clinical_doc_hub', 0, $facilityId)) {
-            $redirectUrl = $modulePublic . 'clinical-doc/index.php?visit_id=' . urlencode((string) $visitId) . '&tab=visit';
-        }
 
         $this->identityStrip->markFromShortcut($visitId, 'doctor', $shortcut);
 

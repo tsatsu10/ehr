@@ -27,7 +27,7 @@ class ReportHubNativeReportServiceTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
 
-        $this->service->countRows('not_native', null, null);
+        $this->service->countRows('not_native', null, null, 0);
     }
 
     public function testRejectsMalformedDate(): void
@@ -38,7 +38,8 @@ class ReportHubNativeReportServiceTest extends TestCase
         $this->service->countRows(
             ReportHubNativeReportService::KEY_IMMUNIZATIONS,
             'bad-date',
-            null
+            null,
+            0
         );
     }
 
@@ -47,7 +48,8 @@ class ReportHubNativeReportServiceTest extends TestCase
         $csv = $this->service->buildCsv(
             ReportHubNativeReportService::KEY_DESTROYED_DRUGS,
             '2099-01-01',
-            '2099-01-02'
+            '2099-01-02',
+            0
         );
 
         $this->assertStringContainsString('destroyed-medicines-', $csv['filename']);

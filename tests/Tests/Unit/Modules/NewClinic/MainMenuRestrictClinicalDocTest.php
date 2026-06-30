@@ -19,6 +19,13 @@ class MainMenuRestrictClinicalDocTest extends TestCase
         $this->assertContains('Visit Forms', MainMenuRestrictService::STOCK_VISIT_FORMS_LABELS);
     }
 
+    public function testVisitFormsHiddenLabelsIncludesTranslatedLabel(): void
+    {
+        $labels = MainMenuRestrictService::visitFormsHiddenLabels();
+        $this->assertContains('Visit Forms', $labels);
+        $this->assertContains(xl('Visit Forms'), $labels);
+    }
+
     public function testFilterMainMenuByLabelRemovesVisitForms(): void
     {
         $visitForms = (object) [

@@ -69,6 +69,7 @@ use OpenEMR\Modules\NewClinic\Services\ReportHubExportService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocAccessService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocCatalogService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocFormOpenService;
+use OpenEMR\Modules\NewClinic\Services\ClinicalDocLbfWizardService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocVisitSummaryService;
 use OpenEMR\Modules\NewClinic\Services\ClinicAdminService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
@@ -1491,6 +1492,48 @@ class AjaxController
                         $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
                     }
                     break;
+                case 'clinical_doc.favorites':
+                    $this->clinicalDocAccessService->assertHubAccess();
+                    $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                    if ($visitId <= 0) {
+                        $this->respond(false, 'visit_id required', [], 400);
+                    }
+                    try {
+                        $favorites = $this->clinicalDocVisitSummaryService->getFavorites($visitId, $userId);
+                        $this->respond(true, 'ok', $favorites);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 400);
+                        $this->respond(false, $e->getMessage(), ['code' => $code === 409 ? 'no_encounter_on_visit' : 'error'], $code);
+                    }
+                    break;
+                case 'clinical_doc.ghana_pack_status':
+                    if ($method !== 'GET') {
+                        $this->respond(false, 'GET required', [], 405);
+                    }
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $this->respond(true, 'ok', (new ClinicalDocLbfWizardService())->getPackStatus($facilityId));
+                    break;
+                case 'clinical_doc.import_ghana_pack':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $this->requireSuperAdmin();
+                    $scope = strtolower(trim((string) ($body['scope'] ?? 'facility')));
+                    if ($scope !== 'global') {
+                        $scope = 'facility';
+                    }
+                    $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    $setAsConsultNote = !empty($body['set_as_consult_note']);
+                    $payload = $this->clinicAdminService->importGhanaOpdLbfPack(
+                        $scope,
+                        $userId,
+                        $setAsConsultNote,
+                        $requestedFacilityId > 0 ? $requestedFacilityId : null
+                    );
+                    $this->respond(true, 'Ghana OPD LBF pack imported', $payload);
+                    break;
                 case 'admin.reconciliation.run':
                     if ($method !== 'POST') {
                         $this->respond(false, 'POST required', [], 405);
@@ -2456,7 +2499,7 @@ class AjaxController
     private function requireClinicalDocWriteAcl(): void
     {
         try {
-            $this->clinicalDocAccessService->assertHubAccess();
+            $this->clinicalDocAccessService->assertWriteAccess();
         } catch (\RuntimeException $e) {
             $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
         }

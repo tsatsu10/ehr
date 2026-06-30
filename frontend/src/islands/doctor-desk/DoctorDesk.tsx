@@ -35,6 +35,7 @@ import { RoutingModal } from './RoutingModal';
 import { ReopenModal } from './ReopenModal';
 import { LabPanelModal, labPanelPlaceNotice, labReturnNotice } from './LabPanelModal';
 import { FormularyRxModal, formularyRxPlaceNotice } from './FormularyRxModal';
+import { DocFavoritesDrawer } from './DocFavoritesDrawer';
 import { rxReturnNotice } from './doctorDeskUtils';
 import { printRxWithNotice } from '../pharm-ops/pharmOpsPrintRx';
 import { DOCTOR_LEFT_VIA_KEY } from './ConsultShortcuts';
@@ -54,6 +55,7 @@ function payloadToSignMeta(data: DoctorConsultPayload): DoctorSignMeta {
     supervisor_id: data.supervisor_id,
     supervisor_display_name: data.supervisor_display_name,
     supervisor_from_profile: data.supervisor_from_profile,
+    documentation_status: data.documentation_status ?? null,
   };
 }
 
@@ -137,6 +139,7 @@ export function DoctorDesk({
   const [routingOpen, setRoutingOpen] = useState(false);
   const [labPanelOpen, setLabPanelOpen] = useState(false);
   const [formularyRxOpen, setFormularyRxOpen] = useState(false);
+  const [docFavoritesOpen, setDocFavoritesOpen] = useState(false);
   const [reopenTarget, setReopenTarget] = useState<DoctorReopenableRow | null>(null);
 
   const queueSeq = useRef(0);
@@ -575,6 +578,9 @@ export function DoctorDesk({
             onComplete={handleComplete}
             onOpenLabPanel={() => setLabPanelOpen(true)}
             onOpenFormularyRx={() => setFormularyRxOpen(true)}
+            onOpenDocFavorites={
+              consultPayload?.clinical_doc_hub_enabled ? () => setDocFavoritesOpen(true) : undefined
+            }
             onShortcutError={(msg) => setNotice({ message: msg, variant: 'danger' })}
             onPrintRx={(id) => { void handlePrintRx(id); }}
             onSupervisorUpdated={handleSupervisorUpdated}
@@ -686,6 +692,16 @@ export function DoctorDesk({
             });
           }
         }}
+      />
+
+      <DocFavoritesDrawer
+        open={docFavoritesOpen}
+        visit={activeVisit}
+        ajaxUrl={ajaxUrl}
+        csrfToken={csrfToken}
+        blocked={sharedSession.blocked}
+        onClose={() => setDocFavoritesOpen(false)}
+        onError={(msg) => setNotice({ message: msg, variant: 'danger' })}
       />
     </div>
   );

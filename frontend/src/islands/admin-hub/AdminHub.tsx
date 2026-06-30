@@ -11,6 +11,7 @@ import type {
   BillingCode,
   BillingCodeType,
   CashProfileStatus,
+  GhanaLbfPackStatus,
   FeeCategoryOption,
   FeeImportSummary,
   FeeScheduleRow,
@@ -74,6 +75,8 @@ export function AdminHub({
   const [reconciliationRunning, setReconciliationRunning] = useState(false);
   const [cashProfile, setCashProfile] = useState<CashProfileStatus>({ applied: false });
   const [cashProfileApplying, setCashProfileApplying] = useState(false);
+  const [ghanaLbfPack, setGhanaLbfPack] = useState<GhanaLbfPackStatus>({ installed: false });
+  const [ghanaLbfImporting, setGhanaLbfImporting] = useState(false);
 
   const [visitTypeModalOpen, setVisitTypeModalOpen] = useState(false);
   const [visitTypeEdit, setVisitTypeEdit] = useState<VisitTypeRow | null>(null);
@@ -118,6 +121,7 @@ export function AdminHub({
     setDefaultCodeType(data.default_code_type ?? 'CPT4');
     setRoleGroups(data.roles ?? {});
     setCashProfile(data.cash_profile ?? { applied: false });
+    setGhanaLbfPack(data.ghana_lbf_pack ?? { installed: false });
     setDirty(false);
   }, [clinicFacilityId]);
 
@@ -438,6 +442,31 @@ export function AdminHub({
     }
   }, [applyPayload, facilityId, fetchOptions, scope]);
 
+  const importGhanaLbfPack = useCallback(async (setAsConsultNote: boolean) => {
+    setGhanaLbfImporting(true);
+    setErrorMessage(null);
+    try {
+      const data = await oeFetch<AdminConfigPayload>('clinical_doc.import_ghana_pack', {
+        ...fetchOptions,
+        json: {
+          scope,
+          facility_id: facilityId,
+          set_as_consult_note: setAsConsultNote,
+        },
+      });
+      applyPayload(data);
+      setSuccessMessage(
+        setAsConsultNote
+          ? 'Ghana OPD LBF pack imported and set as primary consult note.'
+          : 'Ghana OPD LBF pack imported.'
+      );
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Ghana OPD LBF import failed');
+    } finally {
+      setGhanaLbfImporting(false);
+    }
+  }, [applyPayload, facilityId, fetchOptions, scope]);
+
   const roles = roleGroups ?? {};
 
   return (
@@ -488,7 +517,13 @@ export function AdminHub({
         ) : (
           <>
             {activeTab === 'queue' && (
-              <QueueRolesTab settings={settings} onFieldChange={handleFieldChange} />
+              <QueueRolesTab
+                settings={settings}
+                ghanaLbfPack={ghanaLbfPack}
+                ghanaLbfImporting={ghanaLbfImporting}
+                onFieldChange={handleFieldChange}
+                onImportGhanaLbfPack={(setAsConsultNote) => { void importGhanaLbfPack(setAsConsultNote); }}
+              />
             )}
             {activeTab === 'roles' && (
               <RolesTab

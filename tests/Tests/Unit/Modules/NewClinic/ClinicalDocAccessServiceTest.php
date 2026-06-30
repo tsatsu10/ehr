@@ -30,5 +30,16 @@ class ClinicalDocAccessServiceTest extends TestCase
         $this->assertSame(['nursing'], $access->allowedLenses());
         $this->assertTrue($access->canViewNursing());
         $this->assertFalse($access->canViewConsult());
+        $this->assertTrue($access->canWriteAnyLens());
+    }
+
+    public function testVisitOnlyAclCannotWrite(): void
+    {
+        $access = new ClinicalDocAccessService(
+            aclChecker: static fn (string $section, string $aco): bool =>
+                $section === 'new_clinic' && $aco === 'new_clinical_doc_hub',
+        );
+
+        $this->assertFalse($access->canWriteAnyLens());
     }
 }
