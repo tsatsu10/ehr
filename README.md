@@ -1,3 +1,5 @@
+> **New Clinic product docs:** Start with [EHR.md](EHR.md) for outpatient clinic setup, rollout scripts, and tests. This repository is OpenEMR core plus the New Clinic module (`interface/modules/custom_modules/oe-module-new-clinic/`).
+
 [![Syntax Status](https://github.com/openemr/openemr/actions/workflows/syntax.yml/badge.svg)](https://github.com/openemr/openemr/actions/workflows/syntax.yml)
 [![Styling Status](https://github.com/openemr/openemr/actions/workflows/styling.yml/badge.svg)](https://github.com/openemr/openemr/actions/workflows/styling.yml)
 [![Testing Status](https://github.com/openemr/openemr/actions/workflows/test.yml/badge.svg)](https://github.com/openemr/openemr/actions/workflows/test.yml)
