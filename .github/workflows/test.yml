@@ -406,7 +406,7 @@ jobs:
 
     - name: Upload unit test results to Codecov
       if: ${{ !cancelled() && hashFiles('junit-unit.xml') != '' }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: junit-unit.xml
@@ -419,7 +419,7 @@ jobs:
 
     - name: Upload unit test coverage to Codecov
       if: ${{ env.ENABLE_COVERAGE == 'true' && !cancelled() && hashFiles('coverage.unit.clover.xml') != '' }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: coverage.unit.clover.xml
@@ -450,7 +450,7 @@ jobs:
 
     - name: Upload api test results to Codecov
       if: ${{ !cancelled() && hashFiles('junit-api.xml') != '' }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: junit-api.xml
@@ -491,7 +491,7 @@ jobs:
 
     - name: Upload api test coverage to Codecov
       if: ${{ env.ENABLE_COVERAGE == 'true' && !cancelled() && hashFiles('coverage.api.clover.xml') != '' }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: coverage.api.clover.xml
@@ -511,7 +511,7 @@ jobs:
 
     - name: Upload fixtures test results to Codecov
       if: ${{ !cancelled() && hashFiles('junit-fixtures.xml') != '' }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: junit-fixtures.xml
@@ -524,7 +524,7 @@ jobs:
 
     - name: Upload fixtures test coverage to Codecov
       if: ${{ env.ENABLE_COVERAGE == 'true' && !cancelled() && hashFiles('coverage.fixtures.clover.xml') != '' }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: coverage.fixtures.clover.xml
@@ -544,7 +544,7 @@ jobs:
 
     - name: Upload services test results to Codecov
       if: ${{ !cancelled() && hashFiles('junit-services.xml') != '' }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: junit-services.xml
@@ -557,7 +557,7 @@ jobs:
 
     - name: Upload services test coverage to Codecov
       if: ${{ env.ENABLE_COVERAGE == 'true' && !cancelled() && hashFiles('coverage.services.clover.xml') != '' }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: coverage.services.clover.xml
@@ -577,7 +577,7 @@ jobs:
 
     - name: Upload validators test results to Codecov
       if: ${{ !cancelled() && hashFiles('junit-validators.xml') != '' }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: junit-validators.xml
@@ -590,7 +590,7 @@ jobs:
 
     - name: Upload validators test coverage to Codecov
       if: ${{ env.ENABLE_COVERAGE == 'true' && !cancelled() && hashFiles('coverage.validators.clover.xml') != '' }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: coverage.validators.clover.xml
@@ -610,7 +610,7 @@ jobs:
 
     - name: Upload controllers test results to Codecov
       if: ${{ !cancelled() && hashFiles('junit-controllers.xml') != '' }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: junit-controllers.xml
@@ -623,7 +623,7 @@ jobs:
 
     - name: Upload controllers test coverage to Codecov
       if: ${{ env.ENABLE_COVERAGE == 'true' && !cancelled() && hashFiles('coverage.controllers.clover.xml') != '' }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: coverage.controllers.clover.xml
@@ -643,7 +643,7 @@ jobs:
 
     - name: Upload common test results to Codecov
       if: ${{ !cancelled() && hashFiles('junit-common.xml') != '' }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: junit-common.xml
@@ -656,7 +656,7 @@ jobs:
 
     - name: Upload common test coverage to Codecov
       if: ${{ env.ENABLE_COVERAGE == 'true' && !cancelled() && hashFiles('coverage.common.clover.xml') != '' }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: coverage.common.clover.xml
@@ -676,7 +676,7 @@ jobs:
 
     - name: Upload email test results to Codecov
       if: ${{ !cancelled() && hashFiles('junit-email.xml') != '' }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: junit-email.xml
@@ -689,7 +689,7 @@ jobs:
 
     - name: Upload email test coverage to Codecov
       if: ${{ env.ENABLE_COVERAGE == 'true' && !cancelled() && hashFiles('coverage.email.clover.xml') != '' }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: coverage.email.clover.xml
@@ -762,7 +762,7 @@ jobs:
 
     - name: Upload e2e test results to Codecov
       if: ${{ !cancelled() && hashFiles('junit-e2e.xml') != '' }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: junit-e2e.xml
@@ -775,7 +775,7 @@ jobs:
 
     - name: Upload e2e test coverage to Codecov
       if: ${{ env.ENABLE_COVERAGE == 'true' && !cancelled() && hashFiles('coverage.e2e.clover.xml') != '' }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: coverage.e2e.clover.xml
