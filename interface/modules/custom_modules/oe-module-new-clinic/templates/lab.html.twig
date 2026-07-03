@@ -29,7 +29,8 @@
         canReleaseResults:     can_release_results ? true : false,
         canSkipToPayment:      can_skip_to_payment ? true : false,
         sharedDeviceWarning:   enable_shared_device_session_warning ? true : false,
-        canEsignOverride:      can_esign_override ? true : false
+        canEsignOverride:      can_esign_override ? true : false,
+        pollMs:                queue_poll_ms|default(30000)
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}
@@ -39,10 +40,9 @@
 
 {% block scripts %}
 {% if enable_react_lab_desk|default(true) %}
-<link rel="stylesheet" href="{{ assets_url }}/modern/lab-desk.css?v={{ asset_version }}">
+{% include 'partials/island-assets.html.twig' %}
 {% if lab_ops_enabled %}
 <link rel="stylesheet" href="{{ assets_url }}/css/lab-ops.css?v={{ asset_version }}">
 {% endif %}
-<script type="module" src="{{ assets_url }}/modern/lab-desk.js?v={{ asset_version }}"></script>
 {% endif %}
 {% endblock %}

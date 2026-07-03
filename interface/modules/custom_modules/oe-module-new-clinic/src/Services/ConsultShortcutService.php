@@ -11,24 +11,35 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
+use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Logging\EventAuditLogger;
+use OpenEMR\Modules\NewClinic\Exceptions\AllergiesUndocumentedException;
 use OpenEMR\Modules\NewClinic\Exceptions\EncounterSessionMismatchException;
 
 class ConsultShortcutService
 {
-    private const ALLOWED_SHORTCUTS = ['encounter', 'lab', 'rx', 'chart'];
+    private const ALLOWED_SHORTCUTS = ['encounter', 'encounter_hub', 'lab', 'rx', 'chart'];
 
     public function __construct(
         private readonly EncounterSessionService $encounterSession = new EncounterSessionService(),
         private readonly VisitQueueService $queueService = new VisitQueueService(),
         private readonly ProcedureOrderDeepLinkService $procedureOrderLinks = new ProcedureOrderDeepLinkService(),
         private readonly EncounterIdentityStripService $identityStrip = new EncounterIdentityStripService(),
+        private readonly ClinicConfigService $config = new ClinicConfigService(),
+        private readonly PatientCompletionService $completionService = new PatientCompletionService(),
+        private readonly VisitScopeService $visitScope = new VisitScopeService(),
     ) {
     }
 
     /**
      * @return array{redirect_url: string, shortcut: string}
      */
-    public function preflight(int $visitId, string $shortcut, int $actorUserId): array
+    public function preflight(
+        int $visitId,
+        string $shortcut,
+        int $actorUserId,
+        ?string $rxAllergyOverrideReason = null,
+    ): array
     {
         $shortcut = strtolower(trim($shortcut));
         if (!in_array($shortcut, self::ALLOWED_SHORTCUTS, true)) {
@@ -54,10 +65,21 @@ class ConsultShortcutService
 
         $pid = (int) $visit['pid'];
         $encounter = (int) ($visit['encounter'] ?? 0);
+        $facilityId = $this->visitScope->resolveDeskFacilityId((int) ($visit['facility_id'] ?? 0));
+
+        if (
+            $shortcut === 'rx'
+            && $this->config->getInt('require_allergies_for_rx', 0, $facilityId) === 1
+            && !$this->completionService->hasAllergyDocumentationForPatient($pid)
+        ) {
+            $this->assertRxAllergyOverrideAllowed($pid, $visitId, $shortcut, $facilityId, $rxAllergyOverrideReason);
+        }
+
         $modulePublic = ($GLOBALS['webroot'] ?? '') . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
 
         $redirectUrl = match ($shortcut) {
             'encounter' => ($GLOBALS['webroot'] ?? '') . '/interface/patient_file/encounter/encounter_top.php',
+            'encounter_hub' => $modulePublic . 'clinical-doc/index.php?visit_id=' . urlencode((string) $visitId) . '&tab=visit',
             'lab' => $this->procedureOrderLinks->buildNewOrderUrl(
                 $pid,
                 $encounter,
@@ -73,5 +95,45 @@ class ConsultShortcutService
             'redirect_url' => $redirectUrl,
             'shortcut' => $shortcut,
         ];
+    }
+
+    private function assertRxAllergyOverrideAllowed(
+        int $pid,
+        int $visitId,
+        string $shortcut,
+        int $facilityId,
+        ?string $rxAllergyOverrideReason,
+    ): void {
+        $reason = trim((string) ($rxAllergyOverrideReason ?? ''));
+        if ($reason === '') {
+            throw new AllergiesUndocumentedException(
+                'Document allergies (or mark None known) before prescribing.'
+            );
+        }
+
+        if (!AclMain::aclCheckCore('new_clinic', 'new_rx_undocumented_allergy_override')) {
+            throw new AllergiesUndocumentedException(
+                'Document allergies (or mark None known) before prescribing.'
+            );
+        }
+
+        if (
+            $this->config->getInt('require_override_reason', 0, $facilityId) === 1
+            && mb_strlen($reason) < 10
+        ) {
+            throw new \InvalidArgumentException('Override reason must be at least 10 characters');
+        }
+
+        EventAuditLogger::getInstance()->newEvent(
+            'new_visit',
+            $_SESSION['authUser'] ?? 'system',
+            $_SESSION['authProvider'] ?? 'default',
+            'rx_undocumented_allergy_override',
+            'pid=' . $pid . ';visit_id=' . $visitId . ';' . json_encode([
+                'shortcut' => $shortcut,
+                'override_reason' => mb_substr($reason, 0, 200),
+            ]),
+            $pid
+        );
     }
 }

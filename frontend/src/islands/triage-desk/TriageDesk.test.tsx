@@ -87,6 +87,7 @@ const props = {
 
 describe('TriageDesk', () => {
   beforeEach(() => {
+    sessionStorage.clear();
     mockFetch.mockResolvedValue(emptyQueue);
   });
 
@@ -217,9 +218,13 @@ describe('TriageDesk', () => {
       counts: { waiting: 1, in_triage: 2 },
     });
     render(<TriageDesk {...props} />);
-    await waitFor(() =>
-      expect(screen.getByText(/Waiting 1 · In triage 2/)).toBeInTheDocument()
-    );
+    await waitFor(() => {
+      const bar = screen.getByLabelText(/Triage desk status/i);
+      expect(bar).toHaveTextContent('1');
+      expect(bar).toHaveTextContent('Waiting');
+      expect(bar).toHaveTextContent('2');
+      expect(bar).toHaveTextContent('In triage');
+    });
   });
 
   // ── Urgent badge ──────────────────────────────────────────────────────────
@@ -234,6 +239,41 @@ describe('TriageDesk', () => {
     await waitFor(() =>
       expect(screen.getByText('URGENT')).toBeInTheDocument()
     );
+  });
+
+  it('allows clicking in_triage visits with no assigned nurse (orphan row)', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [{ ...waitingPatient, state: 'in_triage' as const, triage_mine: false }],
+        counts: { waiting: 0, in_triage: 1 },
+      })
+      .mockResolvedValueOnce(selectResponse)
+      .mockResolvedValue(emptyQueue);
+
+    render(<TriageDesk {...props} />);
+    const card = await waitFor(() => screen.getByRole('button', { name: /Amara Osei/ }));
+    expect(card).not.toBeDisabled();
+    fireEvent.click(card);
+    await waitFor(() =>
+      expect(mockFetch).toHaveBeenCalledWith('triage.select', expect.anything())
+    );
+  });
+
+  it('disables cards held by another nurse', async () => {
+    mockFetch.mockResolvedValue({
+      ...emptyQueue,
+      visits: [{
+        ...waitingPatient,
+        state: 'in_triage' as const,
+        triage_mine: false,
+        triage_actor_name: 'Nurse Ada',
+      }],
+      counts: { waiting: 0, in_triage: 1 },
+    });
+    render(<TriageDesk {...props} />);
+    const card = await waitFor(() => screen.getByRole('button', { name: /Amara Osei/ }));
+    expect(card).toBeDisabled();
   });
 
   // ── Vitals form validation ─────────────────────────────────────────────────
@@ -310,12 +350,18 @@ describe('TriageDesk', () => {
       vitals: [{}],
       form_vitals: { bps: '120', bpd: '80', pulse: '72', temperature: '36.5', weight: '70' },
     };
+    const readyVisit = {
+      ...inTriageSelect.visit,
+      state: 'ready_for_doctor' as const,
+      row_version: 2,
+    };
 
     mockFetch
       .mockResolvedValueOnce({ ...emptyQueue, visits: [{ ...waitingPatient, state: 'in_triage' as const }], counts: { waiting: 0, in_triage: 1 } })
       .mockResolvedValueOnce(inTriageSelect)  // triage.select → saved mode (has vitals)
       .mockResolvedValueOnce(emptyQueue)      // fetchQueue after select
-      .mockResolvedValueOnce({})             // triage.send_doctor
+      .mockResolvedValueOnce(inTriageSelect)  // triage.select refresh before send_doctor
+      .mockResolvedValueOnce({ visit: readyVisit }) // triage.send_doctor
       .mockResolvedValue(emptyQueue);
 
     render(<TriageDesk {...props} />);

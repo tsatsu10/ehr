@@ -45,13 +45,13 @@
 }
 
 .oe-nc-status-pill--info {
-    background: #ecfeff;
-    color: #0e7490;
+    background: #eff6ff;
+    color: #1d4ed8;
     border-color: #a5f3fc;
 }
 
 .oe-nc-status-pill--info .oe-nc-status-pill__dot {
-    background: #0891b2;
+    background: #2563eb;
 }
 
 .oe-nc-status-pill--warning {
@@ -475,16 +475,87 @@
 .oe-nc-queue-card,
 .nc-queue-card.oe-nc-queue-card {
     border: 1px solid #cbd5e1;
-    border-left: 3px solid #0891b2;
+    border-left: 3px solid #2563eb;
     box-shadow: none;
-    border-radius: 0.375rem;
+    border-radius: 0.5rem;
     padding: 0.65rem 0.75rem;
     background: #fff;
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.oe-nc-queue-card__row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+}
+
+.oe-nc-queue-card__avatar {
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    margin-top: 0.05rem;
+    border-radius: 50%;
+    background: #2563eb;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.02em;
+}
+
+.oe-nc-queue-card--urgent .oe-nc-queue-card__avatar {
+    background: #d97706;
+}
+
+.oe-nc-queue-card--claim-lost .oe-nc-queue-card__avatar {
+    opacity: 0.55;
+}
+
+.oe-nc-queue-card__body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.oe-nc-queue-card__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.35rem;
+    line-height: 1.35;
+    margin-bottom: 0.15rem;
+}
+
+.oe-nc-queue-card__queue-num {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #64748b;
+    font-variant-numeric: tabular-nums;
+}
+
+.oe-nc-queue-card__name {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.oe-nc-queue-card__meta {
+    margin-bottom: 0.1rem;
+}
+
+.oe-nc-queue-card__cc {
+    margin-bottom: 0.25rem;
+}
+
+.oe-nc-queue-card__footer {
+    margin-top: 0.35rem;
 }
 
 .oe-nc-queue-card:hover,
 .nc-queue-card.oe-nc-queue-card:hover {
-    background: #ecfeff;
+    background: #eff6ff;
 }
 
 .oe-nc-queue-card--urgent,
@@ -495,8 +566,8 @@
 
 .oe-nc-queue-card--active,
 .nc-queue-card-active {
-    border-color: #0891b2 !important;
-    background: #ecfeff !important;
+    border-color: #2563eb !important;
+    background: #eff6ff !important;
 }
 
 .oe-nc-queue-card--mine,
@@ -573,4 +644,289 @@
     font-size: 1.35rem;
     font-weight: 600;
     text-align: center;
+}
+
+/* —— completion-bar —— */
+.oe-nc-completion-bar {
+    height: 4px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.oe-nc-completion-bar__fill {
+    height: 100%;
+    background: var(--oe-nc-primary, #2563eb);
+    border-radius: 999px;
+    transition: width 150ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .oe-nc-completion-bar__fill {
+        transition: none;
+    }
+}
+
+/* —— stat-card —— */
+.oe-nc-stat-card {
+    background: #fff;
+    border: 1px solid var(--oe-nc-border, #e2e8f0);
+    border-radius: 0.25rem;
+    padding: 1rem;
+    text-align: center;
+    height: 100%;
+}
+
+.oe-nc-stat-card__value {
+    font-size: 1.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--oe-nc-text, #111827);
+}
+
+.oe-nc-stat-card__label {
+    font-size: 0.8125rem;
+    color: var(--oe-nc-text-muted, #475569);
+    margin-top: 0.25rem;
+}
+
+/* —— segmented-control —— */
+.oe-nc-segmented-control {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0.2rem;
+    border: 1px solid var(--oe-nc-border, #e2e8f0);
+    border-radius: 0.375rem;
+    background: #f8fafc;
+}
+
+.oe-nc-segmented-control__segment {
+    border: none;
+    background: transparent;
+    color: var(--oe-nc-text-muted, #475569);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 0.35rem 0.65rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    min-height: 44px;
+    line-height: 1.2;
+}
+
+.oe-nc-segmented-control__segment:hover {
+    background: #fff;
+    color: var(--oe-nc-text, #111827);
+}
+
+.oe-nc-segmented-control__segment--selected {
+    background: #fff;
+    color: var(--oe-nc-primary, #2563eb);
+    box-shadow: var(--oe-nc-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+    font-weight: 600;
+}
+
+.oe-nc-segmented-control__segment:focus-visible {
+    outline: 2px solid var(--oe-nc-primary, #2563eb);
+    outline-offset: 2px;
+}
+
+/* —— pagination-bar —— */
+.oe-nc-pagination-bar {
+    margin-top: 0.75rem;
+}
+
+.oe-nc-pagination-bar__btn:not(:disabled) {
+    cursor: pointer;
+}
+
+.oe-nc-pagination-bar__summary {
+    flex: 1;
+    text-align: center;
+}
+
+/* —— slide-over —— */
+.oe-nc-slide-over {
+    position: fixed;
+    inset: 0;
+    z-index: 1060;
+}
+
+.oe-nc-slide-over__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+}
+
+.oe-nc-slide-over__panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    max-width: 100%;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+    overflow: hidden;
+}
+
+.oe-nc-slide-over__panel--sm {
+    width: min(480px, 100%);
+}
+
+.oe-nc-slide-over__panel--md {
+    width: min(32rem, 100%);
+}
+
+.oe-nc-slide-over__panel--lg {
+    width: min(720px, 100%);
+}
+
+.oe-nc-slide-over__panel--bottom {
+    top: auto;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    height: min(92vh, 100%);
+    max-height: 92vh;
+    border-radius: 1rem 1rem 0 0;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+}
+
+.oe-nc-slide-over__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--oe-nc-border, #e2e8f0);
+}
+
+.oe-nc-slide-over__body {
+    flex: 1;
+    overflow: auto;
+    padding: 1rem;
+}
+
+.oe-nc-slide-over__footer {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--oe-nc-border, #e2e8f0);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+/* —— trend-pill —— */
+.oe-nc-trend-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+}
+
+.oe-nc-trend-pill--up {
+    color: #047857;
+    background: #ecfdf5;
+}
+
+.oe-nc-trend-pill--down {
+    color: #b91c1c;
+    background: #fef2f2;
+}
+
+.oe-nc-trend-pill--flat {
+    color: #475569;
+    background: #f1f5f9;
+}
+
+/* —— row-actions —— */
+.oe-nc-row-actions__trigger {
+    min-width: 44px;
+    min-height: 44px;
+    line-height: 44px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.oe-nc-data-table {
+    margin-bottom: 0;
+}
+
+/* —— desk-status-bar (DeskQueueStatusBar) —— */
+/* Loaded globally — Vite island bundles do not link the hashed chunk CSS. */
+
+.oe-nc-desk-status-bar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    padding: 0.625rem 1rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    background: #fff;
+    font-size: 0.875rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.oe-nc-front-desk-status-shell .oe-nc-desk-status-bar {
+    margin-bottom: 0;
+}
+
+.oe-nc-desk-status-bar__stats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.25rem;
+    min-width: 0;
+}
+
+.oe-nc-desk-status-bar__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
+.oe-nc-desk-status-bar__divider {
+    display: none;
+    width: 1px;
+    height: 0.875rem;
+    background: #e5e7eb;
+    flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+    .oe-nc-desk-status-bar__divider {
+        display: inline-block;
+    }
+}
+
+.oe-nc-desk-status-bar a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.oe-nc-desk-status-bar a:hover .oe-nc-desk-status-bar__value {
+    color: #2563eb;
+}
+
+.oe-nc-desk-status-bar__value {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: #111827;
+}
+
+.oe-nc-desk-status-bar__label {
+    color: #6b7280;
+}
+
+.oe-nc-desk-status-bar--compact .oe-nc-desk-status-bar__stats {
+    gap: 0.375rem 0.875rem;
+    font-size: 0.8125rem;
 }

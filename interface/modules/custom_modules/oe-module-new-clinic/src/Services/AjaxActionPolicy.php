@@ -24,9 +24,13 @@ class AjaxActionPolicy
         'patients.dup_check' => 'new_reception',
         'patients.create' => 'new_reception',
         'visit.cancel' => 'new_visit_cancel',
+        'visit.hard_assign' => 'new_hard_assign_provider',
         'visit.start' => 'new_reception',
         'visit.start_from_appointment' => 'new_reception',
+        'visit.skip_triage' => 'new_skip_triage',
         'visit.queue_slip' => 'new_reception',
+        'front_desk.revisit_awaiting_documents' => 'new_reception',
+        'front_desk.upload_referral' => 'new_reception',
         'doctor.take' => 'new_doctor',
         'doctor.active' => 'new_doctor',
         'doctor.complete' => 'new_doctor',
@@ -37,6 +41,9 @@ class AjaxActionPolicy
         'doctor.restore_session' => 'new_doctor',
         'doctor.lab_panel_catalog' => 'new_doctor',
         'doctor.lab_panel_place' => 'new_doctor',
+        'doctor.formulary_rx_catalog' => 'new_doctor',
+        'doctor.formulary_rx_place' => 'new_doctor',
+        'doctor.roster.set_taking' => 'new_doctor',
         'triage.restore_session' => 'new_nurse',
         'triage.select' => 'new_nurse',
         'triage.start' => 'new_nurse',
@@ -58,6 +65,7 @@ class AjaxActionPolicy
         'pharmacy.select' => 'new_pharmacy',
         'pharmacy.take' => 'new_pharmacy',
         'pharmacy.complete' => 'new_pharmacy',
+        'pharmacy.walkin_close' => 'new_pharmacy',
         'pharmacy.shortcut_preflight' => 'new_pharmacy',
         'pharmacy.restore_session' => 'new_pharmacy',
         'pharmacy.skip_to_payment' => 'new_visit_skip_queue',
@@ -71,8 +79,23 @@ class AjaxActionPolicy
         'admin.fee.import' => 'new_fee_schedule_admin',
         'admin.roles.grant_self' => 'new_admin',
         'admin.reconciliation.run' => 'new_admin',
+        'admin.profile.apply_cash_clinic' => 'new_admin',
+        'admin.forms_catalog.set_state' => 'new_admin',
+        'admin.health_status' => 'new_admin',
+        'admin.backup.run' => 'new_admin',
+        'admin.backup.complete' => 'new_admin',
+        'admin.setup.mark_item' => 'new_admin',
+        'admin.setup.complete' => 'new_admin',
+        'admin.config.export' => 'new_admin',
+        'admin.config.import' => 'new_admin',
+        'admin.completion_weights.save' => 'new_admin',
+        'clinical_doc.ghana_pack_status' => 'new_admin',
+        'clinical_doc.import_ghana_pack' => 'new_admin',
+        'clinical_doc.import_ancillary_pack' => 'new_admin',
         'reports.daily' => 'reports',
         'reports.reconciliation' => 'reports',
+        'reports.ancillary_export' => 'reports',
+        'reports.documentation_integrity_export' => 'reports',
     ];
 
     /** @var array<int, string> */
@@ -134,6 +157,7 @@ class AjaxActionPolicy
     private const LAB_OPS_ENTER_ACTIONS = [
         'lab_ops.result_save',
         'lab_ops.specimen_collect',
+        'lab_ops.mark_send_out',
     ];
 
     /** @var array<int, string> */
@@ -146,6 +170,137 @@ class AjaxActionPolicy
         'lab_ops.panel_import',
         'lab_ops.fee_map_list',
         'lab_ops.fee_map_save',
+        'lab_ops.setup_model',
+        'lab_ops.provider_create',
+        'lab_ops.sendout_provider_create',
+    ];
+
+    /** @var array<int, string> */
+    private const PHARM_OPS_READ_ACTIONS = [
+        'pharm_ops.worklist',
+        'pharm_ops.dispense_get',
+        'pharm_ops.otc_drugs_search',
+        'pharm_ops.otc_sale_get',
+        'pharm_ops.setup_status',
+        'pharm_ops.reports_embed',
+    ];
+
+    /** @var array<int, string> */
+    private const PHARM_OPS_DESTROY_ACTIONS = [
+        'pharm_ops.destroy_get',
+        'pharm_ops.destroy_confirm',
+    ];
+
+    /** @var array<int, string> */
+    private const PHARM_OPS_RX_PRINT_ACTIONS = [
+        'pharm_ops.rx_print_pdf',
+    ];
+
+    /** @var array<int, string> */
+    private const PHARM_OPS_DISPENSE_LABEL_ACTIONS = [
+        'pharm_ops.dispense_label_pdf',
+    ];
+
+    /** @var array<int, string> */
+    private const PHARM_OPS_DISPENSE_ACTIONS = [
+        'pharm_ops.dispense_confirm',
+        'pharm_ops.otc_sale_confirm',
+    ];
+
+    /** @var array<int, string> */
+    private const PHARM_OPS_RECEIVE_ACTIONS = [
+        'pharm_ops.receive_get',
+        'pharm_ops.receive_save',
+    ];
+
+    /** @var array<int, string> */
+    private const PHARM_OPS_RECEIVE_ACLS = [
+        'new_pharm_ops_receive',
+        'new_pharmacy_lead',
+        'new_admin',
+    ];
+
+    /** @var array<int, string> */
+    private const PHARM_OPS_CATALOG_ACTIONS = [
+        'pharm_ops.warehouse_create',
+        'pharm_ops.formulary_import',
+        'pharm_ops.controlled_catalog',
+        'pharm_ops.controlled_catalog_save',
+    ];
+
+    /** @var array<int, string> */
+    private const SCHEDULING_READ_ACTIONS = [
+        'scheduling.flow_board.list',
+        'scheduling.flow_board.poll',
+        'scheduling.flow_board.prefs',
+        'scheduling.flow_board.lane_map',
+        'scheduling.calendar.day',
+        'scheduling.calendar.range',
+        'scheduling.calendar.poll',
+        'scheduling.recalls.list',
+    ];
+
+    /** @var array<int, string> */
+    private const SCHEDULING_WRITE_ACTIONS = [
+        'scheduling.flow_board.advance',
+        'scheduling.flow_board.room',
+        'scheduling.flow_board.prefs.save',
+        'scheduling.flow_board.lane_map.save',
+        'scheduling.calendar.book',
+        'scheduling.calendar.move',
+        'scheduling.calendar.resize',
+        'scheduling.recalls.save',
+        'scheduling.recalls.delete',
+        'scheduling.recalls.update_status',
+        'scheduling.recalls.snooze',
+        'scheduling.recalls.send_reminder',
+    ];
+
+    /** @var array<int, string> */
+    private const QUEUE_BRIDGE_READ_ACTIONS = [
+        'queue_bridge.list',
+        'queue_bridge.eod_summary',
+        'queue_bridge.flow_board_flags',
+        'queue_bridge.eod_export',
+    ];
+
+    /** @var array<int, string> */
+    private const QUEUE_BRIDGE_RESOLVE_ACTIONS = [
+        'queue_bridge.resolve',
+        'queue_bridge.link_appointment',
+    ];
+
+    /** @var array<int, string> */
+    private const QUEUE_BRIDGE_DISMISS_ACTIONS = [
+        'queue_bridge.dismiss',
+    ];
+
+    /** @var array<int, string> */
+    private const REPORT_HUB_READ_ACTIONS = [
+        'reports.hub_summary',
+        'reports.catalog',
+    ];
+
+    /** @var array<int, string> */
+    private const REPORT_HUB_EXPORT_ACTIONS = [
+        'reports.export_run',
+        'reports.run',
+        'reports.export',
+        'reports.export_status',
+        'reports.export_download',
+    ];
+
+    /** @var array<int, string> */
+    private const CLINICAL_DOC_READ_ACTIONS = [
+        'clinical_doc.visit_summary',
+        'clinical_doc.catalog',
+        'clinical_doc.sign_status',
+        'clinical_doc.favorites',
+    ];
+
+    /** @var array<int, string> */
+    private const CLINICAL_DOC_WRITE_ACTIONS = [
+        'clinical_doc.open_form',
     ];
 
     /** @var array<int, string> */
@@ -162,6 +317,7 @@ class AjaxActionPolicy
     private const BILL_OPS_PAYMENT_ACTIONS = [
         'bill_ops.payments_search',
         'bill_ops.payment_reverse',
+        'bill_ops.receipt_reprint',
     ];
 
     /** @var array<int, string> */
@@ -256,6 +412,7 @@ class AjaxActionPolicy
         'patients.chart.clinical',
         'patients.chart.activity_feed',
         'patients.chart.messages',
+        'patients.chart.search',
         'mrd.profile_payments_summary',
         'chart_depth.payments_list',
         'mrd.clinical_referrals_strip',
@@ -274,6 +431,8 @@ class AjaxActionPolicy
      */
     public function describe(string $action): array
     {
+        $action = $this->normalizeAction($action);
+
         if (isset(self::DEPRECATED[$action])) {
             return ['type' => 'deprecated', 'deprecated' => true];
         }
@@ -314,6 +473,34 @@ class AjaxActionPolicy
             return ['type' => 'lab_ops_catalog_acl'];
         }
 
+        if (in_array($action, self::PHARM_OPS_READ_ACTIONS, true)) {
+            return ['type' => 'pharm_ops_read_acl'];
+        }
+
+        if (in_array($action, self::PHARM_OPS_DISPENSE_ACTIONS, true)) {
+            return ['type' => 'pharm_ops_dispense_acl'];
+        }
+
+        if (in_array($action, self::PHARM_OPS_RECEIVE_ACTIONS, true)) {
+            return ['type' => 'pharm_ops_receive_acl'];
+        }
+
+        if (in_array($action, self::PHARM_OPS_DESTROY_ACTIONS, true)) {
+            return ['type' => 'pharm_ops_destroy_acl'];
+        }
+
+        if (in_array($action, self::PHARM_OPS_RX_PRINT_ACTIONS, true)) {
+            return ['type' => 'pharm_ops_rx_print_acl'];
+        }
+
+        if (in_array($action, self::PHARM_OPS_DISPENSE_LABEL_ACTIONS, true)) {
+            return ['type' => 'pharm_ops_dispense_label_acl'];
+        }
+
+        if (in_array($action, self::PHARM_OPS_CATALOG_ACTIONS, true)) {
+            return ['type' => 'pharm_ops_catalog_acl'];
+        }
+
         if (in_array($action, self::BILL_OPS_CORRECT_READ_ACTIONS, true)
             || in_array($action, self::BILL_OPS_CORRECT_WRITE_ACTIONS, true)) {
             return ['type' => 'bill_ops_correct_acl'];
@@ -329,6 +516,42 @@ class AjaxActionPolicy
 
         if (in_array($action, self::BILL_OPS_OUTSTANDING_ACTIONS, true)) {
             return ['type' => 'bill_ops_outstanding_acl'];
+        }
+
+        if (in_array($action, self::SCHEDULING_READ_ACTIONS, true)) {
+            return ['type' => 'scheduling_read_acl'];
+        }
+
+        if (in_array($action, self::SCHEDULING_WRITE_ACTIONS, true)) {
+            return ['type' => 'scheduling_write_acl'];
+        }
+
+        if (in_array($action, self::QUEUE_BRIDGE_READ_ACTIONS, true)) {
+            return ['type' => 'queue_bridge_read_acl'];
+        }
+
+        if (in_array($action, self::QUEUE_BRIDGE_RESOLVE_ACTIONS, true)) {
+            return ['type' => 'queue_bridge_resolve_acl'];
+        }
+
+        if (in_array($action, self::QUEUE_BRIDGE_DISMISS_ACTIONS, true)) {
+            return ['type' => 'queue_bridge_dismiss_acl'];
+        }
+
+        if (in_array($action, self::REPORT_HUB_READ_ACTIONS, true)) {
+            return ['type' => 'report_hub_read_acl'];
+        }
+
+        if (in_array($action, self::REPORT_HUB_EXPORT_ACTIONS, true)) {
+            return ['type' => 'report_hub_export_acl'];
+        }
+
+        if (in_array($action, self::CLINICAL_DOC_READ_ACTIONS, true)) {
+            return ['type' => 'clinical_doc_read_acl'];
+        }
+
+        if (in_array($action, self::CLINICAL_DOC_WRITE_ACTIONS, true)) {
+            return ['type' => 'clinical_doc_write_acl'];
         }
 
         if (in_array($action, self::COHORT_ACTIONS, true)) {
@@ -347,6 +570,10 @@ class AjaxActionPolicy
             return ['type' => 'any_acl', 'acls' => self::RECEIPT_REPRINT_ACLS];
         }
 
+        if ($action === 'doctor.routing.reassign') {
+            return ['type' => 'any_acl', 'acls' => ['new_admin', 'new_reception']];
+        }
+
         if ($action === 'patients.update') {
             return ['type' => 'any_acl', 'acls' => self::PROFILE_EDIT_ACL_ANY];
         }
@@ -357,8 +584,14 @@ class AjaxActionPolicy
 
         if (in_array($action, [
             'queue.list', 'visit.board', 'visit.detail', 'queue.counts',
-            'triage.queue', 'doctor.queue', 'cashier.queue', 'lab.queue', 'pharmacy.queue',
-            'desk.shared_session_probe',
+            'triage.queue', 'doctor.queue', 'doctor.roster', 'cashier.queue', 'lab.queue', 'pharmacy.queue',
+            'desk.shared_session_probe', 'front_desk.desk_stats', 'front_desk.todays_appointments',
+            'front_desk.recently_viewed', 'front_desk.recently_viewed.remember', 'front_desk.recently_viewed.clear',
+            'reports.scheduling',
+            'reports.ancillary',
+            'reports.ancillary_export',
+            'reports.documentation_integrity',
+            'reports.documentation_integrity_export',
         ], true)) {
             return ['type' => 'desk_acl'];
         }
@@ -396,6 +629,25 @@ class AjaxActionPolicy
 
     public function requiresSingleAcl(string $action): ?string
     {
+        $action = $this->normalizeAction($action);
+
         return self::SINGLE_ACL[$action] ?? null;
+    }
+
+    /**
+     * PRD §13.1 `admin_hub.*` aliases map to module `admin.*` handlers.
+     */
+    public function normalizeAction(string $action): string
+    {
+        return match ($action) {
+            'admin_hub.health_status' => 'admin.health_status',
+            'admin_hub.backup_run' => 'admin.backup.run',
+            'admin_hub.backup_complete' => 'admin.backup.complete',
+            'admin_hub.setup_progress' => 'admin.setup.mark_item',
+            'admin_hub.setup_complete' => 'admin.setup.complete',
+            'admin_hub.config_export' => 'admin.config.export',
+            'admin_hub.config_import' => 'admin.config.import',
+            default => $action,
+        };
     }
 }

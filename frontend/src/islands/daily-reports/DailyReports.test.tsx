@@ -22,7 +22,17 @@ const reportPayload = {
   visit_date: '2026-06-27',
   facility_id: 1,
   visits: { started: 5, completed: 3, still_open: 2, cancelled: 0, by_state: { waiting: 2 } },
-  cash: { total_collected: 120.5, receipt_count: 3 },
+  cash: { total_collected: 120.5, receipt_count: 3, by_category: [{ category: 'consult', label: 'Consultation / visit', amount: 120.5 }] },
+  reconciliation: {
+    status: 'ok',
+    module_total: 120.5,
+    core_total: 120.5,
+    delta_amount: 0,
+    tolerance: 0.01,
+    currency_symbol: 'GH₵',
+    latest_run: null,
+    recent_runs: [],
+  },
   open_visits: [],
   eod_open: {},
   unsigned_alerts: { with_doctor: 0, ready_for_payment: 0 },
@@ -32,11 +42,18 @@ const reportPayload = {
     dup_overrides_today: 0,
     billing_threshold: 70,
     completion_buckets: { under_40: 0, from_40_to_69: 0, from_70_to_99: 1, complete_100: 0 },
+    by_registering_user: [],
     stale_incomplete: [],
   },
   unsigned_visits: [],
   queue_bypass: [],
   last_updated: '2026-06-27T12:00:00+00:00',
+  currency: {
+    currency_code: 'GHS',
+    currency_symbol: 'GH₵',
+    currency_decimals: 2,
+    currency_symbol_position: 'before',
+  },
 };
 
 const props = {
@@ -90,6 +107,6 @@ describe('DailyReports', () => {
     });
 
     expect(await screen.findByText('Total collected')).toBeInTheDocument();
-    expect(screen.getByText('120.50')).toBeInTheDocument();
+    expect(screen.getAllByText('GH₵ 120.50').length).toBeGreaterThan(0);
   });
 });

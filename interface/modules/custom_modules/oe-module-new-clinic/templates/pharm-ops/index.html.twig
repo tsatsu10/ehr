@@ -1,0 +1,106 @@
+{% extends 'base.html.twig' %}
+
+{% block page_heading_actions %}
+<div class="d-flex flex-wrap align-items-center oe-nc-pharmops-toolbar" id="nc-pharmops-toolbar">
+    <div class="btn-group btn-group-sm mr-2 mb-1" role="group" aria-label="{{ 'Worklist tabs'|xlt }}">
+        <button type="button"
+                class="btn btn-outline-primary{% if initial_tab == 'pending_dispense' %} active{% endif %}"
+                id="nc-pharmops-tab-pending">
+            {{ 'Pending dispense'|xlt }} <span class="badge badge-light" id="nc-pharmops-count-pending">0</span>
+        </button>
+        <button type="button"
+                class="btn btn-outline-primary{% if initial_tab == 'low_stock' %} active{% endif %}"
+                id="nc-pharmops-tab-lowstock">
+            {{ 'Low stock'|xlt }} <span class="badge badge-light" id="nc-pharmops-count-lowstock">0</span>
+        </button>
+        <button type="button"
+                class="btn btn-outline-primary{% if initial_tab == 'write_off' %} active{% endif %}"
+                id="nc-pharmops-tab-writeoff">
+            {{ 'Write-off'|xlt }} <span class="badge badge-light" id="nc-pharmops-count-writeoff">0</span>
+        </button>
+        <button type="button"
+                class="btn btn-outline-primary{% if initial_tab == 'reports' %} active{% endif %}"
+                id="nc-pharmops-tab-reports">
+            {{ 'Reports'|xlt }}
+        </button>
+    </div>
+    <input type="date"
+           class="form-control form-control-sm mr-2 mb-1"
+           id="nc-pharmops-date"
+           aria-label="{{ 'Worklist date'|xlt }}"
+           style="width:auto;">
+    <div class="form-check form-check-inline mb-1 mr-2" id="nc-pharmops-urgent-wrap">
+        <input type="checkbox" class="form-check-input" id="nc-pharmops-urgent-first" checked>
+        <label class="form-check-label small" for="nc-pharmops-urgent-first">{{ 'Urgent first'|xlt }}</label>
+    </div>
+    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ pharmacy_desk_url|attr }}">{{ 'Pharmacy Desk'|xlt }}</a>
+    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ visit_board_url|attr }}">{{ 'Visit Board'|xlt }}</a>
+    {% if can_dispense %}
+    <button type="button" class="btn btn-primary btn-sm mb-1 mr-1" id="nc-pharmops-sell-otc">
+        {{ 'Sell OTC'|xlt }}
+    </button>
+    {% endif %}
+    {% if can_receive %}
+    <button type="button" class="btn btn-outline-primary btn-sm mb-1 mr-1" id="nc-pharmops-receive">
+        {{ 'Receive stock'|xlt }}
+    </button>
+    {% endif %}
+    {% if can_manage_catalog %}
+    <button type="button" class="btn btn-outline-secondary btn-sm mb-1 mr-1" id="nc-pharmops-setup" title="{{ 'Pharmacy setup'|xlt }}">
+        <i class="fa fa-cog" aria-hidden="true"></i>
+        <span class="sr-only">{{ 'Setup'|xlt }}</span>
+    </button>
+    {% endif %}
+    {% if can_show_advanced %}
+    <div class="dropdown d-inline-block mb-1 mr-1">
+        <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            {{ 'Advanced'|xlt }}
+        </button>
+        <div class="dropdown-menu dropdown-menu-right">
+            <a class="dropdown-item" href="{{ webroot }}/interface/drugs/drug_inventory.php" target="_top">{{ 'Inventory management (core)'|xlt }}</a>
+            <a class="dropdown-item" href="{{ webroot }}/interface/drugs/add_edit_drug.php" target="_top">{{ 'Add drug (core)'|xlt }}</a>
+            <a class="dropdown-item" href="{{ webroot }}/interface/reports/inventory_list.php" target="_top">{{ 'Reorder report (core)'|xlt }}</a>
+            <a class="dropdown-item" href="{{ webroot }}/interface/reports/inventory_activity.php" target="_top">{{ 'Inventory activity (core)'|xlt }}</a>
+            <a class="dropdown-item" href="{{ webroot }}/interface/reports/inventory_transactions.php" target="_top">{{ 'Inventory transactions (core)'|xlt }}</a>
+            <a class="dropdown-item" href="{{ webroot }}/interface/reports/destroyed_drugs_report.php" target="_top">{{ 'Destroyed drugs (core)'|xlt }}</a>
+        </div>
+    </div>
+    {% endif %}
+    <button type="button" class="btn btn-outline-secondary btn-sm mb-1" id="nc-pharmops-refresh" aria-label="{{ 'Refresh'|xlt }}">
+        <i class="fa fa-refresh" aria-hidden="true"></i>
+    </button>
+    <span class="text-muted small mb-1" id="nc-pharmops-updated"></span>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if enable_react_pharm_ops|default(true) %}
+<div
+    data-island="pharm-ops"
+    data-props="{{ {
+        ajaxUrl: ajax_url,
+        csrfToken: csrf_token,
+        moduleUrl: module_url,
+        pharmacyDeskUrl: pharmacy_desk_url,
+        visitBoardUrl: visit_board_url,
+        facilityId: desk_facility_id|default(0)|number_format(0, '', ''),
+        initialTab: initial_tab,
+        canDispense: can_dispense ? true : false,
+        canReceive: can_receive ? true : false,
+        canDestroy: can_destroy ? true : false,
+        canManageCatalog: can_manage_catalog ? true : false,
+        canViewReports: true,
+        webroot: webroot
+    }|json_encode|e('html_attr') }}"
+></div>
+{% else %}
+{% include 'partials/react-island-disabled.html.twig' with { desk_label: 'Pharmacy Operations' } %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if enable_react_pharm_ops|default(true) %}
+<link rel="stylesheet" href="{{ assets_url }}/css/pharm-ops.css?v={{ asset_version }}">
+{% include 'partials/island-assets.html.twig' %}
+{% endif %}
+{% endblock %}

@@ -2,68 +2,37 @@
  * ConsultShortcuts — clinical shortcut buttons (encounter, lab, Rx, chart).
  */
 
-import { useCallback } from 'react';
-import { oeFetch } from '@core/oeFetch';
-import type { DoctorVisit } from '@core/types';
-import { setDeskActiveVisitId } from '@core/deskSessionStorage';
+import type { ShortcutKind } from './doctorShortcutNav';
 
-const STORAGE_KEY = 'doctor_desk_active_visit_id';
-export const DOCTOR_LEFT_VIA_KEY = 'doctor_desk_left_via';
-
-export type ShortcutKind = 'encounter' | 'lab' | 'rx' | 'chart';
+export type { ShortcutKind };
 
 interface ConsultShortcutsProps {
-  visit: DoctorVisit;
-  ajaxUrl: string;
-  csrfToken: string;
   blocked: boolean;
+  clinicalDocHubEnabled?: boolean;
+  onOpenDocFavorites?: () => void;
   labPanelOrderEnabled?: boolean;
+  formularyRxEnabled?: boolean;
   onOpenLabPanel?: () => void;
-  onError: (message: string) => void;
+  onOpenFormularyRx?: () => void;
+  runShortcut: (shortcut: ShortcutKind) => void | Promise<void>;
 }
 
 export function ConsultShortcuts({
-  visit,
-  ajaxUrl,
-  csrfToken,
   blocked,
+  clinicalDocHubEnabled = false,
+  onOpenDocFavorites,
   labPanelOrderEnabled = false,
+  formularyRxEnabled = false,
   onOpenLabPanel,
-  onError,
+  onOpenFormularyRx,
+  runShortcut,
 }: ConsultShortcutsProps) {
-  const runShortcut = useCallback(async (shortcut: ShortcutKind) => {
-    if (blocked) return;
-
-    if (shortcut === 'chart') {
-      try {
-        const data = await oeFetch<{ redirect_url: string }>('doctor.shortcut_preflight', {
-          ajaxUrl,
-          csrfToken,
-          method: 'POST',
-          json: { visit_id: visit.id, shortcut: 'chart' },
-        });
-        window.open(data.redirect_url, '_blank', 'noopener,noreferrer');
-      } catch (err) {
-        onError(err instanceof Error ? err.message : 'Chart link failed');
-      }
+  const handleShortcut = (shortcut: ShortcutKind) => {
+    if (blocked) {
       return;
     }
-
-    setDeskActiveVisitId(STORAGE_KEY, visit.id);
-    window.sessionStorage.setItem(DOCTOR_LEFT_VIA_KEY, shortcut);
-
-    try {
-      const data = await oeFetch<{ redirect_url: string }>('doctor.shortcut_preflight', {
-        ajaxUrl,
-        csrfToken,
-        method: 'POST',
-        json: { visit_id: visit.id, shortcut },
-      });
-      window.location.assign(data.redirect_url);
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'Shortcut failed');
-    }
-  }, [ajaxUrl, blocked, csrfToken, onError, visit.id]);
+    void runShortcut(shortcut);
+  };
 
   return (
     <div className="nc-doctor-shortcuts mb-3">
@@ -74,10 +43,34 @@ export function ConsultShortcuts({
           className="btn btn-outline-primary mr-2 mb-2 nc-shortcut-btn"
           data-shortcut="encounter"
           disabled={blocked}
-          onClick={() => void runShortcut('encounter')}
+          onClick={() => handleShortcut('encounter')}
         >
           Open encounter
         </button>
+        {clinicalDocHubEnabled && (
+          <>
+            <button
+              type="button"
+              className="btn btn-primary mr-2 mb-2 nc-shortcut-btn"
+              data-shortcut="encounter_hub"
+              disabled={blocked}
+              onClick={() => handleShortcut('encounter_hub')}
+            >
+              Open documentation
+            </button>
+            {onOpenDocFavorites && (
+              <button
+                type="button"
+                className="btn btn-outline-primary mr-2 mb-2 nc-shortcut-btn"
+                data-shortcut="doc-favorites"
+                disabled={blocked}
+                onClick={onOpenDocFavorites}
+              >
+                Quick forms
+              </button>
+            )}
+          </>
+        )}
         <button
           type="button"
           className="btn btn-outline-primary mr-2 mb-2 nc-shortcut-btn"
@@ -87,7 +80,7 @@ export function ConsultShortcuts({
             if (labPanelOrderEnabled && onOpenLabPanel) {
               onOpenLabPanel();
             } else {
-              void runShortcut('lab');
+              handleShortcut('lab');
             }
           }}
         >
@@ -99,7 +92,7 @@ export function ConsultShortcuts({
             className="btn btn-outline-secondary mr-2 mb-2 nc-shortcut-btn"
             data-shortcut="lab-full"
             disabled={blocked}
-            onClick={() => void runShortcut('lab')}
+            onClick={() => handleShortcut('lab')}
           >
             Full lab form
           </button>
@@ -109,16 +102,33 @@ export function ConsultShortcuts({
           className="btn btn-outline-primary mr-2 mb-2 nc-shortcut-btn"
           data-shortcut="rx"
           disabled={blocked}
-          onClick={() => void runShortcut('rx')}
+          onClick={() => {
+            if (formularyRxEnabled && onOpenFormularyRx) {
+              onOpenFormularyRx();
+            } else {
+              handleShortcut('rx');
+            }
+          }}
         >
-          Prescribe
+          {formularyRxEnabled ? 'Quick prescribe' : 'Prescribe'}
         </button>
+        {formularyRxEnabled && (
+          <button
+            type="button"
+            className="btn btn-outline-secondary mr-2 mb-2 nc-shortcut-btn"
+            data-shortcut="rx-full"
+            disabled={blocked}
+            onClick={() => handleShortcut('rx')}
+          >
+            Full Rx form
+          </button>
+        )}
         <button
           type="button"
           className="btn btn-outline-secondary mr-2 mb-2 nc-shortcut-btn"
           data-shortcut="chart"
           disabled={blocked}
-          onClick={() => void runShortcut('chart')}
+          onClick={() => handleShortcut('chart')}
         >
           Open full chart ↗
         </button>
@@ -126,3 +136,5 @@ export function ConsultShortcuts({
     </div>
   );
 }
+
+export { DOCTOR_LEFT_VIA_KEY } from './doctorShortcutNav';

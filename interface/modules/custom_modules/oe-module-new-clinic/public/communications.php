@@ -60,6 +60,7 @@ $lensFromQuery = in_array((string) ($_GET['lens'] ?? ''), ['messages', 'reminder
 $preferences = (new CommHubUserSettingsService())->getPreferences($lensFromQuery, $canViewAllUsers);
 
 (new PageController())->renderForCoreNotesAcl('communications.html.twig', 'Communications', [
+    'island_entry' => 'communications-hub',
     'shell_nav_id' => 'clinicmsg',
     'module_url' => $moduleUrl,
     'can_view_all_users' => $canViewAllUsers,

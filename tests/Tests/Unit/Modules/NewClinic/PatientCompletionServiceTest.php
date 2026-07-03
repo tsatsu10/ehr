@@ -204,4 +204,24 @@ class PatientCompletionServiceTest extends TestCase
         $this->assertStringContainsString('pid=42', $url);
         $this->assertStringContainsString('tab=profile', $url);
     }
+
+    public function testBackgroundHistoryCompleteWhenFamilyDocumented(): void
+    {
+        $this->assertTrue(PatientCompletionService::isBackgroundHistoryRowComplete([
+            'history_mother' => 'Hypertension',
+        ]));
+    }
+
+    public function testBackgroundHistoryCompleteWhenSocialDocumented(): void
+    {
+        $this->assertTrue(PatientCompletionService::isBackgroundHistoryRowComplete([
+            'tobacco' => 'Never smoker',
+        ]));
+    }
+
+    public function testBackgroundHistoryIncompleteWhenEmpty(): void
+    {
+        $this->assertFalse(PatientCompletionService::isBackgroundHistoryRowComplete([]));
+        $this->assertFalse(PatientCompletionService::isBackgroundHistoryRowComplete(null));
+    }
 }

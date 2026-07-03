@@ -60,6 +60,11 @@ $pilotUsers = [
         'lname' => 'Doctor',
         'groups' => ['Clinicians', 'New Clinic Doctor'],
     ],
+    'doctor2_user' => [
+        'fname' => 'Pilot',
+        'lname' => 'Doctor2',
+        'groups' => ['Clinicians', 'New Clinic Doctor'],
+    ],
     'lab_user' => [
         'fname' => 'Pilot',
         'lname' => 'Lab',
@@ -69,6 +74,11 @@ $pilotUsers = [
         'fname' => 'Pilot',
         'lname' => 'Pharmacy',
         'groups' => ['Clinicians', 'New Clinic Pharmacy'],
+    ],
+    'pharmacy_lead_user' => [
+        'fname' => 'Pilot',
+        'lname' => 'PharmLead',
+        'groups' => ['Clinicians', 'New Clinic Pharmacy Lead'],
     ],
     'cashier_user' => [
         'fname' => 'Pilot',

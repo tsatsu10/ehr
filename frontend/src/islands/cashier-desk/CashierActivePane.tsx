@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type {
+  CashierPaymentMethod,
   CashierSelectData,
   CashierSignMeta,
   CashierStagedLine,
@@ -7,7 +8,7 @@ import type {
 } from '@core/types';
 import { ChargePicker } from './ChargePicker';
 import { ChargesTable } from './ChargesTable';
-import { formatMoney } from './cashierUtils';
+import { formatMoney, parseCashInput, toCashInputValue } from './cashierUtils';
 
 export type CashierActiveMode = 'idle' | 'loading' | 'checkout' | 'error';
 
@@ -24,8 +25,18 @@ interface CashierActivePaneProps {
   paneError: string | null;
   onStagedChange: (lines: CashierStagedLine[]) => void;
   onPostCharges: () => void;
-  onTakePayment: (amountReceived: number, receiptNote: string) => void;
-  onEsignOverride: (amountReceived: number, receiptNote: string) => void;
+  onTakePayment: (
+    amountReceived: number,
+    receiptNote: string,
+    paymentMethod: CashierPaymentMethod,
+    momoReference: string,
+  ) => void;
+  onEsignOverride: (
+    amountReceived: number,
+    receiptNote: string,
+    paymentMethod: CashierPaymentMethod,
+    momoReference: string,
+  ) => void;
   onMarkUnpaid: () => void;
   onCloseZero: () => void;
 }
@@ -100,11 +111,15 @@ export function CashierActivePane({
 }: CashierActivePaneProps) {
   const [cashReceived, setCashReceived] = useState('0.00');
   const [receiptNote, setReceiptNote] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<CashierPaymentMethod>('cash');
+  const [momoReference, setMomoReference] = useState('');
 
   useEffect(() => {
     if (data) {
-      setCashReceived(formatMoney(data.charges_total));
+      setCashReceived(toCashInputValue(data.charges_total));
       setReceiptNote('');
+      setPaymentMethod('cash');
+      setMomoReference('');
     }
   }, [data]);
 
@@ -142,13 +157,23 @@ export function CashierActivePane({
   const identity = preview.identity;
   const unsigned = !signMeta.encounter_signed;
   const zeroCharge = total <= 0;
-  const payDisabled =
-    blocked ||
-    total <= 0 ||
-    (data.completion_blocked && !data.can_skip_completion) ||
-    (unsigned && !esignOverrideAllowed);
+  const payBlockReason =
+    blocked
+      ? 'Return to the queue before taking payment (shared device).'
+      : total <= 0
+        ? 'Post charges first, or use Close without charge.'
+        : data.completion_blocked && !data.can_skip_completion
+          ? 'Complete the patient profile before payment.'
+          : unsigned && !esignOverrideAllowed
+            ? 'Documentation must be signed before payment.'
+            : null;
+  const payDisabled = payBlockReason !== null
+    || (paymentMethod === 'momo' && momoReference.trim() === '');
   const showEsignPay = unsigned && esignOverrideAllowed && !zeroCharge;
-  const change = Math.max(0, (Number.parseFloat(cashReceived) || 0) - total);
+  const momoEnabled = !!data.enable_momo_payment;
+  const isMomo = momoEnabled && paymentMethod === 'momo';
+  const tenderedAmount = isMomo ? total : parseCashInput(cashReceived);
+  const change = isMomo ? 0 : Math.max(0, tenderedAmount - total);
 
   return (
     <div id="nc-cashier-active-pane">
@@ -214,47 +239,90 @@ export function CashierActivePane({
           ) : (
             <>
               <h5>Take payment</h5>
+              {momoEnabled && (
+                <div className="form-group">
+                  <span className="d-block small font-weight-bold mb-2">Payment method</span>
+                  <div className="btn-group btn-group-toggle" role="group" aria-label="Payment method">
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${paymentMethod === 'cash' ? 'btn-primary' : 'btn-outline-primary'}`}
+                      disabled={blocked}
+                      onClick={() => setPaymentMethod('cash')}
+                    >
+                      Cash
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${paymentMethod === 'momo' ? 'btn-primary' : 'btn-outline-primary'}`}
+                      disabled={blocked}
+                      onClick={() => setPaymentMethod('momo')}
+                    >
+                      MoMo
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="form-row align-items-end">
                 <div className="form-group col-md-4">
                   <label>Total due</label>
                   <input type="text" className="form-control" readOnly value={formatMoney(total)} />
                 </div>
-                <div className="form-group col-md-4">
-                  <label htmlFor="nc-cash-received">Cash received</label>
-                  <input
-                    type="number"
-                    step={0.01}
-                    min={0}
-                    className="form-control"
-                    id="nc-cash-received"
-                    value={cashReceived}
-                    disabled={blocked}
-                    onChange={(e) => setCashReceived(e.target.value)}
-                  />
-                </div>
-                <div className="form-group col-md-4">
-                  <label htmlFor="nc-cash-change">Change</label>
+                {!isMomo ? (
+                  <>
+                    <div className="form-group col-md-4">
+                      <label htmlFor="nc-cash-received">Cash received</label>
+                      <input
+                        type="number"
+                        step={0.01}
+                        min={0}
+                        className="form-control"
+                        id="nc-cash-received"
+                        value={cashReceived}
+                        disabled={blocked}
+                        onChange={(e) => setCashReceived(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group col-md-4">
+                      <label htmlFor="nc-cash-change">Change</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        id="nc-cash-change"
+                        readOnly
+                        value={formatMoney(change)}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="form-group col-md-8">
+                    <label htmlFor="nc-momo-reference">MoMo transaction reference</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      id="nc-momo-reference"
+                      maxLength={255}
+                      value={momoReference}
+                      disabled={blocked}
+                      onChange={(e) => setMomoReference(e.target.value)}
+                      placeholder="e.g. provider reference or sender name"
+                    />
+                  </div>
+                )}
+              </div>
+              {!isMomo && (
+                <div className="form-group">
+                  <label htmlFor="nc-receipt-note">Receipt note (optional)</label>
                   <input
                     type="text"
                     className="form-control"
-                    id="nc-cash-change"
-                    readOnly
-                    value={formatMoney(change)}
+                    id="nc-receipt-note"
+                    maxLength={255}
+                    value={receiptNote}
+                    disabled={blocked}
+                    onChange={(e) => setReceiptNote(e.target.value)}
                   />
                 </div>
-              </div>
-              <div className="form-group">
-                <label htmlFor="nc-receipt-note">Receipt note (optional)</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  id="nc-receipt-note"
-                  maxLength={255}
-                  value={receiptNote}
-                  disabled={blocked}
-                  onChange={(e) => setReceiptNote(e.target.value)}
-                />
-              </div>
+              )}
             </>
           )}
 
@@ -281,7 +349,12 @@ export function CashierActivePane({
                 className="btn btn-warning mr-2"
                 id="nc-cashier-esign-override-btn"
                 disabled={blocked}
-                onClick={() => onEsignOverride(Number.parseFloat(cashReceived) || 0, receiptNote.trim())}
+                onClick={() => onEsignOverride(
+                  tenderedAmount,
+                  receiptNote.trim(),
+                  isMomo ? 'momo' : 'cash',
+                  momoReference.trim(),
+                )}
               >
                 Pay with E-Sign override
               </button>
@@ -291,7 +364,14 @@ export function CashierActivePane({
                 className="btn btn-success mr-2"
                 id="nc-cashier-pay-btn"
                 disabled={payDisabled}
-                onClick={() => onTakePayment(Number.parseFloat(cashReceived) || 0, receiptNote.trim())}
+                title={payBlockReason ?? undefined}
+                aria-disabled={payDisabled}
+                onClick={() => onTakePayment(
+                  tenderedAmount,
+                  receiptNote.trim(),
+                  isMomo ? 'momo' : 'cash',
+                  momoReference.trim(),
+                )}
               >
                 Take payment
               </button>

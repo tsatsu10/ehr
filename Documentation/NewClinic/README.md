@@ -10,7 +10,9 @@ Read in this order for a full picture:
 2. **[NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md)** — How staff work day-to-day (v1.9.50)
 3. **[NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md)** — What each screen looks like (wireframes, AJAX) (v0.6.51)
 
-**UI/UX entry point:** **[NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md)** (v1.1.0) — cross-cutting principles, component catalog, **§14 premium component translation**, module map. PAGE_DESIGNS remains normative for per-page build detail.
+**UI/UX entry point:** **[NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md)** (v2.0.0) — start at **§0 TL;DR** for 60-second orientation. Full rewrite: trunk-test IA, single component reference with contract template, interaction-state taxonomy, scoring rubric, and phased **shadcn/ui migration plan (§9)**. PAGE_DESIGNS remains normative for per-page build detail.
+
+**Implementation tracking:** **[NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md](./NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md)** — living module × slice × % tracker synced to PRD §5.6 and §20.1 (last audited 2026-07-02).
 
 ## Feature redesign specs
 
@@ -41,8 +43,9 @@ Read in this order for a full picture:
 
 | Document | Purpose |
 |----------|---------|
-| [NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) | UI/UX master index — principles, tokens, components, module map, **§15 premium component catalog** (v1.1.0) |
-| [FRONTEND_2026_MODERNIZATION_PLAN.md](./FRONTEND_2026_MODERNIZATION_PLAN.md) | Strangler-fig frontend strategy (Vite, React, design tokens) |
+| [NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) | UI/UX master — §0 TL;DR · §1 architectural model · §2 design principles · §3 visual system · §4 component reference · §5 interaction states · §6 IA + module map · §9 shadcn migration plan · §10 governance (v2.0.0) |
+| [FRONTEND_2026_MODERNIZATION_PLAN.md](./FRONTEND_2026_MODERNIZATION_PLAN.md) | OpenEMR-wide modernization strategy; **New Clinic React islands shipped** |
+| [FRONTEND_MODULE_GUIDE.md](../FRONTEND_MODULE_GUIDE.md) | How to build and wire React islands (Vite, `oeFetch`, tokens) |
 
 ## Relationship map
 

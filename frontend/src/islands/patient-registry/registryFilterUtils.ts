@@ -54,6 +54,10 @@ export function filtersToApiPayload(filters: RegistryFilters): ApiRegistryFilter
     recall_due: filters.recall_due || 'any',
     recall_date_from: parseText(filters.recall_date_from),
     recall_date_to: parseText(filters.recall_date_to),
+    allergy_substance_contains: parseText(filters.allergy_substance_contains),
+    medication_contains: parseText(filters.medication_contains),
+    unread_staff_message: parseOptional(filters.unread_staff_message),
+    open_dated_reminder: parseOptional(filters.open_dated_reminder),
   };
 
   if (filters.my_provider_today) {
@@ -114,6 +118,12 @@ export function applyPresetToFilters(
   if (preset.recall_due) base.recall_due = preset.recall_due;
   if (preset.recall_date_from) base.recall_date_from = preset.recall_date_from;
   if (preset.recall_date_to) base.recall_date_to = preset.recall_date_to;
+  if (preset.allergy_substance_contains) {
+    base.allergy_substance_contains = preset.allergy_substance_contains;
+  }
+  if (preset.medication_contains) base.medication_contains = preset.medication_contains;
+  if (preset.unread_staff_message) base.unread_staff_message = preset.unread_staff_message;
+  if (preset.open_dated_reminder) base.open_dated_reminder = preset.open_dated_reminder;
 
   if (preset.my_provider_today) {
     base.my_provider_today = true;

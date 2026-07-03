@@ -22,6 +22,7 @@ class LabShortcutService
         private readonly VisitQueueService $queueService = new VisitQueueService(),
         private readonly ProcedureOrderDeepLinkService $procedureOrderLinks = new ProcedureOrderDeepLinkService(),
         private readonly EncounterIdentityStripService $identityStrip = new EncounterIdentityStripService(),
+        private readonly LabDirectService $labDirectService = new LabDirectService(),
     ) {
     }
 
@@ -42,6 +43,11 @@ class LabShortcutService
 
         $this->assertActorMayUseLab($visit, $actorUserId);
         $this->encounterSession->bindForVisit($visitId, $actorUserId);
+
+        if ($shortcut === 'orders' && $this->labDirectService->isLabDirectVisit($visit)) {
+            $this->labDirectService->assertCanCreateOrders();
+        }
+
         $this->encounterSession->assertBound($visitId);
 
         $pid = (int) $visit['pid'];

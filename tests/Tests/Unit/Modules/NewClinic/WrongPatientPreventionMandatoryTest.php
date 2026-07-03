@@ -141,21 +141,25 @@ class WrongPatientPreventionMandatoryTest extends TestCase
     {
         $source = $this->readFrontendSource('src/islands/front-desk/FrontDesk.tsx');
 
-        $this->assertStringContainsString('confirmStartVisitSwitch', $source);
+        $this->assertStringContainsString('resolveSwitchTarget', $source);
         $this->assertStringContainsString('Discard changes and switch to', $source);
         $this->assertStringContainsString('startVisitDirtyRef', $source);
+        $this->assertStringContainsString('Switch patient?', $source);
     }
 
     /** 43e — M5-F15 cashier payment confirm identity */
     public function test43eCashierPaymentConfirmShowsIdentityAndTotal(): void
     {
         $source = $this->readFrontendSource('src/islands/cashier-desk/PayConfirmModal.tsx');
+        $identityBanner = $this->readFrontendSource('src/components/ConfirmModal.tsx');
 
         $this->assertStringContainsString('identity.display_name', $source);
         $this->assertStringContainsString('identity.pubpid', $source);
         $this->assertStringContainsString('Total due', $source);
-        $this->assertStringContainsString('Queue #', $source);
-        $this->assertStringContainsString('MRN', $source);
+        $this->assertStringContainsString('IdentityConfirmBanner', $source);
+        $this->assertStringContainsString('queueNumber', $source);
+        $this->assertStringContainsString('Queue #', $identityBanner);
+        $this->assertStringContainsString('MRN', $identityBanner);
     }
 
     /** 43f — T1-F17 server-injected encounter identity strip */
@@ -189,7 +193,7 @@ class WrongPatientPreventionMandatoryTest extends TestCase
 
         $this->assertStringContainsString("'completed'", $body);
         $this->assertStringContainsString("'closed_unpaid'", $body);
-        $this->assertStringContainsString('ORDER BY id DESC LIMIT 1', $body);
+        $this->assertStringContainsString('ORDER BY v.id DESC LIMIT 1', $body);
     }
 
     /** 43i — M1a-F15 cashier resolves checkout by visit_id not pid alone */
@@ -209,8 +213,9 @@ class WrongPatientPreventionMandatoryTest extends TestCase
         $deskSource = $this->readFrontendSource('src/islands/front-desk/FrontDesk.tsx');
         $formSource = $this->readFrontendSource('src/islands/front-desk/RegistrationForm.tsx');
 
-        $this->assertStringContainsString('confirmRegistrationSwitch', $deskSource);
-        $this->assertStringContainsString('confirmDiscard', $formSource);
+        $this->assertStringContainsString('requestRegistrationDiscard', $deskSource);
+        $this->assertStringContainsString('discard_registration', $deskSource);
+        $this->assertStringContainsString('requestDiscard', $formSource);
         $this->assertStringContainsString('Discard unsaved registration changes?', $formSource);
     }
 
@@ -220,12 +225,16 @@ class WrongPatientPreventionMandatoryTest extends TestCase
         $markUnpaid = $this->readFrontendSource('src/islands/cashier-desk/MarkUnpaidModal.tsx');
         $discount = $this->readFrontendSource('src/islands/cashier-desk/DiscountConfirmModal.tsx');
         $payConfirm = $this->readFrontendSource('src/islands/cashier-desk/PayConfirmModal.tsx');
+        $identityBanner = $this->readFrontendSource('src/components/ConfirmModal.tsx');
 
         $this->assertStringContainsString('identity.display_name', $markUnpaid);
         $this->assertStringContainsString('identity.pubpid', $markUnpaid);
-        $this->assertStringContainsString('Queue #', $markUnpaid);
+        $this->assertStringContainsString('IdentityConfirmBanner', $markUnpaid);
+        $this->assertStringContainsString('queueNumber', $markUnpaid);
         $this->assertStringContainsString('identity.display_name', $discount);
-        $this->assertStringContainsString('MRN', $payConfirm);
+        $this->assertStringContainsString('IdentityConfirmBanner', $discount);
+        $this->assertStringContainsString('IdentityConfirmBanner', $payConfirm);
+        $this->assertStringContainsString('MRN', $identityBanner);
     }
 
     /** 43l — stale complete_consult maps to stale_visit, not taken_elsewhere */

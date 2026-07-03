@@ -1,6 +1,7 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
 import type { RegistrationDupResult } from '@core/types';
+import { ConfirmModal } from '@components/ConfirmModal';
 import { RegistrationDupPanel } from './RegistrationDupPanel';
 import type { RegistrationFormHandle } from './RegistrationForm';
 import { parseSearchQuery } from './registrationFormUtils';
@@ -12,6 +13,7 @@ interface QuickAddRegistrationProps {
     onSaved: (pid: number, startAfter?: boolean) => void;
     onUseExisting: (pid: number) => void;
     onCancel: () => void;
+    onDiscardConfirm?: (onProceed: () => void) => void;
 }
 
 function shouldRunDupCheck(payload: {
@@ -26,7 +28,7 @@ function shouldRunDupCheck(payload: {
 
 export const QuickAddRegistration = forwardRef<RegistrationFormHandle, QuickAddRegistrationProps>(
     function QuickAddRegistration(
-        { ajaxUrl, csrfToken, prefill, onSaved, onUseExisting, onCancel },
+        { ajaxUrl, csrfToken, prefill, onSaved, onUseExisting, onCancel, onDiscardConfirm },
         ref,
     ) {
         const parsedPrefill = useMemo(() => parseSearchQuery(prefill ?? ''), [prefill]);
@@ -44,11 +46,25 @@ export const QuickAddRegistration = forwardRef<RegistrationFormHandle, QuickAddR
         const [dupConfirm, setDupConfirm] = useState(false);
         const [dupOverride, setDupOverride] = useState(false);
         const [dupOverrideReason, setDupOverrideReason] = useState('');
+        const [discardOpen, setDiscardOpen] = useState(false);
+        const [discardProceed, setDiscardProceed] = useState<(() => void) | null>(null);
 
         useImperativeHandle(ref, () => ({
-            confirmDiscard: () => (!dirty ? true : window.confirm('Discard registration changes and switch patient?')),
             isDirty: () => dirty,
         }), [dirty]);
+
+        const requestDiscard = useCallback((onProceed: () => void) => {
+            if (!dirty) {
+                onProceed();
+                return;
+            }
+            if (onDiscardConfirm) {
+                onDiscardConfirm(onProceed);
+                return;
+            }
+            setDiscardProceed(() => onProceed);
+            setDiscardOpen(true);
+        }, [dirty, onDiscardConfirm]);
 
         const dupPayload = useMemo(() => ({
             fname: fname.trim(),
@@ -275,16 +291,35 @@ export const QuickAddRegistration = forwardRef<RegistrationFormHandle, QuickAddR
                         id="nc-qa-cancel"
                         disabled={busy}
                         onClick={() => {
-                            if (dirty && !window.confirm('Discard unsaved registration changes?')) {
-                                return;
-                            }
-                            setDirty(false);
-                            onCancel();
+                            requestDiscard(() => {
+                                setDirty(false);
+                                onCancel();
+                            });
                         }}
                     >
                         Cancel
                     </button>
                 </div>
+
+                <ConfirmModal
+                    open={discardOpen}
+                    onClose={() => {
+                        setDiscardOpen(false);
+                        setDiscardProceed(null);
+                    }}
+                    title="Discard changes?"
+                    modalId="nc-qa-discard-modal"
+                    cancelLabel="Keep editing"
+                    confirmLabel="Discard"
+                    confirmVariant="warning"
+                    onConfirm={() => {
+                        discardProceed?.();
+                        setDiscardOpen(false);
+                        setDiscardProceed(null);
+                    }}
+                >
+                    <p className="mb-0">Discard unsaved registration changes?</p>
+                </ConfirmModal>
             </div>
         );
     },

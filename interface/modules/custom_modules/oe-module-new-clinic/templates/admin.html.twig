@@ -29,7 +29,6 @@
 
 {% block scripts %}
 {% if enable_react_admin_hub|default(true) %}
-<link rel="stylesheet" href="{{ assets_url }}/modern/admin-hub.css?v={{ asset_version }}">
-<script type="module" src="{{ assets_url }}/modern/admin-hub.js?v={{ asset_version }}"></script>
+{% include 'partials/island-assets.html.twig' %}
 {% endif %}
 {% endblock %}

@@ -28,4 +28,25 @@ describe('applyAdminSettingCoupling', () => {
     expect(next.enable_chart_depth_referral).toBe(false);
     expect(next.enable_chart_depth_export).toBe(false);
   });
+
+  it('couples doctor ready notify flags', () => {
+    const on = applyAdminSettingCoupling(
+      'enable_doctor_ready_web_push',
+      true,
+      { enable_doctor_ready_notify: false },
+    );
+    expect(on.enable_doctor_ready_notify).toBe(true);
+
+    const off = applyAdminSettingCoupling(
+      'enable_doctor_ready_notify',
+      false,
+      {
+        enable_doctor_ready_notify: true,
+        notify_unassigned_to_all_on_duty: true,
+        enable_doctor_ready_web_push: true,
+      },
+    );
+    expect(off.notify_unassigned_to_all_on_duty).toBe(false);
+    expect(off.enable_doctor_ready_web_push).toBe(false);
+  });
 });

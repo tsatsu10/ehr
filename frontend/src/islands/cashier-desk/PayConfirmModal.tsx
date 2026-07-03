@@ -1,4 +1,5 @@
-import type { CashierVisit, PatientPreview } from '@core/types';
+import { IdentityConfirmBanner } from '@components/ConfirmModal';
+import type { CashierPaymentMethod, CashierVisit, PatientPreview } from '@core/types';
 import { formatMoney } from './cashierUtils';
 
 interface PayConfirmModalProps {
@@ -7,6 +8,8 @@ interface PayConfirmModalProps {
   visit: CashierVisit | null;
   total: number;
   amountReceived: number;
+  paymentMethod?: CashierPaymentMethod;
+  momoReference?: string;
   completionBlocked: boolean;
   canSkipCompletion: boolean;
   esignOverride?: boolean;
@@ -21,6 +24,8 @@ export function PayConfirmModal({
   visit,
   total,
   amountReceived,
+  paymentMethod = 'cash',
+  momoReference = '',
   completionBlocked,
   canSkipCompletion,
   esignOverride = false,
@@ -31,7 +36,7 @@ export function PayConfirmModal({
   if (!open || !preview || !visit) return null;
 
   const identity = preview.identity;
-  const change = Math.max(0, amountReceived - total);
+  const change = paymentMethod === 'momo' ? 0 : Math.max(0, amountReceived - total);
 
   return (
     <>
@@ -52,11 +57,11 @@ export function PayConfirmModal({
               </button>
             </div>
             <div className="modal-body" id="nc-cashier-pay-confirm-body">
-              <div className="nc-patient-context-banner p-3 border rounded bg-light mb-3">
-                <div>
-                  <strong>Patient:</strong> {identity.display_name} · MRN {identity.pubpid} · Queue #{visit.queue_number}
-                </div>
-              </div>
+              <IdentityConfirmBanner
+                displayName={identity.display_name}
+                pubpid={identity.pubpid}
+                queueNumber={visit.queue_number}
+              />
               {completionBlocked && canSkipCompletion && (
                 <div className="alert alert-warning py-2 mb-3">
                   Profile completion override — payment will proceed despite incomplete profile (
@@ -69,12 +74,23 @@ export function PayConfirmModal({
                 </div>
               )}
               <dl className="row mb-0">
+                <dt className="col-sm-5">Payment method</dt>
+                <dd className="col-sm-7">{paymentMethod === 'momo' ? 'MoMo' : 'Cash'}</dd>
                 <dt className="col-sm-5">Total due</dt>
                 <dd className="col-sm-7"><strong>{formatMoney(total)}</strong></dd>
-                <dt className="col-sm-5">Cash received</dt>
-                <dd className="col-sm-7">{formatMoney(amountReceived)}</dd>
-                <dt className="col-sm-5">Change</dt>
-                <dd className="col-sm-7">{formatMoney(change)}</dd>
+                {paymentMethod === 'momo' ? (
+                  <>
+                    <dt className="col-sm-5">MoMo reference</dt>
+                    <dd className="col-sm-7">{momoReference}</dd>
+                  </>
+                ) : (
+                  <>
+                    <dt className="col-sm-5">Cash received</dt>
+                    <dd className="col-sm-7">{formatMoney(amountReceived)}</dd>
+                    <dt className="col-sm-5">Change</dt>
+                    <dd className="col-sm-7">{formatMoney(change)}</dd>
+                  </>
+                )}
               </dl>
               <p className="small text-muted mb-0 mt-3">Confirm patient identity before posting payment.</p>
             </div>
@@ -83,7 +99,6 @@ export function PayConfirmModal({
               <button
                 type="button"
                 className="btn btn-success"
-                id="nc-cashier-pay-confirm-btn"
                 disabled={submitting}
                 onClick={onConfirm}
               >

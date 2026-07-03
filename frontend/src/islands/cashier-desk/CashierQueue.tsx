@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { CashierPaidTodayRow, CashierQueueCard } from '@core/types';
 import { WaitTimeSpan } from '@components/WaitTimeSpan';
+import { AncillaryVisitBadges } from '@components/AncillaryVisitBadges';
 import { formatMoney } from './cashierUtils';
 import { PatientSearchPanel, type PatientSearchHint } from './PatientSearchPanel';
 
@@ -8,7 +9,6 @@ interface CashierQueueProps {
   ajaxUrl: string;
   csrfToken: string;
   cards: CashierQueueCard[];
-  counts: { waiting: number; paid_today: number } | null;
   paidToday: CashierPaidTodayRow[];
   loading: boolean;
   error: string | null;
@@ -22,7 +22,6 @@ export function CashierQueue({
   ajaxUrl,
   csrfToken,
   cards,
-  counts,
   paidToday,
   loading,
   error,
@@ -45,11 +44,6 @@ export function CashierQueue({
 
       <div className="d-flex justify-content-between align-items-center mb-2">
         <strong>Payment queue</strong>
-        {counts && (
-          <span className="text-muted small" id="nc-cashier-counts">
-            {counts.waiting} waiting
-          </span>
-        )}
       </div>
 
       {error && <div className="alert alert-danger py-2 small">{error}</div>}
@@ -76,6 +70,7 @@ export function CashierQueue({
             <div className="oe-nc-queue-card__header">
               <strong>#{card.queue_number} {card.display_name}</strong>
               {card.is_urgent === 1 && <span className="badge badge-warning ml-1">URGENT</span>}
+              <AncillaryVisitBadges badges={card.ancillary_badges} />
               {card.charges_total > 0 ? (
                 <span className="badge badge-light border ml-1">{formatMoney(card.charges_total)}</span>
               ) : (
@@ -96,7 +91,7 @@ export function CashierQueue({
           id="nc-cashier-done-toggle"
           onClick={() => setPaidOpen((v) => !v)}
         >
-          Paid today ({counts?.paid_today ?? paidToday.length})
+          Paid today ({paidToday.length})
         </button>
         {paidOpen && (
           <div id="nc-cashier-paid-list" className="mt-2">

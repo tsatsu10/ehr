@@ -48,12 +48,20 @@ const islands: Record<string, string> = {
   'admin-hub':           resolve(here, 'src/islands/admin-hub/index.tsx'),
   'patient-chart':       resolve(here, 'src/islands/patient-chart/index.tsx'),
   'lab-ops':             resolve(here, 'src/islands/lab-ops/index.tsx'),
+  'pharm-ops':           resolve(here, 'src/islands/pharm-ops/index.tsx'),
   'chart-depth':         resolve(here, 'src/islands/chart-depth/index.tsx'),
   'bill-ops':            resolve(here, 'src/islands/bill-ops/index.tsx'),
   'bill-ops-correct':    resolve(here, 'src/islands/bill-ops/index-correct.tsx'),
+  'report-hub':          resolve(here, 'src/islands/report-hub/index.tsx'),
+  'queue-bridge':        resolve(here, 'src/islands/queue-bridge/index.tsx'),
+  'scheduling':          resolve(here, 'src/islands/scheduling/index.tsx'),
+  'clinical-doc':        resolve(here, 'src/islands/clinical-doc/index.tsx'),
 };
 
 export default defineConfig({
+  // Relative base so lazy chunks/CSS resolve under .../public/assets/modern/
+  // when islands are served from deep OpenEMR module URLs (not domain root).
+  base: './',
   plugins: [react(), tailwind()],
   resolve: {
     alias: {

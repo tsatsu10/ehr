@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { WidgetCard } from '@components/WidgetCard';
 import { oeFetch } from '@core/oeFetch';
 import { ChartBanner } from './ChartBanner';
+import { ChartInChartSearch } from './ChartInChartSearch';
 import { ClinicalTab } from './ClinicalTab';
 import { MessagesTab } from './MessagesTab';
 import { OverviewTab } from './OverviewTab';
@@ -41,6 +43,7 @@ export function PatientChart({
   frontDeskUrl,
   exportChartUrl,
   registrationMode,
+  enableInChartPatientSearch = false,
 }: PatientChartProps) {
   const [activeTab, setActiveTab] = useState<ChartTabId>(
     isValidChartTab(initialTab) ? initialTab : 'overview'
@@ -84,6 +87,7 @@ export function PatientChart({
   const [messagesLoadingMore, setMessagesLoadingMore] = useState(false);
   const [messagesError, setMessagesError] = useState<string | null>(null);
   const [messagesOffset, setMessagesOffset] = useState(0);
+  const [pendingClinicalAnchor, setPendingClinicalAnchor] = useState(clinicalAnchor ?? '');
 
   const reloadContext = useCallback(async () => {
     setPreviewLoading(true);
@@ -280,14 +284,28 @@ export function PatientChart({
     }
   }, [activityOffset, fetchOptions, pid]);
 
+  const scrollToClinicalAnchor = useCallback((anchor: string) => {
+    if (!anchor) return;
+    const el = document.getElementById(anchor);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
+
   const handleTabChange = useCallback(
-    (tab: ChartTabId) => {
+    (tab: ChartTabId, anchor?: string) => {
       setActiveTab(tab);
+      const nextAnchor = tab === 'clinical' ? (anchor ?? pendingClinicalAnchor) : '';
+      if (tab === 'clinical' && anchor) {
+        setPendingClinicalAnchor(anchor);
+      } else if (tab !== 'clinical') {
+        setPendingClinicalAnchor('');
+      }
 
       const url = new URL(window.location.href);
       url.searchParams.set('tab', tab);
-      if (tab === 'clinical' && clinicalAnchor) {
-        url.searchParams.set('anchor', clinicalAnchor);
+      if (tab === 'clinical' && nextAnchor) {
+        url.searchParams.set('anchor', nextAnchor);
       } else {
         url.searchParams.delete('anchor');
       }
@@ -297,7 +315,13 @@ export function PatientChart({
         void loadVisits(true);
       }
       if (tab === 'clinical' && !clinicalLoaded) {
-        void loadClinical();
+        void loadClinical().then(() => {
+          if (nextAnchor) {
+            scrollToClinicalAnchor(nextAnchor);
+          }
+        });
+      } else if (tab === 'clinical' && nextAnchor) {
+        scrollToClinicalAnchor(nextAnchor);
       }
       if (tab === 'profile' && !paymentsLoaded) {
         void loadPaymentsStrip();
@@ -307,7 +331,6 @@ export function PatientChart({
       }
     },
     [
-      clinicalAnchor,
       clinicalLoaded,
       loadClinical,
       loadMessages,
@@ -315,8 +338,17 @@ export function PatientChart({
       loadVisits,
       messagesLoaded,
       paymentsLoaded,
+      pendingClinicalAnchor,
+      scrollToClinicalAnchor,
       visitsLoaded,
     ]
+  );
+
+  const navigateToChartSection = useCallback(
+    (tab: ChartTabId, anchor?: string) => {
+      handleTabChange(tab, anchor);
+    },
+    [handleTabChange]
   );
 
   const handleProfileSaved = useCallback(() => {
@@ -326,14 +358,6 @@ export function PatientChart({
     void reloadContext();
     void reloadChecklist();
   }, [reloadChecklist, reloadContext]);
-
-  const scrollToClinicalAnchor = useCallback((anchor: string) => {
-    if (!anchor) return;
-    const el = document.getElementById(anchor);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, []);
 
   useEffect(() => {
     void reloadContext();
@@ -366,9 +390,12 @@ export function PatientChart({
 
   return (
     <div className="oe-nc-patient-chart" id="nc-patient-chart" data-pid={pid}>
-      <div className="oe-nc-widget-card mb-3">
-        <div className="oe-nc-widget-card__header d-flex justify-content-between align-items-center flex-wrap">
-          <h2 className="oe-nc-widget-card__title mb-0">Patient chart</h2>
+      <WidgetCard
+        className="mb-3"
+        title={<h2 className="oe-nc-widget-card__title mb-0">Patient chart</h2>}
+        headerClassName="d-flex justify-content-between align-items-center flex-wrap"
+        bodyPad="pad"
+        actions={(
           <div className="btn-group btn-group-sm mt-2 mt-md-0">
             {exportChartUrl && (
               <a href={exportChartUrl} className="btn btn-outline-secondary" target="_top">
@@ -382,137 +409,146 @@ export function PatientChart({
               Visit Board
             </a>
           </div>
+        )}
+      >
+        <div id="nc-chart-banner" className="mb-3">
+          {previewLoading && !preview && <em>Loading patient…</em>}
+          {previewError && <div className="alert alert-danger">{previewError}</div>}
+          {preview && <ChartBanner preview={preview} />}
         </div>
 
-        <div className="oe-nc-widget-card__body oe-nc-widget-card__body--pad">
-          <div id="nc-chart-banner" className="mb-3">
-            {previewLoading && !preview && <em>Loading patient…</em>}
-            {previewError && <div className="alert alert-danger">{previewError}</div>}
-            {preview && <ChartBanner preview={preview} />}
+        {enableInChartPatientSearch && (
+          <ChartInChartSearch
+            ajaxUrl={ajaxUrl}
+            csrfToken={csrfToken}
+            pid={pid}
+            onNavigate={navigateToChartSection}
+          />
+        )}
+
+        <ul className="nav nav-tabs mb-3" id="nc-chart-tabs" role="tablist">
+          {CHART_TAB_IDS.map((tab) => (
+            <li key={tab} className="nav-item" role="presentation">
+              <button
+                type="button"
+                className={`nav-link${activeTab === tab ? ' active' : ''}`}
+                role="tab"
+                aria-selected={activeTab === tab}
+                aria-controls={`nc-chart-tab-${tab}`}
+                onClick={() => {
+                  handleTabChange(tab);
+                }}
+              >
+                {TAB_LABELS[tab]}
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <div className="tab-content" id="nc-chart-tab-panes">
+          <div
+            className={`tab-pane fade${activeTab === 'overview' ? ' show active' : ''}`}
+            id="nc-chart-tab-overview"
+            role="tabpanel"
+          >
+            {activeTab === 'overview' && (
+              <>
+                {previewLoading && !preview && <em>Loading overview…</em>}
+                {preview && (
+                  <OverviewTab
+                    preview={preview}
+                    visitBoardUrl={visitBoardUrl}
+                    activityItems={activityItems}
+                    activityHasMore={activityHasMore}
+                    lookbackDays={lookbackDays}
+                    loadingMore={activityLoadingMore}
+                    onEditProfile={() => handleTabChange('profile')}
+                    onLoadMoreActivity={() => {
+                      void loadMoreActivity();
+                    }}
+                  />
+                )}
+              </>
+            )}
           </div>
 
-          <ul className="nav nav-tabs mb-3" id="nc-chart-tabs" role="tablist">
-            {CHART_TAB_IDS.map((tab) => (
-              <li key={tab} className="nav-item" role="presentation">
-                <button
-                  type="button"
-                  className={`nav-link${activeTab === tab ? ' active' : ''}`}
-                  role="tab"
-                  aria-selected={activeTab === tab}
-                  aria-controls={`nc-chart-tab-${tab}`}
-                  onClick={() => handleTabChange(tab)}
-                >
-                  {TAB_LABELS[tab]}
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div
+            className={`tab-pane fade${activeTab === 'profile' ? ' show active' : ''}`}
+            id="nc-chart-tab-profile"
+            role="tabpanel"
+          >
+            {activeTab === 'profile' && (
+              <ProfileTab
+                ajaxUrl={ajaxUrl}
+                csrfToken={csrfToken}
+                pid={pid}
+                registrationMode={registrationMode}
+                checklist={checklist}
+                payments={payments}
+                onProfileSaved={handleProfileSaved}
+              />
+            )}
+          </div>
 
-          <div className="tab-content" id="nc-chart-tab-panes">
-            <div
-              className={`tab-pane fade${activeTab === 'overview' ? ' show active' : ''}`}
-              id="nc-chart-tab-overview"
-              role="tabpanel"
-            >
-              {activeTab === 'overview' && (
-                <>
-                  {previewLoading && !preview && <em>Loading overview…</em>}
-                  {preview && (
-                    <OverviewTab
-                      preview={preview}
-                      visitBoardUrl={visitBoardUrl}
-                      activityItems={activityItems}
-                      activityHasMore={activityHasMore}
-                      lookbackDays={lookbackDays}
-                      loadingMore={activityLoadingMore}
-                      onEditProfile={() => handleTabChange('profile')}
-                      onLoadMoreActivity={() => {
-                        void loadMoreActivity();
-                      }}
-                    />
-                  )}
-                </>
-              )}
-            </div>
+          <div
+            className={`tab-pane fade${activeTab === 'visits' ? ' show active' : ''}`}
+            id="nc-chart-tab-visits"
+            role="tabpanel"
+          >
+            {activeTab === 'visits' && (
+              <VisitsTab
+                todayVisits={visitsData?.today_visits ?? []}
+                pastVisits={visitsData?.past_visits ?? []}
+                pastHasMore={pastHasMore}
+                loading={visitsLoading && !visitsData}
+                loadingMore={visitsLoadingMore}
+                error={visitsError}
+                visitBoardUrl={visitBoardUrl}
+                onLoadMore={() => {
+                  void loadVisits(false);
+                }}
+              />
+            )}
+          </div>
 
-            <div
-              className={`tab-pane fade${activeTab === 'profile' ? ' show active' : ''}`}
-              id="nc-chart-tab-profile"
-              role="tabpanel"
-            >
-              {activeTab === 'profile' && (
-                <ProfileTab
-                  ajaxUrl={ajaxUrl}
-                  csrfToken={csrfToken}
-                  pid={pid}
-                  registrationMode={registrationMode}
-                  checklist={checklist}
-                  payments={payments}
-                  onProfileSaved={handleProfileSaved}
-                />
-              )}
-            </div>
+          <div
+            className={`tab-pane fade${activeTab === 'clinical' ? ' show active' : ''}`}
+            id="nc-chart-tab-clinical"
+            role="tabpanel"
+          >
+            {activeTab === 'clinical' && (
+              <ClinicalTab
+                data={clinicalData}
+                referralsStrip={referralsStrip}
+                labsStrip={labsStrip}
+                medsStrip={medsStrip}
+                loading={clinicalLoading && !clinicalData}
+                error={clinicalError}
+                clinicalAnchor={pendingClinicalAnchor || clinicalAnchor}
+                onScrollToAnchor={scrollToClinicalAnchor}
+              />
+            )}
+          </div>
 
-            <div
-              className={`tab-pane fade${activeTab === 'visits' ? ' show active' : ''}`}
-              id="nc-chart-tab-visits"
-              role="tabpanel"
-            >
-              {activeTab === 'visits' && (
-                <VisitsTab
-                  todayVisits={visitsData?.today_visits ?? []}
-                  pastVisits={visitsData?.past_visits ?? []}
-                  pastHasMore={pastHasMore}
-                  loading={visitsLoading && !visitsData}
-                  loadingMore={visitsLoadingMore}
-                  error={visitsError}
-                  visitBoardUrl={visitBoardUrl}
-                  onLoadMore={() => {
-                    void loadVisits(false);
-                  }}
-                />
-              )}
-            </div>
-
-            <div
-              className={`tab-pane fade${activeTab === 'clinical' ? ' show active' : ''}`}
-              id="nc-chart-tab-clinical"
-              role="tabpanel"
-            >
-              {activeTab === 'clinical' && (
-                <ClinicalTab
-                  data={clinicalData}
-                  referralsStrip={referralsStrip}
-                  labsStrip={labsStrip}
-                  medsStrip={medsStrip}
-                  loading={clinicalLoading && !clinicalData}
-                  error={clinicalError}
-                  clinicalAnchor={clinicalAnchor}
-                  onScrollToAnchor={scrollToClinicalAnchor}
-                />
-              )}
-            </div>
-
-            <div
-              className={`tab-pane fade${activeTab === 'messages' ? ' show active' : ''}`}
-              id="nc-chart-tab-messages"
-              role="tabpanel"
-            >
-              {activeTab === 'messages' && (
-                <MessagesTab
-                  data={messagesData}
-                  loading={messagesLoading && !messagesData}
-                  loadingMore={messagesLoadingMore}
-                  error={messagesError}
-                  onLoadMore={() => {
-                    void loadMessages(false);
-                  }}
-                />
-              )}
-            </div>
+          <div
+            className={`tab-pane fade${activeTab === 'messages' ? ' show active' : ''}`}
+            id="nc-chart-tab-messages"
+            role="tabpanel"
+          >
+            {activeTab === 'messages' && (
+              <MessagesTab
+                data={messagesData}
+                loading={messagesLoading && !messagesData}
+                loadingMore={messagesLoadingMore}
+                error={messagesError}
+                onLoadMore={() => {
+                  void loadMessages(false);
+                }}
+              />
+            )}
           </div>
         </div>
-      </div>
+      </WidgetCard>
     </div>
   );
 }

@@ -20,8 +20,8 @@ export function InsurancePane({ webroot }: { webroot: string }) {
             <a
               href={`${webroot}${link.path}`}
               className="card card-body h-100 text-decoration-none"
-              target="_top"
-              rel="noreferrer"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               <strong>{link.label}</strong>
               <span className="small text-muted d-block mt-1">Open in new tab</span>

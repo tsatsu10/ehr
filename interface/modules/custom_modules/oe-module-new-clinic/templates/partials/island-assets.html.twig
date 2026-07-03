@@ -1,0 +1,12 @@
+{# Vite island CSS + JS. PageController resolves island_css from manifest when island_entry is set. #}
+{% if island_css|default([])|length %}
+{% for css_file in island_css %}
+<link rel="stylesheet" href="{{ assets_url }}/modern/{{ css_file }}?v={{ asset_version }}">
+{% endfor %}
+{% elseif island_entry|default('') %}
+<link rel="stylesheet" href="{{ assets_url }}/modern/{{ island_entry }}.css?v={{ asset_version }}">
+{% endif %}
+{% set _island_js = island_js|default(island_entry|default('')) %}
+{% if _island_js %}
+<script type="module" src="{{ assets_url }}/modern/{{ _island_js }}.js?v={{ asset_version }}"></script>
+{% endif %}

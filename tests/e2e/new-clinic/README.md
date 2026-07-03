@@ -24,16 +24,47 @@ tests/e2e/new-clinic/
 ├── playwright.config.js         # Playwright configuration
 ├── helpers/                     # Test helpers and utilities
 │   ├── auth.js                  # Login/logout helpers
+│   ├── registration.js          # Full-form register + auto-start visit
+│   ├── cashier.js               # Zero close or take payment
 │   ├── selectors.js             # Common selectors
 │   └── test-data.js             # Test data generators
 └── specs/                       # Test specifications
-    ├── golden-path.spec.js      # Full workflow test
+    ├── golden-path.spec.js      # Skip-pharmacy workflow test
+    ├── golden-path-pharm-dispense.spec.js  # Quick Rx + dispense + label + complete
+    ├── golden-path-lab-close-day.spec.js   # Lab skip + cashier + bill ops close day
+    ├── pharm-ops-hub.spec.js    # Pharm Ops hub worklist + tabs smoke
     ├── front-desk.spec.js       # Front desk specific tests
     ├── doctor-desk.spec.js      # Doctor desk specific tests
     └── cashier.spec.js          # Cashier specific tests
 ```
 
-## Golden Path Workflow (Test 23)
+## Golden Path Workflows
+
+### Skip pharmacy (Test 23) — `golden-path.spec.js`
+
+Registration → triage → doctor route pharmacy → **pharmacy skip** → cashier.
+
+Prep: `scripts/e2e-prep-golden-path.php` (also enables pharm ops seed for other specs).
+
+### Pharm ops deep path — `golden-path-pharm-dispense.spec.js`
+
+Registration → triage → **doctor Quick prescribe (formulary)** → pharmacy **dispense + label** → pharmacy complete (e-sign override) → cashier.
+
+Requires `e2e-prep-golden-path.php` (formulary import, stock, `enable_pharm_ops`, labels, quick Rx).
+
+### Pharm Ops hub smoke — `pharm-ops-hub.spec.js`
+
+Login as `pharmacy_user` → worklist + tabs + OTC drawer. Login as `pharmacy_lead_user` → receive stock + write-off expiring lot.
+
+Prep: `scripts/pilot-enable-pharm-ops.php` (includes write-off lot seed). Run `acl/seed_pilot_users.php` for `pharmacy_lead_user`.
+
+### Lab + close day — `golden-path-lab-close-day.spec.js`
+
+Registration → triage → doctor route **lab** → lab **skip** → cashier payment → **bill ops close day** daysheet (admin).
+
+Requires `e2e-prep-golden-path.php` (`enable_bill_ops`, lab skip ACLs).
+
+## Golden Path Workflow (Test 23 — skip path detail)
 
 The E2E golden path test covers the complete patient journey from registration to payment:
 

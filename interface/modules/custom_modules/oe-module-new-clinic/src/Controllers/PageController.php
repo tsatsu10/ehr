@@ -18,9 +18,11 @@ use OpenEMR\Core\Header;
 use OpenEMR\Core\Kernel;
 use OpenEMR\Modules\NewClinic\ModuleAssetVersion;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
+use OpenEMR\Modules\NewClinic\Services\MoneyFormatService;
 use OpenEMR\Modules\NewClinic\Services\OpenEmrProductRegistrationDismissService;
 use OpenEMR\Modules\NewClinic\Services\PageAccessService;
 use OpenEMR\Modules\NewClinic\Services\ShellService;
+use OpenEMR\Modules\NewClinic\Services\ViteManifestService;
 use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 
 class PageController
@@ -85,8 +87,22 @@ class PageController
         (new OpenEmrProductRegistrationDismissService())->dismissIfPrompting($deskFacilityId);
 
         $deskConfig = new ClinicConfigService();
+        $moneyFormat = new MoneyFormatService();
+
+        // When a page declares its island entry, resolve the full CSS set
+        // (own + shared-chunk) from the Vite manifest so no styles are dropped.
+        $islandCss = [];
+        $islandJs = null;
+        if (!empty($context['island_entry']) && is_string($context['island_entry'])) {
+            $islandCss = (new ViteManifestService())->cssFilesForIsland($context['island_entry']);
+            $islandJs = !empty($context['island_js']) && is_string($context['island_js'])
+                ? $context['island_js']
+                : $context['island_entry'];
+        }
 
         echo $twig->render($template, array_merge([
+            'island_css' => $islandCss,
+            'island_js' => $islandJs,
             'page_title' => $title,
             'header_html' => $headerHtml,
             'ajax_url' => $GLOBALS['webroot'] . '/interface/modules/custom_modules/oe-module-new-clinic/public/ajax.php',
@@ -103,6 +119,7 @@ class PageController
                 $deskFacilityId
             ),
             'queue_poll_ms' => $deskConfig->resolveQueuePollIntervalMs($deskFacilityId),
+            'currency_format' => $moneyFormat->getFormatPayload($deskFacilityId),
         ], (new ShellService())->buildContext($shellAco, $context['shell_nav_id'] ?? null), $context));
     }
 

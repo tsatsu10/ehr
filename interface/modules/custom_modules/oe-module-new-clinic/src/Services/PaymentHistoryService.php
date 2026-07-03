@@ -123,6 +123,42 @@ class PaymentHistoryService
         ];
     }
 
+    /**
+     * M14 — receipt reprint from Billing back office (no chart-depth finance gate).
+     *
+     * @return array<string, mixed>
+     */
+    public function getReceiptReprintForBillOps(int $receiptId, int $pid, int $actorUserId): array
+    {
+        (new BillOpsAccessService())->assertPaymentAccess();
+        $this->facilityScope->assertPatientAccessible($pid);
+        if (!$this->canReprintReceipt()) {
+            throw new \RuntimeException('Forbidden', 403);
+        }
+
+        $receipt = $this->loadReceiptRow($receiptId, $pid);
+        $patient = $this->fetchPatientIdentity($pid);
+
+        EventAuditLogger::getInstance()->newEvent(
+            'new_clinic',
+            'bill_ops',
+            $actorUserId,
+            1,
+            'bill_ops.receipt_reprinted receipt_id=' . $receiptId . ' pid=' . $pid
+        );
+
+        return [
+            'receipt' => [
+                'receipt_number' => (string) ($receipt['receipt_number'] ?? ''),
+                'queue_number' => (int) ($receipt['queue_number'] ?? 0),
+                'amount_paid' => round((float) ($receipt['amount_paid'] ?? 0), 2),
+                'change_due' => round((float) ($receipt['change_due'] ?? 0), 2),
+                'paid_at_label' => $this->formatDateTime((string) ($receipt['created_at'] ?? '')),
+            ],
+            'patient' => $patient,
+        ];
+    }
+
     private function normalizeFilter(string $filter, ?int $visitId): string
     {
         if ($filter === 'this_visit' && ($visitId === null || $visitId <= 0)) {

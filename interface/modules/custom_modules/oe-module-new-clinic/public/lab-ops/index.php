@@ -52,6 +52,7 @@ $reactLabOps = $config->get('enable_react_lab_ops', '1') === '1';
     'Lab Operations',
     ['new_lab_ops', 'new_lab', 'new_lab_lead', 'new_doctor', 'new_admin'],
     [
+        'island_entry' => 'lab-ops',
         'shell_nav_id' => 'cliniclabops',
         'module_url' => $moduleUrl,
         'lab_desk_url' => $moduleUrl . '/lab.php',

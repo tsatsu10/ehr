@@ -55,11 +55,11 @@ class CashierService
 
         $rows = QueryUtils::fetchRecords($sql, [$facilityId]) ?: [];
         $visits = array_map(function (array $row): array {
-            $enriched = $this->rowEnricher->enrichVisitRow($row);
+            $enriched = $row;
             $enriched['charges_total'] = round((float) ($row['charges_total'] ?? 0), 2);
 
             return $enriched;
-        }, $rows);
+        }, $this->rowEnricher->enrichVisitRows($rows));
 
         $doneToday = $this->fetchPaidToday($facilityId, $visitDate);
         $unpaidToday = $this->fetchClosedUnpaidToday($facilityId, $visitDate);
@@ -129,6 +129,7 @@ class CashierService
             ),
             'can_apply_discount' => AclMain::aclCheckCore('new_clinic', 'new_discount'),
             'can_esign_override' => AclMain::aclCheckCore('new_clinic', 'new_esign_skip_complete'),
+            'enable_momo_payment' => $this->configService->getInt('enable_momo_payment', 0, $facilityId) === 1,
         ];
     }
 
@@ -218,7 +219,9 @@ class CashierService
         float $amountReceived,
         ?string $receiptNote = null,
         ?string $esignOverrideReason = null,
-        ?string $clientRequestId = null
+        ?string $clientRequestId = null,
+        ?string $paymentMethod = 'cash',
+        ?string $momoReference = null,
     ): array {
         $clientRequestId = trim((string) ($clientRequestId ?? ''));
         if ($clientRequestId !== '') {
@@ -237,12 +240,20 @@ class CashierService
 
         $pid = (int) $visit['pid'];
         $encounter = (int) $visit['encounter'];
+        $facilityId = (int) ($visit['facility_id'] ?? 0);
         $charges = $this->getEncounterCharges($pid, $encounter);
         $totalDue = $this->sumCharges($charges);
 
         if ($totalDue <= 0) {
             throw new \InvalidArgumentException('No charges on this visit — add fees before taking payment');
         }
+
+        $method = $this->normalizePaymentMethod((string) ($paymentMethod ?? 'cash'), $facilityId);
+        $paymentReference = $this->resolvePaymentReference(
+            $method,
+            $receiptNote,
+            $momoReference
+        );
 
         $completionGate = $this->assessCompletionGate($pid, true);
         if ($completionGate['blocked'] && !$completionGate['can_skip']) {
@@ -257,7 +268,11 @@ class CashierService
             throw new \InvalidArgumentException('Payment amount must be greater than zero');
         }
 
-        if ($amountReceived + 0.001 < $totalDue) {
+        if ($method === 'momo') {
+            if (abs($amountReceived - $totalDue) > 0.001) {
+                throw new \InvalidArgumentException('MoMo payment amount must match total due exactly');
+            }
+        } elseif ($amountReceived + 0.001 < $totalDue) {
             throw new \InvalidArgumentException('Amount received is less than total due');
         }
 
@@ -283,13 +298,20 @@ class CashierService
         sqlBeginTrans();
         $committed = false;
         try {
-            $postedPaymentId = $this->postCashPayment($pid, $encounter, $totalDue, $actorUserId, $receiptNote);
+            $postedPaymentId = $this->postPatientPayment(
+                $pid,
+                $encounter,
+                $totalDue,
+                $actorUserId,
+                $method,
+                $paymentReference
+            );
             $updated = $this->queueService->transition(
                 $visitId,
                 'completed',
                 $actorUserId,
                 $expectedVersion,
-                'cash_payment'
+                $method === 'momo' ? 'momo_payment' : 'cash_payment'
             );
             sqlCommitTrans(true);
             $committed = true;
@@ -305,22 +327,29 @@ class CashierService
             'cashier',
             $actorUserId,
             1,
-            'visit_id=' . $visitId . ' amount=' . $totalDue
+            'visit_id=' . $visitId . ' amount=' . $totalDue . ' method=' . $method
         );
+
+        $receiptMeta = $this->issueReceipt(
+            $visit,
+            $totalDue,
+            $amountReceived,
+            $method === 'momo' ? $paymentReference : $receiptNote,
+            $actorUserId,
+            $postedPaymentId ?? 0
+        );
+        $receiptMeta['payment_method'] = $method;
+        $receiptMeta['payment_method_label'] = $method === 'momo' ? 'MoMo' : 'Cash';
+        if ($method === 'momo') {
+            $receiptMeta['momo_reference'] = $paymentReference;
+        }
 
         $response = $this->buildPaymentResponse(
             $visit,
             $updated,
             $totalDue,
             $amountReceived,
-            $this->issueReceipt(
-                $visit,
-                $totalDue,
-                $amountReceived,
-                $receiptNote,
-                $actorUserId,
-                $postedPaymentId ?? 0
-            )
+            $receiptMeta
         );
 
         return $this->finalizePaymentResponse($response, $clientRequestId, $visitId, $actorUserId);
@@ -551,12 +580,13 @@ class CashierService
         return self::sumChargeLines($charges);
     }
 
-    private function postCashPayment(
+    private function postPatientPayment(
         int $pid,
         int $encounter,
         float $amount,
         int $actorUserId,
-        ?string $receiptNote
+        string $paymentMethod,
+        string $paymentReference,
     ): int {
         require_once dirname(__DIR__, 6) . '/library/payment.inc.php';
 
@@ -569,16 +599,19 @@ class CashierService
             [$encounter, $pid]
         );
 
-        $reference = $receiptNote !== null && trim($receiptNote) !== ''
-            ? mb_substr(trim($receiptNote), 0, 255)
-            : 'New Clinic cashier';
+        $method = $paymentMethod === 'momo' ? 'momo' : 'cash';
+        $reference = mb_substr(trim($paymentReference), 0, 255);
+        if ($reference === '') {
+            $reference = $method === 'momo' ? 'MoMo payment' : 'New Clinic cashier';
+        }
+        $description = $method === 'momo' ? 'MoMo · Ref: ' . $reference : $reference;
 
         $sessionId = sqlInsert(
             "INSERT INTO ar_session SET payer_id = 0, patient_id = ?, user_id = ?, closed = 0,
              reference = ?, check_date = NOW(), deposit_date = NOW(), pay_total = ?,
              payment_type = 'patient', description = ?, adjustment_code = 'patient_payment',
-             post_to_date = NOW(), payment_method = 'cash'",
-            [$pid, $actorUserId, $reference, $amount, $reference]
+             post_to_date = NOW(), payment_method = ?",
+            [$pid, $actorUserId, $reference, $amount, $description, $method]
         );
 
         $sequence = QueryUtils::querySingleRow(
@@ -601,9 +634,58 @@ class CashierService
         );
 
         $timestamp = date('Y-m-d H:i:s');
-        $paymentId = frontPayment($pid, $encounter, 'cash', $reference, 0, $amount, $timestamp);
+        $paymentId = frontPayment($pid, $encounter, $method, $reference, 0, $amount, $timestamp);
 
         return (int) $paymentId;
+    }
+
+    private function normalizePaymentMethod(string $paymentMethod, int $facilityId): string
+    {
+        $method = strtolower(trim($paymentMethod));
+        if ($method === 'momo') {
+            if ($this->configService->getInt('enable_momo_payment', 0, $facilityId) !== 1) {
+                throw new \InvalidArgumentException('MoMo payments are not enabled for this clinic');
+            }
+
+            return 'momo';
+        }
+
+        return 'cash';
+    }
+
+    private function resolvePaymentReference(
+        string $method,
+        ?string $receiptNote,
+        ?string $momoReference,
+    ): string {
+        if ($method === 'momo') {
+            $reference = trim((string) $momoReference);
+            if ($reference === '') {
+                throw new \InvalidArgumentException('MoMo transaction reference is required');
+            }
+
+            return mb_substr($reference, 0, 255);
+        }
+
+        if ($receiptNote !== null && trim($receiptNote) !== '') {
+            return mb_substr(trim($receiptNote), 0, 255);
+        }
+
+        return 'New Clinic cashier';
+    }
+
+    private function postCashPayment(
+        int $pid,
+        int $encounter,
+        float $amount,
+        int $actorUserId,
+        ?string $receiptNote
+    ): int {
+        $reference = $receiptNote !== null && trim($receiptNote) !== ''
+            ? mb_substr(trim($receiptNote), 0, 255)
+            : 'New Clinic cashier';
+
+        return $this->postPatientPayment($pid, $encounter, $amount, $actorUserId, 'cash', $reference);
     }
 
     private function feeSheetUrl(int $pid, int $encounter): string

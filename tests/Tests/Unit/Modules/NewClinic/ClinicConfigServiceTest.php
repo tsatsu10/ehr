@@ -20,8 +20,31 @@ class ClinicConfigServiceTest extends TestCase
 {
     public function testResolveQueuePollDefaultIsThirtySecondsWhenFasterInterruptsOff(): void
     {
-        $service = new ClinicConfigService();
+        $service = $this->getMockBuilder(ClinicConfigService::class)
+            ->onlyMethods(['getInt'])
+            ->getMock();
+        $service->method('getInt')->willReturnCallback(static function (string $key, int $default): int {
+            if ($key === 'enable_faster_queue_interrupts') {
+                return 0;
+            }
+
+            return $default;
+        });
 
         $this->assertSame(30000, $service->resolveQueuePollIntervalMs(0));
+    }
+
+    public function testIsEnabledAcceptsExplicitFacilityId(): void
+    {
+        $service = $this->getMockBuilder(ClinicConfigService::class)
+            ->onlyMethods(['getInt'])
+            ->getMock();
+        $service->method('getInt')->willReturnMap([
+            ['enable_scheduling_redesign', 0, 3, 1],
+            ['enable_scheduling_redesign', 0, 0, 0],
+        ]);
+
+        $this->assertTrue($service->isEnabled('enable_scheduling_redesign', 0, 3));
+        $this->assertFalse($service->isEnabled('enable_scheduling_redesign', 0, 0));
     }
 }

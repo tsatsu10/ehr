@@ -14,6 +14,23 @@ export interface PatientChartProps {
   frontDeskUrl: string;
   exportChartUrl?: string;
   registrationMode: string;
+  enableInChartPatientSearch?: boolean;
+}
+
+export interface ChartSearchResultItem {
+  id?: number | null;
+  category: string;
+  title: string;
+  detail?: string | null;
+  tab: ChartTabId;
+  anchor?: string;
+}
+
+export interface ChartSearchResponse {
+  query: string;
+  items: ChartSearchResultItem[];
+  truncated?: boolean;
+  min_query_length?: number;
 }
 
 export interface ChartActiveVisit {
@@ -112,6 +129,7 @@ export interface ChartVisitRow {
   chief_complaint?: string;
   is_urgent?: boolean;
   skipped_triage?: boolean;
+  ancillary_badges?: string[];
   documentation_url?: string;
   export_visit_summary_url?: string;
 }

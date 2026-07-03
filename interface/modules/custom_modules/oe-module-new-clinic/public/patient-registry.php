@@ -35,6 +35,7 @@ $reactPatientRegistry = $config->get('enable_react_patient_registry', '1') === '
     'new_admin',
     'new_registry',
 ], [
+    'island_entry' => 'patient-registry',
     'shell_nav_id' => 'clinicreg',
     'module_url' => $moduleUrl,
     'chart_url_base' => $moduleUrl . '/patient-chart.php',

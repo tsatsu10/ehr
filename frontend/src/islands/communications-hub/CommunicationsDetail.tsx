@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ConfirmModal } from '@components/ConfirmModal';
 import { PatientSearchDropdown } from '@components/PatientSearchDropdown';
 import { printMessageThread } from './printMessageThread';
 import type { MessageDetail, ReminderListRow } from './communicationsTypes';
@@ -96,6 +97,7 @@ function MessageDetailView({
 }) {
   const [assignPid, setAssignPid] = useState<number | null>(null);
   const [assignName, setAssignName] = useState('');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
     setAssignPid(null);
@@ -216,11 +218,7 @@ function MessageDetailView({
             <button
               type="button"
               className="btn btn-outline-danger btn-sm ml-1"
-              onClick={() => {
-                if (window.confirm('Delete this message? This cannot be undone.')) {
-                  onDelete(detail.id);
-                }
-              }}
+              onClick={() => setDeleteConfirmOpen(true)}
             >
               Delete
             </button>
@@ -231,6 +229,20 @@ function MessageDetailView({
         className="oe-nc-comm-thread"
         dangerouslySetInnerHTML={{ __html: detail.thread_html || '' }}
       />
+      <ConfirmModal
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        title="Delete message?"
+        modalId="nc-comm-delete-modal"
+        confirmLabel="Delete"
+        confirmVariant="danger"
+        onConfirm={() => {
+          onDelete?.(detail.id);
+          setDeleteConfirmOpen(false);
+        }}
+      >
+        <p className="mb-0">Delete this message? This cannot be undone.</p>
+      </ConfirmModal>
     </>
   );
 }

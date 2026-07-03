@@ -68,6 +68,7 @@ $reactChartDepth = $config->get('enable_react_chart_depth', '1') === '1';
     'Export chart',
     ['new_chart_depth_export', 'new_chart_depth_export_full', 'new_admin'],
     [
+        'island_entry' => 'chart-depth',
         'pid' => $pid,
         'preset' => $preset,
         'encounter_id' => $encounterId > 0 ? $encounterId : null,

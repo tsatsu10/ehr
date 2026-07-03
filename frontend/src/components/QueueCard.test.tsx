@@ -25,7 +25,8 @@ const baseCard: VisitCard = {
 describe('QueueCard', () => {
   it('renders queue number and patient name', () => {
     render(<QueueCard card={baseCard} />);
-    expect(screen.getByText(/#3 Jane Doe/)).toBeInTheDocument();
+    expect(screen.getByText('#3')).toBeInTheDocument();
+    expect(screen.getByText('Jane Doe')).toBeInTheDocument();
   });
 
   it('shows the visit type in subtitle', () => {
@@ -40,8 +41,8 @@ describe('QueueCard', () => {
 
   it('masks name in privacy mode', () => {
     render(<QueueCard card={baseCard} privacyMode />);
-    expect(screen.getByText(/#3 Jane D\./)).toBeInTheDocument();
-    expect(screen.queryByText(/Jane Doe/)).not.toBeInTheDocument();
+    expect(screen.getByText('Jane D.')).toBeInTheDocument();
+    expect(screen.queryByText('Jane Doe')).not.toBeInTheDocument();
   });
 
   it('shows URGENT badge for urgent cards', () => {
@@ -69,5 +70,36 @@ describe('QueueCard', () => {
   it('shows similar-surname badge', () => {
     render(<QueueCard card={{ ...baseCard, similar_surname_today: true }} />);
     expect(screen.getByText('Same surname today')).toBeInTheDocument();
+  });
+
+  it('shows ancillary badges when present', () => {
+    render(
+      <QueueCard
+        card={{
+          ...baseCard,
+          ancillary_badges: ['lab_direct', 'referral_on_file'],
+        }}
+      />,
+    );
+    expect(screen.getByText('Direct lab')).toBeInTheDocument();
+    expect(screen.getByText('Referral on file')).toBeInTheDocument();
+  });
+
+  it('shows queue bridge badge when present', () => {
+    render(
+      <QueueCard
+        card={{
+          ...baseCard,
+          queue_bridge_badge: {
+            code: 'EX-03',
+            label: 'Appt not linked',
+            hub_url: '/queue-bridge/index.php',
+          },
+        }}
+      />,
+    );
+    const badge = screen.getByText('Appt not linked');
+    expect(badge).toBeInTheDocument();
+    expect(badge.closest('a')).toHaveAttribute('href', '/queue-bridge/index.php');
   });
 });

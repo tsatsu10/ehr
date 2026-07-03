@@ -1,4 +1,5 @@
 import type { CalendarCategory } from './adminTypes';
+import { formatMoney, type CurrencyFormat } from '@core/formatMoney';
 
 export function profileLabel(profile: string): string {
   if (profile === 'lab_direct') return 'Lab direct';
@@ -22,12 +23,15 @@ export function formatPrice(
   amount: number | string | null | undefined,
   settings: Record<string, unknown>
 ): string {
-  const symbol = String(settings.currency_symbol ?? '');
-  const decimals = settings.currency_decimals !== undefined
-    ? Number(settings.currency_decimals)
-    : 2;
-  const formatted = Number(amount ?? 0).toFixed(decimals);
-  return symbol ? `${symbol} ${formatted}` : formatted;
+  const format: CurrencyFormat = {
+    currency_symbol: String(settings.currency_symbol ?? ''),
+    currency_decimals: settings.currency_decimals !== undefined
+      ? Number(settings.currency_decimals)
+      : 2,
+    currency_symbol_position: settings.currency_symbol_position === 'after' ? 'after' : 'before',
+  };
+
+  return formatMoney(amount, format);
 }
 
 export function initialAdminTab(): string {

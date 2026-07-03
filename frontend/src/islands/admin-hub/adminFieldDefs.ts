@@ -1,4 +1,4 @@
-export type AdminFieldType = 'bool' | 'int' | 'string';
+export type AdminFieldType = 'bool' | 'int' | 'string' | 'select';
 
 export interface AdminFieldDef {
   key: string;
@@ -9,6 +9,7 @@ export interface AdminFieldDef {
   max?: number;
   maxLength?: number;
   indent?: number;
+  choices?: { value: string; label: string }[];
 }
 
 export interface AdminFieldSection {
@@ -16,33 +17,11 @@ export interface AdminFieldSection {
   fields: AdminFieldDef[];
 }
 
-/** All editable keys collected on save (matches legacy nc-admin-field set + admin hub flag). */
-export const ADMIN_SETTING_KEYS: string[] = [
-  'enable_triage',
-  'enable_scheduled_integration',
-  'enable_lab_role',
-  'enable_lab_ops',
-  'enable_pharmacy_role',
-  'enable_pharm_ops',
-  'allow_multiple_visits_per_day',
-  'enable_multi_doctor_filters',
-  'enable_aggressive_orphan_facility_repair',
-  'auto_dismiss_product_registration',
-  'enable_chart_depth',
-  'enable_chart_depth_finance',
-  'enable_chart_depth_referral',
-  'enable_chart_depth_export',
-  'communications_hub_enable',
-  'enable_patient_registry',
-  'registry_redirect_global_search',
-  'enable_shared_device_session_warning',
-  'enable_legacy_patient_context_overlay',
-  'enable_legacy_strip_clinical_chips',
-  'enable_legacy_strip_desk_return',
-  'enable_faster_queue_interrupts',
-  'faster_queue_interrupt_poll_seconds',
-  'enable_similar_surname_queue_warning',
-  'enable_pinned_reception_preview',
+/**
+ * React migration kill-switches — still persisted on save/load but hidden from Admin Hub
+ * UI after w50react cutover (React is the only supported desk path).
+ */
+export const REACT_KILL_SWITCH_KEYS: string[] = [
   'enable_react_visit_board',
   'enable_react_triage_desk',
   'enable_react_doctor_desk',
@@ -56,12 +35,78 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'enable_react_admin_hub',
   'enable_react_patient_chart',
   'enable_react_lab_ops',
+  'enable_react_pharm_ops',
   'enable_react_chart_depth',
+  'enable_react_bill_ops',
+  'enable_react_report_hub',
+  'enable_react_queue_bridge',
+  'enable_react_clinical_doc_hub',
+];
+
+/** All editable keys collected on save (matches legacy nc-admin-field set + admin hub flag). */
+export const ADMIN_SETTING_KEYS: string[] = [
+  'enable_triage',
+  'enable_scheduled_integration',
+  'enable_lab_role',
+  'enable_lab_ops',
+  'enable_pharmacy_role',
+  'enable_ancillary_services',
+  'ancillary_refer_window_hours',
+  'external_rx_max_age_days',
+  'enable_pharm_ops',
+  'enable_pharm_rx_favorites',
+  'enable_rx_print',
+  'enable_dispense_label',
+  'pharm_expiry_warn_days',
+  'allow_multiple_visits_per_day',
+  'enable_multi_doctor_filters',
+  'enable_doctor_roster',
+  'enable_advisory_routing',
+  'require_override_reason',
+  'enable_hard_provider_assignment',
+  'enable_doctor_ready_notify',
+  'notify_unassigned_to_all_on_duty',
+  'enable_doctor_ready_web_push',
+  'enable_aggressive_orphan_facility_repair',
+  'auto_dismiss_product_registration',
+  'enable_chart_depth',
+  'enable_chart_depth_finance',
+  'enable_chart_depth_referral',
+  'enable_chart_depth_export',
+  'communications_hub_enable',
+  'enable_patient_registry',
+  'registry_redirect_global_search',
+  'enable_shared_device_session_warning',
+  'enable_history_editor_wrap',
+  'enable_legacy_patient_context_overlay',
+  'enable_legacy_strip_clinical_chips',
+  'enable_legacy_strip_desk_return',
+  'enable_faster_queue_interrupts',
+  'faster_queue_interrupt_poll_seconds',
+  'enable_similar_surname_queue_warning',
+  'enable_momo_payment',
+  'enable_pinned_reception_preview',
+  'enable_pregnancy_banner_chip',
+  'enable_l3b_background_completion',
+  'enable_lab_results_toast',
+  'enable_visit_board_kiosk_chrome',
+  'enable_banner_mrd_deep_links',
+  'enable_allergy_count_chip',
+  'require_allergies_for_rx',
+  'enable_in_chart_patient_search',
+  'enable_scheduling_full_analytics',
+  ...REACT_KILL_SWITCH_KEYS,
   'enable_bill_ops',
   'enable_bill_ops_outstanding',
+  'enable_report_hub',
+  'report_hub_show_us_quality',
+  'enable_queue_bridge',
+  'enable_scheduling_redesign',
+  'enable_react_scheduling',
+  'queue_bridge_show_recurring_info',
+  'queue_bridge_eod_block',
   'bill_ops_reopen_on_correction',
   'enable_insurance',
-  'enable_react_bill_ops',
   'completion_required_for_billing',
   'enforce_completion_on_revisit',
   'allow_billing_completion_override',
@@ -73,6 +118,10 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'reconciliation_enabled',
   'reconciliation_tolerance',
   'reconciliation_cron_time',
+  'currency_code',
+  'currency_symbol',
+  'currency_decimals',
+  'currency_symbol_position',
 ];
 
 export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
@@ -89,15 +138,72 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
       {
         key: 'enable_lab_ops',
         type: 'bool',
-        label: 'Enable lab ops strip on patient chart Clinical (M12)',
+        label: 'Enable Lab Operations hub (M12)',
+        hint: 'Shows Lab Ops in the clinic sidebar and enables the Clinical labs strip on patient chart.',
         indent: 1,
       },
       { key: 'enable_pharmacy_role', type: 'bool', label: 'Enable pharmacy desk' },
       {
+        key: 'enable_ancillary_services',
+        type: 'bool',
+        label: 'Ancillary walk-in services (V1.1-ANC)',
+        hint: 'Lab-direct and pharmacy walk-in visit types on Front Desk. Requires lab and/or pharmacy desk.',
+        indent: 1,
+      },
+      {
+        key: 'ancillary_refer_window_hours',
+        type: 'int',
+        label: 'Pharmacy → OPD refer link window (hours)',
+        hint: 'Same-day pharmacy visits linked to a follow-up OPD visit within this window count in M7 ancillary report.',
+        min: 1,
+        max: 24,
+        indent: 2,
+      },
+      {
+        key: 'external_rx_max_age_days',
+        type: 'int',
+        label: 'External paper Rx max age (days)',
+        hint: 'Pharmacy walk-in external Rx dispense requires Rx date within this many days unless supervisor override (M9-F15).',
+        min: 1,
+        max: 3650,
+        indent: 2,
+      },
+      {
         key: 'enable_pharm_ops',
         type: 'bool',
-        label: 'Enable pharmacy ops strip on patient chart Clinical (M13)',
+        label: 'Enable Pharmacy Operations hub (M13)',
+        hint: 'Requires Pharmacy desk and OpenEMR in-house pharmacy. Shows Pharm Ops in the sidebar and clinic-wide pending dispense worklist.',
         indent: 1,
+      },
+      {
+        key: 'enable_pharm_rx_favorites',
+        type: 'bool',
+        label: 'Doctor Desk formulary quick prescribe (M4-F37)',
+        hint: 'Requires Pharmacy Operations and imported OPD formulary. Replaces Prescribe shortcut with Quick prescribe drawer.',
+        indent: 2,
+      },
+      {
+        key: 'enable_rx_print',
+        type: 'bool',
+        label: 'Print Rx pack (community pharmacy)',
+        hint: 'Type A Rx PDF for external pharmacies. Independent of Pharmacy Operations hub.',
+        indent: 1,
+      },
+      {
+        key: 'enable_dispense_label',
+        type: 'bool',
+        label: 'Post-dispense patient labels',
+        hint: 'Requires Pharmacy Operations. Opens label PDF after in-house dispense.',
+        indent: 2,
+      },
+      {
+        key: 'pharm_expiry_warn_days',
+        type: 'int',
+        label: 'Expiring lot warning window (days)',
+        hint: 'Lots expiring within this many days appear on the Pharm Ops write-off worklist.',
+        min: 1,
+        max: 365,
+        indent: 2,
       },
       {
         key: 'allow_multiple_visits_per_day',
@@ -108,6 +214,51 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         key: 'enable_multi_doctor_filters',
         type: 'bool',
         label: 'Enable doctor queue Me/All filters',
+      },
+      {
+        key: 'enable_doctor_roster',
+        type: 'bool',
+        label: 'Doctor on-duty roster (V1.1-RTa)',
+        hint: 'Taking patients toggle + load display on Doctor Desk.',
+      },
+      {
+        key: 'enable_advisory_routing',
+        type: 'bool',
+        label: 'Advisory routing suggestions (V1.1-RTb)',
+        hint: 'Fairness-based routing_suggested_provider_id chips. Requires roster + Me/All filters.',
+        indent: 1,
+      },
+      {
+        key: 'require_override_reason',
+        type: 'bool',
+        label: 'Soft confirm when taking another doctor’s suggestion',
+        indent: 2,
+      },
+      {
+        key: 'enable_hard_provider_assignment',
+        type: 'bool',
+        label: 'Hard provider assignment (V1.2)',
+        hint: 'Nurse/reception may lock a visit to a specific doctor before consult.',
+      },
+      {
+        key: 'enable_doctor_ready_notify',
+        type: 'bool',
+        label: 'Doctor ready in-app notify (V1.2)',
+        hint: 'Toast on Doctor Desk when a visit enters ready_for_doctor.',
+        indent: 1,
+      },
+      {
+        key: 'notify_unassigned_to_all_on_duty',
+        type: 'bool',
+        label: 'Notify all on-duty doctors for unassigned ready visits',
+        indent: 2,
+      },
+      {
+        key: 'enable_doctor_ready_web_push',
+        type: 'bool',
+        label: 'Doctor ready browser push (V1.2b — deferred)',
+        hint: 'Requires in-app notify. Delivery not implemented in V1.2a.',
+        indent: 2,
       },
       {
         key: 'enable_aggressive_orphan_facility_repair',
@@ -173,6 +324,12 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         hint: 'Shows a banner when another user may still be logged in on a shared PC. Blocks save actions until acknowledged or session is cleared.',
       },
       {
+        key: 'enable_history_editor_wrap',
+        type: 'bool',
+        label: 'History editor T1 shell (T1-F20b)',
+        hint: 'Wraps stock History & Lifestyle editor with clinic top bar and Back to chart → Clinical → Background.',
+      },
+      {
         key: 'enable_legacy_patient_context_overlay',
         type: 'bool',
         label: 'Legacy patient context strip on stock chart pages (T1-F18)',
@@ -216,100 +373,76 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         hint: "Amber Same surname today chip when another patient in today's queue shares the normalized last name.",
       },
       {
+        key: 'enable_momo_payment',
+        type: 'bool',
+        label: 'MoMo payment at cashier',
+        hint: 'Lets cashier record mobile-money payments with a manual transaction reference (no API integration).',
+      },
+      {
         key: 'enable_pinned_reception_preview',
         type: 'bool',
         label: 'Pinned reception preview (Front Desk)',
         hint: 'Keeps the patient banner visible while Register patient or Edit profile is open.',
       },
+      {
+        key: 'enable_pregnancy_banner_chip',
+        type: 'bool',
+        label: 'Pregnancy banner chip',
+        hint: 'Shows a Pregnant chip on role-desk patient banners when L3 or problem list documents pregnancy.',
+      },
+      {
+        key: 'enable_l3b_background_completion',
+        type: 'bool',
+        label: 'L3b background history completion weight',
+        hint: 'Adds optional completion credit when family or social history is documented in History & Lifestyle.',
+      },
+      {
+        key: 'enable_lab_results_toast',
+        type: 'bool',
+        label: 'Lab results ready toast (Doctor Desk)',
+        hint: 'Shows a one-time success banner when lab results become ready for a queued or active consult patient.',
+      },
+      {
+        key: 'enable_visit_board_kiosk_chrome',
+        type: 'bool',
+        label: 'Visit Board kiosk chrome (wall profile)',
+        hint: 'Enables fullscreen + wake-lock toolbar on visit-board.php?profile=wall. Add &kiosk=1 to force kiosk chrome without Admin Hub.',
+      },
+      {
+        key: 'enable_banner_mrd_deep_links',
+        type: 'bool',
+        label: 'Banner MRD deep links (role desks)',
+        hint: 'Makes safety and routing chips on role-desk banners open patient chart Clinical tab sections in a new tab.',
+      },
+      {
+        key: 'enable_allergy_count_chip',
+        type: 'bool',
+        label: 'Allergy count chip on banners',
+        hint: 'When a patient has more than three documented allergies, show a single “N allergies” chip instead of listing each one.',
+      },
+      {
+        key: 'require_allergies_for_rx',
+        type: 'bool',
+        label: 'Require allergy documentation before Rx shortcut',
+        hint: 'Blocks the doctor Prescribe shortcut until allergies are documented or marked None known.',
+      },
+      {
+        key: 'enable_in_chart_patient_search',
+        type: 'bool',
+        label: 'In-chart patient search (NG15)',
+        hint: 'Kaiser-style lookup within an open patient chart on MRD. Informational only — not clinical decision support.',
+      },
+      {
+        key: 'enable_scheduling_full_analytics',
+        type: 'bool',
+        label: 'Full scheduling analytics (S1-F09)',
+        hint: 'Adds slot→check-in latency and provider utilization to Daily Reports → Scheduling tab. Requires scheduled integration.',
+      },
     ],
   },
   {
-    title: 'React islands (kill-switches)',
+    title: 'Billing back office (M14)',
     fields: [
-      {
-        key: 'enable_react_visit_board',
-        type: 'bool',
-        label: 'Enable React Visit Board',
-        hint: 'Kill-switch for the React visit board island. Default ON after w50react cutover.',
-      },
-      {
-        key: 'enable_react_triage_desk',
-        type: 'bool',
-        label: 'Enable React Triage Desk (Phase 2A)',
-        hint: 'Replaces the jQuery triage desk with a React island (queue, vitals, Find patient drawer). Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_doctor_desk',
-        type: 'bool',
-        label: 'Enable React Doctor Desk (Phase 3A)',
-        hint: 'Replaces the jQuery doctor desk with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_cashier_desk',
-        type: 'bool',
-        label: 'Enable React Cashier Desk (Phase 4A)',
-        hint: 'Replaces the jQuery cashier desk with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_lab_desk',
-        type: 'bool',
-        label: 'Enable React Lab Desk (Phase 5A)',
-        hint: 'Replaces the jQuery lab desk with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_pharmacy_desk',
-        type: 'bool',
-        label: 'Enable React Pharmacy Desk (Phase 6A)',
-        hint: 'Replaces the jQuery pharmacy desk with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_front_desk',
-        type: 'bool',
-        label: 'Enable React Front Desk (Phase 7A)',
-        hint: 'Replaces the jQuery front desk with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_patient_registry',
-        type: 'bool',
-        label: 'Enable React Patient Registry (Phase 8A)',
-        hint: 'Replaces the jQuery patient registry with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_daily_reports',
-        type: 'bool',
-        label: 'Enable React Daily Reports (Phase 9A)',
-        hint: 'Replaces the jQuery daily reports page with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_communications_hub',
-        type: 'bool',
-        label: 'Enable React Communications Hub (Phase 10A)',
-        hint: 'Replaces the jQuery communications hub with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_admin_hub',
-        type: 'bool',
-        label: 'Enable React Admin Hub (Phase 11A)',
-        hint: 'Replaces the jQuery clinic setup page with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_patient_chart',
-        type: 'bool',
-        label: 'Enable React Patient Chart (Phase 12A)',
-        hint: 'Replaces the jQuery patient chart/MRD page with a React island. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_lab_ops',
-        type: 'bool',
-        label: 'Enable React Lab Operations Hub (Phase 13A)',
-        hint: 'Replaces the jQuery lab operations hub with a React island. Requires enable_lab_ops. Default OFF. Requires frontend build.',
-      },
-      {
-        key: 'enable_react_chart_depth',
-        type: 'bool',
-        label: 'Enable React Chart Depth (Phase 14A)',
-        hint: 'Replaces jQuery chart depth pages (payments, referrals, export) with a React island. Requires enable_chart_depth sub-flags. Default OFF. Requires frontend build.',
-      },
       {
         key: 'enable_bill_ops',
         type: 'bool',
@@ -337,11 +470,102 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         hint: 'Shows M14 Insurance vault tab and legacy billing gateways. Cash clinics leave OFF.',
         indent: 1,
       },
+    ],
+  },
+  {
+    title: 'Admin Hub (M15)',
+    fields: [
       {
-        key: 'enable_react_bill_ops',
+        key: 'enable_admin_hub',
         type: 'bool',
-        label: 'Enable React Billing Back Office (Phase 15A)',
-        hint: 'React island for M14 hub tabs. Requires enable_bill_ops. Default OFF. Requires frontend build.',
+        label: 'Enable Admin Hub system features (M15)',
+        hint: 'System health, runbooks, and setup checklist. Core clinic setup tabs remain when OFF.',
+      },
+    ],
+  },
+  {
+    title: 'Reporting Operations Hub (M16)',
+    fields: [
+      {
+        key: 'enable_report_hub',
+        type: 'bool',
+        label: 'Enable Reporting Operations Hub (M16)',
+        hint: 'Curated periodic and compliance reporting; embeds Daily Reports as Today lens. Default OFF.',
+      },
+      {
+        key: 'report_hub_show_us_quality',
+        type: 'bool',
+        label: 'Show US quality reports (CQM/AMC) in audit lens',
+        hint: 'Cash clinics leave OFF. Requires enable_report_hub.',
+        indent: 1,
+      },
+    ],
+  },
+  {
+    title: 'Scheduling & Flow (S1)',
+    fields: [
+      {
+        key: 'enable_scheduling_redesign',
+        type: 'bool',
+        label: 'Enable Scheduling & Flow shell',
+        hint: 'Shows Clinic → Scheduling & Flow (Calendar, Flow Board, Recalls lenses). Requires calendar integration above. Default OFF until parity verified.',
+      },
+    ],
+  },
+  {
+    title: 'Queue Bridge Hub (M18)',
+    fields: [
+      {
+        key: 'enable_queue_bridge',
+        type: 'bool',
+        label: 'Enable Queue Bridge Hub (M18)',
+        hint: 'Schedule vs queue exception worklist and guided fixes. Requires calendar integration. Default OFF.',
+      },
+      {
+        key: 'queue_bridge_show_recurring_info',
+        type: 'bool',
+        label: 'Show recurring informational exceptions (EX-04)',
+        hint: 'Requires enable_queue_bridge.',
+        indent: 1,
+      },
+      {
+        key: 'queue_bridge_eod_block',
+        type: 'bool',
+        label: 'Warn on open EX-01 at end of day (M7 scheduling footer)',
+        hint: 'Requires enable_queue_bridge.',
+        indent: 1,
+      },
+    ],
+  },
+  {
+    title: 'Clinical Documentation Hub (M17)',
+    fields: [
+      {
+        key: 'enable_clinical_doc_hub',
+        type: 'bool',
+        label: 'Enable Clinical Documentation Hub (M17)',
+        hint: 'Curated encounter forms by lens; hides stock Visit Forms menu. Default OFF.',
+      },
+      {
+        key: 'consult_note_formdir',
+        type: 'string',
+        label: 'Primary consult note form directory',
+        hint: 'Registry formdir for the main consult card (default soap).',
+        indent: 1,
+      },
+      {
+        key: 'clinical_doc_show_screening',
+        type: 'bool',
+        label: 'Show screening lens (PHQ-9 / GAD-7)',
+        hint: 'Requires enable_clinical_doc_hub.',
+        indent: 1,
+      },
+      {
+        key: 'clinical_doc_show_specialty',
+        type: 'bool',
+        label: 'Show specialty lens',
+        hint: 'Requires enable_clinical_doc_hub and clinical_doc_specialty_pack JSON.',
+        indent: 1,
       },
     ],
   },
@@ -377,6 +601,39 @@ export const COMPLETION_FIELDS: AdminFieldDef[] = [
     label: 'Pediatric exact DOB age (years)',
     min: 0,
     max: 18,
+  },
+];
+
+export const CLINIC_CURRENCY_FIELDS: AdminFieldDef[] = [
+  {
+    key: 'currency_code',
+    type: 'string',
+    label: 'Currency code (ISO 4217)',
+    maxLength: 3,
+    hint: 'Examples: GHS, NGN, XOF, USD',
+  },
+  {
+    key: 'currency_symbol',
+    type: 'string',
+    label: 'Currency symbol',
+    maxLength: 16,
+    hint: 'Synced to OpenEMR gbl_currency_symbol when you save.',
+  },
+  {
+    key: 'currency_decimals',
+    type: 'int',
+    label: 'Decimal places',
+    min: 0,
+    max: 4,
+  },
+  {
+    key: 'currency_symbol_position',
+    type: 'select',
+    label: 'Symbol position',
+    choices: [
+      { value: 'before', label: 'Before amount (GH₵ 160.00)' },
+      { value: 'after', label: 'After amount (160.00 GH₵)' },
+    ],
   },
 ];
 
@@ -423,4 +680,9 @@ export function collectAdminSettings(settings: Record<string, unknown>): Record<
     out[key] = settings[key];
   }
   return out;
+}
+
+/** Flatten visible queue-tab field keys (excludes hidden React kill-switches). */
+export function visibleQueueFieldKeys(): string[] {
+  return QUEUE_FIELD_SECTIONS.flatMap((section) => section.fields.map((field) => field.key));
 }

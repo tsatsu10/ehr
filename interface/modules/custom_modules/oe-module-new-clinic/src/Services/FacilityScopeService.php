@@ -111,6 +111,34 @@ class FacilityScopeService
     }
 
     /**
+     * Ensure an encounter belongs to the desk facility (always enforced when desk facility is known).
+     */
+    public function assertEncounterAtDeskFacility(int $encounterId, int $pid, int $deskFacilityId): void
+    {
+        if ($encounterId <= 0 || $pid <= 0) {
+            throw new \InvalidArgumentException('Encounter not found');
+        }
+
+        if ($deskFacilityId <= 0) {
+            return;
+        }
+
+        $row = QueryUtils::querySingleRow(
+            'SELECT facility_id FROM form_encounter WHERE encounter = ? AND pid = ? LIMIT 1',
+            [$encounterId, $pid]
+        );
+
+        if (!is_array($row)) {
+            throw new \InvalidArgumentException('Encounter not found');
+        }
+
+        $encounterFacilityId = (int) ($row['facility_id'] ?? 0);
+        if ($encounterFacilityId > 0 && $encounterFacilityId !== $deskFacilityId) {
+            throw new \RuntimeException('Record not accessible at this facility', 403);
+        }
+    }
+
+    /**
      * @return list<int>
      */
     public function getActorFacilityIds(): array

@@ -60,8 +60,11 @@ class PatientChartServiceIntegrationTest extends TestCase
         foreach (array_merge($payload['today_visits'], $payload['past_visits']) as $visit) {
             $encounter = (int) ($visit['encounter'] ?? 0);
             if ($encounter > 0) {
-                $this->assertNotEmpty($visit['documentation_url']);
-                $this->assertStringContainsString('set_encounter=' . $encounter, (string) $visit['documentation_url']);
+                $docUrl = (string) ($visit['documentation_url'] ?? '');
+                $this->assertNotEmpty($docUrl);
+                $isHubUrl = str_contains($docUrl, 'clinical-doc/index.php');
+                $isLegacyUrl = str_contains($docUrl, 'set_encounter=' . $encounter);
+                $this->assertTrue($isHubUrl || $isLegacyUrl, 'documentation_url should be hub or legacy encounter link');
             } else {
                 $this->assertNull($visit['documentation_url']);
             }

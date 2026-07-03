@@ -8,16 +8,13 @@ import type {
   ReceiptReprintPayload,
 } from './chartDepthTypes';
 import { ReprintReceiptModal } from './ReprintReceiptModal';
+import { formatChartMoney } from './chartDepthUtils';
 
 interface PaymentsPaneProps {
   ajaxUrl: string;
   csrfToken: string;
   pid: number;
   visitId?: number;
-}
-
-function formatMoney(symbol: string, amount: number | undefined): string {
-  return `${symbol}${Number(amount ?? 0).toFixed(2)}`;
 }
 
 function typeLabel(type: PaymentHistoryRow['type']): string {
@@ -28,10 +25,8 @@ function typeLabel(type: PaymentHistoryRow['type']): string {
 
 function SummaryCard({
   summary,
-  symbol,
 }: {
   summary: PaymentHistorySummary;
-  symbol: string;
 }) {
   const last = summary.last_receipt;
 
@@ -40,15 +35,15 @@ function SummaryCard({
       <div className="row small">
         <div className="col-sm-4">
           <strong>Charges</strong>
-          <div>{formatMoney(symbol, summary.charges_amount)}</div>
+          <div>{formatChartMoney(summary.charges_amount)}</div>
         </div>
         <div className="col-sm-4">
           <strong>Paid</strong>
-          <div>{formatMoney(symbol, summary.paid_amount)}</div>
+          <div>{formatChartMoney(summary.paid_amount)}</div>
         </div>
         <div className="col-sm-4">
           <strong>Balance</strong>
-          <div>{formatMoney(symbol, summary.balance_amount)}</div>
+          <div>{formatChartMoney(summary.balance_amount)}</div>
         </div>
       </div>
       {last?.receipt_number && (
@@ -71,7 +66,6 @@ export function PaymentsPane({ ajaxUrl, csrfToken, pid, visitId }: PaymentsPaneP
   const [dateTo, setDateTo] = useState('');
   const [rows, setRows] = useState<PaymentHistoryRow[]>([]);
   const [summary, setSummary] = useState<PaymentHistorySummary | null>(null);
-  const [symbol, setSymbol] = useState('');
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -108,7 +102,6 @@ export function PaymentsPane({ ajaxUrl, csrfToken, pid, visitId }: PaymentsPaneP
   const applyListData = useCallback((data: PaymentsListData, append: boolean) => {
     setRows((prev) => (append ? [...prev, ...(data.rows ?? [])] : (data.rows ?? [])));
     setSummary(data.summary ?? null);
-    setSymbol(data.currency_symbol ?? '');
     setHasMore(!!data.has_more);
     setOffset(data.next_offset ?? ((data.offset ?? 0) + (data.rows ?? []).length));
     setAddCorrectionUrl(data.add_correction_visible ? (data.add_correction_url ?? null) : null);
@@ -237,7 +230,7 @@ export function PaymentsPane({ ajaxUrl, csrfToken, pid, visitId }: PaymentsPaneP
       )}
 
       {filter === 'this_visit' && summary && (
-        <SummaryCard summary={summary} symbol={symbol} />
+        <SummaryCard summary={summary} />
       )}
 
       {addCorrectionUrl && (
@@ -279,7 +272,7 @@ export function PaymentsPane({ ajaxUrl, csrfToken, pid, visitId }: PaymentsPaneP
                         <div className="text-muted small">{row.cashier}</div>
                       )}
                     </td>
-                    <td>{formatMoney(symbol, row.amount ?? row.amount_paid)}</td>
+                    <td>{formatChartMoney(row.amount ?? row.amount_paid)}</td>
                     <td>{visitLabel}</td>
                     <td className="text-right">
                       {row.can_reprint && (
@@ -315,7 +308,6 @@ export function PaymentsPane({ ajaxUrl, csrfToken, pid, visitId }: PaymentsPaneP
       <ReprintReceiptModal
         open={reprintOpen}
         payload={reprintPayload}
-        currencySymbol={symbol}
         onClose={() => {
           setReprintOpen(false);
           setReprintPayload(null);

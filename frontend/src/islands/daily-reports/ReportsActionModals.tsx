@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useModalDismiss } from '@components/useModalDismiss';
+import { ConfirmModal, IdentityConfirmBanner } from '@components/ConfirmModal';
 import type { PendingVisitAction } from './reportsTypes';
 
 interface ReasonModalProps {
   open: boolean;
   title: string;
   confirmLabel: string;
-  confirmClass: string;
+  confirmVariant: 'warning' | 'danger';
   patientLabel: string;
   submitting: boolean;
   error: string | null;
@@ -18,7 +18,7 @@ function ReasonModal({
   open,
   title,
   confirmLabel,
-  confirmClass,
+  confirmVariant,
   patientLabel,
   submitting,
   error,
@@ -26,7 +26,6 @@ function ReasonModal({
   onConfirm,
 }: ReasonModalProps) {
   const [reason, setReason] = useState('');
-  useModalDismiss(open, onClose);
 
   useEffect(() => {
     if (open) setReason('');
@@ -34,47 +33,36 @@ function ReasonModal({
 
   if (!open) return null;
 
+  const [displayName, ...rest] = patientLabel.split(' · MRN ');
+  const pubpid = rest[0]?.trim();
+
   return (
-    <>
-      <div className="modal fade show d-block" tabIndex={-1} role="dialog" aria-modal="true">
-        <div className="modal-dialog" role="document">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5 className="modal-title">{title}</h5>
-              <button type="button" className="close" aria-label="Close" onClick={onClose}>
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
-            <div className="modal-body">
-              <p className="mb-2">{patientLabel}</p>
-              <div className="form-group mb-0">
-                <label htmlFor="nc-reports-action-reason">Reason (required)</label>
-                <textarea
-                  id="nc-reports-action-reason"
-                  className="form-control"
-                  rows={2}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                />
-              </div>
-              {error && <div className="alert alert-danger mt-2 mb-0">{error}</div>}
-            </div>
-            <div className="modal-footer">
-              <button type="button" className="btn btn-secondary" onClick={onClose}>Close</button>
-              <button
-                type="button"
-                className={`btn ${confirmClass}`}
-                disabled={submitting || reason.trim() === ''}
-                onClick={() => onConfirm(reason.trim())}
-              >
-                {submitting ? 'Saving…' : confirmLabel}
-              </button>
-            </div>
-          </div>
-        </div>
+    <ConfirmModal
+      open
+      onClose={onClose}
+      title={title}
+      cancelLabel="Close"
+      confirmLabel={confirmLabel}
+      confirmVariant={confirmVariant}
+      confirmDisabled={reason.trim() === ''}
+      submitting={submitting}
+      onConfirm={() => onConfirm(reason.trim())}
+      identityBanner={(
+        <IdentityConfirmBanner displayName={displayName} pubpid={pubpid} />
+      )}
+    >
+      <div className="form-group mb-0">
+        <label htmlFor="nc-reports-action-reason">Reason (required)</label>
+        <textarea
+          id="nc-reports-action-reason"
+          className="form-control"
+          rows={2}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
       </div>
-      <div className="modal-backdrop fade show" />
-    </>
+      {error && <div className="alert alert-danger mt-2 mb-0">{error}</div>}
+    </ConfirmModal>
   );
 }
 
@@ -111,7 +99,7 @@ export function ReportsActionModals({
         open={cancelTarget !== null}
         title="Cancel visit"
         confirmLabel="Cancel visit"
-        confirmClass="btn-danger"
+        confirmVariant="danger"
         patientLabel={cancelTarget ? patientLabel(cancelTarget) : ''}
         submitting={submitting}
         error={cancelError}
@@ -122,7 +110,7 @@ export function ReportsActionModals({
         open={markUnpaidTarget !== null}
         title="Mark visit unpaid"
         confirmLabel="Mark unpaid"
-        confirmClass="btn-warning"
+        confirmVariant="warning"
         patientLabel={markUnpaidTarget ? patientLabel(markUnpaidTarget) : ''}
         submitting={submitting}
         error={markUnpaidError}

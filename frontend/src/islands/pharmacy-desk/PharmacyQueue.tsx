@@ -1,9 +1,9 @@
 import type { PharmacyQueueCard } from '@core/types';
 import { WaitTimeSpan } from '@components/WaitTimeSpan';
+import { AncillaryVisitBadges } from '@components/AncillaryVisitBadges';
 
 interface PharmacyQueueProps {
   cards: PharmacyQueueCard[];
-  counts: { waiting: number; in_pharmacy: number } | null;
   hasActiveWork: boolean;
   loading: boolean;
   error: string | null;
@@ -12,7 +12,6 @@ interface PharmacyQueueProps {
 
 export function PharmacyQueue({
   cards,
-  counts,
   hasActiveWork,
   loading,
   error,
@@ -20,13 +19,8 @@ export function PharmacyQueue({
 }: PharmacyQueueProps) {
   return (
     <div className="nc-pharmacy-queue-panel">
-      <div className="d-flex justify-content-between align-items-center mb-2">
+      <div className="mb-2">
         <strong>Pharmacy queue</strong>
-        {counts && (
-          <span className="text-muted small" id="nc-pharmacy-counts">
-            {counts.waiting} waiting
-          </span>
-        )}
       </div>
 
       {error && <div className="alert alert-danger py-2 small">{error}</div>}
@@ -42,6 +36,12 @@ export function PharmacyQueue({
       <div id="nc-pharmacy-queue-list">
         {cards.map((card) => {
           const disabled = hasActiveWork && card.state === 'ready_for_pharmacy';
+          const rxBadgeLabel = card.undispensed_rx_count != null
+            ? (card.undispensed_rx_count > 0 ? `${card.undispensed_rx_count} Rx undispensed` : null)
+            : (card.rx_count ?? 0) > 0
+              ? `${card.rx_count} Rx`
+              : null;
+
           return (
             <button
               key={card.id}
@@ -58,13 +58,14 @@ export function PharmacyQueue({
               <div className="oe-nc-queue-card__header">
                 <strong>#{card.queue_number} {card.display_name}</strong>
                 {card.is_urgent === 1 && <span className="badge badge-warning ml-1">URGENT</span>}
+                <AncillaryVisitBadges badges={card.ancillary_badges} />
                 {card.pharmacy_mine && <span className="badge badge-primary ml-1">You</span>}
                 {card.pharmacy_actor_name && !card.pharmacy_mine && (
                   <span className="badge badge-info ml-1">{card.pharmacy_actor_name}</span>
                 )}
-                {(card.rx_count ?? 0) > 0 && (
-                  <span className="badge badge-light border ml-1">{card.rx_count} Rx</span>
-                )}
+                {rxBadgeLabel ? (
+                  <span className="badge badge-light border ml-1">{rxBadgeLabel}</span>
+                ) : null}
               </div>
               <div className="oe-nc-queue-card__meta small text-muted">
                 {card.state} · <WaitTimeSpan card={card} suffix="" />

@@ -1,0 +1,54 @@
+.oe-nc-clinicaldoc {
+  max-width: 960px;
+}
+
+.oe-nc-clinicaldoc-cards {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .oe-nc-clinicaldoc-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.oe-nc-clinicaldoc-card {
+  border: 1px solid var(--nc-border-subtle, #dee2e6);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background: var(--nc-surface, #fff);
+}
+
+.oe-nc-clinicaldoc-card__title {
+  margin-bottom: 0.25rem;
+}
+
+.oe-nc-clinicaldoc-card__status {
+  color: var(--nc-text-muted, #6c757d);
+}
+
+.oe-nc-clinicaldoc-empty {
+  padding: 1.5rem;
+  border: 1px dashed var(--nc-border-subtle, #dee2e6);
+  border-radius: 0.5rem;
+  background: var(--nc-surface-muted, #f8f9fa);
+}
+
+.oe-nc-clinicaldoc-sign-overview {
+  padding: 1rem;
+  border: 1px solid var(--nc-border-subtle, #dee2e6);
+  border-radius: 0.5rem;
+  background: var(--nc-surface-muted, #f8f9fa);
+}
+
+.oe-nc-clinicaldoc-sign-overview__stats .badge {
+  font-weight: 500;
+}
+
+.oe-nc-clinicaldoc-lab-panel {
+  padding: 0.75rem 1rem;
+  border: 1px dashed var(--nc-border-subtle, #dee2e6);
+  border-radius: 0.5rem;
+  background: var(--nc-surface-muted, #f8f9fa);
+}

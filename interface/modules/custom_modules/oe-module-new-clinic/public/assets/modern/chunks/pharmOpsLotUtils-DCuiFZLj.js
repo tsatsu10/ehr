@@ -1,0 +1,2 @@
+function e(e){if(!e?.lot_number)return null;let t=[`Lot ${e.lot_number}`];return e.expiration&&!e.expiration.startsWith(`0000`)&&t.push(`exp ${e.expiration}`),e.warehouse&&t.push(e.warehouse),t.join(` · `)}export{e as t};
+//# sourceMappingURL=pharmOpsLotUtils-DCuiFZLj.js.map

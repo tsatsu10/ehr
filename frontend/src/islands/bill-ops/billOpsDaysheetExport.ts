@@ -8,13 +8,14 @@ function csvEscape(value: string | number): string {
   return text;
 }
 
-export function daysheetToCsv(data: DaysheetData): string {
+export function daysheetToCsv(data: DaysheetData, momoTally = ''): string {
   const lines: string[] = [
     `Date,${csvEscape(data.date)}`,
     `Receipts,${data.receipt_count}`,
     `Voided,${data.void_count}`,
     `No-charge closes,${data.no_charge_closes}`,
     `Cash collected,${data.cash_collected}`,
+    `MoMo tally (manual),${csvEscape(momoTally.trim() === '' ? '—' : momoTally)}`,
     `Reconciliation status,${csvEscape(data.reconciliation.status)}`,
     `Reconciliation delta,${data.reconciliation.delta_amount}`,
     '',

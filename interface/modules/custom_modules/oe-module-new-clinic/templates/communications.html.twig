@@ -69,7 +69,6 @@
 {% block scripts %}
 {% if enable_react_communications_hub|default(true) %}
 <link rel="stylesheet" href="{{ assets_url }}/css/communications-hub.css?v={{ asset_version }}">
-<link rel="stylesheet" href="{{ assets_url }}/modern/communications-hub.css?v={{ asset_version }}">
-<script type="module" src="{{ assets_url }}/modern/communications-hub.js?v={{ asset_version }}"></script>
+{% include 'partials/island-assets.html.twig' %}
 {% endif %}
 {% endblock %}

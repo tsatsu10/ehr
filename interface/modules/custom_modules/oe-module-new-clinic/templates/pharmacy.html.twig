@@ -22,7 +22,13 @@
         visitBoardUrl:         visit_board_url,
         canSkipToPayment:      can_skip_to_payment ? true : false,
         sharedDeviceWarning:   enable_shared_device_session_warning ? true : false,
-        canEsignOverride:      can_esign_override ? true : false
+        canEsignOverride:      can_esign_override ? true : false,
+        canSellOtc:            can_sell_otc ? true : false,
+        pharmOpsEnabled:       pharm_ops_enabled ? true : false,
+        canDispense:           can_dispense ? true : false,
+        canUndispensedOverride: can_undispensed_override ? true : false,
+        canExternalRxOverride: can_external_rx_override ? true : false,
+        pollMs:                  queue_poll_ms|default(30000)
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}
@@ -32,7 +38,6 @@
 
 {% block scripts %}
 {% if enable_react_pharmacy_desk|default(true) %}
-<link rel="stylesheet" href="{{ assets_url }}/modern/pharmacy-desk.css?v={{ asset_version }}">
-<script type="module" src="{{ assets_url }}/modern/pharmacy-desk.js?v={{ asset_version }}"></script>
+{% include 'partials/island-assets.html.twig' %}
 {% endif %}
 {% endblock %}

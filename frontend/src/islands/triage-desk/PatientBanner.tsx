@@ -1,11 +1,12 @@
 /**
- * PatientBanner — patient context strip rendered at the top of the active pane.
- *
- * Mirrors renderBanner() + renderCompletionBanner() from triage.js.
- * Shows: name · sex · age · MRN · completion% · missing fields · allergy · vitals summary
+ * PatientBanner — patient context strip rendered at the top of the active triage pane.
  */
 
 import type { PatientPreview, TriageVisit } from '@core/types';
+import { PatientContextBanner } from '@components/PatientContextBanner';
+import { BannerClinicalLink } from '@components/BannerClinicalLink';
+import { bannerPropsFromPreview } from '@components/bannerPreviewProps';
+import { buildMrdClinicalDeepLink, MRD_CLINICAL_ANCHORS } from '@core/mrdBannerLinks';
 
 interface PatientBannerProps {
   preview: PatientPreview;
@@ -13,44 +14,25 @@ interface PatientBannerProps {
 }
 
 export function PatientBanner({ preview, visit }: PatientBannerProps) {
-  const identity = preview.identity;
   const completion = preview.completion;
-  const safety = preview.safety;
   const vitalsToday = preview.vitals_today;
-
+  const bannerProps = bannerPropsFromPreview(preview);
+  const mrdEnabled = bannerProps.bannerMrdDeepLinks;
+  const pid = preview.identity.pid;
+  const chartOpenUrl = preview.completion.chart_open_url;
+  const vitalsHref = buildMrdClinicalDeepLink(pid, MRD_CLINICAL_ANCHORS.vitals, chartOpenUrl);
   const completionBlocked = completion.score < completion.billing_threshold;
-  const severeAllergies = safety?.allergies_severe ?? [];
   const missing = completion.missing_labels ?? [];
 
   return (
-    <div className="nc-patient-context-banner mb-3 p-3 border rounded bg-light">
-      {/* Completion progress bar strip */}
-      {completionBlocked && (
-        <div className="oe-nc-completion-bar mb-2">
-          <div
-            className="oe-nc-completion-bar__fill"
-            style={{ width: `${Math.min(completion.score, 100)}%` }}
-            role="progressbar"
-            aria-valuenow={completion.score}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Profile completion"
-          />
-        </div>
-      )}
-
-      {/* Identity row */}
-      <div className="d-flex justify-content-between flex-wrap align-items-start">
-        <div>
-          <strong>{identity.display_name}</strong>
-          {' · '}
-          {identity.sex}
-          {' '}
-          {identity.age_years}
-          {' · MRN '}
-          {identity.pubpid}
-        </div>
-        <div className="d-flex align-items-center">
+    <PatientContextBanner
+      identity={preview.identity}
+      layout="compact"
+      completion={completion}
+      safety={preview.safety}
+      {...bannerProps}
+      aside={(
+        <>
           <span className={`badge badge-${completionBlocked ? 'warning' : 'light border'} mr-1`}>
             Completion {completion.score}%
           </span>
@@ -59,41 +41,49 @@ export function PatientBanner({ preview, visit }: PatientBannerProps) {
               Complete profile
             </a>
           )}
-        </div>
-      </div>
-
-      {/* Missing fields */}
+        </>
+      )}
+    >
       {missing.length > 0 && completionBlocked && (
         <div className="small text-muted mt-1">
           Missing: {missing.slice(0, 2).join(', ')}{missing.length > 2 ? '…' : ''}
         </div>
       )}
 
-      {/* Allergies */}
-      {severeAllergies.length > 0 && (
-        <div className="text-danger small mt-1">
-          <i className="fa fa-exclamation-circle mr-1" aria-hidden="true" />
-          Allergy: {severeAllergies.join(', ')}
-        </div>
-      )}
-
-      {/* Active visit metadata */}
       <div className="small mt-1 text-muted">
         Visit #{visit.queue_number}
         {' · '}
         {visit.state}
         {visit.visit_type_label ? ` · ${visit.visit_type_label}` : ''}
         {vitalsToday?.vitals_abnormal_today && (
-          <span className="badge badge-danger ml-1">Vitals abnormal</span>
+          <BannerClinicalLink
+            enabled={mrdEnabled}
+            href={vitalsHref}
+            className="badge badge-danger ml-1"
+          >
+            Vitals abnormal
+          </BannerClinicalLink>
         )}
       </div>
 
-      {/* Vitals summary */}
       <div className="small mt-1">
-        {vitalsToday?.summary
-          ? <>Vitals today: {vitalsToday.summary}</>
-          : <span className="text-warning">No vitals today</span>}
+        {vitalsToday?.summary ? (
+          <>
+            Vitals today:{' '}
+            <BannerClinicalLink enabled={mrdEnabled} href={vitalsHref}>
+              {vitalsToday.summary}
+            </BannerClinicalLink>
+          </>
+        ) : (
+          <BannerClinicalLink
+            enabled={mrdEnabled}
+            href={vitalsHref}
+            className="text-warning"
+          >
+            No vitals today
+          </BannerClinicalLink>
+        )}
       </div>
-    </div>
+    </PatientContextBanner>
   );
 }

@@ -19,10 +19,11 @@
 - **PHP:** 8.2+ required
 - **Backend:** Laminas MVC, Symfony components
 - **Templates:** Twig 3.x (modern), Smarty 4.5 (legacy)
-- **Frontend:** Angular 1.8, jQuery 3.7, Bootstrap 4.6
-- **Build:** Gulp 4, SASS
+- **OpenEMR core UI:** Angular 1.8, jQuery 3.7, Knockout, Bootstrap 4.6 (tab shell + legacy screens)
+- **New Clinic module UI:** React 19 + TypeScript + Vite 8 — island bundles in `frontend/` → `oe-module-new-clinic/public/assets/modern/` (see `Documentation/FRONTEND_MODULE_GUIDE.md`)
+- **Build:** Gulp 4 + SASS (core themes); Vite (New Clinic React islands)
 - **Database:** MySQL via ADODB wrapper
-- **Testing:** PHPUnit 11, Jest 29
+- **Testing:** PHPUnit 11, Vitest 4 (New Clinic frontend), Jest 29 (core JS), Playwright (New Clinic E2E)
 
 ## Local Development
 

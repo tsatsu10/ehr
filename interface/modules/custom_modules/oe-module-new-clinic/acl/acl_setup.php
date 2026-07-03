@@ -26,6 +26,7 @@ $acos = [
     'new_doctor' => 'Doctor Desk',
     'new_lab' => 'Lab Desk',
     'new_pharmacy' => 'Pharmacy Desk',
+    'new_pharmacy_lead' => 'New Clinic Pharmacy Lead',
     'new_cashier' => 'Cashier Desk',
     'new_admin' => 'Clinic Admin',
     'new_create_despite_dup' => 'Create Despite Duplicate',
@@ -54,6 +55,18 @@ $acos = [
     'new_lab_ops_enter' => 'Lab Operations Enter Results',
     'new_lab_ops_release' => 'Lab Operations Release Results',
     'new_lab_ops_catalog' => 'Lab Operations Catalog Admin',
+    'new_lab_order_intake' => 'Lab Direct Order Intake',
+    'new_start_ancillary_visit' => 'Start Ancillary Visit',
+    'new_pharm_ops' => 'Pharmacy Operations Hub',
+    'new_pharm_ops_dispense' => 'Pharmacy Operations Dispense',
+    'new_pharm_ops_receive' => 'Pharmacy Operations Receive Stock',
+    'new_pharm_ops_destroy' => 'Pharmacy Operations Destroy Lot',
+    'new_pharm_ops_catalog' => 'Pharmacy Operations Catalog Setup',
+    'new_pharmacy_undispensed_override' => 'Pharmacy Complete With Undispensed Rx',
+    'new_pharmacy_external_rx_override' => 'Pharmacy External Rx Metadata Override',
+    'new_rx_undocumented_allergy_override' => 'Rx Undocumented Allergy Override',
+    'new_pharmacy_walkin_dispense' => 'Pharmacy Walk-in Dispense',
+    'new_pharmacy_refer_to_opd' => 'Pharmacy Walk-in Refer / Close Without Dispense',
     'new_bill_ops' => 'Billing Back Office Hub',
     'new_bill_ops_correct' => 'Billing Charge Corrections',
     'new_bill_ops_payment' => 'Billing Payment Search',
@@ -61,6 +74,25 @@ $acos = [
     'new_bill_ops_outstanding' => 'Billing Outstanding Balances',
     'new_bill_ops_insurance' => 'Billing Insurance Vault',
     'reports' => 'Daily Reports',
+    'new_reports_hub' => 'Reporting Operations Hub',
+    'new_reports_clinical' => 'Reporting Clinical Lens',
+    'new_reports_pharmacy' => 'Reporting Pharmacy Lens',
+    'new_reports_financial' => 'Reporting Financial Lens',
+    'new_reports_public_health' => 'Reporting Public Health Lens',
+    'new_reports_audit' => 'Reporting Audit Lens',
+    'new_clinical_doc_hub' => 'Clinical Documentation Hub',
+    'new_clinical_doc_consult' => 'Clinical Documentation Consult Lens',
+    'new_clinical_doc_screening' => 'Clinical Documentation Screening Lens',
+    'new_clinical_doc_nursing' => 'Clinical Documentation Nursing Lens',
+    'new_clinical_doc_orders' => 'Clinical Documentation Orders Lens',
+    'new_clinical_doc_specialty' => 'Clinical Documentation Specialty Lens',
+    'new_admin_hub_system' => 'Admin Hub System Health & Backup',
+    'new_admin_hub_forms' => 'Admin Hub Forms Bundle',
+    'new_queue_bridge' => 'Queue Bridge Hub',
+    'new_queue_bridge_resolve' => 'Queue Bridge Resolve Actions',
+    'new_queue_bridge_dismiss' => 'Queue Bridge Dismiss Exceptions',
+    'new_hard_assign_provider' => 'Hard Assign Provider',
+    'new_take_assigned_override' => 'Take Hard-Assigned Visit Override',
 ];
 
 foreach ($acos as $name => $title) {
@@ -111,21 +143,35 @@ foreach ($deskMap as $group => $aco) {
     }
 }
 
+$leadTierAco = 'new_pharmacy_lead';
+if (!empty($groupAcls[$leadTierAco]) && isset($acos[$leadTierAco])) {
+    AclExtended::updateAcl(
+        $groupAcls[$leadTierAco],
+        $groups[$leadTierAco],
+        $section,
+        $sectionTitle,
+        $leadTierAco,
+        $acos[$leadTierAco],
+        'write'
+    );
+}
+
 $extraGrants = [
-    'new_reception_lead' => ['new_reception', 'new_create_despite_dup', 'new_skip_triage', 'new_visit_cancel', 'new_visit_skip_queue'],
-    'new_nurse_lead' => ['new_nurse', 'new_skip_triage', 'new_cohort_share_filter'],
-    'new_lab_lead' => ['new_lab', 'new_lab_ops', 'new_lab_ops_enter', 'new_lab_ops_release'],
-    'new_pharmacy_lead' => ['new_pharmacy'],
-    'new_cashier_lead' => ['new_cashier', 'new_billing_skip_completion', 'new_discount', 'new_visit_mark_outstanding', 'new_close_without_charge', 'new_receipt_reprint', 'new_esign_skip_complete', 'new_chart_depth', 'new_chart_depth_finance', 'new_chart_depth_referral', 'new_bill_ops', 'new_bill_ops_correct', 'new_bill_ops_payment'],
+    'new_reception_lead' => ['new_reception', 'new_create_despite_dup', 'new_skip_triage', 'new_visit_cancel', 'new_visit_skip_queue', 'new_queue_bridge', 'new_queue_bridge_resolve', 'new_queue_bridge_dismiss', 'new_start_ancillary_visit', 'new_hard_assign_provider'],
+    'new_nurse_lead' => ['new_nurse', 'new_skip_triage', 'new_cohort_share_filter', 'new_reports_clinical', 'new_clinical_doc_screening', 'new_hard_assign_provider'],
+    'new_lab_lead' => ['new_lab', 'new_lab_ops', 'new_lab_ops_enter', 'new_lab_ops_release', 'new_lab_order_intake'],
+    'new_pharmacy_lead' => ['new_pharmacy', 'new_pharm_ops', 'new_pharm_ops_dispense', 'new_pharm_ops_receive', 'new_pharm_ops_destroy', 'new_pharmacy_undispensed_override', 'new_pharmacy_external_rx_override', 'new_pharmacy_walkin_dispense', 'new_pharmacy_refer_to_opd', 'new_reports_pharmacy'],
+    'new_cashier_lead' => ['new_cashier', 'new_billing_skip_completion', 'new_discount', 'new_visit_mark_outstanding', 'new_close_without_charge', 'new_receipt_reprint', 'new_esign_skip_complete', 'new_chart_depth', 'new_chart_depth_finance', 'new_chart_depth_referral', 'new_bill_ops', 'new_bill_ops_correct', 'new_bill_ops_payment', 'new_bill_ops_close', 'new_bill_ops_outstanding', 'new_reports_financial'],
     'new_admin' => array_keys($acos),
-    'new_doctor' => ['new_doctor', 'new_visit_reopen', 'new_visit_skip_queue', 'new_chart_depth', 'new_chart_depth_referral', 'new_chart_depth_export', 'new_registry', 'new_registry_export', 'new_lab_ops'],
-    'new_nurse' => ['new_nurse', 'new_registry', 'new_registry_export'],
+    'new_doctor' => ['new_doctor', 'new_visit_reopen', 'new_visit_skip_queue', 'new_chart_depth', 'new_chart_depth_referral', 'new_chart_depth_export', 'new_registry', 'new_registry_export', 'new_lab_ops', 'new_lab_order_intake', 'new_clinical_doc_hub', 'new_clinical_doc_consult', 'new_clinical_doc_screening', 'new_clinical_doc_orders', 'new_clinical_doc_specialty', 'new_take_assigned_override'],
+    'new_nurse' => ['new_nurse', 'new_registry', 'new_registry_export', 'new_clinical_doc_hub', 'new_clinical_doc_nursing'],
     'new_cashier' => ['new_cashier', 'new_receipt_reprint', 'new_chart_depth', 'new_chart_depth_finance'],
 ];
 
 $roleAddonGrants = [
     'new_reception' => ['new_chart_depth_export'],
     'new_lab' => ['new_lab_ops', 'new_lab_ops_enter'],
+    'new_pharmacy' => ['new_pharm_ops', 'new_pharm_ops_dispense', 'new_pharmacy_walkin_dispense', 'new_pharmacy_refer_to_opd'],
 ];
 
 foreach ($roleAddonGrants as $group => $keys) {

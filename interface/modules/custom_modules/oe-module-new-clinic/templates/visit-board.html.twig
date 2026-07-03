@@ -28,9 +28,11 @@
          'ajaxUrl':     ajax_url,
          'csrfToken':   csrf_token,
          'facilityId':  desk_facility_id,
-         'pollMs':      30000,
+         'pollMs':      queue_poll_ms|default(30000),
          'profile':     board_profile|default('default'),
          'privacyMode': board_profile|default('default') == 'wall',
+         'kioskChrome': kiosk_chrome|default(false) ? true : false,
+         'clinicName':  shell.brand.clinic_name|default(''),
          'canCancel':   can_cancel_visit,
          'deskUrls':    desk_urls
      }|json_encode|e('html_attr') }}"></div>
@@ -41,7 +43,6 @@
 
 {% block scripts %}
 {% if enable_react_visit_board|default(true) %}
-<link rel="stylesheet" href="{{ assets_url }}/modern/visit-board.css?v={{ asset_version }}">
-<script type="module" src="{{ assets_url }}/modern/visit-board.js?v={{ asset_version }}"></script>
+{% include 'partials/island-assets.html.twig' %}
 {% endif %}
 {% endblock %}

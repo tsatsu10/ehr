@@ -13,6 +13,7 @@ namespace OpenEMR\Modules\NewClinic\Services;
 
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Logging\EventAuditLogger;
+use OpenEMR\Common\Acl\AclMain;
 
 class BillOpsPaymentsSearchService
 {
@@ -271,7 +272,14 @@ class BillOpsPaymentsSearchService
             'pubpid' => (string) ($row['pubpid'] ?? ''),
             'cashier' => $cashier !== '' ? $cashier : null,
             'can_reverse' => empty($row['reversed_at']),
+            'can_reprint' => empty($row['reversed_at']) && $this->canReprintReceipt(),
         ];
+    }
+
+    private function canReprintReceipt(): bool
+    {
+        return AclMain::aclCheckCore('new_clinic', 'new_receipt_reprint')
+            || AclMain::aclCheckCore('new_clinic', 'new_chart_depth_finance');
     }
 
     private function normalizeOptionalDate(?string $date): ?string

@@ -29,6 +29,34 @@
   align-items: center;
 }
 
+/* ── Kiosk chrome (wall profile + enable_visit_board_kiosk_chrome) ───── */
+
+.oe-nc-vb--kiosk {
+  padding: 0.25rem 0;
+}
+
+.oe-nc-vb__kiosk-toolbar {
+  padding: 0.75rem 1rem;
+  background: var(--oe-nc-surface, #fff);
+  border: 1px solid var(--oe-nc-border, #e2e8f0);
+  border-radius: var(--oe-nc-radius, 0.5rem);
+}
+
+.oe-nc-vb__kiosk-toolbar__title strong {
+  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-size: 1.1rem;
+  color: var(--oe-nc-text, #164e63);
+}
+
+.oe-nc-vb--kiosk .oe-nc-queue-card {
+  font-size: 1.05rem;
+  padding: 0.85rem 1rem;
+}
+
+.oe-nc-vb--kiosk .oe-nc-vb-column__label {
+  font-size: 1rem;
+}
+
 /* ── Column ───────────────────────────────────────────────────────────── */
 
 .oe-nc-vb-column {

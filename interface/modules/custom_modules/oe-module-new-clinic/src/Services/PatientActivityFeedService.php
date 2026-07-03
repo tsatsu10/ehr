@@ -82,12 +82,24 @@ class PatientActivityFeedService
             $labBind
         );
         $labTotal = is_array($labTotalRow) ? (int) ($labTotalRow['cnt'] ?? 0) : 0;
-        $total = $stateTotal + $labTotal;
+
+        $pharmBind = array_merge([$pid, $since], $facilityFilter['bind']);
+        $pharmTotalRow = QueryUtils::querySingleRow(
+            "SELECT COUNT(*) AS cnt
+             FROM drug_sales ds
+             LEFT JOIN new_visit v ON v.pid = ds.pid AND v.encounter = ds.encounter
+             WHERE ds.pid = ? AND ds.prescription_id > 0 AND ds.trans_type = 1
+               AND ds.sale_date >= DATE(?){$facilityFilter['sql']}",
+            $pharmBind
+        );
+        $pharmTotal = is_array($pharmTotalRow) ? (int) ($pharmTotalRow['cnt'] ?? 0) : 0;
+        $total = $stateTotal + $labTotal + $pharmTotal;
 
         $fetchSize = min($offset + $limit + 50, 500);
         $stateItems = $this->fetchStateLogItems($pid, $since, $fetchSize, 0, $facilityFilter);
         $labItems = $this->fetchLabResultReadyItems($pid, $since, $fetchSize, 0, $facilityFilter);
-        $merged = array_merge($stateItems, $labItems);
+        $pharmItems = $this->fetchPharmacyDispensedItems($pid, $since, $fetchSize, 0, $facilityFilter);
+        $merged = array_merge($stateItems, $labItems, $pharmItems);
         usort($merged, static function (array $a, array $b): int {
             return strcmp((string) ($b['occurred_at'] ?? ''), (string) ($a['occurred_at'] ?? ''));
         });
@@ -162,6 +174,62 @@ class PatientActivityFeedService
         ) ?: [];
 
         return array_map(fn (array $row): array => $this->mapLabResultReadyItem($row), $rows);
+    }
+
+    /**
+     * @param array{sql: string, bind: array<int, mixed>} $facilityFilter
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchPharmacyDispensedItems(
+        int $pid,
+        string $since,
+        int $limit,
+        int $offset,
+        array $facilityFilter
+    ): array {
+        $bind = array_merge([$pid, $since], $facilityFilter['bind']);
+        $rows = QueryUtils::fetchRecords(
+            "SELECT ds.sale_id, ds.sale_date, ds.quantity, ds.prescription_id,
+                    d.name AS drug_name,
+                    nv.id AS visit_id, nv.queue_number
+             FROM drug_sales ds
+             INNER JOIN drugs d ON d.drug_id = ds.drug_id
+             LEFT JOIN new_visit v ON v.pid = ds.pid AND v.encounter = ds.encounter
+             LEFT JOIN new_visit nv ON nv.pid = ds.pid AND nv.encounter = ds.encounter
+             WHERE ds.pid = ? AND ds.prescription_id > 0 AND ds.trans_type = 1
+               AND ds.sale_date >= DATE(?){$facilityFilter['sql']}
+             ORDER BY ds.sale_date DESC, ds.sale_id DESC
+             LIMIT " . (int) $limit . ' OFFSET ' . (int) $offset,
+            $bind
+        ) ?: [];
+
+        return array_map(fn (array $row): array => $this->mapPharmacyDispensedItem($row), $rows);
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private function mapPharmacyDispensedItem(array $row): array
+    {
+        $drugName = trim((string) ($row['drug_name'] ?? 'Medication'));
+        $qty = (int) round((float) ($row['quantity'] ?? 0));
+        $createdAt = (string) ($row['sale_date'] ?? '');
+
+        return [
+            'event_type' => 'pharmacy_dispensed',
+            'title' => 'Medication dispensed',
+            'subtitle' => $drugName . ($qty > 0 ? ' × ' . $qty : '') . ' · ' . $this->relativeTime($createdAt),
+            'occurred_at' => $createdAt,
+            'visit_id' => (int) ($row['visit_id'] ?? 0),
+            'queue_number' => (int) ($row['queue_number'] ?? 0),
+            'expand' => [
+                'drug_name' => $drugName,
+                'quantity' => $qty,
+                'prescription_id' => (int) ($row['prescription_id'] ?? 0),
+                'sale_id' => (int) ($row['sale_id'] ?? 0),
+            ],
+        ];
     }
 
     /**

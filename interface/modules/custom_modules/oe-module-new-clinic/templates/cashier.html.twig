@@ -24,7 +24,9 @@
         canSkipCompletion:   can_skip_completion ? true : false,
         canApplyDiscount:    can_apply_discount ? true : false,
         canEsignOverride:    can_esign_override ? true : false,
-        sharedDeviceWarning: enable_shared_device_session_warning ? true : false
+        sharedDeviceWarning: enable_shared_device_session_warning ? true : false,
+        currencyFormat:      currency_format|default({}),
+        pollMs:              queue_poll_ms|default(30000)
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}
@@ -34,7 +36,6 @@
 
 {% block scripts %}
 {% if enable_react_cashier_desk|default(true) %}
-<link rel="stylesheet" href="{{ assets_url }}/modern/cashier-desk.css?v={{ asset_version }}">
-<script type="module" src="{{ assets_url }}/modern/cashier-desk.js?v={{ asset_version }}"></script>
+{% include 'partials/island-assets.html.twig' %}
 {% endif %}
 {% endblock %}

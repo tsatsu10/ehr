@@ -61,4 +61,20 @@ class DoctorServiceTest extends TestCase
         $this->assertStringContainsString('reopenToWithDoctor', $body);
         $this->assertStringContainsString('bindForVisit', $body);
     }
+
+    public function testConsultPayloadIncludesPharmOpsPrescriptionsWhenEnabled(): void
+    {
+        $reflection = new \ReflectionMethod(DoctorService::class, 'buildConsultPayload');
+        $source = file_get_contents($reflection->getFileName());
+        $lines = explode("\n", $source);
+        $body = implode("\n", array_slice(
+            $lines,
+            $reflection->getStartLine() - 1,
+            $reflection->getEndLine() - $reflection->getStartLine() + 1
+        ));
+
+        $this->assertStringContainsString('pharm_ops_enabled', $body);
+        $this->assertStringContainsString('getPrescriptionsWithStockForEncounter', $body);
+        $this->assertStringContainsString('rx_list_url', $body);
+    }
 }

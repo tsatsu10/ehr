@@ -7,16 +7,23 @@
 
 import { WaitTimeSpan } from '@components/WaitTimeSpan';
 import { StatusPill } from '@components/StatusPill';
+import { AncillaryVisitBadges } from '@components/AncillaryVisitBadges';
 import type { TriageQueueCard, VisitCard, VisitState } from '@core/types';
 
 interface TriageQueueProps {
   cards: TriageQueueCard[];
   activeVisitId: number | null;
-  counts: { waiting: number; in_triage: number } | null;
   loading: boolean;
   error: string | null;
   queueDateFilter?: string | null;
   onCardClick: (card: TriageQueueCard) => void;
+}
+
+/** In triage with another nurse — not unclaimed/orphan rows (those stay clickable). */
+function isHeldByOtherNurse(card: TriageQueueCard): boolean {
+  return card.state === 'in_triage'
+    && !card.triage_mine
+    && !!card.triage_actor_name;
 }
 
 function cardModifiers(card: TriageQueueCard, activeVisitId: number | null): string {
@@ -25,7 +32,7 @@ function cardModifiers(card: TriageQueueCard, activeVisitId: number | null): str
   if (card.claim_lost) parts.push('oe-nc-queue-card--claim-lost');
   if (card.is_urgent) parts.push('oe-nc-queue-card--urgent');
   if (card.state === 'in_triage' && card.triage_mine) parts.push('oe-nc-triage-card--mine');
-  if (card.state === 'in_triage' && !card.triage_mine) parts.push('oe-nc-triage-card--muted');
+  if (isHeldByOtherNurse(card)) parts.push('oe-nc-triage-card--muted', 'oe-nc-queue-card--disabled');
   return parts.join(' ');
 }
 
@@ -39,7 +46,6 @@ function triageSubtitle(card: TriageQueueCard): string {
 export function TriageQueue({
   cards,
   activeVisitId,
-  counts,
   loading,
   error,
   queueDateFilter,
@@ -50,11 +56,6 @@ export function TriageQueue({
       {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-2">
         <strong>Queue</strong>
-        {counts && (
-          <span className="text-muted small">
-            Waiting {counts.waiting} · In triage {counts.in_triage}
-          </span>
-        )}
       </div>
 
       {/* Error */}
@@ -86,19 +87,24 @@ export function TriageQueue({
 
       {/* Cards */}
       <div role="list" aria-label="Triage queue">
-        {cards.map((card) => (
+        {cards.map((card) => {
+          const heldByOther = isHeldByOtherNurse(card);
+          const disabled = !!card.claim_lost || heldByOther;
+          return (
           <div key={card.id} role="listitem">
             <button
               type="button"
               className={cardModifiers(card, activeVisitId)}
               data-visit-id={card.id}
-              disabled={!!card.claim_lost}
+              disabled={disabled}
               title={
                 card.claim_lost && card.claim_lost_by
                   ? `${card.claim_lost_by.role_label} ${card.claim_lost_by.display_name} took this patient`
-                  : undefined
+                  : heldByOther && card.triage_actor_name
+                    ? `In triage with ${card.triage_actor_name}`
+                    : undefined
               }
-              onClick={() => !card.claim_lost && onCardClick(card)}
+              onClick={() => !disabled && onCardClick(card)}
               aria-pressed={card.id === activeVisitId}
             >
               {/* Header */}
@@ -108,6 +114,7 @@ export function TriageQueue({
                   {!!card.is_urgent && (
                     <span className="badge badge-warning ml-1">URGENT</span>
                   )}
+                  <AncillaryVisitBadges badges={card.ancillary_badges} />
                   {card.claim_lost && (
                     <span className="badge badge-secondary ml-1">Claimed</span>
                   )}
@@ -127,7 +134,8 @@ export function TriageQueue({
               </div>
             </button>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Skipped-triage hint */}

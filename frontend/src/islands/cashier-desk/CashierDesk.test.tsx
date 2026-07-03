@@ -102,7 +102,11 @@ describe('CashierDesk', () => {
     await waitFor(() => {
       expect(screen.getByText(/Ama Boateng/)).toBeInTheDocument();
     });
-    expect(screen.getByText(/1 waiting/)).toBeInTheDocument();
+    await waitFor(() => {
+      const bar = screen.getByLabelText(/Cashier desk status/i);
+      expect(bar).toHaveTextContent('1');
+      expect(bar).toHaveTextContent('Waiting for payment');
+    });
   });
 
   it('loads checkout pane when queue card clicked', async () => {
@@ -123,6 +127,56 @@ describe('CashierDesk', () => {
       expect(screen.getByText(/Posted charges/)).toBeInTheDocument();
     });
     expect(screen.getByRole('button', { name: /Take payment/i })).toBeInTheDocument();
+  });
+
+  it('opens pay confirm modal when Take payment is clicked', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [waitingVisit],
+        counts: { waiting: 1, paid_today: 0, closed_unpaid: 0 },
+      })
+      .mockResolvedValueOnce(selectData);
+
+    render(<CashierDesk {...props} />);
+
+    await waitFor(() => screen.getByText(/Ama Boateng/));
+    fireEvent.click(screen.getByText(/Ama Boateng/));
+
+    await waitFor(() => screen.getByRole('button', { name: /Take payment/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Take payment/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: /Confirm payment/i })).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Confirm patient identity before posting payment/i)).toBeInTheDocument();
+  });
+
+  it('opens esign override modal when Pay with E-Sign override is clicked', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [waitingVisit],
+        counts: { waiting: 1, paid_today: 0, closed_unpaid: 0 },
+      })
+      .mockResolvedValueOnce({
+        ...selectData,
+        encounter_signed: false,
+        can_esign_override: true,
+      });
+
+    render(<CashierDesk {...props} canEsignOverride />);
+
+    await waitFor(() => screen.getByText(/Ama Boateng/));
+    fireEvent.click(screen.getByText(/Ama Boateng/));
+
+    await waitFor(() => screen.getByRole('button', { name: /Pay with E-Sign override/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Pay with E-Sign override/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: /E-Sign override/i })).toBeInTheDocument();
+    });
+    expect(screen.getByLabelText(/Reason/i)).toBeInTheDocument();
   });
 
   it('resolves patient search to checkout when single visit ready', async () => {

@@ -1,5 +1,7 @@
 import type { LabSelectData } from '@core/types';
+import { AncillaryVisitBadges } from '@components/AncillaryVisitBadges';
 import { LabOrdersTable } from './LabOrdersTable';
+import { LabDirectPanel } from './LabDirectPanel';
 
 export type LabActiveMode = 'idle' | 'loading' | 'active' | 'error';
 
@@ -18,6 +20,8 @@ interface LabActivePaneProps {
   onSkip: () => void;
   onOpenOrders: () => void;
   onOpenResults: (orderId?: number) => void;
+  onOpenLabIntake?: () => void;
+  onCreateLabOrder?: () => void;
 }
 
 function PatientBanner({ data }: { data: LabSelectData }) {
@@ -42,6 +46,7 @@ function PatientBanner({ data }: { data: LabSelectData }) {
       )}
       <div className="small mt-1">
         Visit #{data.visit.queue_number} · {data.visit.visit_type_label || 'Visit'}
+        <AncillaryVisitBadges badges={data.visit.ancillary_badges} className="ml-1" />
       </div>
     </div>
   );
@@ -62,6 +67,8 @@ export function LabActivePane({
   onSkip,
   onOpenOrders,
   onOpenResults,
+  onOpenLabIntake,
+  onCreateLabOrder,
 }: LabActivePaneProps) {
   if (mode === 'idle') {
     return (
@@ -97,12 +104,24 @@ export function LabActivePane({
   const canTake = data.visit.state === 'ready_for_lab' && !hasActiveWork;
   const canSkip = canSkipToPayment && (data.visit.state === 'ready_for_lab' || inLab);
   const resultsLabel = labOpsEnabled ? 'Enter results (hub)' : 'Open results (core)';
+  const labDirectIntake = data.lab_direct_intake;
+  const showCoreOrdersButton = !labDirectIntake?.enabled || !labDirectIntake.can_create_orders;
 
   return (
     <div id="nc-lab-active-pane">
       <div className="card">
         <div className="card-body">
           <PatientBanner data={data} />
+
+          {labDirectIntake?.enabled && onOpenLabIntake && onCreateLabOrder && (
+            <LabDirectPanel
+              intake={labDirectIntake}
+              inLab={inLab}
+              disabled={blocked || submitting}
+              onOpenLabIntake={onOpenLabIntake}
+              onCreateOrder={onCreateLabOrder}
+            />
+          )}
 
           <h5>Lab orders</h5>
           <LabOrdersTable
@@ -113,15 +132,17 @@ export function LabActivePane({
           />
 
           <div className="d-flex flex-wrap mt-3 mb-3">
-            <button
-              type="button"
-              className="btn btn-outline-primary btn-sm mr-2"
-              id="nc-lab-open-orders"
-              disabled={blocked || !inLab}
-              onClick={onOpenOrders}
-            >
-              Open orders (core)
-            </button>
+            {showCoreOrdersButton && (
+              <button
+                type="button"
+                className="btn btn-outline-primary btn-sm mr-2"
+                id="nc-lab-open-orders"
+                disabled={blocked || !inLab}
+                onClick={onOpenOrders}
+              >
+                Open orders (core)
+              </button>
+            )}
             <button
               type="button"
               className="btn btn-outline-secondary btn-sm mr-2"

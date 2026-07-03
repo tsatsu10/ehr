@@ -6,10 +6,12 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { oeFetch } from '@core/oeFetch';
 import { resolveActionConflict, applyPostDeskConflict, type DeskInterrupt } from '@core/deskConflict';
 import { useInterval } from '@core/useInterval';
+import { useQueueVisibilityRefresh } from '@core/useQueueVisibilityRefresh';
 import { usePageHeadingToolbar } from '@core/usePageHeadingToolbar';
 import { setDeskActiveVisitId, clearDeskActiveVisitId } from '@core/deskSessionStorage';
 import { useSharedDeviceSession } from '@core/useSharedDeviceSession';
 import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
+import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
 import { EsignOverrideModal } from '@components/EsignOverrideModal';
 import { SkipToPaymentModal } from '@components/SkipToPaymentModal';
@@ -24,6 +26,7 @@ import type {
 import { LabQueue } from './LabQueue';
 import { LabActivePane, type LabActiveMode } from './LabActivePane';
 import { LabOpsResultDrawer } from '@islands/lab-ops/LabOpsResultDrawer';
+import { openClinicalDocForm } from '@islands/clinical-doc/clinicalDocApi';
 
 const STORAGE_KEY = 'lab_desk_active_visit_id';
 
@@ -239,6 +242,10 @@ export function LabDesk({
     void fetchQueue();
   }, [fetchQueue]);
 
+  useQueueVisibilityRefresh(() => {
+    void fetchQueue();
+  });
+
   useInterval(() => {
     if (!document.hidden) void fetchQueue();
   }, pollMs);
@@ -365,6 +372,40 @@ export function LabDesk({
     void runShortcut('results');
   }, [labOpsEnabled, runShortcut]);
 
+  const handleOpenLabIntake = useCallback(async () => {
+    if (!selectData?.lab_direct_intake) {
+      return;
+    }
+
+    const intake = selectData.lab_direct_intake;
+    if (intake.clinical_doc_hub_enabled) {
+      await openClinicalDocForm(
+        ajaxUrl,
+        csrfToken,
+        selectData.visit.id,
+        {
+          id: intake.lab_intake_formdir,
+          lens: 'visit',
+          formdir: intake.lab_intake_formdir,
+          kind: 'form',
+          title: intake.lab_intake_title,
+          description: 'Lab-direct intake note',
+          started: intake.lab_intake_started,
+        },
+        { returnTo: 'hub' },
+      );
+      return;
+    }
+
+    if (intake.documentation_hub_url) {
+      window.location.assign(intake.documentation_hub_url);
+    }
+  }, [ajaxUrl, csrfToken, selectData]);
+
+  const handleCreateLabOrder = useCallback(() => {
+    void runShortcut('orders');
+  }, [runShortcut]);
+
   return (
     <div id="nc-lab-desk" className="oe-nc-lab-react-active">
       <DeskInterruptBanner
@@ -388,11 +429,25 @@ export function LabDesk({
         />
       )}
 
+      <DeskQueueStatusBar
+        id="nc-lab-status-bar"
+        ariaLabel="Lab desk status"
+        items={[
+          {
+            label: 'Waiting',
+            value: counts?.waiting ?? 0,
+            href: (counts?.waiting ?? 0) > 0 ? visitBoardUrl : undefined,
+          },
+          { label: 'In lab', value: counts?.in_lab ?? 0 },
+        ]}
+        loading={queueLoading}
+        onRefresh={() => { void fetchQueue(); }}
+      />
+
       <div className="row">
         <div className="col-lg-4 mb-3">
           <LabQueue
             cards={cards}
-            counts={counts}
             hasActiveWork={hasActiveWork}
             loading={queueLoading}
             error={queueError}
@@ -419,6 +474,8 @@ export function LabDesk({
             onSkip={() => setSkipOpen(true)}
             onOpenOrders={() => void runShortcut('orders')}
             onOpenResults={handleOpenResults}
+            onOpenLabIntake={() => void handleOpenLabIntake()}
+            onCreateLabOrder={handleCreateLabOrder}
           />
         </div>
       </div>

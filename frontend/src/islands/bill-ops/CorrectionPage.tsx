@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { ChargeCorrectionForm } from './ChargeCorrectionForm';
+import { setBillOpsCurrencyFormat } from './billOpsFormatters';
 
 export interface CorrectionPageProps {
   ajaxUrl: string;
@@ -6,6 +8,11 @@ export interface CorrectionPageProps {
   visitId: number;
   billOpsUrl: string;
   visitBoardUrl: string;
+  currencyFormat?: {
+    currency_symbol?: string;
+    currency_decimals?: number;
+    currency_symbol_position?: 'before' | 'after';
+  };
 }
 
 export function CorrectionPage({
@@ -14,7 +21,17 @@ export function CorrectionPage({
   visitId,
   billOpsUrl,
   visitBoardUrl,
+  currencyFormat,
 }: CorrectionPageProps) {
+  useEffect(() => {
+    if (currencyFormat) {
+      setBillOpsCurrencyFormat({
+        currency_symbol: currencyFormat.currency_symbol ?? 'GH₵',
+        currency_decimals: currencyFormat.currency_decimals ?? 2,
+        currency_symbol_position: currencyFormat.currency_symbol_position === 'after' ? 'after' : 'before',
+      });
+    }
+  }, [currencyFormat]);
   return (
     <div className="oe-nc-billops-correction-page">
       <div className="oe-nc-widget-card mb-3">

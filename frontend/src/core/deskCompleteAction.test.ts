@@ -53,4 +53,44 @@ describe('handleDeskCompleteResult', () => {
     );
     expect(message).toBe('Documentation not signed');
   });
+
+  it('opens undispensed modal when rx_undispensed', () => {
+    let opened = false;
+    handleDeskCompleteResult(
+      {
+        ok: false,
+        status: 409,
+        message: '1 prescription on this visit has not been dispensed',
+        data: { code: 'rx_undispensed', undispensed_count: 1 },
+      },
+      {
+        canEsignOverride: false,
+        onSuccess: () => {},
+        onEsignRequired: () => {},
+        onUndispensedRx: () => { opened = true; },
+        onError: () => {},
+      }
+    );
+    expect(opened).toBe(true);
+  });
+
+  it('opens external rx modal when external_rx_incomplete', () => {
+    let opened = false;
+    handleDeskCompleteResult(
+      {
+        ok: false,
+        status: 409,
+        message: 'External Rx metadata incomplete',
+        data: { code: 'external_rx_incomplete', missing: ['prescriber_name'] },
+      },
+      {
+        canEsignOverride: false,
+        onSuccess: () => {},
+        onEsignRequired: () => {},
+        onExternalRxIncomplete: () => { opened = true; },
+        onError: () => {},
+      }
+    );
+    expect(opened).toBe(true);
+  });
 });

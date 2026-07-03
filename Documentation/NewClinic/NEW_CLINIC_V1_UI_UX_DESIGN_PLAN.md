@@ -1,152 +1,356 @@
 # New Clinic V1 — UI/UX Design Plan
 
 | Field | Value |
-|-------|--------|
-| **Document version** | 1.1.0 |
-| **Status** | Active — consolidated from all redesign specs (2026-06-24 audit sync) |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.49), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.49), [FRONTEND_2026_MODERNIZATION_PLAN.md](./FRONTEND_2026_MODERNIZATION_PLAN.md) |
-| **Audience** | Product, design, frontend engineers, QA, clinical leads |
-| **Purpose** | Single entry point for New Clinic UI/UX — cross-cutting principles, component catalog, module map, and constraints. **Normative wireframes and per-page behavior live in PAGE_DESIGNS.** |
+|-------|-------|
+| **Document version** | 2.0.0 |
+| **Status** | Active — full rewrite; trunk-test IA, single component contract, shadcn migration plan (2026-06-29) |
+| **Supersedes** | v1.2.3 (additive Track B). v1.x history preserved in [§13](#13-document-history). |
+| **Companion to** | [PRD](./NEW_CLINIC_V1_PRD.md) v1.20.50 · [PAGE_DESIGNS](./NEW_CLINIC_V1_PAGE_DESIGNS.md) v0.6.51 · [USER_WORKFLOWS](./NEW_CLINIC_V1_USER_WORKFLOWS.md) v1.9.50 · [FRONTEND_2026](./FRONTEND_2026_MODERNIZATION_PLAN.md) |
+| **Audience** | Product · design · frontend · QA · clinical leads |
+| **Purpose** | The single entry point for *how* New Clinic looks and behaves. Cross-cutting principles, the visual system, **one canonical shared-component reference**, the shadcn migration plan, and the quality bar new work must meet. Per-page wireframes stay in PAGE_DESIGNS. |
+
+> Design skills applied: [refactoring-ui](https://www.refactoringui.com), Krug's [*Don't Make Me Think*](https://www.amazon.com/Dont-Make-Think-Revisited-Usability/dp/0321965515), Nielsen's [10 Usability Heuristics](https://www.nngroup.com/articles/ten-usability-heuristics/), Don Norman's [*Design of Everyday Things*](https://www.amazon.com/Design-Everyday-Things-Revised-Expanded/dp/0465050654), Dan Saffer's [*Microinteractions*](https://www.amazon.com/Microinteractions-Full-Color-Designing-Details/dp/1491945923), Jason Santa Maria's [*On Web Typography*](https://www.amazon.com/Web-Typography-Jason-Santa-Maria/dp/1937557065), Martin Fowler's [*Refactoring*](https://www.amazon.com/Refactoring-Improving-Existing-Addison-Wesley-Signature/dp/0134757599).
 
 ---
 
-## 1. Document hierarchy (read this first)
+## 0. TL;DR — 60-second orientation
+
+You're building or reviewing a New Clinic surface. Read this section, then jump to the section you need.
+
+| Question | Answer |
+|----------|--------|
+| **What is New Clinic?** | A West-Africa-first outpatient clinic layer for OpenEMR. Cash-only V1. Role-based desks + a unified chart. |
+| **What's the UI architecture?** | React 19 + TypeScript **islands** rendered into a PHP/Twig shell (`T1`). Stock OpenEMR is unchanged. |
+| **What's the conceptual model?** | **Desk** (today's queue) → **Chart** (history) → **Depth** (money, letters, exports) → **Hub** (back-office). The T1 shell wraps all of them. |
+| **What does a new shared component need?** | A **contract** ([§4.1](#41-component-contract-template)): props, states, accessibility, file path, shadcn target. |
+| **What's the design quality bar?** | All seven skills above must score ≥8/10 ([§10.1](#101-scoring-rubric-per-skill)). |
+| **What goes in V2?** | The shadcn migration plan ([§9](#9-shadcnui-migration-plan)) — a phased cutover, not a rewrite. |
+| **Where do wireframes live?** | [PAGE_DESIGNS](./NEW_CLINIC_V1_PAGE_DESIGNS.md). This doc is principles + components. |
+| **Conflict order** | PRD → PAGE_DESIGNS → feature redesign spec → **this plan**. |
+
+**Krug trunk test pass criteria for this doc:** within 60 seconds a new reader can answer (a) where am I, (b) what's the conceptual model, (c) where do I find a component, (d) where do I find a wireframe, (e) what's the quality bar.
+
+---
+
+## 1. Architectural model
+
+### 1.1 Conceptual model — `desk · chart · depth · hub · shell`
+
+Norman: *the user's model should match the design model.* Five nouns describe every New Clinic surface, and every surface is exactly one of them.
+
+```text
+        ┌────────────────────────────────────────────────────────────┐
+        │                       T1 SHELL                              │
+        │  brand · role pill · ACL nav · queue stats · page heading   │
+        └────────────────────────────────────────────────────────────┘
+                  │              │              │             │
+                  ▼              ▼              ▼             ▼
+              ┌──────┐      ┌───────┐      ┌─────┐      ┌──────┐
+              │ DESK │ ───▶ │ CHART │ ───▶ │DEPTH│      │ HUB  │
+              └──────┘      └───────┘      └─────┘      └──────┘
+              today's        history        money         back-office
+              queue          (5 tabs)       letters       (list + lens)
+              (M1–M9, M2)    (MRD)          exports       (COM, M10–M18)
+                                            (slide-over)
+```
+
+| Surface | Purpose | Examples | Component cue |
+|---------|---------|----------|---------------|
+| **Shell** | Identity · navigation · ambient counters | `T1` top bar | server-rendered Twig + `shell.js` |
+| **Desk** | Today's queue + role action | Front Desk, Triage, Doctor, Cashier, Lab, Pharmacy, Visit Board | `QueueCard` list |
+| **Chart** | Full patient history | MRD `patient-chart` island (5 tabs) | `WidgetCard` + tabs |
+| **Depth** | Money, letters, exports beyond the chart | Payment history, referrals, clinical export | `SlideOver` from chart strip |
+| **Hub** | Back-office cohort work | COM, Registry, Admin, Bill Ops, Lab Ops | Split-pane `WidgetCard` |
+
+**Rule:** if a feature doesn't fit into one of those five buckets, the IA is wrong — fix the IA before fixing the UI.
+
+### 1.2 Document hierarchy
 
 | Layer | Document | Wins on… |
 |-------|----------|----------|
 | Requirements | [PRD](./NEW_CLINIC_V1_PRD.md) | Modules, ACL, data model, feature flags, acceptance |
 | Workflows | [USER_WORKFLOWS](./NEW_CLINIC_V1_USER_WORKFLOWS.md) | Who does what, in what order |
-| **This plan** | UI/UX master index | Cross-cutting principles, tokens, patterns, module → wireframe map |
-| Page build spec | [PAGE_DESIGNS](./NEW_CLINIC_V1_PAGE_DESIGNS.md) | Layout, wireframes, AJAX, per-page state, §8 mobile, §9 a11y |
-| Feature depth | `*_REDESIGN.md` specs | Domain pain points, IA, module-specific principles, closed decisions |
-| Post-V1 platform | [FRONTEND_2026](./FRONTEND_2026_MODERNIZATION_PLAN.md) | React/Vite/Tailwind migration after pragmatic V1 |
-| Design tokens | [`design-system/openemr-2026/MASTER.md`](../../design-system/openemr-2026/MASTER.md) | Colors, typography, spacing (optional in V1; COM Phase 1 uses scoped CSS) |
+| **This plan** | UI/UX master | Principles, visual system, **component contracts**, IA, shadcn migration |
+| Page build spec | [PAGE_DESIGNS](./NEW_CLINIC_V1_PAGE_DESIGNS.md) | Layout, wireframes, AJAX, per-page state, mobile, a11y |
+| Feature depth | `*_REDESIGN.md` specs | Domain pain points, IA, closed decisions |
+| Platform | [FRONTEND_2026](./FRONTEND_2026_MODERNIZATION_PLAN.md) | OpenEMR-wide shell migration (Phase 3+) |
+| Design tokens | [`design-system/openemr-2026/MASTER.md`](../../design-system/openemr-2026/MASTER.md) | Colors, type, spacing — implemented in `frontend/src/core/tokens.css` |
 
 **Conflict resolution:** PRD → PAGE_DESIGNS → feature redesign spec → this plan.
+**Wireframe format:** ASCII boxes + Mermaid. No pixel-perfect Figma mocks in V1 docs.
 
-**Wireframe format:** ASCII boxes + Mermaid — not Figma. No pixel-perfect mocks in V1 docs.
+### 1.3 Implementation snapshot (June 2026)
+
+**Code baseline:** `interface/modules/custom_modules/oe-module-new-clinic/` · build `frontend/` → `public/assets/modern/` · asset version in `ModuleAssetVersion::VERSION`.
+
+#### 1.3.1 Vite island entries (16, all shipped)
+
+| Island key | React entry | PHP route | Twig mount |
+|------------|-------------|-----------|------------|
+| `front-desk` | `islands/front-desk/` | `public/front-desk.php` | `templates/front-desk.html.twig` |
+| `visit-board` | `islands/visit-board/` | `public/visit-board.php` | `templates/visit-board.html.twig` |
+| `triage-desk` | `islands/triage-desk/` | `public/triage.php` | `templates/triage.html.twig` |
+| `doctor-desk` | `islands/doctor-desk/` | `public/doctor.php` | `templates/doctor.html.twig` |
+| `cashier-desk` | `islands/cashier-desk/` | `public/cashier.php` | `templates/cashier.html.twig` |
+| `lab-desk` | `islands/lab-desk/` | `public/lab.php` | `templates/lab.html.twig` |
+| `pharmacy-desk` | `islands/pharmacy-desk/` | `public/pharmacy.php` | `templates/pharmacy.html.twig` |
+| `daily-reports` | `islands/daily-reports/` | `public/reports.php` | `templates/reports.html.twig` |
+| `admin-hub` | `islands/admin-hub/` | `public/admin.php` | `templates/admin.html.twig` |
+| `communications-hub` | `islands/communications-hub/` | `public/communications.php` | `templates/communications.html.twig` |
+| `patient-registry` | `islands/patient-registry/` | `public/patient-registry.php` | `templates/patient-registry.html.twig` |
+| `patient-chart` | `islands/patient-chart/` | `public/patient-chart.php` | `templates/patient-chart.html.twig` |
+| `chart-depth` | `islands/chart-depth/` | `public/chart-depth/*.php` | `templates/chart-depth/*.html.twig` |
+| `lab-ops` | `islands/lab-ops/` | `public/lab-ops/index.php` | `templates/lab-ops/index.html.twig` |
+| `bill-ops` | `islands/bill-ops/` | `public/bill-ops/index.php` | `templates/bill-ops/index.html.twig` |
+| `bill-ops-correct` | `islands/bill-ops/index-correct.tsx` | `public/bill-ops/correct.php` | `templates/bill-ops/correct.html.twig` |
+
+**Not yet an island:** S1 Scheduling, M13 Pharm Ops Hub (separate from M9 desk), M16 Reporting Hub, M17 Clinical Doc Hub, M18 Queue Bridge.
+
+#### 1.3.2 Stack — what runs where
+
+| Layer | New Clinic module | Core OpenEMR (unchanged) |
+|-------|-------------------|--------------------------|
+| App shell | T1 PHP/Twig (`PageController`, `#oe-nc-t1`) | Knockout + iframe tabs |
+| Desk / hub UI | **React 19 + TypeScript** (Vite islands) | jQuery / Knockout view models |
+| CSS | Bootstrap 4.6 page chrome + island BEM (`--oe-nc-*`) + Tailwind 4 tokens | Bootstrap 4.6 + Gulp themes |
+| Module JS | `shell.js` + `ui-components.js` (nav, queue stats only) | ~137 interface JS files |
+| Data | `oeFetch` → `public/ajax.php` (session + CSRF) | Mixed jQuery POST / iframe |
+| Build | `frontend/` → `public/assets/modern/` (16 Vite entries) | Gulp 4 |
+| Tests | Vitest + Playwright E2E | Jest (minimal) |
+
+**Rule:** New Clinic pages must not call `dynamic_finder.php` or embed stock Knockout iframe chrome when the module is active (PRD §5.2). React is the **only** UI implementation for module desks — no jQuery fallback.
+
+#### 1.3.3 Status legend (used throughout §6 module map)
+
+| Status | Meaning |
+|--------|---------|
+| **Shipped** | React island wired; usable when module + role ACL allow |
+| **Shipped (flag)** | Island built; requires product flag (e.g. `communications_hub_enable`) |
+| **Polish** | Shipped; quality bar gap noted in [§10.2](#102-quality-bar-for-new-components) |
+| **Not started** | No module UI — stock OpenEMR or spec only |
 
 ---
 
-## 2. V1 technology constraints (non-negotiable for pilot)
+## 2. Design principles
 
-Per PRD §5.6, COM §3, and [FRONTEND_2026 §1.9](./FRONTEND_2026_MODERNIZATION_PLAN.md):
+Seven principles, each backed by a skill and (where applicable) external research. **Every PR is reviewed against these.**
 
-| Constraint | V1 choice | Post-V1 (FRONTEND_2026) |
-|------------|-----------|-------------------------|
-| App shell | **T1** server-rendered PHP/Twig (`oe-module-new-clinic`) | React shell (Phase 3) |
-| CSS | Bootstrap 4.6 + module SCSS (`oe-` overrides) | Design tokens + Tailwind 4 bridge |
-| JS | jQuery 3.7 + vanilla modules | Vite + React 19 islands |
-| Charts (clinical) | Stock Dygraphs / Chart.js where used | Unified Chart.js + Recharts dashboards |
-| Tables | DataTables (legacy paths only); module queues use custom cards/tables | TanStack Table |
-| Icons | Font Awesome 6 | Lucide in new React UI |
-| Forms (clinical) | Stock encounter forms + LForms | React Hook Form + Zod for new UI |
-| Feature flags OFF | **100% legacy OpenEMR** — no half-new chrome | — |
+### 2.1 Safety & identity (clinical-first)
 
-**Rule:** New Clinic pages must not call `dynamic_finder.php` or embed stock Knockout iframe chrome when the module is active (PRD §5.2).
-
----
-
-## 3. Visual design system (V1)
-
-Tokens align with [design-system/openemr-2026/MASTER.md](../../design-system/openemr-2026/MASTER.md) and [COM §15](./NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md#15-visual-design-system).
-
-| Token | Value | Use |
-|-------|-------|-----|
-| Primary | `#0891B2` | Accents, selected border, links |
-| Secondary | `#22D3EE` | Hover states |
-| Success / CTA | `#059669` | Confirm, send, complete |
-| Background tint | `#ECFEFF` or `var(--light)` | Subtle page wash |
-| Text | `#164E63` or `var(--body)` | Body copy |
-| Danger | `var(--danger)` | Delete, overdue, unsigned |
-| Warning | `var(--orange)` | Today reminders, URGENT |
-| Typography | Figtree / Noto Sans | **Optional** — use when global theme allows; else system stack |
-| Icons | Font Awesome 6 | No emoji as icons |
-| Radius | `0.25rem` | Match Bootstrap 4 cards |
-| Motion | 150–200ms transitions | Respect `prefers-reduced-motion` |
-
-**Anti-patterns (all modules):** neon gradients, AI purple styling, color-only status, icon-only actions without `aria-label`, motion-heavy animations.
-
-**Regional formatting:** clinic `currency_symbol` via M6 (D-REG-3); dates **DD/MM/YYYY**; phone local `0XX` format — never hardcode `$` or US-only labels when `enable_insurance = false`.
-
----
-
-## 4. Global UX principles (cross-cutting)
-
-Synthesized from all redesign specs. Module-specific IDs (MRD-G*, COM G*, etc.) remain authoritative in their source docs.
-
-### 4.1 Safety & identity
+> *Skill: design-everyday-things (constraints, feedback) + Nielsen #5 (error prevention) + Nielsen #9 (error recovery).*
+> *Evidence:* AHRQ-funded research ([Adelman 2017 patient-photo RCT](https://digital.ahrq.gov/sites/default/files/docs/citation/r01hs024713-adelman-final-report-2023.pdf), [Sopan/Plaisant/Shneiderman 2014 wrong-patient catalog](https://pmc.ncbi.nlm.nih.gov/articles/PMC4420010/)) shows patient photo + row highlighting *significantly reduces* wrong-patient orders. The Epic Storyboard pattern (persistent header) is the production analogue.
 
 | Principle | Application |
 |-----------|-------------|
-| **Identity anchor** | `patient-context-banner` (T1-F17) on every patient-scoped surface; MRD Zone A on full chart |
-| **Wrong-patient prevention** | Modals repeat Patient · MRN · Visit # · Receipt # (G12 family); full reload on `pid` change — no silent swap |
+| **Identity anchor** | `PatientContextBanner` (T1-F17) is **mandatory** on every patient-scoped surface; MRD Zone A on full chart |
+| **Wrong-patient prevention** | `IdentityConfirmBanner` repeats Patient · MRN · Visit # · Receipt # inside G12 confirm modals; full reload on `pid` change — no silent swap |
 | **Shared device** | Active-role pill (T1); T1-F19 session warning; T1-F18 desk return link on legacy pages |
 | **Safety above fold** | Allergies visible without scroll ≥360px (MRD-G1); severe allergy chips never color-only |
 | **Destructive confirm** | No silent deletes; reason required on overrides (completion, e-sign, billing, queue bridge dismiss) |
 
-### 4.2 Navigation & information architecture
+### 2.2 Performance & connectivity (West Africa pilot)
 
-| Principle | Application |
-|-----------|-------------|
-| **Task over tool** | Label by staff intent (“Payment history”, “Referral letter”) — not stock menu names |
-| **One front door per domain** | Hub pattern: COM, M12/M13/M14/M15/M16/M17/M18 — stock menus hidden when flag ON + menu cutover |
-| **Progressive disclosure** | Summary strip → depth panel; 6–8 hub cards; Advanced (OpenEMR) behind ⚠ banner |
-| **Visit-scoped default** | Financial/correspondence views filter active visit first |
-| **Tabs over infinite scroll** | MRD 5-tab IA; desks for queue work; no single scroll-the-whole-chart timeline (D-MRD-8) |
-| **Desks vs chart vs depth** | Desk = today's queue; MRD = history; Chart Depth = money, letters, exports (slide-over) |
-
-### 4.3 Interaction & performance
+> *Skill: design-everyday-things (feedback timing) + Nielsen #1 (visibility of system status).*
+> *Evidence:* [Simple.org on offline-first clinical apps](https://www.simple.org/blog/offline-first-apps/), [NextBillion last-mile digital health](https://nextbillion.net/designing-digital-health-tools-for-last-mile-lessons-for-maximizing-connectivity-usability-trust/).
 
 | Principle | Application |
 |-----------|-------------|
 | **Server shell first byte** | T1 chrome server-rendered — no AJAX flash for page chrome |
-| **AJAX in-place** | List read/compose/update without full reload; standard JSON envelope (PAGE_DESIGNS §6) |
-| **Explicit apply** | Registry cohort search uses **Apply** — not live-search on every keystroke (M10 C5) |
-| **Debounced search** | Front Desk M1a: 250ms debounce; top 8 displayed / 25 scored (M1a) |
-| **Ghana connectivity** | Optimistic saves where safe; async export with download link; offline banner + disable writes >60s |
+| **AJAX in place** | List read / compose / update without full reload; standard JSON envelope (PAGE_DESIGNS §6) |
+| **Optimistic where safe** | Triage vitals save optimistically; cashier writes do **not** (cash truth) |
+| **Visible offline state** | Offline banner; writes disabled after >60s without server contact |
+| **Async export** | Long reports return a download link (no blocked UI); polled every 5s |
 | **Print-first where paper wins** | Receipts, referrals, Rx packs, queue slips — A4 / 80mm thermal |
 
-### 4.4 Access & inclusion
+### 2.3 Cognitive load — *Don't Make Me Think*
+
+> *Skill: ux-heuristics (Krug's three laws + Trunk Test).*
+
+| Principle | Application |
+|-----------|-------------|
+| **Task over tool** | Label by staff intent ("Payment history", "Referral letter") — not stock menu names |
+| **One front door per domain** | Hub pattern: COM, M10/M12/M14/M15/M16/M17/M18 — stock menus hidden when flag ON |
+| **Progressive disclosure** | Summary strip → depth panel; 6–8 hub cards; Advanced (OpenEMR) behind ⚠ banner |
+| **Tabs over infinite scroll** | MRD 5-tab IA; desks for queue work; no scroll-the-whole-chart timeline (D-MRD-8) |
+| **Recognition not recall** | Combobox dropdowns over free-text where the option set is bounded (provider, queue state, service profile) |
+| **Trunk test everywhere** | Every page must answer: where am I, what's the patient, what can I do next |
+
+### 2.4 Affordances & feedback — bridging Norman's gulfs
+
+> *Skill: design-everyday-things (the two gulfs, the seven stages of action).*
+
+| Gulf | Bridge | Application |
+|------|--------|-------------|
+| **Execution** ("how do I do this?") | Signifiers, mappings, constraints | Buttons look pressable (raised + color); destructive actions separated from routine; reason textarea on overrides |
+| **Evaluation** ("did it work?") | Immediate visible feedback, system state, error messages | Saves show ≤100ms button-state change → ≤1s confirmation toast; errors are inline with the field; queue counters refresh every 30s with `aria-live` |
+
+**Seven stages walkthrough** — apply to every new flow (goal → plan → specify → perform → perceive → interpret → compare). Find the stage where users stall, then add a signifier, constraint, or feedback at that point.
+
+### 2.5 Microinteraction quality bar (Saffer)
+
+> *Skill: microinteractions (trigger / rules / feedback / loops & modes).*
+
+Every shared component must define all four:
+
+| Element | Definition | Example (`ConfirmModal`) |
+|---------|------------|---------------------------|
+| **Trigger** | Manual or system event that opens it | Manual: cashier presses "Confirm payment" |
+| **Rules** | What runs, constraints, edge cases | Reason required on overrides; `confirmDisabled` until valid |
+| **Feedback** | Immediate visible response | Button → "Saving…"; success toast; error in body |
+| **Loops & Modes** | Long-term behavior + alternate states | None for V1 (single-use); future: remember last cashier discount reason |
+
+**Anti-patterns:** invisible triggers without a visible alternative; fake progress bars; same control with different behavior in different modes (no mode → make modes visible).
+
+### 2.6 Access & inclusion
+
+> *Skill: ux-heuristics (Nielsen #2 real-world language, #7 efficiency).*
 
 | Principle | Application |
 |-----------|-------------|
 | **WCAG 2.1 AA** | Target for all New Clinic surfaces (PRD T1-F08; PAGE_DESIGNS §9) |
 | **Status = shape + label + color** | Never color alone (scheduling, queue, allergies, visit state) |
 | **44×44px touch targets** | Primary CTAs; sticky bottom actions on `sm`/`xs` |
-| **Keyboard** | ↑/↓/Enter/Esc on search; skip links; visible focus rings |
+| **Keyboard** | ↑/↓/Enter/Esc on search; skip links; visible 3–4px focus rings |
 | **Mobile-realistic** | Usable at `sm` (481–767px); focus pages at `xs` (Triage, Cashier, Visit Board) |
+| **Owner language** | "Reception desk" not `new_reception`; plain English training copy |
+| **Cash truth** | Hide insurance UI when `enable_insurance = false`; no "Insurance pending" labels |
 
-### 4.5 Cash clinic & West Africa
+### 2.7 Anti-patterns (all modules)
 
-| Principle | Application |
-|-----------|-------------|
-| **Cash truth** | Hide insurance UI when `enable_insurance = false`; no “Insurance pending” labels |
-| **Owner language** | “Reception desk” not `new_reception`; plain English training copy |
-| **Walk-in normal** | Dual-system clinics: walk-in % is expected — not an error state |
-| **Shared device clinics** | Role pill + session warnings are first-class, not edge cases |
+- Neon gradients · "AI purple" styling · motion-heavy animations
+- Color-only status · icon-only actions without `aria-label`
+- Decorative dashboards without visit context — every surface must anchor on **patient** or **today's queue** (clinical safety)
+- Hover-only information on mobile
+- Hidden destructive actions (delete in an overflow menu without confirm)
 
 ---
 
-## 5. Shared component catalog
+## 3. Visual design system
 
-Normative build detail: [PAGE_DESIGNS §4](./NEW_CLINIC_V1_PAGE_DESIGNS.md#4-shared-components).
+Tokens align with [design-system/openemr-2026/MASTER.md](../../design-system/openemr-2026/MASTER.md) and [COM §15](./NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md#15-visual-design-system). Implemented in `frontend/src/core/tokens.css`.
 
-| Component | ID / partial | Used on |
-|-----------|--------------|---------|
-| T1 shell | Top bar + module nav + queue stats | All module pages |
-| Patient search | `patient-search` (M1a) | Front Desk, Triage, Cashier, Admin |
-| Patient context banner | `patient-context-banner` Tier 1–3 | Desks, hubs, chart depth, legacy overlay |
-| Queue card | `visit-queue-card` | All role desks, Visit Board |
-| Visit state chip | FSM-colored pill | Banner, cards, MRD Zone A |
-| Slide-over panel | ≥768px width 480–720px | Chart depth, lab/pharm results, billing correction |
-| Full-screen sheet | &lt;768px | Mobile chart depth, confirm modals |
-| Split-pane hub | List + detail | COM, M16 lenses (pattern) |
-| Filter bar | Shared state in URL | S1 scheduling, M10 registry, M16 reporting |
-| Confirm modal | G12 identity repeat | Payment, print, export, override |
-| Empty / loading / error | Shell + card | Every page (PAGE_DESIGNS §2.5) |
+### 3.1 Color tokens
 
-### 5.1 Patient context banner tiers
+| Role | Hex | CSS var | Use | WCAG-AA at body size |
+|------|-----|---------|-----|----------------------|
+| Primary | `#0891B2` | `--oe-primary` | Selected state, links, accent borders | 4.85:1 on white |
+| Secondary | `#22D3EE` | `--oe-secondary` | Hover wash, focus halo | — (not for text) |
+| Success / CTA | `#059669` | `--oe-cta` | Confirm, send, complete | 4.66:1 on white |
+| Background tint | `#ECFEFF` | `--oe-bg` | Subtle page wash, card hover | — (not for text) |
+| Text | `#164E63` | `--oe-text` | Body copy | 11.95:1 on white |
+| Danger | `var(--danger)` | Bootstrap `--danger` | Delete, overdue, unsigned | 4.5:1+ required |
+| Warning | `var(--orange)` | Bootstrap `--orange` | Today reminders, URGENT | 4.5:1+ required |
+
+**Anti-pattern:** wrapping the same value through `var(var(--x))` indirection. Use the token directly.
+
+### 3.2 Typography scale
+
+> *Skill: web-typography — "clear goblet" principle. Type for body must serve sustained reading; type for moments (CTAs, KPIs) serves impact.*
+
+Two faces, **one workhorse pair**: **Figtree** (heads) + **Noto Sans** (body, i18n-safe). System stack as fallback (`-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`).
+
+| Role | Size | Weight | Line height | Tracking | Use |
+|------|------|--------|-------------|----------|-----|
+| Display | `1.875rem` / 30px | 600 | 1.2 | -0.01em | Page headings, modal titles |
+| H1 | `1.5rem` / 24px | 600 | 1.25 | -0.005em | Section titles, hub lens names |
+| H2 | `1.25rem` / 20px | 600 | 1.3 | 0 | Card titles, MRD zone titles |
+| H3 | `1.125rem` / 18px | 600 | 1.35 | 0 | Sub-section, list group title |
+| Body | `1rem` / 16px | 400 | 1.5 | 0 | All prose, table cells |
+| Body-strong | `1rem` / 16px | 600 | 1.5 | 0 | KPI labels, table headers when not uppercase-small |
+| Small | `0.875rem` / 14px | 400 | 1.45 | 0 | Captions, helper text, meta |
+| Micro / uppercase | `0.75rem` / 12px | 600 | 1.4 | 0.05em | Form labels, table-header style, status pill text |
+| KPI value | `2rem` / 32px | 700 | 1 | -0.02em | `StatCard` big number |
+| Mono | `0.875rem` / 14px | 400 | 1.4 | 0 | MRN, IDs, codes (use `font-feature-settings: "tnum"`) |
+
+**Line length:** prose `max-width: 65ch`; modal body `max-width: 480px`; never full-width text.
+**Mobile:** body bumps to 17px on `sm` to compensate for hand-distance.
+**Performance:** WOFF2 only, `font-display: swap`, Latin subset (West Africa pilot).
+
+### 3.3 Spacing scale
+
+| Token | Value | When |
+|-------|-------|------|
+| `--space-xs` | 4px | Icon ↔ label inside a chip |
+| `--space-sm` | 8px | Form control inner pad, tight grid gap |
+| `--space-md` | 16px | Card body pad, default block margin |
+| `--space-lg` | 24px | Card header → body, section padding |
+| `--space-xl` | 32px | Adjacent card gap on hub split |
+| `--space-2xl` | 48px | Page heading → first section |
+| `--space-3xl` | 64px | Empty-state vertical centering |
+
+**Rule:** between groups > within groups. Tight pairing (icon + label) gets `xs`; section separation gets `lg`+. If you're using a number that isn't on this scale, it's a bug.
+
+### 3.4 Elevation & radius
+
+| Token | Value | When |
+|-------|-------|------|
+| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | Subtle lift on hover (`QueueCard`) |
+| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)` | Default `WidgetCard` |
+| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)` | `SlideOver`, dropdowns |
+| `--shadow-xl` | `0 20px 25px rgba(0,0,0,0.15)` | Reserved (rarely used in clinical UI) |
+| Radius | `0.25rem` (4px) for Bootstrap parity; `0.5rem` (8px) for new cards | Match Bootstrap 4 cards on legacy surfaces; new shared components may opt-in to 8px |
+
+**Anti-pattern:** more than one shadow level on the same screen. Pick `sm` or `md`, not both.
+
+### 3.5 Motion
+
+| Token | Value | When |
+|-------|-------|------|
+| `--motion-fast` | 100ms ease-out | State changes (`Button:active`, chip selection) |
+| `--motion-base` | 150ms ease | Hover transitions, accordion open |
+| `--motion-slow` | 200ms ease | `SlideOver` enter, drawer open |
+| `--motion-modal` | 250ms cubic-bezier(0.16, 1, 0.3, 1) | `Dialog` overlay fade |
+
+`prefers-reduced-motion` **must** disable all non-essential motion (only keep state-change feedback).
+
+### 3.6 Iconography
+
+| Surface | Choice | Why |
+|---------|--------|-----|
+| T1 shell + legacy Twig | Font Awesome 6 | Already loaded; consistency with core OpenEMR |
+| New React islands | Lucide React (optional) | Consistent 24×24 SVG, modern stroke; opt-in per island |
+| Always | **No emoji as icons** | Cross-platform rendering inconsistent; harms `aria-label` |
+| Sizing | 16px in chips, 20px in buttons, 24px in headers | Match line-height of adjacent text |
+
+### 3.7 Regional formatting
+
+- Clinic `currency_symbol` via M6 (D-REG-3) — never hardcode `$`
+- Dates **DD/MM/YYYY** (West Africa convention)
+- Phone local `0XX` format
+- Numbers: `Intl.NumberFormat('en-GH')` for thousands separators
+
+---
+
+## 4. Shared component reference — single source of truth
+
+> *Skill: refactoring-patterns — eliminating duplication.* Previous v1.x splits (§2.1 inventory / §5 catalog / §14 premium) are consolidated here. Each row has the same five fields so reviewers can grep them.
+
+### 4.1 Component contract template
+
+Every shared component (`frontend/src/components/<Component>.tsx`) MUST publish:
+
+| Field | What it answers |
+|-------|-----------------|
+| **Purpose** | One sentence — the user problem it solves |
+| **Props** | TypeScript interface with required/optional + variants |
+| **States** | All of: `idle`, `hover`, `focus-visible`, `pressed`, `loading`, `success`, `error`, `disabled`, `empty` (omit only with rationale) |
+| **A11y** | Roles, `aria-*`, keyboard map, focus management |
+| **Microinteraction** | Trigger · rules · feedback · loops/modes ([§2.5](#25-microinteraction-quality-bar-saffer)) |
+| **Files** | Component, test, CSS, used-by list |
+| **shadcn target** | Which shadcn primitive replaces this in Phase 3 ([§9](#9-shadcnui-migration-plan)) |
+
+A component with no contract section in its file header doesn't pass code review.
+
+### 4.2 Identity & safety
+
+| Component | Files | Purpose | shadcn target |
+|-----------|-------|---------|---------------|
+| `PatientContextBanner` | `components/PatientContextBanner.tsx` + `CompletionBar.tsx`, `CompletionScorePill.tsx`, `ChipCloud.tsx`, `patientBannerUtils.ts` | Tier-1/2/3 patient identity strip. Mandatory on every patient-scoped surface. | `Card` + `Avatar` + `Badge` |
+| `IdentityConfirmBanner` | `components/ConfirmModal.tsx` | Repeats Patient · MRN · Visit # · Receipt # inside confirm modals (AHRQ wrong-patient mitigation) | Inline `Card` inside `Dialog` |
+| `DeskInterruptBanner` | `components/DeskInterruptBanner.tsx` | Single high-priority notice above a desk queue | `Alert` (variant=warning) |
+| `DeskSharedDeviceBanner` | `components/DeskSharedDeviceBanner.tsx` | T1-F19 shared-device warning | `Alert` (variant=info) |
+
+**Tier definition** (replaces v1.x §5.1):
 
 | Tier | Fields | When |
 |------|--------|------|
@@ -154,23 +358,134 @@ Normative build detail: [PAGE_DESIGNS §4](./NEW_CLINIC_V1_PAGE_DESIGNS.md#4-sha
 | **2** | Tier 1 + allergies (max 3) + completion % | Active visit panels |
 | **3** | Tier 2 + visit state chip + queue # + primary action | Active visit on desks |
 
-Legacy overlay tiers (L0–L3): [LEGACY_CHART_CONTEXT §5.1](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md#51-strip-tier-definition-normative).
+Legacy overlay tiers (L0–L3) for stock chart pages: [LEGACY_CHART_CONTEXT §5.1](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md#51-strip-tier-definition-normative).
 
-### 5.2 Chart depth interaction pattern
+### 4.3 Queue & flow
 
-```text
-MRD tab content
-  └─ Summary strip ("Last payment … · View payment history")
-       └─ [ View full history ] → Chart Depth panel
-            ├─ Desktop (≥768px): slide-over 480–720px
-            └─ Mobile (<768px): full-screen sheet + sticky Close
-```
+| Component | Files | Purpose | shadcn target |
+|-----------|-------|---------|---------------|
+| `QueueCard` | `components/QueueCard.tsx` + `WaitTimeSpan.tsx` | Card-shaped row for a single visit in a desk queue | `Card` (custom composition) |
+| `WaitTimeSpan` | `components/WaitTimeSpan.tsx` | Shared wait-time label with `long`/`medium` CSS classes — **see workspace rule** | inline `span` (no shadcn equivalent) |
+| `StatusPill` | `components/StatusPill.tsx` | FSM / appointment / allergy state pill | `Badge` (variant per state) |
+| `SegmentedControl` | `components/SegmentedControl.tsx` | "All (134) · Urgent (12)" tab filter | `ToggleGroup` |
+| `RoutingChips` | `components/RoutingChips.tsx` | Doctor / banner metadata as a row of pills | `Badge` row |
 
-Normative: [CHART_DEPTH §5.2](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#52-interaction-patterns-normative).
+**Wait-time rule (workspace-level):** any change to wait-time rendering must be applied to **all** desks + the shared component in one pass — see `.cursor/rules/new-clinic-big-picture-first.mdc`.
+
+### 4.4 Data display
+
+| Component | Files | Purpose | shadcn target |
+|-----------|-------|---------|---------------|
+| `WidgetCard` | `components/WidgetCard.tsx` | Card shell with header + actions + padded/flush body | `Card` |
+| `DataTable` + `DataTableStatusRow` | `components/DataTable.tsx` | Wrapper around Bootstrap `table-sm` with status-row helper | shadcn `Table` + TanStack Table |
+| `RowActionsMenu` | `components/RowActionsMenu.tsx` | ⋮ row dropdown for tables | `DropdownMenu` |
+| `PaginationBar` | `components/PaginationBar.tsx` | Prev/next + page numbers + size select | `Pagination` |
+
+### 4.5 Insights (M7 daily reports + KPI surfaces)
+
+| Component | Files | Purpose | shadcn target |
+|-----------|-------|---------|---------------|
+| `StatCard` | `components/StatCard.tsx` | Label · value · optional trend pill | `Card` + custom value layout (21st.dev `StatsCard` pattern) |
+| `TrendPill` | `components/TrendPill.tsx` | ↑12% / ↓3% directional indicator | `Badge` |
+| `CompletionBar` | `components/CompletionBar.tsx` | Profile completion progress | `Progress` |
+| `CompletionScorePill` | `components/CompletionScorePill.tsx` | Score + threshold label | `Badge` |
+| `ChipCloud` | `components/ChipCloud.tsx` | "N more" overflow chip row (allergies, problems) | `Badge` group |
+
+### 4.6 Overlays
+
+| Component | Files | Purpose | shadcn target |
+|-----------|-------|---------|---------------|
+| `ConfirmModal` + `IdentityConfirmBanner` | `components/ConfirmModal.tsx` | G12 family confirm shell with variant buttons + identity strip | `Dialog` (variants via `cn()`) |
+| `SlideOver` | `components/SlideOver.tsx` | Right drawer ≥768px / full-screen ≤767px | `Sheet` |
+| `FindPatientDrawer` | `components/FindPatientDrawer.tsx` | Triage / lab / bill ops shared patient picker drawer | `Sheet` + `Command` |
+| `EsignOverrideModal` | `components/EsignOverrideModal.tsx` | Doctor unsigned + cashier-override flow | `Dialog` |
+| `SkipToPaymentModal` | `components/SkipToPaymentModal.tsx` | Lab / pharmacy skip with reason | `Dialog` |
+| `useModalDismiss` | `components/useModalDismiss.tsx` | Shared ESC + backdrop hook | replaced by Radix `onOpenChange` |
+
+### 4.7 Search & input
+
+| Component | Files | Purpose | shadcn target |
+|-----------|-------|---------|---------------|
+| `PatientSearchDropdown` | `components/PatientSearchDropdown.tsx` | M1a debounced (250ms) search, top 8 displayed / 25 scored | `Command` (cmdk) |
+| `PatientSearchWidget` | `islands/front-desk/PatientSearchWidget.tsx` | Front Desk hero search + idle lists | `Command` + island CSS |
+| `DeskStatusBar` | `islands/front-desk/DeskStatusBar.tsx` | Front Desk operational strip (waiting · started · scheduled) | `DeskQueueStatusBar` |
+| `DeskQueueStatusBar` | `components/DeskQueueStatusBar.tsx` | Shared one-line queue stats + refresh for all queue desks (Triage, Doctor, Lab, Pharmacy, Cashier, Visit Board) | custom BEM |
+| `RecentlyViewed` | `islands/front-desk/RecentlyViewed.tsx` | Last 5 patients pill row — synced per user via `front_desk.recently_viewed` (localStorage fallback) | custom BEM |
+| `TodaysAppointmentsList` | `islands/front-desk/TodaysAppointmentsList.tsx` | Today's schedule in search idle state (`front_desk.todays_appointments`) | custom BEM |
+
+**M1a Front Desk layout (2026-06-29)** — search-first operational pattern (not dashboard KPI cards):
+
+| State | Layout |
+|-------|--------|
+| **Idle** | Centered single column (~680px): `DeskStatusBar` + hero `PatientSearchWidget` with `RecentlyViewed` pills and `TodaysAppointmentsList` when scheduling is on. No empty preview pane on desktop. |
+| **Patient selected** | Workspace expands (~1080px; ~1180px when sidebar collapsed): equal `1fr 1fr` grid — search (sticky) \| preview. Preview pane scrolls; **Start Visit** footer sticks to bottom. |
+| **Shell** | `oe-nc-t1--desk-focus` hides duplicate PHP `h1`; island owns chrome. Width/centering in `shell.css` + `front-desk/main.css`. |
+| **Keyboard** | `/` focuses search from anywhere on the page. |
+
+Primary palette shifted to neutral dashboard (`#2563eb` primary, `#f9fafb` bg) per MedTrackr-inspired polish pass.
+
+### 4.8 Status legend (used in §4 tables)
+
+A shipped component above means the React file exists and is wired into ≥1 island. **🔶 Polish** means the BEM CSS still lives in the island; promotion to `frontend/src/components/` is queued for Track B.
+
+### 4.9 Components to build (P2, V1.1)
+
+| Component | Purpose | Blocked surfaces | shadcn target |
+|-----------|---------|------------------|---------------|
+| `chart-line` | Chart.js wrapper with reference ranges, accessible tooltip table, colorblind-safe palette | MRD vitals · M7 trends · M16 reporting hub | `Chart` (Recharts wrapper) |
+| `date-range-picker` | Presets (Today / 7d / 30d / custom) + DD/MM/YYYY | M7 date range · S1 filter bar · M16 reports | `DatePicker` (Calendar) |
+| `med-schedule-timeline` | Week strip + dose chips (adherence display only — **not** prescribing in V1) | MRD meds tab · eRx list | custom (no direct shadcn) |
+| `FilterBar` | URL-synced filter chip row | S1 · M10 · M16 | composed of `Badge` + `Combobox` |
+| `BottomSheet` | Mobile action sheet (`xs`/`sm`) | MRD Zone D mobile actions | `Drawer` (Vaul) |
+| `Skeleton` row/card | AJAX loading placeholder | Every AJAX tab | `Skeleton` |
+
+**Deliberately not shared in V1** (intentional decisions, not gaps):
+
+| Reference component | Why skipped |
+|---------------------|-------------|
+| Left sidebar navigation | T1 horizontal top nav — better for role switching on shared tablets |
+| Chatbot / AI assistant | PRD non-goal in V1 |
+| Decorative dashboard widgets without visit context | Every surface must anchor on patient or today's queue (clinical safety) |
+| Inventory sidebar item | Pharmacy stock is M13 hub, not global nav |
 
 ---
 
-## 6. Shell & navigation (T1)
+## 5. Interaction state taxonomy
+
+> *Skill: microinteractions. Every shared component declares its state set so QA can audit it.*
+
+### 5.1 Universal states (per component)
+
+| State | When | Visual cue | A11y |
+|-------|------|------------|------|
+| `idle` | Resting | Default token colors | — |
+| `hover` | Mouse over | `--shadow-sm` lift or background wash; ≥150ms | — |
+| `focus-visible` | Keyboard focus | 3–4px ring `--oe-primary` at 40% alpha | `:focus-visible` only — never on mouse click |
+| `pressed` | Mouse/key down | Slight darken + 1px translate; `--motion-fast` | — |
+| `loading` | Async work in flight | Inline spinner; button text → "Saving…"; `aria-busy="true"` on container | `aria-live="polite"` for status text |
+| `success` | Operation completed | Brief checkmark; toast on bigger ops | `aria-live="polite"` |
+| `error` | Operation failed | Inline error message near the source; **never** silent | `aria-live="assertive"` for blocking errors |
+| `disabled` | Action not currently available | Reduced opacity + `cursor: not-allowed`; tooltip explaining *why* (Norman: constraint must be visible) | `aria-disabled="true"`; not `disabled` if you want focus + tooltip |
+| `empty` | No data | Empty-state shell with action ([§4.7](#47-search--input)) | — |
+
+### 5.2 Pattern-specific micro-rules
+
+| Pattern | Trigger | Rules | Feedback | Loops & Modes |
+|---------|---------|-------|----------|---------------|
+| **Confirm modal** (G12) | Manual ("Confirm payment") | Reason required on overrides; `confirmDisabled` until valid | Button → "Saving…"; success closes + toast; error shows in body | None (single-use) |
+| **Slide-over** | Manual (chart strip "View full") | Focus moves into drawer; backdrop click to close (with confirm if dirty form) | 200ms slide-in; ESC closes; focus returns to trigger | None |
+| **AJAX list refresh** | System (30s timer + manual ↻) | Pause while user interacts (no flicker); resume on idle | Spinner in heading; `aria-live` update | Open loop; pause on `tab` blur |
+| **Patient search** | Manual (typing) | 250ms debounce; top 8 displayed / 25 scored; arrow keys; **idle state** shows today's appointments + recently viewed (M1a) | Highlight match; "No results" empty state | None |
+| **Toast** | System (after action) | Auto-dismiss success 4s; sticky for errors | Top-right of T1; max 1 visible | None |
+| **Allergy chip** | Manual (hover/tap) | Severity color border (never color-only); `aria-label` includes severity | Tooltip with note on hover; full detail in `SlideOver` | None |
+
+---
+
+## 6. Information architecture
+
+Wireframes for every page live in [PAGE_DESIGNS](./NEW_CLINIC_V1_PAGE_DESIGNS.md). This section is the **map**.
+
+### 6.1 T1 shell & navigation
 
 Full wireframes: [PAGE_DESIGNS §2](./NEW_CLINIC_V1_PAGE_DESIGNS.md#2-top-bar-and-shell-t1).
 
@@ -178,69 +493,105 @@ Full wireframes: [PAGE_DESIGNS §2](./NEW_CLINIC_V1_PAGE_DESIGNS.md#2-top-bar-an
 |--------|---------|
 | Brand strip | Clinic logo · name · facility |
 | Active-role pill | First name — role label · Switch role · Logout |
-| Module nav | ACL-filtered desk tabs; active tab highlighted |
-| Queue stats | Live FSM counts; 30s refresh |
+| Module nav | ACL-filtered desk tabs; active tab highlighted with pill background + 2px bottom border |
+| Queue stats | Live FSM counts; 30s refresh; `aria-live` |
 | Page heading | Title · Refresh · contextual CTA |
 
 **Role accent colors:** Reception teal · Nurse blue · Doctor green · Lab amber · Pharmacy purple · Cashier orange · Admin grey.
-
 **Breakpoints:** Full strip ≥992px · hamburger ≤767px · role pill initials only ≤480px.
 
----
+### 6.2 Desk pattern (today's queue)
 
-## 7. Module → UI map
+```text
+T1 SHELL ─────────────────────────────────────────────
+DESK HEADING (Triage · Doctor · Cashier · Lab · Pharm)
+┌─────────────────────────────────┬──────────────────┐
+│ QUEUE LIST                       │ PATIENT PREVIEW │
+│   [QueueCard] [QueueCard] …      │ [Banner Tier 2] │
+│   SegmentedControl: All / Urgent │ [DeskActions]   │
+└─────────────────────────────────┴──────────────────┘
+```
 
-Each row links the **redesign spec** (why/IA/principles) to **PAGE_DESIGNS** (wireframes/build).
+### 6.3 Chart pattern (MRD 5-tab)
 
-### 7.1 V1 pilot — role desks & core
+```text
+[PatientContextBanner Tier 1]
+[Tabs: Overview · Profile · Visits · Clinical · Messages]
+[WidgetCard tab content]
+```
 
-| Module | Redesign spec | PAGE_DESIGNS | Status | Key UI pattern |
-|--------|---------------|--------------|--------|----------------|
-| **T1** Shell | — | §2, §4 | Draft | Server-rendered chrome |
-| **M1a** Front Desk search | [FRONT_DESK_SEARCH](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) v1.0.8 | §4.1, §7.2 | **Approved P1** | Split search + preview; debounced |
-| **M1b** Registration form | [FRONT_DESK_REGISTRATION](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) v1.0.0 | §4.1.3, §7.2.7 | **Approved** | 4-section accordion; region→district |
-| **M2** Visit Board | PRD §8 | §7.8 | Draft | Kanban cards; wall profile |
-| **M3** Triage | PRD §8 | §7.3 | Draft | Vitals steppers on mobile |
-| **M4** Doctor Desk | PRD §8 | §7.4 | Draft | Consult queue + shortcuts |
-| **M5** Cashier | PRD §8 | §7.7 | Draft | Payment confirm modal (G12) |
-| **M6** Clinic Admin | [ADMIN](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) v0.1.4 | §7.9 | Draft | Card tabs; checklist wizard |
-| **M7** Daily Reports | [REPORTING](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) v0.1.3 | §7.10 | Draft | Today-first KPI cards |
-| **M8** Lab Desk | [LAB_OPS](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) v0.1.9 | §7.5 | Draft | Visit queue + M12 slide-over |
-| **M9** Pharmacy Desk | [PHARM_OPS](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) v0.1.9 | §7.6 | Draft | Visit queue + undispensed gate |
-| **COM** Communications | [COM](./NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) v1.0.3 | §7.12 | **Approved P1** | Split-pane Messages/Reminders |
-| **MRD** Medical record | [MRD](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) v0.2.36 | §4.11, MRD spec | Draft | 4 zones · 5 tabs · banner-first actions |
-| **S1** Scheduling | [SCHEDULING](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) v0.2.6 | §7.11 | Draft | 3-lens shell; shared filter bar |
+### 6.4 Chart depth pattern (slide-over)
 
-### 7.2 Post-pilot hubs & chart depth
+```text
+MRD tab content
+  └─ Summary strip ("Last payment ₵120 · View payment history")
+       └─ [ View full history ] → Chart Depth panel
+            ├─ Desktop (≥768px): SlideOver 480–720px
+            └─ Mobile (<768px):  full-screen sheet + sticky Close
+```
 
-| Module | Redesign spec | PAGE_DESIGNS | Slice | Key UI pattern |
-|--------|---------------|--------------|-------|----------------|
-| **M10** Patient Registry | [REGISTRY](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) v0.2.1 | §7.32 | V1.1-REG | Filter panel + Apply; cohort table |
-| **M11** Chart Depth | [CHART_DEPTH](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) v0.1.15 | §7.13–§7.16 | V1.1-CDa/b/c | Slide-over panels from MRD strips |
-| — Payment history | [PAYMENT_HISTORY](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) | §7.13 | V1.1-CDa | Read-only ledger timeline |
-| — Referrals & letters | [REFERRALS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) v0.1.2 | §7.14 | V1.1-CDb | Wizard + print confirm |
-| — Clinical export | [CLINICAL_EXPORT](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) | §7.15 | V1.1-CDc | Preset builder + confirm |
-| **M12** Lab Ops Hub | [LAB_OPS](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) | §7.17–§7.20 | V1.1-LAB | Worklist + result slide-over |
-| **M13** Pharm Ops Hub | [PHARM_OPS](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) | §7.21–§7.24 | V1.1-PHARM | Pending dispense worklist |
-| **M14** Billing back office | [BILLING](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) v0.1.3 | §7.25–§7.26 | V1.2-BILL | Hub tabs: corrections · payments · close day |
-| **M15** Admin hub | [ADMIN](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) | §7.27–§7.28 | V1.1-ADMIN | Lens shell embeds M6 |
-| **M16** Reporting hub | [REPORTING](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) | §7.29 | V1.1-REP | Curated report cards; M7 embed |
-| **M17** Clinical doc hub | [CLINICAL_DOC](./NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) v0.1.2 | §7.30 | V1.1-DOC | 3–7 bundle cards per visit type |
-| **M18** Queue Bridge | [QUEUE_BOUNDARY](./NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) v0.1.3 | §7.31 | V1.1-BRIDGE | Exception worklist + guided fixes |
+Normative: [CHART_DEPTH §5.2](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#52-interaction-patterns-normative).
 
-### 7.3 Chart & legacy overlays
+### 6.5 Hub pattern (list + lens)
 
-| Surface | Redesign spec | Notes |
-|---------|---------------|-------|
-| MRD primary (B7) | [B7_PRIMARY](./NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md) | Build slice integrating MRD + legacy boundary |
-| Background / History | [MEDICAL_HISTORY](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) | T1-F20 read summary; stock editor |
-| Legacy chart strip | [LEGACY_CHART_CONTEXT](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) | T1-F18/F19 on stock `patient_file/*` |
+```text
+[Hub heading + filters]
+┌────────────────┬──────────────────────────────────┐
+│ ITEM LIST      │ LENS DETAIL                       │
+│ [WidgetCard]   │ [WidgetCard with full detail]    │
+│ [WidgetCard]   │                                   │
+└────────────────┴──────────────────────────────────┘
+```
 
----
+### 6.6 Module → UI map
 
-## 8. Domain-specific principle index
+#### 6.6.1 V1 pilot — role desks & core
 
-Quick reference — full tables live in each redesign spec §3–§5.
+| Module | Redesign spec | PAGE_DESIGNS | Status | Surface | Pattern |
+|--------|---------------|--------------|--------|---------|---------|
+| **T1** Shell | — | §2, §4 | **Shipped** · Polish | Shell | Twig + `shell.js`; hamburger drawer polish pending |
+| **M1a** Front Desk search | [FRONT_DESK_SEARCH](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) v1.0.8 | §4.1, §7.2 | **Shipped** · Polish | Desk | Search-first · idle appointments · split on select |
+| **M1b** Registration form | [FRONT_DESK_REGISTRATION](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) v1.0.0 | §4.1.3, §7.2.7 | **Shipped** | Desk | 4-section accordion |
+| **M2** Visit Board | PRD §8 | §7.8 | **Shipped** | Desk | Kanban columns + wall profile |
+| **M3** Triage | PRD §8 | §7.3 | **Shipped** | Desk | Vitals steppers on mobile |
+| **M4** Doctor Desk | PRD §8 | §7.4 | **Shipped** · Polish | Desk | Consult queue + shortcuts |
+| **M5** Cashier | PRD §8 | §7.7 | **Shipped** | Desk | Payment confirm modal (G12) |
+| **M6** Clinic Admin | [ADMIN](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) v0.1.4 | §7.9 | **Shipped** | Hub | `admin-hub` island embeds M6 cards |
+| **M7** Daily Reports | [REPORTING](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) v0.1.3 | §7.10 | **Shipped** | Hub-lite | Today-first KPI sections |
+| **M8** Lab Desk | [LAB_OPS](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) v0.1.9 | §7.5 | **Shipped (flag)** | Desk | Visit queue + M12 slide-over link |
+| **M9** Pharmacy Desk | [PHARM_OPS](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) v0.1.9 | §7.6 | **Shipped (flag)** | Desk | Visit queue + undispensed gate |
+| **COM** Communications | [COM](./NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) v1.0.3 | §7.12 | **Shipped (flag)** | Hub | Split-pane Messages / Reminders |
+| **MRD** Medical record | [MRD](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) v0.2.36 | §4.11, MRD spec | **Shipped** · Polish | Chart | `patient-chart` island — 5-tab IA |
+| **S1** Scheduling | [SCHEDULING](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) v0.2.6 | §7.11 | **Not started** | Desk | Legacy calendar / tracker |
+
+#### 6.6.2 Post-pilot hubs & chart depth
+
+| Module | Redesign spec | Slice | Status | Pattern |
+|--------|---------------|-------|--------|---------|
+| **M10** Patient Registry | [REGISTRY](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) v0.2.1 | V1.1-REG | **Shipped (flag)** | Hub: filter + cohort table |
+| **M11** Chart Depth | [CHART_DEPTH](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) v0.1.15 | V1.1-CDa/b/c | **Shipped (flag)** | Depth: SlideOver from MRD strips |
+| — Payment history | [PAYMENT_HISTORY](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) | V1.1-CDa | **Shipped (flag)** | `chart-depth` payments mode |
+| — Referrals & letters | [REFERRALS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) v0.1.2 | V1.1-CDb | **Shipped (flag)** | Wizard + print confirm |
+| — Clinical export | [CLINICAL_EXPORT](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) | V1.1-CDc | **Shipped (flag)** | Preset builder + confirm |
+| **M12** Lab Ops Hub | [LAB_OPS](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) | V1.1-LAB | **Shipped (flag)** | Hub: worklist + result slide-over |
+| **M13** Pharm Ops Hub | [PHARM_OPS](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) | V1.1-PHARM | **Not started** | Hub: dispense worklist |
+| **M14** Billing back office | [BILLING](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) v0.1.3 | V1.2-BILL | **Shipped (flag)** | Hub: corrections · payments · close day |
+| **M15** Admin hub | [ADMIN](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) | V1.1-ADMIN | **Shipped (flag)** | Hub: lens shell embedding M6 |
+| **M16** Reporting hub | [REPORTING](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) | V1.1-REP | **Not started** | Hub (pilot uses M7) |
+| **M17** Clinical doc hub | [CLINICAL_DOC](./NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) v0.1.2 | V1.1-DOC | **Not started** | Hub (pilot uses M4 shortcuts) |
+| **M18** Queue Bridge | [QUEUE_BOUNDARY](./NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) v0.1.3 | V1.1-BRIDGE | **Not started** | Hub: exception worklist |
+
+#### 6.6.3 Chart & legacy overlays
+
+| Surface | Redesign spec | Status | Notes |
+|---------|---------------|--------|-------|
+| MRD primary (B7) | [B7_PRIMARY](./NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md) | **Shipped** · Polish | `patient-chart` island — cutover per PRD §5.6.1 |
+| Background / History | [MEDICAL_HISTORY](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) | **Polish** | T1-F20 read summary in Clinical tab |
+| Legacy chart strip | [LEGACY_CHART_CONTEXT](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) | **Shipped** | T1-F18/F19 Twig strip on stock `patient_file/*` |
+
+### 6.7 Domain-specific principle index
+
+Full tables live in each redesign spec §3–§5. This is the quick lookup.
 
 | Domain | Spec section | Prefix IDs |
 |--------|--------------|------------|
@@ -253,7 +604,7 @@ Quick reference — full tables live in each redesign spec §3–§5.
 | Queue bridge (M18) | QUEUE_BOUNDARY §5 | Plain-language principles |
 | Patient Registry (M10) | REGISTRY §3 | C1–C14 |
 | Lab operations | LAB_OPS §5 | L1–L6 |
-| Pharmacy operations | PHARM_OPS §5 | P1–P10 table |
+| Pharmacy operations | PHARM_OPS §5 | P1–P10 |
 | Billing back office | BILLING §5 | P1–P10 |
 | Admin & config | ADMIN §5 | A1–A12 |
 | Reporting | REPORTING §5 | R1–R12 |
@@ -263,9 +614,22 @@ Quick reference — full tables live in each redesign spec §3–§5.
 
 ---
 
-## 9. Mobile, tablet & print
+## 7. Accessibility, mobile, print
 
-Normative detail: [PAGE_DESIGNS §8](./NEW_CLINIC_V1_PAGE_DESIGNS.md#8-mobile-and-tablet-patterns).
+Normative detail: [PAGE_DESIGNS §8](./NEW_CLINIC_V1_PAGE_DESIGNS.md#8-mobile-and-tablet-patterns) and [§9](./NEW_CLINIC_V1_PAGE_DESIGNS.md#9-accessibility).
+
+### 7.1 WCAG 2.1 AA checklist (every surface)
+
+- Contrast 4.5:1+ on text and primary actions
+- Focus visible (3–4px ring); logical tab order
+- `aria-live` for queue refresh and AJAX errors
+- `aria-label` on icon-only buttons
+- `prefers-reduced-motion`: disable non-essential animation
+- Form labels associated; required fields marked
+- Native `<select>` or accessible combobox for critical filters (Registry C12)
+- Native dialog focus trap (Radix in shadcn migration; manual in current `ConfirmModal`)
+
+### 7.2 Responsive breakpoints
 
 | Breakpoint | Width | Behavior |
 |------------|-------|----------|
@@ -275,27 +639,21 @@ Normative detail: [PAGE_DESIGNS §8](./NEW_CLINIC_V1_PAGE_DESIGNS.md#8-mobile-an
 | `sm` | 481–767px | Hamburger; cards replace wide tables |
 | `xs` | ≤480px | Focus pages only; initials-only role pill |
 
-**Print targets:** queue slip + receipt → 80mm thermal; referrals/letters → A4; reports → CSV (browser PDF if needed).
+**Focus pages on `xs`**: Triage, Cashier, Visit Board, Patient Chart (read-only view).
 
-**Wall display:** Visit Board `?profile=wall` only — not Flow Board (D22).
+### 7.3 Print targets
 
----
+- Queue slip + receipt → 80mm thermal
+- Referrals / letters → A4
+- Reports → CSV (browser PDF if needed)
 
-## 10. Accessibility checklist
+### 7.4 Wall display
 
-Normative detail: [PAGE_DESIGNS §9](./NEW_CLINIC_V1_PAGE_DESIGNS.md#9-accessibility).
-
-- WCAG 2.1 AA contrast on text and primary actions
-- Focus visible (3–4px ring); logical tab order
-- `aria-live` for queue refresh and AJAX errors
-- `aria-label` on icon-only buttons
-- `prefers-reduced-motion`: disable non-essential animation
-- Form labels associated; required fields marked
-- Native `<select>` or accessible combobox for critical filters (Registry C12)
+Visit Board `?profile=wall` only — not Flow Board (D22).
 
 ---
 
-## 11. Feature-flag UI rule
+## 8. Feature-flag UI rule
 
 When `oe-module-new-clinic` is disabled **or** a sub-flag is OFF, the UI **must** render **100% legacy** OpenEMR (PRD §5.6, PAGE_DESIGNS §2.5).
 
@@ -307,171 +665,224 @@ When `oe-module-new-clinic` is disabled **or** a sub-flag is OFF, the UI **must*
 | `enable_*_hub` (M12–M18) | Stock menus + desk deep links |
 | `enable_chart_depth_*` | Stock Ledger / Report / Transactions |
 
-Rollback = set flag `0`; no orphaned half-new chrome.
+**Rollback = set flag `0`; no orphaned half-new chrome.**
 
 ---
 
-## 12. Relationship to FRONTEND 2026
+## 9. shadcn/ui migration plan
 
-V1 deliberately **defers** React/Vite/Tailwind for the pilot. [FRONTEND_2026_MODERNIZATION_PLAN.md](./FRONTEND_2026_MODERNIZATION_PLAN.md) picks up after V1:
+> **Strategic positioning:** New Clinic islands ship today on Bootstrap 4.6 + custom BEM (`oe-nc-*`). [FRONTEND_2026 Phase 3](./FRONTEND_2026_MODERNIZATION_PLAN.md#phase-3--shell-modernization-2027-h1-high-risk) names shadcn/ui as the platform target. This section is the *New Clinic-specific* cutover plan that feeds that platform decision.
 
-| FRONTEND phase | When | New Clinic impact |
-|----------------|------|-------------------|
-| Phase 0 (Q2 2026) | Tooling + tokens | Align `design-system/openemr-2026` with module SCSS |
-| Phase 1 (Q3 2026) | High-value React islands | Vitals, labs, patient summary — may wrap MRD blocks |
-| Phase 2 (Q4 2026) | Forms + tables | Registry, reporting tables |
-| Phase 3 (2027 H1) | Modern shell | Replace Knockout tab shell — highest risk |
-| Phase 4 (2027 H2+) | Legacy retirement | Stock Finder, Message Center |
+### 9.1 Why shadcn for New Clinic
 
-COM Phase 4 explicitly plans T1 shell wrap when `oe-module-new-clinic` lands.
+| Need | shadcn answer |
+|------|---------------|
+| Accessibility primitives without bundling Radix ourselves | Components copy-in (Dialog, Sheet, Combobox = Radix under the hood) |
+| Token-driven theming (already in MASTER.md) | Tailwind 4 `@theme` + CSS variables — matches our `tokens.css` |
+| Data table with sort, filter, pagination | TanStack Table baseline — first-class shadcn pattern |
+| Searchable patient picker | `Command` (cmdk) — replaces custom `PatientSearchDropdown` keyboard logic |
+| Drawer / Sheet for chart depth | `Sheet` primitive — already mirrors our `SlideOver` API |
+| GPL compatibility | MIT — compatible with GPL parent project; copy-in model means no opaque runtime |
+
+### 9.2 Component-by-component map (V2 ground truth)
+
+| Our shared component | shadcn primitive | Replaces / wraps | Effort |
+|----------------------|------------------|-------------------|--------|
+| `WidgetCard` | `Card` (`Card`, `CardHeader`, `CardContent`, `CardFooter`) | 1:1 wrap; keep BEM class for legacy Twig consumers | S |
+| `DataTable` | `Table` + TanStack Table | New `DataTable` HOC; preserve `DataTableStatusRow` API | M |
+| `RowActionsMenu` | `DropdownMenu` | 1:1 | S |
+| `PaginationBar` | `Pagination` | 1:1 | S |
+| `ConfirmModal` | `Dialog` | Keep `IdentityConfirmBanner` slot; map variants to button classes | M |
+| `SlideOver` / `FindPatientDrawer` | `Sheet` + `Command` | Drop `useModalDismiss` (Radix handles ESC/focus) | M |
+| `PatientSearchDropdown` | `Command` (cmdk) | Big win: keyboard a11y + scoring stay; remove manual `arrowKeys` code | M |
+| `StatusPill` / `TrendPill` / `RoutingChips` | `Badge` | Variant via `cn()`; preserve allergy severity color rules | S |
+| `SegmentedControl` | `ToggleGroup` | 1:1 | S |
+| `CompletionBar` | `Progress` | 1:1 | S |
+| `StatCard` | `Card` + custom layout (21st.dev `StatsCard` pattern) | Keep `TrendPill` integration | S |
+| `PatientContextBanner` | `Card` composition + `Avatar` + `Badge` | Compose, don't replace; preserve Tier 1/2/3 contract | M |
+| `QueueCard` | `Card` (custom composition) | Keep `WaitTimeSpan` rendering rule | S |
+| `Toast` (current per-island) | `Sonner` | Promote to shared; one app-wide toaster mount in T1 shell | M |
+| `Skeleton` (per-island stub) | `Skeleton` | Promote to shared | S |
+| `Empty` (per-island) | `Empty` | Promote to shared | S |
+| `chart-line` (P2) | `Chart` (Recharts) wrapper | Greenfield component; build directly on shadcn `Chart` | L |
+| `date-range-picker` (P2) | `Calendar` + `Popover` | Greenfield; presets + DD/MM/YYYY | M |
+
+**Effort key:** S = ≤1 day, M = 1–3 days, L = ≥1 week.
+
+### 9.3 Phased rollout
+
+#### Phase A — Tokens & infrastructure (no user-visible change) · ~1 sprint
+
+- Install `tailwindcss@4` (`@tailwindcss/vite`) in `frontend/` if not already present
+- Map `tokens.css` to Tailwind `@theme` directive (light + dark)
+- Add `cn()` utility (clsx + tailwind-merge)
+- `npx shadcn@latest init` against `frontend/src/components/ui/`
+- Lint: forbid raw color hex in island TSX (must use token/Tailwind class)
+- **Exit:** Lighthouse/visual regression unchanged on all 16 islands
+
+#### Phase B — Drop-in wrappers (small components) · ~1 sprint
+
+Migrate **S-effort** components above. Keep public API identical so islands need zero changes.
+
+- `WidgetCard` · `RowActionsMenu` · `PaginationBar` · `StatusPill` · `TrendPill` · `SegmentedControl` · `CompletionBar` · `StatCard` · `QueueCard`
+- Each PR: ship behind no flag (component-internal swap), Vitest + visual smoke must pass
+
+#### Phase C — Behavior-bearing primitives (M-effort) · ~2 sprints
+
+- `Toast` → `Sonner` (one mount in `T1` shell; per-island imports become `import { toast } from 'sonner'`)
+- `ConfirmModal` → `Dialog` (preserve `IdentityConfirmBanner` slot, variants, submit/submitting states)
+- `SlideOver` → `Sheet` (drop `useModalDismiss`; Radix handles ESC + focus return)
+- `PatientSearchDropdown` → `Command` (preserve 250ms debounce + scoring)
+- `DataTable` → shadcn `Table` + TanStack Table (M7 + Registry first; ship behind `enable_shadcn_tables` flag)
+
+#### Phase D — Composite & greenfield (L-effort) · post-pilot
+
+- `PatientContextBanner` composed of shadcn primitives (preserve Tier 1/2/3 + AHRQ identity-repeat rules)
+- `chart-line` built directly on shadcn `Chart` (Recharts) — replaces Chart.js need in pilot scope for new dashboards
+- `date-range-picker` greenfield on `Calendar` + `Popover`
+
+#### Phase E — Retire BEM CSS · 2027
+
+- Remove `oe-nc-widget-card`, `oe-nc-data-table`, etc. from `components.css` when no consumer remains
+- Twig partials under `templates/partials/ui/` migrate to use shadcn-equivalent Tailwind classes
+- Update `ModuleAssetVersion` and document the cutover in [§13](#13-document-history)
+
+### 9.4 Compatibility decisions
+
+| Layer | Decision | Rationale |
+|-------|----------|-----------|
+| **Bootstrap 4.6 chrome (T1 shell)** | Keep through Phase D | Replacing the server-rendered shell is a Phase 3 platform decision, not New Clinic's |
+| **Page-level Bootstrap utilities** (`mb-3`, `d-flex`, `col-md-6`) | Allowed during Phase B–C; lint-warned in Phase D; removed in Phase E | Avoid premature churn; concentrate on component-internal |
+| **Existing `oe-nc-*` BEM classes** | Retained as data attributes for legacy Twig consumers during Phase B–D; removed in Phase E | Twig partials (e.g. `legacy-patient-context-strip.twig`) still consumed by stock chart pages |
+| **Font Awesome 6** | Keep in shell + legacy Twig; Lucide adopted alongside in new shadcn components | One icon style per surface |
+| **Tailwind utility prefix** | None (default) — `frontend/src/` is isolated from legacy `interface/` Bootstrap | No class-name collision risk |
+
+### 9.5 Risks & exit criteria
+
+| Risk | Mitigation |
+|------|------------|
+| Bundle size spike from shadcn dependencies | Tree-shake; measure per-island gzip after each Phase B PR; budget ≤200KB gzip per island |
+| Visual regression in clinical safety surfaces | Playwright visual diff on banner, allergies, queue cards before merging Phase C |
+| New A11y regressions when swapping `ConfirmModal` to `Dialog` | axe-core in Playwright; manual screen-reader pass on cashier confirm + e-sign override |
+| Bootstrap + Tailwind class collisions | Limit Tailwind to islands; lint-forbid in legacy Twig |
+| Pilot stability disruption | All Phase C changes ship behind a flag (`enable_shadcn_dialogs`, `enable_shadcn_tables`) for ≥2 weeks |
+
+**Exit criteria (Phase done = true):**
+- All Vitest + Playwright suites green
+- Bundle size delta ≤+15% per island
+- Lighthouse Accessibility ≥90 on M5 cashier and MRD chart
+- Pilot clinic reports no UI regressions for ≥1 week
+
+### 9.6 Cross-references
+
+- Platform-wide context: [FRONTEND_2026 §3.3 shadcn rationale](./FRONTEND_2026_MODERNIZATION_PLAN.md#33-ui-component-library-shadcnui--tailwind-css-4)
+- Chart strategy: [FRONTEND_2026 §4 Chart Modernization](./FRONTEND_2026_MODERNIZATION_PLAN.md#4-chart-modernization-strategy)
+- Module guide for new islands: [`FRONTEND_MODULE_GUIDE.md`](../FRONTEND_MODULE_GUIDE.md)
 
 ---
 
-## 13. Known gaps (not in V1 UI scope)
+## 10. Governance & quality bar
 
-From [OPENEMR_AREAS_NOT_ADDRESSED.txt](./OPENEMR_AREAS_NOT_ADDRESSED.txt) and PRD non-goals:
+### 10.1 Scoring rubric (per skill)
+
+Every UI/UX PR (new surface, redesign, or polish pass) gets a score out of 10 on each axis. **Merge bar: ≥8/10 average, no axis <6/10.**
+
+| Axis | Skill source | 10/10 means |
+|------|--------------|-------------|
+| **Visual hierarchy** | refactoring-ui | One primary action; secondary muted; tertiary text-only. Constrained scale. |
+| **Spacing & rhythm** | refactoring-ui | Only `--space-*` values used; between-group > within-group |
+| **Typography** | web-typography | Body 16px+ · line-height 1.5 · line length ≤75ch · mobile 17px |
+| **Don't make me think** | ux-heuristics (Krug) | Trunk test passes; labels are intention-revealing; primary action obvious |
+| **Heuristics** | ux-heuristics (Nielsen) | 10/10 on visibility, match, control, consistency, error-prevention |
+| **Affordances & gulfs** | design-everyday-things | Discoverable in <10s without training; feedback for every action <100ms |
+| **Microinteractions** | microinteractions | All 4 (trigger/rules/feedback/loops) defined; all 9 states ([§5.1](#51-universal-states-per-component)) handled |
+| **Refactor smell** | refactoring-patterns | No duplication; no method >40 lines; no magic strings |
+
+### 10.2 Quality bar for new components
+
+A new shared component (`frontend/src/components/<Name>.tsx`) must arrive with:
+
+- [ ] **Contract block** at top of file ([§4.1](#41-component-contract-template))
+- [ ] **TypeScript props interface** exported
+- [ ] **All 9 states** ([§5.1](#51-universal-states-per-component)) implemented or documented why omitted
+- [ ] **Vitest** covering: happy path + each variant + a11y query (e.g. `getByRole`)
+- [ ] **CSS class names** following BEM (`oe-nc-<name>__<element>--<modifier>`)
+- [ ] **No raw hex colors** — only tokens (`var(--oe-*)` or Tailwind class once Phase A lands)
+- [ ] **`aria-label`** on icon-only controls
+- [ ] **`prefers-reduced-motion`** respected
+- [ ] **Wired into ≥1 island** in the same PR (no orphan components)
+- [ ] **Used-by list** in contract block updated when consumers change
+
+### 10.3 Versioning
+
+This doc follows **SemVer**:
+- `MAJOR` — IA change that breaks reader cross-references (e.g. v1 → v2)
+- `MINOR` — new section, new principle, new component contract; no cross-ref break
+- `PATCH` — copy edits, table fixes, anchor renames
+
+Update [§13](#13-document-history) on every change.
+
+### 10.4 Relationship to FRONTEND_2026
+
+This plan is **module-scoped**. FRONTEND_2026 is **platform-scoped**. When they conflict:
+
+- Module decisions (component contracts, IA, principles) win for New Clinic surfaces
+- Platform decisions (framework, build, charts, shell) win for cross-OpenEMR work
+- New shared components must list a **shadcn target** ([§4.1](#41-component-contract-template)) to keep alignment
+
+| FRONTEND phase | Scope | New Clinic status (June 2026) |
+|----------------|-------|-------------------------------|
+| Phase 0 (Q2 2026) | Tooling + tokens | **Done** — `frontend/`, Vite 8, `tokens.css` |
+| Phase 1 (Q3 2026) | High-value React islands | **Done for module** — 16 Vite entries ([§1.3.1](#131-vite-island-entries-16-all-shipped)) |
+| Phase 2 (Q4 2026) | Forms + tables | **Partial** — Registry table, daily reports; shared `data-table` / `pagination-bar` consolidating in Track B |
+| Phase 3 (2027 H1) | Modern shell + shadcn | **In progress for module** — see [§9 migration plan](#9-shadcnui-migration-plan); core Knockout tab shell unchanged |
+| Phase 4 (2027 H2+) | Legacy retirement | **Pending** — stock Finder, Message Center when flags OFF |
+
+---
+
+## 11. Known gaps (not in V1 UI scope)
+
+From `OPENEMR_AREAS_NOT_ADDRESSED.txt` and PRD non-goals:
 
 - Patient portal UI redesign
 - Telehealth UI
 - Group therapy
-- i18n / localization strategy for New Clinic strings
+- i18n / localization strategy for New Clinic strings (en-GH only in pilot)
 - US insurance / claims UI (NG1)
 - DICOM viewer, fax UI (deep links only in COM)
+- AI / decision support (PRD non-goal in V1)
 
 ---
 
-## 14. Premium component catalog — reference EHR translation
+## 12. Reading order by role
 
-**Source:** Critical analysis of reference EHR UI screenshots (clinic dashboard + patient chart). **Scope:** reusable **components only** — not page layout (New Clinic uses **T1 horizontal top nav**, not a left sidebar; that is intentional).
-
-**Legend:** ✅ Spec'd · 🔶 Spec'd but needs premium polish · ➕ Add to component library · ⛔ Out of V1 scope
-
-### 14.1 Navigation & shell primitives
-
-| Reference component | What it is (component only) | New Clinic equivalent | Status | Premium upgrade |
-|---------------------|----------------------------|------------------------|--------|-----------------|
-| App brand block | Logo + product name | T1 brand strip (clinic logo + facility name) | ✅ PAGE_DESIGNS §2.1 | Clinic-uploaded logo; consistent `max-height` + fallback initials |
-| Sidebar nav item | Icon + label + active fill | **T1 module nav tab** (horizontal, ACL-filtered) | ✅ §2.1 | Active tab: pill background + 2px bottom border; icon + label at `md+`, icon-only at `sm` |
-| Sidebar collapse toggle | Chevron expand/collapse | Hamburger menu ≤767px | 🔶 §2.6, §8.3 | Animated drawer; remember collapsed state per user |
-| Utility nav link | Help / Settings / Notifications | **⋯ overflow** + Admin hub runbooks; COM badge | 🔶 | `nav-utility-link` partial: icon + label + optional badge |
-| User profile widget | Avatar + name + role + chevron | **Active-role pill** + dropdown | ✅ §2.2, §4.10 | Circular avatar/initials; role accent ring; keyboard-accessible menu |
-| Notification badge | Red count pill on nav item | Queue stats strip; COM envelope (Phase 2) | 🔶 | `nav-badge` atom: `aria-label` count; cap at `99+` |
-| Beta / feature tag | Small label pill ("Beta") | Not spec'd | ➕ | `feature-tag` for V1.1 slices only — never on clinical safety paths |
-| Horizontal tab bar | Icon + label + count per tab | **MRD Zone C tabs**; COM lens switcher; hub lenses | ✅ MRD §8; COM §6 | `tab-bar` partial: selected state, badge count, `role="tablist"` |
-| Primary CTA button | Large rounded action button | Desk primary actions; **Start visit**; **Create appointment** | ✅ | `btn-primary-lg`: min 44px height, icon-left, loading spinner state |
-| Icon button | Search, close, expand | Refresh, filter, **⋯** overflow | ✅ | `btn-icon`: 44×44 hit area, mandatory `aria-label` |
-
-### 14.2 Filters, search & date controls
-
-| Reference component | What it is | New Clinic equivalent | Status | Premium upgrade |
-|---------------------|-----------|------------------------|--------|-----------------|
-| Global date range picker | Dropdown + calendar icon | M7 date range; S1 filter bar; M16 reports | 🔶 | `date-range-picker`: presets (Today / 7d / 30d / custom); DD/MM/YYYY |
-| Inline date display | Date text + calendar icon + chevron | S1 top bar date stepper; Registry "as of" | 🔶 | `date-stepper`: prev/today/next + label |
-| Search input | Magnifying glass + placeholder | **`patient-search`** (M1a); hub list search | ✅ §4.1 | Consistent `search-input` partial; clear (×) button; debounce indicator |
-| Filter button | Funnel icon button | Registry filter panel; M16 lens filters | 🔶 | `filter-trigger` opens slide-over panel on mobile |
-| Segmented control w/ counts | Pills: All (134), Completed (56)… | Visit Board state filters; M18 severity tabs; COM unread counts | 🔶 | **`segmented-control`**: each segment = label + `(count)`; keyboard arrows |
-| Section header w/ count | "134 total appointments" | Queue desk headings; Registry match banner | 🔶 | `section-header`: title + muted count + right actions slot |
-
-### 14.3 Data display — cards & KPIs
-
-| Reference component | What it is | New Clinic equivalent | Status | Premium upgrade |
-|---------------------|-----------|------------------------|--------|-----------------|
-| KPI / stat card | Icon + label + big number + trend pill | **M7 KPI cards**; queue stats strip | 🔶 §7.10 | **`stat-card`**: value + `trend-pill` (↑12% green / ↓3% red) + sparkline optional V1.1 |
-| Trend pill | % change + directional arrow | Not spec'd as reusable atom | ➕ | `trend-pill`: `aria-label` "up 12% vs last period" |
-| Widget card shell | White card + header + expand chevron | MRD blocks; hub lenses; COM panes | 🔶 | **`widget-card`**: header (title + icon + actions) + body + optional footer |
-| Expandable widget | Card header → full view | Chart depth slide-over; M12 result entry | 🔶 | `widget-expand` → opens slide-over ≥768px / full page &lt;768px |
-| Empty state | Illustration + guidance | §4.9 empty/loading/error | ✅ | Premium: role-specific CTA in empty state |
-| Skeleton loader | Placeholder shimmer | Mentioned for chart depth | 🔶 | `skeleton-row` / `skeleton-card` for AJAX tabs |
-
-### 14.4 Tables & lists
-
-| Reference component | What it is | New Clinic equivalent | Status | Premium upgrade |
-|---------------------|-----------|------------------------|--------|-----------------|
-| Data table container | Column headers + rows | Registry cohort table; COM list; M7 exports | 🔶 | **`data-table`** partial (not DataTables.net in module UI) |
-| Avatar + two-line cell | Photo + name + subtitle | Queue card patient row; table patient column | 🔶 §4.2 | **`cell-identity`**: avatar/initials + primary + secondary line |
-| Two-line text cell | Primary + secondary (time+duration, phone+email) | Visit timeline rows; appointment chips | 🔶 | **`cell-stacked`**: ellipsis + `title` tooltip on truncate |
-| Status badge pill | Colored pill + dot + label | **`visit-chip`**; FSM state; appt status | ✅ §4.3 | **`status-pill`**: variant map (success/info/warning/danger/neutral) + dot + text |
-| Category icon cell | Icon + specialty label | Doctor Desk consult type; lab test category | 🔶 | **`cell-category`**: FA icon in tinted circle |
-| Doctor avatar cell | Small avatar + name | Provider combobox; assign doctor | ✅ §4.12 | Reuse in tables and combobox dropdown |
-| Document link cell | File icon + filename | Chart depth export; referrals print | 🔶 | **`cell-document`**: icon + truncated name + download |
-| Progress bar | Horizontal completion % | Profile completion (MRD); treatment not in V1 | 🔶 | **`progress-bar`**: label + % + `role="progressbar"` — MRD Profile checklist |
-| Row kebab menu | ⋯ vertical ellipsis | Queue card actions; MRD overflow | ✅ | **`row-actions-menu`**: dropdown; destructive items separated |
-| Pagination bar | "Showing 1–20 of N" + page buttons | Registry; MRD visits; COM lists | 🔶 | **`pagination-bar`**: prev/next + page numbers + page-size select |
-
-**Note:** Role **desks** intentionally use **`queue-card`** (card list), not a data table — better for queue pressure and mobile. Use **`data-table`** for Registry, reports, and admin lists.
-
-### 14.5 Patient & clinical widgets (image 2)
-
-| Reference component | What it is | New Clinic equivalent | Status | Premium upgrade |
-|---------------------|-----------|------------------------|--------|-----------------|
-| Patient hero card | Large photo + overlay name/age | **MRD Zone A** patient banner | 🔶 MRD §6 | Photo/initials + sticky identity; not decorative hero — clinical first |
-| Quick action overlay buttons | Message / Call on photo | MRD Messages tab; phone in Profile | 🔶 | **`quick-action-chip`**: only actions with real handlers (no dead icons) |
-| Contact list rows | Icon + label + value | MRD Profile demographics; Preview pane | ✅ §4.11 | **`contact-row`**: icon + label + value + copy button optional |
-| Allergy chip cloud | Rounded tags per allergen | **MRD Zone B** safety strip; legacy L2+ chips | ✅ MRD §7 | **`chip-cloud`**: severity color border; max visible + "N more" |
-| Medication schedule timeline | Week strip + gantt bars + med chips | MRD **meds strip** §8.10.5; eRx list | 🔶 | ➕ **`med-schedule-timeline`** (V1.1): day strip + dose chips — **adherence display only** in V1, not prescribing |
-| AM/PM toggle | Morning / Evening filter | Not spec'd | ➕ | Pair with med timeline; sun/moon icons + text label (not color-only) |
-| Line chart + tooltip | Weight trend + hover popover | Vitals trends (stock); MRD clinical labs | 🔶 | **`chart-line`**: Chart.js wrapper + accessible tooltip table |
-| Chart summary stats | Latest / target / height below chart | Vitals block in MRD Clinical | 🔶 | **`chart-summary-row`**: 3-up stat line under chart |
-| Month dropdown on chart | Period selector | Not as shared component | ➕ | `chart-period-select`: 7d / 30d / 90d / 12mo |
-| Appointments sub-tabs | Upcoming / Past within card | MRD **Visits tab** §8.5 | ✅ | **`sub-tabs`**: underline style inside widget-card |
-| Heart rate mini-card | Title + date range + sparkline | Vitals chips in Zone A (BP/HR/T) | 🔶 | **`vital-chip-group`**: abnormal state styling (M3-F14) |
-
-### 14.6 Modals & overlays
-
-| Reference component | What it is | New Clinic equivalent | Status | Premium upgrade |
-|---------------------|-----------|------------------------|--------|-----------------|
-| Confirm modal w/ identity | Patient · MRN repeat | G12 family; payment confirm; print confirm | ✅ §4.4, §4.5 | **`confirm-modal`**: danger variant + reason textarea on overrides |
-| Slide-over panel | Right drawer 480–720px | Chart depth; lab results; billing correction | ✅ CHART_DEPTH §5.2 | Backdrop blur; focus trap; ESC to close |
-| Bottom sheet | Mobile action sheet | MRD Zone D mobile actions | ✅ MRD §9 | `bottom-sheet`: drag handle optional |
-| Toast / banner | Inline alert | `visit-interrupt`; completion banner; offline banner | ✅ §4.6, §4.8 | `toast`: auto-dismiss info; sticky for errors |
-
-### 14.7 Deliberately skipped (V1)
-
-| Reference component | Why skip |
-|-------------------|----------|
-| Left sidebar navigation | New Clinic **T1 top nav** — better for role switching on shared tablets; not a component gap |
-| Chatbot AI + Beta tag | PRD non-goal; no AI assistant in V1 |
-| Inventory sidebar item | Pharmacy stock is M13 hub, not global nav |
-| Billing as top-level beside clinical | Cashier desk + M5; not parallel to "Patients" in a US SaaS shell |
-| Decorative dashboard without visit context | Every surface must anchor **patient** or **today's queue** (clinical safety) |
-
-### 14.8 Implementation priority
-
-Build these **shared Twig partials** once in `templates/partials/ui/` — use everywhere:
-
-| Priority | Partial name | Unblocks |
-|----------|--------------|----------|
-| P0 | `status-pill`, `cell-identity`, `btn-primary-lg`, `search-input` | All desks + Registry |
-| P0 | `patient-context-banner` (existing §4.11) — polish pass | All patient surfaces |
-| P1 | `stat-card`, `trend-pill`, `segmented-control`, `widget-card` | M7, MRD Overview, S1 |
-| P1 | `data-table`, `pagination-bar`, `row-actions-menu` | M10 Registry, COM, M16 |
-| P1 | `chip-cloud`, `vital-chip-group`, `progress-bar` | MRD Clinical + Profile |
-| P2 | `chart-line`, `med-schedule-timeline`, `date-range-picker` | MRD depth, M7 trends |
-| P2 | `slide-over`, `bottom-sheet`, `confirm-modal` | Chart depth, lab, billing |
-
-**Stack:** Implement as Bootstrap 4.6 + scoped SCSS (`oe-nc-*` BEM) in V1; extract to React + shadcn in [FRONTEND_2026](./FRONTEND_2026_MODERNIZATION_PLAN.md) Phase 1–2 without changing component API names.
+| Role | First time | Returning |
+|------|------------|-----------|
+| **Designer** | §0 → §1.1 → §2 → §3 → §4 (component scan) → relevant §6.6 row | §3 + §4 |
+| **Frontend engineer** | §0 → §1.3 → §4 (contract template + relevant component) → §5 → §9 (if Phase B+ work) | §4 + §10.2 |
+| **QA** | §0 → §1.1 → §5 (state taxonomy) → [PAGE_DESIGNS §10 acceptance matrix](./NEW_CLINIC_V1_PAGE_DESIGNS.md#10-acceptance) | §5 + §7 |
+| **Product** | §0 → §1.1 → §6.6 (module map) → §10.4 (relation to FRONTEND_2026) | §6.6 + §11 |
+| **Clinical lead** | §0 → §2.1 (safety) → §2.6 (access) → [USER_WORKFLOWS](./NEW_CLINIC_V1_USER_WORKFLOWS.md) | §2.1 + relevant redesign §1 |
 
 ---
 
-## 15. Reading order by role
-
-| Role | Read |
-|------|------|
-| **Designer** | This plan §3–§5 → PAGE_DESIGNS §2, §4, §8–§9 → relevant §7.x |
-| **Frontend engineer** | PAGE_DESIGNS §4–§6 → §7.x for assigned page → feature redesign spec |
-| **QA** | PAGE_DESIGNS §10 acceptance matrix → PRD §21.1x tests |
-| **Product** | This plan §7 module map → PRD §5.6 phasing |
-| **Clinical lead** | USER_WORKFLOWS → relevant redesign §1 purpose |
-
----
-
-## 16. Document history
+## 13. Document history
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.1.0 | 2026-06-24 | **§14 Premium component catalog** — reference EHR screenshot analysis translated to New Clinic components; gap/priority matrix for premium partials |
-| 1.0.0 | 2026-06-24 | Initial consolidated plan — synthesized UI/UX from all 19 redesign specs + PAGE_DESIGNS + FRONTEND_2026 + design-system MASTER; module map; cross-cutting principles; post-audit version sync |
+| **2.0.5** | **2026-06-29** | **`DeskQueueStatusBar`** extended to Lab and Pharmacy desks — waiting / in-lab and waiting / in-pharmacy counts; queue panel headers no longer duplicate stats. **`enable_pharm_ops`** now shows **Pharm Ops** in clinic sidebar (placeholder hub page until M13 worklists ship). |
+| **2.0.4** | **2026-06-29** | **Shared `DeskQueueStatusBar`** rolled to Triage, Doctor, Cashier, Visit Board — same operational strip pattern as Front Desk; per-desk counts moved out of queue panel headers. |
+| **2.0.3** | **2026-06-29** | Revert M1b 3-step intake wizard — registration returns to **4-section accordion** on all viewports (mobile keeps optional step wizard via `wizardMode`). Wide registration layout retained. |
+| **2.0.2** | **2026-06-29** | **M1b intake wizard + recently viewed sync** — §4.7: `RecentlyViewed` server sync (`front_desk.recently_viewed`); 3-step desktop registration intake (reverted in 2.0.3). |
+| **2.0.1** | **2026-06-29** | **M1a Front Desk search-first pass** — §4.7 documents `DeskStatusBar`, `RecentlyViewed`, `TodaysAppointmentsList`, idle vs selected layout, desk-focus shell, sticky Start Visit footer; §5.2 patient search idle state; §6.6.1 M1a pattern updated. |
+| **2.0.0** | **2026-06-29** | **Full rewrite.** New IA: §0 TL;DR (trunk test), §1 architectural model (Norman desk·chart·depth·hub·shell), §2 design principles backed by AHRQ wrong-patient research + offline-first research, §3 full visual system (type scale, spacing scale, motion, elevation), §4 **single canonical component reference** with contract template + shadcn target per component, §5 interaction state taxonomy (Saffer), §6 IA + module map, §7 a11y/mobile/print, §8 feature-flag rule, **§9 phased shadcn migration plan** (Phase A→E), §10 governance + scoring rubric per skill + quality bar checklist, §11 gaps, §12 reading order. Consolidates v1.x §2.1/§5/§14 component lists into §4 (removes duplication smell). Renames or removes some v1.x anchors — README + FRONTEND_2026 updated. |
+| 1.2.3 | 2026-06-28 | **Track B (cont.)** — `ConfirmModal` + `IdentityConfirmBanner`; refactored e-sign, skip-to-payment, pay confirm, M7 action modals; `PatientChart` → `WidgetCard`; M7 `ReportsSections` → `DataTable` |
+| 1.2.2 | 2026-06-28 | **Track B (cont.)** — `WidgetCard`, `DataTable`, `RowActionsMenu`, `SlideOver`, `TrendPill`; wired into Registry, COM, chart depth, lab ops, bill ops, Front Desk search |
+| 1.2.1 | 2026-06-28 | **Track B** — shared React components: `PatientContextBanner`, `StatCard`, `SegmentedControl`, `PaginationBar`, `ChipCloud`, `CompletionBar`; wired into desks, M7, Registry, Visit Board |
+| 1.2.0 | 2026-06-28 | **Track A doc sync** — §2.1 implementation inventory; §5/§7 status updated; §12 FRONTEND 2026 reflects shipped islands; §14.8 React component priority with file paths |
+| 1.1.0 | 2026-06-24 | **§14 Premium component catalog** — reference EHR screenshot analysis translated to New Clinic components |
+| 1.0.0 | 2026-06-24 | Initial consolidated plan — synthesized UI/UX from all 19 redesign specs + PAGE_DESIGNS + FRONTEND_2026 + design-system MASTER |
 
 ---
 
-*Normative wireframes: [PAGE_DESIGNS](./NEW_CLINIC_V1_PAGE_DESIGNS.md) · Workflows: [USER_WORKFLOWS](./NEW_CLINIC_V1_USER_WORKFLOWS.md) · Requirements: [PRD](./NEW_CLINIC_V1_PRD.md)*
+*Normative wireframes: [PAGE_DESIGNS](./NEW_CLINIC_V1_PAGE_DESIGNS.md) · Workflows: [USER_WORKFLOWS](./NEW_CLINIC_V1_USER_WORKFLOWS.md) · Requirements: [PRD](./NEW_CLINIC_V1_PRD.md) · Platform: [FRONTEND_2026](./FRONTEND_2026_MODERNIZATION_PLAN.md)*

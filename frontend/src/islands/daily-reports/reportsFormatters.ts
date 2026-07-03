@@ -1,3 +1,6 @@
+import type { CurrencyFormat } from '@core/formatMoney';
+import { formatMoney as formatMoneyCore } from '@core/formatMoney';
+
 export function localDateString(date = new Date()): string {
   return date.toLocaleDateString('en-CA');
 }
@@ -13,8 +16,18 @@ export function initialReportTab(): string {
   return fromUrl ?? 'visits';
 }
 
+let reportCurrencyFormat: CurrencyFormat = {
+  currency_symbol: 'GH₵',
+  currency_decimals: 2,
+  currency_symbol_position: 'before',
+};
+
+export function setReportCurrencyFormat(format: CurrencyFormat): void {
+  reportCurrencyFormat = format;
+}
+
 export function formatMoney(amount: number | string | null | undefined): string {
-  return Number(amount ?? 0).toFixed(2);
+  return formatMoneyCore(amount, reportCurrencyFormat);
 }
 
 export function formatWaitMinutes(minutes: number | string | null | undefined): string {

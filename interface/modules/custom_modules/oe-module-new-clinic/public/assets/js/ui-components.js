@@ -381,11 +381,21 @@
     }
 
     function postJson(url, body) {
+        var shell = document.getElementById('oe-nc-t1');
+        var csrfToken = shell ? (shell.getAttribute('data-csrf-token') || '') : '';
+        var payload = Object.assign({}, body || {});
+        if (!payload.csrf_token_form && !payload.csrf_token && csrfToken) {
+            payload.csrf_token_form = csrfToken;
+        }
+        var headers = { 'Content-Type': 'application/json' };
+        if (csrfToken) {
+            headers['X-CSRF-Token'] = csrfToken;
+        }
         return fetch(url, {
             method: 'POST',
             credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
+            headers: headers,
+            body: JSON.stringify(payload)
         }).then(parseJsonResponse).catch(networkErrorResult);
     }
 
@@ -514,6 +524,17 @@
         return parts[0] + ' ' + parts[parts.length - 1].charAt(0) + '.';
     }
 
+    function patientInitials(displayName) {
+        var parts = String(displayName || '').trim().split(/\s+/).filter(Boolean);
+        if (!parts.length) {
+            return '—';
+        }
+        if (parts.length === 1) {
+            return parts[0].charAt(0).toUpperCase();
+        }
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+
     /**
      * Returns a small amber badge when the visit was opened on a previous day.
      * Gives staff a clear visual signal without the system acting on it.
@@ -593,6 +614,26 @@
         return escapeHtml(text);
     }
 
+    function renderAncillaryBadges(card) {
+        var badges = (card && card.ancillary_badges) || [];
+        if (!badges.length) {
+            return '';
+        }
+        var meta = {
+            lab_direct: { label: 'Direct lab', cls: 'badge-info' },
+            pharmacy_walkin: { label: 'Pharmacy walk-in', cls: 'badge-info' },
+            referral_on_file: { label: 'Referral on file', cls: 'badge-secondary' },
+            referred_to_opd: { label: 'Referred to OPD', cls: 'badge-secondary' }
+        };
+        return badges.map(function (key) {
+            var item = meta[key];
+            if (!item) {
+                return '';
+            }
+            return '<span class="badge ' + item.cls + ' ml-1">' + escapeHtml(item.label) + '</span>';
+        }).join('');
+    }
+
     function renderQueueCard(card, options) {
         var opts = options || {};
         var interactive = opts.interactive !== false;
@@ -620,10 +661,21 @@
         var displayName = opts.privacyMode ? privacyDisplayName(card.display_name) : (card.display_name || '');
         var surnameBadge = similarSurnameBadge(card);
         var staleBadge = staleDateBadge(card);
+        var bridgeBadge = '';
+        if (card.queue_bridge_badge && card.queue_bridge_badge.label) {
+            var bridge = card.queue_bridge_badge;
+            var hubUrl = bridge.hub_url || '#';
+            var bridgeTitle = bridge.code ? ' title="' + escapeHtml(bridge.code) + '"' : '';
+            bridgeBadge = '<a href="' + escapeHtml(hubUrl) + '" class="badge badge-info ml-1"' +
+                bridgeTitle + ' onclick="event.stopPropagation();">' +
+                escapeHtml(bridge.label) + '</a>';
+        }
         var titleHtml = opts.titleHtml
-            ? (opts.titleHtml + surnameBadge + staleBadge)
-            : ('<strong>#' + escapeHtml(card.queue_number) + ' ' + escapeHtml(displayName) + '</strong>' +
-                (opts.badgesHtml || '') + surnameBadge + staleBadge);
+            ? (opts.titleHtml + surnameBadge + staleBadge + bridgeBadge)
+            : ('<span class="oe-nc-queue-card__queue-num">#' + escapeHtml(card.queue_number) + '</span>' +
+                '<span class="oe-nc-queue-card__name">' + escapeHtml(displayName) + '</span>' +
+                renderAncillaryBadges(card) +
+                (opts.badgesHtml || '') + bridgeBadge + surnameBadge + staleBadge);
         var waitLabel = resolveWaitLabel(card);
         var subtitleHtml = opts.subtitleHtml || (
             '<div class="oe-nc-queue-card__meta small text-muted">' +
@@ -635,6 +687,8 @@
             ? '<div class="oe-nc-queue-card__cc small text-muted text-truncate">CC: ' +
             escapeHtml(card.chief_complaint) + '</div>' : '';
         var footerHtml = opts.footerHtml || '';
+        var avatarHtml = '<span class="oe-nc-queue-card__avatar" aria-hidden="true">' +
+            escapeHtml(patientInitials(card.display_name)) + '</span>';
 
         var dataAttrs = '';
         Object.keys(opts.dataAttributes || {}).forEach(function (key) {
@@ -649,10 +703,13 @@
         return '<' + tag + typeAttr +
             ' class="oe-nc-queue-card nc-queue-card' + btnClasses + ' w-100 mb-2' + modifierClass + '"' +
             dataAttrs + claimTitle + disabledTitle + disabledAttr + '>' +
-            '<div class="oe-nc-queue-card__header d-flex justify-content-between align-items-start flex-wrap">' +
-            titleHtml +
-            '</div>' +
-            subtitleHtml + cc + footerHtml +
+            '<div class="oe-nc-queue-card__row">' +
+            avatarHtml +
+            '<div class="oe-nc-queue-card__body">' +
+            '<div class="oe-nc-queue-card__header">' + titleHtml + '</div>' +
+            subtitleHtml + cc +
+            (footerHtml ? '<div class="oe-nc-queue-card__footer">' + footerHtml + '</div>' : '') +
+            '</div></div>' +
             '</' + tag + '>';
     }
 
@@ -821,9 +878,13 @@
                 if (visitId <= 0) {
                     return;
                 }
+                var shell = document.getElementById('oe-nc-t1');
+                var restoreCsrf = root.dataset.csrfToken
+                    || (shell ? shell.getAttribute('data-csrf-token') : '')
+                    || '';
                 postJson(root.dataset.ajaxUrl + '?action=' + restoreAction, {
                     visit_id: visitId,
-                    csrf_token_form: root.dataset.csrfToken
+                    csrf_token_form: restoreCsrf
                 }).then(function (result) {
                     if (result.payload.success) {
                         hideBanner();
@@ -985,6 +1046,7 @@
         processClaimLostPoll: processClaimLostPoll,
         resolveVisitConflict: resolveVisitConflict,
         renderQueueCard: renderQueueCard,
+        renderAncillaryBadges: renderAncillaryBadges,
         privacyDisplayName: privacyDisplayName,
         setDeskActiveVisitId: setDeskActiveVisitId,
         clearDeskActiveVisitId: clearDeskActiveVisitId,

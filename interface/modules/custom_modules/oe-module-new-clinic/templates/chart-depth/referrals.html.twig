@@ -11,7 +11,8 @@
         pid: pid,
         encounterId: encounter_id|default(0)|number_format(0, '', ''),
         chartUrl: chart_url,
-        visitBoardUrl: visit_board_url
+        visitBoardUrl: visit_board_url,
+        currencyFormat: currency_format|default({})
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}
@@ -21,6 +22,6 @@
 
 {% block scripts %}
 {% if enable_react_chart_depth|default(true) %}
-<script type="module" src="{{ assets_url }}/modern/chart-depth.js?v={{ asset_version }}"></script>
+{% include 'partials/island-assets.html.twig' %}
 {% endif %}
 {% endblock %}

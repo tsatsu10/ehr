@@ -1,0 +1,12 @@
+{
+  "export_format": "new_clinic_m6_config",
+  "export_version": 1,
+  "exported_at": "2026-06-29T12:00:00+00:00",
+  "facility_id": 0,
+  "facility_label": "E2E dry-run fixture",
+  "settings": {
+    "currency_decimals": "2"
+  },
+  "fee_schedule": [],
+  "visit_types": []
+}

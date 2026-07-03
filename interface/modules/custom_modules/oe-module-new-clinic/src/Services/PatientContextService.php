@@ -26,7 +26,11 @@ class PatientContextService
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly PatientActivityFeedService $activityFeed = new PatientActivityFeedService(),
         private readonly AppointmentTodayService $appointmentToday = new AppointmentTodayService(),
+        private readonly RecallDueService $recallDue = new RecallDueService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
+        private readonly RevisitCompletionGateService $revisitGate = new RevisitCompletionGateService(),
+        private readonly ClinicDateService $clinicDate = new ClinicDateService(),
+        private readonly QueueBridgeSurfaceService $queueBridgeSurface = new QueueBridgeSurfaceService(),
     ) {
     }
 
@@ -72,6 +76,11 @@ class PatientContextService
             "SELECT title FROM lists WHERE pid = ? AND type = 'allergy' AND activity = 1 ORDER BY id DESC LIMIT 5",
             [$pid]
         ) ?: [];
+        $allergyCountRow = QueryUtils::querySingleRow(
+            "SELECT COUNT(*) AS cnt FROM lists WHERE pid = ? AND type = 'allergy' AND activity = 1",
+            [$pid]
+        );
+        $allergyCount = is_array($allergyCountRow) ? (int) ($allergyCountRow['cnt'] ?? 0) : 0;
         $allergiesUndocumented = !$this->completionService->hasAllergyDocumentationForPatient($pid);
         $allergyTitles = array_values(array_filter(array_map(
             fn ($row) => $row['title'] ?? '',
@@ -81,6 +90,12 @@ class PatientContextService
                 && !PatientCompletionService::isNkdaOnlyTitle((string) $title);
         }));
 
+        $facilityId = $this->visitScope->resolveDefaultFacilityId();
+        $pregnant = $this->config->getInt('enable_pregnancy_banner_chip', 0, $facilityId) === 1
+            && $this->isPatientPregnant($pid, is_array($meta) ? $meta : []);
+        $bannerMrdDeepLinks = $this->config->getInt('enable_banner_mrd_deep_links', 0, $facilityId) === 1;
+        $allergyCountChip = $this->config->getInt('enable_allergy_count_chip', 0, $facilityId) === 1;
+
         $problemRow = QueryUtils::querySingleRow(
             "SELECT COUNT(*) AS cnt FROM lists WHERE pid = ? AND type = 'medical_problem' AND activity = 1",
             [$pid]
@@ -88,10 +103,13 @@ class PatientContextService
         $problemCount = is_array($problemRow) ? (int) ($problemRow['cnt'] ?? 0) : 0;
 
         $visit = QueryUtils::querySingleRow(
-            "SELECT id, state, queue_number, chief_complaint, encounter, facility_id FROM new_visit
-             WHERE pid = ?
-             AND state NOT IN ('completed', 'closed_unpaid', 'cancelled')
-             ORDER BY id DESC LIMIT 1",
+            "SELECT v.id, v.state, v.queue_number, v.chief_complaint, v.encounter, v.facility_id, v.row_version,
+                    v.hard_assigned_provider_id, ha.fname AS hard_fname, ha.lname AS hard_lname
+             FROM new_visit v
+             LEFT JOIN users ha ON ha.id = v.hard_assigned_provider_id
+             WHERE v.pid = ?
+             AND v.state NOT IN ('completed', 'closed_unpaid', 'cancelled')
+             ORDER BY v.id DESC LIMIT 1",
             [$pid]
         );
 
@@ -113,10 +131,13 @@ class PatientContextService
         if (is_array($visit) && !empty($visit['id'])) {
             $encounterId = (int) ($visit['encounter'] ?? 0);
             $facilityId = (int) ($visit['facility_id'] ?? 0);
+            $hardId = (int) ($visit['hard_assigned_provider_id'] ?? 0);
+            $hardName = trim(($visit['hard_fname'] ?? '') . ' ' . ($visit['hard_lname'] ?? ''));
             $activeVisit = [
                 'visit_id' => (int) $visit['id'],
                 'state' => $visit['state'],
                 'queue_number' => (int) $visit['queue_number'],
+                'row_version' => (int) ($visit['row_version'] ?? 0),
                 'chief_complaint' => $visit['chief_complaint'] ?? null,
                 'encounter_id' => $encounterId > 0 ? $encounterId : null,
                 'encounter_signed' => $encounterId > 0
@@ -128,6 +149,12 @@ class PatientContextService
                     $facilityId
                 ) === 1,
             ];
+            if ($hardId > 0) {
+                $activeVisit['hard_assigned_provider_id'] = $hardId;
+                if ($hardName !== '') {
+                    $activeVisit['hard_assigned_provider_name'] = $hardName;
+                }
+            }
         }
 
         $payload = [
@@ -145,6 +172,8 @@ class PatientContextService
                 'allergies_severe' => $allergyTitles,
                 'allergies_undocumented' => $allergiesUndocumented,
                 'problem_count' => $problemCount,
+                'pregnant' => $pregnant,
+                'allergy_count' => $allergyCount,
             ],
             'pediatric_dob_block' => $pediatricBlock,
             'completion' => [
@@ -173,6 +202,8 @@ class PatientContextService
                 'label' => $this->formatDateLabel(is_array($lastVisit) ? ($lastVisit['last_visit_date'] ?? null) : null),
             ],
             'context' => $context,
+            'banner_mrd_deep_links' => $bannerMrdDeepLinks,
+            'allergy_count_chip' => $allergyCountChip,
         ];
 
         $payload = $this->enrichVitalsToday($payload, $pid);
@@ -183,14 +214,58 @@ class PatientContextService
             $payload['activity_feed'] = $overview['activity_feed'];
         }
 
-        $facilityId = $this->visitScope->resolveDefaultFacilityId();
         $payload['appointment_today'] = $this->appointmentToday->chipForPatient($pid, $facilityId);
+        $recallChip = $this->recallDue->chipForPatient($pid, $facilityId);
+        $payload['recall_due'] = $recallChip;
         $payload['chips'] = [
             'appointment_today' => $payload['appointment_today'],
-            'recall_due' => false,
+            'recall_due' => $recallChip,
         ];
+        $payload['visits_today'] = $this->loadVisitsToday($pid, $facilityId);
+        $payload['revisit_gate'] = $this->revisitGate->assess($pid, $facilityId);
+        $payload['queue_bridge'] = $this->queueBridgeSurface->patientFlags($pid, $facilityId);
+
+        if ($context === 'front-desk') {
+            $hardAssign = new VisitHardAssignService();
+            $hardEnabled = $hardAssign->isEnabled($facilityId);
+            $canHardAssign = $hardAssign->canAssign($actorUserId);
+            $payload['hard_provider_assignment_enabled'] = $hardEnabled;
+            $payload['can_hard_assign_provider'] = $canHardAssign;
+            if ($hardEnabled && $canHardAssign) {
+                $payload['assignable_doctors'] = $hardAssign->listAssignableDoctors($facilityId);
+            }
+        }
 
         return $payload;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function loadVisitsToday(int $pid, int $facilityId): array
+    {
+        $today = $this->clinicDate->today();
+        $rows = QueryUtils::fetchRecords(
+            "SELECT v.id AS visit_id, v.queue_number, v.state, vt.label AS visit_type_label
+             FROM new_visit v
+             LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
+             WHERE v.pid = ? AND v.facility_id = ? AND v.visit_date = ?
+             ORDER BY v.queue_number ASC, v.id ASC",
+            [$pid, $facilityId, $today]
+        ) ?: [];
+
+        return array_map(static function (array $row): array {
+            $state = (string) ($row['state'] ?? '');
+            $terminal = in_array($state, ['completed', 'closed_unpaid', 'cancelled'], true);
+
+            return [
+                'visit_id' => (int) ($row['visit_id'] ?? 0),
+                'queue_number' => (int) ($row['queue_number'] ?? 0),
+                'state' => $state,
+                'visit_type_label' => (string) ($row['visit_type_label'] ?? ''),
+                'is_finished' => $terminal,
+            ];
+        }, $rows);
     }
 
     /**
@@ -242,5 +317,30 @@ class PatientContextService
         } catch (\Exception) {
             return null;
         }
+    }
+
+    /**
+     * @param array<string, mixed> $meta
+     */
+    private function isPatientPregnant(int $pid, array $meta): bool
+    {
+        if (strcasecmp(trim((string) ($meta['pregnancy_status'] ?? '')), 'Pregnant') === 0) {
+            return true;
+        }
+
+        $row = QueryUtils::querySingleRow(
+            "SELECT COUNT(*) AS cnt
+             FROM lists
+             WHERE pid = ?
+               AND type = 'medical_problem'
+               AND activity = 1
+               AND (
+                    LOWER(title) LIKE '%pregnan%'
+                    OR LOWER(title) LIKE '%gravida%'
+               )",
+            [$pid]
+        );
+
+        return is_array($row) && (int) ($row['cnt'] ?? 0) > 0;
     }
 }

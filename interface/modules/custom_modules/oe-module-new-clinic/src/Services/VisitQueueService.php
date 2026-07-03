@@ -11,6 +11,7 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
+use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Logging\EventAuditLogger;
 use OpenEMR\Common\Uuid\UuidRegistry;
@@ -28,6 +29,8 @@ class VisitQueueService
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly FacilityScopeService $facilityScope = new FacilityScopeService(),
         private readonly ClinicDateService $clinicDate = new ClinicDateService(),
+        private readonly RevisitCompletionGateService $revisitGate = new RevisitCompletionGateService(),
+        private readonly ReferralDocumentService $referralDocuments = new ReferralDocumentService(),
     ) {
     }
 
@@ -189,7 +192,9 @@ class VisitQueueService
         int $actorUserId,
         ?int $facilityId = null,
         ?string $chiefComplaint = null,
-        bool $isUrgent = false
+        bool $isUrgent = false,
+        ?string $revisitOverrideReason = null,
+        ?int $referralDocumentId = null,
     ): array {
         return $this->createVisit(
             $pid,
@@ -197,7 +202,15 @@ class VisitQueueService
             $actorUserId,
             $facilityId,
             $chiefComplaint,
-            $isUrgent
+            $isUrgent,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            $revisitOverrideReason,
+            $referralDocumentId
         );
     }
 
@@ -214,7 +227,8 @@ class VisitQueueService
         ?int $visitTypeId = null,
         ?int $facilityId = null,
         ?string $chiefComplaint = null,
-        bool $isUrgent = false
+        bool $isUrgent = false,
+        ?string $revisitOverrideReason = null
     ): array {
         $facilityId = $facilityId ?? $this->visitScope->resolveActorFacilityId(null);
         $appointmentService = new AppointmentTodayService();
@@ -258,7 +272,8 @@ class VisitQueueService
                 (int) ($appointment['pc_eid'] ?? 0),
                 (string) ($appointment['pc_eventDate'] ?? $apptDate),
                 $assignedProviderId > 0 ? $assignedProviderId : null,
-                $encounterProviderId
+                $encounterProviderId,
+                $revisitOverrideReason
             );
 
             $appointmentStatusUpdated = false;
@@ -332,7 +347,8 @@ class VisitQueueService
         int $visitId,
         int $actorUserId,
         int $expectedVersion,
-        ?string $chiefComplaint = null
+        ?string $chiefComplaint = null,
+        ?int $hardAssignedProviderId = null
     ): array {
         $visit = $this->getVisitForActor($visitId);
         if ($visit['state'] !== 'in_triage') {
@@ -347,7 +363,7 @@ class VisitQueueService
             }
         }
 
-        return $this->transition(
+        $updated = $this->transition(
             $visitId,
             'ready_for_doctor',
             $actorUserId,
@@ -355,6 +371,81 @@ class VisitQueueService
             'send_to_doctor',
             $chiefComplaintValue
         );
+
+        $facilityId = (int) ($visit['facility_id'] ?? 0);
+        (new VisitHardAssignService())->applyHardAssignOnReady(
+            $visitId,
+            $facilityId,
+            $hardAssignedProviderId,
+            $actorUserId
+        );
+
+        return $this->finalizeReadyForDoctor($visitId, $updated);
+    }
+
+    /**
+     * @param array<string, mixed> $updated
+     * @return array<string, mixed>
+     */
+    private function finalizeReadyForDoctor(int $visitId, array $updated): array
+    {
+        $fresh = $this->getVisitById($visitId) ?? $updated;
+        if ((string) ($fresh['state'] ?? '') !== 'ready_for_doctor') {
+            throw new StaleVisitException($visitId);
+        }
+
+        (new DoctorReadyNotifyService())->recordForReadyVisit($fresh);
+
+        return $fresh;
+    }
+
+    /**
+     * Reception skip triage: waiting → ready_for_doctor (M1d-F07).
+     *
+     * @return array<string, mixed>
+     */
+    public function skipTriage(
+        int $visitId,
+        int $actorUserId,
+        int $expectedVersion,
+        ?string $reason = null,
+        ?int $hardAssignedProviderId = null
+    ): array {
+        if (!AclMain::aclCheckCore('new_clinic', 'new_skip_triage')) {
+            throw new \InvalidArgumentException('Skip triage not permitted');
+        }
+
+        $visit = $this->getVisitForActor($visitId);
+        if ($visit['state'] !== 'waiting') {
+            throw new \InvalidArgumentException('Visit must be in waiting state to skip triage');
+        }
+
+        $reasonValue = $reason !== null ? mb_substr(trim($reason), 0, 200) : null;
+        if ($reasonValue === '') {
+            $reasonValue = null;
+        }
+
+        $updated = $this->transition(
+            $visitId,
+            'ready_for_doctor',
+            $actorUserId,
+            $expectedVersion,
+            $reasonValue ?? 'skip_triage',
+            null,
+            null,
+            false,
+            ['skip_triage' => 1]
+        );
+
+        $facilityId = (int) ($visit['facility_id'] ?? 0);
+        (new VisitHardAssignService())->applyHardAssignOnReady(
+            $visitId,
+            $facilityId,
+            $hardAssignedProviderId,
+            $actorUserId
+        );
+
+        return $this->finalizeReadyForDoctor($visitId, $updated);
     }
 
     private function createVisit(
@@ -369,10 +460,14 @@ class VisitQueueService
         ?int $pcEid = null,
         ?string $apptDate = null,
         ?int $assignedProviderId = null,
-        ?int $encounterProviderId = null
+        ?int $encounterProviderId = null,
+        ?string $revisitOverrideReason = null,
+        ?int $referralDocumentId = null,
     ): array {
         $facilityId = $facilityId ?? $this->visitScope->resolveActorFacilityId(null);
         $this->visitScope->assertFacilityAccessible($facilityId);
+
+        $this->revisitGate->assertCanStartVisit($pid, $actorUserId, $facilityId, $revisitOverrideReason);
 
         $existing = $this->assertCanStartVisit($pid, $facilityId);
         if ($existing) {
@@ -384,6 +479,16 @@ class VisitQueueService
         }
 
         $visitType = $this->loadVisitTypeForFacility($visitTypeId, $facilityId);
+
+        $normalizedReferralDocumentId = $referralDocumentId !== null && $referralDocumentId > 0
+            ? $referralDocumentId
+            : null;
+        if ($normalizedReferralDocumentId !== null) {
+            if ((string) ($visitType['service_profile'] ?? '') !== 'lab_direct') {
+                throw new \InvalidArgumentException('Referral upload is only supported for lab-direct visit types');
+            }
+            $this->referralDocuments->assertBelongsToPatient($normalizedReferralDocumentId, $pid);
+        }
 
         $this->facilityScope->assertPatientAccessible($pid);
 
@@ -443,6 +548,7 @@ class VisitQueueService
                 visit_type_id = ?, queue_number = ?, state = ?, service_profile = ?,
                 chief_complaint = ?, is_urgent = ?,
                 pc_eid = ?, appt_date = ?, assigned_provider_id = ?,
+                referral_document_id = ?,
                 started_at = NOW(), created_by = ?, created_at = NOW(), updated_at = NOW()",
             [
                 $pid,
@@ -458,6 +564,7 @@ class VisitQueueService
                 $pcEid,
                 $apptDate,
                 $assignedProviderId,
+                $normalizedReferralDocumentId,
                 $actorUserId,
             ]
         );
@@ -476,7 +583,22 @@ class VisitQueueService
             $auditPayload['appt_date'] = $apptDate;
             $auditPayload['visit_type_id'] = $visitTypeId;
         }
+        if ($normalizedReferralDocumentId !== null) {
+            $auditPayload['referral_document_id'] = $normalizedReferralDocumentId;
+        }
         $this->audit('new_visit', $auditEvent, $pid, (int) $visitId, $auditPayload);
+
+        $serviceProfile = (string) ($visitType['service_profile'] ?? 'full_opd');
+        if ($serviceProfile !== 'full_opd') {
+            $this->audit('new_visit', 'ancillary_started', $pid, (int) $visitId, [
+                'service_profile' => $serviceProfile,
+                'visit_type_id' => $visitTypeId,
+            ]);
+        }
+        if ($serviceProfile === 'full_opd') {
+            $this->linkPendingPharmacyReferral($pid, $facilityId, (int) $visitId, $actorUserId);
+        }
+        $this->linkWrongVisitTypeReplacement((int) $visitId, $pid, $facilityId, $visitDate, $actorUserId);
 
         return $this->getVisitById((int) $visitId) ?? [];
     }
@@ -489,7 +611,8 @@ class VisitQueueService
         ?string $reason = null,
         ?string $chiefComplaint = null,
         ?int $assignedProviderId = null,
-        bool $setPharmacyOrdered = false
+        bool $setPharmacyOrdered = false,
+        array $auditExtra = []
     ): array {
         $visit = $this->getVisitForActor($visitId);
 
@@ -509,9 +632,16 @@ class VisitQueueService
                     WHERE id = ? AND state = ? AND row_version = ?";
             sqlStatement($sql, [$newState, $visitId, $fromState, $expectedVersion]);
         } elseif ($assignedProviderId !== null && in_array($newState, ['with_doctor', 'in_lab', 'in_pharmacy'], true)) {
-            $sql = "UPDATE new_visit
-                    SET state = ?, assigned_provider_id = ?, row_version = row_version + 1, updated_at = NOW()
-                    WHERE id = ? AND state = ? AND row_version = ?";
+            if ($newState === 'with_doctor') {
+                $sql = "UPDATE new_visit
+                        SET state = ?, assigned_provider_id = ?, routing_suggested_provider_id = NULL,
+                            row_version = row_version + 1, updated_at = NOW()
+                        WHERE id = ? AND state = ? AND row_version = ?";
+            } else {
+                $sql = "UPDATE new_visit
+                        SET state = ?, assigned_provider_id = ?, row_version = row_version + 1, updated_at = NOW()
+                        WHERE id = ? AND state = ? AND row_version = ?";
+            }
             sqlStatement($sql, [$newState, $assignedProviderId, $visitId, $fromState, $expectedVersion]);
         } elseif ($newState === 'closed_unpaid') {
             $sql = "UPDATE new_visit
@@ -530,11 +660,21 @@ class VisitQueueService
         }
 
         $this->logStateChange($visitId, $fromState, $newState, $actorUserId, $reason);
-        $this->audit('new_visit', 'state_changed', (int) $visit['pid'], $visitId, [
+        $this->audit('new_visit', 'state_changed', (int) $visit['pid'], $visitId, array_merge([
             'from' => $fromState,
             'to' => $newState,
             'reason' => $reason,
-        ]);
+        ], $auditExtra));
+
+        $facilityId = (int) ($visit['facility_id'] ?? 0);
+        $visitDate = (string) ($visit['visit_date'] ?? $this->clinicDate->today());
+        $routing = new VisitRoutingService();
+        if ($routing->isEnabled($facilityId)) {
+            if ($newState === 'ready_for_doctor' || $fromState === 'ready_for_doctor') {
+                $routingReason = $newState === 'ready_for_doctor' ? 'enter_ready' : 'pool_change';
+                $routing->recomputeFacility($facilityId, $visitDate, $routingReason);
+            }
+        }
 
         return $this->getVisitById($visitId) ?? [];
     }
@@ -577,7 +717,7 @@ class VisitQueueService
         return $this->getVisitById($visitId) ?? [];
     }
 
-    public function takePatient(int $visitId, int $actorUserId, int $expectedVersion): array
+    public function takePatient(int $visitId, int $actorUserId, int $expectedVersion, ?string $overrideReason = null): array
     {
         $visit = $this->getVisitForActor($visitId);
         if ($visit['state'] !== 'ready_for_doctor') {
@@ -599,9 +739,25 @@ class VisitQueueService
             [$actorUserId, $visit['pid'], $visit['encounter']]
         );
 
-        $this->audit('new_visit', 'taken', (int) $visit['pid'], $visitId, [
+        $auditPayload = [
             'provider_id' => $actorUserId,
-        ]);
+            'was_suggested_for' => (int) ($visit['routing_suggested_provider_id'] ?? 0) ?: null,
+            'take_mode' => $this->classifyTakeMode($visit, $actorUserId),
+        ];
+        if ($overrideReason !== null && trim($overrideReason) !== '') {
+            $auditPayload['override_reason'] = mb_substr(trim($overrideReason), 0, 200);
+        }
+
+        $hardAssigned = (int) ($visit['hard_assigned_provider_id'] ?? 0);
+        if ($hardAssigned > 0 && $hardAssigned !== $actorUserId && $overrideReason !== null && trim($overrideReason) !== '') {
+            $this->audit('new_visit', 'take_assigned_override', (int) $visit['pid'], $visitId, [
+                'actor' => $actorUserId,
+                'hard_assigned_provider_id' => $hardAssigned,
+                'reason' => mb_substr(trim($overrideReason), 0, 200),
+            ]);
+        }
+
+        $this->audit('new_visit', 'taken', (int) $visit['pid'], $visitId, $auditPayload);
 
         return $this->getVisitById($visitId) ?? $updated;
     }
@@ -654,6 +810,27 @@ class VisitQueueService
         return $this->getVisitById($visitId) ?? $updated;
     }
 
+    /**
+     * M0-F19 — set/clear hard_assigned_provider_id (§6.5.3).
+     *
+     * @return array<string, mixed>
+     */
+    public function hardAssignProvider(
+        int $visitId,
+        int $facilityId,
+        ?int $providerId,
+        int $actorUserId,
+        int $expectedVersion
+    ): array {
+        return (new VisitHardAssignService())->hardAssignProvider(
+            $visitId,
+            $facilityId,
+            $providerId,
+            $actorUserId,
+            $expectedVersion
+        );
+    }
+
     public function cancelVisit(
         int $visitId,
         int $actorUserId,
@@ -672,7 +849,13 @@ class VisitQueueService
             throw new \InvalidArgumentException('Visit is already closed');
         }
 
-        $fromState = $visit['state'];
+        $fromState = (string) $visit['state'];
+        if (stripos($reason, 'wrong_visit_type') !== false && $fromState !== 'waiting') {
+            throw new \InvalidArgumentException(
+                'Wrong visit type correction is only allowed while the visit is still waiting'
+            );
+        }
+
         $sql = "UPDATE new_visit
                 SET state = 'cancelled', cancel_reason = ?, cancelled_at = NOW(),
                     row_version = row_version + 1, updated_at = NOW()
@@ -689,6 +872,105 @@ class VisitQueueService
         ]);
 
         return $this->getVisitById($visitId) ?? [];
+    }
+
+    public function setPharmacyOutcome(int $visitId, string $outcome): void
+    {
+        $allowed = array_merge(
+            PharmacyWalkinService::DISPENSE_OUTCOMES,
+            PharmacyWalkinService::NON_DISPENSE_OUTCOMES
+        );
+        if (!in_array($outcome, $allowed, true)) {
+            throw new \InvalidArgumentException('Invalid pharmacy outcome');
+        }
+
+        sqlStatement(
+            "UPDATE new_visit SET pharmacy_outcome = ? WHERE id = ?",
+            [$outcome, $visitId]
+        );
+    }
+
+    public function linkReferredVisit(int $fromVisitId, int $toVisitId, int $actorUserId): void
+    {
+        if ($fromVisitId <= 0 || $toVisitId <= 0) {
+            throw new \InvalidArgumentException('Invalid visit link');
+        }
+
+        $from = $this->getVisitById($fromVisitId);
+        $to = $this->getVisitById($toVisitId);
+        if (empty($from) || empty($to)) {
+            throw new \InvalidArgumentException('Visit not found for referral link');
+        }
+
+        sqlStatement(
+            "UPDATE new_visit SET referred_to_visit_id = ? WHERE id = ?",
+            [$toVisitId, $fromVisitId]
+        );
+
+        EventAuditLogger::getInstance()->newEvent(
+            'new_clinic',
+            'pharmacy_outcome',
+            $actorUserId,
+            1,
+            'visit_id=' . $fromVisitId
+                . ' outcome=' . (string) ($from['pharmacy_outcome'] ?? '')
+                . ' referred_to_visit_id=' . $toVisitId
+        );
+    }
+
+    private function linkPendingPharmacyReferral(
+        int $pid,
+        int $facilityId,
+        int $opdVisitId,
+        int $actorUserId
+    ): void {
+        $row = QueryUtils::querySingleRow(
+            "SELECT id FROM new_visit
+             WHERE pid = ? AND facility_id = ? AND visit_date = ?
+               AND service_profile = 'pharmacy_walkin'
+               AND pharmacy_outcome = 'rx_required_refer_to_opd'
+               AND referred_to_visit_id IS NULL
+             ORDER BY id DESC
+             LIMIT 1",
+            [$pid, $facilityId, $this->clinicDate->today()]
+        );
+        if (!is_array($row) || empty($row['id'])) {
+            return;
+        }
+
+        $this->linkReferredVisit((int) $row['id'], $opdVisitId, $actorUserId);
+    }
+
+    private function linkWrongVisitTypeReplacement(
+        int $newVisitId,
+        int $pid,
+        int $facilityId,
+        string $visitDate,
+        int $actorUserId,
+    ): void {
+        $row = QueryUtils::querySingleRow(
+            "SELECT id FROM new_visit
+             WHERE pid = ? AND facility_id = ? AND visit_date = ?
+               AND state = 'cancelled'
+               AND cancel_reason LIKE '%wrong_visit_type%'
+               AND id <> ?
+             ORDER BY updated_at DESC, id DESC
+             LIMIT 1",
+            [$pid, $facilityId, $visitDate, $newVisitId]
+        );
+        if (!is_array($row) || empty($row['id'])) {
+            return;
+        }
+
+        $cancelledId = (int) $row['id'];
+        sqlStatement(
+            "UPDATE new_visit SET referred_to_visit_id = ? WHERE id = ? AND referred_to_visit_id IS NULL",
+            [$cancelledId, $newVisitId]
+        );
+
+        $this->audit('new_visit', 'wrong_visit_type_replacement_linked', $pid, $newVisitId, [
+            'cancelled_visit_id' => $cancelledId,
+        ]);
     }
 
     private function resolveInitialState(string $serviceProfile): string
@@ -850,6 +1132,24 @@ class VisitQueueService
         }
 
         return $visitType;
+    }
+
+    /**
+     * @param array<string, mixed> $visit
+     */
+    private function classifyTakeMode(array $visit, int $actorUserId): string
+    {
+        $hardAssigned = (int) ($visit['hard_assigned_provider_id'] ?? 0);
+        if ($hardAssigned > 0) {
+            return $hardAssigned === $actorUserId ? 'hard_assigned_match' : 'hard_assigned_override';
+        }
+
+        $suggested = (int) ($visit['routing_suggested_provider_id'] ?? 0);
+        if ($suggested <= 0) {
+            return 'unassigned';
+        }
+
+        return $suggested === $actorUserId ? 'accepted_suggestion' : 'manual_override';
     }
 
     private function audit(string $category, string $event, int $pid, int $visitId, array $payload): void

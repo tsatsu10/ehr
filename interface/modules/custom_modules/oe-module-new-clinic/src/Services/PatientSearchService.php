@@ -23,6 +23,7 @@ class PatientSearchService
         private readonly FacilityScopeService $facilityScope = new FacilityScopeService(),
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly AppointmentTodayService $appointmentToday = new AppointmentTodayService(),
+        private readonly RecallDueService $recallDue = new RecallDueService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
     ) {
     }
@@ -240,6 +241,7 @@ class PatientSearchService
 
         $facilityId = $this->visitScope->resolveDefaultFacilityId();
         $appointmentChip = $this->appointmentToday->chipForPatient($pid, $facilityId);
+        $recallChip = $this->recallDue->chipForPatient($pid, $facilityId);
 
         $displayName = trim(($row['lname'] ?? '') . ', ' . ($row['fname'] ?? ''));
         $displayName = trim($displayName, ', ');
@@ -265,7 +267,7 @@ class PatientSearchService
             ],
             'chips' => [
                 'appointment_today' => $appointmentChip,
-                'recall_due' => false,
+                'recall_due' => $recallChip,
             ],
         ];
     }

@@ -8,7 +8,10 @@ export async function exportRegistryCsv(
 ): Promise<void> {
   const response = await fetch(`${ajaxUrl}?action=cohort.export`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
     credentials: 'same-origin',
     body: JSON.stringify({
       csrf_token_form: csrfToken,

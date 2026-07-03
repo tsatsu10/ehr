@@ -36,22 +36,22 @@
 @import 'tailwindcss';
 
 @theme {
-  /* Core palette — mirrors MASTER.md "Color Palette" */
-  --color-oe-primary:   #0891b2;   /* Primary — calm cyan */
-  --color-oe-secondary: #22d3ee;   /* Secondary — hover / highlight */
-  --color-oe-cta:       #059669;   /* CTA / Success / Confirm */
-  --color-oe-bg:        #ecfeff;   /* Background tint (cyan-50) */
-  --color-oe-text:      #164e63;   /* Body copy */
-  --color-oe-muted:     #475569;   /* Muted / meta text */
-  --color-oe-border:    #e2e8f0;   /* Default border */
-  --color-oe-surface:   #ffffff;   /* Card / panel surface */
+  /* Core palette — clean neutral dashboard */
+  --color-oe-primary:   #2563eb;
+  --color-oe-secondary: #3b82f6;
+  --color-oe-cta:       #059669;
+  --color-oe-bg:        #f9fafb;
+  --color-oe-text:      #111827;
+  --color-oe-muted:     #6b7280;
+  --color-oe-border:    #e5e7eb;
+  --color-oe-surface:   #ffffff;
 
   /* Danger / Warning — map to Bootstrap vars where available */
   --color-oe-danger:    #dc2626;
   --color-oe-warning:   #ea580c;
 
   /* Role accent colors (§6 shell) */
-  --color-oe-role-reception: #0891b2;
+  --color-oe-role-reception: #2563eb;
   --color-oe-role-nurse:     #2563eb;
   --color-oe-role-doctor:    #059669;
   --color-oe-role-lab:       #f59e0b;
@@ -100,13 +100,16 @@
  */
 :root {
   /* Primary palette — --oe-nc-* (module convention) */
-  --oe-nc-primary:    #0891b2;
-  --oe-nc-secondary:  #22d3ee;
+  --oe-nc-primary:       #2563eb;
+  --oe-nc-primary-hover: #1d4ed8;
+  --oe-nc-secondary:  #3b82f6;
   --oe-nc-cta:        #059669;
-  --oe-nc-bg-tint:    #ecfeff;
-  --oe-nc-text:       #164e63;
-  --oe-nc-text-muted: #475569;
-  --oe-nc-border:     #e2e8f0;
+  --oe-nc-bg:         #eff6ff;
+  --oe-nc-bg-tint:    #f9fafb;
+  --oe-nc-bg-muted:   #f3f4f6;
+  --oe-nc-text:       #111827;
+  --oe-nc-text-muted: #6b7280;
+  --oe-nc-border:     #e5e7eb;
   --oe-nc-surface:    #ffffff;
 
   /* MASTER.md short-form aliases */
@@ -119,10 +122,10 @@
   /* Interaction tokens */
   --oe-nc-radius:     0.25rem;
   --oe-nc-transition: 150ms ease;
-  --oe-nc-focus-ring: 0 0 0 3px rgba(8, 145, 178, 0.35);
+  --oe-nc-focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.25);
 
   /* Role accents */
-  --oe-nc-role-reception: #0891b2;
+  --oe-nc-role-reception: #2563eb;
   --oe-nc-role-nurse:     #2563eb;
   --oe-nc-role-doctor:    #059669;
   --oe-nc-role-lab:       #f59e0b;
@@ -140,9 +143,9 @@
   --space-3xl: 4rem;
 
   /* Shadows — aligns with MASTER.md --shadow-* */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 4px 12px rgba(15, 23, 42, 0.06);
   --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
 }
 

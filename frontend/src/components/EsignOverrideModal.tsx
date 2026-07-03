@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { PatientPreview } from '@core/types';
-import { useModalDismiss } from './useModalDismiss';
+import './ui/ui-primitives.css';
 
 interface EsignOverrideModalProps {
   open: boolean;
@@ -47,21 +47,31 @@ function EsignOverrideModalBody({
 
   return (
     <>
-      <div className="modal fade show d-block" tabIndex={-1} role="dialog" aria-modal="true">
+      <div
+        className="modal fade show d-block"
+        id="nc-esign-override-modal"
+        tabIndex={-1}
+        role="dialog"
+        aria-labelledby="nc-esign-override-title"
+        aria-modal="true"
+      >
         <div className="modal-dialog" role="document">
           <div className="modal-content">
             <div className="modal-header">
-              <h5 className="modal-title">{title}</h5>
+              <h5 className="modal-title" id="nc-esign-override-title">{title}</h5>
               <button type="button" className="close" aria-label="Close" onClick={onClose}>
                 <span aria-hidden="true">&times;</span>
               </button>
             </div>
             <div className="modal-body">
               <div className="nc-patient-context-banner p-3 border rounded bg-light mb-3">
-                <strong>{identity.display_name}</strong> · MRN {identity.pubpid}
-                {visit.queue_number !== undefined && (
-                  <> · Queue #{visit.queue_number}</>
-                )}
+                <strong>
+                  {identity.display_name}
+                  {' · '}
+                  MRN {identity.pubpid}
+                  {' · '}
+                  Queue #{visit.queue_number}
+                </strong>
               </div>
               <p className="small text-muted">Supervisor override — reason is recorded in the audit log.</p>
               <div className="form-group mb-0">
@@ -86,11 +96,7 @@ function EsignOverrideModalBody({
           </div>
         </div>
       </div>
-      <div
-        className="modal-backdrop fade show"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <div className="modal-backdrop fade show" id="nc-esign-override-backdrop" />
     </>
   );
 }
@@ -105,8 +111,6 @@ export function EsignOverrideModal({
   onClose,
   onConfirm,
 }: EsignOverrideModalProps) {
-  useModalDismiss(open, onClose);
-
   if (!open || !preview || !visit) return null;
 
   return (

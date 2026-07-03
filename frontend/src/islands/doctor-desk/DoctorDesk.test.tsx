@@ -103,7 +103,11 @@ describe('DoctorDesk', () => {
     await waitFor(() => {
       expect(screen.getByText(/Kwame Mensah/)).toBeInTheDocument();
     });
-    expect(screen.getByText(/1 waiting/)).toBeInTheDocument();
+    await waitFor(() => {
+      const bar = screen.getByLabelText(/Doctor desk status/i);
+      expect(bar).toHaveTextContent('1');
+      expect(bar).toHaveTextContent('Waiting');
+    });
   });
 
   it('takes patient and shows consult pane', async () => {
@@ -130,7 +134,7 @@ describe('DoctorDesk', () => {
     });
     expect(screen.getByText(/Supervising provider/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Complete consult/i })).toBeEnabled();
-    expect(screen.getByText(/Allergy: Penicillin/)).toBeInTheDocument();
+    expect(screen.getByText('Penicillin')).toBeInTheDocument();
   });
 
   it('disables complete when e-sign required and unsigned', async () => {
@@ -160,6 +164,106 @@ describe('DoctorDesk', () => {
 
     await waitFor(() => {
       expect(document.getElementById('nc-doctor-scope')).toBeInTheDocument();
+    });
+  });
+
+  it('shows prescription stock badges when pharm ops enabled', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [waitingPatient],
+        counts: { waiting: 1, done_today: 0, reopenable_today: 0 },
+      })
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [waitingPatient],
+        counts: { waiting: 1, done_today: 0, reopenable_today: 0 },
+      })
+      .mockResolvedValueOnce({
+        ...consultPayload,
+        pharm_ops_enabled: true,
+        prescriptions: [
+          {
+            id: 55,
+            drug: 'Amoxicillin 500mg',
+            sig: '1 cap q8h',
+            quantity: '21',
+            status: 'to_dispense',
+            stock_status: 'low',
+            qoh_display: 'QOH 8 · reorder 20',
+          },
+        ],
+      });
+
+    render(<DoctorDesk {...props} />);
+
+    await waitFor(() => screen.getByText(/Kwame Mensah/));
+    fireEvent.click(screen.getByText(/Kwame Mensah/));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Prescriptions \(stock\)/)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Low stock/)).toBeInTheDocument();
+    expect(screen.getByText(/Amoxicillin 500mg/)).toBeInTheDocument();
+  });
+
+  it('shows documentation hub shortcut when clinical doc hub is enabled', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [waitingPatient],
+        counts: { waiting: 1, done_today: 0, reopenable_today: 0 },
+      })
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [waitingPatient],
+        counts: { waiting: 1, done_today: 0, reopenable_today: 0 },
+      })
+      .mockResolvedValueOnce({
+        ...consultPayload,
+        clinical_doc_hub_enabled: true,
+        documentation_status: {
+          hub_enabled: true,
+          encounter_signed: false,
+          unsigned_required: [],
+          documentation_hub_url: '/clinical-doc/index.php?visit_id=7',
+        },
+      });
+
+    render(<DoctorDesk {...props} />);
+
+    await waitFor(() => screen.getByText(/Kwame Mensah/));
+    fireEvent.click(screen.getByText(/Kwame Mensah/));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Open documentation/i })).toBeInTheDocument();
+    });
+  });
+
+  it('shows lab results ready toast when results_ready flips on queue poll', async () => {
+    const patientPending = { ...waitingPatient, routing_chips: { results_ready: false } };
+    const patientReady = { ...waitingPatient, routing_chips: { results_ready: true } };
+
+    mockFetch
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [patientPending],
+        counts: { waiting: 1, done_today: 0, reopenable_today: 0 },
+      })
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [patientReady],
+        counts: { waiting: 1, done_today: 0, reopenable_today: 0 },
+      });
+
+    render(<DoctorDesk {...props} labResultsToastEnabled />);
+
+    await waitFor(() => screen.getByText(/Kwame Mensah/));
+
+    fireEvent.click(screen.getByRole('button', { name: /Refresh status/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Lab results ready for Kwame Mensah/i)).toBeInTheDocument();
     });
   });
 });

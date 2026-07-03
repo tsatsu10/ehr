@@ -6,13 +6,16 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { oeFetch } from '@core/oeFetch';
 import { resolveActionConflict, type DeskInterrupt } from '@core/deskConflict';
 import { useInterval } from '@core/useInterval';
+import { useQueueVisibilityRefresh } from '@core/useQueueVisibilityRefresh';
 import { usePageHeadingToolbar } from '@core/usePageHeadingToolbar';
 import { getDeskActiveVisitId, clearDeskActiveVisitId } from '@core/deskSessionStorage';
 import { useSharedDeviceSession } from '@core/useSharedDeviceSession';
 import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
+import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import type {
   CashierDeskProps,
+  CashierPaymentMethod,
   CashierPayResult,
   CashierQueueCard,
   CashierQueueData,
@@ -35,6 +38,7 @@ import {
   buildStagedFromSuggestions,
   getDiscountLines,
   newClientRequestId,
+  setCashierCurrencyFormat,
   stagedLinesHaveDiscount,
 } from './cashierUtils';
 import type { PatientSearchHint } from './PatientSearchPanel';
@@ -73,7 +77,18 @@ export function CashierDesk({
   canApplyDiscount = false,
   canEsignOverride = false,
   sharedDeviceWarning = false,
+  currencyFormat,
 }: CashierDeskProps) {
+  useEffect(() => {
+    if (currencyFormat) {
+      setCashierCurrencyFormat({
+        currency_symbol: currencyFormat.currency_symbol ?? '',
+        currency_decimals: currencyFormat.currency_decimals ?? 2,
+        currency_symbol_position: currencyFormat.currency_symbol_position === 'after' ? 'after' : 'before',
+      });
+    }
+  }, [currencyFormat]);
+
   const [cards, setCards] = useState<CashierQueueCard[]>([]);
   const [counts, setCounts] = useState<CashierQueueData['counts'] | null>(null);
   const [visitDate, setVisitDate] = useState<string | null>(null);
@@ -94,6 +109,8 @@ export function CashierDesk({
   const [payConfirmOpen, setPayConfirmOpen] = useState(false);
   const [payAmount, setPayAmount] = useState(0);
   const [payReceiptNote, setPayReceiptNote] = useState('');
+  const [payPaymentMethod, setPayPaymentMethod] = useState<CashierPaymentMethod>('cash');
+  const [payMomoReference, setPayMomoReference] = useState('');
   const [payEsignReason, setPayEsignReason] = useState<string | null>(null);
   const [paySubmitting, setPaySubmitting] = useState(false);
   const clientRequestIdRef = useRef<string | null>(null);
@@ -274,6 +291,10 @@ export function CashierDesk({
     void fetchQueue();
   }, [fetchQueue]);
 
+  useQueueVisibilityRefresh(() => {
+    void fetchQueue();
+  });
+
   useInterval(() => {
     if (!document.hidden) void fetchQueue();
   }, pollMs);
@@ -339,19 +360,33 @@ export function CashierDesk({
     void executePostCharges();
   }, [canApplyDiscount, executePostCharges, selectData, staged]);
 
-  const handleTakePaymentClick = useCallback((amountReceived: number, receiptNote: string) => {
+  const handleTakePaymentClick = useCallback((
+    amountReceived: number,
+    receiptNote: string,
+    paymentMethod: CashierPaymentMethod,
+    momoReference: string,
+  ) => {
     if (sharedSession.blocked || !selectData) return;
     setPayAmount(amountReceived);
     setPayReceiptNote(receiptNote);
+    setPayPaymentMethod(paymentMethod);
+    setPayMomoReference(momoReference);
     setPayEsignReason(null);
     clientRequestIdRef.current = newClientRequestId();
     setPayConfirmOpen(true);
   }, [selectData, sharedSession.blocked]);
 
-  const handleEsignOverrideClick = useCallback((amountReceived: number, receiptNote: string) => {
+  const handleEsignOverrideClick = useCallback((
+    amountReceived: number,
+    receiptNote: string,
+    paymentMethod: CashierPaymentMethod,
+    momoReference: string,
+  ) => {
     if (sharedSession.blocked || !selectData) return;
     setPayAmount(amountReceived);
     setPayReceiptNote(receiptNote);
+    setPayPaymentMethod(paymentMethod);
+    setPayMomoReference(momoReference);
     setEsignOpen(true);
   }, [selectData, sharedSession.blocked]);
 
@@ -371,6 +406,8 @@ export function CashierDesk({
         row_version: selectData.visit.row_version ?? 0,
         amount_received: payAmount,
         receipt_note: payReceiptNote,
+        payment_method: payPaymentMethod,
+        ...(payPaymentMethod === 'momo' ? { momo_reference: payMomoReference } : {}),
         client_request_id: clientRequestIdRef.current,
         ...(payEsignReason ? { esign_override_reason: payEsignReason } : {}),
       },
@@ -400,6 +437,8 @@ export function CashierDesk({
     payAmount,
     payEsignReason,
     payReceiptNote,
+    payPaymentMethod,
+    payMomoReference,
     paySubmitting,
     resetActivePane,
     selectData,
@@ -496,13 +535,27 @@ export function CashierDesk({
         />
       )}
 
+      <DeskQueueStatusBar
+        id="nc-cashier-status-bar"
+        ariaLabel="Cashier desk status"
+        items={[
+          {
+            label: 'Waiting for payment',
+            value: counts?.waiting ?? 0,
+            href: (counts?.waiting ?? 0) > 0 ? visitBoardUrl : undefined,
+          },
+          { label: 'Paid today', value: counts?.paid_today ?? 0 },
+        ]}
+        loading={queueLoading}
+        onRefresh={() => { void fetchQueue(); }}
+      />
+
       <div className="row">
         <div className="col-lg-4 mb-3">
           <CashierQueue
             ajaxUrl={ajaxUrl}
             csrfToken={csrfToken}
             cards={cards}
-            counts={counts}
             paidToday={paidToday ?? []}
             loading={queueLoading}
             error={queueError}
@@ -541,6 +594,8 @@ export function CashierDesk({
         visit={mergedSelectData?.visit ?? null}
         total={mergedSelectData?.charges_total ?? 0}
         amountReceived={payAmount}
+        paymentMethod={payPaymentMethod}
+        momoReference={payMomoReference}
         completionBlocked={!!mergedSelectData?.completion_blocked}
         canSkipCompletion={!!mergedSelectData?.can_skip_completion}
         esignOverride={!!payEsignReason}

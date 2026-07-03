@@ -31,5 +31,18 @@ export function applyAdminSettingCoupling(
     }
   }
 
+  if (key === 'notify_unassigned_to_all_on_duty' && isSettingOn(value)) {
+    next.enable_doctor_ready_notify = true;
+  }
+
+  if (key === 'enable_doctor_ready_web_push' && isSettingOn(value)) {
+    next.enable_doctor_ready_notify = true;
+  }
+
+  if (key === 'enable_doctor_ready_notify' && !isSettingOn(value)) {
+    next.notify_unassigned_to_all_on_duty = false;
+    next.enable_doctor_ready_web_push = false;
+  }
+
   return next;
 }

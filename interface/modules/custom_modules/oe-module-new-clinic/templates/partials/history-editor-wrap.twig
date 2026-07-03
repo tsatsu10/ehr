@@ -1,0 +1,40 @@
+{# T1-F20b — History editor shell (V1.1-HIST-WRAP) #}
+<link rel="stylesheet" href="{{ asset_css_url|attr }}">
+{% if legacy_strip_html %}
+    {{ legacy_strip_html|raw }}
+{% endif %}
+<header id="oe-nc-history-editor-wrap"
+        class="oe-nc-history-editor-wrap__header"
+        role="banner"
+        aria-label="{{ 'History editor'|xla }}">
+    <div class="oe-nc-history-editor-wrap__inner container-fluid py-2">
+        <div class="oe-nc-history-editor-wrap__top">
+            <div class="oe-nc-history-editor-wrap__brand">
+                <strong class="oe-nc-history-editor-wrap__clinic">{{ clinic_name|text }}</strong>
+                {% if role_label %}
+                    <span class="oe-nc-history-editor-wrap__role">{{ role_label|text }}</span>
+                {% endif %}
+                {% if today_label %}
+                    <span class="oe-nc-history-editor-wrap__date">{{ today_label|text }}</span>
+                {% endif %}
+            </div>
+            {% if back_url %}
+                <a class="btn btn-sm btn-outline-primary oe-nc-history-editor-wrap__back-top"
+                   href="{{ back_url|attr }}"
+                   target="_top">
+                    {{ back_label|text }}
+                </a>
+            {% endif %}
+        </div>
+        <div class="oe-nc-history-editor-wrap__title-row">
+            <h1 class="oe-nc-history-editor-wrap__title h5 mb-0">{{ page_title|text }}</h1>
+            <nav class="oe-nc-history-editor-wrap__breadcrumb small text-muted" aria-label="{{ 'Breadcrumb'|xla }}">
+                <span>{{ breadcrumb_chart|text }}</span>
+                <span aria-hidden="true"> › </span>
+                <span>{{ breadcrumb_clinical|text }}</span>
+                <span aria-hidden="true"> › </span>
+                <span>{{ breadcrumb_edit|text }}</span>
+            </nav>
+        </div>
+    </div>
+</header>

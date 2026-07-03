@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
+import { SlideOver } from '@components/SlideOver';
 import { createLabResultValidator } from './labResultValidation';
 import type { ResultEntryForm, ResultLine, ResultLineValue } from './labOpsTypes';
 
@@ -310,28 +311,76 @@ export function LabOpsResultDrawer({
       : `Enter results — ${lines[0]?.procedure_name ?? 'Lab order'}`;
 
   return (
-    <>
-      <div
-        className="oe-nc-labops-drawer-backdrop"
-        id="nc-labops-drawer-backdrop"
-        aria-hidden="true"
-        onClick={onClose}
-      />
-      <aside
-        className="oe-nc-labops-drawer"
-        id="nc-labops-drawer"
-        aria-labelledby="nc-labops-drawer-title"
-        role="dialog"
-        aria-modal="true"
-      >
-        <header className="oe-nc-labops-drawer__header">
-          <h2 className="h6 mb-0" id="nc-labops-drawer-title">{drawerTitle}</h2>
-          <button type="button" className="close" id="nc-labops-drawer-close" aria-label="Close" onClick={onClose}>
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </header>
-
-        <div className="oe-nc-labops-drawer__body" id="nc-labops-drawer-body" ref={bodyRef}>
+    <SlideOver
+      open={open}
+      onClose={onClose}
+      title={drawerTitle}
+      id="nc-labops-drawer"
+      titleId="nc-labops-drawer-title"
+      width="md"
+      footer={(
+        <>
+          {viewMode === 'saved' || viewMode === 'released' ? (
+            <>
+              <button type="button" className="btn btn-primary btn-sm" onClick={onClose}>
+                Done
+              </button>
+              {viewMode !== 'released' ? (
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={() => {
+                    if (orderId) void loadForm(orderId).then(() => setViewMode('form'));
+                  }}
+                >
+                  Edit results
+                </button>
+              ) : null}
+              {canRelease && viewMode !== 'released' && !savedDraft && orderId ? (
+                <button
+                  type="button"
+                  className="btn btn-success btn-sm"
+                  disabled={saving}
+                  onClick={() => void releaseOrder()}
+                >
+                  Release to doctor
+                </button>
+              ) : null}
+            </>
+          ) : canEnter && lines.length ? (
+            <>
+              <button
+                type="button"
+                className="btn btn-outline-secondary btn-sm"
+                disabled={saving}
+                onClick={() => void saveEntry(true)}
+              >
+                {saving ? 'Saving…' : 'Save draft'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                disabled={saving}
+                onClick={() => void saveEntry(false)}
+              >
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+              {canRelease && !savedDraft && orderId ? (
+                <button
+                  type="button"
+                  className="btn btn-success btn-sm"
+                  disabled={saving}
+                  onClick={() => void releaseOrder()}
+                >
+                  Release to doctor
+                </button>
+              ) : null}
+            </>
+          ) : null}
+        </>
+      )}
+    >
+      <div id="nc-labops-drawer-body" ref={bodyRef}>
           {loadError ? (
             <div className="alert alert-danger">{loadError}</div>
           ) : viewMode === 'saved' || viewMode === 'released' ? (
@@ -438,67 +487,6 @@ export function LabOpsResultDrawer({
             </>
           )}
         </div>
-
-        <footer className="oe-nc-labops-drawer__footer" id="nc-labops-drawer-footer">
-          {viewMode === 'saved' || viewMode === 'released' ? (
-            <>
-              <button type="button" className="btn btn-primary btn-sm" onClick={onClose}>
-                Done
-              </button>
-              {viewMode !== 'released' ? (
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary btn-sm"
-                  onClick={() => {
-                    if (orderId) void loadForm(orderId).then(() => setViewMode('form'));
-                  }}
-                >
-                  Edit results
-                </button>
-              ) : null}
-              {canRelease && viewMode !== 'released' && !savedDraft && orderId ? (
-                <button
-                  type="button"
-                  className="btn btn-success btn-sm"
-                  disabled={saving}
-                  onClick={() => void releaseOrder()}
-                >
-                  Release to doctor
-                </button>
-              ) : null}
-            </>
-          ) : canEnter && lines.length ? (
-            <>
-              <button
-                type="button"
-                className="btn btn-outline-secondary btn-sm"
-                disabled={saving}
-                onClick={() => void saveEntry(true)}
-              >
-                {saving ? 'Saving…' : 'Save draft'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                disabled={saving}
-                onClick={() => void saveEntry(false)}
-              >
-                {saving ? 'Saving…' : 'Save'}
-              </button>
-              {canRelease && !savedDraft && orderId ? (
-                <button
-                  type="button"
-                  className="btn btn-success btn-sm"
-                  disabled={saving}
-                  onClick={() => void releaseOrder()}
-                >
-                  Release to doctor
-                </button>
-              ) : null}
-            </>
-          ) : null}
-        </footer>
-      </aside>
-    </>
+    </SlideOver>
   );
 }

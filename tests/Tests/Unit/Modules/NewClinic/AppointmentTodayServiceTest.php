@@ -32,6 +32,20 @@ class AppointmentTodayServiceTest extends TestCase
         $this->assertStringContainsString('CURDATE()', $body);
     }
 
+    public function testListTodayAppointmentsOrdersByStartTime(): void
+    {
+        $method = new ReflectionMethod(AppointmentTodayService::class, 'listTodayAppointments');
+        $source = file_get_contents($method->getFileName());
+        $start = $method->getStartLine();
+        $end = $method->getEndLine();
+        $body = implode('', array_slice(explode("\n", $source), $start - 1, $end - $start + 1));
+
+        $this->assertStringContainsString('INNER JOIN patient_data pd', $body);
+        $this->assertStringContainsString('pc_startTime', $body);
+        $this->assertStringContainsString('CURDATE()', $body);
+        $this->assertStringContainsString("pc_apptstatus NOT IN ('*', '%', 'x', 'X')", $body);
+    }
+
     public function testResolveVisitTypeIdForCategoryRequiresFullOpd(): void
     {
         $method = new ReflectionMethod(AppointmentTodayService::class, 'resolveVisitTypeIdForCategory');

@@ -85,7 +85,7 @@ export function ChargeCorrectionForm({
     setSaving(true);
     setError(null);
     try {
-      const updated = await oeFetch<VisitChargesData>('bill_ops.charge_correct', {
+      const updated = await oeFetch<VisitChargesData & { visit_id?: number }>('bill_ops.charge_correct', {
         ...fetchOptions,
         method: 'POST',
         json: {
@@ -95,7 +95,7 @@ export function ChargeCorrectionForm({
           reason: reason.trim(),
         },
       });
-      setData((prev) => (prev ? { ...prev, ...updated, visit: prev.visit } : prev));
+      await loadVisit(updated.visit_id ?? data.visit.id);
       setRemoveIds([]);
       setSelectedFeeId('');
       setReason('');
@@ -106,8 +106,6 @@ export function ChargeCorrectionForm({
       setSaving(false);
     }
   };
-
-  const symbol = data?.currency_symbol ?? 'GH₵';
 
   return (
     <div className="oe-nc-billops-correction-form">
@@ -140,8 +138,14 @@ export function ChargeCorrectionForm({
           <div className="mb-3 small text-muted">
             Visit #{data.visit.queue_number} · {data.visit.patient_name ?? ''} · {data.visit.state}
             {' · '}
-            Due {formatBillMoney(symbol, data.balance_due)} (paid {formatBillMoney(symbol, data.paid_total)})
+            Due {formatBillMoney(data.balance_due)} (paid {formatBillMoney(data.paid_total)})
           </div>
+
+          {data.reopen_on_underpaid && (
+            <p className="alert alert-info py-2 small mb-3">
+              When a correction leaves the visit underpaid, it may return to the payment queue automatically.
+            </p>
+          )}
 
           <h3 className="h6">Existing charges</h3>
           <table className="table table-sm table-hover mb-3">
@@ -164,7 +168,7 @@ export function ChargeCorrectionForm({
                     />
                   </td>
                   <td>{line.description}</td>
-                  <td className="text-right">{formatBillMoney(symbol, line.amount)}</td>
+                  <td className="text-right">{formatBillMoney(line.amount)}</td>
                 </tr>
               ))}
             </tbody>
@@ -181,7 +185,7 @@ export function ChargeCorrectionForm({
                 <option value="">Fee schedule…</option>
                 {data.fee_schedule.map((fee: FeeScheduleItem) => (
                   <option key={fee.id} value={fee.id}>
-                    {fee.name} — {formatBillMoney(symbol, fee.price_amount)}
+                    {fee.name} — {formatBillMoney(fee.price_amount)}
                   </option>
                 ))}
               </select>

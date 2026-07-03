@@ -1,3 +1,4 @@
+import { IdentityConfirmBanner } from '@components/ConfirmModal';
 import { useEffect, useState } from 'react';
 import type { CashierVisit, PatientPreview } from '@core/types';
 
@@ -42,9 +43,11 @@ export function MarkUnpaidModal({
               </button>
             </div>
             <div className="modal-body">
-              <div className="nc-patient-context-banner p-3 border rounded bg-light mb-3">
-                <strong>{identity.display_name}</strong> · MRN {identity.pubpid} · Queue #{visit.queue_number}
-              </div>
+              <IdentityConfirmBanner
+                displayName={identity.display_name}
+                pubpid={identity.pubpid}
+                queueNumber={visit.queue_number}
+              />
               <p className="mb-2">Record that this patient left without paying. Reason is required.</p>
               <div className="form-group mb-0">
                 <label htmlFor="nc-cashier-terminal-reason">Reason</label>

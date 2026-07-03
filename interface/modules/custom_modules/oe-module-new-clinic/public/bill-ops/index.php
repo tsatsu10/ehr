@@ -79,6 +79,7 @@ if (!in_array($initialTab, $allowedTabs, true)) {
         'new_admin',
     ],
     [
+        'island_entry' => 'bill-ops',
         'shell_nav_id' => 'clinicbillops',
         'module_url' => $moduleUrl,
         'cashier_url' => $moduleUrl . '/cashier.php',

@@ -70,7 +70,8 @@
         canInsurance: can_insurance ? true : false,
         canShowAdvanced: can_show_advanced ? true : false,
         reopenOnCorrection: reopen_on_correction ? true : false,
-        webroot: webroot
+        webroot: webroot,
+        currencyFormat: currency_format|default({})
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}
@@ -80,6 +81,6 @@
 
 {% block scripts %}
 {% if enable_react_bill_ops|default(true) %}
-<script type="module" src="{{ assets_url }}/modern/bill-ops.js?v={{ asset_version }}"></script>
+{% include 'partials/island-assets.html.twig' %}
 {% endif %}
 {% endblock %}

@@ -18,8 +18,8 @@ OpenEMR's modernization uses the **strangler-fig + islands** pattern:
   template wherever React should render.
 - A Vite-built JavaScript bundle finds those mount nodes at runtime and
   hydrates them with React.
-- Each island ships behind a **per-feature config flag** (kill-switch; defaults
-  ON after the New Clinic w50react cutover).
+- Optional hubs gate on **product** flags (`enable_bill_ops`, etc.). Desk pages
+  mount React by default; legacy jQuery desk JS was removed in w50react.
 
 No island ever:
 
@@ -57,8 +57,9 @@ Each island writes to:
 interface/modules/custom_modules/<module>/public/assets/modern/<name>.js
 ```
 
-CSS is co-located with the JS chunk; Vite emits a `<link>` automatically when
-the bundle loads. No `config/config.yaml` change is required in Phase 0.
+CSS is co-located with the JS chunk; Twig pages reference matching `<name>.css` via
+`asset_version` cache-busting. No `config/config.yaml` change is required — bundles
+live under the module's `public/assets/modern/`.
 
 ---
 
@@ -105,74 +106,71 @@ mountIsland('my-island', MyIsland);
 
 ### Step 2 — Register the entry in `vite.config.ts`
 
+Set `base: './'` in the Vite config root (not only under `build`). OpenEMR serves
+islands from a deep module path (`…/oe-module-new-clinic/public/assets/modern/`),
+so the default `base: '/'` breaks **lazy-loaded** chunks and shared CSS — the browser
+requests `/assets/…` at the site root instead of next to the entry bundle. Static
+entry imports still work; `React.lazy()` drawers (pharm-ops, pharmacy-desk) do not.
+
 ```ts
-build: {
-  rollupOptions: {
-    input: {
-      'visit-board': resolve(here, 'src/islands/visit-board/index.tsx'),
-      'my-island':   resolve(here, 'src/islands/my-island/index.tsx'),
+export default defineConfig({
+  base: './',
+  plugins: [react(), tailwind()],
+  build: {
+    rollupOptions: {
+      input: {
+        'visit-board': resolve(here, 'src/islands/visit-board/index.tsx'),
+        'my-island':   resolve(here, 'src/islands/my-island/index.tsx'),
+      },
     },
   },
-}
+});
 ```
 
-### Step 3 — Add a config flag (one per island, default ON for New Clinic)
+### Step 3 — Wire the Twig page (product flag if optional hub)
 
-In the consuming module's `sql/install.sql`:
+Optional hubs (chart depth, bill ops, comms) use **product** flags such as
+`enable_chart_depth` or `communications_hub_enable`. Desk pages mount React
+unconditionally (defaults ON); legacy jQuery desk JS was removed in w50react.
+
+For a new optional surface, add to `sql/install.sql`:
 
 ```sql
-#IfNotRow2D new_clinic_config facility_id 0 config_key enable_my_island
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_my_feature
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
-(0, 'enable_my_island', '1');
+(0, 'enable_my_feature', '0');
 #EndIf
 ```
 
-In `ClinicAdminService::EDITABLE_SETTINGS`:
-
-```php
-'enable_my_island' => ['type' => 'bool', 'default' => '0'],
-```
-
-And surface a checkbox in `templates/admin.html.twig`.
+Register in `ClinicAdminService::EDITABLE_SETTINGS` and the Admin Hub field list.
 
 ### Step 4 — Mount in the Twig template
 
 ```twig
-{% if enable_my_island|default(false) %}
+{% if enable_my_feature|default(false) %}
 <div data-island="my-island"
      data-props="{{ {'patientId': pid, 'label': 'Demographics'}|json_encode|e('html_attr') }}"></div>
 {% endif %}
 
 {% block scripts %}
-  …existing scripts…
-  {% if enable_my_island|default(false) %}
+  …existing shell scripts…
+  {% if enable_my_feature|default(false) %}
+  <link rel="stylesheet" href="{{ assets_url }}/modern/my-island.css?v={{ asset_version }}">
   <script type="module" src="{{ assets_url }}/modern/my-island.js?v={{ asset_version }}"></script>
   {% endif %}
 {% endblock %}
 ```
 
-And in the PHP entry point, read the flag and pass it to the template:
-
-```php
-$enableMyIsland = (new ClinicConfigService())->get('enable_my_island', '0') === '1';
-
-(new PageController())->renderForAnyClinicRole($template, $title, $acos, [
-    …existing context…,
-    'enable_my_island' => $enableMyIsland,
-]);
-```
+Pass context from the PHP entry point via `PageController::render…()`.
 
 ### Step 5 — Build, test, ship
 
 ```bash
-npm run frontend:build
-npm run frontend:test
-npm run frontend:typecheck
-npm run frontend:lint
+cd frontend && npm run check && npm run build
 ```
 
-Toggle the flag in the admin panel, hard-refresh the page, verify the island
-renders. Flip the flag back to confirm the legacy path still works.
+Bump `ModuleAssetVersion::VERSION` once, hard-refresh the page, verify the island.
+There is no legacy jQuery fallback path for New Clinic desks.
 
 ---
 
@@ -193,8 +191,8 @@ interface VisitBoardPayload {
 const board = await oeFetch<VisitBoardPayload>('visit.board');
 ```
 
-Phase 1 will layer **TanStack Query** on top of `oeFetch` for caching,
-polling, and retry. Don't add it ad hoc per island.
+TanStack Query may layer on top of `oeFetch` later for caching, polling, and retry.
+Don't add ad hoc fetch wrappers per island.
 
 ---
 
@@ -293,20 +291,22 @@ Tailwind utility classes lose to Bootstrap on every OpenEMR page.
 - **Bundle size:** target < 200 KB gzip per island.
 - **Regional formatting:** DD/MM/YYYY dates; clinic `currency_symbol` via M6;
   never hardcode `$` or US labels when `enable_insurance = false`.
-- **No emojis as icons.** Font Awesome 6 (`fa-*`) in V1 Twig surfaces; Lucide
-  React (`lucide-react`) in Phase 1+ islands.
+- **No emojis as icons.** Font Awesome 6 in Twig shell chrome; Lucide React
+  (`lucide-react`) in React islands when icons are needed.
 
 ---
 
-## 6. Where this lives in the bigger plan
+## 6. New Clinic implementation status (June 2026)
 
-| Phase | Scope | Status |
-|-------|-------|--------|
-| **Phase 0** | Vite scaffold, one hello island, config flag pattern | **done** |
-| Phase 1 | Replace jQuery desk surfaces with React islands (Visit Board, QueueCard, Patient Search, then Triage → Doctor → Cashier/Lab/Pharmacy) | next |
-| Phase 2 | Forms (React Hook Form + Zod) + TanStack Table on heavy lists | future |
-| Phase 3 | Replace Knockout tab shell behind a feature flag | future |
-| Phase 4 | Retire jQuery plugins, Dygraphs, DataTables, Knockout | future |
+| Layer | Stack |
+|-------|--------|
+| Page shell | PHP 8.2 + Twig 3 (`PageController`, `#oe-nc-t1` shell) |
+| Desk / hub UI | **React 19 + TypeScript** — 16 Vite entries under `frontend/src/islands/` |
+| Shared runtime | `mountIsland`, `oeFetch`, design tokens — `frontend/src/core/` |
+| Module shell JS | `shell.js` + `ui-components.js` only (nav, queue stats, shared POST helpers) |
+| Styles | Bootstrap 4.6 page chrome + island BEM CSS (`var(--oe-nc-*)`) + Tailwind 4 (build-time only) |
+| Build | Vite 8 → `public/assets/modern/` |
+| Tests | Vitest 4 (172 tests), PHPUnit New Clinic (349), Playwright E2E |
 
-See [`FRONTEND_2026_MODERNIZATION_PLAN.md`](./NewClinic/FRONTEND_2026_MODERNIZATION_PLAN.md)
-for the full roadmap, risk analysis, and library inventory.
+**OpenEMR-wide** shell migration (Knockout tabs → React shell) remains future work —
+see [`FRONTEND_2026_MODERNIZATION_PLAN.md`](./NewClinic/FRONTEND_2026_MODERNIZATION_PLAN.md).

@@ -1,4 +1,7 @@
 import type { RegistryRow, RegistrySearchStatus } from './registryTypes';
+import { DataTable, DataTableStatusRow } from '@components/DataTable';
+import { PaginationBar } from '@components/PaginationBar';
+import { RowActionsMenu } from '@components/RowActionsMenu';
 
 interface RegistryResultsTableProps {
   rows: RegistryRow[];
@@ -11,6 +14,8 @@ interface RegistryResultsTableProps {
   total: number;
   onPageChange: (page: number) => void;
 }
+
+const COL_SPAN = 7;
 
 export function RegistryResultsTable({
   rows,
@@ -27,47 +32,36 @@ export function RegistryResultsTable({
     (row) => row.condition_summary || row.index_diagnosis_date
   );
 
-  const showPagination = total > pageSize;
-  const from = (page - 1) * pageSize + 1;
-  const to = Math.min(page * pageSize, total);
-
   function renderBody() {
     if (status === 'loading') {
       return (
-        <tr>
-          <td colSpan={7}>
-            <em>Searching…</em>
-          </td>
-        </tr>
+        <DataTableStatusRow colSpan={COL_SPAN}>
+          <em>Searching…</em>
+        </DataTableStatusRow>
       );
     }
     if (status === 'error' && errorMessage) {
       return (
-        <tr>
-          <td colSpan={7} className="text-danger">
-            {errorMessage}
-          </td>
-        </tr>
+        <DataTableStatusRow colSpan={COL_SPAN} tone="danger">
+          {errorMessage}
+        </DataTableStatusRow>
       );
     }
     if (status === 'idle') {
       return (
-        <tr>
-          <td colSpan={7} className="text-muted">
-            <em>No search yet.</em>
-          </td>
-        </tr>
+        <DataTableStatusRow colSpan={COL_SPAN}>
+          <em>No search yet.</em>
+        </DataTableStatusRow>
       );
     }
     if (!rows.length) {
       return (
-        <tr>
-          <td colSpan={7} className="text-muted">
-            <em>No patients match these filters.</em>
-          </td>
-        </tr>
+        <DataTableStatusRow colSpan={COL_SPAN}>
+          <em>No patients match these filters.</em>
+        </DataTableStatusRow>
       );
     }
+
     return rows.map((row) => {
       const chartUrl = row.chart_url ?? `${chartUrlBase}?pid=${encodeURIComponent(String(row.pid))}`;
       return (
@@ -90,9 +84,10 @@ export function RegistryResultsTable({
           </td>
           <td>{row.completion_pct}%</td>
           <td className="text-right">
-            <a className="btn btn-link btn-sm p-0" href={chartUrl} target="_top">
-              Open chart
-            </a>
+            <RowActionsMenu
+              label={`Actions for ${row.name}`}
+              items={[{ id: 'chart', label: 'Open chart', href: chartUrl }]}
+            />
           </td>
         </tr>
       );
@@ -102,50 +97,39 @@ export function RegistryResultsTable({
   return (
     <section className="col-lg-8">
       <div className="oe-nc-registry-summary text-muted small mb-2">{summaryText}</div>
-      <div className="table-responsive">
-        <table className="table table-sm table-hover" id="nc-registry-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Age</th>
-              <th>Sex</th>
-              <th>MRN</th>
-              <th
-                className="oe-nc-registry-col-condition"
-                style={{ display: hasClinical ? undefined : 'none' }}
-              >
-                Condition
-              </th>
-              <th>Completion</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody id="nc-registry-rows">{renderBody()}</tbody>
-        </table>
-      </div>
-      {showPagination && (
-        <div className="d-flex justify-content-between align-items-center" id="nc-registry-pagination">
-          <button
-            type="button"
-            className="btn btn-link btn-sm p-0"
-            disabled={page <= 1}
-            onClick={() => onPageChange(Math.max(1, page - 1))}
-          >
-            Prev
-          </button>
-          <span className="small text-muted">
-            {from}–{to} of {total}
-          </span>
-          <button
-            type="button"
-            className="btn btn-link btn-sm p-0"
-            disabled={to >= total}
-            onClick={() => onPageChange(page + 1)}
-          >
-            Next
-          </button>
-        </div>
-      )}
+      <DataTable
+        id="nc-registry-table"
+        hover
+        header={(
+          <tr>
+            <th>Name</th>
+            <th>Age</th>
+            <th>Sex</th>
+            <th>MRN</th>
+            <th
+              className="oe-nc-registry-col-condition"
+              style={{ display: hasClinical ? undefined : 'none' }}
+            >
+              Condition
+            </th>
+            <th>Completion</th>
+            <th aria-label="Actions" />
+          </tr>
+        )}
+        footer={
+          total > pageSize ? (
+            <PaginationBar
+              id="nc-registry-pagination"
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={onPageChange}
+            />
+          ) : undefined
+        }
+      >
+        {renderBody()}
+      </DataTable>
     </section>
   );
 }

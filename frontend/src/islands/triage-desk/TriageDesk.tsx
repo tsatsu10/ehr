@@ -12,9 +12,11 @@
  */
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { oeFetch } from '@core/oeFetch';
+import { oeFetch, OeFetchError } from '@core/oeFetch';
+import { getDeskActiveVisitId } from '@core/deskSessionStorage';
 import { resolveActionConflict, type DeskInterrupt } from '@core/deskConflict';
 import { useInterval } from '@core/useInterval';
+import { useQueueVisibilityRefresh } from '@core/useQueueVisibilityRefresh';
 import { usePageHeadingToolbar, usePageHeadingButton } from '@core/usePageHeadingToolbar';
 import type {
   TriageDeskProps,
@@ -31,7 +33,10 @@ import type {
 import { TriageQueue } from './TriageQueue';
 import { TriageActivePane, type ActiveMode } from './TriageActivePane';
 import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
+import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
+import { ConfirmModal, IdentityConfirmBanner } from '@components/ConfirmModal';
 import { AutoStartModal } from './AutoStartModal';
+import { TriageSendDoctorModal } from './TriageSendDoctorModal';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
 import { FindPatientDrawer } from '@components/FindPatientDrawer';
 import { useSharedDeviceSession } from '@core/useSharedDeviceSession';
@@ -102,9 +107,16 @@ export function TriageDesk({
     error: string | null;
   } | null>(null);
   const [findDrawerOpen, setFindDrawerOpen] = useState(false);
+  const [pendingVisitSwitch, setPendingVisitSwitch] = useState<number | null>(null);
+  const [hardAssignEnabled, setHardAssignEnabled] = useState(false);
+  const [assignableDoctors, setAssignableDoctors] = useState<
+    Array<{ user_id: number; display_name: string; taking_patients: boolean }>
+  >([]);
+  const [sendDoctorModalOpen, setSendDoctorModalOpen] = useState(false);
 
   // Stale-response guard for queue polling
   const queueSeq = useRef(0);
+  const selectVisitRef = useRef<(visitId: number, force?: boolean) => Promise<void>>(async () => {});
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -153,6 +165,8 @@ export function TriageDesk({
       if (data.vitals_unit_label && data.vitals_form_rules) {
         setVitalsRules(data.vitals_form_rules);
       }
+      setHardAssignEnabled(!!data.hard_provider_assignment_enabled && !!data.can_hard_assign_provider);
+      setAssignableDoctors(data.assignable_doctors ?? []);
       setQueueError(null);
       setLastUpdated(new Date());
     } catch (err) {
@@ -165,11 +179,9 @@ export function TriageDesk({
 
   useEffect(() => { void fetchQueue(); }, [fetchQueue]);
 
-  useEffect(() => {
-    const onVisible = () => { if (!document.hidden) void fetchQueue(); };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [fetchQueue]);
+  useQueueVisibilityRefresh(() => {
+    void fetchQueue();
+  });
 
   useInterval(fetchQueue, pollMs);
 
@@ -196,6 +208,10 @@ export function TriageDesk({
       resetActivePane();
       void fetchQueue();
     },
+    onSessionRestored: () => {
+      const storedId = getDeskActiveVisitId(TRIAGE_STORAGE_KEY);
+      if (storedId > 0) void selectVisitRef.current(storedId, true);
+    },
   });
 
   const resetActivePaneAndSession = useCallback(() => {
@@ -218,9 +234,10 @@ export function TriageDesk({
 
   // ── Select patient ───────────────────────────────────────────────────────
 
-  const selectVisit = useCallback(async (visitId: number) => {
-    if (formDirty && activeVisit && activeVisit.id !== visitId) {
-      if (!window.confirm('Discard unsaved vitals and open another patient?')) return;
+  const selectVisit = useCallback(async (visitId: number, force = false) => {
+    if (!force && formDirty && activeVisit && activeVisit.id !== visitId) {
+      setPendingVisitSwitch(visitId);
+      return;
     }
 
     setMode('loading');
@@ -267,15 +284,23 @@ export function TriageDesk({
       } else {
         setMode('idle');
         setQueueError(err instanceof Error ? err.message : 'Failed to load patient');
+        if (err instanceof OeFetchError && err.status === 400) {
+          sharedDevice.clearActiveVisitId();
+        }
       }
     }
   }, [ajaxUrl, csrfToken, formDirty, activeVisit, fetchQueue, resetActivePaneAndSession, sharedDevice]);
 
-  // Ref kept in sync with selectVisit so the nc:patient-selected handler
-  // always invokes the latest version without re-registering the listener.
-  // Must be declared AFTER selectVisit (avoids temporal dead zone).
-  const selectVisitRef = useRef(selectVisit);
   useEffect(() => { selectVisitRef.current = selectVisit; }, [selectVisit]);
+
+  useEffect(() => {
+    const storedId = getDeskActiveVisitId(TRIAGE_STORAGE_KEY);
+    if (storedId > 0 && mode === 'idle') {
+      void selectVisitRef.current(storedId, true);
+    }
+  // mount-only session restore
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Start triage ─────────────────────────────────────────────────────────
 
@@ -378,21 +403,38 @@ export function TriageDesk({
 
   // ── Send to doctor ───────────────────────────────────────────────────────
 
-  const handleSend = useCallback(async () => {
+  const executeSendToDoctor = useCallback(async (hardAssignedProviderId: number | null) => {
     if (!activeVisit || sending || sharedDevice.blocked) return;
     setSending(true);
     setFormError(null);
     try {
-      await oeFetch('triage.send_doctor', {
+      const freshSelect = await oeFetch<{ visit: TriageVisit }>('triage.select', {
+        ajaxUrl,
+        csrfToken,
+        method: 'POST',
+        json: { visit_id: activeVisit.id },
+      });
+      const rowVersion = freshSelect.visit?.row_version ?? activeVisit.row_version;
+      if (freshSelect.visit) {
+        setActiveVisit(freshSelect.visit);
+      }
+
+      const data = await oeFetch<{ visit: TriageVisit }>('triage.send_doctor', {
         ajaxUrl,
         csrfToken,
         method: 'POST',
         json: {
           visit_id: activeVisit.id,
-          row_version: activeVisit.row_version,
+          row_version: rowVersion,
           chief_complaint: chiefComplaint.trim(),
+          ...(hardAssignedProviderId ? { hard_assigned_provider_id: hardAssignedProviderId } : {}),
         },
       });
+
+      if (data.visit?.state !== 'ready_for_doctor') {
+        throw new Error('Send to doctor did not complete — please refresh and try again');
+      }
+
       setInterrupt(null);
       resetActivePane();
       void fetchQueue();
@@ -411,6 +453,15 @@ export function TriageDesk({
       setSending(false);
     }
   }, [activeVisit, sending, ajaxUrl, csrfToken, chiefComplaint, resetActivePane, fetchQueue, resetActivePaneAndSession, sharedDevice]);
+
+  const handleSend = useCallback(() => {
+    if (!activeVisit || sending || sharedDevice.blocked) return;
+    if (hardAssignEnabled && assignableDoctors.length > 0) {
+      setSendDoctorModalOpen(true);
+      return;
+    }
+    void executeSendToDoctor(null);
+  }, [activeVisit, assignableDoctors.length, executeSendToDoctor, hardAssignEnabled, sending, sharedDevice.blocked]);
 
   // ── Record another set ───────────────────────────────────────────────────
 
@@ -556,13 +607,27 @@ export function TriageDesk({
 
       <DeskInterruptBanner interrupt={interrupt} onDismiss={dismissInterrupt} />
 
+      <DeskQueueStatusBar
+        id="nc-triage-status-bar"
+        ariaLabel="Triage desk status"
+        items={[
+          {
+            label: 'Waiting',
+            value: counts?.waiting ?? 0,
+            href: (counts?.waiting ?? 0) > 0 ? visitBoardUrl : undefined,
+          },
+          { label: 'In triage', value: counts?.in_triage ?? 0 },
+        ]}
+        loading={queueLoading}
+        onRefresh={() => { void fetchQueue(); }}
+      />
+
       <div className="row">
         {/* Left: queue */}
         <div className="col-lg-4 mb-3">
           <TriageQueue
             cards={cards}
             activeVisitId={activeVisit?.id ?? null}
-            counts={counts}
             loading={queueLoading}
             error={queueError}
             queueDateFilter={queueDateFilter}
@@ -612,6 +677,19 @@ export function TriageDesk({
         />
       )}
 
+      <TriageSendDoctorModal
+        open={sendDoctorModalOpen}
+        doctors={assignableDoctors}
+        submitting={sending}
+        onClose={() => {
+          if (!sending) setSendDoctorModalOpen(false);
+        }}
+        onConfirm={(hardAssignedProviderId) => {
+          setSendDoctorModalOpen(false);
+          void executeSendToDoctor(hardAssignedProviderId);
+        }}
+      />
+
       <FindPatientDrawer
         open={findDrawerOpen}
         onClose={() => setFindDrawerOpen(false)}
@@ -619,6 +697,37 @@ export function TriageDesk({
         csrfToken={csrfToken}
         onSelectPatient={(pid) => void handleFindPatient(pid)}
       />
+
+      <ConfirmModal
+        open={pendingVisitSwitch !== null}
+        onClose={() => setPendingVisitSwitch(null)}
+        title="Switch patient?"
+        modalId="nc-triage-switch-modal"
+        cancelLabel="Keep editing"
+        confirmLabel="Switch"
+        confirmVariant="warning"
+        onConfirm={() => {
+          if (pendingVisitSwitch !== null) {
+            void selectVisit(pendingVisitSwitch, true);
+          }
+          setPendingVisitSwitch(null);
+        }}
+        identityBanner={(() => {
+          const card = pendingVisitSwitch !== null
+            ? cards.find((c) => c.id === pendingVisitSwitch)
+            : undefined;
+          if (!card) return undefined;
+          return (
+            <IdentityConfirmBanner
+              displayName={card.display_name}
+              pubpid={card.pubpid}
+              queueNumber={card.queue_number}
+            />
+          );
+        })()}
+      >
+        <p className="mb-0">Discard unsaved vitals and open another patient?</p>
+      </ConfirmModal>
     </>
   );
 }

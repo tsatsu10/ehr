@@ -50,6 +50,24 @@ const patientCard = {
   claim_lost: false,
 };
 
+function expectQueueCard(queueNumber: string, displayName: string) {
+  expect(screen.getByText(displayName)).toBeInTheDocument();
+  expect(screen.getByText(`#${queueNumber}`)).toBeInTheDocument();
+}
+
+function columnLabels(): string[] {
+  return Array.from(document.querySelectorAll('.oe-nc-vb-column__label'))
+    .map((el) => el.textContent ?? '');
+}
+
+async function waitForBoardLoaded() {
+  await waitFor(() => {
+    expect(screen.getByLabelText(/Visit board status/i)).toBeInTheDocument();
+    expect(columnLabels().length).toBeGreaterThan(0);
+  });
+}
+
+
 describe('VisitBoard', () => {
   beforeEach(() => {
     mockFetch.mockResolvedValue(emptyBoard);
@@ -72,9 +90,8 @@ describe('VisitBoard', () => {
 
   it('renders column headers after successful fetch', async () => {
     render(<VisitBoard {...props} />);
-    await waitFor(() => expect(screen.getByText('Waiting')).toBeInTheDocument());
-    expect(screen.getByText('Doctor')).toBeInTheDocument();
-    expect(screen.getByText('Payment')).toBeInTheDocument();
+    await waitForBoardLoaded();
+    expect(columnLabels()).toEqual(expect.arrayContaining(['Waiting', 'Doctor', 'Payment']));
   });
 
   it('shows empty-state in each column', async () => {
@@ -88,7 +105,19 @@ describe('VisitBoard', () => {
       columns: { ...emptyBoard.columns, waiting: [patientCard] },
     });
     render(<VisitBoard {...props} />);
-    await waitFor(() => expect(screen.getByText(/#1 Kwame Mensah/)).toBeInTheDocument());
+    await waitFor(() => expectQueueCard('1', 'Kwame Mensah'));
+  });
+
+  it('renders queue bridge badge on visit card when API supplies map', async () => {
+    mockFetch.mockResolvedValue({
+      ...emptyBoard,
+      columns: { ...emptyBoard.columns, waiting: [patientCard] },
+      queue_bridge_badges: {
+        '42': { code: 'EX-03', label: 'Appt not linked', hub_url: '/queue-bridge/index.php' },
+      },
+    });
+    render(<VisitBoard {...props} />);
+    await waitFor(() => expect(screen.getByText('Appt not linked')).toBeInTheDocument());
   });
 
   // ── Error states ──────────────────────────────────────────────────────────
@@ -110,7 +139,7 @@ describe('VisitBoard', () => {
     render(<VisitBoard {...props} />);
 
     // Wait for board to render
-    await waitFor(() => expect(screen.getByText(/#1 Kwame Mensah/)).toBeInTheDocument());
+    await waitFor(() => expectQueueCard('1', 'Kwame Mensah'));
 
     // Second fetch (background poll) fails
     mockFetch.mockRejectedValueOnce(new Error('Timeout'));
@@ -125,7 +154,7 @@ describe('VisitBoard', () => {
     // The warning banner should eventually appear
     // (we can't directly trigger the interval, so validate the branch via retry)
     // Verify the board data is still there
-    expect(screen.getByText(/#1 Kwame Mensah/)).toBeInTheDocument();
+    expect(screen.getByText('Kwame Mensah')).toBeInTheDocument();
   });
 
   it('shows no error banner on first successful fetch', async () => {
@@ -165,7 +194,7 @@ describe('VisitBoard', () => {
       columns: { ...emptyBoard.columns, lab: [{ ...patientCard, id: 99, state: 'in_lab' as const }] },
     });
     render(<VisitBoard {...props} />);
-    await waitFor(() => expect(screen.getByText('Lab')).toBeInTheDocument());
+    await waitFor(() => expect(columnLabels()).toContain('Lab'));
   });
 
   // ── Stale visits ──────────────────────────────────────────────────────────
@@ -186,11 +215,11 @@ describe('VisitBoard', () => {
       columns: { ...emptyBoard.columns, waiting: [patientCard] },
     });
     render(<VisitBoard {...props} />);
-    await waitFor(() => screen.getByText(/#1 Kwame Mensah/));
+    await waitFor(() => expectQueueCard('1', 'Kwame Mensah'));
 
     const searchInput = screen.getByPlaceholderText(/search name/i);
     fireEvent.change(searchInput, { target: { value: 'nobody' } });
-    expect(screen.queryByText(/#1 Kwame Mensah/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Kwame Mensah')).not.toBeInTheDocument();
     expect(screen.getByText(/no patients match/i)).toBeInTheDocument();
   });
 
@@ -200,14 +229,14 @@ describe('VisitBoard', () => {
       columns: { ...emptyBoard.columns, waiting: [patientCard] },
     });
     render(<VisitBoard {...props} />);
-    await waitFor(() => screen.getByText(/#1 Kwame Mensah/));
+    await waitFor(() => expectQueueCard('1', 'Kwame Mensah'));
 
     const searchInput = screen.getByPlaceholderText(/search name/i);
     fireEvent.change(searchInput, { target: { value: 'nobody' } });
-    expect(screen.queryByText(/#1 Kwame Mensah/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Kwame Mensah')).not.toBeInTheDocument();
 
     fireEvent.change(searchInput, { target: { value: '' } });
-    expect(screen.getByText(/#1 Kwame Mensah/)).toBeInTheDocument();
+    expectQueueCard('1', 'Kwame Mensah');
   });
 
   it('manual refresh triggers another board fetch', async () => {
@@ -219,11 +248,13 @@ describe('VisitBoard', () => {
 
     mockFetch.mockResolvedValue(emptyBoard);
     render(<VisitBoard {...props} />);
-    await waitFor(() => expect(screen.getByText('Waiting')).toBeInTheDocument());
+    await waitForBoardLoaded();
     expect(mockFetch).toHaveBeenCalledTimes(1);
 
     fireEvent.click(refreshBtn);
     await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
+    fireEvent.click(screen.getByLabelText(/Refresh status/i));
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(3));
   });
 
   it('updates wall banner with now serving queue number', async () => {
@@ -280,7 +311,7 @@ describe('VisitBoard', () => {
       ],
     });
     render(<VisitBoard {...props} />);
-    await waitFor(() => expect(screen.getByText('Waiting')).toBeInTheDocument());
+    await waitForBoardLoaded();
 
     expect(screen.getByRole('button', { name: /Cancelled today \(1\)/i })).toBeInTheDocument();
 
@@ -302,7 +333,7 @@ describe('VisitBoard', () => {
       ],
     });
     render(<VisitBoard {...props} />);
-    await waitFor(() => expect(screen.getByText('Waiting')).toBeInTheDocument());
+    await waitForBoardLoaded();
 
     fireEvent.click(screen.getByRole('button', { name: /Left unpaid today \(1\)/i }));
 
@@ -317,7 +348,7 @@ describe('VisitBoard', () => {
       ],
     });
     render(<VisitBoard {...props} profile="wall" />);
-    await waitFor(() => expect(screen.getByText('Waiting')).toBeInTheDocument());
+    await waitFor(() => expect(columnLabels().length).toBeGreaterThan(0));
     expect(screen.queryByText(/Cancelled today/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Left unpaid today/i)).not.toBeInTheDocument();
   });
@@ -401,5 +432,34 @@ describe('VisitBoard', () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(mockFetch).toHaveBeenCalledWith('visit.board', expect.any(Object));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('shows kiosk toolbar on wall profile when kioskChrome is enabled', async () => {
+    mockFetch.mockResolvedValue(emptyBoard);
+
+    render(
+      <VisitBoard
+        {...props}
+        profile="wall"
+        kioskChrome
+        clinicName="Sunrise Clinic"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Sunrise Clinic')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Fullscreen/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Privacy/i })).toBeInTheDocument();
+    });
+  });
+
+  it('does not show kiosk toolbar without kioskChrome flag', async () => {
+    mockFetch.mockResolvedValue(emptyBoard);
+
+    render(<VisitBoard {...props} profile="wall" clinicName="Sunrise Clinic" />);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /Fullscreen/i })).not.toBeInTheDocument();
+    });
   });
 });

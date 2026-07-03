@@ -1,43 +1,90 @@
 import {
+  CLINIC_CURRENCY_FIELDS,
   CLINIC_PRINT_FIELDS,
   CLINIC_RECONCILIATION_FIELDS,
 } from '../adminFieldDefs';
 import { AdminConfigField } from '../AdminConfigField';
+import type { CashProfileStatus } from '../adminTypes';
+import { formatPrice } from '../adminUtils';
 
 interface ClinicTabProps {
   settings: Record<string, unknown>;
+  cashProfile: CashProfileStatus;
+  cashProfileApplying: boolean;
   reconciliationStatus: string;
   reconciliationRunning: boolean;
   onFieldChange: (key: string, value: unknown) => void;
+  onApplyCashProfile: () => void;
   onRunReconciliation: () => void;
+}
+
+function formatAppliedAt(value?: string | null): string {
+  if (!value) {
+    return 'Not applied yet';
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleString();
 }
 
 export function ClinicTab({
   settings,
+  cashProfile,
+  cashProfileApplying,
   reconciliationStatus,
   reconciliationRunning,
   onFieldChange,
+  onApplyCashProfile,
   onRunReconciliation,
 }: ClinicTabProps) {
   return (
     <>
       <div className="card mb-3">
         <div className="card-body">
-          <p className="text-muted">Currency display settings (read-only in V1).</p>
-          <dl className="row mb-0">
-            <dt className="col-sm-4">Currency code</dt>
-            <dd className="col-sm-8" id="nc-admin-currency-code">
-              {String(settings.currency_code ?? '—')}
-            </dd>
-            <dt className="col-sm-4">Symbol</dt>
-            <dd className="col-sm-8" id="nc-admin-currency-symbol">
-              {String(settings.currency_symbol ?? '—')}
-            </dd>
-            <dt className="col-sm-4">Decimal places</dt>
-            <dd className="col-sm-8" id="nc-admin-currency-decimals">
-              {settings.currency_decimals !== undefined ? String(settings.currency_decimals) : '—'}
-            </dd>
-          </dl>
+          <div className="d-flex flex-wrap align-items-start justify-content-between">
+            <div className="mb-2 mb-md-0">
+              <h5 className="card-title mb-1">Cash clinic profile</h5>
+              <p className="text-muted small mb-2">
+                Applies recommended OpenEMR globals for a private cash clinic (Appendix E):
+                disables insurance eligibility noise, enables E-Sign defaults, syncs currency
+                symbol, and turns on pinned reception preview plus print Rx.
+              </p>
+              <p className="small mb-0" id="nc-admin-cash-profile-status">
+                <span className={`badge badge-${cashProfile.applied ? 'success' : 'secondary'} mr-2`}>
+                  {cashProfile.applied ? 'Applied' : 'Not applied'}
+                </span>
+                Last applied: {formatAppliedAt(cashProfile.last_applied_at)}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              id="nc-admin-apply-cash-profile"
+              disabled={cashProfileApplying}
+              onClick={onApplyCashProfile}
+            >
+              {cashProfileApplying ? 'Applying…' : 'Apply cash clinic profile'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="card mb-3">
+        <div className="card-body">
+          <h5 className="card-title">Clinic currency</h5>
+          <p className="text-muted small">
+            Example: {formatPrice(160, settings)}
+          </p>
+          {CLINIC_CURRENCY_FIELDS.map((def) => (
+            <AdminConfigField
+              key={def.key}
+              def={def}
+              value={settings[def.key]}
+              onChange={onFieldChange}
+            />
+          ))}
         </div>
       </div>
 

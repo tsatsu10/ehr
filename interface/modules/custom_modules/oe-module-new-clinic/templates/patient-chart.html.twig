@@ -13,7 +13,8 @@
         visitBoardUrl: visit_board_url,
         frontDeskUrl: module_url ~ '/front-desk.php',
         exportChartUrl: export_chart_url|default(''),
-        registrationMode: registration_mode
+        registrationMode: registration_mode,
+        enableInChartPatientSearch: enable_in_chart_patient_search|default(false)
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}
@@ -24,7 +25,6 @@
 {% block scripts %}
 {% if enable_react_patient_chart|default(true) %}
 <link rel="stylesheet" href="{{ assets_url }}/css/registration-form.css?v={{ asset_version }}">
-<link rel="stylesheet" href="{{ assets_url }}/modern/patient-chart.css?v={{ asset_version }}">
-<script type="module" src="{{ assets_url }}/modern/patient-chart.js?v={{ asset_version }}"></script>
+{% include 'partials/island-assets.html.twig' %}
 {% endif %}
 {% endblock %}

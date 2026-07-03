@@ -1,4 +1,5 @@
 import type { ChartVisitRow } from './patientChartTypes';
+import { AncillaryVisitBadges } from '@components/AncillaryVisitBadges';
 import { formatStateLabel } from './patientChartUtils';
 
 interface VisitsTabProps {
@@ -25,7 +26,7 @@ function VisitRow({
 
   return (
     <div className="border rounded p-2 mb-2 d-flex flex-wrap align-items-start">
-      <div className="flex-grow-1">
+      <div className="grow">
         <div className="d-flex align-items-center flex-wrap">
           <strong className="mr-2">#{visit.queue_number}</strong>
           <span className="text-muted small mr-2">{dateLabel}</span>
@@ -34,6 +35,7 @@ function VisitRow({
           {visit.skipped_triage && (
             <span className="badge badge-secondary mr-1">Skipped triage</span>
           )}
+          <AncillaryVisitBadges badges={visit.ancillary_badges} className="mr-1" />
         </div>
         <div className="small">
           {visit.visit_type_label ?? 'Visit'}

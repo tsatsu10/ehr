@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
+import { ConfirmModal } from '@components/ConfirmModal';
 import { usePageHeadingRefresh } from '@core/usePageHeadingToolbar';
 import { emptyRegistryFilters } from './registryDefaults';
 import {
@@ -65,6 +66,11 @@ export function PatientRegistry({
   const [status, setStatus] = useState<RegistrySearchStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [summaryText, setSummaryText] = useState('Apply filters to search the registry.');
+  const [pendingConfirm, setPendingConfirm] = useState<'export' | 'delete' | null>(null);
+  const [saveFilterOpen, setSaveFilterOpen] = useState(false);
+  const [filterName, setFilterName] = useState('');
+  const [shareFilter, setShareFilter] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchOptions = useMemo(
     () => ({ ajaxUrl, csrfToken }),
@@ -183,44 +189,66 @@ export function PatientRegistry({
     [filters, runSearch]
   );
 
-  const handleExport = useCallback(async () => {
-    if (!window.confirm('Export current filters to CSV (max 5,000 rows)?')) return;
+  const handleExport = useCallback(() => {
+    setPendingConfirm('export');
+  }, []);
+
+  const runExport = useCallback(async () => {
     try {
       await exportRegistryCsv(ajaxUrl, csrfToken, filtersToApiPayload(filters));
+      setActionError(null);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Export failed');
+      setActionError(err instanceof Error ? err.message : 'Export failed');
     }
   }, [ajaxUrl, csrfToken, filters]);
 
-  const handleSaveFilter = useCallback(async () => {
-    const name = window.prompt('Name for this saved filter:');
+  const handleSaveFilter = useCallback(() => {
+    const owned =
+      selectedSavedId > 0 && presets.find((p) => p.saved_id === selectedSavedId)?.owned_by_user;
+    const preset = presets.find((p) => p.saved_id === selectedSavedId);
+    if (owned && preset) {
+      setFilterName(preset.label.replace(/^\[Shared\] /, ''));
+      setShareFilter(!!preset.is_shared);
+    } else {
+      setFilterName('');
+      setShareFilter(false);
+    }
+    setSaveFilterOpen(true);
+  }, [presets, selectedSavedId]);
+
+  const submitSaveFilter = useCallback(async () => {
+    const name = filterName.trim();
     if (!name) return;
 
-    let isShared = false;
-    if (canShareFilter) {
-      isShared = window.confirm('Share this filter with the whole clinic?');
-    }
+    const ownedPreset = presets.find((p) => p.saved_id === selectedSavedId);
+    const updateId =
+      selectedSavedId > 0 && ownedPreset?.owned_by_user ? selectedSavedId : undefined;
 
     try {
       await oeFetch<{ success?: boolean }>('cohort.saved_filter', {
         ...fetchOptions,
         json: {
           operation: 'save',
+          ...(updateId ? { id: updateId } : {}),
           name,
-          is_shared: isShared ? 1 : 0,
+          is_shared: shareFilter ? 1 : 0,
           filters: filtersToApiPayload(filters),
         },
       });
+      setSaveFilterOpen(false);
+      setActionError(null);
       await loadPresets();
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not save filter');
+      setActionError(err instanceof Error ? err.message : 'Could not save filter');
     }
-  }, [canShareFilter, fetchOptions, filters, loadPresets]);
+  }, [fetchOptions, filterName, filters, loadPresets, presets, selectedSavedId, shareFilter]);
 
-  const handleDeleteFilter = useCallback(async () => {
+  const handleDeleteFilter = useCallback(() => {
     if (selectedSavedId <= 0) return;
-    if (!window.confirm('Delete this saved filter?')) return;
+    setPendingConfirm('delete');
+  }, [selectedSavedId]);
 
+  const runDeleteFilter = useCallback(async () => {
     try {
       await oeFetch<{ success?: boolean }>('cohort.saved_filter', {
         ...fetchOptions,
@@ -231,15 +259,18 @@ export function PatientRegistry({
       });
       setSelectedSavedId(0);
       setSelectedPresetId('');
+      setActionError(null);
       await loadPresets();
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not delete filter');
+      setActionError(err instanceof Error ? err.message : 'Could not delete filter');
     }
   }, [fetchOptions, loadPresets, selectedSavedId]);
 
   const selectedPreset = presets.find((p) => p.id === selectedPresetId);
   const showDeleteSaved =
     selectedSavedId > 0 && selectedPreset?.can_delete === true;
+  const updatingOwnedFilter =
+    selectedSavedId > 0 && selectedPreset?.owned_by_user === true;
 
   usePageHeadingRefresh('nc-registry-refresh', handleRefresh);
   usePageHeadingButton('nc-registry-export', handleExport);
@@ -248,6 +279,11 @@ export function PatientRegistry({
 
   return (
     <div className="oe-nc-registry row">
+      {actionError && (
+        <div className="col-12">
+          <div className="alert alert-danger py-2" role="alert">{actionError}</div>
+        </div>
+      )}
       <RegistryFilterPanel
         filters={filters}
         presets={presets}
@@ -272,6 +308,71 @@ export function PatientRegistry({
         total={total}
         onPageChange={handlePageChange}
       />
+
+      <ConfirmModal
+        open={pendingConfirm === 'export'}
+        onClose={() => setPendingConfirm(null)}
+        title="Export registry?"
+        modalId="nc-registry-export-modal"
+        confirmLabel="Export CSV"
+        confirmVariant="primary"
+        onConfirm={() => {
+          setPendingConfirm(null);
+          void runExport();
+        }}
+      >
+        <p className="mb-0">Export current filters to CSV (max 5,000 rows)?</p>
+      </ConfirmModal>
+
+      <ConfirmModal
+        open={pendingConfirm === 'delete'}
+        onClose={() => setPendingConfirm(null)}
+        title="Delete saved filter?"
+        modalId="nc-registry-delete-modal"
+        confirmLabel="Delete"
+        confirmVariant="danger"
+        onConfirm={() => {
+          setPendingConfirm(null);
+          void runDeleteFilter();
+        }}
+      >
+        <p className="mb-0">Delete this saved filter? This cannot be undone.</p>
+      </ConfirmModal>
+
+      <ConfirmModal
+        open={saveFilterOpen}
+        onClose={() => setSaveFilterOpen(false)}
+        title={updatingOwnedFilter ? 'Update saved filter' : 'Save filter'}
+        modalId="nc-registry-save-filter-modal"
+        confirmLabel={updatingOwnedFilter ? 'Update' : 'Save'}
+        confirmDisabled={filterName.trim() === ''}
+        onConfirm={() => { void submitSaveFilter(); }}
+      >
+        <div className="form-group mb-2">
+          <label htmlFor="nc-registry-filter-name">Filter name</label>
+          <input
+            id="nc-registry-filter-name"
+            className="form-control"
+            value={filterName}
+            onChange={(e) => setFilterName(e.target.value)}
+            autoFocus
+          />
+        </div>
+        {canShareFilter && (
+          <div className="form-check">
+            <input
+              id="nc-registry-filter-share"
+              type="checkbox"
+              className="form-check-input"
+              checked={shareFilter}
+              onChange={(e) => setShareFilter(e.target.checked)}
+            />
+            <label className="form-check-label" htmlFor="nc-registry-filter-share">
+              Share with the whole clinic
+            </label>
+          </div>
+        )}
+      </ConfirmModal>
     </div>
   );
 }

@@ -14,11 +14,7 @@ import type {
   RoutingChips,
 } from '@core/types';
 import { postDoctorAction } from './postDoctorAction';
-
-function formatLabMoney(symbol: string, amount: number | null | undefined): string {
-  if (amount === null || amount === undefined || Number.isNaN(amount)) return '';
-  return `${symbol}${Number(amount).toFixed(2)}`;
-}
+import { formatDoctorMoney } from './doctorDeskUtils';
 
 interface LabPanelModalProps {
   open: boolean;
@@ -188,7 +184,7 @@ export function LabPanelModal({
                       {test.has_fee ? (
                         <span className="text-muted">
                           {' '}
-                          {formatLabMoney(catalog.currency_symbol, test.fee_amount)}
+                          {formatDoctorMoney(test.fee_amount)}
                         </span>
                       ) : (
                         <span className="text-muted"> (no fee mapped)</span>
@@ -210,7 +206,7 @@ export function LabPanelModal({
                   </button>
                   <span className="text-muted small" id="nc-lab-panel-total">
                     {estimatedTotal != null
-                      ? `Estimated: ${formatLabMoney(catalog.currency_symbol, estimatedTotal)}`
+                      ? `Estimated: ${formatDoctorMoney(estimatedTotal)}`
                       : ''}
                   </span>
                 </div>
@@ -252,8 +248,7 @@ export function labPanelPlaceNotice(result: LabPanelPlaceResult): { message: str
   const billing = result.billing ?? {};
   if ((billing.posted_count ?? 0) > 0) {
     return {
-      message: `${billing.posted_count} lab charge(s) posted to encounter (${formatLabMoney(
-        billing.currency_symbol ?? '',
+      message: `${billing.posted_count} lab charge(s) posted to encounter (${formatDoctorMoney(
         billing.charges_total,
       )}).`,
       variant: 'info',

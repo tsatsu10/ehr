@@ -36,7 +36,7 @@ export function LabOpsSetupPanel({
   }, [fetchOptions, onSetupChange, reloadSetup]);
 
   const createProvider = useCallback(async () => {
-    await oeFetch('lab_ops.provider_create', fetchOptions);
+    await oeFetch('lab_ops.provider_create', { ...fetchOptions, json: {} });
     await reloadSetup();
   }, [fetchOptions, reloadSetup]);
 

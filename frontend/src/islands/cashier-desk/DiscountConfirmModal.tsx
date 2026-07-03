@@ -1,3 +1,4 @@
+import { IdentityConfirmBanner } from '@components/ConfirmModal';
 import type { CashierDiscountLine, CashierVisit, PatientPreview } from '@core/types';
 import { formatMoney } from './cashierUtils';
 
@@ -36,9 +37,11 @@ export function DiscountConfirmModal({
               </button>
             </div>
             <div className="modal-body">
-              <div className="nc-patient-context-banner p-3 border rounded bg-light mb-3">
-                <strong>{identity.display_name}</strong> · MRN {identity.pubpid} · Queue #{visit.queue_number}
-              </div>
+              <IdentityConfirmBanner
+                displayName={identity.display_name}
+                pubpid={identity.pubpid}
+                queueNumber={visit.queue_number}
+              />
               {lines.length === 0 ? (
                 <p className="mb-0">Post discounted charges to this visit?</p>
               ) : (
