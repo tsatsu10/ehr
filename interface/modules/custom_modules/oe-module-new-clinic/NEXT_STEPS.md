@@ -1,8 +1,8 @@
 # New Clinic V1 — Next Steps
 
-**Current status (July 3, 2026):** Post-pilot §20.1 slices + sp71 audit remediation shipped · asset `20260703sp71auditfix`  
+**Current status (July 3, 2026):** S1 Scheduling smoke package shipped · asset `20260703sp72scheduling`  
 **Product repo:** [github.com/tsatsu10/ehr](https://github.com/tsatsu10/ehr) — see root [EHR.md](../../../../EHR.md)  
-**Remaining work:** Run `upgrade_sql.php` on existing DBs; S1 scheduling smoke package (`testMandatory60`); V1.2-BILL depth fixtures
+**Remaining work:** Run `upgrade_sql.php` on existing DBs; V1.2-BILL depth fixtures; Communications Hub rollout slice
 
 ### V1.1-DOC rollout (M17 clinical documentation hub)
 
@@ -262,19 +262,32 @@ Notify-only pilot (hard assign OFF):
 php interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-v12-doctor-notify.php
 ```
 
-### S1 Scheduling rollout note
-
-`enable_scheduling_redesign` admin default is `'1'` for **new** facility rows only. Existing databases keep their stored value until you run:
+### S1 Scheduling rollout (calendar / flow / recalls)
 
 ```bash
 php interface/modules/custom_modules/oe-module-new-clinic/bin/upgrade_sql.php
-php interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-scheduling-redesign.php
+php interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-v11-scheduling.php
+php interface/modules/custom_modules/oe-module-new-clinic/scripts/scheduling-recurring-fixture-seed.php
+php interface/modules/custom_modules/oe-module-new-clinic/acl/seed_pilot_users.php
 cd frontend && npm run build
 ```
 
-**S-P12 DB upgrade:** re-run module SQL for `new_clinic_flowboard_lane_map`, `new_clinic_recall_meta.recall_type`, multi-recall UNIQUE drop, and `new_clinic_flowboard_lane_prefs`.
+`enable_scheduling_redesign` admin default is `'1'` for **new** facility rows only. Existing databases keep their stored value until you run the pilot script above.
 
-Hub URL: `.../scheduling/index.php?lens=calendar|flow|recalls&v=20260701sp13flowboard403`
+E2E smoke (S1 calendar / flow / recalls subset):
+
+```bash
+npm run test:e2e-new-clinic -- tests/e2e/new-clinic/specs/v11-scheduling-smoke.spec.js
+npm run test:e2e-new-clinic -- tests/e2e/new-clinic/specs/scheduling.spec.js
+```
+
+HTTP smoke:
+
+```bash
+php interface/modules/custom_modules/oe-module-new-clinic/scripts/smoke-scheduling-http.php
+```
+
+Hub URL: `.../scheduling/index.php?lens=calendar|flow|recalls`
 
 ---
 

@@ -1104,6 +1104,7 @@ class NewClinicMandatoryContractTest extends TestCase
         $this->assertStringContainsString('NC-RECURRING-E2E-FIXTURE', $seedBody);
         $this->assertStringNotContainsString('LAST_INSERT_ID()', $seedBody);
         $this->assertStringContainsString('ORDER BY pc_eid DESC LIMIT 1', $seedBody);
+        $this->assertStringNotContainsString("config->set('enable_scheduling_redesign'", $seedBody);
 
         $shellPath = dirname(__DIR__, 5) . '/frontend/src/islands/scheduling/SchedulingShell.tsx';
         $this->assertFileExists($shellPath, 'Scheduling shell island must exist');
@@ -1111,5 +1112,59 @@ class NewClinicMandatoryContractTest extends TestCase
         $ctxFixture = dirname(__DIR__, 5)
             . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/v12-ctx-smoke-fixture.php';
         $this->assertFileExists($ctxFixture, 'CTX smoke fixture must seed waiting visits');
+    }
+
+    public function testMandatory60SchedulingSmokeE2e(): void
+    {
+        $e2eDir = dirname(__DIR__, 4) . '/e2e/new-clinic';
+        $specPath = $e2eDir . '/specs/v11-scheduling-smoke.spec.js';
+        $this->assertFileExists($specPath, 'S1 Scheduling smoke spec must exist');
+
+        $spec = file_get_contents($specPath);
+        $this->assertStringContainsString('pilot-enable-v11-scheduling.php', $spec);
+        $this->assertStringContainsString('e2e-prep-golden-path.php', $spec);
+        $this->assertStringContainsString('v11-scheduling-smoke-fixture.php', $spec);
+        $this->assertStringContainsString('scheduling-recurring-fixture-seed.php', $spec);
+        $this->assertStringContainsString('scheduling.calendar.range', $spec);
+        $this->assertStringContainsString('scheduling.flow_board.list', $spec);
+        $this->assertStringContainsString('scheduling.recalls.list', $spec);
+        $this->assertStringContainsString('Mode 2 arrivals only', $spec);
+        $this->assertStringContainsString('403', $spec);
+        $this->assertStringContainsString('nc-scheduling-root', $spec);
+
+        $legacySpecPath = $e2eDir . '/specs/scheduling.spec.js';
+        $this->assertFileExists($legacySpecPath, 'Legacy scheduling spec must exist');
+
+        $pilotScript = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-v11-scheduling.php';
+        $this->assertFileExists($pilotScript, 'Pilot S1 scheduling enable script must exist');
+        $pilotBody = file_get_contents($pilotScript);
+        $this->assertStringContainsString('enable_scheduling_redesign', $pilotBody);
+        $this->assertStringContainsString('enable_scheduled_integration', $pilotBody);
+        $this->assertStringContainsString('enable_react_scheduling', $pilotBody);
+
+        $fixtureScript = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/v11-scheduling-smoke-fixture.php';
+        $this->assertFileExists($fixtureScript, 'Scheduling smoke fixture must exist');
+        $fixtureBody = file_get_contents($fixtureScript);
+        $this->assertStringContainsString('NC-SCHEDULING-SMOKE-FIXTURE', $fixtureBody);
+        $this->assertStringNotContainsString('LAST_INSERT_ID()', $fixtureBody);
+
+        $httpSmoke = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/smoke-scheduling-http.php';
+        $this->assertFileExists($httpSmoke, 'Scheduling HTTP smoke must exist');
+
+        $hubPhp = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/public/scheduling/index.php';
+        $this->assertFileExists($hubPhp, 'Scheduling hub entry must exist');
+
+        $shellPath = dirname(__DIR__, 5) . '/frontend/src/islands/scheduling/SchedulingShell.tsx';
+        $this->assertFileExists($shellPath, 'SchedulingShell React component must exist');
+
+        $accessTest = __DIR__ . '/SchedulingAccessServiceTest.php';
+        $this->assertFileExists($accessTest, 'Scheduling access service test must exist');
+
+        $calendarTest = __DIR__ . '/SchedulingCalendarServiceTest.php';
+        $this->assertFileExists($calendarTest, 'Scheduling calendar service test must exist');
     }
 }
