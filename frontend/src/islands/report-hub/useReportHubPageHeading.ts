@@ -5,6 +5,7 @@ import type { ReportHubLens } from './reportHubTypes';
 interface Options {
   tab: ReportHubLens;
   summaryLabel: string;
+  summaryError?: string | null;
   lastUpdated: Date | null;
   onTabChange: (tab: ReportHubLens) => void;
   onRefresh: () => void;
@@ -13,6 +14,7 @@ interface Options {
 export function useReportHubPageHeading({
   tab,
   summaryLabel,
+  summaryError,
   lastUpdated,
   onTabChange,
   onRefresh,
@@ -23,9 +25,10 @@ export function useReportHubPageHeading({
   useEffect(() => {
     const kpi = document.getElementById('nc-reporthub-kpis');
     if (kpi) {
-      kpi.textContent = summaryLabel;
+      kpi.textContent = summaryError ? 'Summary unavailable' : summaryLabel;
+      kpi.classList.toggle('text-danger', Boolean(summaryError));
     }
-  }, [summaryLabel]);
+  }, [summaryError, summaryLabel]);
 
   useEffect(() => {
     const toolbar = document.getElementById('nc-reporthub-toolbar');

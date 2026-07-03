@@ -15,6 +15,8 @@ use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Twig\TwigContainer;
 use OpenEMR\Modules\NewClinic\Bootstrap;
 use OpenEMR\Modules\NewClinic\GlobalConfig;
+use OpenEMR\Modules\NewClinic\Support\ActivePatientPidResolver;
+use OpenEMR\Modules\NewClinic\Support\HistoryEditorWrapGate;
 use Twig\Environment;
 
 class LegacyChartContextService
@@ -68,12 +70,19 @@ class LegacyChartContextService
 
     public function shouldBufferCurrentRequest(): bool
     {
+        if (HistoryEditorWrapGate::displacesLegacyStrip($this->config, $this->visitScope)) {
+            return false;
+        }
+
         if (!$this->isOverlayEnabled() || !$this->userHasClinicRole()) {
             return false;
         }
 
-        $pid = (int) ($_SESSION['pid'] ?? 0);
-        if ($pid <= 0) {
+        if ($this->isEmbeddedChartFragment()) {
+            return false;
+        }
+
+        if ($this->resolveActivePid() <= 0) {
             return false;
         }
 
@@ -135,7 +144,7 @@ class LegacyChartContextService
      */
     private function buildViewModel(): ?array
     {
-        $pid = (int) ($_SESSION['pid'] ?? 0);
+        $pid = $this->resolveActivePid();
         if ($pid <= 0) {
             return null;
         }
@@ -202,6 +211,16 @@ class LegacyChartContextService
         ];
     }
 
+    private function resolveActivePid(): int
+    {
+        return ActivePatientPidResolver::resolve();
+    }
+
+    private function isEmbeddedChartFragment(): bool
+    {
+        return !empty($_POST['embeddedScreen']) || !empty($_REQUEST['embeddedScreen']);
+    }
+
     private function isOverlayEnabled(): bool
     {
         if (!$this->isModuleActive()) {
@@ -226,7 +245,7 @@ class LegacyChartContextService
 
     private function requestMatchesAllowlist(): bool
     {
-        $script = $this->currentScriptName();
+        $script = HistoryEditorWrapGate::currentScriptName();
         if (str_contains($script, '/oe-module-new-clinic/')) {
             return false;
         }
@@ -250,11 +269,6 @@ class LegacyChartContextService
         }
 
         return false;
-    }
-
-    private function currentScriptName(): string
-    {
-        return str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
     }
 
     private function isModuleActive(): bool

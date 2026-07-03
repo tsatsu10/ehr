@@ -1,0 +1,52 @@
+{% extends 'base.html.twig' %}
+
+{% block page_heading_actions %}
+<div class="d-flex flex-wrap align-items-center oe-nc-scheduling-toolbar" id="nc-scheduling-toolbar">
+    <span class="text-muted small mb-1 mr-2" id="nc-scheduling-summary"></span>
+    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ front_desk_url|attr }}">{{ 'Front Desk'|xlt }}</a>
+    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ visit_board_url|attr }}">{{ 'Visit Board'|xlt }}</a>
+    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ queue_bridge_url|attr }}">{{ 'Queue Bridge'|xlt }}</a>
+    <button type="button" class="btn btn-outline-secondary btn-sm mb-1" id="nc-scheduling-refresh" aria-label="{{ 'Refresh'|xlt }}">
+        <i class="fa fa-refresh" aria-hidden="true"></i>
+    </button>
+    <span class="text-muted small mb-1" id="nc-scheduling-updated"></span>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if enable_react_scheduling|default(true) %}
+<div
+    id="nc-scheduling"
+    data-island="scheduling"
+    data-props="{{ {
+        ajaxUrl: ajax_url,
+        csrfToken: csrf_token,
+        moduleUrl: module_url,
+        frontDeskUrl: front_desk_url,
+        visitBoardUrl: visit_board_url,
+        queueBridgeUrl: queue_bridge_url,
+        facilityId: initial_facility_id|default(desk_facility_id|default(0))|number_format(0, '', ''),
+        initialLens: initial_lens,
+        initialDate: initial_date,
+        initialProviderId: initial_provider_id|default(0)|number_format(0, '', ''),
+        canBook: can_book ? true : false,
+        facilities: facilities,
+        providers: providers,
+        legacyCalendarUrl: legacy_calendar_url,
+        legacyFlowBoardUrl: legacy_flow_board_url,
+        legacyRecallsUrl: legacy_recalls_url,
+        webroot: webroot,
+        authUserId: auth_user_id|default(0)|number_format(0, '', ''),
+        labels: scheduling_labels|default({})
+    }|json_encode|e('html_attr') }}"
+></div>
+{% else %}
+{% include 'partials/react-island-disabled.html.twig' with { desk_label: 'Scheduling & Flow' } %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if enable_react_scheduling|default(true) %}
+{% include 'partials/island-assets.html.twig' %}
+{% endif %}
+{% endblock %}

@@ -77,6 +77,6 @@
 
 {% block scripts %}
 {% if enable_react_clinical_doc_hub|default(true) %}
-<script type="module" src="{{ assets_url }}/modern/clinical-doc.js?v={{ asset_version }}"></script>
+{% include 'partials/island-assets.html.twig' %}
 {% endif %}
 {% endblock %}

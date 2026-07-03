@@ -7,7 +7,7 @@
 | **Document version** | 1.20.50 |
 | **Minimum OpenEMR** | 7.0.3+ (PHP 8.2+; see Q7 closed §24.1) |
 | **V1 product name (user-facing)** | New Clinic |
-| **Status** | Draft for review — **§5.6 implementation status matrix**; Phase 1 companion specs approved for COM and M1a |
+| **Status** | Draft for review — **§5.6 implementation status matrix**; **[Implementation scorecard](./NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md)** (living % tracker); Phase 1 companion specs approved for COM and M1a |
 | **Product codename** | New Clinic Module Suite (NCMS) |
 | **Working module prefix** | `oe-module-new-clinic` (+ related modules) |
 | **Primary market** | Private outpatient clinics (V1 launch region: West Africa; expandable) |
@@ -561,36 +561,36 @@ See [Section 3.2](#32-non-goals-v1). Additionally: patient portal, telehealth, g
 
 ### 5.6 Implementation status matrix
 
-**Purpose:** Align product, QA, trainers, and clinicians on what is **specified** vs **shipped** vs **pilot-ready**. Update this table when a module reaches code-complete or pilot sign-off.
+**Purpose:** Align product, QA, trainers, and clinicians on what is **specified** vs **shipped** vs **pilot-ready**. Update this table when a module reaches code-complete or pilot sign-off. **Detailed % tracker:** [NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md](./NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md).
 
-**Code baseline (last audited):** `interface/modules/custom_modules/oe-module-new-clinic/` contains `version.php` only (v0.1.0, DB v0). Legacy OpenEMR surfaces (`dynamic_finder.php`, `messages.php` tabbed UI, `demographics.php` stock MRD) remain the runtime default.
+**Code baseline (last audited):** `interface/modules/custom_modules/oe-module-new-clinic/` — React islands in `frontend/` built to `public/assets/modern/`; Vite manifest resolves shared CSS per island (2026-07-02).
 
 | Module / package | Spec status | Code status | Pilot-ready | Notes |
 |------------------|-------------|-------------|-------------|-------|
-| **M0** Core (queue, DTOs, ACL, install) | PRD §8 | **Not started** (stub dir only) | No | Blocks all role desks |
-| **M1** Front Desk (M1a–M1d) | PRD §8; M1a **approved Phase 1** | **Not started** | No | M1a is first user-facing slice after M0 |
-| **M2** Visit Board | PRD §8 | **Not started** | No | Depends on M0 `getQueue()` |
-| **M3** Triage | PRD §8; PAGE_DESIGNS §7.3 | **Not started** | No | Depends on M0 + encounter |
-| **M4** Doctor Desk | PRD §8; PAGE_DESIGNS §7.4 | **Not started** | No | M0 + `EncounterSessionService` + core round-trip (§7.4.7a–b) |
-| **M5** Cashier | PRD §8 | **Not started** | No | Depends on M0 + `CashCheckoutService` |
-| **M6** Clinic Admin | PRD §8 | **Not started** | No | Installer + pilot worksheet (§24.4) |
-| **M7** Daily Reports | PRD §8; PAGE_DESIGNS §7.10 | **Not started** | No | **V1 P0** — manager EOD; pilot-blocking with B6 |
-| **M16** Reporting Operations Hub | Draft v0.1.2; [REPORTING spec](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md); PAGE_DESIGNS §7.29 | **Not started** | No | Post-pilot **V1.1-REP**; pilot uses M7 + stock Reports menu |
-| **M17** Clinical Documentation Hub | Draft v0.1.2; [CLINICAL_DOCUMENTATION spec](./NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md); PAGE_DESIGNS §7.30 | **Not started** | No | Post-pilot **V1.1-DOC**; pilot uses M4 shortcuts + stock Visit Forms |
-| **M18** Queue Bridge Hub | Draft v0.1.2; [SCHEDULING_QUEUE_BOUNDARY spec](./NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md); PAGE_DESIGNS §7.31 | **Not started** | No | Post-pilot **V1.1-BRIDGE**; requires `enable_scheduled_integration` + S1-P2; pilot uses M7-F16 counts only |
-| **M8** Lab Desk | PRD §8 | **Not started** | No | Gated by `enable_lab_role` |
-| **M9** Pharmacy Desk | PRD §8 | **Not started** | No | Gated by `enable_pharmacy_role` |
-| **M10** Patient Registry | Draft v0.2.1 | **Not started** | No | Cohort search — **V1.1-REG**; [PAGE_DESIGNS §7.32](./NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) |
-| **M11** Chart Depth | Draft v0.1.7; PAGE_DESIGNS §7.13–§7.16 | **Not started** | No | Post-pilot **V1.1-CD**; pilot uses stock ledger/report + T1 wrapper (§5.6.1) |
-| **M12** Lab Operations Hub | Draft v0.1.8; PAGE_DESIGNS §7.17–§7.20 | **Not started** | No | Post-pilot **V1.1-LAB**; pilot uses M8 queue + stock `orders_results.php` |
-| **M13** Pharmacy Operations Hub | Draft v0.1.8; PAGE_DESIGNS §7.21–§7.24 | **Not started** | No | Post-pilot **V1.1-PHARM**; pilot uses M9 queue + stock Rx/inventory |
-| **M14** Billing Back Office | Draft v0.1.3; [BILLING_AR spec](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md); PAGE_DESIGNS §7.25–§7.26 | **Not started** | No | Post-pilot **V1.2-BILL**; pilot uses M5 + Classic menu for corrections |
-| **M15** Admin Operations Hub | Draft v0.1.3; [ADMIN_CONFIGURATION spec](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md); PAGE_DESIGNS §7.27 | **Not started** | No | **V1.1-ADMIN** after M6 P0; pilot may use stock Admin + M6 |
-| **COM** Communications Hub | **Approved Phase 1** v1.0.3 | **Not started** (legacy `messages.php`) | No | `communications_hub_enable` flag not wired |
-| **S1** Scheduling & Flow | Draft v0.2.3 | **Not started** | No | Legacy calendar / tracker / recalls active |
-| **T1** Theme & shell | PRD §8 | **Not started** | No | Wraps module pages + MRD when enabled |
-| **MRD** Full chart redesign | Draft v0.2.30 | **Not started** (stock `demographics.php`) | No | Secondary path; role desks primary |
-| **T2** Globals profile | PRD §8 | **Not started** | No | Installer preset doc |
+| **M0** Core (queue, DTOs, ACL, install) | PRD §8 | **Shipped** | Yes | Foundation for all desks |
+| **M1** Front Desk (M1a–M1d) | PRD §8; M1a **approved Phase 1** | **Shipped** (React) | Yes | Search, registration, start visit |
+| **M2** Visit Board | PRD §8 | **Shipped** (React) | Yes | Floor queue + M18 badges when bridge ON |
+| **M3** Triage | PRD §8; PAGE_DESIGNS §7.3 | **Shipped** (React) | Yes | Vitals + send to doctor |
+| **M4** Doctor Desk | PRD §8; PAGE_DESIGNS §7.4 | **Shipped** (React) | Yes | Consult workflow; **V1.1-RTa** roster when `enable_doctor_roster` = 1 |
+| **M5** Cashier | PRD §8 | **Shipped** (React) | Yes | Checkout + payments |
+| **M6** Clinic Admin | PRD §8 | **Shipped** (React hub + setup) | Yes | M15 system tab when `enable_admin_hub` = 1 |
+| **M7** Daily Reports | PRD §8; PAGE_DESIGNS §7.10 | **Shipped** (React) | Yes | Manager EOD; pilot-blocking with B6 |
+| **M16** Reporting Operations Hub | Draft v0.1.2; [REPORTING spec](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md); PAGE_DESIGNS §7.29 | **Shipped** (React) | Post-pilot | **V1.1-REP** when `enable_report_hub` = 1; RR-01–RR-12 runbooks in hub footer |
+| **M17** Clinical Documentation Hub | Draft v0.1.2; [CLINICAL_DOCUMENTATION spec](./NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md); PAGE_DESIGNS §7.30 | **Shipped** (React) | Post-pilot | **V1.1-DOC** when `enable_clinical_doc_hub` = 1 |
+| **M18** Queue Bridge Hub | Draft v0.1.2; [SCHEDULING_QUEUE_BOUNDARY spec](./NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md); PAGE_DESIGNS §7.31 | **Shipped** (React) | Post-pilot | EX-01 chips on Flow Board; EX-03/04 on Visit Board; Front Desk guard |
+| **M8** Lab Desk | PRD §8 | **Shipped** (React) | Yes | Gated by `enable_lab_role` |
+| **M9** Pharmacy Desk | PRD §8 | **Shipped** (React) | Yes | Gated by `enable_pharmacy_role` |
+| **M10** Patient Registry | Draft v0.2.1 | **Shipped** (React) | Post-pilot | **PR-3** saved filters (save/update/delete); **V1.1-REG** |
+| **M11** Chart Depth | Draft v0.1.7; PAGE_DESIGNS §7.13–§7.16 | **Shipped** (React) | Post-pilot | **V1.1-CD**; menu cutover via `PatientMenuRestrictService` |
+| **M12** Lab Operations Hub | Draft v0.1.8; PAGE_DESIGNS §7.17–§7.20 | **Shipped** (React) | Post-pilot | **V1.1-LAB** when `enable_lab_ops` = 1 |
+| **M13** Pharmacy Operations Hub | Draft v0.1.8; PAGE_DESIGNS §7.21–§7.24 | **Shipped** (React) | Post-pilot | **V1.1-PHARM** when `enable_pharm_ops` = 1 |
+| **M14** Billing Back Office | Draft v0.1.3; [BILLING_AR spec](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md); PAGE_DESIGNS §7.25–§7.26 | **Shipped** (React) | Post-pilot | **V1.2-BILL** F04 outstanding pane when `enable_bill_ops_outstanding` = 1 |
+| **M15** Admin Operations Hub | Draft v0.1.3; [ADMIN_CONFIGURATION spec](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md); PAGE_DESIGNS §7.27 | **Shipped** (React) | Post-pilot | RB-01–RB-20 runbooks; gated by `enable_admin_hub` |
+| **COM** Communications Hub | **Approved Phase 1** v1.0.3 | **Shipped** (React) | Post-pilot | `communications_hub_enable` |
+| **S1** Scheduling & Flow | Draft v0.2.3 | **Shipped** (React) | Post-pilot | Calendar, Flow Board, Recalls when `enable_scheduling_redesign` = 1 |
+| **T1** Theme & shell | PRD §8 | **Shipped** | Yes | Twig shell + React islands |
+| **MRD** Full chart redesign | Draft v0.2.30 | **Shipped** (B7 island) | Yes | `patient-chart` island; stock chart via **V1.2-CTX** overlay bridge |
+| **T2** Globals profile | PRD §8 | Partial | Yes | Installer + M6 clinic setup |
 
 #### 5.6.1 Interim full chart (pilot week 1 — before B7 MRD ships)
 
@@ -1196,6 +1196,7 @@ Independent flags — enable à la carte (§23.1). M6 **Apply cash clinic profil
 | `enable_faster_queue_interrupts` | `0` | M0-F34 | When `1`: role-desk poll **10s** when tab visible (was 30s); **immediate** poll on `visibilitychange` → `document.hidden` false; cancel/take/send interrupts ≤10s typical |
 | `enable_similar_surname_queue_warning` | `0` | M0-F35 | When `1`: queue cards show amber **Same surname today** when normalized `lname` matches another active visit in today's facility queue |
 | `enable_banner_mrd_deep_links` | `0` | MRD §6.3 | Banner chips → MRD tab anchors (new tab) |
+| `enable_scheduling_full_analytics` | `0` | S1-F09, V1.1-OPS | When `1`: M7-F16 Scheduling tab adds slot→check-in latency (median, P90, on-time %) and provider utilization table |
 
 #### V1.2 / legacy (D54)
 
@@ -3397,7 +3398,7 @@ Full spec: [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./NEW_CLINIC_V1
 | S1-F06 | **Loop closure**: `produced_eid` on recall; auto-complete recall when linked appointment checked in | P1 |
 | S1-F07 | Honor §6.7 H1–H3; recurring appointment guard (`pc_recurrtype != 0`) | P0 |
 | S1-F08 | Hide legacy Calendar / Flow Board / Recall Board menus when S1 parity verified (§19) | P1 |
-| S1-F09 | Scheduling KPIs: **pilot thin slice** via M7-F16 (booked, arrival funnel, walk-in vs scheduled mix, recall funnel). Full analytics (slot→check-in latency, provider utilization) deferred V1.1 | P1 |
+| S1-F09 | Scheduling KPIs: **pilot thin slice** via M7-F16 (booked, arrival funnel, walk-in vs scheduled mix, recall funnel). Full analytics (slot→check-in latency, provider utilization) when `enable_scheduling_full_analytics` = 1 (**V1.1-OPS**) | P1 |
 | S1-F10 | **Flow Board boundary chip** — when `enable_queue_bridge` = 1 and EX-01, card shows **No clinical visit** + **Fix** link to M18 row (M18-F08) | P1 (V1.1-BRIDGE) |
 
 ---
@@ -4148,6 +4149,7 @@ Inserted on module install and applied by M6 “Apply cash clinic profile.” Cl
 | `enable_legacy_strip_desk_return` | `1` | T1-F18c, V1.2-CTX | When `1`: Return to desk link on legacy strip when session mismatch |
 | `require_allergies_for_rx` | `0` | V1.1-OPS | When `1`: block core Rx shortcut when allergies undocumented (see §M6 config note) |
 | `enable_in_chart_patient_search` | `0` | NG15, V1.1-OPS | When `1`: informational in-chart search on MRD / full chart (Kaiser-style lookup); not in V1 pilot |
+| `enable_scheduling_full_analytics` | `0` | S1-F09, V1.1-OPS | When `1`: M7-F16 Scheduling tab adds slot→check-in latency (median, P90, on-time %) and provider utilization table |
 | `vitals_threshold_overrides` | `{}` | V1.1-OPS, §7.3.8 | JSON map of threshold overrides (BP sys/dia, pulse, temp, SpO₂, RR); empty = PAGE_DESIGNS §7.3.8 defaults |
 | `mrd_activity_feed_days` | `90` | MRD §8.4, T1-F15 | Overview activity feed lookback window |
 | `mrd_activity_feed_page_size` | `25` | MRD §8.4 | Initial + incremental load size for activity feed |
@@ -5384,7 +5386,7 @@ After V1 pilot sign-off, post-V1 work ships as **named slices** — not one bund
 | **V1.1-ANC** | §6.8 Ancillary — lab-direct, pharmacy walk-in, fee hints, M7-F18 | `enable_ancillary_services` = 1 (+ role flags per §6.8.7a) | **First** when clinic wants walk-in lab/pharmacy | `@new-clinic-v11-anc` |
 | **V1.1-RTa** | §6.5.2 roster — Taking patients, on-duty list, load display | `enable_doctor_roster` = 1 | Optional; multi-doctor clinics | `@new-clinic-v11-rt` |
 | **V1.1-RTb** | §6.5.2 suggestions — `routing_suggested_provider_id`, fairness | `enable_advisory_routing` = 1 (requires RTa) | After RTa when clinic wants hints | `@new-clinic-v11-rt` |
-| **V1.1-OPS** | Ops polish — MoMo label, full upfront reg, analytics, toasts, kiosk chrome (§23) | Per-feature flags in §23 table | Any time; **each feature optional** | `@new-clinic-v11-ops` |
+| **V1.1-OPS** | Ops polish — MoMo label, analytics, toasts, kiosk chrome, in-chart search (§23) | Per-feature flags in §23 table | Any time; **each feature optional** | `@new-clinic-v11-ops` |
 | **V1.1-CDa** | M11 payment history + receipt reprint + MRD Profile strip | `enable_chart_depth` = 1, `enable_chart_depth_finance` = 1 | After pilot; independent of ANC/RT/OPS | `@new-clinic-v11-cd` |
 | **V1.1-CDb** | M11 referral wizard + list + Clinical strip | `enable_chart_depth_referral` = 1 | After CDa or parallel if finance OFF | `@new-clinic-v11-cd` |
 | **V1.1-CDc** | M11 export presets + Visits **Export summary** | `enable_chart_depth_export` = 1 | After CDb optional | `@new-clinic-v11-cd` |
@@ -5979,7 +5981,7 @@ Requires `enable_legacy_patient_context_overlay` = 1 and/or `enable_shared_devic
 |---------|----------|
 | **V1.2** | **§6.5.3** optional hard assignment (`enable_hard_provider_assignment`); **§6.5.4** doctor ready in-app notify (+ optional Web Push); **§6.1j** legacy overlay + shared-device session warning (**V1.2-CTX** T1-F18/F19); specialty-tag routing lanes (if pilot); per-doctor sub-queues still deferred |
 | **V1.2-CTX** | T1-F18 legacy strip + T1-F19 desk warning — optional during pilot (§5.6.1) | `enable_legacy_patient_context_overlay`, `enable_shared_device_session_warning` | Independent of M11–M18 | `@new-clinic-v12-ctx` |
-| **V1.1-OPS** | MoMo payment label; `registration_mode=full_upfront`; `require_allergies_for_rx`; `enable_banner_mrd_deep_links`; `enable_pinned_reception_preview` (M6 cash profile default **ON**); `enable_faster_queue_interrupts`; `enable_similar_surname_queue_warning`; `enable_l3b_background_completion`; `enable_pregnancy_banner_chip`; `enable_in_chart_patient_search` (NG15); completion weight editor; full S1-F09 analytics; lab results toast; Visit Board kiosk chrome — **each feature optional; enable independently** |
+| **V1.1-OPS** | MoMo payment label; `require_allergies_for_rx`; `enable_banner_mrd_deep_links`; `enable_pinned_reception_preview` (M6 cash profile default **ON**); `enable_faster_queue_interrupts`; `enable_similar_surname_queue_warning`; `enable_l3b_background_completion`; `enable_pregnancy_banner_chip`; `enable_in_chart_patient_search` (NG15); completion weight editor; full S1-F09 analytics; lab results toast; Visit Board kiosk chrome — **each feature optional; enable independently** |
 | **V1.1-RT** | **§6.5.2 Advisory routing:** **V1.1-RTa** Taking patients toggle + on-duty roster + load display (`enable_doctor_roster`); **V1.1-RTb** `routing_suggested_provider_id` + fairness algorithm (`enable_advisory_routing`, requires RTa) |
 | **V1.1-ANC** | **§6.8 Ancillary:** `lab_direct`, `pharmacy_walkin`; lab-direct intake; pharmacy walk-in triage; cashier fee hints; M7-F18 — `enable_ancillary_services` = 1 |
 | **V1.1-CD** | M11 Chart Depth — payment history, referrals, export — `enable_chart_depth_*` slices (§20.1) |

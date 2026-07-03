@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PatientContextBanner } from '@components/PatientContextBanner';
+import type { DoctorVisit, LabPanelPlaceResult } from '@core/types';
+import { LabPanelModal } from '../doctor-desk/LabPanelModal';
 import { ClinicalDocLensPane, fetchVisitSummary } from './ClinicalDocLensPane';
-import type { ClinicalDocCard, ClinicalDocLens, ClinicalDocProps } from './clinicalDocTypes';
+import { openClinicalDocForm } from './clinicalDocApi';
+import type {
+  ClinicalDocCard,
+  ClinicalDocLens,
+  ClinicalDocProps,
+  ClinicalDocSignOverview,
+} from './clinicalDocTypes';
 import {
   allowedLenses,
   firstAllowedLens,
@@ -26,6 +34,10 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
     return readVisitIdFromUrl();
   });
   const [cards, setCards] = useState<ClinicalDocCard[]>([]);
+  const [signOverview, setSignOverview] = useState<ClinicalDocSignOverview | null>(null);
+  const [addableForms, setAddableForms] = useState<ClinicalDocCard[]>([]);
+  const [labPanelOrderEnabled, setLabPanelOrderEnabled] = useState(false);
+  const [doctorVisit, setDoctorVisit] = useState<DoctorVisit | null>(null);
   const [contextLabel, setContextLabel] = useState('');
   const [advancedUrl, setAdvancedUrl] = useState<string | null>(null);
   const [encounterSigned, setEncounterSigned] = useState(false);
@@ -34,6 +46,7 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
+  const [labPanelOpen, setLabPanelOpen] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
 
   useEffect(() => {
@@ -46,6 +59,9 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
   const loadSummary = useCallback(async () => {
     if (!visitId) {
       setCards([]);
+      setSignOverview(null);
+      setAddableForms([]);
+      setDoctorVisit(null);
       setContextLabel('');
       setAdvancedUrl(null);
       return;
@@ -55,15 +71,28 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
     try {
       const data = await fetchVisitSummary(props.ajaxUrl, props.csrfToken, visitId, tab);
       setCards(data.cards ?? []);
+      setSignOverview(data.sign_overview ?? null);
+      setAddableForms(data.addable_forms ?? []);
+      setLabPanelOrderEnabled(!!data.lab_panel_order_enabled);
       setEncounterSigned(!!data.sign_status?.encounter_signed);
       setPatientName(data.patient?.display_name ?? '');
       setPubpid(data.patient?.pubpid ?? '');
       setAdvancedUrl(data.advanced_encounter_url ?? null);
+      setDoctorVisit({
+        id: data.visit.id,
+        pid: data.visit.pid,
+        encounter: data.visit.encounter,
+        queue_number: String(data.visit.queue_number ?? ''),
+        state: 'with_doctor',
+      });
       setContextLabel(
         `Queue #${data.visit?.queue_number ?? '—'} · Encounter ${data.visit?.encounter ?? '—'}`,
       );
     } catch (err) {
       setCards([]);
+      setSignOverview(null);
+      setAddableForms([]);
+      setDoctorVisit(null);
       setError(err instanceof Error ? err.message : 'Could not load visit documentation');
     } finally {
       setLoading(false);
@@ -97,6 +126,16 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
     onRefresh: refresh,
   });
 
+  const handleLabPlaced = useCallback((_result: LabPanelPlaceResult) => {
+    setLabPanelOpen(false);
+    refresh();
+  }, [refresh]);
+
+  const procedureOrderCard = useMemo(
+    () => cards.find((card) => card.lens === 'orders' && card.formdir.toLowerCase().includes('procedure_order')),
+    [cards],
+  );
+
   return (
     <div className="oe-nc-clinicaldoc" id="nc-clinical-doc-root">
       {visitId && patientName ? (
@@ -117,12 +156,38 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
       <ClinicalDocLensPane
         lens={tab}
         cards={cards}
+        signOverview={signOverview}
+        addableForms={addableForms}
+        labPanelOrderEnabled={labPanelOrderEnabled}
         loading={loading}
         error={error}
         visitId={visitId}
         ajaxUrl={props.ajaxUrl}
         csrfToken={props.csrfToken}
         onOpenError={setOpenError}
+        onOpenLabPanel={() => setLabPanelOpen(true)}
+      />
+      <LabPanelModal
+        open={labPanelOpen}
+        visit={doctorVisit}
+        ajaxUrl={props.ajaxUrl}
+        csrfToken={props.csrfToken}
+        facilityId={props.facilityId ?? 0}
+        blocked={false}
+        onClose={() => setLabPanelOpen(false)}
+        onPlaced={handleLabPlaced}
+        onFullLabForm={() => {
+          setLabPanelOpen(false);
+          if (!visitId || !procedureOrderCard) {
+            return;
+          }
+          void openClinicalDocForm(props.ajaxUrl, props.csrfToken, visitId, procedureOrderCard, {
+            lens: 'orders',
+            returnTo: 'hub',
+          }).catch((err: unknown) => {
+            setOpenError(err instanceof Error ? err.message : 'Could not open lab form');
+          });
+        }}
       />
     </div>
   );

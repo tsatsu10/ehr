@@ -22,6 +22,16 @@ use PHPUnit\Framework\TestCase;
 
 class ClinicalDocFormOpenServiceTest extends TestCase
 {
+    private ?string $previousClinicalDocHub = null;
+    private ?ClinicConfigService $liveConfig = null;
+
+    protected function tearDown(): void
+    {
+        if ($this->liveConfig !== null && $this->previousClinicalDocHub !== null) {
+            $this->liveConfig->set('enable_clinical_doc_hub', $this->previousClinicalDocHub, 0);
+        }
+    }
+
     private function hubEnabledDoctorAccess(): ClinicalDocAccessService
     {
         return new ClinicalDocAccessService(
@@ -33,10 +43,11 @@ class ClinicalDocFormOpenServiceTest extends TestCase
 
     private function hubEnabledConfig(): ClinicConfigService
     {
-        $config = new ClinicConfigService();
-        $config->set('enable_clinical_doc_hub', '1', 0);
+        $this->liveConfig = new ClinicConfigService();
+        $this->previousClinicalDocHub = $this->liveConfig->get('enable_clinical_doc_hub', '0', 0);
+        $this->liveConfig->set('enable_clinical_doc_hub', '1', 0);
 
-        return $config;
+        return $this->liveConfig;
     }
 
     /**

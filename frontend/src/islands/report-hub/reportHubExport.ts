@@ -1,6 +1,10 @@
 import { oeFetch } from '@core/oeFetch';
 import { localDateString } from '@islands/daily-reports/reportsFormatters';
 
+export const HUB_REPORT_PAGE_SIZE = 25;
+const EXPORT_POLL_ATTEMPTS = 120;
+const EXPORT_POLL_INTERVAL_MS = 500;
+
 function triggerCsvDownload(filename: string, blob: Blob): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
@@ -25,7 +29,7 @@ async function pollExportJob(
   csrfToken: string,
   jobId: number,
 ): Promise<void> {
-  for (let attempt = 0; attempt < 30; attempt += 1) {
+  for (let attempt = 0; attempt < EXPORT_POLL_ATTEMPTS; attempt += 1) {
     const status = await oeFetch<{
       status: string;
       ready?: boolean;
@@ -64,7 +68,7 @@ async function pollExportJob(
     }
 
     await new Promise((resolve) => {
-      setTimeout(resolve, 500);
+      setTimeout(resolve, EXPORT_POLL_INTERVAL_MS);
     });
   }
 
@@ -75,6 +79,8 @@ export interface HubExportParams {
   reportKey: string;
   dateFrom: string;
   dateTo: string;
+  offset?: number;
+  limit?: number;
 }
 
 export async function exportHubReportCsv(
@@ -141,8 +147,8 @@ export async function runHubReportPreview(
       report_key: params.reportKey,
       date_from: params.dateFrom,
       date_to: params.dateTo,
-      limit: 25,
-      offset: 0,
+      limit: params.limit ?? HUB_REPORT_PAGE_SIZE,
+      offset: params.offset ?? 0,
     },
   });
 }

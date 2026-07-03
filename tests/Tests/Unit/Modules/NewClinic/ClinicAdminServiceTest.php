@@ -91,6 +91,25 @@ class ClinicAdminServiceTest extends TestCase
         ], 1);
     }
 
+    public function testSaveRejectsAncillaryWithoutDeskRoles(): void
+    {
+        $service = new ClinicAdminService();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Ancillary walk-in services require at least one of lab desk or pharmacy desk');
+        $service->saveSettings('global', [
+            'enable_ancillary_services' => '1',
+            'enable_lab_role' => '0',
+            'enable_pharmacy_role' => '0',
+        ], 1);
+    }
+
+    public function testGlobalMigrationDefaultsIncludesAncillaryKeys(): void
+    {
+        $defaults = ClinicAdminService::globalMigrationDefaults();
+        $this->assertSame('0', $defaults['enable_ancillary_services']);
+        $this->assertSame('4', $defaults['ancillary_refer_window_hours']);
+    }
+
     public function testSaveRejectsPharmOpsWithoutInhousePharmacyGlobal(): void
     {
         $previous = $GLOBALS['inhouse_pharmacy'] ?? null;
@@ -174,5 +193,95 @@ class ClinicAdminServiceTest extends TestCase
         $this->assertSame('0', $defaults['enable_clinical_doc_hub']);
         $this->assertArrayHasKey('clinical_doc_show_us_quality', $defaults);
         $this->assertArrayHasKey('enable_react_clinical_doc_hub', $defaults);
+    }
+
+    public function testGlobalMigrationDefaultsIncludesAdminHubFlags(): void
+    {
+        $defaults = ClinicAdminService::globalMigrationDefaults();
+
+        $this->assertArrayHasKey('enable_admin_hub', $defaults);
+        $this->assertSame('0', $defaults['enable_admin_hub']);
+        $this->assertArrayHasKey('admin_hub_backup_retention_days', $defaults);
+        $this->assertSame('30', $defaults['admin_hub_backup_retention_days']);
+        $this->assertArrayHasKey('admin_hub_setup_complete', $defaults);
+        $this->assertSame('0', $defaults['admin_hub_setup_complete']);
+    }
+
+    public function testApplySettingDependenciesEnablesScheduledIntegrationWhenQueueBridgeOn(): void
+    {
+        $normalized = ClinicAdminService::applySettingDependencies([
+            'enable_queue_bridge' => '1',
+            'enable_scheduled_integration' => '0',
+        ]);
+
+        $this->assertSame('1', $normalized['enable_queue_bridge']);
+        $this->assertSame('1', $normalized['enable_scheduled_integration']);
+    }
+
+    public function testApplySettingDependenciesEnablesScheduledIntegrationWhenSchedulingRedesignOn(): void
+    {
+        $normalized = ClinicAdminService::applySettingDependencies([
+            'enable_scheduling_redesign' => '1',
+            'enable_scheduled_integration' => '0',
+        ]);
+
+        $this->assertSame('1', $normalized['enable_scheduling_redesign']);
+        $this->assertSame('1', $normalized['enable_scheduled_integration']);
+    }
+
+    public function testApplySettingDependenciesEnablesReactAdminHubWhenAdminHubOn(): void
+    {
+        $normalized = ClinicAdminService::applySettingDependencies([
+            'enable_admin_hub' => '1',
+            'enable_react_admin_hub' => '0',
+        ]);
+
+        $this->assertSame('1', $normalized['enable_admin_hub']);
+        $this->assertSame('1', $normalized['enable_react_admin_hub']);
+    }
+
+    public function testApplySettingDependenciesCouplesDoctorReadyNotifyFlags(): void
+    {
+        $on = ClinicAdminService::applySettingDependencies([
+            'enable_doctor_ready_web_push' => '1',
+            'enable_doctor_ready_notify' => '0',
+        ]);
+        $this->assertSame('1', $on['enable_doctor_ready_notify']);
+
+        $off = ClinicAdminService::applySettingDependencies([
+            'enable_doctor_ready_notify' => '0',
+            'notify_unassigned_to_all_on_duty' => '1',
+            'enable_doctor_ready_web_push' => '1',
+        ]);
+        $this->assertSame('0', $off['notify_unassigned_to_all_on_duty']);
+        $this->assertSame('0', $off['enable_doctor_ready_web_push']);
+    }
+
+    public function testApplySettingDependenciesNormalizesUnknownClinicalDocBundle(): void
+    {
+        $normalized = ClinicAdminService::applySettingDependencies([
+            'clinical_doc_bundle' => 'unknown_bundle',
+        ]);
+
+        $this->assertSame('ghana_opd_v1', $normalized['clinical_doc_bundle']);
+    }
+
+    public function testGlobalMigrationDefaultsIncludesQueueBridgeFlags(): void
+    {
+        $defaults = ClinicAdminService::globalMigrationDefaults();
+
+        $this->assertArrayHasKey('enable_queue_bridge', $defaults);
+        $this->assertSame('0', $defaults['enable_queue_bridge']);
+        $this->assertArrayHasKey('queue_bridge_show_recurring_info', $defaults);
+        $this->assertArrayHasKey('enable_react_queue_bridge', $defaults);
+    }
+
+    public function testSaveRejectsBackupRetentionOutOfRange(): void
+    {
+        $service = new ClinicAdminService();
+        $this->expectException(\InvalidArgumentException::class);
+        $service->saveSettings('global', [
+            'admin_hub_backup_retention_days' => '999',
+        ], 1);
     }
 }

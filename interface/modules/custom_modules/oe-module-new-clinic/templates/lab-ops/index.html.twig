@@ -72,7 +72,6 @@
 {% block scripts %}
 {% if enable_react_lab_ops|default(true) %}
 <link rel="stylesheet" href="{{ assets_url }}/css/lab-ops.css?v={{ asset_version }}">
-<link rel="stylesheet" href="{{ assets_url }}/modern/lab-ops.css?v={{ asset_version }}">
-<script type="module" src="{{ assets_url }}/modern/lab-ops.js?v={{ asset_version }}"></script>
+{% include 'partials/island-assets.html.twig' %}
 {% endif %}
 {% endblock %}

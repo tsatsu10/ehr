@@ -30,6 +30,7 @@ $labOpsAccess = new LabOpsAccessService();
 $reactLabDesk = $config->get('enable_react_lab_desk', '1') === '1';
 
 (new PageController())->render('lab.html.twig', 'Lab Desk', 'new_lab', [
+    'island_entry' => 'lab-desk',
     'desk_id' => 'lab',
     'module_url' => $moduleUrl,
     'visit_board_url' => $moduleUrl . '/visit-board.php',

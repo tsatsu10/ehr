@@ -2,11 +2,10 @@ import type { ReactNode, RefObject } from 'react';
 import { useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
 import type { FrontDeskPreviewData } from '@core/types';
-import { ChipCloud } from '@components/ChipCloud';
 import { CompletionRing } from '@components/CompletionRing';
 import { CompletionScorePill } from '@components/CompletionScorePill';
 import { PatientContextBanner } from '@components/PatientContextBanner';
-import { buildAllergyChips } from '@components/patientBannerUtils';
+import { bannerPropsFromPreview } from '@components/bannerPreviewProps';
 import { WidgetCard } from '@components/WidgetCard';
 import { Button } from '@components/ui/button';
 import { Badge } from '@components/ui/badge';
@@ -14,11 +13,14 @@ import { StartVisitForm } from './StartVisitForm';
 import { RegistrationForm, type RegistrationFormHandle } from './RegistrationForm';
 import { QuickAddRegistration } from './QuickAddRegistration';
 import { ActiveVisitBanner } from './RevisitGatePanel';
+import { ActiveVisitHardAssign } from './ActiveVisitHardAssign';
 import { CancelVisitModal } from './CancelVisitModal';
 import { TodaysVisitsList } from './TodaysVisitsList';
 import { PreviewEmptyState } from './PreviewEmptyState';
 import { PreviewLoadingState } from './PreviewLoadingState';
-import { Pencil, FolderOpen, CalendarCheck, AlertCircle, XCircle } from 'lucide-react';
+import { Pencil, FolderOpen, CalendarCheck, AlertCircle, XCircle, BellRing } from 'lucide-react';
+import { badgeVariants } from '@components/ui/badge';
+import { cn } from '@/lib/utils';
 
 type PreviewPaneMode = 'empty' | 'loading' | 'preview' | 'registration' | 'registration-pinned';
 
@@ -53,10 +55,6 @@ interface PatientPreviewPaneProps {
   onRegistrationUseExisting: (pid: number) => void;
   onRegistrationCancel: () => void;
   onRegistrationDiscardConfirm?: (onProceed: () => void) => void;
-}
-
-function SafetyStrip({ preview }: { preview: FrontDeskPreviewData }) {
-  return <ChipCloud chips={buildAllergyChips(preview.safety)} />;
 }
 
 function CompletionSummary({
@@ -110,9 +108,9 @@ function CompletionSummary({
           className="shrink-0"
         />
         <div>
-          <div className="text-sm font-semibold text-[var(--oe-nc-text)]">Profile completion</div>
+          <div className="text-sm font-semibold text-(--oe-nc-text)">Profile completion</div>
           {missingCaption && (
-            <div className="text-xs text-[var(--oe-nc-text-muted)] mt-0.5">{missingCaption}</div>
+            <div className="text-xs text-(--oe-nc-text-muted) mt-0.5">{missingCaption}</div>
           )}
           {!belowThreshold && (
             <div className="text-xs text-emerald-600 mt-0.5 font-medium">Ready for billing</div>
@@ -239,6 +237,7 @@ function PreviewBanner({
   const identity = preview.identity;
   const completion = preview.completion;
   const appointment = preview.appointment_today ?? preview.chips?.appointment_today ?? null;
+  const recallDue = preview.recall_due ?? preview.chips?.recall_due ?? null;
   const activeVisit = preview.active_visit;
 
   const chartUrl = completion.chart_open_url || completion.chart_url;
@@ -273,6 +272,9 @@ function PreviewBanner({
       <PatientContextBanner
         identity={identity}
         layout="full"
+        completion={completion}
+        safety={preview.safety}
+        {...bannerPropsFromPreview(preview)}
         aside={(
           <CompletionScorePill
             score={completion.score ?? 0}
@@ -280,7 +282,6 @@ function PreviewBanner({
           />
         )}
       >
-        <SafetyStrip preview={preview} />
         <CompletionSummary
           preview={preview}
           registrationMode={registrationMode}
@@ -298,6 +299,25 @@ function PreviewBanner({
           visitBoardUrl={visitBoardUrl}
           canCancelVisit={canCancelVisit}
           onCancelVisit={() => setCancelOpen(true)}
+          showWrongVisitTypeHint={activeVisit.state === 'waiting'}
+        />
+      )}
+
+      {activeVisit
+        && preview.hard_provider_assignment_enabled
+        && preview.can_hard_assign_provider
+        && (preview.assignable_doctors?.length ?? 0) > 0 && (
+        <ActiveVisitHardAssign
+          visitId={activeVisit.visit_id}
+          rowVersion={activeVisit.row_version ?? 0}
+          state={activeVisit.state}
+          currentProviderId={activeVisit.hard_assigned_provider_id}
+          currentProviderName={activeVisit.hard_assigned_provider_name}
+          doctors={preview.assignable_doctors ?? []}
+          ajaxUrl={ajaxUrl}
+          csrfToken={csrfToken}
+          facilityId={facilityId}
+          onSaved={onPreviewRefresh}
         />
       )}
 
@@ -309,6 +329,22 @@ function PreviewBanner({
             {appointment.start_time_label ? ` · ${appointment.start_time_label}` : ''}
             {appointment.provider_name ? ` · ${appointment.provider_name}` : ''}
           </Badge>
+        </div>
+      )}
+
+      {!activeVisit && recallDue && (
+        <div className="mb-3">
+          <a
+            href={recallDue.worklist_url}
+            target="_top"
+            title={recallDue.reason || recallDue.label}
+            className={cn(badgeVariants({ variant: 'warning' }), 'no-underline hover:opacity-90')}
+          >
+            <BellRing className="h-3 w-3" />
+            Recall due
+            {' · '}
+            {recallDue.label}
+          </a>
         </div>
       )}
 
@@ -382,6 +418,7 @@ function PreviewBanner({
         error={cancelError}
         onClose={() => setCancelOpen(false)}
         onConfirm={(reason) => void handleCancelVisit(reason)}
+        suggestWrongVisitType={activeVisit?.state === 'waiting'}
       />
     </div>
   );
@@ -434,7 +471,7 @@ export function PatientPreviewPane({
     }
     return (
       <div
-        className="oe-nc-desk-split__preview oe-nc-preview-pane rounded-xl border border-[var(--oe-nc-border)] bg-white shadow-[var(--shadow-sm)] overflow-hidden"
+        className="oe-nc-desk-split__preview oe-nc-preview-pane rounded-xl border border-(--oe-nc-border) bg-white shadow-(--shadow-sm) overflow-hidden"
         id="nc-preview-pane"
       >
         <div className="oe-nc-preview-pane__scroll p-4">

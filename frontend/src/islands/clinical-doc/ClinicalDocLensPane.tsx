@@ -1,16 +1,27 @@
 import { oeFetch } from '@core/oeFetch';
-import type { ClinicalDocCard, ClinicalDocLens, ClinicalDocVisitSummary } from './clinicalDocTypes';
+import type {
+  ClinicalDocCard,
+  ClinicalDocLens,
+  ClinicalDocSignOverview,
+  ClinicalDocVisitSummary,
+} from './clinicalDocTypes';
+import { AddFormPicker } from './AddFormPicker';
+import { VisitSignOverview } from './VisitSignOverview';
 import { openClinicalDocForm } from './clinicalDocApi';
 
 interface ClinicalDocLensPaneProps {
   lens: ClinicalDocLens;
   cards: ClinicalDocCard[];
+  signOverview?: ClinicalDocSignOverview | null;
+  addableForms?: ClinicalDocCard[];
+  labPanelOrderEnabled?: boolean;
   loading: boolean;
   error: string | null;
   visitId: number | null;
   ajaxUrl: string;
   csrfToken: string;
   onOpenError: (message: string) => void;
+  onOpenLabPanel?: () => void;
 }
 
 async function openForm(
@@ -45,12 +56,16 @@ function statusLine(card: ClinicalDocCard): string {
 export function ClinicalDocLensPane({
   lens,
   cards,
+  signOverview,
+  addableForms = [],
+  labPanelOrderEnabled = false,
   loading,
   error,
   visitId,
   ajaxUrl,
   csrfToken,
   onOpenError,
+  onOpenLabPanel,
 }: ClinicalDocLensPaneProps) {
   if (!visitId) {
     return (
@@ -73,7 +88,7 @@ export function ClinicalDocLensPane({
   const primaryCards = lensCards.filter((card) => !card.more);
   const moreCards = lensCards.filter((card) => card.more);
 
-  if (!lensCards.length) {
+  if (!lensCards.length && lens !== 'visit') {
     return (
       <div className="oe-nc-clinicaldoc-empty">
         <p className="mb-0 text-muted">No forms are available for this lens with your role and clinic configuration.</p>
@@ -86,6 +101,9 @@ export function ClinicalDocLensPane({
       <h3 className="oe-nc-clinicaldoc-card__title h6">{card.title}</h3>
       <p className="oe-nc-clinicaldoc-card__blurb small text-muted mb-1">{card.description}</p>
       <p className="oe-nc-clinicaldoc-card__status small mb-2">{statusLine(card)}</p>
+      {card.bundle_health && !card.bundle_health.esign_ok ? (
+        <p className="small text-warning mb-2">{card.bundle_health.status_label}</p>
+      ) : null}
       <button
         type="button"
         className="btn btn-sm btn-outline-primary"
@@ -101,15 +119,42 @@ export function ClinicalDocLensPane({
   );
 
   return (
-    <div className="oe-nc-clinicaldoc-cards" role="list">
-      {primaryCards.map(renderCard)}
-      {moreCards.length > 0 && (
-        <details className="oe-nc-clinicaldoc-more mt-2">
-          <summary className="small text-muted">More note types</summary>
-          <div className="oe-nc-clinicaldoc-cards mt-2" role="list">
-            {moreCards.map(renderCard)}
-          </div>
-        </details>
+    <div>
+      {lens === 'visit' && signOverview ? <VisitSignOverview overview={signOverview} /> : null}
+      {lens === 'visit' && addableForms.length > 0 ? (
+        <AddFormPicker
+          addableForms={addableForms}
+          visitId={visitId}
+          ajaxUrl={ajaxUrl}
+          csrfToken={csrfToken}
+          lens={lens}
+          onOpenError={onOpenError}
+        />
+      ) : null}
+      {lens === 'orders' && labPanelOrderEnabled && onOpenLabPanel ? (
+        <div className="oe-nc-clinicaldoc-lab-panel mb-3">
+          <p className="small text-muted mb-2">Quick order common lab tests without opening the full lab form.</p>
+          <button type="button" className="btn btn-outline-primary btn-sm" onClick={onOpenLabPanel}>
+            Quick lab panel
+          </button>
+        </div>
+      ) : null}
+      {!lensCards.length ? (
+        <div className="oe-nc-clinicaldoc-empty">
+          <p className="mb-0 text-muted">No started or required forms on this visit yet. Use Add form to begin documentation.</p>
+        </div>
+      ) : (
+        <div className="oe-nc-clinicaldoc-cards" role="list">
+          {primaryCards.map(renderCard)}
+          {moreCards.length > 0 && (
+            <details className="oe-nc-clinicaldoc-more mt-2">
+              <summary className="small text-muted">More note types</summary>
+              <div className="oe-nc-clinicaldoc-cards mt-2" role="list">
+                {moreCards.map(renderCard)}
+              </div>
+            </details>
+          )}
+        </div>
       )}
     </div>
   );

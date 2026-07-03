@@ -19,6 +19,13 @@ class VisitTypeAdminService
     /** @var array<int, string> */
     public const SERVICE_PROFILES = ['full_opd', 'lab_direct', 'pharmacy_walkin'];
 
+    /** @var array<string, string> */
+    private const SERVICE_PROFILE_HINTS = [
+        'full_opd' => 'Standard OPD — triage, doctor, and cashier path',
+        'lab_direct' => 'Lab-only — skips doctor and pharmacy',
+        'pharmacy_walkin' => 'Pharmacy walk-in — OTC or external Rx only',
+    ];
+
     public function __construct(
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
@@ -214,19 +221,23 @@ class VisitTypeAdminService
         $defaultId = (int) ($this->config->get('default_visit_type_id', '0', $facilityId) ?? '0');
 
         $rows = QueryUtils::fetchRecords(
-            "SELECT id, label, service_profile, pc_catid, facility_id
+            "SELECT id, label, service_profile, pc_catid, facility_id, referral_required
              FROM new_visit_type
              WHERE is_active = 1 AND (facility_id = 0 OR facility_id = ?)
              ORDER BY label ASC",
             [$facilityId]
         ) ?: [];
 
+        $enableAncillary = $this->config->getInt('enable_ancillary_services', 0, $facilityId) === 1;
         $enableLab = $this->config->getInt('enable_lab_role', 0, $facilityId) === 1;
         $enablePharmacy = $this->config->getInt('enable_pharmacy_role', 0, $facilityId) === 1;
 
         $filtered = [];
         foreach ($rows as $row) {
             $profile = (string) ($row['service_profile'] ?? 'full_opd');
+            if ($profile !== 'full_opd' && !$enableAncillary) {
+                continue;
+            }
             if ($profile === 'lab_direct' && !$enableLab) {
                 continue;
             }
@@ -239,6 +250,9 @@ class VisitTypeAdminService
                 'service_profile' => $profile,
                 'pc_catid' => (int) ($row['pc_catid'] ?? 0),
                 'is_default' => $defaultId > 0 && (int) ($row['id'] ?? 0) === $defaultId,
+                'referral_required' => (int) ($row['referral_required'] ?? 0) === 1,
+                'allows_referral_upload' => $profile === 'lab_direct',
+                'service_profile_hint' => self::SERVICE_PROFILE_HINTS[$profile] ?? null,
             ];
         }
 
@@ -274,6 +288,9 @@ class VisitTypeAdminService
 
     private function assertProfileAllowedForClinic(string $profile, int $facilityId): void
     {
+        if ($profile !== 'full_opd' && $this->config->getInt('enable_ancillary_services', 0, $facilityId) !== 1) {
+            throw new \InvalidArgumentException('Enable ancillary walk-in services before adding lab-direct or pharmacy walk-in types');
+        }
         if ($profile === 'lab_direct' && $this->config->getInt('enable_lab_role', 0, $facilityId) !== 1) {
             throw new \InvalidArgumentException('Enable lab desk before adding a lab-direct visit type');
         }

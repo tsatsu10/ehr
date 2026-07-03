@@ -153,6 +153,34 @@ class ReportHubAccessService
         return $this->config->getInt('enable_bill_ops', 0, $facilityId) === 1;
     }
 
+    public function isBillOpsOutstandingEnabled(?int $facilityId = null): bool
+    {
+        if ($facilityId === null || $facilityId <= 0) {
+            $facilityId = $this->visitScope->resolveDeskFacilityId();
+        }
+
+        return $this->isBillOpsLinked($facilityId)
+            && $this->config->getInt('enable_bill_ops_outstanding', 0, $facilityId) === 1;
+    }
+
+    public function isPatientRegistryEnabled(?int $facilityId = null): bool
+    {
+        if ($facilityId === null || $facilityId <= 0) {
+            $facilityId = $this->visitScope->resolveDeskFacilityId();
+        }
+
+        return $this->config->getInt('enable_patient_registry', 0, $facilityId) === 1;
+    }
+
+    public function isAncillaryServicesEnabled(?int $facilityId = null): bool
+    {
+        if ($facilityId === null || $facilityId <= 0) {
+            $facilityId = $this->visitScope->resolveDeskFacilityId();
+        }
+
+        return $this->config->getInt('enable_ancillary_services', 0, $facilityId) === 1;
+    }
+
     public function assertHubAccess(): void
     {
         $this->assertHubEnabled();

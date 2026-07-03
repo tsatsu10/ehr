@@ -16,6 +16,7 @@ import { oeFetch, OeFetchError } from '@core/oeFetch';
 import { getDeskActiveVisitId } from '@core/deskSessionStorage';
 import { resolveActionConflict, type DeskInterrupt } from '@core/deskConflict';
 import { useInterval } from '@core/useInterval';
+import { useQueueVisibilityRefresh } from '@core/useQueueVisibilityRefresh';
 import { usePageHeadingToolbar, usePageHeadingButton } from '@core/usePageHeadingToolbar';
 import type {
   TriageDeskProps,
@@ -35,6 +36,7 @@ import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import { ConfirmModal, IdentityConfirmBanner } from '@components/ConfirmModal';
 import { AutoStartModal } from './AutoStartModal';
+import { TriageSendDoctorModal } from './TriageSendDoctorModal';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
 import { FindPatientDrawer } from '@components/FindPatientDrawer';
 import { useSharedDeviceSession } from '@core/useSharedDeviceSession';
@@ -106,6 +108,11 @@ export function TriageDesk({
   } | null>(null);
   const [findDrawerOpen, setFindDrawerOpen] = useState(false);
   const [pendingVisitSwitch, setPendingVisitSwitch] = useState<number | null>(null);
+  const [hardAssignEnabled, setHardAssignEnabled] = useState(false);
+  const [assignableDoctors, setAssignableDoctors] = useState<
+    Array<{ user_id: number; display_name: string; taking_patients: boolean }>
+  >([]);
+  const [sendDoctorModalOpen, setSendDoctorModalOpen] = useState(false);
 
   // Stale-response guard for queue polling
   const queueSeq = useRef(0);
@@ -158,6 +165,8 @@ export function TriageDesk({
       if (data.vitals_unit_label && data.vitals_form_rules) {
         setVitalsRules(data.vitals_form_rules);
       }
+      setHardAssignEnabled(!!data.hard_provider_assignment_enabled && !!data.can_hard_assign_provider);
+      setAssignableDoctors(data.assignable_doctors ?? []);
       setQueueError(null);
       setLastUpdated(new Date());
     } catch (err) {
@@ -170,11 +179,9 @@ export function TriageDesk({
 
   useEffect(() => { void fetchQueue(); }, [fetchQueue]);
 
-  useEffect(() => {
-    const onVisible = () => { if (!document.hidden) void fetchQueue(); };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [fetchQueue]);
+  useQueueVisibilityRefresh(() => {
+    void fetchQueue();
+  });
 
   useInterval(fetchQueue, pollMs);
 
@@ -396,21 +403,38 @@ export function TriageDesk({
 
   // ── Send to doctor ───────────────────────────────────────────────────────
 
-  const handleSend = useCallback(async () => {
+  const executeSendToDoctor = useCallback(async (hardAssignedProviderId: number | null) => {
     if (!activeVisit || sending || sharedDevice.blocked) return;
     setSending(true);
     setFormError(null);
     try {
-      await oeFetch('triage.send_doctor', {
+      const freshSelect = await oeFetch<{ visit: TriageVisit }>('triage.select', {
+        ajaxUrl,
+        csrfToken,
+        method: 'POST',
+        json: { visit_id: activeVisit.id },
+      });
+      const rowVersion = freshSelect.visit?.row_version ?? activeVisit.row_version;
+      if (freshSelect.visit) {
+        setActiveVisit(freshSelect.visit);
+      }
+
+      const data = await oeFetch<{ visit: TriageVisit }>('triage.send_doctor', {
         ajaxUrl,
         csrfToken,
         method: 'POST',
         json: {
           visit_id: activeVisit.id,
-          row_version: activeVisit.row_version,
+          row_version: rowVersion,
           chief_complaint: chiefComplaint.trim(),
+          ...(hardAssignedProviderId ? { hard_assigned_provider_id: hardAssignedProviderId } : {}),
         },
       });
+
+      if (data.visit?.state !== 'ready_for_doctor') {
+        throw new Error('Send to doctor did not complete — please refresh and try again');
+      }
+
       setInterrupt(null);
       resetActivePane();
       void fetchQueue();
@@ -429,6 +453,15 @@ export function TriageDesk({
       setSending(false);
     }
   }, [activeVisit, sending, ajaxUrl, csrfToken, chiefComplaint, resetActivePane, fetchQueue, resetActivePaneAndSession, sharedDevice]);
+
+  const handleSend = useCallback(() => {
+    if (!activeVisit || sending || sharedDevice.blocked) return;
+    if (hardAssignEnabled && assignableDoctors.length > 0) {
+      setSendDoctorModalOpen(true);
+      return;
+    }
+    void executeSendToDoctor(null);
+  }, [activeVisit, assignableDoctors.length, executeSendToDoctor, hardAssignEnabled, sending, sharedDevice.blocked]);
 
   // ── Record another set ───────────────────────────────────────────────────
 
@@ -643,6 +676,19 @@ export function TriageDesk({
           onClose={() => setAutoStart(null)}
         />
       )}
+
+      <TriageSendDoctorModal
+        open={sendDoctorModalOpen}
+        doctors={assignableDoctors}
+        submitting={sending}
+        onClose={() => {
+          if (!sending) setSendDoctorModalOpen(false);
+        }}
+        onConfirm={(hardAssignedProviderId) => {
+          setSendDoctorModalOpen(false);
+          void executeSendToDoctor(hardAssignedProviderId);
+        }}
+      />
 
       <FindPatientDrawer
         open={findDrawerOpen}

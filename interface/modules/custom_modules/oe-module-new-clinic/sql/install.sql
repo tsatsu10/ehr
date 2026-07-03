@@ -527,6 +527,41 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_react_report_hub', '1');
 #EndIf
 
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_queue_bridge
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_queue_bridge', '0'),
+(0, 'queue_bridge_show_recurring_info', '1'),
+(0, 'queue_bridge_eod_block', '0'),
+(0, 'enable_react_queue_bridge', '1');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_scheduling_redesign
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_scheduling_redesign', '0'),
+(0, 'enable_react_scheduling', '1');
+#EndIf
+
+#IfNotTable queue_bridge_exception_snapshot
+CREATE TABLE IF NOT EXISTS `queue_bridge_exception_snapshot` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `facility_id` INT NOT NULL,
+    `snapshot_date` DATE NOT NULL,
+    `exception_code` VARCHAR(16) NOT NULL,
+    `pid` BIGINT NOT NULL,
+    `pc_eid` INT NULL,
+    `visit_id` BIGINT NULL,
+    `severity` ENUM('action','info','resolved') NOT NULL,
+    `detected_at` DATETIME NOT NULL,
+    `resolved_at` DATETIME NULL,
+    `resolved_by` BIGINT NULL,
+    `resolve_action` VARCHAR(64) NULL,
+    `dismiss_reason` TEXT NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_facility_date` (`facility_id`, `snapshot_date`),
+    KEY `idx_pid_date` (`pid`, `snapshot_date`)
+) ENGINE=InnoDB COMMENT='M18 queue bridge exception snapshots';
+#EndIf
+
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_insurance
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_insurance', '0');
@@ -554,7 +589,55 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_faster_queue_interrupts', '0'),
 (0, 'faster_queue_interrupt_poll_seconds', '10'),
 (0, 'enable_similar_surname_queue_warning', '0'),
-(0, 'enable_pinned_reception_preview', '0');
+(0, 'enable_momo_payment', '0'),
+(0, 'enable_pinned_reception_preview', '0'),
+(0, 'enable_pregnancy_banner_chip', '0'),
+(0, 'enable_l3b_background_completion', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_lab_results_toast
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_lab_results_toast', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_visit_board_kiosk_chrome
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_visit_board_kiosk_chrome', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_banner_mrd_deep_links
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_banner_mrd_deep_links', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_allergy_count_chip
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_allergy_count_chip', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key require_allergies_for_rx
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'require_allergies_for_rx', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_in_chart_patient_search
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_in_chart_patient_search', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_scheduling_full_analytics
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_scheduling_full_analytics', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_history_editor_wrap
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_history_editor_wrap', '0');
+#EndIf
+
+#IfNotRow2D new_completion_field_weight field_key background_history_documented
+INSERT INTO `new_completion_field_weight` (`field_key`, `level`, `weight`, `is_active`) VALUES
+('background_history_documented', 3, 5, 0);
 #EndIf
 
 #IfNotTable new_condition_map
@@ -590,6 +673,91 @@ CREATE TABLE IF NOT EXISTS `new_cohort_saved_filter` (
     PRIMARY KEY (`id`),
     KEY `idx_user_shared` (`user_id`, `is_shared`)
 ) ENGINE=InnoDB COMMENT='Patient Registry saved cohort filters (M10 PR-3)';
+#EndIf
+
+#IfNotTable new_doctor_availability
+CREATE TABLE IF NOT EXISTS `new_doctor_availability` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `user_id` BIGINT NOT NULL,
+    `facility_id` INT NOT NULL DEFAULT 0,
+    `taking_patients` TINYINT(1) NOT NULL DEFAULT 1,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_facility` (`user_id`, `facility_id`)
+) ENGINE=InnoDB COMMENT='V1.1-RTa doctor on-duty roster';
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_doctor_roster
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_doctor_roster', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_advisory_routing
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_advisory_routing', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key routing_weight_active
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'routing_weight_active', '2.0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key routing_weight_waiting_assigned
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'routing_weight_waiting_assigned', '1.0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key routing_weight_waiting_unassigned
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'routing_weight_waiting_unassigned', '0.5');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key routing_fairness_minutes_per_point
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'routing_fairness_minutes_per_point', '15');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key routing_continuity_days
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'routing_continuity_days', '90');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key require_override_reason
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'require_override_reason', '0');
+#EndIf
+
+#IfNotTable new_visit_notify_log
+CREATE TABLE IF NOT EXISTS `new_visit_notify_log` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `visit_id` BIGINT NOT NULL,
+    `recipient_user_id` BIGINT NOT NULL,
+    `channel` VARCHAR(16) NOT NULL,
+    `notified_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_visit_recipient` (`visit_id`, `recipient_user_id`),
+    KEY `idx_recipient` (`recipient_user_id`)
+) ENGINE=InnoDB COMMENT='V1.2 doctor-ready notify debounce (§6.5.4)';
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_hard_provider_assignment
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_hard_provider_assignment', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_doctor_ready_notify
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_doctor_ready_notify', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key notify_unassigned_to_all_on_duty
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'notify_unassigned_to_all_on_duty', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_doctor_ready_web_push
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_doctor_ready_web_push', '0');
 #EndIf
 
 #IfNotRow2D new_clinic_config facility_id 0 config_key lab_inhouse_provider_id
@@ -787,6 +955,88 @@ CREATE TABLE IF NOT EXISTS `clinical_doc_form_open` (
 ) ENGINE=InnoDB COMMENT='M17 clinical documentation form open audit (V1.1-DOC)';
 #EndIf
 
+#IfNotTable admin_hub_backup_run
+CREATE TABLE IF NOT EXISTS `admin_hub_backup_run` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `facility_id` INT NOT NULL,
+    `started_at` DATETIME NOT NULL,
+    `finished_at` DATETIME NULL,
+    `status` ENUM('ok','failed','running') NOT NULL,
+    `file_path` VARCHAR(512) NULL,
+    `actor_id` BIGINT NULL,
+    `message` TEXT NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_facility_started` (`facility_id`, `started_at`)
+) ENGINE=InnoDB COMMENT='M15 admin hub manual backup runs (V1.1-ADMIN)';
+#EndIf
+
+#IfNotTable admin_hub_setup_progress
+CREATE TABLE IF NOT EXISTS `admin_hub_setup_progress` (
+    `facility_id` INT NOT NULL,
+    `checklist_key` VARCHAR(64) NOT NULL,
+    `completed_at` DATETIME NULL,
+    `completed_by` BIGINT NULL,
+    PRIMARY KEY (`facility_id`, `checklist_key`)
+) ENGINE=InnoDB COMMENT='M15 setup wizard progress (V1.1-ADMIN)';
+#EndIf
+
+#IfIndex medex_recalls r_PRACTID
+ALTER TABLE `medex_recalls` DROP INDEX `r_PRACTID`;
+#EndIf
+
+#IfNotIndex medex_recalls idx_medex_recalls_pid
+ALTER TABLE `medex_recalls` ADD INDEX `idx_medex_recalls_pid` (`r_pid`);
+#EndIf
+
+#IfNotTable new_clinic_flowboard_lane_prefs
+CREATE TABLE IF NOT EXISTS `new_clinic_flowboard_lane_prefs` (
+    `user_id` INT NOT NULL,
+    `collapsed_json` TEXT NOT NULL,
+    `order_json` TEXT NOT NULL,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`user_id`)
+) ENGINE=InnoDB COMMENT='S1 Flow Board lane collapse/order per user (§10.3)';
+#EndIf
+
+#IfNotTable new_clinic_flowboard_lane_map
+CREATE TABLE IF NOT EXISTS `new_clinic_flowboard_lane_map` (
+    `facility_id` INT NOT NULL,
+    `apptstat_code` VARCHAR(31) NOT NULL,
+    `lane_key` VARCHAR(32) NOT NULL,
+    `lane_label` VARCHAR(64) NOT NULL DEFAULT '',
+    `lane_seq` INT NOT NULL DEFAULT 0,
+    `status_seq` INT NOT NULL DEFAULT 0,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`facility_id`, `apptstat_code`),
+    KEY `idx_lane_key` (`facility_id`, `lane_key`, `lane_seq`)
+) ENGINE=InnoDB COMMENT='S1 admin apptstat → flow board lane mapping (§10.3)';
+#EndIf
+
+#IfMissingColumn new_clinic_recall_meta recall_type
+ALTER TABLE `new_clinic_recall_meta` ADD COLUMN `recall_type` VARCHAR(32) NOT NULL DEFAULT 'general' AFTER `status`;
+#EndIf
+
+#IfNotTable new_clinic_recall_meta
+CREATE TABLE IF NOT EXISTS `new_clinic_recall_meta` (
+    `recall_id` INT NOT NULL COMMENT 'medex_recalls.r_ID',
+    `status` VARCHAR(32) NOT NULL DEFAULT 'open',
+    `produced_eid` INT UNSIGNED NULL,
+    `outcome_note` TEXT NULL,
+    `updated_by` INT NULL,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`recall_id`),
+    KEY `idx_status` (`status`),
+    KEY `idx_produced_eid` (`produced_eid`)
+) ENGINE=InnoDB COMMENT='S1 recall status and loop link (H1-safe extension)';
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_admin_hub
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_admin_hub', '0'),
+(0, 'admin_hub_backup_retention_days', '30'),
+(0, 'admin_hub_setup_complete', '0');
+#EndIf
+
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_clinical_doc_hub
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_clinical_doc_hub', '0'),
@@ -798,3 +1048,23 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'consult_note_formdir', 'soap'),
 (0, 'enable_react_clinical_doc_hub', '1');
 #EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_ancillary_services
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_ancillary_services', '0'),
+(0, 'ancillary_refer_window_hours', '4'),
+(0, 'lab_intake_formdir', 'lab_intake'),
+(0, 'pharmacy_service_formdir', 'pharmacy_service'),
+(0, 'pharmacy_refer_to_opd_terminal_state', 'cancelled'),
+(0, 'pharmacy_declined_terminal_state', 'cancelled');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key external_rx_max_age_days
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'external_rx_max_age_days', '730');
+#EndIf
+
+UPDATE `new_clinic_config`
+SET `config_value` = 'ghana_opd_v1'
+WHERE `config_key` = 'clinical_doc_bundle'
+  AND `config_value` <> 'ghana_opd_v1';

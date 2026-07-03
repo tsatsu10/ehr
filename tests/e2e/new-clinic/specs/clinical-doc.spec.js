@@ -14,13 +14,18 @@ const { registerAndStartVisit } = require('../helpers/registration');
 const ADMIN_USER = process.env.TEST_USERNAME_ADMIN || 'Adminstrator';
 const ADMIN_PASS = process.env.TEST_PASSWORD_ADMIN || 'passpass1';
 
-function pilotPrep() {
+function runPhpScript(scriptName) {
+  const php = process.env.PHP_BIN || 'C:\\xampp\\php\\php.exe';
   const script = path.join(
     __dirname,
-    '../../../../interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-clinical-doc.php',
+    '../../../../interface/modules/custom_modules/oe-module-new-clinic/scripts',
+    scriptName,
   );
-  const php = process.env.PHP_BIN || 'C:\\xampp\\php\\php.exe';
   execSync(`"${php}" "${script}"`, { stdio: 'inherit' });
+}
+
+function pilotPrep() {
+  runPhpScript('pilot-enable-v11-doc.php');
 }
 
 function credentials() {
@@ -54,13 +59,17 @@ function generatePatientName() {
 
 async function waitForQueueCard(page, lname) {
   const card = page.locator(`.nc-queue-card:has-text("${lname}")`).first();
-  for (let attempt = 0; attempt < 8; attempt += 1) {
+  for (let attempt = 0; attempt < 15; attempt += 1) {
     if (await card.isVisible().catch(() => false) && await card.isEnabled().catch(() => false)) {
       return card;
     }
     const refresh = page.locator('#nc-doctor-refresh');
     if (await refresh.isVisible().catch(() => false)) {
       await refresh.click();
+      await page.waitForResponse(
+        (resp) => resp.url().includes('doctor.queue') && resp.ok(),
+        { timeout: 20000 },
+      ).catch(() => {});
     }
     await page.waitForTimeout(2000);
   }
@@ -109,7 +118,8 @@ async function prepareDoctorDesk(page) {
 
 test.describe('Clinical Documentation Hub', () => {
   test.beforeAll(() => {
-    pilotPrep();
+    runPhpScript('e2e-prep-golden-path.php');
+    runPhpScript('pilot-enable-v11-doc.php');
   });
 
   test('admin loads hub shell and clinical catalog API', async ({ page }) => {
@@ -175,14 +185,17 @@ test.describe('Clinical Documentation Hub', () => {
 
     const doctorCard = await waitForQueueCard(page, patient.lname);
     await doctorCard.click();
-    await expect(page.locator('#nc-doctor-active-pane')).toContainText(patient.lname, { timeout: 20000 });
+    await expect(page.locator('#nc-doctor-active-pane')).toContainText(patient.lname, { timeout: 30000 });
+    await expect(page.locator('.nc-shortcut-btn[data-shortcut="encounter_hub"]')).toBeVisible({
+      timeout: 30000,
+    });
 
     const preflightPromise = page.waitForResponse(
       (resp) => resp.url().includes('doctor.shortcut_preflight') && resp.ok(),
       { timeout: 60000 },
     );
     const navigationPromise = page.waitForURL(/clinical-doc\/index\.php/, { timeout: 60000 });
-    await page.locator('.nc-shortcut-btn[data-shortcut="encounter"]').click();
+    await page.locator('.nc-shortcut-btn[data-shortcut="encounter_hub"]').click();
     await Promise.all([preflightPromise, navigationPromise]);
 
     await expect(page).toHaveURL(/clinical-doc\/index\.php\?visit_id=\d+/, { timeout: 20000 });

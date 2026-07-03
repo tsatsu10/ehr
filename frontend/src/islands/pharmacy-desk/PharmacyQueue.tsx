@@ -1,5 +1,6 @@
 import type { PharmacyQueueCard } from '@core/types';
 import { WaitTimeSpan } from '@components/WaitTimeSpan';
+import { AncillaryVisitBadges } from '@components/AncillaryVisitBadges';
 
 interface PharmacyQueueProps {
   cards: PharmacyQueueCard[];
@@ -57,6 +58,7 @@ export function PharmacyQueue({
               <div className="oe-nc-queue-card__header">
                 <strong>#{card.queue_number} {card.display_name}</strong>
                 {card.is_urgent === 1 && <span className="badge badge-warning ml-1">URGENT</span>}
+                <AncillaryVisitBadges badges={card.ancillary_badges} />
                 {card.pharmacy_mine && <span className="badge badge-primary ml-1">You</span>}
                 {card.pharmacy_actor_name && !card.pharmacy_mine && (
                   <span className="badge badge-info ml-1">{card.pharmacy_actor_name}</span>

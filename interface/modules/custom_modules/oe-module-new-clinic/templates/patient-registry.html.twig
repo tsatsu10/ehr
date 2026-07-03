@@ -26,7 +26,6 @@
 {% block scripts %}
 {% if enable_react_patient_registry|default(true) %}
 <link rel="stylesheet" href="{{ assets_url }}/css/patient-registry.css?v={{ asset_version }}">
-<link rel="stylesheet" href="{{ assets_url }}/modern/patient-registry.css?v={{ asset_version }}">
-<script type="module" src="{{ assets_url }}/modern/patient-registry.js?v={{ asset_version }}"></script>
+{% include 'partials/island-assets.html.twig' %}
 {% endif %}
 {% endblock %}

@@ -65,6 +65,7 @@ $reactChartDepth = $config->get('enable_react_chart_depth', '1') === '1';
     'Referrals',
     ['new_chart_depth_referral', 'new_chart_depth', 'new_admin'],
     [
+        'island_entry' => 'chart-depth',
         'pid' => $pid,
         'encounter_id' => $encounterId > 0 ? $encounterId : null,
         'chart_url' => $chartUrl,

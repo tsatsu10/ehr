@@ -29,8 +29,10 @@ $pharmOpsEnabled = $pharmOpsAccess->isHubEnabled($facilityId);
 $canDispense = $pharmOpsEnabled && $pharmOpsAccess->canDispense();
 $canSellOtc = $canDispense;
 $canUndispensedOverride = AclMain::aclCheckCore('new_clinic', 'new_pharmacy_undispensed_override');
+$canExternalRxOverride = AclMain::aclCheckCore('new_clinic', 'new_pharmacy_external_rx_override');
 
 (new PageController())->render('pharmacy.html.twig', 'Pharmacy Desk', 'new_pharmacy', [
+    'island_entry' => 'pharmacy-desk',
     'desk_id' => 'pharmacy',
     'module_url' => $moduleUrl,
     'visit_board_url' => $moduleUrl . '/visit-board.php',
@@ -42,4 +44,5 @@ $canUndispensedOverride = AclMain::aclCheckCore('new_clinic', 'new_pharmacy_undi
     'pharm_ops_enabled' => $pharmOpsEnabled,
     'can_dispense' => $canDispense,
     'can_undispensed_override' => $canUndispensedOverride,
+    'can_external_rx_override' => $canExternalRxOverride,
 ]);

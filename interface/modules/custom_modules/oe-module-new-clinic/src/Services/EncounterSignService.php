@@ -200,10 +200,10 @@ class EncounterSignService
         }
         EventAuditLogger::getInstance()->newEvent(
             'new_visit',
-            'esign_override',
             $_SESSION['authUser'] ?? 'system',
             $_SESSION['authProvider'] ?? 'default',
-            json_encode([
+            'esign_override',
+            'pid=' . (int) ($visit['pid'] ?? 0) . ';visit_id=' . $visitId . ';' . json_encode([
                 'visit_id' => $visitId,
                 'encounter_id' => (int) ($visit['encounter'] ?? 0),
                 'service_profile' => (string) ($visit['service_profile'] ?? ''),

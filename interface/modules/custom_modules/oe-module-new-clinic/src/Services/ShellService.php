@@ -123,6 +123,16 @@ class ShellService
             'icon' => 'fa-th-large',
         ],
         [
+            'id' => 'clinicscheduling',
+            'label' => 'Scheduling',
+            'path' => 'scheduling/index.php',
+            'acos' => ['new_reception', 'new_reception_lead', 'new_nurse', 'new_admin'],
+            'group' => 'operations',
+            'icon' => 'fa-calendar-alt',
+            'config' => 'enable_scheduling_redesign',
+            'requires_scheduled_integration' => true,
+        ],
+        [
             'id' => 'clinicrephub',
             'label' => 'Reporting',
             'path' => 'report-hub/index.php',
@@ -139,6 +149,19 @@ class ShellService
             'group' => 'hubs',
             'icon' => 'fa-chart-line',
             'config' => 'enable_report_hub',
+        ],
+        [
+            'id' => 'clinicqueuebridge',
+            'label' => 'Queue Bridge',
+            'path' => 'queue-bridge/index.php',
+            'acos' => [
+                'new_queue_bridge',
+                'new_reception_lead',
+                'new_admin',
+            ],
+            'group' => 'hubs',
+            'icon' => 'fa-random',
+            'config' => 'enable_queue_bridge',
         ],
         [
             'id' => 'clinicdochub',
@@ -203,6 +226,7 @@ class ShellService
         private readonly SessionRoleService $sessionRole = new SessionRoleService(),
         private readonly VisitQueueService $queueService = new VisitQueueService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
+        private readonly ScheduledIntegrationService $scheduledIntegration = new ScheduledIntegrationService(),
     ) {
     }
 
@@ -298,15 +322,20 @@ class ShellService
     {
         /** @var array<string, array<int, array<string, mixed>>> $grouped */
         $grouped = [];
+        $deskFacilityId = $this->visitScope->resolveDeskFacilityId();
 
         foreach (self::NAV_ITEMS as $item) {
-            if ($item['id'] === 'clinicrp' && $this->config->isEnabled('enable_report_hub', 0)) {
+            if ($item['id'] === 'clinicrp' && $this->config->isEnabled('enable_report_hub', 0, $deskFacilityId)) {
                 continue;
             }
 
             if (!empty($item['config'])) {
                 $defaultOn = $item['config'] === 'enable_triage';
-                if (!$this->config->isEnabled($item['config'], $defaultOn ? 1 : 0)) {
+                if (!$this->config->isEnabled($item['config'], $defaultOn ? 1 : 0, $deskFacilityId)) {
+                    continue;
+                }
+                if (!empty($item['requires_scheduled_integration'])
+                    && !$this->scheduledIntegration->isEnabled($deskFacilityId)) {
                     continue;
                 }
             }

@@ -60,6 +60,7 @@ $initialTab = in_array($tabParam, ['low_stock', 'reports', 'write_off'], true) ?
     'Pharmacy Operations',
     ['new_pharm_ops', 'new_pharmacy', 'new_pharmacy_lead', 'new_admin'],
     [
+        'island_entry' => 'pharm-ops',
         'shell_nav_id' => 'clinicpharmops',
         'module_url' => $moduleUrl,
         'pharmacy_desk_url' => $moduleUrl . '/pharmacy.php',

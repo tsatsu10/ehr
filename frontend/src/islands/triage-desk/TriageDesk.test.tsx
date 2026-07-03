@@ -350,12 +350,18 @@ describe('TriageDesk', () => {
       vitals: [{}],
       form_vitals: { bps: '120', bpd: '80', pulse: '72', temperature: '36.5', weight: '70' },
     };
+    const readyVisit = {
+      ...inTriageSelect.visit,
+      state: 'ready_for_doctor' as const,
+      row_version: 2,
+    };
 
     mockFetch
       .mockResolvedValueOnce({ ...emptyQueue, visits: [{ ...waitingPatient, state: 'in_triage' as const }], counts: { waiting: 0, in_triage: 1 } })
       .mockResolvedValueOnce(inTriageSelect)  // triage.select → saved mode (has vitals)
       .mockResolvedValueOnce(emptyQueue)      // fetchQueue after select
-      .mockResolvedValueOnce({})             // triage.send_doctor
+      .mockResolvedValueOnce(inTriageSelect)  // triage.select refresh before send_doctor
+      .mockResolvedValueOnce({ visit: readyVisit }) // triage.send_doctor
       .mockResolvedValue(emptyQueue);
 
     render(<TriageDesk {...props} />);

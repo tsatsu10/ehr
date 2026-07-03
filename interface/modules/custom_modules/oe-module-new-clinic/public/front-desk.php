@@ -16,6 +16,8 @@ use OpenEMR\Modules\NewClinic\Controllers\PageController;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\AppointmentTodayService;
 use OpenEMR\Modules\NewClinic\Services\ScheduledIntegrationService;
+use OpenEMR\Modules\NewClinic\Services\SchedulingShellService;
+use OpenEMR\Modules\NewClinic\Services\SchedulingAccessService;
 use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 
 $visitScope = new VisitScopeService();
@@ -24,6 +26,8 @@ $facilityId = $visitScope->resolveDeskFacilityId(
 );
 $scheduledIntegration = new ScheduledIntegrationService();
 $appointmentToday = new AppointmentTodayService();
+$schedulingUrls = (new SchedulingShellService())->resolveIntegrationUrls($facilityId);
+$schedulingEnabled = (new SchedulingAccessService())->isHubEnabled($facilityId);
 $deskConfig = new ClinicConfigService();
 $config = $deskConfig;
 
@@ -31,6 +35,7 @@ $reactFrontDesk = $config->get('enable_react_front_desk', '1') === '1';
 $moduleUrl = $GLOBALS['webroot'] . '/interface/modules/custom_modules/oe-module-new-clinic/public';
 
 (new PageController())->render('front-desk.html.twig', 'Front Desk', 'new_reception', [
+    'island_entry' => 'front-desk',
     'desk_id' => 'front-desk',
     'registration_mode' => $deskConfig->get('registration_mode', 'desk_full_form') ?? 'desk_full_form',
     'enable_pinned_reception_preview' => $deskConfig->isEnabled('enable_pinned_reception_preview', 0, $facilityId),
@@ -45,7 +50,10 @@ $moduleUrl = $GLOBALS['webroot'] . '/interface/modules/custom_modules/oe-module-
     'appointments_today_count' => $scheduledIntegration->isEnabled($facilityId)
         ? $appointmentToday->countTodayAtFacility($facilityId)
         : 0,
-    'calendar_url' => $GLOBALS['webroot'] . '/interface/main/main_info.php',
+    'calendar_url' => $schedulingEnabled
+        ? $schedulingUrls['scheduling_url']
+        : ($GLOBALS['webroot'] . '/interface/main/main_info.php'),
+    'recalls_url' => $schedulingEnabled ? $schedulingUrls['recalls_url'] : null,
     'enable_react_front_desk' => $reactFrontDesk,
     'shell_desk_focus' => $reactFrontDesk,
 ]);

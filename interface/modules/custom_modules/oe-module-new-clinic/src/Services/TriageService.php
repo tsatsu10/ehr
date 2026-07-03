@@ -60,6 +60,7 @@ class TriageService
         $rows = QueryUtils::fetchRecords($sql, $bind) ?: [];
         $visitIds = array_map(fn (array $row) => (int) ($row['id'] ?? 0), $rows);
         $holders = $this->rowEnricher->batchTriageHolders($visitIds);
+        $rows = $this->rowEnricher->enrichVisitRows($rows);
 
         $visits = [];
         $waitingCount = 0;
@@ -87,6 +88,9 @@ class TriageService
             'last_updated' => date('c'),
             'vitals_unit_label' => $this->vitalsValidation->formTemperatureUnitLabel(),
             'vitals_form_rules' => $this->vitalsValidation->getFormRules(),
+            'hard_provider_assignment_enabled' => (new VisitHardAssignService())->isEnabled($facilityId),
+            'can_hard_assign_provider' => (new VisitHardAssignService())->canAssign($actorUserId),
+            'assignable_doctors' => (new VisitHardAssignService())->listAssignableDoctors($facilityId, $visitDate ?? $today),
         ];
     }
 
@@ -146,7 +150,8 @@ class TriageService
         int $visitId,
         int $actorUserId,
         int $expectedVersion,
-        ?string $chiefComplaint = null
+        ?string $chiefComplaint = null,
+        ?int $hardAssignedProviderId = null
     ): array {
         $visit = $this->queueService->getVisitForActor($visitId);
         if ($visit['state'] !== 'in_triage') {
@@ -161,7 +166,8 @@ class TriageService
             $visitId,
             $actorUserId,
             $expectedVersion,
-            $chiefComplaint
+            $chiefComplaint,
+            $hardAssignedProviderId
         );
     }
 
@@ -229,7 +235,6 @@ class TriageService
     private function enrichQueueRow(array $row, int $actorUserId, array $holders): array
     {
         $visitId = (int) ($row['id'] ?? 0);
-        $row = $this->rowEnricher->enrichVisitRow($row, $visitId);
 
         $holder = $holders[$visitId] ?? null;
         $row['triage_actor_id'] = $holder['actor_user_id'] ?? null;

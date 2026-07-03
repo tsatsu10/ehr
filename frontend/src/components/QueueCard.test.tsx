@@ -71,4 +71,35 @@ describe('QueueCard', () => {
     render(<QueueCard card={{ ...baseCard, similar_surname_today: true }} />);
     expect(screen.getByText('Same surname today')).toBeInTheDocument();
   });
+
+  it('shows ancillary badges when present', () => {
+    render(
+      <QueueCard
+        card={{
+          ...baseCard,
+          ancillary_badges: ['lab_direct', 'referral_on_file'],
+        }}
+      />,
+    );
+    expect(screen.getByText('Direct lab')).toBeInTheDocument();
+    expect(screen.getByText('Referral on file')).toBeInTheDocument();
+  });
+
+  it('shows queue bridge badge when present', () => {
+    render(
+      <QueueCard
+        card={{
+          ...baseCard,
+          queue_bridge_badge: {
+            code: 'EX-03',
+            label: 'Appt not linked',
+            hub_url: '/queue-bridge/index.php',
+          },
+        }}
+      />,
+    );
+    const badge = screen.getByText('Appt not linked');
+    expect(badge).toBeInTheDocument();
+    expect(badge.closest('a')).toHaveAttribute('href', '/queue-bridge/index.php');
+  });
 });

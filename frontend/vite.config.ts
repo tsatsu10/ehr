@@ -53,6 +53,8 @@ const islands: Record<string, string> = {
   'bill-ops':            resolve(here, 'src/islands/bill-ops/index.tsx'),
   'bill-ops-correct':    resolve(here, 'src/islands/bill-ops/index-correct.tsx'),
   'report-hub':          resolve(here, 'src/islands/report-hub/index.tsx'),
+  'queue-bridge':        resolve(here, 'src/islands/queue-bridge/index.tsx'),
+  'scheduling':          resolve(here, 'src/islands/scheduling/index.tsx'),
   'clinical-doc':        resolve(here, 'src/islands/clinical-doc/index.tsx'),
 };
 

@@ -12,6 +12,17 @@ import type {
   BillingCodeType,
   CashProfileStatus,
   GhanaLbfPackStatus,
+  AncillaryLbfPackStatus,
+  FormBundleBoardPayload,
+  FormsCatalogItem,
+  FormsCatalogPayload,
+  RunbooksPayload,
+  SetupProgressPayload,
+  ConfigExportMeta,
+  ConfigImportResult,
+  CompletionFieldWeightPayload,
+  CompletionFieldWeightRow,
+  SystemHealthPayload,
   FeeCategoryOption,
   FeeImportSummary,
   FeeScheduleRow,
@@ -26,6 +37,8 @@ import { VisitTypeModal } from './modals/VisitTypeModal';
 import { ClinicTab } from './tabs/ClinicTab';
 import { CompletionTab } from './tabs/CompletionTab';
 import { FeesTab } from './tabs/FeesTab';
+import { FormsTab } from './tabs/FormsTab';
+import { SystemTab } from './tabs/SystemTab';
 import { QueueRolesTab } from './tabs/QueueRolesTab';
 import { RolesTab } from './tabs/RolesTab';
 import { VisitTypesTab } from './tabs/VisitTypesTab';
@@ -40,7 +53,8 @@ type AdminConfirm =
   | { type: 'archive_visit_type'; row: VisitTypeRow }
   | { type: 'archive_fee'; row: FeeScheduleRow }
   | { type: 'grant_roles' }
-  | { type: 'cash_profile' };
+  | { type: 'cash_profile' }
+  | { type: 'catalog_enable'; item: FormsCatalogItem };
 
 export function AdminHub({
   ajaxUrl,
@@ -77,6 +91,29 @@ export function AdminHub({
   const [cashProfileApplying, setCashProfileApplying] = useState(false);
   const [ghanaLbfPack, setGhanaLbfPack] = useState<GhanaLbfPackStatus>({ installed: false });
   const [ghanaLbfImporting, setGhanaLbfImporting] = useState(false);
+  const [ancillaryLbfPacks, setAncillaryLbfPacks] = useState<AncillaryLbfPackStatus[]>([]);
+  const [ancillaryLbfImporting, setAncillaryLbfImporting] = useState<string | null>(null);
+  const [formBundleBoard, setFormBundleBoard] = useState<FormBundleBoardPayload | null>(null);
+  const [formsCatalog, setFormsCatalog] = useState<FormsCatalogPayload | null>(null);
+  const [catalogTogglingId, setCatalogTogglingId] = useState<number | null>(null);
+  const [installingAllAncillary, setInstallingAllAncillary] = useState(false);
+  const [systemHealth, setSystemHealth] = useState<SystemHealthPayload | null>(null);
+  const [runbooks, setRunbooks] = useState<RunbooksPayload | null>(null);
+  const [setupProgress, setSetupProgress] = useState<SetupProgressPayload | null>(null);
+  const [configExport, setConfigExport] = useState<ConfigExportMeta | null>(null);
+  const [configExporting, setConfigExporting] = useState(false);
+  const [configImportPreview, setConfigImportPreview] = useState<ConfigImportResult | null>(null);
+  const [configImportSnapshot, setConfigImportSnapshot] = useState<Record<string, unknown> | null>(null);
+  const [configImportPreviewing, setConfigImportPreviewing] = useState(false);
+  const [configImporting, setConfigImporting] = useState(false);
+  const [setupMarkingKey, setSetupMarkingKey] = useState<string | null>(null);
+  const [setupCompleting, setSetupCompleting] = useState(false);
+  const [backupRunning, setBackupRunning] = useState(false);
+  const [backupCompleting, setBackupCompleting] = useState(false);
+  const [healthRefreshing, setHealthRefreshing] = useState(false);
+  const [completionFieldWeights, setCompletionFieldWeights] = useState<CompletionFieldWeightPayload | null>(null);
+  const [weightsSaving, setWeightsSaving] = useState(false);
+  const [weightsError, setWeightsError] = useState<string | null>(null);
 
   const [visitTypeModalOpen, setVisitTypeModalOpen] = useState(false);
   const [visitTypeEdit, setVisitTypeEdit] = useState<VisitTypeRow | null>(null);
@@ -100,6 +137,18 @@ export function AdminHub({
     [ajaxUrl, csrfToken]
   );
 
+  const adminHubEnabled = settings.enable_admin_hub === true;
+  const visibleTabs = useMemo(
+    () => ADMIN_TABS.filter((tab) => tab.id !== 'system' || adminHubEnabled),
+    [adminHubEnabled]
+  );
+
+  useEffect(() => {
+    if (!adminHubEnabled && activeTab === 'system') {
+      setActiveTab('queue');
+    }
+  }, [adminHubEnabled, activeTab]);
+
   const scopeHint = scope === 'global'
     ? 'Applies as the default when a clinic has no override. Existing per-clinic rows still win until you save under This clinic.'
     : `Editing ${scopeLabel || clinicFacilityLabel} (ID ${facilityId}). These values override the global default for this clinic.`;
@@ -122,6 +171,15 @@ export function AdminHub({
     setRoleGroups(data.roles ?? {});
     setCashProfile(data.cash_profile ?? { applied: false });
     setGhanaLbfPack(data.ghana_lbf_pack ?? { installed: false });
+    setAncillaryLbfPacks(data.ancillary_lbf_packs ?? []);
+    setFormBundleBoard(data.form_bundle_board ?? null);
+    setFormsCatalog(data.forms_catalog ?? null);
+    setSystemHealth(data.system_health ?? null);
+    setRunbooks(data.runbooks ?? null);
+    setSetupProgress(data.setup_progress ?? null);
+    setConfigExport(data.config_export ?? null);
+    setCompletionFieldWeights(data.completion_field_weights ?? null);
+    setWeightsError(null);
     setDirty(false);
   }, [clinicFacilityId]);
 
@@ -197,6 +255,33 @@ export function AdminHub({
       setDirty(true);
     }
   }, [applyPayload, facilityId, fetchOptions, loadReconciliationStatus, scope, settings]);
+
+  const saveCompletionWeights = useCallback(
+    async (items: CompletionFieldWeightRow[]) => {
+      setWeightsSaving(true);
+      setWeightsError(null);
+      try {
+        const data = await oeFetch<AdminConfigPayload>('admin.completion_weights.save', {
+          ...fetchOptions,
+          method: 'POST',
+          json: {
+            scope,
+            facility_id: facilityId,
+            items,
+          },
+        });
+        applyPayload(data);
+        setSuccessMessage('Completion weights saved.');
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Could not save completion weights.';
+        setWeightsError(message);
+        setErrorMessage(message);
+      } finally {
+        setWeightsSaving(false);
+      }
+    },
+    [applyPayload, facilityId, fetchOptions, scope]
+  );
 
   useAdminPageHeading({
     dirty,
@@ -397,6 +482,26 @@ export function AdminHub({
     }
   }, [fetchOptions]);
 
+  const refreshSystemHealth = useCallback(async () => {
+    setHealthRefreshing(true);
+    try {
+      const data = await oeFetch<{ system_health?: SystemHealthPayload }>('admin_hub.health_status', {
+        ...fetchOptions,
+        params: {
+          scope,
+          facility_id: facilityId > 0 ? facilityId : clinicFacilityId,
+        },
+      });
+      if (data.system_health) {
+        setSystemHealth(data.system_health);
+      }
+    } catch {
+      /* keep last known health */
+    } finally {
+      setHealthRefreshing(false);
+    }
+  }, [clinicFacilityId, facilityId, fetchOptions, scope]);
+
   const runReconciliation = useCallback(async () => {
     setReconciliationRunning(true);
     setErrorMessage(null);
@@ -415,12 +520,199 @@ export function AdminHub({
         `core ${data.core_total_amount ?? 0}, delta ${data.delta_amount ?? 0}`
       );
       await loadReconciliationStatus();
+      await refreshSystemHealth();
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : 'Reconciliation failed');
     } finally {
       setReconciliationRunning(false);
     }
-  }, [fetchOptions, loadReconciliationStatus]);
+  }, [fetchOptions, loadReconciliationStatus, refreshSystemHealth]);
+
+  const runBackup = useCallback(async () => {
+    setBackupRunning(true);
+    setErrorMessage(null);
+    try {
+      const data = await oeFetch<AdminConfigPayload>('admin_hub.backup_run', {
+        ...fetchOptions,
+        json: {
+          scope,
+          facility_id: facilityId,
+        },
+      });
+      applyPayload(data);
+      const backupUrl = data.backup_run_result?.backup_url;
+      if (backupUrl) {
+        window.open(backupUrl, '_top');
+      }
+      setSuccessMessage('Backup started — complete the download in the stock backup screen.');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Backup failed');
+    } finally {
+      setBackupRunning(false);
+    }
+  }, [applyPayload, facilityId, fetchOptions, scope]);
+
+  const completeBackup = useCallback(async (runId?: number | null) => {
+    setBackupCompleting(true);
+    setErrorMessage(null);
+    try {
+      const data = await oeFetch<AdminConfigPayload>('admin_hub.backup_complete', {
+        ...fetchOptions,
+        json: {
+          scope,
+          facility_id: facilityId,
+          run_id: runId ?? systemHealth?.backup_run_id ?? 0,
+        },
+      });
+      applyPayload(data);
+      setSuccessMessage('Backup marked complete.');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Could not mark backup complete');
+    } finally {
+      setBackupCompleting(false);
+    }
+  }, [applyPayload, facilityId, fetchOptions, scope, systemHealth?.backup_run_id]);
+
+  const markSetupItem = useCallback(async (checklistKey: string) => {
+    setSetupMarkingKey(checklistKey);
+    setErrorMessage(null);
+    try {
+      const data = await oeFetch<AdminConfigPayload>('admin_hub.setup_progress', {
+        ...fetchOptions,
+        json: {
+          scope,
+          facility_id: facilityId,
+          checklist_key: checklistKey,
+        },
+      });
+      applyPayload(data);
+      setSuccessMessage('Setup checklist updated.');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Could not update setup checklist');
+    } finally {
+      setSetupMarkingKey(null);
+    }
+  }, [applyPayload, facilityId, fetchOptions, scope]);
+
+  const markSetupComplete = useCallback(async () => {
+    setSetupCompleting(true);
+    setErrorMessage(null);
+    try {
+      const data = await oeFetch<AdminConfigPayload>('admin_hub.setup_complete', {
+        ...fetchOptions,
+        json: {
+          scope,
+          facility_id: facilityId,
+        },
+      });
+      applyPayload(data);
+      setSuccessMessage('Admin hub setup marked complete.');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Could not mark setup complete');
+    } finally {
+      setSetupCompleting(false);
+    }
+  }, [applyPayload, facilityId, fetchOptions, scope]);
+
+  const exportConfig = useCallback(async () => {
+    setConfigExporting(true);
+    setErrorMessage(null);
+    try {
+      const data = await oeFetch<AdminConfigPayload>('admin_hub.config_export', {
+        ...fetchOptions,
+        params: {
+          scope,
+          facility_id: facilityId > 0 ? facilityId : clinicFacilityId,
+        },
+      });
+      const snapshot = data.config_export_snapshot;
+      if (!snapshot) {
+        throw new Error('Export snapshot missing from server response');
+      }
+      const facilityPart = facilityId > 0 ? `facility-${facilityId}` : 'global';
+      const filename = `new-clinic-m6-config-${facilityPart}-${localDateString()}.json`;
+      const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      if (data.config_export) {
+        setConfigExport(data.config_export);
+      }
+      setSuccessMessage('M6 config JSON downloaded.');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Config export failed');
+    } finally {
+      setConfigExporting(false);
+    }
+  }, [clinicFacilityId, facilityId, fetchOptions, scope]);
+
+  const previewConfigImport = useCallback(async (snapshot: Record<string, unknown>) => {
+    setConfigImportPreviewing(true);
+    setConfigImportPreview(null);
+    setConfigImportSnapshot(snapshot);
+    setErrorMessage(null);
+    try {
+      const data = await oeFetch<AdminConfigPayload>('admin_hub.config_import', {
+        ...fetchOptions,
+        json: {
+          scope,
+          facility_id: facilityId > 0 ? facilityId : clinicFacilityId,
+          snapshot,
+          dry_run: true,
+        },
+      });
+      applyPayload(data);
+      if (data.config_import_result) {
+        setConfigImportPreview(data.config_import_result);
+      }
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Config import preview failed');
+      setConfigImportSnapshot(null);
+    } finally {
+      setConfigImportPreviewing(false);
+    }
+  }, [applyPayload, clinicFacilityId, facilityId, fetchOptions, scope]);
+
+  const confirmConfigImport = useCallback(async () => {
+    if (!configImportSnapshot) {
+      return;
+    }
+    setConfigImporting(true);
+    setErrorMessage(null);
+    try {
+      const data = await oeFetch<AdminConfigPayload>('admin_hub.config_import', {
+        ...fetchOptions,
+        json: {
+          scope,
+          facility_id: facilityId > 0 ? facilityId : clinicFacilityId,
+          snapshot: configImportSnapshot,
+          dry_run: false,
+        },
+      });
+      applyPayload(data);
+      setConfigImportPreview(null);
+      setConfigImportSnapshot(null);
+      const summary = data.config_import_result?.summary;
+      setSuccessMessage(
+        summary
+          ? `M6 config imported (${summary.settings_imported ?? 0} settings, `
+            + `${summary.fees_imported ?? 0} fees, ${summary.visit_types_imported ?? 0} visit types).`
+          : 'M6 config imported.',
+      );
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Config import failed');
+    } finally {
+      setConfigImporting(false);
+    }
+  }, [applyPayload, clinicFacilityId, configImportSnapshot, facilityId, fetchOptions, scope]);
+
+  const clearConfigImportPreview = useCallback(() => {
+    setConfigImportPreview(null);
+    setConfigImportSnapshot(null);
+  }, []);
 
   const applyCashProfile = useCallback(async () => {
     setCashProfileApplying(true);
@@ -467,6 +759,124 @@ export function AdminHub({
     }
   }, [applyPayload, facilityId, fetchOptions, scope]);
 
+  const importAncillaryLbfPack = useCallback(async (packKey: string) => {
+    setAncillaryLbfImporting(packKey);
+    setErrorMessage(null);
+    try {
+      const data = await oeFetch<AdminConfigPayload>('clinical_doc.import_ancillary_pack', {
+        ...fetchOptions,
+        json: {
+          scope,
+          facility_id: facilityId,
+          pack_key: packKey,
+        },
+      });
+      applyPayload(data);
+      setSuccessMessage(`Ancillary LBF pack "${packKey}" imported.`);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Ancillary LBF import failed');
+    } finally {
+      setAncillaryLbfImporting(null);
+    }
+  }, [applyPayload, facilityId, fetchOptions, scope]);
+
+  const installAllMissingAncillary = useCallback(async () => {
+    if (!formBundleBoard) {
+      return;
+    }
+    const packKeys = formBundleBoard.rows
+      .filter((row) => row.can_import && row.pack_key)
+      .map((row) => row.pack_key as string);
+    if (packKeys.length === 0) {
+      return;
+    }
+    setInstallingAllAncillary(true);
+    setErrorMessage(null);
+    try {
+      let lastPayload: AdminConfigPayload | null = null;
+      for (const packKey of packKeys) {
+        setAncillaryLbfImporting(packKey);
+        lastPayload = await oeFetch<AdminConfigPayload>('clinical_doc.import_ancillary_pack', {
+          ...fetchOptions,
+          json: {
+            scope,
+            facility_id: facilityId,
+            pack_key: packKey,
+          },
+        });
+      }
+      if (lastPayload) {
+        applyPayload(lastPayload);
+      }
+      setSuccessMessage('Missing ancillary LBF forms imported.');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Ancillary LBF import failed');
+    } finally {
+      setAncillaryLbfImporting(null);
+      setInstallingAllAncillary(false);
+    }
+  }, [applyPayload, facilityId, fetchOptions, formBundleBoard, scope]);
+
+  const applyCatalogEnable = useCallback(async (item: FormsCatalogItem) => {
+    setCatalogTogglingId(item.id);
+    setErrorMessage(null);
+    try {
+      const data = await oeFetch<AdminConfigPayload>('admin.forms_catalog.set_state', {
+        ...fetchOptions,
+        json: {
+          scope,
+          facility_id: facilityId,
+          registry_id: item.id,
+          enabled: true,
+        },
+      });
+      applyPayload(data);
+      const warning = data.forms_catalog_result?.warning;
+      setSuccessMessage(warning ?? `${item.name} enabled in form registry.`);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Could not update form registry');
+    } finally {
+      setCatalogTogglingId(null);
+    }
+  }, [applyPayload, facilityId, fetchOptions, scope]);
+
+  const toggleCatalogForm = useCallback(async (item: FormsCatalogItem, enabled: boolean) => {
+    if (item.enabled === enabled) {
+      return;
+    }
+    if (!enabled && item.disable_blocked) {
+      setErrorMessage(item.disable_block_reason ?? 'This form cannot be disabled.');
+      return;
+    }
+    if (enabled && item.enable_warning) {
+      setPendingConfirm({ type: 'catalog_enable', item });
+      return;
+    }
+    if (enabled) {
+      await applyCatalogEnable(item);
+      return;
+    }
+    setCatalogTogglingId(item.id);
+    setErrorMessage(null);
+    try {
+      const data = await oeFetch<AdminConfigPayload>('admin.forms_catalog.set_state', {
+        ...fetchOptions,
+        json: {
+          scope,
+          facility_id: facilityId,
+          registry_id: item.id,
+          enabled: false,
+        },
+      });
+      applyPayload(data);
+      setSuccessMessage(`${item.name} disabled in form registry.`);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Could not update form registry');
+    } finally {
+      setCatalogTogglingId(null);
+    }
+  }, [applyPayload, applyCatalogEnable, facilityId, fetchOptions, scope]);
+
   const roles = roleGroups ?? {};
 
   return (
@@ -496,7 +906,7 @@ export function AdminHub({
       </div>
 
       <ul className="nav nav-tabs mb-3" role="tablist">
-        {ADMIN_TABS.map((tab) => (
+        {visibleTabs.map((tab) => (
           <li className="nav-item" key={tab.id}>
             <button
               type="button"
@@ -518,11 +928,17 @@ export function AdminHub({
           <>
             {activeTab === 'queue' && (
               <QueueRolesTab
+                ajaxUrl={ajaxUrl}
+                csrfToken={csrfToken}
+                facilityId={facilityId}
                 settings={settings}
                 ghanaLbfPack={ghanaLbfPack}
                 ghanaLbfImporting={ghanaLbfImporting}
+                ancillaryLbfPacks={ancillaryLbfPacks}
+                ancillaryLbfImporting={ancillaryLbfImporting}
                 onFieldChange={handleFieldChange}
                 onImportGhanaLbfPack={(setAsConsultNote) => { void importGhanaLbfPack(setAsConsultNote); }}
+                onImportAncillaryLbfPack={(packKey) => { void importAncillaryLbfPack(packKey); }}
               />
             )}
             {activeTab === 'roles' && (
@@ -536,7 +952,16 @@ export function AdminHub({
               />
             )}
             {activeTab === 'completion' && (
-              <CompletionTab settings={settings} onFieldChange={handleFieldChange} />
+              <CompletionTab
+                settings={settings}
+                completionFieldWeights={completionFieldWeights}
+                weightsSaving={weightsSaving}
+                weightsError={weightsError}
+                onFieldChange={handleFieldChange}
+                onSaveWeights={(items) => {
+                  void saveCompletionWeights(items);
+                }}
+              />
             )}
             {activeTab === 'clinic' && (
               <ClinicTab
@@ -549,6 +974,54 @@ export function AdminHub({
                 onApplyCashProfile={() => setPendingConfirm({ type: 'cash_profile' })}
                 onRunReconciliation={() => { void runReconciliation(); }}
               />
+            )}
+            {activeTab === 'forms' && formBundleBoard && formsCatalog && (
+              <FormsTab
+                board={formBundleBoard}
+                catalog={formsCatalog}
+                ancillaryLbfPacks={ancillaryLbfPacks}
+                importingPackKey={ancillaryLbfImporting}
+                installingAll={installingAllAncillary}
+                catalogTogglingId={catalogTogglingId}
+                onImportPack={(packKey) => { void importAncillaryLbfPack(packKey); }}
+                onInstallAllMissing={() => { void installAllMissingAncillary(); }}
+                onToggleCatalogForm={(item, enabled) => { void toggleCatalogForm(item, enabled); }}
+              />
+            )}
+            {activeTab === 'forms' && (!formBundleBoard || !formsCatalog) && (
+              <div className="text-muted"><em>Forms configuration unavailable.</em></div>
+            )}
+            {activeTab === 'system' && systemHealth && runbooks && setupProgress && (
+              <SystemTab
+                health={systemHealth}
+                runbooks={runbooks}
+                setupProgress={setupProgress}
+                configExport={configExport}
+                scopeLabel={scopeLabel}
+                configExporting={configExporting}
+                onExportConfig={() => { void exportConfig(); }}
+                configImportPreview={configImportPreview}
+                configImportPreviewing={configImportPreviewing}
+                configImporting={configImporting}
+                onConfigImportPreview={(snapshot) => { void previewConfigImport(snapshot); }}
+                onConfigImportConfirm={() => { void confirmConfigImport(); }}
+                onConfigImportClearPreview={clearConfigImportPreview}
+                reconciliationRunning={reconciliationRunning}
+                backupRunning={backupRunning}
+                backupCompleting={backupCompleting}
+                setupMarkingKey={setupMarkingKey}
+                setupCompleting={setupCompleting}
+                onRunReconciliation={() => { void runReconciliation(); }}
+                onRunBackup={() => { void runBackup(); }}
+                onCompleteBackup={() => { void completeBackup(); }}
+                onRefreshHealth={() => { void refreshSystemHealth(); }}
+                healthRefreshing={healthRefreshing}
+                onMarkSetupItem={(key) => { void markSetupItem(key); }}
+                onMarkSetupComplete={() => { void markSetupComplete(); }}
+              />
+            )}
+            {activeTab === 'system' && (!systemHealth || !runbooks || !setupProgress) && (
+              <div className="text-muted"><em>System configuration unavailable.</em></div>
             )}
             {activeTab === 'types' && (
               <VisitTypesTab
@@ -613,7 +1086,8 @@ export function AdminHub({
             : pendingConfirm?.type === 'archive_visit_type' ? 'Archive visit type?'
               : pendingConfirm?.type === 'archive_fee' ? 'Archive fee line?'
                 : pendingConfirm?.type === 'grant_roles' ? 'Grant desk roles?'
-                  : 'Apply cash clinic profile?'
+                  : pendingConfirm?.type === 'catalog_enable' ? 'Enable billing form?'
+                    : 'Apply cash clinic profile?'
         }
         modalId="nc-admin-confirm-modal"
         cancelLabel="Cancel"
@@ -621,7 +1095,8 @@ export function AdminHub({
           pendingConfirm?.type === 'scope_switch' ? 'Switch'
             : pendingConfirm?.type === 'grant_roles' ? 'Grant roles'
               : pendingConfirm?.type === 'cash_profile' ? 'Apply profile'
-                : 'Archive'
+                : pendingConfirm?.type === 'catalog_enable' ? 'Enable anyway'
+                  : 'Archive'
         }
         confirmVariant={
           pendingConfirm?.type === 'archive_visit_type' || pendingConfirm?.type === 'archive_fee'
@@ -643,6 +1118,8 @@ export function AdminHub({
             void grantSelfRoles();
           } else if (pendingConfirm.type === 'cash_profile') {
             void applyCashProfile();
+          } else if (pendingConfirm.type === 'catalog_enable') {
+            void applyCatalogEnable(pendingConfirm.item);
           }
           setPendingConfirm(null);
         }}
@@ -666,6 +1143,9 @@ export function AdminHub({
             Apply the cash clinic profile? This updates OpenEMR globals (E-Sign, currency symbol,
             eligibility, search UI) and enables pinned reception preview. Changes are logged.
           </p>
+        )}
+        {pendingConfirm?.type === 'catalog_enable' && (
+          <p className="mb-0">{pendingConfirm.item.enable_warning}</p>
         )}
       </ConfirmModal>
     </div>

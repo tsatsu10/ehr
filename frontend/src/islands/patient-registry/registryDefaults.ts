@@ -36,6 +36,10 @@ export const DEFAULT_REGISTRY_FILTERS: RegistryFilters = {
   recall_date_from: '',
   recall_date_to: '',
   my_provider_today: false,
+  allergy_substance_contains: '',
+  medication_contains: '',
+  unread_staff_message: '',
+  open_dated_reminder: '',
 };
 
 export function emptyRegistryFilters(): RegistryFilters {

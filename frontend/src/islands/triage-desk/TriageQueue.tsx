@@ -7,6 +7,7 @@
 
 import { WaitTimeSpan } from '@components/WaitTimeSpan';
 import { StatusPill } from '@components/StatusPill';
+import { AncillaryVisitBadges } from '@components/AncillaryVisitBadges';
 import type { TriageQueueCard, VisitCard, VisitState } from '@core/types';
 
 interface TriageQueueProps {
@@ -113,6 +114,7 @@ export function TriageQueue({
                   {!!card.is_urgent && (
                     <span className="badge badge-warning ml-1">URGENT</span>
                   )}
+                  <AncillaryVisitBadges badges={card.ancillary_badges} />
                   {card.claim_lost && (
                     <span className="badge badge-secondary ml-1">Claimed</span>
                   )}

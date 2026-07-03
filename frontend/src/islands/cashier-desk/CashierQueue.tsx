@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { CashierPaidTodayRow, CashierQueueCard } from '@core/types';
 import { WaitTimeSpan } from '@components/WaitTimeSpan';
+import { AncillaryVisitBadges } from '@components/AncillaryVisitBadges';
 import { formatMoney } from './cashierUtils';
 import { PatientSearchPanel, type PatientSearchHint } from './PatientSearchPanel';
 
@@ -69,6 +70,7 @@ export function CashierQueue({
             <div className="oe-nc-queue-card__header">
               <strong>#{card.queue_number} {card.display_name}</strong>
               {card.is_urgent === 1 && <span className="badge badge-warning ml-1">URGENT</span>}
+              <AncillaryVisitBadges badges={card.ancillary_badges} />
               {card.charges_total > 0 ? (
                 <span className="badge badge-light border ml-1">{formatMoney(card.charges_total)}</span>
               ) : (

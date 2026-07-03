@@ -20,7 +20,9 @@
         visitBoardUrl: visit_board_url,
         canCancelVisit: can_cancel_visit ? true : false,
         canMarkUnpaid: can_mark_unpaid ? true : false,
-        canRunReconciliation: can_run_reconciliation ? true : false
+        canRunReconciliation: can_run_reconciliation ? true : false,
+        scheduledIntegrationEnabled: scheduled_integration_enabled ? true : false,
+        ancillaryServicesEnabled: ancillary_services_enabled ? true : false
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}
@@ -30,7 +32,6 @@
 
 {% block scripts %}
 {% if enable_react_daily_reports|default(true) %}
-<link rel="stylesheet" href="{{ assets_url }}/modern/daily-reports.css?v={{ asset_version }}">
-<script type="module" src="{{ assets_url }}/modern/daily-reports.js?v={{ asset_version }}"></script>
+{% include 'partials/island-assets.html.twig' %}
 {% endif %}
 {% endblock %}

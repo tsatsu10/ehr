@@ -614,6 +614,26 @@
         return escapeHtml(text);
     }
 
+    function renderAncillaryBadges(card) {
+        var badges = (card && card.ancillary_badges) || [];
+        if (!badges.length) {
+            return '';
+        }
+        var meta = {
+            lab_direct: { label: 'Direct lab', cls: 'badge-info' },
+            pharmacy_walkin: { label: 'Pharmacy walk-in', cls: 'badge-info' },
+            referral_on_file: { label: 'Referral on file', cls: 'badge-secondary' },
+            referred_to_opd: { label: 'Referred to OPD', cls: 'badge-secondary' }
+        };
+        return badges.map(function (key) {
+            var item = meta[key];
+            if (!item) {
+                return '';
+            }
+            return '<span class="badge ' + item.cls + ' ml-1">' + escapeHtml(item.label) + '</span>';
+        }).join('');
+    }
+
     function renderQueueCard(card, options) {
         var opts = options || {};
         var interactive = opts.interactive !== false;
@@ -641,11 +661,21 @@
         var displayName = opts.privacyMode ? privacyDisplayName(card.display_name) : (card.display_name || '');
         var surnameBadge = similarSurnameBadge(card);
         var staleBadge = staleDateBadge(card);
+        var bridgeBadge = '';
+        if (card.queue_bridge_badge && card.queue_bridge_badge.label) {
+            var bridge = card.queue_bridge_badge;
+            var hubUrl = bridge.hub_url || '#';
+            var bridgeTitle = bridge.code ? ' title="' + escapeHtml(bridge.code) + '"' : '';
+            bridgeBadge = '<a href="' + escapeHtml(hubUrl) + '" class="badge badge-info ml-1"' +
+                bridgeTitle + ' onclick="event.stopPropagation();">' +
+                escapeHtml(bridge.label) + '</a>';
+        }
         var titleHtml = opts.titleHtml
-            ? (opts.titleHtml + surnameBadge + staleBadge)
+            ? (opts.titleHtml + surnameBadge + staleBadge + bridgeBadge)
             : ('<span class="oe-nc-queue-card__queue-num">#' + escapeHtml(card.queue_number) + '</span>' +
                 '<span class="oe-nc-queue-card__name">' + escapeHtml(displayName) + '</span>' +
-                (opts.badgesHtml || '') + surnameBadge + staleBadge);
+                renderAncillaryBadges(card) +
+                (opts.badgesHtml || '') + bridgeBadge + surnameBadge + staleBadge);
         var waitLabel = resolveWaitLabel(card);
         var subtitleHtml = opts.subtitleHtml || (
             '<div class="oe-nc-queue-card__meta small text-muted">' +
@@ -1016,6 +1046,7 @@
         processClaimLostPoll: processClaimLostPoll,
         resolveVisitConflict: resolveVisitConflict,
         renderQueueCard: renderQueueCard,
+        renderAncillaryBadges: renderAncillaryBadges,
         privacyDisplayName: privacyDisplayName,
         setDeskActiveVisitId: setDeskActiveVisitId,
         clearDeskActiveVisitId: clearDeskActiveVisitId,

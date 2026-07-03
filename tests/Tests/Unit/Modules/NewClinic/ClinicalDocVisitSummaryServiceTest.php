@@ -11,7 +11,10 @@ namespace OpenEMR\Tests\Unit\Modules\NewClinic;
 
 require_once __DIR__ . '/ModuleAutoload.php';
 
+use OpenEMR\Modules\NewClinic\Services\AdminFormBundleService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocAccessService;
+use OpenEMR\Modules\NewClinic\Services\ClinicalDocCatalogService;
+use OpenEMR\Modules\NewClinic\Services\ClinicalDocDocumentationStatusService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocVisitSummaryService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\EncounterSignService;
@@ -20,13 +23,24 @@ use PHPUnit\Framework\TestCase;
 
 class ClinicalDocVisitSummaryServiceTest extends TestCase
 {
+    private ?string $previousClinicalDocHub = null;
+    private ?ClinicConfigService $liveConfig = null;
+
+    protected function tearDown(): void
+    {
+        if ($this->liveConfig !== null && $this->previousClinicalDocHub !== null) {
+            $this->liveConfig->set('enable_clinical_doc_hub', $this->previousClinicalDocHub, 0);
+        }
+    }
+
     private function hubEnabledDoctorAccess(): ClinicalDocAccessService
     {
-        $config = new ClinicConfigService();
-        $config->set('enable_clinical_doc_hub', '1', 0);
+        $this->liveConfig = new ClinicConfigService();
+        $this->previousClinicalDocHub = $this->liveConfig->get('enable_clinical_doc_hub', '0', 0);
+        $this->liveConfig->set('enable_clinical_doc_hub', '1', 0);
 
         return new ClinicalDocAccessService(
-            config: $config,
+            config: $this->liveConfig,
             aclChecker: static fn (string $section, string $aco): bool =>
                 $section === 'new_clinic' && $aco === 'new_doctor',
         );
@@ -87,5 +101,51 @@ class ClinicalDocVisitSummaryServiceTest extends TestCase
         $this->assertTrue($status['encounter_signed']);
         $this->assertSame(55, $status['encounter']);
         $this->assertSame(7, $status['visit_id']);
+    }
+
+    public function testVisitLensIncludesSignOverviewAndAddableForms(): void
+    {
+        $queue = new class extends VisitQueueService {
+            public function getVisitForActor(int $visitId): array
+            {
+                return [
+                    'id' => $visitId,
+                    'state' => 'with_doctor',
+                    'pid' => 1,
+                    'encounter' => 55,
+                    'queue_number' => 12,
+                    'service_profile' => 'full_opd',
+                    'facility_id' => 0,
+                ];
+            }
+        };
+
+        $sign = new class extends EncounterSignService {
+            public function isEncounterDocumentationSigned(int $encounterId): bool
+            {
+                return false;
+            }
+        };
+
+        $access = $this->hubEnabledDoctorAccess();
+        $catalog = new ClinicalDocCatalogService(access: $access);
+
+        $service = new ClinicalDocVisitSummaryService(
+            access: $access,
+            catalog: $catalog,
+            docStatus: new ClinicalDocDocumentationStatusService(catalog: $catalog),
+            formBundle: new AdminFormBundleService(catalog: $catalog),
+            queueService: $queue,
+            signService: $sign,
+        );
+
+        $summary = $service->getVisitSummary(7, 1, 'visit');
+
+        $this->assertArrayHasKey('sign_overview', $summary);
+        $this->assertArrayHasKey('addable_forms', $summary);
+        $this->assertIsArray($summary['sign_overview']['required_forms']);
+        $this->assertIsArray($summary['addable_forms']);
+        $this->assertArrayHasKey('lab_panel_order_enabled', $summary);
+        $this->assertSame('full_opd', $summary['visit']['service_profile']);
     }
 }

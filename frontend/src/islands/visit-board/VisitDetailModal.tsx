@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
 import { StatusPill } from '@components/StatusPill';
 import { WaitTimeSpan } from '@components/WaitTimeSpan';
+import { AncillaryVisitBadges, isAncillaryVisitBadgeKey } from '@components/AncillaryVisitBadges';
 import { useModalDismiss } from '@components/useModalDismiss';
+import { resolveQueueBridgeException } from '@islands/queue-bridge/queueBridgeApi';
 import type { VisitDetailData } from '@core/types';
 import { deskActionForState } from './visitBoardUtils';
 
@@ -17,10 +19,13 @@ interface VisitDetailModalProps {
   onClose: () => void;
   onOpenDrawer: (data: VisitDetailData) => void;
   onVisitCancelled: () => void;
+  onQueueBridgeResolved?: () => void;
 }
 
 function SummaryBadges({ badges }: { badges: string[] }) {
   if (!badges.length) return null;
+
+  const ancillaryBadges = badges.filter(isAncillaryVisitBadgeKey);
 
   return (
     <div className="nc-visit-summary__badges mt-2">
@@ -28,8 +33,9 @@ function SummaryBadges({ badges }: { badges: string[] }) {
         <span className="badge badge-warning mr-1">URGENT</span>
       )}
       {badges.includes('skipped_triage') && (
-        <span className="badge badge-secondary">Skipped triage</span>
+        <span className="badge badge-secondary mr-1">Skipped triage</span>
       )}
+      <AncillaryVisitBadges badges={ancillaryBadges} className="mr-1" />
     </div>
   );
 }
@@ -45,12 +51,14 @@ export function VisitDetailModal({
   onClose,
   onOpenDrawer,
   onVisitCancelled,
+  onQueueBridgeResolved,
 }: VisitDetailModalProps) {
   const [data, setData] = useState<VisitDetailData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [linking, setLinking] = useState(false);
 
   useModalDismiss(open, onClose);
 
@@ -121,6 +129,32 @@ export function VisitDetailModal({
     }
   };
 
+  const handleLinkAppointment = async () => {
+    const bridgeAction = data?.queue_bridge_action;
+    if (!bridgeAction?.can_resolve || linking) {
+      return;
+    }
+
+    setLinking(true);
+    setActionError(null);
+    try {
+      await resolveQueueBridgeException(ajaxUrl, csrfToken, {
+        exception_code: bridgeAction.exception_code,
+        action: 'link_appointment',
+        pid: bridgeAction.pid,
+        pc_eid: bridgeAction.pc_eid,
+        visit_id: bridgeAction.visit_id,
+        appt_date: bridgeAction.appt_date,
+      });
+      onQueueBridgeResolved?.();
+      onClose();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Link appointment failed');
+    } finally {
+      setLinking(false);
+    }
+  };
+
   if (!open || !visitId) return null;
 
   const summary = data?.visit_summary;
@@ -128,6 +162,7 @@ export function VisitDetailModal({
   const preview = data?.preview;
   const identity = preview?.identity;
   const completion = preview?.completion;
+  const bridgeAction = data?.queue_bridge_action;
   const deskAction = visit ? deskActionForState(visit.state, deskUrls) : null;
   const chartUrl = completion?.chart_open_url || completion?.chart_url || '';
   const title = summary
@@ -162,6 +197,18 @@ export function VisitDetailModal({
                     <div className="alert alert-warning py-2 mb-2">
                       Profile incomplete for billing — {completion.score}% of{' '}
                       {completion.billing_threshold || 70}% required.
+                    </div>
+                  )}
+                  {bridgeAction && (
+                    <div className="alert alert-info py-2 mb-2">
+                      {bridgeAction.summary}
+                      {bridgeAction.appt_time_label ? ` · Appt ${bridgeAction.appt_time_label}` : ''}
+                      {bridgeAction.hub_url && (
+                        <>
+                          {' '}
+                          <a href={bridgeAction.hub_url}>Open Queue Bridge</a>
+                        </>
+                      )}
                     </div>
                   )}
                   <div className="nc-patient-context-banner mb-2">
@@ -203,6 +250,17 @@ export function VisitDetailModal({
                 className="modal-footer flex-wrap justify-content-start"
                 id="nc-visit-modal-footer"
               >
+                {bridgeAction?.can_resolve && (
+                  <button
+                    type="button"
+                    className="btn btn-primary mb-1 mr-1"
+                    id="nc-modal-link-appointment"
+                    disabled={linking}
+                    onClick={() => void handleLinkAppointment()}
+                  >
+                    {linking ? 'Linking…' : bridgeAction.label}
+                  </button>
+                )}
                 {deskAction && (
                   <a
                     className="btn btn-primary mb-1 mr-1"

@@ -60,10 +60,12 @@ $reactPatientChart = $config->get('enable_react_patient_chart', '1') === '1';
     'Patient chart',
     ['new_reception', 'new_nurse', 'new_doctor', 'new_lab', 'new_pharmacy', 'new_cashier', 'new_admin'],
     [
+        'island_entry' => 'patient-chart',
         'pid' => $pid,
         'active_tab' => $tab,
         'clinical_anchor' => $clinicalAnchor,
         'registration_mode' => $config->get('registration_mode', 'desk_full_form') ?? 'desk_full_form',
+        'enable_in_chart_patient_search' => $config->getInt('enable_in_chart_patient_search', 0) === 1,
         'enable_react_patient_chart' => $reactPatientChart,
         'shell_nav_id' => 'clinicchart',
         'visit_board_url' => $GLOBALS['webroot']

@@ -16,6 +16,18 @@ export function formatMoney(amount: number | null | undefined): string {
   return formatMoneyCore(amount, currencyFormat);
 }
 
+/** Plain numeric string for `<input type="number">` (never currency symbols). */
+export function toCashInputValue(amount: number | null | undefined): string {
+  const decimals = currencyFormat.currency_decimals ?? 2;
+  return Number(amount ?? 0).toFixed(decimals);
+}
+
+export function parseCashInput(raw: string): number {
+  const cleaned = raw.replace(/[^\d.-]/g, '');
+  const parsed = Number.parseFloat(cleaned);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export function newClientRequestId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();

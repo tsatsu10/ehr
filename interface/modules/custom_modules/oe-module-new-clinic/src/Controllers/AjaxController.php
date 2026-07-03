@@ -16,6 +16,8 @@ use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Modules\NewClinic\Exceptions\EncounterSessionMismatchException;
 use OpenEMR\Modules\NewClinic\Exceptions\StaleVisitException;
+use OpenEMR\Modules\NewClinic\Exceptions\AllergiesUndocumentedException;
+use OpenEMR\Modules\NewClinic\Exceptions\ExternalRxIncompleteException;
 use OpenEMR\Modules\NewClinic\Exceptions\UndispensedRxException;
 use OpenEMR\Modules\NewClinic\Exceptions\UnsignedEncounterException;
 use OpenEMR\Modules\NewClinic\Exceptions\VisitNotTakeableException;
@@ -30,6 +32,8 @@ use OpenEMR\Modules\NewClinic\Services\PatientCohortSearchService;
 use OpenEMR\Modules\NewClinic\Services\RegistryAuditService;
 use OpenEMR\Modules\NewClinic\Services\CashierService;
 use OpenEMR\Modules\NewClinic\Services\ConsultShortcutService;
+use OpenEMR\Modules\NewClinic\Services\DoctorRosterService;
+use OpenEMR\Modules\NewClinic\Services\VisitRoutingService;
 use OpenEMR\Modules\NewClinic\Services\DoctorService;
 use OpenEMR\Modules\NewClinic\Services\LabPanelOrderService;
 use OpenEMR\Modules\NewClinic\Services\PharmFormularyRxService;
@@ -62,7 +66,11 @@ use OpenEMR\Modules\NewClinic\Services\PharmacyShortcutService;
 use OpenEMR\Modules\NewClinic\Services\PaymentHistoryService;
 use OpenEMR\Modules\NewClinic\Services\ProfilePaymentsSummaryService;
 use OpenEMR\Modules\NewClinic\Services\ReferralCorrespondenceService;
+use OpenEMR\Modules\NewClinic\Services\ReferralDocumentService;
 use OpenEMR\Modules\NewClinic\Services\ReportsService;
+use OpenEMR\Modules\NewClinic\Services\ReportsSchedulingService;
+use OpenEMR\Modules\NewClinic\Services\ReportsAncillaryService;
+use OpenEMR\Modules\NewClinic\Services\ReportsDocumentationIntegrityService;
 use OpenEMR\Modules\NewClinic\Services\ReportHubAccessService;
 use OpenEMR\Modules\NewClinic\Services\ReportHubCatalogService;
 use OpenEMR\Modules\NewClinic\Services\ReportHubExportService;
@@ -79,6 +87,7 @@ use OpenEMR\Modules\NewClinic\Services\SharedDeviceSessionService;
 use OpenEMR\Modules\NewClinic\Services\PatientActivityFeedService;
 use OpenEMR\Modules\NewClinic\Services\PatientChartClinicalService;
 use OpenEMR\Modules\NewClinic\Services\PatientChartMessagesService;
+use OpenEMR\Modules\NewClinic\Services\PatientChartSearchService;
 use OpenEMR\Modules\NewClinic\Services\PatientChartService;
 use OpenEMR\Modules\NewClinic\Services\PatientContextService;
 use OpenEMR\Modules\NewClinic\Services\PatientDuplicateService;
@@ -88,6 +97,15 @@ use OpenEMR\Modules\NewClinic\Services\FacilityScopeService;
 use OpenEMR\Modules\NewClinic\Services\GeoService;
 use OpenEMR\Modules\NewClinic\Services\QuickAddService;
 use OpenEMR\Modules\NewClinic\Services\QueueSlipService;
+use OpenEMR\Modules\NewClinic\Services\QueueBridgeAccessService;
+use OpenEMR\Modules\NewClinic\Services\QueueBridgeService;
+use OpenEMR\Modules\NewClinic\Services\QueueBridgeSurfaceService;
+use OpenEMR\Modules\NewClinic\Services\SchedulingAccessService;
+use OpenEMR\Modules\NewClinic\Services\SchedulingCalendarService;
+use OpenEMR\Modules\NewClinic\Services\SchedulingFlowBoardLaneMapService;
+use OpenEMR\Modules\NewClinic\Services\SchedulingFlowBoardService;
+use OpenEMR\Modules\NewClinic\Services\SchedulingFlowBoardPrefsService;
+use OpenEMR\Modules\NewClinic\Services\SchedulingRecallsService;
 use OpenEMR\Modules\NewClinic\Services\RateLimitService;
 use OpenEMR\Modules\NewClinic\Services\ReconciliationService;
 use OpenEMR\Modules\NewClinic\Services\RevisitCompletionGateService;
@@ -118,6 +136,7 @@ class AjaxController
         private readonly PatientChartService $patientChartService = new PatientChartService(),
         private readonly PatientChartClinicalService $patientChartClinicalService = new PatientChartClinicalService(),
         private readonly PatientChartMessagesService $patientChartMessagesService = new PatientChartMessagesService(),
+        private readonly PatientChartSearchService $patientChartSearchService = new PatientChartSearchService(),
         private readonly PatientActivityFeedService $activityFeedService = new PatientActivityFeedService(),
         private readonly GeoService $geoService = new GeoService(),
         private readonly PatientDuplicateService $duplicateService = new PatientDuplicateService(),
@@ -187,6 +206,19 @@ class AjaxController
         private readonly FrontDeskRecentPatientsService $frontDeskRecentPatientsService = new FrontDeskRecentPatientsService(),
         private readonly AppointmentTodayService $appointmentTodayService = new AppointmentTodayService(),
         private readonly RevisitCompletionGateService $revisitCompletionGateService = new RevisitCompletionGateService(),
+        private readonly QueueBridgeAccessService $queueBridgeAccessService = new QueueBridgeAccessService(),
+        private readonly QueueBridgeService $queueBridgeService = new QueueBridgeService(),
+        private readonly SchedulingFlowBoardService $schedulingFlowBoardService = new SchedulingFlowBoardService(),
+        private readonly SchedulingFlowBoardPrefsService $schedulingFlowBoardPrefsService = new SchedulingFlowBoardPrefsService(),
+        private readonly SchedulingFlowBoardLaneMapService $schedulingFlowBoardLaneMapService = new SchedulingFlowBoardLaneMapService(),
+        private readonly SchedulingCalendarService $schedulingCalendarService = new SchedulingCalendarService(),
+        private readonly SchedulingRecallsService $schedulingRecallsService = new SchedulingRecallsService(),
+        private readonly SchedulingAccessService $schedulingAccessService = new SchedulingAccessService(),
+        private readonly QueueBridgeSurfaceService $queueBridgeSurfaceService = new QueueBridgeSurfaceService(),
+        private readonly ReportsSchedulingService $reportsSchedulingService = new ReportsSchedulingService(),
+        private readonly ReportsAncillaryService $reportsAncillaryService = new ReportsAncillaryService(),
+        private readonly ReportsDocumentationIntegrityService $reportsDocumentationIntegrityService = new ReportsDocumentationIntegrityService(),
+        private readonly ReferralDocumentService $referralDocumentService = new ReferralDocumentService(),
     ) {
     }
 
@@ -283,6 +315,19 @@ class AjaxController
                     $limit = (int) ($_REQUEST['limit'] ?? PatientChartMessagesService::PAGE_SIZE);
                     $messages = $this->patientChartMessagesService->getMessagesPayload($pid, $offset, $limit);
                     $this->respond(true, 'ok', $messages);
+                    break;
+                case 'patients.chart.search':
+                    $pid = (int) ($_REQUEST['pid'] ?? 0);
+                    $this->authorizeChartRead($pid);
+                    $this->assertPatientChartPid($pid);
+                    $config = new ClinicConfigService();
+                    if ($config->getInt('enable_in_chart_patient_search', 0) !== 1) {
+                        $this->respond(false, 'Feature not enabled', ['code' => 'feature_disabled'], 403);
+                    }
+                    $query = trim((string) ($_REQUEST['q'] ?? ''));
+                    $limit = (int) ($_REQUEST['limit'] ?? PatientChartSearchService::DEFAULT_LIMIT);
+                    $search = $this->patientChartSearchService->search($pid, $query, $limit);
+                    $this->respond(true, 'ok', $search);
                     break;
                 case 'mrd.profile_payments_summary':
                     $pid = (int) ($_REQUEST['pid'] ?? 0);
@@ -537,6 +582,29 @@ class AjaxController
                     );
                     $this->respond(true, 'Visit cancelled', ['visit' => $visit]);
                     break;
+                case 'visit.hard_assign':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $facilityId = $this->resolveDeskFacilityFromBody($body);
+                    $providerRaw = $body['hard_assigned_provider_id'] ?? null;
+                    $providerId = ($providerRaw === null || $providerRaw === '')
+                        ? null
+                        : (int) $providerRaw;
+                    if ($providerId !== null && $providerId <= 0) {
+                        $providerId = null;
+                    }
+                    $visit = $this->visitQueueService->hardAssignProvider(
+                        (int) ($body['visit_id'] ?? 0),
+                        $facilityId,
+                        $providerId,
+                        $userId,
+                        (int) ($body['row_version'] ?? 0)
+                    );
+                    $this->respond(true, 'Doctor assignment updated', ['visit' => $visit]);
+                    break;
                 case 'visit.start':
                     if ($method !== 'POST') {
                         $this->respond(false, 'POST required', [], 405);
@@ -552,7 +620,10 @@ class AjaxController
                         !empty($body['is_urgent']),
                         isset($body['revisit_override_reason'])
                             ? (string) $body['revisit_override_reason']
-                            : null
+                            : null,
+                        isset($body['referral_document_id'])
+                            ? (int) $body['referral_document_id']
+                            : null,
                     );
                     $this->respond(true, 'Visit started', $this->enrichStartVisitResponse($visit, $userId));
                     break;
@@ -610,6 +681,26 @@ class AjaxController
                     $this->frontDeskRecentPatientsService->clear();
                     $this->respond(true, 'ok', ['recent' => []]);
                     break;
+                case 'front_desk.upload_referral':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $this->verifyCsrf($_POST);
+                    if (empty($_FILES['file']) || !is_array($_FILES['file'])) {
+                        $this->respond(false, 'Referral file is required', ['code' => 'validation'], 400);
+                    }
+                    $pid = (int) ($_POST['pid'] ?? 0);
+                    if ($pid <= 0) {
+                        $this->respond(false, 'Patient is required', ['code' => 'validation'], 400);
+                    }
+                    $this->facilityScopeService->assertPatientAccessible($pid);
+                    $upload = $this->referralDocumentService->uploadForPatient(
+                        $pid,
+                        $_FILES['file'],
+                        $userId
+                    );
+                    $this->respond(true, 'Referral uploaded', $upload);
+                    break;
                 case 'front_desk.revisit_awaiting_documents':
                     if ($method !== 'POST') {
                         $this->respond(false, 'POST required', [], 405);
@@ -648,6 +739,11 @@ class AjaxController
                             : null
                     );
                     $visit = (array) ($result['visit'] ?? []);
+                    $this->schedulingRecallsService->completeLinkedRecallOnCheckIn(
+                        (int) ($body['pc_eid'] ?? 0),
+                        (int) ($body['pid'] ?? 0),
+                        $userId,
+                    );
                     $this->respond(
                         true,
                         'Visit started from appointment',
@@ -740,11 +836,19 @@ class AjaxController
                     }
                     $body = $this->readJsonBody();
                     $this->verifyCsrf($body);
-                    $visit = $this->visitQueueService->sendToDoctor(
+                    $providerRaw = $body['hard_assigned_provider_id'] ?? null;
+                    $providerId = ($providerRaw === null || $providerRaw === '')
+                        ? null
+                        : (int) $providerRaw;
+                    if ($providerId !== null && $providerId <= 0) {
+                        $providerId = null;
+                    }
+                    $visit = $this->triageService->sendToDoctor(
                         (int) ($body['visit_id'] ?? 0),
                         $userId,
                         (int) ($body['row_version'] ?? 0),
-                        isset($body['chief_complaint']) ? (string) $body['chief_complaint'] : null
+                        isset($body['chief_complaint']) ? (string) $body['chief_complaint'] : null,
+                        $providerId
                     );
                     $this->respond(true, 'Sent to doctor', ['visit' => $visit]);
                     break;
@@ -788,6 +892,64 @@ class AjaxController
                     $queue = $this->enrichQueuePayload($queue, $userId, $facilityId);
                     $this->respond(true, 'ok', $queue);
                     break;
+                case 'doctor.roster':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $rosterService = new DoctorRosterService();
+                    if (!$rosterService->isEnabled($facilityId)) {
+                        $this->respond(true, 'ok', [
+                            'enabled' => false,
+                            'doctors' => [],
+                            'my_user_id' => $userId,
+                        ]);
+                        break;
+                    }
+                    $this->respond(true, 'ok', $rosterService->getRosterPayload(
+                        $facilityId,
+                        $userId,
+                        isset($_REQUEST['visit_date']) ? (string) $_REQUEST['visit_date'] : null
+                    ));
+                    break;
+                case 'doctor.roster.set_taking':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $targetUserId = (int) ($body['user_id'] ?? $userId);
+                    if ($targetUserId !== $userId && !AclMain::aclCheckCore('new_clinic', 'new_admin')) {
+                        $this->respond(false, 'Forbidden', [], 403);
+                    }
+                    (new DoctorRosterService())->setTakingPatients(
+                        $targetUserId,
+                        $facilityId,
+                        !empty($body['taking_patients'])
+                    );
+                    $this->respond(true, 'Roster updated');
+                    break;
+                case 'doctor.routing.reassign':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $providerId = isset($body['provider_id']) ? (int) $body['provider_id'] : null;
+                    if (array_key_exists('provider_id', $body) && ($body['provider_id'] === null || $body['provider_id'] === '')) {
+                        $providerId = null;
+                    }
+                    $visit = (new VisitRoutingService())->reassignSuggestion(
+                        (int) ($body['visit_id'] ?? 0),
+                        $providerId,
+                        $userId,
+                        isset($body['note']) ? (string) $body['note'] : null
+                    );
+                    $this->respond(true, 'Routing suggestion updated', [
+                        'visit_id' => (int) ($visit['id'] ?? 0),
+                        'routing_suggested_provider_id' => isset($visit['routing_suggested_provider_id'])
+                            ? (int) $visit['routing_suggested_provider_id']
+                            : null,
+                    ]);
+                    break;
                 case 'doctor.active':
                     if ($method !== 'POST') {
                         $this->respond(false, 'POST required', [], 405);
@@ -809,7 +971,8 @@ class AjaxController
                     $payload = $this->doctorService->takePatient(
                         (int) ($body['visit_id'] ?? 0),
                         $userId,
-                        (int) ($body['row_version'] ?? 0)
+                        (int) ($body['row_version'] ?? 0),
+                        isset($body['override_reason']) ? (string) $body['override_reason'] : null
                     );
                     $this->respond(true, 'Patient taken', $payload);
                     break;
@@ -875,7 +1038,8 @@ class AjaxController
                     $preflight = $this->consultShortcutService->preflight(
                         (int) ($body['visit_id'] ?? 0),
                         (string) ($body['shortcut'] ?? ''),
-                        $userId
+                        $userId,
+                        $this->rxAllergyOverrideReason($body),
                     );
                     $this->respond(true, 'ok', $preflight);
                     break;
@@ -995,7 +1159,9 @@ class AjaxController
                         (float) ($body['amount_received'] ?? 0),
                         isset($body['receipt_note']) ? (string) $body['receipt_note'] : null,
                         $this->esignOverrideReason($body),
-                        isset($body['client_request_id']) ? (string) $body['client_request_id'] : null
+                        isset($body['client_request_id']) ? (string) $body['client_request_id'] : null,
+                        isset($body['payment_method']) ? (string) $body['payment_method'] : 'cash',
+                        isset($body['momo_reference']) ? (string) $body['momo_reference'] : null,
                     );
                     $this->respond(true, 'Payment recorded', $result);
                     break;
@@ -1161,9 +1327,26 @@ class AjaxController
                         $userId,
                         (int) ($body['row_version'] ?? 0),
                         $this->esignOverrideReason($body),
-                        $this->undispensedOverrideReason($body)
+                        $this->undispensedOverrideReason($body),
+                        isset($body['pharmacy_outcome']) ? (string) $body['pharmacy_outcome'] : null,
+                        $this->externalRxOverrideReason($body),
                     );
                     $this->respond(true, 'Pharmacy completed', $result);
+                    break;
+                case 'pharmacy.walkin_close':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $result = $this->pharmacyService->closeWalkinWithoutDispense(
+                        (int) ($body['visit_id'] ?? 0),
+                        (string) ($body['pharmacy_outcome'] ?? ''),
+                        $userId,
+                        (int) ($body['row_version'] ?? 0),
+                        $this->esignOverrideReason($body),
+                    );
+                    $this->respond(true, 'Pharmacy walk-in closed', $result);
                     break;
                 case 'pharmacy.skip_to_payment':
                     if ($method !== 'POST') {
@@ -1237,6 +1420,25 @@ class AjaxController
                         $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
                     );
                     $this->respond(true, 'Settings saved', $payload);
+                    break;
+                case 'admin.completion_weights.save':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $scope = strtolower(trim((string) ($body['scope'] ?? 'facility')));
+                    if ($scope !== 'global') {
+                        $scope = 'facility';
+                    }
+                    $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    $payload = $this->clinicAdminService->saveCompletionFieldWeights(
+                        (array) ($body['items'] ?? []),
+                        $userId,
+                        $scope,
+                        $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
+                    );
+                    $this->respond(true, 'Completion weights saved', $payload);
                     break;
                 case 'admin.visit_type.save':
                     if ($method !== 'POST') {
@@ -1335,6 +1537,59 @@ class AjaxController
                         $_REQUEST['visit_date'] ?? date('Y-m-d')
                     );
                     $this->respond(true, 'ok', $report);
+                    break;
+                case 'reports.scheduling':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $visitDate = (string) ($_REQUEST['visit_date'] ?? date('Y-m-d'));
+                    $this->respond(true, 'ok', $this->reportsSchedulingService->getReport($facilityId, $visitDate));
+                    break;
+                case 'reports.ancillary':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $startDate = (string) ($_REQUEST['start_date'] ?? $_REQUEST['visit_date'] ?? date('Y-m-d'));
+                    $endDate = (string) ($_REQUEST['end_date'] ?? $startDate);
+                    try {
+                        $this->respond(true, 'ok', $this->reportsAncillaryService->getReport($facilityId, $startDate, $endDate));
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_date'], 400);
+                    }
+                    break;
+                case 'reports.ancillary_export':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $startDate = (string) ($_REQUEST['start_date'] ?? $_REQUEST['visit_date'] ?? date('Y-m-d'));
+                    $endDate = (string) ($_REQUEST['end_date'] ?? $startDate);
+                    try {
+                        $export = $this->reportsAncillaryService->exportCsv($facilityId, $startDate, $endDate);
+                        $this->respondCsv($export['filename'], $export['content']);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_date'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+                    }
+                    break;
+                case 'reports.documentation_integrity':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $startDate = (string) ($_REQUEST['start_date'] ?? $_REQUEST['visit_date'] ?? date('Y-m-d'));
+                    $endDate = (string) ($_REQUEST['end_date'] ?? $startDate);
+                    try {
+                        $this->respond(true, 'ok', $this->reportsDocumentationIntegrityService->getReport(
+                            $facilityId,
+                            $startDate,
+                            $endDate
+                        ));
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_date'], 400);
+                    }
+                    break;
+                case 'reports.documentation_integrity_export':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $startDate = (string) ($_REQUEST['start_date'] ?? $_REQUEST['visit_date'] ?? date('Y-m-d'));
+                    $endDate = (string) ($_REQUEST['end_date'] ?? $startDate);
+                    try {
+                        $export = $this->reportsDocumentationIntegrityService->exportCsv($facilityId, $startDate, $endDate);
+                        $this->respondCsv($export['filename'], $export['content']);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_date'], 400);
+                    }
                     break;
                 case 'reports.reconciliation':
                     $facilityId = $this->resolveRequestFacilityId();
@@ -1439,6 +1694,433 @@ class AjaxController
                     $recorded = $this->reportHubExportService->recordExportRun($body, $userId);
                     $this->respond(true, 'ok', $recorded);
                     break;
+                case 'queue_bridge.list':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $lens = (string) ($_REQUEST['lens'] ?? 'action');
+                    $page = max(1, (int) ($_REQUEST['page'] ?? 1));
+                    $this->respond(true, 'ok', $this->queueBridgeService->listExceptions($facilityId, $lens, $page));
+                    break;
+                case 'queue_bridge.eod_summary':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $this->respond(true, 'ok', $this->queueBridgeService->eodSummary($facilityId));
+                    break;
+                case 'queue_bridge.flow_board_flags':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $this->respond(true, 'ok', [
+                        'enabled' => $this->queueBridgeSurfaceService->isSurfaceEnabled($facilityId),
+                        'chips' => $this->queueBridgeSurfaceService->flowBoardChips($facilityId),
+                    ] + $this->queueBridgeSurfaceService->hubUrlPayload($facilityId));
+                    break;
+                case 'queue_bridge.eod_export':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    try {
+                        $this->queueBridgeAccessService->assertHubAccess();
+                        $export = $this->queueBridgeService->exportEodCsv($facilityId);
+                        $this->respondCsv($export['filename'], $export['content']);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+                    }
+                    break;
+                case 'queue_bridge.resolve':
+                case 'queue_bridge.link_appointment':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $resolveAction = $action === 'queue_bridge.link_appointment'
+                        ? 'link_appointment'
+                        : (string) ($body['action'] ?? '');
+                    try {
+                        $result = $this->queueBridgeService->resolve(
+                            (string) ($body['exception_code'] ?? ''),
+                            $resolveAction,
+                            (int) ($body['pid'] ?? 0),
+                            $facilityId,
+                            $userId,
+                            isset($body['pc_eid']) ? (int) $body['pc_eid'] : null,
+                            isset($body['visit_id']) ? (int) $body['visit_id'] : null,
+                            isset($body['appt_date']) ? (string) $body['appt_date'] : null,
+                            isset($body['visit_type_id']) ? (int) $body['visit_type_id'] : null,
+                            isset($body['cancel_reason']) ? (string) $body['cancel_reason'] : null,
+                        );
+                        $this->respond(true, 'ok', $result);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.flow_board.list':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    try {
+                        $board = $this->schedulingFlowBoardService->getBoard(
+                            $facilityId,
+                            (string) ($_REQUEST['date'] ?? date('Y-m-d')),
+                            $this->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null),
+                        );
+                        $this->respond(true, 'ok', $board);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.flow_board.poll':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    try {
+                        $board = $this->schedulingFlowBoardService->pollBoard(
+                            $facilityId,
+                            (string) ($_REQUEST['date'] ?? date('Y-m-d')),
+                            $this->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null),
+                            (string) ($_REQUEST['revision'] ?? ''),
+                        );
+                        $this->respond(true, 'ok', $board);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.flow_board.advance':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $facilityId = $this->resolveRequestFacilityId();
+                        $this->schedulingFlowBoardService->advanceStatus(
+                            $facilityId,
+                            (int) ($body['pc_eid'] ?? 0),
+                            (string) ($body['status'] ?? ''),
+                            $userId
+                        );
+                        $board = $this->schedulingFlowBoardService->getBoard(
+                            $facilityId,
+                            (string) ($body['date'] ?? date('Y-m-d')),
+                            $this->parseOptionalPositiveInt($body['provider_id'] ?? null),
+                        );
+                        $this->respond(true, 'ok', $board);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.flow_board.room':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $facilityId = $this->resolveRequestFacilityId();
+                        $this->schedulingFlowBoardService->updateRoom(
+                            $facilityId,
+                            (int) ($body['pc_eid'] ?? 0),
+                            (string) ($body['room'] ?? ''),
+                            $userId
+                        );
+                        $board = $this->schedulingFlowBoardService->getBoard(
+                            $facilityId,
+                            (string) ($body['date'] ?? date('Y-m-d')),
+                            $this->parseOptionalPositiveInt($body['provider_id'] ?? null),
+                        );
+                        $this->respond(true, 'ok', $board);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.flow_board.prefs':
+                    try {
+                        $prefs = $this->schedulingFlowBoardPrefsService->getPrefs($userId);
+                        $this->respond(true, 'ok', $prefs);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.flow_board.prefs.save':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $collapsed = is_array($body['collapsed'] ?? null) ? $body['collapsed'] : [];
+                        $order = is_array($body['order'] ?? null) ? $body['order'] : [];
+                        $prefs = $this->schedulingFlowBoardPrefsService->savePrefs($userId, $collapsed, $order);
+                        $this->respond(true, 'ok', $prefs);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.flow_board.lane_map':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    try {
+                        $config = $this->schedulingFlowBoardLaneMapService->getAdminConfig($facilityId);
+                        $this->respond(true, 'ok', $config);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.flow_board.lane_map.save':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $facilityId = $this->resolveRequestFacilityId();
+                    try {
+                        $rows = is_array($body['rows'] ?? null) ? $body['rows'] : [];
+                        $config = $this->schedulingFlowBoardLaneMapService->saveAdminConfig($facilityId, $rows);
+                        $this->respond(true, 'ok', $config);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.calendar.day':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    try {
+                        $day = $this->schedulingCalendarService->getDayView(
+                            $facilityId,
+                            (string) ($_REQUEST['date'] ?? date('Y-m-d')),
+                            $this->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null),
+                        );
+                        $this->respond(true, 'ok', $day);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.calendar.range':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    try {
+                        $view = (string) ($_REQUEST['view'] ?? 'day');
+                        $range = $this->schedulingCalendarService->getRangeView(
+                            $facilityId,
+                            (string) ($_REQUEST['date'] ?? date('Y-m-d')),
+                            $view,
+                            $this->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null),
+                        );
+                        $this->respond(true, 'ok', $range);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.calendar.poll':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    try {
+                        $view = (string) ($_REQUEST['view'] ?? 'day');
+                        $range = $this->schedulingCalendarService->pollRangeView(
+                            $facilityId,
+                            (string) ($_REQUEST['date'] ?? date('Y-m-d')),
+                            $view,
+                            $this->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null),
+                            (string) ($_REQUEST['revision'] ?? ''),
+                        );
+                        $this->respond(true, 'ok', $range);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.calendar.move':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $facilityId = $this->resolveRequestFacilityId();
+                        $payload = $this->schedulingCalendarService->moveAppointment($facilityId, $body, $userId);
+                        $this->respond(true, 'ok', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.calendar.resize':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $facilityId = $this->resolveRequestFacilityId();
+                        $payload = $this->schedulingCalendarService->resizeAppointment($facilityId, $body, $userId);
+                        $this->respond(true, 'ok', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.calendar.book':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $facilityId = $this->resolveRequestFacilityId();
+                        $day = $this->schedulingCalendarService->bookAppointment($facilityId, $body, $userId);
+                        $this->respond(true, 'ok', $day);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.recalls.list':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    try {
+                        $worklist = $this->schedulingRecallsService->getWorklist(
+                            $facilityId,
+                            $this->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null),
+                            (string) ($_REQUEST['bucket'] ?? 'due'),
+                            $this->parseOptionalPositiveInt($_REQUEST['pid'] ?? null),
+                            trim((string) ($_REQUEST['q'] ?? '')),
+                        );
+                        $this->respond(true, 'ok', $worklist);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.recalls.save':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $facilityId = $this->resolveRequestFacilityId();
+                        $worklist = $this->schedulingRecallsService->saveRecall($facilityId, $body, $userId);
+                        $this->respond(true, 'ok', $worklist);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.recalls.delete':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $this->schedulingRecallsService->deleteRecall((int) ($body['recall_id'] ?? 0), $userId);
+                        $facilityId = $this->resolveRequestFacilityId();
+                        $worklist = $this->schedulingRecallsService->getWorklist(
+                            $facilityId,
+                            $this->parseOptionalPositiveInt($body['provider_id'] ?? null),
+                            (string) ($body['bucket'] ?? 'due'),
+                        );
+                        $this->respond(true, 'ok', $worklist);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.recalls.update_status':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $result = $this->schedulingRecallsService->updateStatus(
+                            (int) ($body['recall_id'] ?? 0),
+                            (string) ($body['status'] ?? ''),
+                            isset($body['note']) ? (string) $body['note'] : null,
+                            $userId,
+                        );
+                        $facilityId = $this->resolveRequestFacilityId();
+                        $worklist = $this->schedulingRecallsService->getWorklist(
+                            $facilityId,
+                            $this->parseOptionalPositiveInt($body['provider_id'] ?? null),
+                            (string) ($body['bucket'] ?? 'due'),
+                        );
+                        $this->respond(true, 'ok', ['status' => $result, 'worklist' => $worklist]);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.recalls.snooze':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $this->schedulingRecallsService->snoozeRecall(
+                            (int) ($body['recall_id'] ?? 0),
+                            (int) ($body['days'] ?? 7),
+                            $userId,
+                            isset($body['note']) ? (string) $body['note'] : '',
+                        );
+                        $facilityId = $this->resolveRequestFacilityId();
+                        $worklist = $this->schedulingRecallsService->getWorklist(
+                            $facilityId,
+                            $this->parseOptionalPositiveInt($body['provider_id'] ?? null),
+                            (string) ($body['bucket'] ?? 'due'),
+                            $this->parseOptionalPositiveInt($body['pid'] ?? null),
+                        );
+                        $this->respond(true, 'ok', $worklist);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.recalls.send_reminder':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $result = $this->schedulingRecallsService->sendRecallReminder(
+                            (int) ($body['recall_id'] ?? 0),
+                            $userId,
+                        );
+                        $this->respond(true, 'ok', $result);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'queue_bridge.dismiss':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $facilityId = $this->resolveRequestFacilityId();
+                    try {
+                        $result = $this->queueBridgeService->dismiss(
+                            (string) ($body['exception_code'] ?? ''),
+                            (int) ($body['pid'] ?? 0),
+                            $facilityId,
+                            $userId,
+                            (string) ($body['reason'] ?? ''),
+                            isset($body['pc_eid']) ? (int) $body['pc_eid'] : null,
+                            isset($body['visit_id']) ? (int) $body['visit_id'] : null,
+                        );
+                        $this->respond(true, 'ok', $result);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
                 case 'clinical_doc.visit_summary':
                     $this->clinicalDocAccessService->assertHubAccess();
                     $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
@@ -1534,6 +2216,34 @@ class AjaxController
                     );
                     $this->respond(true, 'Ghana OPD LBF pack imported', $payload);
                     break;
+                case 'clinical_doc.import_ancillary_pack':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $this->requireSuperAdmin();
+                    $scope = strtolower(trim((string) ($body['scope'] ?? 'facility')));
+                    if ($scope !== 'global') {
+                        $scope = 'facility';
+                    }
+                    $packKey = strtolower(trim((string) ($body['pack_key'] ?? '')));
+                    if ($packKey === '') {
+                        $this->respond(false, 'pack_key required', [], 400);
+                    }
+                    $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    try {
+                        $payload = $this->clinicAdminService->importAncillaryLbfPack(
+                            $scope,
+                            $userId,
+                            $packKey,
+                            $requestedFacilityId > 0 ? $requestedFacilityId : null
+                        );
+                        $this->respond(true, 'Ancillary LBF pack imported', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_pack'], 400);
+                    }
+                    break;
                 case 'admin.reconciliation.run':
                     if ($method !== 'POST') {
                         $this->respond(false, 'POST required', [], 405);
@@ -1563,6 +2273,191 @@ class AjaxController
                         $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
                     );
                     $this->respond(true, 'Cash clinic profile applied', $payload);
+                    break;
+                case 'admin.forms_catalog.set_state':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $scope = strtolower(trim((string) ($body['scope'] ?? 'facility')));
+                    if ($scope !== 'global') {
+                        $scope = 'facility';
+                    }
+                    $registryId = (int) ($body['registry_id'] ?? 0);
+                    $enabled = !empty($body['enabled']);
+                    $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    try {
+                        $payload = $this->clinicAdminService->setFormsCatalogState(
+                            $scope,
+                            $registryId,
+                            $enabled,
+                            $userId,
+                            $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
+                        );
+                        $this->respond(true, 'Form registry updated', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
+                    break;
+                case 'admin.health_status':
+                    $params = $this->readRequestParams($method);
+                    $scope = strtolower(trim((string) ($params['scope'] ?? 'facility')));
+                    if ($scope !== 'global') {
+                        $scope = 'facility';
+                    }
+                    $requestedFacilityId = (int) ($params['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    $this->respond(true, 'ok', [
+                        'system_health' => $this->clinicAdminService->getSystemHealth(
+                            $scope,
+                            $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
+                        ),
+                    ]);
+                    break;
+                case 'admin.backup.run':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $scope = strtolower(trim((string) ($body['scope'] ?? 'facility')));
+                    if ($scope !== 'global') {
+                        $scope = 'facility';
+                    }
+                    $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    try {
+                        $payload = $this->clinicAdminService->initiateBackupRun(
+                            $scope,
+                            $userId,
+                            $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
+                        );
+                        $this->respond(true, 'Backup started', $payload);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
+                    break;
+                case 'admin.backup.complete':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $scope = strtolower(trim((string) ($body['scope'] ?? 'facility')));
+                    if ($scope !== 'global') {
+                        $scope = 'facility';
+                    }
+                    $runId = (int) ($body['run_id'] ?? 0);
+                    $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    try {
+                        $payload = $this->clinicAdminService->completeBackupRun(
+                            $scope,
+                            $userId,
+                            $runId > 0 ? $runId : null,
+                            $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
+                        );
+                        $this->respond(true, 'Backup marked complete', $payload);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
+                    break;
+                case 'admin.setup.mark_item':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $scope = strtolower(trim((string) ($body['scope'] ?? 'facility')));
+                    if ($scope !== 'global') {
+                        $scope = 'facility';
+                    }
+                    $checklistKey = trim((string) ($body['checklist_key'] ?? ''));
+                    $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    try {
+                        $payload = $this->clinicAdminService->markSetupItem(
+                            $scope,
+                            $checklistKey,
+                            $userId,
+                            $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
+                        );
+                        $this->respond(true, 'Setup item marked', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    }
+                    break;
+                case 'admin.setup.complete':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $scope = strtolower(trim((string) ($body['scope'] ?? 'facility')));
+                    if ($scope !== 'global') {
+                        $scope = 'facility';
+                    }
+                    $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    try {
+                        $payload = $this->clinicAdminService->markSetupComplete(
+                            $scope,
+                            $userId,
+                            $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
+                        );
+                        $this->respond(true, 'Setup marked complete', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    }
+                    break;
+                case 'admin.config.export':
+                    $scope = strtolower(trim((string) ($_REQUEST['scope'] ?? 'facility')));
+                    if ($scope !== 'global') {
+                        $scope = 'facility';
+                    }
+                    $requestedFacilityId = (int) ($_REQUEST['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    try {
+                        $payload = $this->clinicAdminService->exportConfigSnapshot(
+                            $scope,
+                            $userId,
+                            $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
+                        );
+                        $this->respond(true, 'Config export ready', $payload);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
+                    break;
+                case 'admin.config.import':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $scope = strtolower(trim((string) ($body['scope'] ?? 'facility')));
+                    if ($scope !== 'global') {
+                        $scope = 'facility';
+                    }
+                    $snapshot = is_array($body['snapshot'] ?? null) ? $body['snapshot'] : [];
+                    $dryRun = !empty($body['dry_run']);
+                    $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    try {
+                        $payload = $this->clinicAdminService->importConfigSnapshot(
+                            $scope,
+                            $snapshot,
+                            $userId,
+                            $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null,
+                            $dryRun
+                        );
+                        $message = $dryRun ? 'Config import preview ready' : 'Config import complete';
+                        $this->respond(true, $message, $payload);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    }
                     break;
                 case 'queue.counts':
                     $facilityId = $this->resolveRequestFacilityId();
@@ -2048,7 +2943,7 @@ class AjaxController
                     }
                     $body = $this->readJsonBody();
                     $this->verifyCsrf($body);
-                    $providerId = isset($body['provider_id']) ? (int) $body['provider_id'] : null;
+                    $providerId = $this->parseOptionalPositiveInt($body['provider_id'] ?? null);
                     if (!empty($body['use_starter'])) {
                         $importResult = $this->labOpsSetupService->importStarterPanel(
                             $providerId > 0 ? $providerId : null,
@@ -2064,7 +2959,7 @@ class AjaxController
                     $this->respond(true, 'ok', $importResult);
                     break;
                 case 'lab_ops.fee_map_list':
-                    $providerId = isset($_REQUEST['provider_id']) ? (int) $_REQUEST['provider_id'] : null;
+                    $providerId = $this->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null);
                     $unmapped = $this->labOpsSetupService->listUnmappedFees(
                         $providerId > 0 ? $providerId : null
                     );
@@ -2077,7 +2972,7 @@ class AjaxController
                     $body = $this->readJsonBody();
                     $this->verifyCsrf($body);
                     if (!empty($body['use_starter_defaults'])) {
-                        $providerId = isset($body['provider_id']) ? (int) $body['provider_id'] : null;
+                        $providerId = $this->parseOptionalPositiveInt($body['provider_id'] ?? null);
                         $feeResult = $this->labOpsSetupService->applyStarterFeeDefaults(
                             $providerId > 0 ? $providerId : null,
                             $userId
@@ -2148,6 +3043,17 @@ class AjaxController
                     );
                     $this->respond(true, 'ok', $reversed);
                     break;
+                case 'bill_ops.receipt_reprint':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $pid = (int) ($body['pid'] ?? 0);
+                    $receiptId = (int) ($body['receipt_id'] ?? 0);
+                    $payload = $this->paymentHistoryService->getReceiptReprintForBillOps($receiptId, $pid, $userId);
+                    $this->respond(true, 'ok', $payload);
+                    break;
                 case 'bill_ops.daysheet':
                     $params = $this->readRequestParams($method);
                     $daysheet = $this->billOpsDaysheetService->getDaysheet(
@@ -2202,6 +3108,14 @@ class AjaxController
                 'code' => 'rx_undispensed',
                 'undispensed_count' => $e->getUndispensedCount(),
             ], 409);
+        } catch (AllergiesUndocumentedException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'allergies_undocumented'], 409);
+        } catch (ExternalRxIncompleteException $e) {
+            $this->respond(false, $e->getMessage(), [
+                'code' => 'external_rx_incomplete',
+                'missing' => $e->getMissing(),
+                'field_errors' => $e->getFieldErrors(),
+            ], 409);
         } catch (EncounterSessionMismatchException $e) {
             $this->respond(false, $e->getMessage(), ['code' => 'session_mismatch'], 409);
         } catch (\InvalidArgumentException $e) {
@@ -2244,6 +3158,20 @@ class AjaxController
         return $reason !== '' ? $reason : null;
     }
 
+    private function externalRxOverrideReason(array $body): ?string
+    {
+        $reason = trim((string) ($body['external_rx_override_reason'] ?? ''));
+
+        return $reason !== '' ? $reason : null;
+    }
+
+    private function rxAllergyOverrideReason(array $body): ?string
+    {
+        $reason = trim((string) ($body['rx_undocumented_allergy_override_reason'] ?? ''));
+
+        return $reason !== '' ? $reason : null;
+    }
+
     private function authorizeAction(string $action): void
     {
         if ($this->actionPolicy->isDeprecated($action)) {
@@ -2280,6 +3208,11 @@ class AjaxController
             'bill_ops_outstanding_acl' => $this->requireBillOpsOutstandingAcl(),
             'report_hub_read_acl' => $this->requireReportHubReadAcl(),
             'report_hub_export_acl' => $this->requireReportHubExportAcl(),
+            'queue_bridge_read_acl' => $this->requireQueueBridgeReadAcl(),
+            'queue_bridge_resolve_acl' => $this->requireQueueBridgeResolveAcl(),
+            'queue_bridge_dismiss_acl' => $this->requireQueueBridgeDismissAcl(),
+            'scheduling_read_acl' => $this->requireSchedulingReadAcl(),
+            'scheduling_write_acl' => $this->requireSchedulingWriteAcl(),
             'clinical_doc_read_acl' => $this->requireClinicalDocReadAcl(),
             'clinical_doc_write_acl' => $this->requireClinicalDocWriteAcl(),
             'deprecated' => $this->respond(
@@ -2487,6 +3420,60 @@ class AjaxController
         }
     }
 
+    private function requireQueueBridgeReadAcl(): void
+    {
+        try {
+            $this->queueBridgeAccessService->assertHubAccess();
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requireQueueBridgeResolveAcl(): void
+    {
+        try {
+            $this->queueBridgeAccessService->assertHubAccess();
+            if (!$this->queueBridgeAccessService->canResolve()) {
+                throw new \RuntimeException('Queue Bridge resolve permission denied', 403);
+            }
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requireQueueBridgeDismissAcl(): void
+    {
+        try {
+            $this->queueBridgeAccessService->assertHubAccess();
+            if (!$this->queueBridgeAccessService->canDismiss()) {
+                throw new \RuntimeException('Queue Bridge dismiss permission denied', 403);
+            }
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requireSchedulingReadAcl(): void
+    {
+        try {
+            $this->schedulingAccessService->assertHubAccess($this->resolveRequestFacilityId());
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requireSchedulingWriteAcl(): void
+    {
+        try {
+            $this->schedulingAccessService->assertHubAccess($this->resolveRequestFacilityId());
+            if (!$this->schedulingAccessService->canBookAppointment()) {
+                throw new \RuntimeException('Appointment write permission denied', 403);
+            }
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
     private function requireClinicalDocReadAcl(): void
     {
         try {
@@ -2618,6 +3605,31 @@ class AjaxController
     }
 
     /**
+     * Treat missing, blank, or JS "undefined"/"null" query values as absent optional ints.
+     */
+    private function parseOptionalPositiveInt(mixed $value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+            if ($trimmed === '' || $trimmed === 'undefined' || $trimmed === 'null') {
+                return null;
+            }
+        }
+
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        $parsed = (int) $value;
+
+        return $parsed > 0 ? $parsed : null;
+    }
+
+    /**
      * @param array<string, mixed> $visit
      * @return array<string, mixed>
      */
@@ -2688,13 +3700,13 @@ class AjaxController
     {
         $action = trim((string) ($_REQUEST['action'] ?? ''));
         if ($action !== '') {
-            return $action;
+            return $this->actionPolicy->normalizeAction($action);
         }
 
         if (strcasecmp((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'), 'POST') === 0) {
             $fromBody = trim((string) ($this->readJsonBody()['action'] ?? ''));
             if ($fromBody !== '') {
-                return $fromBody;
+                return $this->actionPolicy->normalizeAction($fromBody);
             }
         }
 

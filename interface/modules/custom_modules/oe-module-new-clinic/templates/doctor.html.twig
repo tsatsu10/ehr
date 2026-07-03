@@ -27,10 +27,15 @@
         facilityId:            desk_facility_id|default(0)|number_format(0, '', ''),
         visitBoardUrl:         visit_board_url,
         multiDoctorFilters:    enable_multi_doctor_filters ? true : false,
+        doctorRosterEnabled:   enable_doctor_roster ? true : false,
+        advisoryRoutingEnabled: enable_advisory_routing ? true : false,
         sharedDeviceWarning:   enable_shared_device_session_warning ? true : false,
         labPanelOrderEnabled:  lab_panel_order_enabled ? true : false,
         formularyRxEnabled:    formulary_rx_enabled ? true : false,
-        currencyFormat:        currency_format|default({})
+        labResultsToastEnabled: lab_results_toast_enabled ? true : false,
+        canRxAllergyOverride:     can_rx_allergy_override ? true : false,
+        currencyFormat:        currency_format|default({}),
+        pollMs:                queue_poll_ms|default(30000)
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}
@@ -40,7 +45,6 @@
 
 {% block scripts %}
 {% if enable_react_doctor_desk|default(true) %}
-<link rel="stylesheet" href="{{ assets_url }}/modern/doctor-desk.css?v={{ asset_version }}">
-<script type="module" src="{{ assets_url }}/modern/doctor-desk.js?v={{ asset_version }}"></script>
+{% include 'partials/island-assets.html.twig' %}
 {% endif %}
 {% endblock %}

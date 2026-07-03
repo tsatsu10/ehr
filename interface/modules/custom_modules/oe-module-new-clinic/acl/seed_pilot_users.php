@@ -60,6 +60,11 @@ $pilotUsers = [
         'lname' => 'Doctor',
         'groups' => ['Clinicians', 'New Clinic Doctor'],
     ],
+    'doctor2_user' => [
+        'fname' => 'Pilot',
+        'lname' => 'Doctor2',
+        'groups' => ['Clinicians', 'New Clinic Doctor'],
+    ],
     'lab_user' => [
         'fname' => 'Pilot',
         'lname' => 'Lab',

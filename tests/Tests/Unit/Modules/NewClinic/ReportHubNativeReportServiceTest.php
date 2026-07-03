@@ -56,4 +56,17 @@ class ReportHubNativeReportServiceTest extends TestCase
         $this->assertStringContainsString('Drug,NDC,Lot', $csv['content']);
         $this->assertSame(0, $csv['row_count']);
     }
+
+    public function testInventoryTransactionsCsvHeaders(): void
+    {
+        $csv = $this->service->buildCsv(
+            ReportHubNativeReportService::KEY_INVENTORY_TRANSACTIONS,
+            '2099-01-01',
+            '2099-01-02',
+            0
+        );
+
+        $this->assertStringContainsString('inventory-transactions-', $csv['filename']);
+        $this->assertStringContainsString('Date,Transaction,Product', $csv['content']);
+    }
 }

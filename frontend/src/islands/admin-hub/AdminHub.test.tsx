@@ -60,6 +60,7 @@ const configPayload = {
     enable_react_patient_registry: false,
     enable_react_daily_reports: false,
     enable_react_communications_hub: false,
+    enable_admin_hub: true,
     enable_react_admin_hub: false,
     enable_react_patient_chart: false,
     enable_react_lab_ops: false,
@@ -93,6 +94,92 @@ const configPayload = {
   billing_code_types: [{ ct_key: 'CPT4', label: 'CPT4' }],
   default_code_type: 'CPT4',
   roles: { role_groups: [], sensitive_permissions: [], acl_inventory: [] },
+  form_bundle_board: {
+    rows: [],
+    esign_globally_enabled: true,
+    missing_count: 0,
+    esign_issue_count: 0,
+    forms_admin_url: '/forms',
+    layout_editor_url: '/layout',
+    doctor_desk_url: '/doctor',
+    clinical_doc_hub_enabled: false,
+    clinical_doc_hub_url: '/clinical-doc',
+    test_esign_help: 'test',
+  },
+  forms_catalog: {
+    items: [],
+    can_edit: false,
+    forms_admin_url: '/forms',
+    layout_editor_url: '/layout',
+    list_editor_url: '/list',
+    bundle_formdirs: [],
+  },
+  system_health: {
+    overall_status: 'ok',
+    checked_at: '2026-06-30T12:00:00Z',
+    chips: [],
+    meta: { openemr_version: '8.0.0', module_version: 'test', errors_24h: 0 },
+    can_run_backup: false,
+    backup_blocked_reason: 'Backup requires administrator access',
+    backup_running: false,
+    backup_url: '/backup',
+    logview_url: '/logs',
+    backup_php_url: '/backup',
+    xampp_backup_hint: 'hint',
+  },
+  runbooks: {
+    source: 'test',
+    cards: [
+      {
+        id: 'RB-01',
+        when: 'Day 2',
+        task: 'Verify backup ran',
+        lens: 'System',
+        summary: 'Confirm backup',
+        deep_link: '/admin?tab=system',
+        search_text: 'rb-01 backup',
+      },
+    ],
+  },
+  setup_progress: {
+    setup_complete: false,
+    score_percent: 40,
+    can_mark_complete: false,
+    items: [
+      {
+        key: 'cash_profile',
+        label: 'Cash clinic profile applied',
+        weight: 10,
+        completed: true,
+        manual: false,
+        hint: 'Clinic tab',
+      },
+    ],
+  },
+  config_export: {
+    can_export: true,
+    blocked_reason: null,
+    export_format: 'new_clinic_m6_config',
+    export_version: 1,
+    can_import: true,
+    import_blocked_reason: null,
+    import_format: 'new_clinic_m6_config',
+    import_version: 1,
+  },
+  completion_field_weights: {
+    items: [
+      {
+        field_key: 'fname',
+        level: 1,
+        level_label: 'Basic info',
+        label: 'First name',
+        weight: 15,
+        is_active: true,
+      },
+    ],
+    active_total: 15,
+    target_total: 100,
+  },
 };
 
 const props = {
@@ -174,5 +261,24 @@ describe('AdminHub', () => {
       })
     );
     expect(await screen.findByText('Settings saved.')).toBeInTheDocument();
+  });
+
+  it('shows system health tab with backup blocked help', async () => {
+    render(<AdminHub {...props} />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'System' }));
+    });
+
+    expect(await screen.findByText(/System health/i)).toBeInTheDocument();
+    expect(screen.getByText(/Day-2 runbooks/i)).toBeInTheDocument();
+    expect(screen.getByText(/Setup checklist/i)).toBeInTheDocument();
+    expect(screen.getByText(/Backup requires administrator access/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Download M6 config JSON/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Choose M6 config JSON/i })).toBeInTheDocument();
   });
 });

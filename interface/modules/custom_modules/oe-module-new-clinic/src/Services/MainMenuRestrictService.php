@@ -36,6 +36,18 @@ class MainMenuRestrictService
         'Visit Forms',
     ];
 
+    /** @var array<int, string> Stock Calendar menu id hidden when S1 redesign is ON (S-P6) */
+    public const STOCK_SCHEDULING_MENU_IDS = [
+        'cal0',
+    ];
+
+    /** @var array<int, string> Stock scheduling URLs hidden when S1 redesign is ON (S-P6) */
+    public const STOCK_SCHEDULING_MENU_URLS = [
+        '/interface/main/main_info.php',
+        '/interface/patient_tracker/patient_tracker.php?skip_timeout_reset=1',
+        '/interface/main/messages/messages.php?go=Recalls',
+    ];
+
     /**
      * Stock + translated Visit Forms labels for menu cutover (i18n-safe).
      *
@@ -110,6 +122,11 @@ class MainMenuRestrictService
 
         if ($this->shouldHideStockVisitFormsMenusForCurrentUser()) {
             $menu = $this->filterMainMenuByLabel($menu, self::visitFormsHiddenLabels());
+        }
+
+        if ($this->shouldHideStockSchedulingMenusForCurrentUser()) {
+            $menu = $this->filterMainMenu($menu, self::STOCK_SCHEDULING_MENU_IDS);
+            $menu = $this->filterMainMenuByUrl($menu, self::STOCK_SCHEDULING_MENU_URLS);
         }
 
         $menu = $this->pruneEmptyMenuBranches($menu);
@@ -214,6 +231,21 @@ class MainMenuRestrictService
         $facilityId = $facilityId ?? $this->visitScope->resolveDefaultFacilityId();
 
         return $this->config->isEnabled('enable_clinical_doc_hub', 0, $facilityId);
+    }
+
+    public function shouldHideStockSchedulingMenusForCurrentUser(?int $facilityId = null): bool
+    {
+        if (AclMain::aclCheckCore('new_clinic', 'new_admin') || AclMain::aclCheckCore('admin', 'super')) {
+            return false;
+        }
+
+        if (!$this->currentUserHasSchedulingHubAcl()) {
+            return false;
+        }
+
+        $facilityId = $facilityId ?? $this->visitScope->resolveDefaultFacilityId();
+
+        return (new SchedulingAccessService($this->config))->isHubEnabled($facilityId);
     }
 
     /**
@@ -340,6 +372,17 @@ class MainMenuRestrictService
     private function currentUserHasClinicDeskAcl(): bool
     {
         foreach (self::CLINIC_DESK_ACLS as $aco) {
+            if (AclMain::aclCheckCore('new_clinic', $aco)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function currentUserHasSchedulingHubAcl(): bool
+    {
+        foreach (SchedulingAccessService::HUB_READ_ACLS as $aco) {
             if (AclMain::aclCheckCore('new_clinic', $aco)) {
                 return true;
             }

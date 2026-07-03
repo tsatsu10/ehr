@@ -96,6 +96,7 @@ interface ActiveVisitBannerProps {
   visitBoardUrl?: string;
   canCancelVisit: boolean;
   onCancelVisit: () => void;
+  showWrongVisitTypeHint?: boolean;
 }
 
 export function ActiveVisitBanner({
@@ -104,6 +105,7 @@ export function ActiveVisitBanner({
   visitBoardUrl,
   canCancelVisit,
   onCancelVisit,
+  showWrongVisitTypeHint = false,
 }: ActiveVisitBannerProps) {
   return (
     <div className="alert alert-warning py-2 mb-3" id="nc-active-visit-banner">
@@ -116,6 +118,11 @@ export function ActiveVisitBanner({
           <div className="small text-muted mt-1">
             Start visit is disabled until this visit is finished or cancelled.
           </div>
+          {showWrongVisitTypeHint && canCancelVisit && (
+            <div className="small mt-1">
+              Wrong visit type? Cancel this visit and start again with the correct type.
+            </div>
+          )}
         </div>
         <div className="mt-2 mt-md-0">
           {visitBoardUrl && (

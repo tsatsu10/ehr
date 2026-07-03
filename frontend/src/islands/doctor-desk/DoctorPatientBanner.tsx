@@ -5,6 +5,9 @@
 import type { DoctorVisit, PatientPreview, RoutingChips, DocumentationStatus } from '@core/types';
 import { PatientContextBanner } from '@components/PatientContextBanner';
 import { RoutingChips as RoutingChipsBadges } from '@components/RoutingChips';
+import { BannerClinicalLink } from '@components/BannerClinicalLink';
+import { bannerPropsFromPreview } from '@components/bannerPreviewProps';
+import { buildMrdClinicalDeepLink, MRD_CLINICAL_ANCHORS } from '@core/mrdBannerLinks';
 import { DocumentationStatusChip } from './DocumentationStatusChip';
 
 export interface DoctorSignMeta {
@@ -26,6 +29,11 @@ interface DoctorPatientBannerProps {
 
 export function DoctorPatientBanner({ preview, visit, signMeta }: DoctorPatientBannerProps) {
   const vitalsToday = preview.vitals_today;
+  const bannerProps = bannerPropsFromPreview(preview);
+  const mrdEnabled = bannerProps.bannerMrdDeepLinks;
+  const pid = preview.identity.pid;
+  const chartOpenUrl = preview.completion.chart_open_url;
+  const vitalsHref = buildMrdClinicalDeepLink(pid, MRD_CLINICAL_ANCHORS.vitals, chartOpenUrl);
 
   const signed = signMeta.encounter_signed;
   const requireSign = signMeta.require_esign_before_complete_consult;
@@ -36,6 +44,7 @@ export function DoctorPatientBanner({ preview, visit, signMeta }: DoctorPatientB
       layout="compact"
       completion={preview.completion}
       safety={preview.safety}
+      {...bannerProps}
       aside={<span className="badge badge-success">In consult #{visit.queue_number}</span>}
     >
       {visit.chief_complaint && (
@@ -44,7 +53,12 @@ export function DoctorPatientBanner({ preview, visit, signMeta }: DoctorPatientB
 
       {signMeta.routing_chips && (
         <div className="small mt-1">
-          <RoutingChipsBadges chips={signMeta.routing_chips} />
+          <RoutingChipsBadges
+            chips={signMeta.routing_chips}
+            mrdDeepLinks={mrdEnabled}
+            pid={pid}
+            chartOpenUrl={chartOpenUrl}
+          />
         </div>
       )}
 
@@ -53,7 +67,13 @@ export function DoctorPatientBanner({ preview, visit, signMeta }: DoctorPatientB
         {' · '}
         {visit.visit_type_label || 'Visit'}
         {vitalsToday?.vitals_abnormal_today && (
-          <span className="badge badge-danger ml-1">Vitals abnormal</span>
+          <BannerClinicalLink
+            enabled={mrdEnabled}
+            href={vitalsHref}
+            className="badge badge-danger ml-1"
+          >
+            Vitals abnormal
+          </BannerClinicalLink>
         )}
         <DocumentationStatusChip
           documentationStatus={signMeta.documentation_status}
@@ -63,9 +83,22 @@ export function DoctorPatientBanner({ preview, visit, signMeta }: DoctorPatientB
       </div>
 
       <div className="small mt-1">
-        {vitalsToday?.summary
-          ? <>Vitals today: {vitalsToday.summary}</>
-          : <span className="text-warning">No vitals today</span>}
+        {vitalsToday?.summary ? (
+          <>
+            Vitals today:{' '}
+            <BannerClinicalLink enabled={mrdEnabled} href={vitalsHref}>
+              {vitalsToday.summary}
+            </BannerClinicalLink>
+          </>
+        ) : (
+          <BannerClinicalLink
+            enabled={mrdEnabled}
+            href={vitalsHref}
+            className="text-warning"
+          >
+            No vitals today
+          </BannerClinicalLink>
+        )}
       </div>
     </PatientContextBanner>
   );

@@ -29,6 +29,7 @@ class LabService
         private readonly EncounterSignService $signService = new EncounterSignService(),
         private readonly LabOpsOrderMetaService $orderMeta = new LabOpsOrderMetaService(),
         private readonly ClinicDateService $clinicDate = new ClinicDateService(),
+        private readonly LabDirectService $labDirectService = new LabDirectService(),
     ) {
     }
 
@@ -56,6 +57,7 @@ class LabService
         $holders = $this->rowEnricher->batchLabHolders($visitIds);
         $orderCounts = $this->rowEnricher->batchLabOrderCounts($visitIds);
         $unreleasedCounts = $this->rowEnricher->batchLabUnreleasedCounts($visitIds);
+        $rows = $this->rowEnricher->enrichVisitRows($rows);
 
         $visits = [];
         $waitingCount = 0;
@@ -109,17 +111,33 @@ class LabService
         );
         $orders = $this->getLabOrdersForEncounter((int) $visit['pid'], (int) $visit['encounter']);
         $criticalUnreleased = $this->countCriticalUnreleasedResults((int) $visit['pid'], (int) $visit['encounter']);
+        $enrichedVisit = $detail['visit'];
+        $facilityId = (int) ($visit['facility_id'] ?? 0);
 
-        return [
-            'visit' => $detail['visit'],
-            'preview' => $preview,
-            'lab_orders' => $orders,
-            'skipped_triage' => $detail['skipped_triage'],
-            'session_bound' => false,
-            'can_skip_to_payment' => AclMain::aclCheckCore('new_clinic', 'new_visit_skip_queue'),
-            'critical_unreleased_count' => $criticalUnreleased,
-            'critical_unreleased' => $criticalUnreleased > 0,
-        ];
+        return array_merge(
+            [
+                'visit' => $enrichedVisit,
+                'preview' => $preview,
+                'lab_orders' => $orders,
+                'skipped_triage' => $detail['skipped_triage'],
+                'session_bound' => false,
+                'can_skip_to_payment' => AclMain::aclCheckCore('new_clinic', 'new_visit_skip_queue'),
+                'critical_unreleased_count' => $criticalUnreleased,
+                'critical_unreleased' => $criticalUnreleased > 0,
+            ],
+            $this->labDirectDeskFlags($visit, $facilityId, (int) $visit['pid'], count($orders)),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $visit
+     * @return array{lab_direct_intake?: array<string, mixed>}
+     */
+    private function labDirectDeskFlags(array $visit, int $facilityId, int $pid, int $orderCount): array
+    {
+        $intake = $this->labDirectService->intakePayload($visit, $facilityId, $pid, $orderCount);
+
+        return $intake === null ? [] : ['lab_direct_intake' => $intake];
     }
 
     /**
@@ -417,7 +435,6 @@ class LabService
         array $unreleasedCounts = []
     ): array {
         $visitId = (int) ($row['id'] ?? 0);
-        $row = $this->rowEnricher->enrichVisitRow($row, $visitId);
         $holder = $holders[$visitId] ?? null;
         $row['lab_actor_id'] = $holder['actor_user_id'] ?? null;
         $row['lab_actor_name'] = $holder['actor_name'] ?? null;
@@ -467,17 +484,21 @@ class LabService
         );
         $orders = $this->getLabOrdersForEncounter((int) $visit['pid'], (int) $visit['encounter']);
         $criticalUnreleased = $this->countCriticalUnreleasedResults((int) $visit['pid'], (int) $visit['encounter']);
+        $facilityId = (int) ($visit['facility_id'] ?? 0);
 
-        return [
-            'visit' => $visit,
-            'preview' => $preview,
-            'lab_orders' => $orders,
-            'skipped_triage' => $detail['skipped_triage'],
-            'session_bound' => true,
-            'can_skip_to_payment' => AclMain::aclCheckCore('new_clinic', 'new_visit_skip_queue'),
-            'critical_unreleased_count' => $criticalUnreleased,
-            'critical_unreleased' => $criticalUnreleased > 0,
-        ];
+        return array_merge(
+            [
+                'visit' => $visit,
+                'preview' => $preview,
+                'lab_orders' => $orders,
+                'skipped_triage' => $detail['skipped_triage'],
+                'session_bound' => true,
+                'can_skip_to_payment' => AclMain::aclCheckCore('new_clinic', 'new_visit_skip_queue'),
+                'critical_unreleased_count' => $criticalUnreleased,
+                'critical_unreleased' => $criticalUnreleased > 0,
+            ],
+            $this->labDirectDeskFlags($visit, $facilityId, (int) $visit['pid'], count($orders)),
+        );
     }
 
     private function countCriticalUnreleasedResults(int $pid, int $encounter): int

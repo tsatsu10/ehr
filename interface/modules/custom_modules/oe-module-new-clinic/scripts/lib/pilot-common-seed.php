@@ -43,6 +43,11 @@ function pilotEnsureNewClinicAclObjects(): void
         'new_clinical_doc_nursing',
         'new_clinical_doc_orders',
         'new_clinical_doc_specialty',
+        'new_admin_hub_system',
+        'new_admin_hub_forms',
+        'new_queue_bridge',
+        'new_queue_bridge_resolve',
+        'new_queue_bridge_dismiss',
     ];
     foreach ($required as $aco) {
         $row = QueryUtils::querySingleRow(

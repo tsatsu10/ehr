@@ -41,6 +41,35 @@ describe('PatientContextBanner', () => {
     expect(screen.getByText(/Jane Doe · Female 32 · MRN MRN-42/)).toBeInTheDocument();
     expect(screen.getByText('Penicillin')).toBeInTheDocument();
   });
+
+  it('renders pregnancy chip when flagged in safety payload', () => {
+    render(
+      <PatientContextBanner
+        identity={identity}
+        layout="compact"
+        safety={{ pregnant: true, allergies_severe: ['Penicillin'] }}
+      />
+    );
+
+    expect(screen.getByText('Pregnant')).toBeInTheDocument();
+    expect(screen.getByText('Penicillin')).toBeInTheDocument();
+  });
+
+  it('renders linked allergy chips when MRD deep links are enabled', () => {
+    render(
+      <PatientContextBanner
+        identity={{ ...identity, pid: 42 }}
+        layout="compact"
+        completion={{ score: 80, billing_threshold: 70, chart_open_url: 'http://localhost/chart?pid=42' }}
+        safety={{ allergies_severe: ['Penicillin'] }}
+        bannerMrdDeepLinks
+      />
+    );
+
+    const link = screen.getByRole('link', { name: 'Penicillin' });
+    expect(link).toHaveAttribute('href', expect.stringContaining('anchor=clinical-allergies'));
+    expect(link).toHaveAttribute('target', '_blank');
+  });
 });
 
 describe('SegmentedControl', () => {

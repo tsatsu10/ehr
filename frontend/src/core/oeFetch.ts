@@ -23,8 +23,8 @@ export interface OeFetchOptions extends Omit<RequestInit, 'body'> {
   ajaxUrl?: string;
   /** Override the CSRF token resolved from the page. Used in tests. */
   csrfToken?: string;
-  /** Extra GET query params appended after `?action=<name>`. */
-  params?: Record<string, string | number>;
+  /** Extra GET query params appended after `?action=<name>`. Null/undefined values are omitted. */
+  params?: Record<string, string | number | null | undefined>;
 }
 
 export interface OeEnvelopeSuccess<T> {
@@ -118,6 +118,7 @@ export async function oeFetch<T>(
 
   const extraParams = options.params
     ? Object.entries(options.params)
+        .filter(([, v]) => v !== undefined && v !== null && v !== '')
         .map(([k, v]) => `&${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
         .join('')
     : '';

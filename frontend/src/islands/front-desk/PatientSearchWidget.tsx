@@ -14,12 +14,13 @@ import { usePatientSearch } from '@core/usePatientSearch';
 import type { PatientSearchRow } from '@core/types';
 import { cn } from '@/lib/utils';
 import { completionVariant, initialsFromName } from './frontDeskUtils';
+import { badgeVariants } from '@components/ui/badge';
 import { SearchResultSkeleton } from './SearchResultSkeleton';
 import { RecentlyViewed } from './RecentlyViewed';
 import { TodaysAppointmentsList } from './TodaysAppointmentsList';
 import type { RecentPatient } from '@core/useRecentlyViewedPatients';
 import type { TodaysAppointmentRow } from '@core/types';
-import { UserPlus, X, Check, CalendarCheck, Search } from 'lucide-react';
+import { UserPlus, X, Check, CalendarCheck, Search, BellRing } from 'lucide-react';
 
 interface PatientSearchWidgetProps {
   ajaxUrl: string;
@@ -63,6 +64,7 @@ function SearchResultRow({
   const compVariant = COMPLETION_BADGE_VARIANT[completionVariant(completionScore)] ?? 'neutral';
   const activeVisit = patient.active_visit ?? null;
   const appointmentToday = patient.chips?.appointment_today;
+  const recallDue = patient.chips?.recall_due;
 
   return (
     <div className="oe-nc-search-row__inner">
@@ -94,6 +96,18 @@ function SearchResultRow({
             <CalendarCheck className="h-3 w-3" />
             Today
           </Badge>
+        )}
+
+        {!activeVisit && recallDue && (
+          <a
+            href={recallDue.worklist_url}
+            target="_top"
+            title={recallDue.reason || recallDue.label}
+            className={cn(badgeVariants({ variant: 'warning' }), 'no-underline hover:opacity-90')}
+          >
+            <BellRing className="h-3 w-3" />
+            {recallDue.label}
+          </a>
         )}
 
         <Badge variant={compVariant} className="tabular-nums">

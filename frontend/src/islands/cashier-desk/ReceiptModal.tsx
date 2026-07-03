@@ -51,10 +51,26 @@ export function ReceiptModal({ open, preview, receipt, onClose }: ReceiptModalPr
                   {receipt.receipt_number ? <>Receipt #{receipt.receipt_number}<br /></> : null}
                   Queue #{receipt.queue_number}
                   <br />
+                  {receipt.payment_method_label ? (
+                    <>
+                      Method: {receipt.payment_method_label}
+                      <br />
+                    </>
+                  ) : null}
                   Paid: {formatMoney(receipt.amount_paid)}
                   <br />
-                  Change: {formatMoney(receipt.change_due)}
-                  <br />
+                  {receipt.payment_method === 'momo' && receipt.momo_reference ? (
+                    <>
+                      MoMo ref: {receipt.momo_reference}
+                      <br />
+                    </>
+                  ) : null}
+                  {receipt.payment_method !== 'momo' ? (
+                    <>
+                      Change: {formatMoney(receipt.change_due)}
+                      <br />
+                    </>
+                  ) : null}
                   {new Date().toLocaleString()}
                 </p>
               </div>

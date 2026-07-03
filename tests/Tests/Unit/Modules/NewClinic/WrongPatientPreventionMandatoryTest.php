@@ -193,7 +193,7 @@ class WrongPatientPreventionMandatoryTest extends TestCase
 
         $this->assertStringContainsString("'completed'", $body);
         $this->assertStringContainsString("'closed_unpaid'", $body);
-        $this->assertStringContainsString('ORDER BY id DESC LIMIT 1', $body);
+        $this->assertStringContainsString('ORDER BY v.id DESC LIMIT 1', $body);
     }
 
     /** 43i — M1a-F15 cashier resolves checkout by visit_id not pid alone */
@@ -229,8 +229,10 @@ class WrongPatientPreventionMandatoryTest extends TestCase
 
         $this->assertStringContainsString('identity.display_name', $markUnpaid);
         $this->assertStringContainsString('identity.pubpid', $markUnpaid);
-        $this->assertStringContainsString('Queue #', $markUnpaid);
+        $this->assertStringContainsString('IdentityConfirmBanner', $markUnpaid);
+        $this->assertStringContainsString('queueNumber', $markUnpaid);
         $this->assertStringContainsString('identity.display_name', $discount);
+        $this->assertStringContainsString('IdentityConfirmBanner', $discount);
         $this->assertStringContainsString('IdentityConfirmBanner', $payConfirm);
         $this->assertStringContainsString('MRN', $identityBanner);
     }

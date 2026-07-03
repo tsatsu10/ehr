@@ -101,7 +101,6 @@
 {% block scripts %}
 {% if enable_react_pharm_ops|default(true) %}
 <link rel="stylesheet" href="{{ assets_url }}/css/pharm-ops.css?v={{ asset_version }}">
-<link rel="stylesheet" href="{{ assets_url }}/modern/pharm-ops.css?v={{ asset_version }}">
-<script type="module" src="{{ assets_url }}/modern/pharm-ops.js?v={{ asset_version }}"></script>
+{% include 'partials/island-assets.html.twig' %}
 {% endif %}
 {% endblock %}

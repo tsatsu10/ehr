@@ -4,6 +4,9 @@
 
 import type { PatientPreview, TriageVisit } from '@core/types';
 import { PatientContextBanner } from '@components/PatientContextBanner';
+import { BannerClinicalLink } from '@components/BannerClinicalLink';
+import { bannerPropsFromPreview } from '@components/bannerPreviewProps';
+import { buildMrdClinicalDeepLink, MRD_CLINICAL_ANCHORS } from '@core/mrdBannerLinks';
 
 interface PatientBannerProps {
   preview: PatientPreview;
@@ -13,6 +16,11 @@ interface PatientBannerProps {
 export function PatientBanner({ preview, visit }: PatientBannerProps) {
   const completion = preview.completion;
   const vitalsToday = preview.vitals_today;
+  const bannerProps = bannerPropsFromPreview(preview);
+  const mrdEnabled = bannerProps.bannerMrdDeepLinks;
+  const pid = preview.identity.pid;
+  const chartOpenUrl = preview.completion.chart_open_url;
+  const vitalsHref = buildMrdClinicalDeepLink(pid, MRD_CLINICAL_ANCHORS.vitals, chartOpenUrl);
   const completionBlocked = completion.score < completion.billing_threshold;
   const missing = completion.missing_labels ?? [];
 
@@ -22,6 +30,7 @@ export function PatientBanner({ preview, visit }: PatientBannerProps) {
       layout="compact"
       completion={completion}
       safety={preview.safety}
+      {...bannerProps}
       aside={(
         <>
           <span className={`badge badge-${completionBlocked ? 'warning' : 'light border'} mr-1`}>
@@ -47,14 +56,33 @@ export function PatientBanner({ preview, visit }: PatientBannerProps) {
         {visit.state}
         {visit.visit_type_label ? ` · ${visit.visit_type_label}` : ''}
         {vitalsToday?.vitals_abnormal_today && (
-          <span className="badge badge-danger ml-1">Vitals abnormal</span>
+          <BannerClinicalLink
+            enabled={mrdEnabled}
+            href={vitalsHref}
+            className="badge badge-danger ml-1"
+          >
+            Vitals abnormal
+          </BannerClinicalLink>
         )}
       </div>
 
       <div className="small mt-1">
-        {vitalsToday?.summary
-          ? <>Vitals today: {vitalsToday.summary}</>
-          : <span className="text-warning">No vitals today</span>}
+        {vitalsToday?.summary ? (
+          <>
+            Vitals today:{' '}
+            <BannerClinicalLink enabled={mrdEnabled} href={vitalsHref}>
+              {vitalsToday.summary}
+            </BannerClinicalLink>
+          </>
+        ) : (
+          <BannerClinicalLink
+            enabled={mrdEnabled}
+            href={vitalsHref}
+            className="text-warning"
+          >
+            No vitals today
+          </BannerClinicalLink>
+        )}
       </div>
     </PatientContextBanner>
   );

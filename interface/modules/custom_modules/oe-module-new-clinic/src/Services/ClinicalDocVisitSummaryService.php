@@ -22,6 +22,9 @@ class ClinicalDocVisitSummaryService
         private readonly EncounterSignService $signService = new EncounterSignService(),
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
+        private readonly ClinicalDocDocumentationStatusService $docStatus = new ClinicalDocDocumentationStatusService(),
+        private readonly LabPanelOrderService $labPanelOrder = new LabPanelOrderService(),
+        private readonly AdminFormBundleService $formBundle = new AdminFormBundleService(),
     ) {
     }
 
@@ -50,13 +53,16 @@ class ClinicalDocVisitSummaryService
         $facilityId = (int) ($visit['facility_id'] ?? $this->visitScope->resolveDeskFacilityId());
         $catalog = $this->catalog->getCatalog($lens, $facilityId);
         $instances = $this->loadFormInstances($encounterId, $pid);
-        $cards = $this->mergeCardsWithInstances($catalog['cards'], $instances);
+        $cards = $this->enrichCardsWithBundleHealth(
+            $this->mergeCardsWithInstances($catalog['cards'], $instances),
+            $facilityId
+        );
 
         $encounterSigned = $this->signService->isEncounterDocumentationSigned($encounterId);
         $webroot = $GLOBALS['webroot'] ?? '';
         $modulePublic = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
 
-        return [
+        $payload = [
             'visit' => [
                 'id' => $visitId,
                 'queue_number' => (int) ($visit['queue_number'] ?? 0),
@@ -64,6 +70,7 @@ class ClinicalDocVisitSummaryService
                 'encounter' => $encounterId,
                 'pid' => $pid,
                 'assigned_provider_id' => (int) ($visit['assigned_provider_id'] ?? 0),
+                'service_profile' => (string) ($visit['service_profile'] ?? 'full_opd'),
             ],
             'patient' => [
                 'display_name' => $this->displayName($patient),
@@ -82,9 +89,17 @@ class ClinicalDocVisitSummaryService
             'cards' => $cards,
             'consult_note_formdir' => (string) ($catalog['consult_note_formdir'] ?? 'soap'),
             'show_us_quality' => (bool) ($catalog['show_us_quality'] ?? false),
+            'lab_panel_order_enabled' => $this->labPanelOrder->isFeatureEnabled($facilityId),
             'doctor_desk_url' => $modulePublic . 'doctor.php',
             'advanced_encounter_url' => EncounterSignService::buildEncounterUrl($webroot, $pid, $encounterId),
         ];
+
+        if ($lens === 'visit') {
+            $payload['sign_overview'] = $this->buildSignOverview($visit, $cards, $facilityId, $encounterSigned);
+            $payload['addable_forms'] = $this->buildAddableForms($encounterId, $pid, $facilityId);
+        }
+
+        return $payload;
     }
 
     /**
@@ -154,6 +169,25 @@ class ClinicalDocVisitSummaryService
         }
 
         return $merged;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $cards
+     * @return list<array<string, mixed>>
+     */
+    private function enrichCardsWithBundleHealth(array $cards, int $facilityId): array
+    {
+        $enriched = [];
+        foreach ($cards as $card) {
+            $formdir = (string) ($card['formdir'] ?? '');
+            $health = $this->formBundle->getFormHealth($formdir, $facilityId);
+            if ($health !== null) {
+                $card['bundle_health'] = $health;
+            }
+            $enriched[] = $card;
+        }
+
+        return $enriched;
     }
 
     /**
@@ -240,5 +274,56 @@ class ClinicalDocVisitSummaryService
         $ts = strtotime((string) $value);
 
         return $ts !== false ? date('Y-m-d H:i', $ts) : (string) $value;
+    }
+
+    /**
+     * M17-F02 — encounter + per-required-form sign summary for This visit tab.
+     *
+     * @param array<string, mixed> $visit
+     * @param list<array<string, mixed>> $cards
+     * @return array<string, mixed>
+     */
+    private function buildSignOverview(array $visit, array $cards, int $facilityId, bool $encounterSigned): array
+    {
+        $docStatus = $this->docStatus->getStatusForVisit($visit, $facilityId);
+        $started = 0;
+        $signed = 0;
+        $unsigned = 0;
+        foreach ($cards as $card) {
+            if (empty($card['started'])) {
+                continue;
+            }
+            $started++;
+            if (!empty($card['signed'])) {
+                $signed++;
+            } else {
+                $unsigned++;
+            }
+        }
+
+        return [
+            'encounter_signed' => $encounterSigned,
+            'started_count' => $started,
+            'signed_count' => $signed,
+            'unsigned_count' => $unsigned,
+            'required_forms' => $docStatus['unsigned_required'] ?? [],
+        ];
+    }
+
+    /**
+     * M17-F02 — bundle-limited forms not yet started on this encounter.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function buildAddableForms(int $encounterId, int $pid, int $facilityId): array
+    {
+        $fullCatalog = $this->catalog->getCatalog(null, $facilityId);
+        $instances = $this->loadFormInstances($encounterId, $pid);
+        $allCards = $this->mergeCardsWithInstances($fullCatalog['cards'], $instances);
+
+        return array_values(array_filter(
+            $allCards,
+            static fn (array $card): bool => empty($card['started'])
+        ));
     }
 }

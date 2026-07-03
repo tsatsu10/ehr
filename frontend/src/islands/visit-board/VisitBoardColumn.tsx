@@ -14,6 +14,7 @@ export interface VisitBoardColumnProps {
   privacyMode?: boolean;
   onCardClick?: (card: VisitCard) => void;
   selectedVisitId?: number | null;
+  queueBridgeBadges?: Record<string, { code: string; label: string; hub_url: string }>;
 }
 
 export function VisitBoardColumn({
@@ -22,6 +23,7 @@ export function VisitBoardColumn({
   privacyMode = false,
   onCardClick,
   selectedVisitId = null,
+  queueBridgeBadges = {},
 }: VisitBoardColumnProps) {
   const label = COLUMN_LABELS[columnKey];
 
@@ -43,16 +45,20 @@ export function VisitBoardColumn({
               <p className="mb-0 small text-muted text-center">No patients</p>
             </div>
           ) : (
-            cards.map((card) => (
+            cards.map((card) => {
+              const badge = queueBridgeBadges[String(card.id)];
+              const enriched = badge ? { ...card, queue_bridge_badge: badge } : card;
+              return (
               <div key={card.id} role="listitem">
                 <QueueCard
-                  card={card}
+                  card={enriched}
                   privacyMode={privacyMode}
                   onClick={onCardClick}
                   selected={card.id === selectedVisitId}
                 />
               </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

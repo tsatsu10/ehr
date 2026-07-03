@@ -10,6 +10,7 @@ export interface CompleteActionHandlers {
   onError: (message: string) => void;
   onEsignRequired: () => void;
   onUndispensedRx?: (data: { undispensed_count?: number }) => void;
+  onExternalRxIncomplete?: (data: { missing?: string[]; field_errors?: Record<string, string> }) => void;
 }
 
 export function handleDeskCompleteResult(
@@ -25,6 +26,8 @@ export function handleDeskCompleteResult(
     code?: string;
     encounter_url?: string;
     undispensed_count?: number;
+    missing?: string[];
+    field_errors?: Record<string, string>;
   } | undefined;
   if (result.status === 409 && data?.code === 'encounter_unsigned') {
     if (handlers.canEsignOverride) {
@@ -39,6 +42,16 @@ export function handleDeskCompleteResult(
   if (result.status === 409 && data?.code === 'rx_undispensed') {
     if (handlers.onUndispensedRx) {
       handlers.onUndispensedRx({ undispensed_count: data.undispensed_count });
+      return;
+    }
+  }
+
+  if (result.status === 409 && data?.code === 'external_rx_incomplete') {
+    if (handlers.onExternalRxIncomplete) {
+      handlers.onExternalRxIncomplete({
+        missing: data.missing,
+        field_errors: data.field_errors,
+      });
       return;
     }
   }

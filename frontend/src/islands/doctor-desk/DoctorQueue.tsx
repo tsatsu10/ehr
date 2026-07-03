@@ -10,6 +10,7 @@ import type {
 } from '@core/types';
 import { WaitTimeSpan } from '@components/WaitTimeSpan';
 import { RoutingChips } from '@components/RoutingChips';
+import { AncillaryVisitBadges } from '@components/AncillaryVisitBadges';
 
 interface DoctorQueueProps {
   cards: DoctorQueueCard[];
@@ -19,7 +20,6 @@ interface DoctorQueueProps {
   hasActiveConsult: boolean;
   loading: boolean;
   error: string | null;
-  hasActiveConsult: boolean;
   onTakePatient: (card: DoctorQueueCard) => void;
   onReopenClick: (row: DoctorReopenableRow) => void;
 }
@@ -65,9 +65,20 @@ function DoctorQueueCardButton({
           {card.skipped_triage && (
             <span className="badge badge-secondary ml-1">Skipped triage</span>
           )}
+          <AncillaryVisitBadges badges={card.ancillary_badges} />
           {card.assigned_provider_name && (
             <span className="badge badge-info ml-1">
               Appt: {card.assigned_provider_name}
+            </span>
+          )}
+          {card.routing_suggested_provider_name && (
+            <span className="badge badge-primary ml-1" title="Advisory routing suggestion">
+              Routing suggests: {card.routing_suggested_provider_name}
+            </span>
+          )}
+          {card.hard_assigned_provider_name && (
+            <span className="badge badge-dark ml-1" title="Hard-assigned provider">
+              Assigned: {card.hard_assigned_provider_name}
             </span>
           )}
           <RoutingChips chips={card.routing_chips} />

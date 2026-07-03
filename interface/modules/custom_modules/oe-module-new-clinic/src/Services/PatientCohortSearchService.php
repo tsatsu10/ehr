@@ -220,6 +220,8 @@ class PatientCohortSearchService
         $this->applyVisitFilters($filters, $where, $bind);
         $this->applySchedulingFilters($filters, $where, $bind);
         $this->applyClinicalFilters($filters, $where, $bind);
+        $this->applyAllergyMedicationFilters($filters, $where, $bind);
+        $this->applyCommunicationsFilters($filters, $where, $bind);
 
         $joinSql = $this->buildJoins($filters);
         $whereSql = implode(' AND ', $where);
@@ -290,6 +292,8 @@ class PatientCohortSearchService
         $this->applyVisitFilters($filters, $where, $bind);
         $this->applySchedulingFilters($filters, $where, $bind);
         $this->applyClinicalFilters($filters, $where, $bind);
+        $this->applyAllergyMedicationFilters($filters, $where, $bind);
+        $this->applyCommunicationsFilters($filters, $where, $bind);
 
         $joinSql = $this->buildJoins($filters);
         $whereSql = implode(' AND ', $where);
@@ -467,6 +471,24 @@ class PatientCohortSearchService
         }
         if (!empty($filters['last_visit_never'])) {
             $parts[] = 'Never visited';
+        }
+        if (!empty($filters['allergy_substance_contains'])) {
+            $parts[] = 'Allergy contains "' . trim((string) $filters['allergy_substance_contains']) . '"';
+        }
+        if (!empty($filters['medication_contains'])) {
+            $parts[] = 'Medication contains "' . trim((string) $filters['medication_contains']) . '"';
+        }
+        $unread = (string) ($filters['unread_staff_message'] ?? '');
+        if ($unread === 'yes') {
+            $parts[] = 'Unread staff message for me';
+        } elseif ($unread === 'no') {
+            $parts[] = 'No unread staff message for me';
+        }
+        $openReminder = (string) ($filters['open_dated_reminder'] ?? '');
+        if ($openReminder === 'yes') {
+            $parts[] = 'Open dated reminder for me';
+        } elseif ($openReminder === 'no') {
+            $parts[] = 'No open dated reminder for me';
         }
 
         return implode(' · ', $parts);
@@ -829,6 +851,84 @@ class PatientCohortSearchService
             ? $clauses[0]
             : '(' . implode(' OR ', $clauses) . ')';
         $bind = array_merge($bind, $clauseBind);
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     * @param array<int, string> $where
+     * @param array<int, mixed> $bind
+     */
+    private function applyAllergyMedicationFilters(array $filters, array &$where, array &$bind): void
+    {
+        $allergy = trim((string) ($filters['allergy_substance_contains'] ?? ''));
+        if ($allergy !== '') {
+            $where[] = "EXISTS (
+                SELECT 1 FROM lists la
+                WHERE la.pid = pd.pid
+                  AND la.type = 'allergy'
+                  AND la.activity = 1
+                  AND la.title LIKE ?
+            )";
+            $bind[] = '%' . $allergy . '%';
+        }
+
+        $medication = trim((string) ($filters['medication_contains'] ?? ''));
+        if ($medication !== '') {
+            $where[] = "EXISTS (
+                SELECT 1 FROM lists lm
+                WHERE lm.pid = pd.pid
+                  AND lm.type = 'medication'
+                  AND lm.activity = 1
+                  AND (lm.title LIKE ? OR lm.diagnosis LIKE ?)
+            )";
+            $bind[] = '%' . $medication . '%';
+            $bind[] = '%' . $medication . '%';
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     * @param array<int, string> $where
+     * @param array<int, mixed> $bind
+     */
+    private function applyCommunicationsFilters(array $filters, array &$where, array &$bind): void
+    {
+        $unread = (string) ($filters['unread_staff_message'] ?? '');
+        if (in_array($unread, ['yes', 'no'], true)) {
+            $authUser = trim((string) ($_SESSION['authUser'] ?? ''));
+            if ($authUser === '') {
+                $where[] = '1=0';
+            } else {
+                $exists = "EXISTS (
+                    SELECT 1 FROM pnotes pn
+                    WHERE pn.pid = pd.pid
+                      AND pn.deleted != 1
+                      AND pn.activity = 1
+                      AND pn.message_status = 'New'
+                      AND pn.assigned_to LIKE ?
+                )";
+                $where[] = $unread === 'yes' ? $exists : 'NOT ' . $exists;
+                $bind[] = '%' . $authUser . '%';
+            }
+        }
+
+        $openReminder = (string) ($filters['open_dated_reminder'] ?? '');
+        if (in_array($openReminder, ['yes', 'no'], true)) {
+            $userId = (int) ($_SESSION['authUserID'] ?? 0);
+            if ($userId <= 0) {
+                $where[] = '1=0';
+            } else {
+                $exists = "EXISTS (
+                    SELECT 1 FROM dated_reminders dr
+                    JOIN dated_reminders_link drl ON dr.dr_id = drl.dr_id
+                    WHERE dr.pid = pd.pid
+                      AND drl.to_id = ?
+                      AND dr.message_processed = 0
+                )";
+                $where[] = $openReminder === 'yes' ? $exists : 'NOT ' . $exists;
+                $bind[] = $userId;
+            }
+        }
     }
 
     /**

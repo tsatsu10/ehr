@@ -6,6 +6,7 @@ import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } fro
 import { oeFetch } from '@core/oeFetch';
 import { resolveActionConflict, applyPostDeskConflict, type DeskInterrupt } from '@core/deskConflict';
 import { useInterval } from '@core/useInterval';
+import { useQueueVisibilityRefresh } from '@core/useQueueVisibilityRefresh';
 import { usePageHeadingToolbar } from '@core/usePageHeadingToolbar';
 import { setDeskActiveVisitId, clearDeskActiveVisitId } from '@core/deskSessionStorage';
 import { useSharedDeviceSession } from '@core/useSharedDeviceSession';
@@ -13,6 +14,7 @@ import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
 import { UndispensedRxModal } from '@components/UndispensedRxModal';
+import { ExternalRxIncompleteModal } from '@components/ExternalRxIncompleteModal';
 import { EsignOverrideModal } from '@components/EsignOverrideModal';
 import { SkipToPaymentModal } from '@components/SkipToPaymentModal';
 import { handleDeskCompleteResult } from '@core/deskCompleteAction';
@@ -27,6 +29,7 @@ import { PharmacyQueue } from './PharmacyQueue';
 import { PharmacyActivePane, type PharmacyActiveMode } from './PharmacyActivePane';
 import type { OtcSaleInitialContext } from '../pharm-ops/pharmOpsTypes';
 import { printRxWithNotice } from '../pharm-ops/pharmOpsPrintRx';
+import { openClinicalDocForm } from '@islands/clinical-doc/clinicalDocApi';
 
 const PharmOpsOtcSaleDrawer = lazy(() =>
   import('../pharm-ops/PharmOpsOtcSaleDrawer').then((module) => ({
@@ -55,6 +58,7 @@ export function PharmacyDesk({
   pharmOpsEnabled: pharmOpsEnabledProp = false,
   canDispense: canDispenseProp = false,
   canUndispensedOverride: canUndispensedOverrideProp = false,
+  canExternalRxOverride: canExternalRxOverrideProp = false,
 }: PharmacyDeskProps) {
   const [cards, setCards] = useState<PharmacyQueueCard[]>([]);
   const [counts, setCounts] = useState<PharmacyQueueData['counts'] | null>(null);
@@ -78,9 +82,16 @@ export function PharmacyDesk({
   const [pharmOpsEnabled, setPharmOpsEnabled] = useState(pharmOpsEnabledProp);
   const [canDispense, setCanDispense] = useState(canDispenseProp);
   const [canUndispensedOverride, setCanUndispensedOverride] = useState(canUndispensedOverrideProp);
+  const [canExternalRxOverride, setCanExternalRxOverride] = useState(canExternalRxOverrideProp);
   const [undispensedOpen, setUndispensedOpen] = useState(false);
   const [undispensedCount, setUndispensedCount] = useState(0);
   const [undispensedError, setUndispensedError] = useState<string | null>(null);
+  const [externalRxOpen, setExternalRxOpen] = useState(false);
+  const [externalRxMissing, setExternalRxMissing] = useState<string[]>([]);
+  const [externalRxError, setExternalRxError] = useState<string | null>(null);
+  const [walkinOutcome, setWalkinOutcome] = useState<string | null>(null);
+  const [pendingWalkinClose, setPendingWalkinClose] = useState<string | null>(null);
+  const esignActionRef = useRef<'complete' | 'walkin_close'>('complete');
 
   const queueSeq = useRef(0);
   const activeVisitIdRef = useRef<number | null>(null);
@@ -105,6 +116,8 @@ export function PharmacyDesk({
     setMode('idle');
     setSelectData(null);
     setActionError(null);
+    setWalkinOutcome(null);
+    setPendingWalkinClose(null);
     activeVisitIdRef.current = null;
     clearDeskActiveVisitId(STORAGE_KEY);
   }, []);
@@ -134,6 +147,7 @@ export function PharmacyDesk({
     setSelectData(data);
     setMode('active');
     setInterrupt(null);
+    setWalkinOutcome(null);
     if (data.pharm_ops_enabled != null) {
       setPharmOpsEnabled(data.pharm_ops_enabled);
     }
@@ -142,6 +156,9 @@ export function PharmacyDesk({
     }
     if (data.can_undispensed_override != null) {
       setCanUndispensedOverride(data.can_undispensed_override);
+    }
+    if (data.can_external_rx_override != null) {
+      setCanExternalRxOverride(data.can_external_rx_override);
     }
     sharedSession.setActiveVisitId(data.visit.id);
     activeVisitIdRef.current = data.visit.id;
@@ -282,6 +299,10 @@ export function PharmacyDesk({
     void fetchQueue();
   }, [fetchQueue]);
 
+  useQueueVisibilityRefresh(() => {
+    void fetchQueue();
+  });
+
   useInterval(() => {
     if (!document.hidden) void fetchQueue();
   }, pollMs);
@@ -298,26 +319,37 @@ export function PharmacyDesk({
   const handleComplete = useCallback(async (options?: {
     esignOverrideReason?: string;
     undispensedOverrideReason?: string;
+    externalRxOverrideReason?: string;
   }) => {
     if (!selectData || sharedSession.blocked || submitting) return;
 
     setSubmitting(true);
     setActionError(null);
     setUndispensedError(null);
+    setExternalRxError(null);
+    esignActionRef.current = 'complete';
+
+    const body: Record<string, unknown> = {
+      visit_id: selectData.visit.id,
+      row_version: selectData.visit.row_version ?? 0,
+      ...(options?.esignOverrideReason ? { esign_override_reason: options.esignOverrideReason } : {}),
+      ...(options?.undispensedOverrideReason
+        ? { undispensed_override_reason: options.undispensedOverrideReason }
+        : {}),
+      ...(options?.externalRxOverrideReason
+        ? { external_rx_override_reason: options.externalRxOverrideReason }
+        : {}),
+    };
+    if (selectData.walkin_triage?.enabled && walkinOutcome) {
+      body.pharmacy_outcome = walkinOutcome;
+    }
 
     const result = await postDeskAction({
       ajaxUrl,
       csrfToken,
       facilityId,
       action: 'pharmacy.complete',
-      body: {
-        visit_id: selectData.visit.id,
-        row_version: selectData.visit.row_version ?? 0,
-        ...(options?.esignOverrideReason ? { esign_override_reason: options.esignOverrideReason } : {}),
-        ...(options?.undispensedOverrideReason
-          ? { undispensed_override_reason: options.undispensedOverrideReason }
-          : {}),
-      },
+      body,
     });
 
     setSubmitting(false);
@@ -337,6 +369,7 @@ export function PharmacyDesk({
       canEsignOverride,
       onSuccess: () => {
         setUndispensedOpen(false);
+        setExternalRxOpen(false);
         resetActivePane();
         setHasActiveWork(false);
         hasActiveWorkRef.current = false;
@@ -347,6 +380,10 @@ export function PharmacyDesk({
         setUndispensedCount(data.undispensed_count ?? selectData.undispensed_rx_count ?? 1);
         setUndispensedOpen(true);
       },
+      onExternalRxIncomplete: (data) => {
+        setExternalRxMissing(data.missing ?? []);
+        setExternalRxOpen(true);
+      },
       onError: (message) => {
         if (options?.esignOverrideReason) {
           setEsignOpen(true);
@@ -354,11 +391,66 @@ export function PharmacyDesk({
         if (options?.undispensedOverrideReason) {
           setUndispensedError(message);
           setUndispensedOpen(true);
+        } else if (options?.externalRxOverrideReason) {
+          setExternalRxError(message);
+          setExternalRxOpen(true);
         } else {
           setActionError(message);
         }
       },
     });
+  }, [ajaxUrl, canEsignOverride, csrfToken, facilityId, resetActivePane, selectData, sharedSession, submitting, walkinOutcome]);
+
+  const handleWalkinClose = useCallback(async (
+    outcome: string,
+    options?: { esignOverrideReason?: string },
+  ) => {
+    if (!selectData || sharedSession.blocked || submitting) return;
+
+    setSubmitting(true);
+    setActionError(null);
+    esignActionRef.current = 'walkin_close';
+    setPendingWalkinClose(outcome);
+
+    const result = await postDeskAction({
+      ajaxUrl,
+      csrfToken,
+      facilityId,
+      action: 'pharmacy.walkin_close',
+      body: {
+        visit_id: selectData.visit.id,
+        row_version: selectData.visit.row_version ?? 0,
+        pharmacy_outcome: outcome,
+        ...(options?.esignOverrideReason ? { esign_override_reason: options.esignOverrideReason } : {}),
+      },
+    });
+
+    setSubmitting(false);
+    setEsignOpen(false);
+
+    if (!result.ok) {
+      if (applyPostDeskConflict(result, {
+        onInterrupt: setInterrupt,
+        onSessionMismatch: () => void sharedSession.probe(),
+        onInlineError: setActionError,
+      })) {
+        return;
+      }
+      handleDeskCompleteResult(result, {
+        canEsignOverride,
+        onSuccess: () => {},
+        onEsignRequired: () => setEsignOpen(true),
+        onError: setActionError,
+      });
+      return;
+    }
+
+    setPendingWalkinClose(null);
+    setWalkinOutcome(null);
+    resetActivePane();
+    setHasActiveWork(false);
+    hasActiveWorkRef.current = false;
+    void fetchQueueRef.current();
   }, [ajaxUrl, canEsignOverride, csrfToken, facilityId, resetActivePane, selectData, sharedSession, submitting]);
 
   const handleSkip = useCallback(async (reason: string) => {
@@ -446,6 +538,41 @@ export function PharmacyDesk({
     void runShortcut('dispense');
   }, [canDispense, pharmOpsEnabled, runShortcut, selectData]);
 
+  const handleOpenPharmacyService = useCallback(async () => {
+    const externalRx = selectData?.walkin_triage?.external_rx;
+    if (!selectData || !externalRx) {
+      return;
+    }
+
+    if (externalRx.clinical_doc_hub_enabled) {
+      await openClinicalDocForm(
+        ajaxUrl,
+        csrfToken,
+        selectData.visit.id,
+        {
+          id: externalRx.pharmacy_service_formdir,
+          lens: 'visit',
+          formdir: externalRx.pharmacy_service_formdir,
+          kind: 'form',
+          title: externalRx.pharmacy_service_title,
+          description: 'Pharmacy walk-in service note',
+          started: externalRx.pharmacy_service_started,
+        },
+        { returnTo: 'hub' },
+      );
+      return;
+    }
+
+    if (externalRx.documentation_hub_url) {
+      window.location.assign(externalRx.documentation_hub_url);
+    }
+  }, [ajaxUrl, csrfToken, selectData]);
+
+  const openPharmacyServiceFromModal = useCallback(() => {
+    setExternalRxOpen(false);
+    void handleOpenPharmacyService();
+  }, [handleOpenPharmacyService]);
+
   return (
     <div id="nc-pharmacy-desk" className="oe-nc-pharmacy-react-active">
       <DeskInterruptBanner
@@ -529,6 +656,10 @@ export function PharmacyDesk({
             onOpenRxEdit={() => void runShortcut('rx_edit')}
             onDispenseRx={(prescriptionId) => setDispenseRxId(prescriptionId)}
             onPrintRx={(prescriptionId) => { void handlePrintRx(prescriptionId); }}
+            walkinOutcome={walkinOutcome}
+            onSelectWalkinOutcome={setWalkinOutcome}
+            onWalkinClose={(outcome) => { void handleWalkinClose(outcome); }}
+            onOpenPharmacyService={() => { void handleOpenPharmacyService(); }}
           />
         </div>
       </div>
@@ -554,7 +685,13 @@ export function PharmacyDesk({
         confirmLabel="Complete with override"
         reasonFieldId="nc-pharmacy-esign-reason"
         onClose={() => setEsignOpen(false)}
-        onConfirm={(reason) => void handleComplete({ esignOverrideReason: reason })}
+        onConfirm={(reason) => {
+          if (esignActionRef.current === 'walkin_close' && pendingWalkinClose) {
+            void handleWalkinClose(pendingWalkinClose, { esignOverrideReason: reason });
+            return;
+          }
+          void handleComplete({ esignOverrideReason: reason });
+        }}
       />
 
       <UndispensedRxModal
@@ -571,6 +708,22 @@ export function PharmacyDesk({
         }}
         onOpenDispense={openFirstUndispensedDispense}
         onOverrideComplete={(reason) => void handleComplete({ undispensedOverrideReason: reason })}
+      />
+
+      <ExternalRxIncompleteModal
+        open={externalRxOpen}
+        preview={selectData?.preview ?? null}
+        visit={selectData?.visit ?? null}
+        missing={externalRxMissing}
+        canOverride={canExternalRxOverride}
+        submitting={submitting}
+        error={externalRxError}
+        onClose={() => {
+          setExternalRxOpen(false);
+          setExternalRxError(null);
+        }}
+        onOpenPharmacyService={openPharmacyServiceFromModal}
+        onOverrideComplete={(reason) => void handleComplete({ externalRxOverrideReason: reason })}
       />
 
       {otcOpen ? (

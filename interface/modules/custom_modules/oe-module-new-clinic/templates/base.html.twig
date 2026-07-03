@@ -14,7 +14,7 @@
 </head>
 <body class="body_top">
 <div id="oe-nc-t1"
-     class="oe-nc-t1{% if shell_minimal|default(false) %} oe-nc-t1--shell-minimal{% endif %}{% if shell_desk_focus|default(false) %} oe-nc-t1--desk-focus{% endif %}"
+     class="oe-nc-t1{% if shell_minimal|default(false) %} oe-nc-t1--shell-minimal{% endif %}{% if shell_embed|default(false) %} oe-nc-t1--embed{% endif %}{% if shell_desk_focus|default(false) %} oe-nc-t1--desk-focus{% endif %}"
      data-role-accent="{{ shell.role.accent }}"
      data-ajax-url="{{ ajax_url }}"
      data-csrf-token="{{ csrf_token }}"

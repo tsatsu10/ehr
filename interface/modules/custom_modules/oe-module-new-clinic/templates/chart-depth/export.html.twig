@@ -23,6 +23,6 @@
 
 {% block scripts %}
 {% if enable_react_chart_depth|default(true) %}
-<script type="module" src="{{ assets_url }}/modern/chart-depth.js?v={{ asset_version }}"></script>
+{% include 'partials/island-assets.html.twig' %}
 {% endif %}
 {% endblock %}

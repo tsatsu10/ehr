@@ -56,4 +56,16 @@ class CashierServiceTest extends TestCase
         $this->assertStringContainsString('pick_visit', $body);
         $this->assertStringContainsString('assertPatientAccessible', $body);
     }
+
+    public function testRecordPaymentSupportsMomoMethod(): void
+    {
+        $method = new \ReflectionMethod(CashierService::class, 'postPatientPayment');
+        $source = file_get_contents($method->getFileName());
+        $start = $method->getStartLine();
+        $end = $method->getEndLine();
+        $body = implode('', array_slice(explode("\n", $source), $start - 1, $end - $start + 1));
+
+        $this->assertStringContainsString("'momo'", $body);
+        $this->assertStringContainsString('MoMo · Ref:', $body);
+    }
 }

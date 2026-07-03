@@ -85,7 +85,7 @@ export function ChargeCorrectionForm({
     setSaving(true);
     setError(null);
     try {
-      const updated = await oeFetch<VisitChargesData>('bill_ops.charge_correct', {
+      const updated = await oeFetch<VisitChargesData & { visit_id?: number }>('bill_ops.charge_correct', {
         ...fetchOptions,
         method: 'POST',
         json: {
@@ -95,7 +95,7 @@ export function ChargeCorrectionForm({
           reason: reason.trim(),
         },
       });
-      setData((prev) => (prev ? { ...prev, ...updated, visit: prev.visit } : prev));
+      await loadVisit(updated.visit_id ?? data.visit.id);
       setRemoveIds([]);
       setSelectedFeeId('');
       setReason('');
@@ -140,6 +140,12 @@ export function ChargeCorrectionForm({
             {' · '}
             Due {formatBillMoney(data.balance_due)} (paid {formatBillMoney(data.paid_total)})
           </div>
+
+          {data.reopen_on_underpaid && (
+            <p className="alert alert-info py-2 small mb-3">
+              When a correction leaves the visit underpaid, it may return to the payment queue automatically.
+            </p>
+          )}
 
           <h3 className="h6">Existing charges</h3>
           <table className="table table-sm table-hover mb-3">

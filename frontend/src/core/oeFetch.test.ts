@@ -48,6 +48,31 @@ describe('oeFetch', () => {
     });
   });
 
+  it('omits null and undefined query params', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ success: true, message: 'ok', data: {} }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await oeFetch('scheduling.flow_board.list', {
+      ajaxUrl: '/ajax.php',
+      params: {
+        date: '2026-07-01',
+        facility_id: 3,
+        provider_id: undefined,
+        q: '',
+      },
+    });
+
+    const [url] = fetchMock.mock.calls[0] as [string];
+    expect(url).toContain('facility_id=3');
+    expect(url).not.toContain('provider_id');
+    expect(url).not.toContain('undefined');
+    expect(url).not.toContain('q=');
+  });
+
   it('surfaces server message on 403 instead of generic HTTP text', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false,

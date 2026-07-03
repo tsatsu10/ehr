@@ -6,6 +6,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { oeFetch } from '@core/oeFetch';
 import { resolveActionConflict, type DeskInterrupt } from '@core/deskConflict';
 import { useInterval } from '@core/useInterval';
+import { useQueueVisibilityRefresh } from '@core/useQueueVisibilityRefresh';
 import { usePageHeadingToolbar } from '@core/usePageHeadingToolbar';
 import { getDeskActiveVisitId, clearDeskActiveVisitId } from '@core/deskSessionStorage';
 import { useSharedDeviceSession } from '@core/useSharedDeviceSession';
@@ -14,6 +15,7 @@ import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import type {
   CashierDeskProps,
+  CashierPaymentMethod,
   CashierPayResult,
   CashierQueueCard,
   CashierQueueData,
@@ -107,6 +109,8 @@ export function CashierDesk({
   const [payConfirmOpen, setPayConfirmOpen] = useState(false);
   const [payAmount, setPayAmount] = useState(0);
   const [payReceiptNote, setPayReceiptNote] = useState('');
+  const [payPaymentMethod, setPayPaymentMethod] = useState<CashierPaymentMethod>('cash');
+  const [payMomoReference, setPayMomoReference] = useState('');
   const [payEsignReason, setPayEsignReason] = useState<string | null>(null);
   const [paySubmitting, setPaySubmitting] = useState(false);
   const clientRequestIdRef = useRef<string | null>(null);
@@ -287,6 +291,10 @@ export function CashierDesk({
     void fetchQueue();
   }, [fetchQueue]);
 
+  useQueueVisibilityRefresh(() => {
+    void fetchQueue();
+  });
+
   useInterval(() => {
     if (!document.hidden) void fetchQueue();
   }, pollMs);
@@ -352,19 +360,33 @@ export function CashierDesk({
     void executePostCharges();
   }, [canApplyDiscount, executePostCharges, selectData, staged]);
 
-  const handleTakePaymentClick = useCallback((amountReceived: number, receiptNote: string) => {
+  const handleTakePaymentClick = useCallback((
+    amountReceived: number,
+    receiptNote: string,
+    paymentMethod: CashierPaymentMethod,
+    momoReference: string,
+  ) => {
     if (sharedSession.blocked || !selectData) return;
     setPayAmount(amountReceived);
     setPayReceiptNote(receiptNote);
+    setPayPaymentMethod(paymentMethod);
+    setPayMomoReference(momoReference);
     setPayEsignReason(null);
     clientRequestIdRef.current = newClientRequestId();
     setPayConfirmOpen(true);
   }, [selectData, sharedSession.blocked]);
 
-  const handleEsignOverrideClick = useCallback((amountReceived: number, receiptNote: string) => {
+  const handleEsignOverrideClick = useCallback((
+    amountReceived: number,
+    receiptNote: string,
+    paymentMethod: CashierPaymentMethod,
+    momoReference: string,
+  ) => {
     if (sharedSession.blocked || !selectData) return;
     setPayAmount(amountReceived);
     setPayReceiptNote(receiptNote);
+    setPayPaymentMethod(paymentMethod);
+    setPayMomoReference(momoReference);
     setEsignOpen(true);
   }, [selectData, sharedSession.blocked]);
 
@@ -384,6 +406,8 @@ export function CashierDesk({
         row_version: selectData.visit.row_version ?? 0,
         amount_received: payAmount,
         receipt_note: payReceiptNote,
+        payment_method: payPaymentMethod,
+        ...(payPaymentMethod === 'momo' ? { momo_reference: payMomoReference } : {}),
         client_request_id: clientRequestIdRef.current,
         ...(payEsignReason ? { esign_override_reason: payEsignReason } : {}),
       },
@@ -413,6 +437,8 @@ export function CashierDesk({
     payAmount,
     payEsignReason,
     payReceiptNote,
+    payPaymentMethod,
+    payMomoReference,
     paySubmitting,
     resetActivePane,
     selectData,
@@ -568,6 +594,8 @@ export function CashierDesk({
         visit={mergedSelectData?.visit ?? null}
         total={mergedSelectData?.charges_total ?? 0}
         amountReceived={payAmount}
+        paymentMethod={payPaymentMethod}
+        momoReference={payMomoReference}
         completionBlocked={!!mergedSelectData?.completion_blocked}
         canSkipCompletion={!!mergedSelectData?.can_skip_completion}
         esignOverride={!!payEsignReason}

@@ -742,6 +742,29 @@ body.body_top:has(.oe-nc-t1) {
     padding-bottom: 1.5rem;
 }
 
+/* ── Embedded pages (reports.php?embed=1 inside Report Hub iframe) ──────── */
+
+.oe-nc-t1--embed {
+    min-height: 0;
+}
+
+.oe-nc-t1--embed .oe-nc-shell-main {
+    min-height: 0;
+}
+
+.oe-nc-t1--embed .oe-nc-page-heading {
+    display: none;
+}
+
+.oe-nc-t1--embed .oe-nc-main {
+    padding: 0;
+}
+
+.oe-nc-t1--embed .oe-nc-content {
+    padding: 0.75rem 1rem 1.25rem;
+    max-width: none;
+}
+
 /* ── Bootstrap alert harmonization inside T1 shell ─────────────────────── */
 
 .oe-nc-t1 .alert {

@@ -31,6 +31,7 @@ class VisitBoardService
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
         private readonly VisitRowEnricher $rowEnricher = new VisitRowEnricher(),
         private readonly ClinicDateService $clinicDate = new ClinicDateService(),
+        private readonly QueueBridgeSurfaceService $queueBridgeSurface = new QueueBridgeSurfaceService(),
     ) {
     }
 
@@ -74,6 +75,7 @@ class VisitBoardService
                 'enable_pharmacy_role' => $this->config->isEnabled('enable_pharmacy_role', 0),
                 'enable_triage' => $this->config->isEnabled('enable_triage', 1),
                 'enable_multi_doctor_filters' => $this->config->getInt('enable_multi_doctor_filters', 0, $facilityId) === 1,
+                'enable_queue_bridge' => $this->queueBridgeSurface->isSurfaceEnabled($facilityId),
             ],
             'columns' => $columns,
             'cancelled' => $cancelled,
@@ -82,6 +84,7 @@ class VisitBoardService
             'stale_count' => $staleCount,
             'visit_date' => $visitDate,
             'last_updated' => date('c'),
+            'queue_bridge_badges' => $this->queueBridgeSurface->visitBadgeMap($facilityId),
         ];
     }
 
@@ -117,6 +120,7 @@ class VisitBoardService
             [$visitId]
         ) ?: [];
         $pid = (int) ($enriched['pid'] ?? 0);
+        $facilityId = (int) ($visit['facility_id'] ?? $this->visitScope->resolveDeskFacilityId());
 
         return [
             'visit' => $enriched,
@@ -127,6 +131,7 @@ class VisitBoardService
             'chart_history_url' => $pid > 0
                 ? PatientCompletionService::chartUrl($pid, 'overview') . '&visit_id=' . urlencode((string) $visitId)
                 : null,
+            'queue_bridge_action' => $this->queueBridgeSurface->visitBoardAction($visitId, $facilityId),
         ];
     }
 
@@ -142,6 +147,12 @@ class VisitBoardService
         }
         if ($skippedTriage) {
             $badges[] = 'skipped_triage';
+        }
+        foreach ($visit['ancillary_badges'] ?? [] as $badge) {
+            $badge = (string) $badge;
+            if ($badge !== '') {
+                $badges[] = $badge;
+            }
         }
 
         $state = (string) ($visit['state'] ?? '');
@@ -312,17 +323,7 @@ class VisitBoardService
      */
     private function enrichVisitRows(array $rows): array
     {
-        $visitIds = array_map(fn (array $row) => (int) ($row['id'] ?? 0), $rows);
-        $skippedMap = $this->rowEnricher->batchSkippedTriage($visitIds);
-
-        return array_map(
-            fn (array $row) => $this->rowEnricher->enrichVisitRow(
-                $row,
-                (int) ($row['id'] ?? 0),
-                $skippedMap
-            ),
-            $rows
-        );
+        return $this->rowEnricher->enrichVisitRows($rows);
     }
 
     /**

@@ -47,6 +47,7 @@ class PatientCompletionService
         'email' => 'Email',
         'nhis_number' => 'NHIS number',
         'allergies_documented' => 'Allergies (or document None known)',
+        'background_history_documented' => 'Family or social history',
     ];
 
     /**
@@ -73,6 +74,8 @@ class PatientCompletionService
         if (empty($weights)) {
             $weights = $this->defaultWeights();
         }
+
+        $weights = $this->appendL3bWeightIfEnabled($weights);
 
         $result = $this->computeScore($weights, $patient, $dobEstimated, $pid, is_array($meta) ? $meta : []);
         $score = $result['score'];
@@ -264,7 +267,7 @@ class PatientCompletionService
             $complete = !isset($missing[$key]);
             $levels[$level]['fields'][] = [
                 'key' => $key,
-                'label' => self::FIELD_LABELS[$key] ?? $key,
+                'label' => self::labelForField($key),
                 'complete' => $complete,
             ];
             if (!$complete) {
@@ -277,7 +280,12 @@ class PatientCompletionService
         return array_values($levels);
     }
 
-    private function levelLabel(int $level): string
+  private function levelLabel(int $level): string
+    {
+        return self::labelForLevel($level);
+    }
+
+    public static function labelForLevel(int $level): string
     {
         return match ($level) {
             1 => 'Basic info',
@@ -286,6 +294,11 @@ class PatientCompletionService
             4 => 'Admin & insurance',
             default => 'Level ' . $level,
         };
+    }
+
+    public static function labelForField(string $fieldKey): string
+    {
+        return self::FIELD_LABELS[$fieldKey] ?? $fieldKey;
     }
 
     /**
@@ -333,6 +346,10 @@ class PatientCompletionService
     {
         if ($fieldKey === 'allergies_documented') {
             return $this->hasAllergyDocumentation($pid);
+        }
+
+        if ($fieldKey === 'background_history_documented') {
+            return $this->hasBackgroundHistoryDocumentation($pid);
         }
 
         if ($fieldKey === 'emergency_contact') {
@@ -410,6 +427,84 @@ class PatientCompletionService
 
         foreach ($rows as $row) {
             if (self::isDocumentedAllergyTitle($row['title'] ?? '')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array<int, array{field_key: string, weight: int}> $weights
+     * @return array<int, array{field_key: string, weight: int}>
+     */
+    private function appendL3bWeightIfEnabled(array $weights): array
+    {
+        $config = new ClinicConfigService();
+        if ($config->getInt('enable_l3b_background_completion', 0) !== 1) {
+            return $weights;
+        }
+
+        foreach ($weights as $row) {
+            if ((string) ($row['field_key'] ?? '') === 'background_history_documented') {
+                return $weights;
+            }
+        }
+
+        $configured = QueryUtils::querySingleRow(
+            "SELECT weight FROM new_completion_field_weight WHERE field_key = 'background_history_documented' LIMIT 1"
+        );
+        $weight = is_array($configured) ? (int) ($configured['weight'] ?? 5) : 5;
+        if ($weight <= 0) {
+            $weight = 5;
+        }
+
+        $weights[] = [
+            'field_key' => 'background_history_documented',
+            'weight' => $weight,
+        ];
+
+        return $weights;
+    }
+
+    private function hasBackgroundHistoryDocumentation(int $pid): bool
+    {
+        if ($pid <= 0) {
+            return false;
+        }
+
+        $row = QueryUtils::querySingleRow(
+            "SELECT history_mother, history_father, history_siblings,
+                    tobacco, alcohol, recreational_drugs, exercise_patterns
+             FROM history_data
+             WHERE pid = ?
+             ORDER BY id DESC
+             LIMIT 1",
+            [$pid]
+        );
+
+        return self::isBackgroundHistoryRowComplete(is_array($row) ? $row : null);
+    }
+
+    /**
+     * @param array<string, mixed>|null $row
+     */
+    public static function isBackgroundHistoryRowComplete(?array $row): bool
+    {
+        if ($row === null) {
+            return false;
+        }
+
+        $familyFields = ['history_mother', 'history_father', 'history_siblings'];
+        foreach ($familyFields as $field) {
+            if (trim((string) ($row[$field] ?? '')) !== '') {
+                return true;
+            }
+        }
+
+        $socialFields = ['tobacco', 'alcohol', 'recreational_drugs', 'exercise_patterns'];
+        foreach ($socialFields as $field) {
+            if (trim((string) ($row[$field] ?? '')) !== '') {
                 return true;
             }
         }

@@ -432,6 +432,60 @@ export function RegistryFilterPanel({
                   />
                 </div>
               </div>
+              <div className="form-group">
+                <label htmlFor="nc-registry-allergy-substance">Allergy substance contains</label>
+                <input
+                  id="nc-registry-allergy-substance"
+                  type="search"
+                  className="form-control form-control-sm"
+                  placeholder="e.g. penicillin"
+                  value={filters.allergy_substance_contains}
+                  onChange={(e) => setField(onFiltersChange, 'allergy_substance_contains', e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="nc-registry-medication">Medication contains</label>
+                <input
+                  id="nc-registry-medication"
+                  type="search"
+                  className="form-control form-control-sm"
+                  placeholder="e.g. amoxicillin"
+                  value={filters.medication_contains}
+                  onChange={(e) => setField(onFiltersChange, 'medication_contains', e.target.value)}
+                />
+              </div>
+            </div>
+          </details>
+
+          <details className="oe-nc-registry-comms-filters mb-2">
+            <summary className="small font-weight-bold">Communications</summary>
+            <div className="mt-2">
+              <div className="form-group">
+                <label htmlFor="nc-registry-unread-message">Unread staff message (for me)</label>
+                <select
+                  id="nc-registry-unread-message"
+                  className="form-control form-control-sm"
+                  value={filters.unread_staff_message}
+                  onChange={(e) => setField(onFiltersChange, 'unread_staff_message', e.target.value)}
+                >
+                  <option value="">Any</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="nc-registry-open-reminder">Open dated reminder (for me)</label>
+                <select
+                  id="nc-registry-open-reminder"
+                  className="form-control form-control-sm"
+                  value={filters.open_dated_reminder}
+                  onChange={(e) => setField(onFiltersChange, 'open_dated_reminder', e.target.value)}
+                >
+                  <option value="">Any</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
             </div>
           </details>
 

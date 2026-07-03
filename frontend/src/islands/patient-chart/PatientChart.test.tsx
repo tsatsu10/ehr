@@ -88,4 +88,14 @@ describe('PatientChart', () => {
 
     expect(await screen.findByTestId('registration-form')).toBeInTheDocument();
   });
+
+  it('shows in-chart search when enabled', async () => {
+    render(<PatientChart {...props} enableInChartPatientSearch />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.getByPlaceholderText(/Search this chart/i)).toBeInTheDocument();
+  });
 });

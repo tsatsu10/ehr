@@ -52,6 +52,7 @@ if (!in_array($tabParam, $allowedTabs, true)) {
     'Clinical Documentation',
     ClinicalDocAccessService::HUB_READ_ACLS,
     [
+        'island_entry' => 'clinical-doc',
         'shell_nav_id' => 'clinicdochub',
         'module_url' => $moduleUrl,
         'doctor_desk_url' => $moduleUrl . '/doctor.php',

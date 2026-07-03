@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
+import { hardAssignVisit } from '@core/hardAssignVisit';
 import type {
   AppointmentTodayChip,
   DeskVisitType,
@@ -20,6 +21,9 @@ import {
 import { Play, CalendarCheck, Printer, CheckCircle2, AlertCircle, SkipForward, Loader2 } from 'lucide-react';
 import { RevisitGatePanel, type RevisitPath } from './RevisitGatePanel';
 import { SkipTriageModal } from './SkipTriageModal';
+import { ReferralUploadField } from './ReferralUploadField';
+import { uploadReferralDocument } from './referralUploadApi';
+import { HardAssignDoctorSelect } from '@components/HardAssignDoctorSelect';
 
 interface StartVisitFormProps {
   ajaxUrl: string;
@@ -73,11 +77,22 @@ export function StartVisitForm({
   const [skipModalOpen, setSkipModalOpen] = useState(false);
   const [skipSubmitting, setSkipSubmitting] = useState(false);
   const [skipError, setSkipError] = useState<string | null>(null);
+  const [referralDocumentId, setReferralDocumentId] = useState<number | null>(null);
+  const [referralFilename, setReferralFilename] = useState<string | null>(null);
+  const [referralUploading, setReferralUploading] = useState(false);
+  const [hardAssignDoctorId, setHardAssignDoctorId] = useState('');
+  const [referralUploadError, setReferralUploadError] = useState<string | null>(null);
   const autoStartAttemptedRef = useRef(false);
+
+  const selectedVisitType = types.find((type) => String(type.id) === visitTypeId) ?? null;
+  const showReferralUpload = !!selectedVisitType?.allows_referral_upload;
 
   const appointment: AppointmentTodayChip | null =
     preview.appointment_today ?? preview.chips?.appointment_today ?? null;
   const fromAppointment = !!(appointment?.pc_eid);
+  const queueBridge = preview.queue_bridge;
+  const blockPlainStart = !!(queueBridge?.enabled && queueBridge.block_plain_start && !fromAppointment);
+  const showArrivalAdvisor = !!(queueBridge?.enabled && queueBridge.show_arrival_advisor && fromAppointment);
   const activeVisit = preview.active_visit;
   const gate = preview.revisit_gate;
   const gateBlocked = !!(
@@ -85,12 +100,21 @@ export function StartVisitForm({
     && gate?.applies
     && gate.blocked
   );
+  const showHardAssign = !!(
+    preview.hard_provider_assignment_enabled
+    && preview.can_hard_assign_provider
+    && (preview.assignable_doctors?.length ?? 0) > 0
+  );
 
   useEffect(() => {
     onDirtyChange?.(false);
     setRevisitPath(null);
     setOverrideReason('');
     setAwaitingNote(null);
+    setReferralDocumentId(null);
+    setReferralFilename(null);
+    setReferralUploadError(null);
+    setHardAssignDoctorId('');
   }, [activeVisit, fromAppointment, onDirtyChange, pid]);
 
   useEffect(() => {
@@ -139,6 +163,30 @@ export function StartVisitForm({
   ]);
 
   const markDirty = useCallback(() => { onDirtyChange?.(true); }, [onDirtyChange]);
+
+  const handleReferralFile = useCallback(async (file: File) => {
+    setReferralUploading(true);
+    setReferralUploadError(null);
+    markDirty();
+    try {
+      const result = await uploadReferralDocument(ajaxUrl, csrfToken, pid, file, facilityId);
+      setReferralDocumentId(result.document_id);
+      setReferralFilename(result.filename);
+    } catch (err) {
+      setReferralDocumentId(null);
+      setReferralFilename(null);
+      setReferralUploadError(err instanceof Error ? err.message : 'Referral upload failed');
+    } finally {
+      setReferralUploading(false);
+    }
+  }, [ajaxUrl, csrfToken, facilityId, markDirty, pid]);
+
+  const clearReferralUpload = useCallback(() => {
+    setReferralDocumentId(null);
+    setReferralFilename(null);
+    setReferralUploadError(null);
+    markDirty();
+  }, [markDirty]);
 
   const canShowVisitFields = !gateBlocked || revisitPath === 'manager_override';
 
@@ -192,6 +240,9 @@ export function StartVisitForm({
       if (gateBlocked && revisitPath === 'manager_override') {
         body.revisit_override_reason = overrideReason.trim();
       }
+      if (referralDocumentId != null && referralDocumentId > 0) {
+        body.referral_document_id = referralDocumentId;
+      }
 
       const data = await oeFetch<VisitStartData>(action, {
         ajaxUrl,
@@ -199,6 +250,20 @@ export function StartVisitForm({
         method: 'POST',
         json: body,
       });
+
+      const parsedDoctorId = hardAssignDoctorId
+        ? Number.parseInt(hardAssignDoctorId, 10)
+        : 0;
+      if (parsedDoctorId > 0 && data.visit.id) {
+        await hardAssignVisit({
+          ajaxUrl,
+          csrfToken,
+          facilityId,
+          visitId: data.visit.id,
+          rowVersion: data.visit.row_version ?? 0,
+          hardAssignedProviderId: parsedDoctorId,
+        });
+      }
 
       const queueNumber = data.visit.queue_number ?? '?';
       let msg = `Visit #${queueNumber} started — patient is now on the Triage queue.`;
@@ -218,8 +283,8 @@ export function StartVisitForm({
     }
   }, [
     ajaxUrl, appointment, chiefComplaint, csrfToken, facilityId, fromAppointment,
-    gateBlocked, isUrgent, onCompleteNow, onDirtyChange, overrideReason, pid,
-    revisitPath, visitTypeId,
+    gateBlocked, hardAssignDoctorId, isUrgent, onCompleteNow, onDirtyChange, overrideReason, pid,
+    referralDocumentId, revisitPath, visitTypeId,
   ]);
 
   const handleSkipTriage = useCallback(async (reason: string) => {
@@ -282,7 +347,7 @@ export function StartVisitForm({
     const showPrint = printQueueSlip && success.queue_slip_enabled !== false && !!slipUrl;
 
     return (
-      <div className="mt-3 border-t border-[var(--oe-nc-border)] pt-4" id="nc-start-visit-mount">
+      <div className="mt-3 border-t border-(--oe-nc-border) pt-4" id="nc-start-visit-mount">
         <div
           className="oe-nc-success-callout mb-4 rounded-xl px-4 py-3 flex items-start gap-3"
           id="nc-start-visit-success"
@@ -334,7 +399,7 @@ export function StartVisitForm({
 
   if (loadingTypes) {
     return (
-      <div className="flex items-center gap-2 text-sm text-[var(--oe-nc-text-muted)] py-3">
+      <div className="flex items-center gap-2 text-sm text-(--oe-nc-text-muted) py-3">
         <Loader2 className="h-4 w-4 animate-spin" />
         Loading visit types…
       </div>
@@ -363,8 +428,27 @@ export function StartVisitForm({
       : startLabel;
 
   return (
-    <div className="mt-4 pt-4 border-t border-[var(--oe-nc-border)]" id="nc-start-visit-mount">
-      <h6 className="text-sm font-semibold text-[var(--oe-nc-text)] mb-3">{startLabel}</h6>
+    <div className="mt-4 pt-4 border-t border-(--oe-nc-border)" id="nc-start-visit-mount">
+      <h6 className="text-sm font-semibold text-(--oe-nc-text) mb-3">{startLabel}</h6>
+
+      {showArrivalAdvisor && (
+        <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          This patient has an appointment today. Use <strong>Start visit &amp; check in</strong> so the
+          calendar and visit queue stay aligned.
+        </div>
+      )}
+
+      {blockPlainStart && (
+        <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          Patient is marked arrived on the schedule but has no clinical visit yet. Open{' '}
+          {queueBridge?.hub_url ? (
+            <a href={queueBridge.hub_url} className="font-semibold underline">Queue Bridge</a>
+          ) : (
+            'Queue Bridge'
+          )}{' '}
+          to start visit &amp; check in — plain Start visit is blocked until resolved.
+        </div>
+      )}
 
       {gateBlocked && gate && (
         <RevisitGatePanel
@@ -395,6 +479,9 @@ export function StartVisitForm({
               value={visitTypeId}
               onValueChange={(val) => {
                 setVisitTypeId(val);
+                setReferralDocumentId(null);
+                setReferralFilename(null);
+                setReferralUploadError(null);
                 markDirty();
               }}
             >
@@ -409,7 +496,25 @@ export function StartVisitForm({
                 ))}
               </SelectContent>
             </Select>
+            {selectedVisitType?.service_profile_hint && (
+              <p className="text-xs text-(--oe-nc-text-muted)">
+                {selectedVisitType.service_profile_hint}
+              </p>
+            )}
           </div>
+
+          {showReferralUpload && (
+            <ReferralUploadField
+              referralRequired={selectedVisitType?.referral_required}
+              documentId={referralDocumentId}
+              filename={referralFilename}
+              uploading={referralUploading}
+              error={referralUploadError}
+              disabled={submitting}
+              onSelectFile={(file) => { void handleReferralFile(file); }}
+              onClear={clearReferralUpload}
+            />
+          )}
 
           <div className="space-y-1.5">
             <Label htmlFor="nc-chief-complaint">Reason for visit</Label>
@@ -439,10 +544,28 @@ export function StartVisitForm({
               Urgent
             </Label>
           </div>
+
+          {showHardAssign && (
+            <div className="space-y-1.5">
+              <Label htmlFor="nc-start-hard-assign-doctor">Assign doctor (optional)</Label>
+              <HardAssignDoctorSelect
+                id="nc-start-hard-assign-doctor"
+                doctors={preview.assignable_doctors ?? []}
+                value={hardAssignDoctorId}
+                disabled={submitting}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                onChange={(value) => {
+                  setHardAssignDoctorId(value);
+                  markDirty();
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
 
       <div className="oe-nc-start-visit__footer mt-4 flex flex-wrap gap-2">
+        {!blockPlainStart && (
         <Button
           size="lg"
           variant={fromAppointment ? 'cta' : 'default'}
@@ -456,6 +579,7 @@ export function StartVisitForm({
           }
           {submitting ? 'Starting…' : gateActionLabel}
         </Button>
+        )}
       </div>
 
       {error && (

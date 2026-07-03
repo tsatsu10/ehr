@@ -20,9 +20,13 @@ class ClinicConfigService
         return (new VisitScopeService())->resolveDefaultFacilityId();
     }
 
-    public function isEnabled(string $key, int $default = 0): bool
+    public function isEnabled(string $key, int $default = 0, ?int $facilityId = null): bool
     {
-        return $this->getInt($key, $default, $this->resolveReaderFacilityId()) === 1;
+        if ($facilityId === null) {
+            $facilityId = $this->resolveReaderFacilityId();
+        }
+
+        return $this->getInt($key, $default, $facilityId) === 1;
     }
 
     public function get(string $key, ?string $default = null, int $facilityId = 0): ?string

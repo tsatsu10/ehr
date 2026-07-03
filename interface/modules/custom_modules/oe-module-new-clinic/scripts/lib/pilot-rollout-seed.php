@@ -27,6 +27,8 @@ function pilotRolloutEnsureProductFlags(ClinicConfigService $config, ?array $fac
     $flags = [
         'enable_triage' => '1',
         'enable_scheduled_integration' => '1',
+        'enable_scheduling_redesign' => '1',
+        'enable_react_scheduling' => '1',
         'enable_lab_role' => '1',
         'enable_lab_ops' => '1',
         'communications_hub_enable' => '1',
@@ -35,8 +37,16 @@ function pilotRolloutEnsureProductFlags(ClinicConfigService $config, ?array $fac
         'enable_chart_depth_finance' => '1',
         'enable_chart_depth_referral' => '1',
         'enable_chart_depth_export' => '1',
+        'enable_bill_ops' => '1',
         'enable_bill_ops_outstanding' => '1',
         'enable_report_hub' => '1',
+        'enable_queue_bridge' => '1',
+        'enable_legacy_patient_context_overlay' => '1',
+        'enable_admin_hub' => '1',
+        'enable_clinical_doc_hub' => '1',
+        'enable_multi_doctor_filters' => '1',
+        'enable_doctor_roster' => '1',
+        'enable_advisory_routing' => '1',
     ];
 
     foreach ($facilityIds as $facilityId) {

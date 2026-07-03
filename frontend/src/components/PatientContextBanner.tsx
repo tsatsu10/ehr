@@ -3,7 +3,6 @@ import { ChipCloud } from './ChipCloud';
 import { CompletionBar } from './CompletionBar';
 import { CompletionScorePill } from './CompletionScorePill';
 import { Avatar, AvatarFallback } from './ui/avatar';
-import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 import {
   buildAllergyChips,
@@ -18,8 +17,10 @@ export interface PatientContextBannerProps {
   identity: PatientIdentityLine;
   /** `full` — avatar header (MRD, Front Desk). `compact` — desk active pane strip. */
   layout?: 'full' | 'compact';
-  completion?: { score: number; billing_threshold: number };
+  completion?: { score: number; billing_threshold: number; chart_open_url?: string };
   safety?: PatientSafetyChips;
+  bannerMrdDeepLinks?: boolean;
+  showAllergyCountChip?: boolean;
   aside?: ReactNode;
   children?: ReactNode;
   className?: string;
@@ -31,12 +32,19 @@ export function PatientContextBanner({
   layout = 'full',
   completion,
   safety,
+  bannerMrdDeepLinks = false,
+  showAllergyCountChip = false,
   aside,
   children,
   className,
   id,
 }: PatientContextBannerProps) {
-  const allergyChips = buildAllergyChips(safety);
+  const allergyChips = buildAllergyChips(safety, {
+    mrdDeepLinks: bannerMrdDeepLinks,
+    pid: identity.pid,
+    chartOpenUrl: completion?.chart_open_url,
+    showAllergyCountChip,
+  });
   const showCompletionBar =
     completion != null && completion.score < completion.billing_threshold;
 
@@ -48,7 +56,7 @@ export function PatientContextBanner({
         )}
         <div
           className={cn(
-            'oe-nc-banner-compact flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-[var(--oe-nc-border)] bg-[var(--oe-nc-bg-tint)] mb-3',
+            'oe-nc-banner-compact flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-(--oe-nc-border) bg-(--oe-nc-bg-tint) mb-3',
             className
           )}
           id={id}
@@ -60,7 +68,7 @@ export function PatientContextBanner({
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <span className="block font-semibold text-sm text-[var(--oe-nc-text)] truncate">
+              <span className="block font-semibold text-sm text-(--oe-nc-text) truncate">
                 {formatIdentityInline(identity)}
               </span>
             </div>
@@ -100,17 +108,7 @@ export function PatientContextBanner({
         </div>
 
         {allergyChips.length > 0 && (
-          <div className="oe-nc-patient-banner__safety mt-2">
-            {allergyChips.map((chip, i) => (
-              <Badge
-                key={i}
-                variant={chip.variant === 'severe' ? 'danger' : 'warning'}
-                className="text-xs"
-              >
-                {chip.label}
-              </Badge>
-            ))}
-          </div>
+          <ChipCloud chips={allergyChips} className="oe-nc-patient-banner__safety mt-2" />
         )}
 
         {children}

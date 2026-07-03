@@ -20,6 +20,6 @@
 
 {% block scripts %}
 {% if enable_react_bill_ops|default(true) %}
-<script type="module" src="{{ assets_url }}/modern/bill-ops-correct.js?v={{ asset_version }}"></script>
+{% include 'partials/island-assets.html.twig' %}
 {% endif %}
 {% endblock %}

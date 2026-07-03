@@ -20,16 +20,16 @@ use OpenEMR\Events\Main\Tabs\RenderEvent;
 use OpenEMR\Menu\MenuEvent;
 use OpenEMR\Menu\PatientMenuEvent;
 use OpenEMR\Modules\NewClinic\Services\EncounterIdentityStripService;
+use OpenEMR\Modules\NewClinic\Services\HistoryEditorWrapService;
 use OpenEMR\Modules\NewClinic\Services\LegacyChartContextService;
 use OpenEMR\Modules\NewClinic\Services\DeepLinkRestoreSessionService;
-use OpenEMR\Modules\NewClinic\Support\DeepLinkRestoreSessionInjector;
-use OpenEMR\Modules\NewClinic\Support\EncounterIdentityStripInjector;
-use OpenEMR\Modules\NewClinic\Support\LegacyChartContextInjector;
+use OpenEMR\Modules\NewClinic\Services\QueueBridgeFlowBoardService;
 use OpenEMR\Modules\NewClinic\GlobalConfig;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\MainMenuIntegrationsService;
 use OpenEMR\Modules\NewClinic\Services\MainMenuRestrictService;
 use OpenEMR\Modules\NewClinic\Services\PatientMenuRestrictService;
+use OpenEMR\Modules\NewClinic\Services\ScheduledIntegrationService;
 use stdClass;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Twig\Error\LoaderError;
@@ -69,7 +69,9 @@ class Bootstrap
     {
         $this->registerTemplateEvents();
         $this->registerEncounterIdentityStrip();
+        $this->registerHistoryEditorWrap();
         $this->registerLegacyChartContextStrip();
+        $this->registerQueueBridgeFlowBoard();
         $this->registerDeepLinkRestoreSession();
 
         if (!$this->globalsConfig->isModuleActive()) {
@@ -103,21 +105,35 @@ class Bootstrap
 
     private function registerEncounterIdentityStrip(): void
     {
-        (new EncounterIdentityStripInjector(
+        (new \OpenEMR\Modules\NewClinic\Support\EncounterIdentityStripInjector(
             new EncounterIdentityStripService($this->twig)
+        ))->startIfNeeded();
+    }
+
+    private function registerHistoryEditorWrap(): void
+    {
+        (new \OpenEMR\Modules\NewClinic\Support\HistoryEditorWrapInjector(
+            new HistoryEditorWrapService($this->twig)
         ))->startIfNeeded();
     }
 
     private function registerLegacyChartContextStrip(): void
     {
-        (new LegacyChartContextInjector(
+        (new \OpenEMR\Modules\NewClinic\Support\LegacyChartContextInjector(
             new LegacyChartContextService($this->twig)
+        ))->startIfNeeded();
+    }
+
+    private function registerQueueBridgeFlowBoard(): void
+    {
+        (new \OpenEMR\Modules\NewClinic\Support\QueueBridgeFlowBoardInjector(
+            new QueueBridgeFlowBoardService()
         ))->startIfNeeded();
     }
 
     private function registerDeepLinkRestoreSession(): void
     {
-        (new DeepLinkRestoreSessionInjector(
+        (new \OpenEMR\Modules\NewClinic\Support\DeepLinkRestoreSessionInjector(
             new DeepLinkRestoreSessionService()
         ))->startIfNeeded();
     }
@@ -165,6 +181,19 @@ class Bootstrap
 
         $items = [
             ['id' => 'clinicfd', 'label' => 'Front Desk', 'url' => $base . 'front-desk.php', 'acl' => $deskAclOr('new_reception')],
+            [
+                'id' => 'clinicscheduling',
+                'label' => 'Scheduling & Flow',
+                'url' => $base . 'scheduling/index.php',
+                'direct' => true,
+                'acl' => [
+                    $deskAclOr('new_reception'),
+                    $deskAclOr('new_reception_lead'),
+                    $deskAclOr('new_nurse'),
+                    $deskAclOr('new_admin'),
+                ],
+                'config' => 'enable_scheduling_redesign',
+            ],
             ['id' => 'clinicvb', 'label' => 'Visit Board', 'url' => $base . 'visit-board.php', 'acl' => [
                 $deskAclOr('new_reception'),
                 $deskAclOr('new_nurse'),
@@ -180,6 +209,78 @@ class Bootstrap
             ['id' => 'clinicl', 'label' => 'Lab Desk', 'url' => $base . 'lab.php', 'acl' => $deskAclOr('new_lab'), 'config' => 'enable_lab_role'],
             ['id' => 'clinicph', 'label' => 'Pharmacy Desk', 'url' => $base . 'pharmacy.php', 'acl' => $deskAclOr('new_pharmacy'), 'config' => 'enable_pharmacy_role'],
             ['id' => 'cliniccs', 'label' => 'Cashier', 'url' => $base . 'cashier.php', 'acl' => $deskAclOr('new_cashier')],
+            [
+                'id' => 'cliniclabops',
+                'label' => 'Lab Ops',
+                'url' => $base . 'lab-ops/index.php',
+                'direct' => true,
+                'acl' => [
+                    $deskAclOr('new_lab_ops'),
+                    $deskAclOr('new_lab'),
+                    $deskAclOr('new_admin'),
+                ],
+                'config' => 'enable_lab_ops',
+            ],
+            [
+                'id' => 'clinicpharmops',
+                'label' => 'Pharm Ops',
+                'url' => $base . 'pharm-ops/index.php',
+                'direct' => true,
+                'acl' => [
+                    $deskAclOr('new_pharm_ops'),
+                    $deskAclOr('new_pharmacy'),
+                    $deskAclOr('new_admin'),
+                ],
+                'config' => 'enable_pharm_ops',
+            ],
+            [
+                'id' => 'clinicbillops',
+                'label' => 'Billing',
+                'url' => $base . 'bill-ops/index.php',
+                'direct' => true,
+                'acl' => [
+                    $deskAclOr('new_bill_ops'),
+                    $deskAclOr('new_admin'),
+                ],
+                'config' => 'enable_bill_ops',
+            ],
+            [
+                'id' => 'clinicrephub',
+                'label' => 'Reporting',
+                'url' => $base . 'report-hub/index.php',
+                'direct' => true,
+                'acl' => [
+                    $deskAclOr('new_reports_hub'),
+                    $deskAclOr('reports'),
+                    $deskAclOr('new_admin'),
+                ],
+                'config' => 'enable_report_hub',
+            ],
+            [
+                'id' => 'clinicqueuebridge',
+                'label' => 'Queue Bridge',
+                'url' => $base . 'queue-bridge/index.php',
+                'direct' => true,
+                'acl' => [
+                    $deskAclOr('new_queue_bridge'),
+                    $deskAclOr('new_reception_lead'),
+                    $deskAclOr('new_admin'),
+                ],
+                'config' => 'enable_queue_bridge',
+            ],
+            [
+                'id' => 'clinicdochub',
+                'label' => 'Documentation',
+                'url' => $base . 'clinical-doc/index.php',
+                'direct' => true,
+                'acl' => [
+                    $deskAclOr('new_clinical_doc_hub'),
+                    $deskAclOr('new_doctor'),
+                    $deskAclOr('new_nurse'),
+                    $deskAclOr('new_admin'),
+                ],
+                'config' => 'enable_clinical_doc_hub',
+            ],
             ['id' => 'clinicad', 'label' => 'Clinic Setup', 'url' => $base . 'admin.php', 'acl' => $deskAclOr('new_admin')],
             ['id' => 'clinicrp', 'label' => 'Daily Reports', 'url' => $base . 'reports.php', 'acl' => $deskAclOr('reports')],
             ['id' => 'clinicmsg', 'label' => 'Messages', 'url' => $base . 'communications.php', 'acl' => ['patients', 'notes'], 'config' => 'communications_hub_enable'],
@@ -192,11 +293,23 @@ class Bootstrap
         ];
 
         $config = new ClinicConfigService();
+        $webroot = (string) ($GLOBALS['webroot'] ?? '');
+        $scheduledIntegration = new ScheduledIntegrationService();
 
         foreach ($items as $item) {
+            if ($item['id'] === 'clinicrp' && $config->isEnabled('enable_report_hub', 0)) {
+                continue;
+            }
+
             if (!empty($item['config'])) {
                 $defaultOn = $item['config'] === 'enable_triage';
                 if (!$config->isEnabled($item['config'], $defaultOn ? 1 : 0)) {
+                    continue;
+                }
+                if ($item['config'] === 'enable_scheduling_redesign' && !$scheduledIntegration->isEnabled(0)) {
+                    continue;
+                }
+                if ($item['config'] === 'enable_queue_bridge' && !$scheduledIntegration->isEnabled(0)) {
                     continue;
                 }
             }
@@ -206,7 +319,9 @@ class Bootstrap
             $child->target = 'clinic0';
             $child->menu_id = $item['id'];
             $child->label = xlt($item['label']);
-            $child->url = $topRedirectBase . rawurlencode(basename($item['url']));
+            $child->url = !empty($item['direct'])
+                ? $webroot . $item['url']
+                : $topRedirectBase . rawurlencode(basename($item['url']));
             $child->children = [];
             $child->acl_req = $item['acl'];
             $child->global_req = [];

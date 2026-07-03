@@ -9,6 +9,7 @@
 import type { VisitCard } from '@core/types';
 import { StatusPill } from './StatusPill';
 import { WaitTimeSpan } from './WaitTimeSpan';
+import { AncillaryVisitBadges } from './AncillaryVisitBadges';
 
 export interface QueueCardProps {
   card: VisitCard;
@@ -88,10 +89,21 @@ export function QueueCard({ card, privacyMode = false, onClick, selected = false
             {card.skipped_triage && (
               <span className="badge badge-secondary" title="Skipped triage">Skipped triage</span>
             )}
+            <AncillaryVisitBadges badges={card.ancillary_badges} />
             {hasSimilarSurname && (
               <span className="badge badge-warning" title="Another patient in today's queue shares this surname">
                 Same surname today
               </span>
+            )}
+            {card.queue_bridge_badge && (
+              <a
+                href={card.queue_bridge_badge.hub_url}
+                className="badge badge-info"
+                title={card.queue_bridge_badge.code}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {card.queue_bridge_badge.label}
+              </a>
             )}
             {isStale && (
               <span className="oe-nc-stale-badge" title={`Visit opened on ${card.visit_date.slice(0, 10)}`}>

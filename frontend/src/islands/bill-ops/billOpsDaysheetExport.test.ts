@@ -21,4 +21,9 @@ describe('daysheetToCsv', () => {
     expect(csv).toContain('Akosua,8200');
     expect(csv).toContain('OPD,10000');
   });
+
+  it('includes optional MoMo tally row', () => {
+    const csv = daysheetToCsv(sample, '1200');
+    expect(csv).toContain('MoMo tally (manual),1200');
+  });
 });

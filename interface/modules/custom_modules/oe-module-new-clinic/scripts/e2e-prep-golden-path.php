@@ -39,5 +39,7 @@ pharmOpsPilotImportFormularyAndStock($config, $defaultFacilityId);
 goldenPathEnsureBillOpsConfig($config, $facilityIds);
 goldenPathEnsureDeskSkipAcls();
 goldenPathEnsureBillOpsAcls();
+goldenPathEnsureBillOpsAdminUser();
+goldenPathEnsureClinicalDocConfig($config, $facilityIds);
 
 echo "Golden-path E2E prep complete.\n";

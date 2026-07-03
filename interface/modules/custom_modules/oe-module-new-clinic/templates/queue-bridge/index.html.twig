@@ -1,0 +1,48 @@
+{% extends 'base.html.twig' %}
+
+{% block page_heading_actions %}
+<div class="d-flex flex-wrap align-items-center oe-nc-queuebridge-toolbar" id="nc-queuebridge-toolbar">
+    <span class="text-muted small mb-1 mr-2" id="nc-queuebridge-summary"></span>
+    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ visit_board_url|attr }}">{{ 'Visit Board'|xlt }}</a>
+    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ flow_board_url|attr }}" target="_top">{{ 'Flow Board'|xlt }}</a>
+    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ scheduling_url|attr }}" target="_top">{{ 'Scheduling'|xlt }}</a>
+    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ reports_url|attr }}">{{ 'Daily Reports'|xlt }}</a>
+    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ eod_export_url|attr }}">{{ 'Export EOD'|xlt }}</a>
+    <button type="button" class="btn btn-outline-secondary btn-sm mb-1" id="nc-queuebridge-refresh" aria-label="{{ 'Refresh'|xlt }}">
+        <i class="fa fa-refresh" aria-hidden="true"></i>
+    </button>
+    <span class="text-muted small mb-1" id="nc-queuebridge-updated"></span>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if enable_react_queue_bridge|default(true) %}
+<div
+    id="nc-queue-bridge"
+    data-island="queue-bridge"
+    data-props="{{ {
+        ajaxUrl: ajax_url,
+        csrfToken: csrf_token,
+        moduleUrl: module_url,
+        visitBoardUrl: visit_board_url,
+        frontDeskUrl: front_desk_url,
+        flowBoardUrl: flow_board_url,
+        schedulingUrl: scheduling_url,
+        reportsUrl: reports_url,
+        facilityId: desk_facility_id|default(0)|number_format(0, '', ''),
+        initialLens: initial_lens,
+        canResolve: can_resolve ? true : false,
+        canDismiss: can_dismiss ? true : false,
+        webroot: webroot
+    }|json_encode|e('html_attr') }}"
+></div>
+{% else %}
+{% include 'partials/react-island-disabled.html.twig' with { desk_label: 'Queue Bridge Hub' } %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if enable_react_queue_bridge|default(true) %}
+{% include 'partials/island-assets.html.twig' %}
+{% endif %}
+{% endblock %}

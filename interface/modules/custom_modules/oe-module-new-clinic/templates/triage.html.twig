@@ -25,7 +25,8 @@
         visitBoardUrl:       module_url ~ '/visit-board.php',
         vitalsRules:         vitals_form_rules,
         canCancel:           can_cancel_visit ? true : false,
-        sharedDeviceWarning: enable_shared_device_session_warning ? true : false
+        sharedDeviceWarning: enable_shared_device_session_warning ? true : false,
+        pollMs:                  queue_poll_ms|default(30000)
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}
@@ -35,7 +36,6 @@
 
 {% block scripts %}
 {% if enable_react_triage_desk|default(true) %}
-<link rel="stylesheet" href="{{ assets_url }}/modern/triage-desk.css?v={{ asset_version }}">
-<script type="module" src="{{ assets_url }}/modern/triage-desk.js?v={{ asset_version }}"></script>
+{% include 'partials/island-assets.html.twig' %}
 {% endif %}
 {% endblock %}

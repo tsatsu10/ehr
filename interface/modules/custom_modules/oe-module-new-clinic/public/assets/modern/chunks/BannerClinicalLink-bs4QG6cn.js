@@ -1,0 +1,2 @@
+import{o as e}from"./oeFetch-Bh_9Pv0w.js";var t=e();function n({enabled:e,href:n,className:r,children:i}){return e&&n?(0,t.jsx)(`a`,{href:n,target:`_blank`,rel:`noopener noreferrer`,className:r,children:i}):(0,t.jsx)(`span`,{className:r,children:i})}export{n as t};
+//# sourceMappingURL=BannerClinicalLink-bs4QG6cn.js.map

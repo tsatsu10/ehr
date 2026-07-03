@@ -32,6 +32,7 @@ class DoctorService
         private readonly PharmacyService $pharmacyService = new PharmacyService(),
         private readonly PharmOpsAccessService $pharmOpsAccess = new PharmOpsAccessService(),
         private readonly ClinicalDocDocumentationStatusService $docStatus = new ClinicalDocDocumentationStatusService(),
+        private readonly VisitRoutingService $routingService = new VisitRoutingService(),
     ) {
     }
 
@@ -53,26 +54,53 @@ class DoctorService
             $scope = 'all';
         }
 
+        $advisoryEnabled = $this->routingService->isEnabled($facilityId);
+        $hardAssign = new VisitHardAssignService();
+        $hardAssignEnabled = $hardAssign->isEnabled($facilityId);
+        $notifyService = new DoctorReadyNotifyService();
+
         $bind = [$facilityId];
         $sql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid, pd.sex, pd.DOB,
                        vt.label AS visit_type_label,
-                       u.fname AS provider_fname, u.lname AS provider_lname
+                       u.fname AS provider_fname, u.lname AS provider_lname,
+                       rs.fname AS suggested_fname, rs.lname AS suggested_lname,
+                       ha.fname AS hard_fname, ha.lname AS hard_lname
                 FROM new_visit v
                 INNER JOIN patient_data pd ON pd.pid = v.pid
                 LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
                 LEFT JOIN users u ON u.id = v.assigned_provider_id
+                LEFT JOIN users rs ON rs.id = v.routing_suggested_provider_id
+                LEFT JOIN users ha ON ha.id = v.hard_assigned_provider_id
                 WHERE v.facility_id = ?
                 AND v.state = 'ready_for_doctor'";
 
         if ($scope === 'me') {
-            $sql .= " AND (v.assigned_provider_id IS NULL OR v.assigned_provider_id = 0 OR v.assigned_provider_id = ?)";
-            $bind[] = $actorUserId;
+            if ($hardAssignEnabled) {
+                $sql .= " AND (v.hard_assigned_provider_id IS NULL OR v.hard_assigned_provider_id = 0
+                          OR v.hard_assigned_provider_id = ?)";
+                $bind[] = $actorUserId;
+            } elseif ($advisoryEnabled) {
+                $sql .= " AND (v.assigned_provider_id IS NULL OR v.assigned_provider_id = 0
+                          OR v.assigned_provider_id = ? OR v.routing_suggested_provider_id = ?)";
+                $bind[] = $actorUserId;
+                $bind[] = $actorUserId;
+            } else {
+                $sql .= " AND (v.assigned_provider_id IS NULL OR v.assigned_provider_id = 0 OR v.assigned_provider_id = ?)";
+                $bind[] = $actorUserId;
+            }
         }
 
-        $sql .= " ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC";
+        if ($advisoryEnabled) {
+            $sql .= " ORDER BY CASE WHEN v.routing_suggested_provider_id = ? THEN 0 ELSE 1 END,
+                      v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC";
+            $bind[] = $actorUserId;
+        } else {
+            $sql .= " ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC";
+        }
 
         $rows = QueryUtils::fetchRecords($sql, $bind) ?: [];
         $routingByVisit = $this->labReadiness->batchRoutingChipsForVisits($rows, $facilityId);
+        $rows = $this->rowEnricher->enrichVisitRows($rows);
         $visits = array_map(
             fn (array $row) => $this->enrichQueueRow(
                 $row,
@@ -105,6 +133,13 @@ class DoctorService
             'done_today' => $doneToday,
             'reopenable_today' => $reopenableToday,
             'can_reopen_consult' => $canReopenConsult,
+            'advisory_routing_enabled' => $advisoryEnabled,
+            'hard_provider_assignment_enabled' => $hardAssignEnabled,
+            'doctor_ready_notify_enabled' => $notifyService->isEnabled($facilityId),
+            'can_take_assigned_override' => $hardAssign->canOverrideTake($actorUserId),
+            'ready_notify_pending' => $notifyService->listPendingForDoctor($actorUserId, $facilityId),
+            'require_override_reason' => $this->config->getInt('require_override_reason', 0, $facilityId) === 1,
+            'my_user_id' => $actorUserId,
         ];
     }
 
@@ -130,7 +165,7 @@ class DoctorService
     /**
      * @return array<string, mixed>
      */
-    public function takePatient(int $visitId, int $actorUserId, int $expectedVersion): array
+    public function takePatient(int $visitId, int $actorUserId, int $expectedVersion, ?string $overrideReason = null): array
     {
         $visit = $this->queueService->getVisitForActor($visitId);
         $facilityId = (int) ($visit['facility_id'] ?? 0);
@@ -149,7 +184,9 @@ class DoctorService
             }
         }
 
-        $this->queueService->takePatient($visitId, $actorUserId, $expectedVersion);
+        (new VisitHardAssignService())->assertCanTake($visit, $actorUserId, $overrideReason);
+
+        $this->queueService->takePatient($visitId, $actorUserId, $expectedVersion, $overrideReason);
         $this->encounterSessionService->bindForVisit($visitId, $actorUserId);
 
         return $this->buildConsultPayload($visitId, $actorUserId);
@@ -331,10 +368,25 @@ class DoctorService
      */
     private function enrichQueueRow(array $row, ?array $routingChips = null): array
     {
-        $row = $this->rowEnricher->enrichVisitRow($row);
         $providerName = trim(($row['provider_fname'] ?? '') . ' ' . ($row['provider_lname'] ?? ''));
         if ($providerName !== '') {
             $row['assigned_provider_name'] = $providerName;
+        }
+        $suggestedName = trim(($row['suggested_fname'] ?? '') . ' ' . ($row['suggested_lname'] ?? ''));
+        $suggestedId = (int) ($row['routing_suggested_provider_id'] ?? 0);
+        if ($suggestedId > 0) {
+            $row['routing_suggested_provider_id'] = $suggestedId;
+            if ($suggestedName !== '') {
+                $row['routing_suggested_provider_name'] = $suggestedName;
+            }
+        }
+        $hardName = trim(($row['hard_fname'] ?? '') . ' ' . ($row['hard_lname'] ?? ''));
+        $hardId = (int) ($row['hard_assigned_provider_id'] ?? 0);
+        if ($hardId > 0) {
+            $row['hard_assigned_provider_id'] = $hardId;
+            if ($hardName !== '') {
+                $row['hard_assigned_provider_name'] = $hardName;
+            }
         }
         if ($routingChips !== null) {
             $row['routing_chips'] = $routingChips;
@@ -377,6 +429,8 @@ class DoctorService
             $chips = $batch[$visitId] ?? null;
         }
 
+        $row = $this->rowEnricher->enrichVisitRow($row, $visitId);
+
         return $this->enrichQueueRow($row, $chips);
     }
 
@@ -406,7 +460,7 @@ class DoctorService
 
         $rows = QueryUtils::fetchRecords($sql, $bind) ?: [];
 
-        return array_map(fn (array $row) => $this->rowEnricher->enrichVisitRow($row), $rows);
+        return $this->rowEnricher->enrichVisitRows($rows);
     }
 
     /**
@@ -425,7 +479,7 @@ class DoctorService
 
         $rows = QueryUtils::fetchRecords($sql, [$facilityId, $visitDate, $actorUserId]) ?: [];
 
-        return array_map(fn (array $row) => $this->rowEnricher->enrichVisitRow($row), $rows);
+        return $this->rowEnricher->enrichVisitRows($rows);
     }
 
     /**

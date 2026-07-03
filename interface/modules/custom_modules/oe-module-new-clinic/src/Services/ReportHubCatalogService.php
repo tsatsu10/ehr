@@ -53,10 +53,10 @@ class ReportHubCatalogService
     private function cardsForLens(string $lens, int $facilityId): array
     {
         return match ($lens) {
-            'clinical' => $this->clinicalCards(),
+            'clinical' => $this->clinicalCards($facilityId),
             'pharmacy' => $this->pharmacyCards($facilityId),
             'financial' => $this->financialCards($facilityId),
-            'public_health' => $this->publicHealthCards(),
+            'public_health' => $this->publicHealthCards($facilityId),
             'audit' => $this->auditCards(),
             default => [],
         };
@@ -65,9 +65,9 @@ class ReportHubCatalogService
     /**
      * @return list<array<string, mixed>>
      */
-    private function clinicalCards(): array
+    private function clinicalCards(int $facilityId): array
     {
-        return [
+        $cards = [
             $this->nativeCard(
                 'clinical_immunizations',
                 'clinical',
@@ -96,6 +96,30 @@ class ReportHubCatalogService
                 'referrals_report.php'
             ),
         ];
+
+        if ($this->access->isPatientRegistryEnabled($facilityId)) {
+            $cards[] = [
+                'id' => 'clinical_patient_registry',
+                'lens' => 'clinical',
+                'title' => 'Patient registry cohort',
+                'blurb' => 'Interactive cohort search and export (M10) — separate from stock clinical reports.',
+                'url' => '/interface/modules/custom_modules/oe-module-new-clinic/public/patient-registry.php',
+                'kind' => 'module',
+            ];
+        }
+
+        if ($this->access->isAncillaryServicesEnabled($facilityId)) {
+            $cards[] = [
+                'id' => 'clinical_ancillary_m7',
+                'lens' => 'clinical',
+                'title' => 'Ancillary services outcomes',
+                'blurb' => 'Lab-direct, pharmacy walk-in, and pharmacy→OPD chain metrics (M7-F18).',
+                'url' => '/interface/modules/custom_modules/oe-module-new-clinic/public/reports.php?tab=ancillary',
+                'kind' => 'module',
+            ];
+        }
+
+        return $cards;
     }
 
     /**
@@ -114,19 +138,17 @@ class ReportHubCatalogService
                 'Destroyed medicines register',
                 'Lots marked destroyed with witness and method — pharmacy council inspections.',
             ),
-            $this->stockCard(
+            $this->nativeCard(
                 'pharm_inventory_activity',
                 'pharmacy',
                 'Inventory activity',
-                'Stock movements and adjustments across warehouses.',
-                'inventory_activity.php'
+                'Stock movements and adjustments across warehouses — summary by product and warehouse.',
             ),
-            $this->stockCard(
+            $this->nativeCard(
                 'pharm_inventory_transactions',
                 'pharmacy',
                 'Inventory transactions',
                 'Detailed purchase, sale, and adjustment ledger.',
-                'inventory_transactions.php'
             ),
         ];
 
@@ -177,39 +199,70 @@ class ReportHubCatalogService
             ];
         }
 
+        if ($this->access->isBillOpsOutstandingEnabled($facilityId)) {
+            $cards[] = [
+                'id' => 'fin_bill_ops_outstanding',
+                'lens' => 'financial',
+                'title' => 'Outstanding balances',
+                'blurb' => 'Underpaid visits and follow-up list from Billing Back Office (M14).',
+                'url' => '/interface/modules/custom_modules/oe-module-new-clinic/public/bill-ops/index.php?tab=outstanding',
+                'kind' => 'module',
+            ];
+        }
+
         return $cards;
     }
 
     /**
      * @return list<array<string, mixed>>
      */
-    private function publicHealthCards(): array
+    private function publicHealthCards(int $facilityId): array
     {
-        return [
-            [
-                'id' => 'ph_opd_attendance',
-                'lens' => 'public_health',
-                'title' => 'OPD attendance template',
-                'blurb' => 'Monthly outpatient attendance worksheet aligned to common district returns (Ghana v1 pack).',
-                'url' => '',
-                'kind' => 'placeholder',
-                'note' => 'Manual CSV template — DHIMS2 export ships in V2.2 (NG8).',
-            ],
-            $this->stockCard(
-                'ph_encounters',
+        $cards = [
+            $this->nativeCard(
+                'ph_opd_attendance',
                 'public_health',
-                'Encounters by period',
-                'Visit counts for surveillance — compare with M7 operational throughput, do not sum with appointments.',
-                'encounters_report.php'
+                'OPD attendance template',
+                'Monthly outpatient attendance by age, sex, and new vs follow-up — Ghana MOH v1 worksheet.',
             ),
-            $this->stockCard(
-                'ph_appointments',
+            $this->nativeCard(
+                'ph_malaria_surveillance',
                 'public_health',
-                'Appointments funnel',
-                'Scheduled visits orthogonal to module queue counts (M7-F16).',
-                'appointments_report.php'
+                'Malaria suspected / tested',
+                'Distinct patients with malaria suspicion, lab orders, or positive results — district indicator prep.',
             ),
         ];
+
+        if ($this->access->isPatientRegistryEnabled($facilityId)) {
+            $cards[] = [
+                'id' => 'ph_notifiable_manual',
+                'lens' => 'public_health',
+                'title' => 'Notifiable conditions — manual log',
+                'blurb' => 'Interactive cohort search for surveillance conditions until DHIMS2 syndromic feed (NG8).',
+                'url' => '/interface/modules/custom_modules/oe-module-new-clinic/public/patient-registry.php',
+                'kind' => 'module',
+                'note' => 'US syndromic (HL7) reports remain in Advanced only.',
+            ];
+        }
+
+        $cards[] = $this->stockCard(
+            'ph_encounters',
+            'public_health',
+            'Encounters by period',
+            'Visit counts for surveillance — compare with M7 operational throughput, do not sum with appointments.',
+            'encounters_report.php',
+            'Scheduling funnel — do not sum with M7 visit throughput.'
+        );
+        $cards[] = $this->stockCard(
+            'ph_appointments',
+            'public_health',
+            'Appointments funnel',
+            'Scheduled visits orthogonal to module queue counts (M7-F16).',
+            'appointments_report.php',
+            'Scheduling funnel — do not sum with M7 visit throughput.'
+        );
+
+        return $cards;
     }
 
     /**
@@ -230,7 +283,15 @@ class ReportHubCatalogService
                 'lens' => 'audit',
                 'title' => 'Operational override log',
                 'blurb' => 'Billing skips, dup overrides, and queue bypasses from Daily Reports.',
-                'url' => '/interface/modules/custom_modules/oe-module-new-clinic/public/reports.php?tab=overrides',
+                'url' => '/interface/modules/custom_modules/oe-module-new-clinic/public/reports.php?tab=bypass',
+                'kind' => 'module',
+            ],
+            [
+                'id' => 'audit_m7_quality',
+                'lens' => 'audit',
+                'title' => 'Data quality & duplicate overrides',
+                'blurb' => 'Registration quality metrics and duplicate override counts from Daily Reports (M7).',
+                'url' => '/interface/modules/custom_modules/oe-module-new-clinic/public/reports.php?tab=quality',
                 'kind' => 'module',
             ],
         ];
@@ -273,9 +334,9 @@ class ReportHubCatalogService
     /**
      * @return array<string, mixed>
      */
-    private function stockCard(string $id, string $lens, string $title, string $blurb, string $script): array
+    private function stockCard(string $id, string $lens, string $title, string $blurb, string $script, ?string $note = null): array
     {
-        return [
+        $card = [
             'id' => $id,
             'lens' => $lens,
             'title' => $title,
@@ -283,5 +344,10 @@ class ReportHubCatalogService
             'url' => '/interface/reports/' . ltrim($script, '/'),
             'kind' => 'stock',
         ];
+        if ($note !== null && $note !== '') {
+            $card['note'] = $note;
+        }
+
+        return $card;
     }
 }

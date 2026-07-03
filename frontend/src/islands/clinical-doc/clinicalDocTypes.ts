@@ -23,6 +23,23 @@ export interface ClinicalDocCard {
   last_saved_by?: string | null;
   signed?: boolean;
   pin?: number;
+  bundle_health?: {
+    installed: boolean;
+    esign_ok: boolean;
+    status_label: string;
+  };
+}
+
+export interface ClinicalDocSignOverview {
+  encounter_signed: boolean;
+  started_count: number;
+  signed_count: number;
+  unsigned_count: number;
+  required_forms: Array<{
+    formdir: string;
+    title: string;
+    started?: boolean;
+  }>;
 }
 
 export interface ClinicalDocVisitSummary {
@@ -32,6 +49,7 @@ export interface ClinicalDocVisitSummary {
     state: string;
     encounter: number;
     pid: number;
+    service_profile?: string;
   };
   patient: {
     display_name: string;
@@ -41,6 +59,9 @@ export interface ClinicalDocVisitSummary {
     encounter_signed: boolean;
     require_esign_before_complete_consult: boolean;
   };
+  sign_overview?: ClinicalDocSignOverview;
+  addable_forms?: ClinicalDocCard[];
+  lab_panel_order_enabled?: boolean;
   lenses: ClinicalDocLens[];
   cards: ClinicalDocCard[];
   show_us_quality?: boolean;
@@ -53,6 +74,7 @@ export interface ClinicalDocProps {
   moduleUrl: string;
   doctorDeskUrl: string;
   visitBoardUrl: string;
+  facilityId?: number;
   initialTab: ClinicalDocLens;
   initialVisitId?: number | null;
   canVisit: boolean;

@@ -108,6 +108,18 @@ describe('VisitBoard', () => {
     await waitFor(() => expectQueueCard('1', 'Kwame Mensah'));
   });
 
+  it('renders queue bridge badge on visit card when API supplies map', async () => {
+    mockFetch.mockResolvedValue({
+      ...emptyBoard,
+      columns: { ...emptyBoard.columns, waiting: [patientCard] },
+      queue_bridge_badges: {
+        '42': { code: 'EX-03', label: 'Appt not linked', hub_url: '/queue-bridge/index.php' },
+      },
+    });
+    render(<VisitBoard {...props} />);
+    await waitFor(() => expect(screen.getByText('Appt not linked')).toBeInTheDocument());
+  });
+
   // ── Error states ──────────────────────────────────────────────────────────
 
   it('shows full error alert when initial load fails (no previous data)', async () => {
@@ -420,5 +432,34 @@ describe('VisitBoard', () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(mockFetch).toHaveBeenCalledWith('visit.board', expect.any(Object));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('shows kiosk toolbar on wall profile when kioskChrome is enabled', async () => {
+    mockFetch.mockResolvedValue(emptyBoard);
+
+    render(
+      <VisitBoard
+        {...props}
+        profile="wall"
+        kioskChrome
+        clinicName="Sunrise Clinic"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Sunrise Clinic')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Fullscreen/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Privacy/i })).toBeInTheDocument();
+    });
+  });
+
+  it('does not show kiosk toolbar without kioskChrome flag', async () => {
+    mockFetch.mockResolvedValue(emptyBoard);
+
+    render(<VisitBoard {...props} profile="wall" clinicName="Sunrise Clinic" />);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /Fullscreen/i })).not.toBeInTheDocument();
+    });
   });
 });

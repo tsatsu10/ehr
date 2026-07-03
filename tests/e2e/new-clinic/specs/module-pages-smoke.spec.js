@@ -8,6 +8,8 @@
  */
 
 const { test, expect } = require('@playwright/test');
+const { execSync } = require('child_process');
+const path = require('path');
 const { BASE_URL, MODULE_BASE, login: loginAsAdmin } = require('../helpers/auth');
 
 const ADMIN_USER = process.env.TEST_USERNAME_ADMIN || 'Adminstrator';
@@ -35,6 +37,7 @@ const MODULE_PAGES = [
   ['bill-ops', `${MODULE_BASE}/bill-ops/index.php`],
   ['report-hub', `${MODULE_BASE}/report-hub/index.php`],
   ['clinical-doc', `${MODULE_BASE}/clinical-doc/index.php`],
+  ['queue-bridge', `${MODULE_BASE}/queue-bridge/index.php`],
 ];
 
 async function loginAsAdminPage(page) {
@@ -42,6 +45,15 @@ async function loginAsAdminPage(page) {
 }
 
 test.describe('New Clinic module pages (authenticated)', () => {
+  test.beforeAll(() => {
+    const script = path.join(
+      __dirname,
+      '../../../../interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-queue-bridge.php',
+    );
+    const php = process.env.PHP_BIN || 'C:\\xampp\\php\\php.exe';
+    execSync(`"${php}" "${script}"`, { stdio: 'inherit' });
+  });
+
   test.beforeEach(async ({ page }) => {
     await loginAsAdminPage(page);
   });

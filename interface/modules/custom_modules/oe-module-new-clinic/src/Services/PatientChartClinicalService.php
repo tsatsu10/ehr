@@ -22,6 +22,7 @@ class PatientChartClinicalService
         private readonly ProcedureOrderDeepLinkService $procedureOrderLinks = new ProcedureOrderDeepLinkService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
         private readonly ClinicalDocHubLinkService $docHubLinks = new ClinicalDocHubLinkService(),
+        private readonly HistoryEditorWrapService $historyEditorWrap = new HistoryEditorWrapService(),
     ) {
     }
 
@@ -92,9 +93,12 @@ class PatientChartClinicalService
             'anchor' => 'clinical-background',
             'lines' => $lines,
             'empty' => $lines === [],
-            'editor_url' => $webroot
+            'editor_url' => $this->historyEditorWrap->appendReturnParam(
+                $webroot
                 . '/interface/patient_file/history/history_full.php?set_pid='
                 . urlencode((string) $pid),
+                $pid
+            ),
             'last_updated' => is_array($row) ? ($row['date'] ?? null) : null,
         ];
     }

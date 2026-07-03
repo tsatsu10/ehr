@@ -53,14 +53,20 @@ class ClinicalDocCatalogServiceTest extends TestCase
     public function testUnknownBundleFallsBackToGhanaOpdDefs(): void
     {
         $config = new ClinicConfigService();
-        $config->set('clinical_doc_bundle', 'unknown_bundle', 0);
+        $previous = $config->get('clinical_doc_bundle', ClinicalDocCatalogService::DEFAULT_BUNDLE_KEY, 0);
+        try {
+            $config->set('clinical_doc_bundle', 'unknown_bundle', 0);
 
-        $access = new ClinicalDocAccessService(
-            aclChecker: static fn (string $section, string $aco): bool =>
-                $section === 'new_clinic' && $aco === 'new_doctor',
-        );
-        $catalog = new ClinicalDocCatalogService(access: $access, config: $config);
+            $access = new ClinicalDocAccessService(
+                aclChecker: static fn (string $section, string $aco): bool =>
+                    $section === 'new_clinic' && $aco === 'new_doctor',
+            );
+            $catalog = new ClinicalDocCatalogService(access: $access, config: $config);
 
-        $this->assertSame('consult', $catalog->resolveSourceLensForFormdir('soap', 0));
+            $this->assertSame(ClinicalDocCatalogService::DEFAULT_BUNDLE_KEY, $catalog->resolveBundleKey(0));
+            $this->assertSame('consult', $catalog->resolveSourceLensForFormdir('soap', 0));
+        } finally {
+            $config->set('clinical_doc_bundle', (string) $previous, 0);
+        }
     }
 }

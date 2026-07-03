@@ -1,0 +1,76 @@
+/**
+ * T1-F20b — History editor wrap (V1.1-HIST-WRAP)
+ */
+body.oe-nc-history-editor-wrap {
+    background: #f8fafc;
+}
+
+.oe-nc-history-editor-wrap__header {
+    position: sticky;
+    top: 0;
+    z-index: 1040;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.oe-nc-history-editor-wrap__inner {
+    max-width: 100%;
+}
+
+.oe-nc-history-editor-wrap__top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.oe-nc-history-editor-wrap__brand {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 0.75rem;
+}
+
+.oe-nc-history-editor-wrap__clinic {
+    font-size: 0.9375rem;
+    color: #0f172a;
+}
+
+.oe-nc-history-editor-wrap__role,
+.oe-nc-history-editor-wrap__date {
+    font-size: 0.8125rem;
+    color: #64748b;
+}
+
+.oe-nc-history-editor-wrap__title-row {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+}
+
+.oe-nc-history-editor-wrap__title {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.oe-nc-history-editor-wrap__breadcrumb {
+    margin: 0;
+}
+
+body.oe-nc-history-editor-wrap #container_div > .row:first-child {
+    display: none !important;
+}
+
+body.oe-nc-history-editor-wrap .oemr_ui_heading,
+body.oe-nc-history-editor-wrap .title {
+    display: none !important;
+}
+
+body.oe-nc-history-editor-wrap .oe-nc-history-editor-wrap__back {
+    margin-right: 0.35rem;
+}

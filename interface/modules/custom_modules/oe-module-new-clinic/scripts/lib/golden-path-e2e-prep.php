@@ -89,5 +89,43 @@ function goldenPathEnsureDeskSkipAcls(): void
 function goldenPathEnsureBillOpsAcls(): void
 {
     goldenPathGrantAclToGroup('New Clinic Cashier Lead', 'new_bill_ops', 'Billing Back Office Hub');
+    goldenPathGrantAclToGroup('New Clinic Cashier Lead', 'new_bill_ops_correct', 'Billing Charge Corrections');
+    goldenPathGrantAclToGroup('New Clinic Cashier Lead', 'new_bill_ops_payment', 'Billing Payment Search');
     goldenPathGrantAclToGroup('New Clinic Cashier Lead', 'new_bill_ops_close', 'Billing Close Day');
+    goldenPathGrantAclToGroup('New Clinic Cashier Lead', 'new_bill_ops_outstanding', 'Billing Outstanding Balances');
+    goldenPathGrantAclToGroup('New Clinic Admin', 'new_bill_ops_insurance', 'Billing Insurance Vault');
+}
+
+function goldenPathEnsureBillOpsAdminUser(): void
+{
+    $adminUsername = getenv('TEST_USERNAME_ADMIN') ?: 'Adminstrator';
+    $user = sqlQuery('SELECT id FROM users WHERE username = ? AND active = 1 LIMIT 1', [$adminUsername]);
+    if (empty($user['id'])) {
+        echo "Admin user {$adminUsername} not found — skip insurance vault ACL bind\n";
+        return;
+    }
+
+    AclExtended::addUserAros($adminUsername, 'New Clinic Admin');
+    echo "Granted {$adminUsername} → New Clinic Admin for bill ops insurance e2e.\n";
+}
+
+/**
+ * @param list<int> $facilityIds
+ */
+function goldenPathEnsureClinicalDocConfig(ClinicConfigService $config, ?array $facilityIds = null): void
+{
+    $keys = [
+        'enable_clinical_doc_hub' => '1',
+        'clinical_doc_show_screening' => '1',
+        'enable_react_clinical_doc_hub' => '1',
+        'clinical_doc_bundle' => 'ghana_opd_v1',
+    ];
+
+    foreach ($facilityIds ?? pharmOpsPilotFacilityIds() as $facilityId) {
+        foreach ($keys as $key => $value) {
+            $config->set($key, $value, $facilityId);
+        }
+    }
+
+    echo 'Clinical doc hub flags enabled for golden-path E2E.' . PHP_EOL;
 }

@@ -57,27 +57,35 @@ export interface VisitChargesData {
   balance_due: number;
   fee_schedule: FeeScheduleItem[];
   can_apply_discount: boolean;
+  reopen_on_underpaid?: boolean;
 }
 
 export interface PaymentRow {
   id: number;
   receipt_number: string;
   amount_paid: number;
+  change_due?: number;
   paid_at: string;
   reversed_at: string | null;
   reversal_reason: string | null;
   visit_id: number;
   queue_number: number;
+  pid: number;
+  posted_payment_id?: number;
   patient_name: string;
   pubpid: string;
   cashier: string | null;
   can_reverse: boolean;
+  can_reprint?: boolean;
 }
 
 export interface PaymentsSearchData {
   currency_symbol: string;
   rows: PaymentRow[];
   total: number;
+  offset?: number;
+  limit?: number;
+  has_more?: boolean;
 }
 
 export interface DaysheetData {
@@ -112,4 +120,8 @@ export interface OutstandingData {
   currency_symbol: string;
   total_owed: number;
   rows: OutstandingRow[];
+  total: number;
+  offset?: number;
+  limit?: number;
+  has_more?: boolean;
 }

@@ -1,6 +1,9 @@
 import type { PillVariant } from '@core/types';
+import { buildMrdClinicalDeepLink, MRD_CLINICAL_ANCHORS } from '@core/mrdBannerLinks';
+import type { ChipItem } from './ChipCloud';
 
 export interface PatientIdentityLine {
+  pid?: number;
   display_name: string;
   sex?: string;
   age_years?: string | number;
@@ -48,25 +51,82 @@ export function formatIdentityInline(identity: PatientIdentityLine): string {
 export interface PatientSafetyChips {
   allergies_severe?: string[];
   allergies_undocumented?: boolean;
+  pregnant?: boolean;
+  problem_count?: number;
+  allergy_count?: number;
 }
 
-export function buildAllergyChips(safety?: PatientSafetyChips): { label: string; variant: 'severe' | 'warn' }[] {
+export interface BuildAllergyChipsOptions {
+  mrdDeepLinks?: boolean;
+  pid?: number;
+  chartOpenUrl?: string;
+  showAllergyCountChip?: boolean;
+}
+
+function chipHref(
+  options: BuildAllergyChipsOptions | undefined,
+  anchor: string,
+): string | undefined {
+  if (!options?.mrdDeepLinks || !options.pid) {
+    return undefined;
+  }
+  return buildMrdClinicalDeepLink(options.pid, anchor, options.chartOpenUrl);
+}
+
+export function buildAllergyChips(
+  safety?: PatientSafetyChips,
+  options?: BuildAllergyChipsOptions,
+): ChipItem[] {
   if (!safety) return [];
 
-  const chips: { label: string; variant: 'severe' | 'warn' }[] = [];
+  const chips: ChipItem[] = [];
+  const allergyHref = chipHref(options, MRD_CLINICAL_ANCHORS.allergies);
+  const problemsHref = chipHref(options, MRD_CLINICAL_ANCHORS.problems);
+
+  if (safety.pregnant) {
+    chips.push({
+      label: 'Pregnant',
+      variant: 'warn',
+      href: problemsHref,
+    });
+  }
 
   if (safety.allergies_undocumented) {
-    chips.push({ label: 'Allergies undocumented', variant: 'warn' });
+    chips.push({
+      label: 'Allergies undocumented',
+      variant: 'warn',
+      href: allergyHref,
+    });
     return chips;
   }
 
-  (safety.allergies_severe ?? []).slice(0, 3).forEach((allergy) => {
-    chips.push({ label: allergy, variant: 'severe' });
+  const severe = safety.allergies_severe ?? [];
+  const allergyCount = safety.allergy_count ?? severe.length;
+
+  if (options?.showAllergyCountChip && allergyCount > 3) {
+    chips.push({
+      label: `${allergyCount} allergies`,
+      variant: 'warn',
+      href: allergyHref,
+    });
+    return chips;
+  }
+
+  severe.slice(0, 3).forEach((allergy) => {
+    chips.push({ label: allergy, variant: 'severe', href: allergyHref });
   });
 
-  const extra = (safety.allergies_severe ?? []).length - 3;
+  const extra = severe.length - 3;
   if (extra > 0) {
-    chips.push({ label: `+${extra} more`, variant: 'warn' });
+    chips.push({ label: `+${extra} more`, variant: 'warn', href: allergyHref });
+  }
+
+  if (safety.problem_count != null && safety.problem_count > 0) {
+    chips.push({
+      label: `${safety.problem_count} problem${safety.problem_count === 1 ? '' : 's'}`,
+      variant: 'warn',
+      href: problemsHref,
+    });
   }
 
   return chips;

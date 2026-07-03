@@ -44,6 +44,10 @@ export interface RegistryFilters {
   recall_date_from: string;
   recall_date_to: string;
   my_provider_today: boolean;
+  allergy_substance_contains: string;
+  medication_contains: string;
+  unread_staff_message: string;
+  open_dated_reminder: string;
 }
 
 /** API payload shape sent to cohort.search / cohort.export. */
@@ -83,6 +87,10 @@ export interface ApiRegistryFilters {
   recall_date_from: string | null;
   recall_date_to: string | null;
   my_provider_today?: boolean;
+  allergy_substance_contains: string | null;
+  medication_contains: string | null;
+  unread_staff_message: string | null;
+  open_dated_reminder: string | null;
 }
 
 export interface RegistryPreset {

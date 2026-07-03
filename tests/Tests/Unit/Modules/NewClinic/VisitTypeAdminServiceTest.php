@@ -61,6 +61,7 @@ class VisitTypeAdminServiceTest extends TestCase
 
         $this->assertStringContainsString('enable_lab_role', $body);
         $this->assertStringContainsString('enable_pharmacy_role', $body);
+        $this->assertStringContainsString('enable_ancillary_services', $body);
         $this->assertStringContainsString('lab_direct', $body);
         $this->assertStringContainsString('pharmacy_walkin', $body);
     }

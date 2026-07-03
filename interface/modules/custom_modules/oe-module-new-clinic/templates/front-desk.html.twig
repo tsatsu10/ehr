@@ -22,7 +22,8 @@
         enforceCompletionOnRevisit:    enforce_completion_on_revisit ? true : false,
         scheduledIntegrationEnabled:   scheduled_integration_enabled ? true : false,
         appointmentsTodayCount:        appointments_today_count|default(0)|number_format(0, '', ''),
-        calendarUrl:                   calendar_url
+        calendarUrl:                   calendar_url,
+        recallsUrl:                    recalls_url|default(null)
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}
@@ -32,8 +33,7 @@
 
 {% block scripts %}
 {% if enable_react_front_desk|default(true) %}
-<link rel="stylesheet" href="{{ assets_url }}/modern/front-desk.css?v={{ asset_version }}">
+{% include 'partials/island-assets.html.twig' %}
 <link rel="stylesheet" href="{{ assets_url }}/css/registration-form.css?v={{ asset_version }}">
-<script type="module" src="{{ assets_url }}/modern/front-desk.js?v={{ asset_version }}"></script>
 {% endif %}
 {% endblock %}

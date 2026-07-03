@@ -4,7 +4,7 @@
 
 import type { DoctorConsultPayload, DoctorSupervisorMeta } from '@core/types';
 import { DoctorPatientBanner, type DoctorSignMeta } from './DoctorPatientBanner';
-import { ConsultShortcuts } from './ConsultShortcuts';
+import { ConsultShortcuts, type ShortcutKind } from './ConsultShortcuts';
 import { SupervisorCombobox } from './SupervisorCombobox';
 import { PharmacyPrescriptionsTable } from '../pharmacy-desk/PharmacyPrescriptionsTable';
 
@@ -25,6 +25,7 @@ interface DoctorActivePaneProps {
   onOpenLabPanel: () => void;
   onOpenFormularyRx: () => void;
   onOpenDocFavorites?: () => void;
+  runShortcut: (shortcut: ShortcutKind) => void | Promise<void>;
   onShortcutError: (message: string) => void;
   onPrintRx?: (prescriptionId: number) => void;
   onSupervisorUpdated: (meta: DoctorSupervisorMeta) => void;
@@ -46,7 +47,8 @@ export function DoctorActivePane({
   onOpenLabPanel,
   onOpenFormularyRx,
   onOpenDocFavorites,
-  onShortcutError,
+  runShortcut,
+  onShortcutError: _onShortcutError,
   onPrintRx,
   onSupervisorUpdated,
   onSupervisorNotice,
@@ -107,9 +109,6 @@ export function DoctorActivePane({
             onNotice={onSupervisorNotice}
           />
           <ConsultShortcuts
-            visit={visit}
-            ajaxUrl={ajaxUrl}
-            csrfToken={csrfToken}
             blocked={blocked}
             clinicalDocHubEnabled={!!payload.clinical_doc_hub_enabled}
             onOpenDocFavorites={onOpenDocFavorites}
@@ -117,7 +116,7 @@ export function DoctorActivePane({
             formularyRxEnabled={formularyRxEnabled}
             onOpenLabPanel={onOpenLabPanel}
             onOpenFormularyRx={onOpenFormularyRx}
-            onError={onShortcutError}
+            runShortcut={runShortcut}
           />
           {(payload.pharm_ops_enabled || payload.rx_print_enabled) ? (
             <div className="mb-3" id="nc-doctor-rx-stock-panel">

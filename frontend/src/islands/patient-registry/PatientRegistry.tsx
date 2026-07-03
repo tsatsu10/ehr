@@ -203,20 +203,33 @@ export function PatientRegistry({
   }, [ajaxUrl, csrfToken, filters]);
 
   const handleSaveFilter = useCallback(() => {
-    setFilterName('');
-    setShareFilter(false);
+    const owned =
+      selectedSavedId > 0 && presets.find((p) => p.saved_id === selectedSavedId)?.owned_by_user;
+    const preset = presets.find((p) => p.saved_id === selectedSavedId);
+    if (owned && preset) {
+      setFilterName(preset.label.replace(/^\[Shared\] /, ''));
+      setShareFilter(!!preset.is_shared);
+    } else {
+      setFilterName('');
+      setShareFilter(false);
+    }
     setSaveFilterOpen(true);
-  }, []);
+  }, [presets, selectedSavedId]);
 
   const submitSaveFilter = useCallback(async () => {
     const name = filterName.trim();
     if (!name) return;
+
+    const ownedPreset = presets.find((p) => p.saved_id === selectedSavedId);
+    const updateId =
+      selectedSavedId > 0 && ownedPreset?.owned_by_user ? selectedSavedId : undefined;
 
     try {
       await oeFetch<{ success?: boolean }>('cohort.saved_filter', {
         ...fetchOptions,
         json: {
           operation: 'save',
+          ...(updateId ? { id: updateId } : {}),
           name,
           is_shared: shareFilter ? 1 : 0,
           filters: filtersToApiPayload(filters),
@@ -228,7 +241,7 @@ export function PatientRegistry({
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Could not save filter');
     }
-  }, [fetchOptions, filterName, filters, loadPresets, shareFilter]);
+  }, [fetchOptions, filterName, filters, loadPresets, presets, selectedSavedId, shareFilter]);
 
   const handleDeleteFilter = useCallback(() => {
     if (selectedSavedId <= 0) return;
@@ -256,6 +269,8 @@ export function PatientRegistry({
   const selectedPreset = presets.find((p) => p.id === selectedPresetId);
   const showDeleteSaved =
     selectedSavedId > 0 && selectedPreset?.can_delete === true;
+  const updatingOwnedFilter =
+    selectedSavedId > 0 && selectedPreset?.owned_by_user === true;
 
   usePageHeadingRefresh('nc-registry-refresh', handleRefresh);
   usePageHeadingButton('nc-registry-export', handleExport);
@@ -327,9 +342,9 @@ export function PatientRegistry({
       <ConfirmModal
         open={saveFilterOpen}
         onClose={() => setSaveFilterOpen(false)}
-        title="Save filter"
+        title={updatingOwnedFilter ? 'Update saved filter' : 'Save filter'}
         modalId="nc-registry-save-filter-modal"
-        confirmLabel="Save"
+        confirmLabel={updatingOwnedFilter ? 'Update' : 'Save'}
         confirmDisabled={filterName.trim() === ''}
         onConfirm={() => { void submitSaveFilter(); }}
       >

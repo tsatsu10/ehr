@@ -30,6 +30,40 @@ export interface ReportHubSummary {
   currency_symbol: string;
 }
 
+export interface ReportHubBillOpsEmbedProps {
+  canCorrect: boolean;
+  canPayment: boolean;
+  canClose: boolean;
+  canOutstanding: boolean;
+  canInsurance: boolean;
+  reopenOnCorrection: boolean;
+}
+
+export interface ReportHubEmbedContext {
+  ajaxUrl: string;
+  csrfToken: string;
+  webroot: string;
+  facilityId: number;
+  visitBoardUrl: string;
+  moduleUrl: string;
+  cashierUrl: string;
+  reportsUrl: string;
+  chartUrlBase: string;
+  billingThreshold: number;
+  visitDate: string;
+  canCancelVisit: boolean;
+  canMarkUnpaid: boolean;
+  canRunReconciliation: boolean;
+  scheduledIntegrationEnabled: boolean;
+  billOps: ReportHubBillOpsEmbedProps;
+  currencyFormat?: {
+    currency_code?: string;
+    currency_symbol?: string;
+    currency_decimals?: number;
+    currency_symbol_position?: 'before' | 'after';
+  };
+}
+
 export interface ReportHubProps {
   ajaxUrl: string;
   csrfToken: string;
@@ -38,6 +72,9 @@ export interface ReportHubProps {
   visitBoardUrl: string;
   billOpsUrl: string;
   pharmOpsUrl: string;
+  cashierUrl: string;
+  chartUrlBase: string;
+  billingThreshold: number;
   facilityId: number;
   initialTab: string;
   canToday: boolean;
@@ -48,6 +85,28 @@ export interface ReportHubProps {
   canAudit: boolean;
   canShowAdvanced: boolean;
   webroot: string;
+  canCancelVisit: boolean;
+  canMarkUnpaid: boolean;
+  canRunReconciliation: boolean;
+  scheduledIntegrationEnabled: boolean;
+  canBillOpsCorrect: boolean;
+  canBillOpsPayment: boolean;
+  canBillOpsClose: boolean;
+  canBillOpsOutstanding: boolean;
+  canBillOpsInsurance: boolean;
+  reopenOnCorrection: boolean;
+  runbooks?: ReportHubRunbookCard[];
+  currencyFormat?: ReportHubEmbedContext['currencyFormat'];
+}
+
+export interface ReportHubRunbookCard {
+  id: string;
+  cadence: string;
+  title: string;
+  screen: string;
+  detail: string;
+  url: string | null;
+  search_text: string;
 }
 
 export const LENS_LABELS: Record<ReportHubLens, string> = {

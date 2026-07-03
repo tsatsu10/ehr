@@ -42,8 +42,8 @@
             {{ 'Advanced (OpenEMR)'|xlt }}
         </button>
         <div class="dropdown-menu dropdown-menu-right">
-            <a class="dropdown-item" href="{{ webroot }}/interface/reports/report.php" target="_top">{{ 'Stock Reports menu'|xlt }}</a>
-            <a class="dropdown-item" href="{{ reports_url|attr }}" target="_top">{{ 'Daily Reports (M7)'|xlt }}</a>
+            <a class="dropdown-item" href="{{ webroot }}/interface/reports/report.php" data-report-key="hub_advanced_stock_reports" target="_top">{{ 'Stock Reports menu'|xlt }}</a>
+            <a class="dropdown-item" href="{{ reports_url|attr }}" data-report-key="hub_advanced_daily_reports" target="_top">{{ 'Daily Reports (M7)'|xlt }}</a>
         </div>
     </div>
     {% endif %}
@@ -67,6 +67,9 @@
         visitBoardUrl: visit_board_url,
         billOpsUrl: bill_ops_url,
         pharmOpsUrl: pharm_ops_url,
+        cashierUrl: cashier_url,
+        chartUrlBase: chart_url_base,
+        billingThreshold: billing_threshold|default(70)|number_format(0, '', ''),
         facilityId: desk_facility_id|default(0)|number_format(0, '', ''),
         initialTab: initial_tab,
         canToday: can_today ? true : false,
@@ -76,6 +79,18 @@
         canPublicHealth: can_public_health ? true : false,
         canAudit: can_audit ? true : false,
         canShowAdvanced: can_show_advanced ? true : false,
+        canCancelVisit: can_cancel_visit ? true : false,
+        canMarkUnpaid: can_mark_unpaid ? true : false,
+        canRunReconciliation: can_run_reconciliation ? true : false,
+        scheduledIntegrationEnabled: scheduled_integration_enabled ? true : false,
+        canBillOpsCorrect: can_bill_ops_correct ? true : false,
+        canBillOpsPayment: can_bill_ops_payment ? true : false,
+        canBillOpsClose: can_bill_ops_close ? true : false,
+        canBillOpsOutstanding: can_bill_ops_outstanding ? true : false,
+        canBillOpsInsurance: can_bill_ops_insurance ? true : false,
+        reopenOnCorrection: reopen_on_correction ? true : false,
+        currencyFormat: currency_format|default({}),
+        runbooks: report_runbooks|default([]),
         webroot: webroot
     }|json_encode|e('html_attr') }}"
 ></div>
@@ -86,6 +101,6 @@
 
 {% block scripts %}
 {% if enable_react_report_hub|default(true) %}
-<script type="module" src="{{ assets_url }}/modern/report-hub.js?v={{ asset_version }}"></script>
+{% include 'partials/island-assets.html.twig' %}
 {% endif %}
 {% endblock %}

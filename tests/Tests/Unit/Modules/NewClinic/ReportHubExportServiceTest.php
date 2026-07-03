@@ -21,24 +21,34 @@ use PHPUnit\Framework\TestCase;
 class ReportHubExportServiceTest extends TestCase
 {
     private ReportHubExportService $service;
+    private ClinicConfigService $config;
+    private ?string $previousReportHubFlag = null;
 
     protected function setUp(): void
     {
-        $config = new ClinicConfigService();
-        $config->set('enable_report_hub', '1', 0);
+        $this->config = new ClinicConfigService();
+        $this->previousReportHubFlag = $this->config->get('enable_report_hub', '0', 0);
+        $this->config->set('enable_report_hub', '1', 0);
 
         $access = new ReportHubAccessService(
-            config: $config,
+            config: $this->config,
             aclChecker: static fn (string $section, string $aco): bool =>
                 $section === 'new_clinic'
                 && in_array($aco, ['new_reports_hub', 'new_reports_clinical', 'reports'], true),
         );
-        $catalog = new ReportHubCatalogService(access: $access, config: $config);
+        $catalog = new ReportHubCatalogService(access: $access, config: $this->config);
 
         $this->service = new ReportHubExportService(
             access: $access,
             catalog: $catalog,
         );
+    }
+
+    protected function tearDown(): void
+    {
+        if ($this->previousReportHubFlag !== null) {
+            $this->config->set('enable_report_hub', $this->previousReportHubFlag, 0);
+        }
     }
 
     public function testRejectsEmptyReportKey(): void
@@ -83,8 +93,11 @@ class ReportHubExportServiceTest extends TestCase
     public function testRequestExportReturnsAsyncWhenAboveThreshold(): void
     {
         $config = new ClinicConfigService();
-        $config->set('enable_report_hub', '1', 0);
-        $config->set('report_hub_async_export_threshold', '10', 0);
+        $prevHub = $config->get('enable_report_hub', '0', 0);
+        $prevThreshold = $config->get('report_hub_async_export_threshold', '1000', 0);
+        try {
+            $config->set('enable_report_hub', '1', 0);
+            $config->set('report_hub_async_export_threshold', '10', 0);
 
         $access = new ReportHubAccessService(
             config: $config,
@@ -121,5 +134,9 @@ class ReportHubExportServiceTest extends TestCase
         $this->assertSame('async', $result['mode']);
         $this->assertArrayHasKey('job_id', $result);
         $this->assertSame(25, $result['row_count_estimate']);
+        } finally {
+            $config->set('enable_report_hub', (string) $prevHub, 0);
+            $config->set('report_hub_async_export_threshold', (string) $prevThreshold, 0);
+        }
     }
 }

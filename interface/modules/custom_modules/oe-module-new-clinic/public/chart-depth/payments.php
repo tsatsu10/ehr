@@ -64,6 +64,7 @@ $reactChartDepth = $config->get('enable_react_chart_depth', '1') === '1';
     'Payment history',
     ['new_chart_depth_finance', 'new_admin'],
     [
+        'island_entry' => 'chart-depth',
         'pid' => $pid,
         'visit_id' => $visitId > 0 ? $visitId : null,
         'chart_url' => $chartUrl,

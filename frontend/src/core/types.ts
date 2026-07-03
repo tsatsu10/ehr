@@ -66,6 +66,13 @@ export interface VisitCard {
   claim_lost: boolean;
   claim_lost_by?: { display_name: string; role_label: string };
   photo_url?: string;
+  queue_bridge_badge?: {
+    code: string;
+    label: string;
+    hub_url: string;
+  };
+  /** PRD §6.8.6 — when enable_ancillary_services is on */
+  ancillary_badges?: string[];
 }
 
 export type ColumnKey =
@@ -81,6 +88,7 @@ export interface BoardConfig {
   enable_triage: boolean;
   enable_lab_role: boolean;
   enable_pharmacy_role: boolean;
+  enable_queue_bridge?: boolean;
 }
 
 export interface BoardData {
@@ -90,6 +98,11 @@ export interface BoardData {
   visit_date?: string;
   cancelled?: BoardTerminalVisit[];
   closed_unpaid?: BoardTerminalVisit[];
+  queue_bridge_badges?: Record<string, {
+    code: string;
+    label: string;
+    hub_url: string;
+  }>;
 }
 
 /** One row in a visit-board terminal collapsible (cancelled / left unpaid). */
@@ -167,6 +180,7 @@ export interface TriageQueueCard {
   claim_lost?: boolean;
   claim_lost_by?: { display_name: string; role_label: string };
   row_version?: number | null;
+  ancillary_badges?: string[];
 }
 
 /** Response from ?action=triage.queue */
@@ -179,6 +193,9 @@ export interface TriageQueueData {
   queue_date_filter?: string | null;
   vitals_unit_label?: string;
   vitals_form_rules?: VitalsRules;
+  hard_provider_assignment_enabled?: boolean;
+  can_hard_assign_provider?: boolean;
+  assignable_doctors?: Array<{ user_id: number; display_name: string; taking_patients: boolean }>;
 }
 
 /** Patient identity/safety/completion context */
@@ -208,8 +225,16 @@ export interface PatientVitalsToday {
 export interface PatientPreview {
   identity: PatientIdentity;
   completion: PatientCompletion;
-  safety?: { allergies_severe?: string[] };
+  safety?: {
+    allergies_severe?: string[];
+    allergies_undocumented?: boolean;
+    pregnant?: boolean;
+    problem_count?: number;
+    allergy_count?: number;
+  };
   vitals_today?: PatientVitalsToday;
+  banner_mrd_deep_links?: boolean;
+  allergy_count_chip?: boolean;
 }
 
 /** Lightweight visit record returned by triage.select / triage.start */
@@ -267,6 +292,10 @@ export interface VisitBoardProps {
   canCancel?: boolean;
   /** Desk-specific navigation URLs keyed by role slug. */
   deskUrls?: Record<string, string>;
+  /** V1.1-OPS — fullscreen + wake-lock toolbar on wall profile. */
+  kioskChrome?: boolean;
+  /** Clinic display name for kiosk toolbar. */
+  clinicName?: string;
 }
 
 // ── Visit Board detail modal (visit.detail) ───────────────────────────────
@@ -312,6 +341,18 @@ export interface VisitDetailData {
   skipped_triage?: boolean;
   audit_timeline?: VisitDetailAuditItem[];
   chart_history_url?: string | null;
+  queue_bridge_action?: {
+    exception_code: string;
+    pid: number;
+    pc_eid: number;
+    visit_id: number;
+    appt_date: string;
+    label: string;
+    summary?: string;
+    appt_time_label?: string | null;
+    can_resolve: boolean;
+    hub_url?: string;
+  } | null;
 }
 
 // ── Doctor desk domain types ──────────────────────────────────────────────
@@ -342,10 +383,15 @@ export interface DoctorQueueCard {
   is_urgent: 0 | 1;
   skipped_triage?: boolean;
   assigned_provider_name?: string;
+  routing_suggested_provider_id?: number;
+  routing_suggested_provider_name?: string;
+  hard_assigned_provider_id?: number;
+  hard_assigned_provider_name?: string;
   routing_chips?: RoutingChips;
   row_version?: number | null;
   claim_lost?: boolean;
   claim_lost_by?: { display_name: string; role_label: string };
+  ancillary_badges?: string[];
 }
 
 /** Active consult visit record */
@@ -430,6 +476,13 @@ export interface DoctorQueueData {
   done_today?: DoctorDoneTodayRow[];
   reopenable_today?: DoctorReopenableRow[];
   can_reopen_consult?: boolean;
+  advisory_routing_enabled?: boolean;
+  hard_provider_assignment_enabled?: boolean;
+  doctor_ready_notify_enabled?: boolean;
+  can_take_assigned_override?: boolean;
+  ready_notify_pending?: Array<{ visit_id: number; display_name: string; queue_number: string | number }>;
+  require_override_reason?: boolean;
+  my_user_id?: number;
 }
 
 /** Doctor island props (passed via data-props JSON from Twig) */
@@ -440,6 +493,8 @@ export interface DoctorDeskProps {
   pollMs?: number;
   visitBoardUrl?: string;
   multiDoctorFilters?: boolean;
+  doctorRosterEnabled?: boolean;
+  advisoryRoutingEnabled?: boolean;
   sharedDeviceWarning?: boolean;
   labPanelOrderEnabled?: boolean;
   formularyRxEnabled?: boolean;
@@ -448,6 +503,10 @@ export interface DoctorDeskProps {
     currency_decimals?: number;
     currency_symbol_position?: 'before' | 'after';
   };
+  /** V1.1-OPS — one-time success banner when lab results become ready. */
+  labResultsToastEnabled?: boolean;
+  /** Emergency Rx when allergies undocumented (`new_rx_undocumented_allergy_override`). */
+  canRxAllergyOverride?: boolean;
 }
 
 /** Provider row from doctor.search_providers */
@@ -552,6 +611,7 @@ export interface CashierQueueCard {
   is_urgent: 0 | 1;
   charges_total: number;
   row_version?: number | null;
+  ancillary_badges?: string[];
 }
 
 export interface CashierPaidTodayRow {
@@ -635,7 +695,10 @@ export interface CashierSelectData {
   encounter_url?: string;
   can_apply_discount?: boolean;
   can_esign_override?: boolean;
+  enable_momo_payment?: boolean;
 }
+
+export type CashierPaymentMethod = 'cash' | 'momo';
 
 export interface CashierReceipt {
   queue_number: number | string;
@@ -643,6 +706,9 @@ export interface CashierReceipt {
   change_due: number;
   paid_at?: string;
   receipt_number?: string;
+  payment_method?: CashierPaymentMethod;
+  payment_method_label?: string;
+  momo_reference?: string;
 }
 
 /** Response from cashier.pay */
@@ -668,6 +734,7 @@ export interface PatientSearchRow {
   };
   chips?: {
     appointment_today?: AppointmentTodayChip | null;
+    recall_due?: RecallDueChip | null;
   };
 }
 
@@ -739,6 +806,7 @@ export interface LabQueueCard {
   unreleased_count?: number;
   row_version?: number | null;
   claim_lost?: boolean;
+  ancillary_badges?: string[];
 }
 
 export interface LabVisit {
@@ -749,6 +817,23 @@ export interface LabVisit {
   state: 'ready_for_lab' | 'in_lab';
   visit_type_label?: string;
   row_version?: number | null;
+  service_profile?: string;
+  ancillary_badges?: string[];
+}
+
+export interface LabDirectIntake {
+  enabled: boolean;
+  has_referral: boolean;
+  referral_required_warning: boolean;
+  referral_view_url?: string | null;
+  can_create_orders: boolean;
+  lab_intake_formdir: string;
+  lab_intake_title: string;
+  lab_intake_signed: boolean;
+  lab_intake_started: boolean;
+  documentation_hub_url?: string | null;
+  clinical_doc_hub_enabled?: boolean;
+  order_count?: number;
 }
 
 export interface LabOrderLine {
@@ -781,6 +866,7 @@ export interface LabSelectData {
   can_skip_to_payment?: boolean;
   critical_unreleased_count?: number;
   critical_unreleased?: boolean;
+  lab_direct_intake?: LabDirectIntake;
 }
 
 /** Lab island props (passed via data-props JSON from Twig) */
@@ -821,6 +907,7 @@ export interface PharmacyQueueCard {
   undispensed_rx_count?: number;
   row_version?: number | null;
   claim_lost?: boolean;
+  ancillary_badges?: string[];
 }
 
 export interface PharmacyVisit {
@@ -831,6 +918,39 @@ export interface PharmacyVisit {
   state: 'ready_for_pharmacy' | 'in_pharmacy';
   visit_type_label?: string;
   row_version?: number | null;
+  service_profile?: string;
+}
+
+export interface PharmacyExternalRxStatus {
+  fields: {
+    prescriber_name: string;
+    prescriber_reg_id: string;
+    rx_date: string;
+  };
+  valid: boolean;
+  missing: string[];
+  field_errors: Record<string, string>;
+  max_age_days: number;
+  can_override?: boolean;
+  pharmacy_service_formdir: string;
+  pharmacy_service_title: string;
+  pharmacy_service_started: boolean;
+  documentation_hub_url?: string | null;
+  clinical_doc_hub_enabled?: boolean;
+}
+
+export interface PharmacyWalkinTriage {
+  enabled: boolean;
+  doctor_available: boolean;
+  roster_enabled: boolean;
+  allergies_undocumented?: boolean;
+  dispense_outcomes: string[];
+  non_dispense_outcomes: string[];
+  can_refer_to_opd?: boolean;
+  can_close_without_dispense?: boolean;
+  can_dispense?: boolean;
+  can_record_no_doctor?: boolean;
+  external_rx?: PharmacyExternalRxStatus | null;
 }
 
 export interface PharmacyPrescriptionLine {
@@ -872,6 +992,8 @@ export interface PharmacySelectData {
   can_print_rx?: boolean;
   undispensed_rx_count?: number;
   can_undispensed_override?: boolean;
+  can_external_rx_override?: boolean;
+  walkin_triage?: PharmacyWalkinTriage;
 }
 
 /** Pharmacy island props (passed via data-props JSON from Twig) */
@@ -888,6 +1010,7 @@ export interface PharmacyDeskProps {
   pharmOpsEnabled?: boolean;
   canDispense?: boolean;
   canUndispensedOverride?: boolean;
+  canExternalRxOverride?: boolean;
 }
 
 // ── Front desk domain types ───────────────────────────────────────────────
@@ -901,6 +1024,23 @@ export interface AppointmentTodayChip {
   default_visit_type_id?: number;
 }
 
+export interface RecallDueChip {
+  recall_id: number;
+  due_date: string;
+  days_delta: number;
+  reason?: string;
+  status?: string;
+  worklist_url: string;
+  label: string;
+}
+
+/** V1.2 hard-assign doctor roster row (triage + front desk) */
+export interface AssignableDoctor {
+  user_id: number;
+  display_name: string;
+  taking_patients: boolean;
+}
+
 /** Response from patients.preview on front desk */
 export interface FrontDeskPreviewData {
   identity: PatientIdentity & { phone_masked?: string };
@@ -911,20 +1051,39 @@ export interface FrontDeskPreviewData {
   safety?: {
     allergies_severe?: string[];
     allergies_undocumented?: boolean;
+    pregnant?: boolean;
+    problem_count?: number;
+    allergy_count?: number;
   };
+  banner_mrd_deep_links?: boolean;
+  allergy_count_chip?: boolean;
   active_visit?: {
     visit_id: number;
     state: VisitState;
     queue_number: number | string;
     row_version?: number;
     chief_complaint?: string | null;
+    hard_assigned_provider_id?: number;
+    hard_assigned_provider_name?: string;
   } | null;
+  hard_provider_assignment_enabled?: boolean;
+  can_hard_assign_provider?: boolean;
+  assignable_doctors?: AssignableDoctor[];
   appointment_today?: AppointmentTodayChip | null;
+  recall_due?: RecallDueChip | null;
   chips?: {
     appointment_today?: AppointmentTodayChip | null;
+    recall_due?: RecallDueChip | null;
   };
   visits_today?: TodayVisitRow[];
   revisit_gate?: RevisitGate;
+  queue_bridge?: {
+    enabled?: boolean;
+    hub_url?: string;
+    ex01_open?: boolean;
+    block_plain_start?: boolean;
+    show_arrival_advisor?: boolean;
+  };
 }
 
 export interface TodayVisitRow {
@@ -973,6 +1132,9 @@ export interface DeskVisitType {
   label: string;
   is_default?: boolean;
   service_profile?: string;
+  service_profile_hint?: string | null;
+  referral_required?: boolean;
+  allows_referral_upload?: boolean;
 }
 
 /** Response from visit.start / visit.start_from_appointment */
@@ -1006,6 +1168,7 @@ export interface FrontDeskProps {
   scheduledIntegrationEnabled?: boolean;
   appointmentsTodayCount?: number;
   calendarUrl?: string;
+  recallsUrl?: string;
 }
 
 export interface RegistrationDupCandidate {

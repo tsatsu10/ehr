@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
+import { PaginationBar } from '@components/PaginationBar';
 import { oeFetch } from '@core/oeFetch';
+import { ReprintReceiptModal } from '@islands/chart-depth/ReprintReceiptModal';
+import type { ReceiptReprintPayload } from '@islands/chart-depth/chartDepthTypes';
 import type { BillOpsHubProps, PaymentRow, PaymentsSearchData } from './billOpsTypes';
 import { formatBillMoney, localDateString } from './billOpsFormatters';
+
+const PAGE_SIZE = 25;
 
 interface Props {
   fetchOptions: { ajaxUrl: string; csrfToken: string };
@@ -11,21 +16,29 @@ interface Props {
 export function PaymentsPane({ fetchOptions, facilityId }: Props) {
   const [query, setQuery] = useState('');
   const [date, setDate] = useState(localDateString());
+  const [applied, setApplied] = useState(() => ({ query: '', date: localDateString() }));
+  const [page, setPage] = useState(1);
   const [rows, setRows] = useState<PaymentRow[]>([]);
+  const [total, setTotal] = useState(0);
   const [selected, setSelected] = useState<PaymentRow | null>(null);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [reversing, setReversing] = useState(false);
+  const [reprintOpen, setReprintOpen] = useState(false);
+  const [reprintPayload, setReprintPayload] = useState<ReceiptReprintPayload | null>(null);
+  const [reprintSubmitting, setReprintSubmitting] = useState(false);
 
-  const search = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const body: Record<string, unknown> = {
-        q: query,
-        date_from: date,
-        date_to: date,
+        q: applied.query,
+        date_from: applied.date,
+        date_to: applied.date,
+        offset: (page - 1) * PAGE_SIZE,
+        limit: PAGE_SIZE,
       };
       if (facilityId > 0) body.facility_id = facilityId;
 
@@ -34,17 +47,23 @@ export function PaymentsPane({ fetchOptions, facilityId }: Props) {
         json: body,
       });
       setRows(data.rows ?? []);
+      setTotal(data.total ?? 0);
       setSelected(null);
     } catch {
       setError('Search failed');
     } finally {
       setLoading(false);
     }
-  }, [date, facilityId, fetchOptions, query]);
+  }, [applied.date, applied.query, facilityId, fetchOptions, page]);
 
   useEffect(() => {
-    void search();
-  }, [search]);
+    void load();
+  }, [load]);
+
+  const runSearch = () => {
+    setApplied({ query, date });
+    setPage(1);
+  };
 
   const reversePayment = async () => {
     if (!selected || !selected.can_reverse) return;
@@ -61,11 +80,30 @@ export function PaymentsPane({ fetchOptions, facilityId }: Props) {
         json: { receipt_id: selected.id, reason: reason.trim() },
       });
       setReason('');
-      await search();
+      await load();
     } catch {
       setError('Reverse failed');
     } finally {
       setReversing(false);
+    }
+  };
+
+  const reprintReceipt = async () => {
+    if (!selected?.can_reprint || !selected.pid) return;
+    setReprintSubmitting(true);
+    setError(null);
+    try {
+      const payload = await oeFetch<ReceiptReprintPayload>('bill_ops.receipt_reprint', {
+        ...fetchOptions,
+        method: 'POST',
+        json: { pid: selected.pid, receipt_id: selected.id },
+      });
+      setReprintPayload(payload);
+      setReprintOpen(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not reprint receipt');
+    } finally {
+      setReprintSubmitting(false);
     }
   };
 
@@ -78,6 +116,9 @@ export function PaymentsPane({ fetchOptions, facilityId }: Props) {
           placeholder="Receipt # / MRN / name"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') runSearch();
+          }}
         />
         <input
           type="date"
@@ -85,7 +126,12 @@ export function PaymentsPane({ fetchOptions, facilityId }: Props) {
           value={date}
           onChange={(e) => setDate(e.target.value)}
         />
-        <button type="button" className="btn btn-primary btn-sm mb-1" onClick={() => void search()} disabled={loading}>
+        <button
+          type="button"
+          className="btn btn-primary btn-sm mb-1"
+          onClick={runSearch}
+          disabled={loading}
+        >
           Search
         </button>
       </div>
@@ -123,39 +169,68 @@ export function PaymentsPane({ fetchOptions, facilityId }: Props) {
         </tbody>
       </table>
 
+      <PaginationBar
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={total}
+        onPageChange={setPage}
+        id="nc-billops-payments-pagination"
+      />
+
       {selected && (
         <div className="border rounded p-3 mt-2">
           <h3 className="h6">Payment detail</h3>
           <p className="small mb-2">
             Receipt {selected.receipt_number} · Visit #{selected.queue_number} ·{' '}
             {formatBillMoney(selected.amount_paid)}
+            {selected.posted_payment_id ? (
+              <span className="text-muted"> · Posted #{selected.posted_payment_id}</span>
+            ) : null}
           </p>
           {selected.reversed_at ? (
             <p className="small text-muted mb-0">Reversed: {selected.reversal_reason}</p>
           ) : (
-            <>
-              <div className="form-group mb-2">
-                <label htmlFor="nc-billops-reverse-reason">Reverse reason</label>
-                <input
-                  id="nc-billops-reverse-reason"
-                  type="text"
-                  className="form-control form-control-sm"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                />
+            <div className="d-flex flex-wrap align-items-start">
+              <div className="mr-3 mb-2">
+                <div className="form-group mb-2">
+                  <label htmlFor="nc-billops-reverse-reason">Reverse reason</label>
+                  <input
+                    id="nc-billops-reverse-reason"
+                    type="text"
+                    className="form-control form-control-sm"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-outline-danger btn-sm"
+                  onClick={() => void reversePayment()}
+                  disabled={reversing}
+                >
+                  {reversing ? 'Reversing…' : 'Reverse payment'}
+                </button>
               </div>
-              <button
-                type="button"
-                className="btn btn-outline-danger btn-sm"
-                onClick={() => void reversePayment()}
-                disabled={reversing}
-              >
-                {reversing ? 'Reversing…' : 'Reverse payment'}
-              </button>
-            </>
+              {selected.can_reprint && (
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm mb-2"
+                  onClick={() => void reprintReceipt()}
+                  disabled={reprintSubmitting}
+                >
+                  {reprintSubmitting ? 'Loading…' : 'Reprint receipt'}
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}
+
+      <ReprintReceiptModal
+        open={reprintOpen}
+        payload={reprintPayload}
+        onClose={() => setReprintOpen(false)}
+      />
     </div>
   );
 }

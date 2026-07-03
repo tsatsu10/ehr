@@ -29,6 +29,8 @@ class PharmacyService
         private readonly EncounterSignService $signService = new EncounterSignService(),
         private readonly ClinicDateService $clinicDate = new ClinicDateService(),
         private readonly PharmOpsAccessService $pharmOpsAccess = new PharmOpsAccessService(),
+        private readonly PharmacyWalkinService $walkinService = new PharmacyWalkinService(),
+        private readonly ExternalRxValidationService $externalRxService = new ExternalRxValidationService(),
     ) {
     }
 
@@ -60,6 +62,7 @@ class PharmacyService
         $undispensedCounts = $inhousePharmacy
             ? $this->rowEnricher->batchUndispensedRxCounts($visitIds)
             : [];
+        $rows = $this->rowEnricher->enrichVisitRows($rows);
 
         $visits = [];
         $waitingCount = 0;
@@ -133,7 +136,8 @@ class PharmacyService
                 'can_skip_to_payment' => AclMain::aclCheckCore('new_clinic', 'new_visit_skip_queue'),
             ],
             $this->pharmOpsDeskFlags($facilityId),
-            $this->undispensedDeskFlags((int) $visit['pid'], (int) $visit['encounter'])
+            $this->undispensedDeskFlags((int) $visit['pid'], (int) $visit['encounter']),
+            $this->walkinDeskFlags($visit, $facilityId, (int) $visit['pid']),
         );
     }
 
@@ -186,6 +190,8 @@ class PharmacyService
         int $expectedVersion,
         ?string $esignOverrideReason = null,
         ?string $undispensedOverrideReason = null,
+        ?string $pharmacyOutcome = null,
+        ?string $externalRxOverrideReason = null,
     ): array {
         $this->assertPharmacyRoleEnabled();
         $visit = $this->queueService->getVisitForActor($visitId);
@@ -194,6 +200,28 @@ class PharmacyService
         }
 
         $this->assertActorMayWorkPharmacy($visit, $actorUserId);
+        $facilityId = (int) ($visit['facility_id'] ?? 0);
+        $pid = (int) ($visit['pid'] ?? 0);
+
+        if ($this->walkinService->isWalkinVisit($visit) && $this->walkinService->isAncillaryEnabled($facilityId)) {
+            $outcome = trim((string) ($pharmacyOutcome ?? ''));
+            if ($outcome === '') {
+                throw new \InvalidArgumentException('Select a pharmacy walk-in outcome before completing');
+            }
+            $this->walkinService->assertDispenseAllowed($pid, $outcome);
+            $this->walkinService->persistDispenseOutcome($visitId, $outcome, $actorUserId);
+            if ($outcome === 'external_rx_dispensed') {
+                $this->externalRxService->assertComplete(
+                    $pid,
+                    (int) ($visit['encounter'] ?? 0),
+                    $facilityId,
+                    $externalRxOverrideReason,
+                    $actorUserId,
+                    $visitId,
+                );
+            }
+        }
+
         $this->signService->assertProfileSigned($visitId, $esignOverrideReason);
         $this->assertUndispensedGateResolved($visitId, $visit, $actorUserId, $undispensedOverrideReason);
 
@@ -283,6 +311,27 @@ class PharmacyService
         );
 
         return ['visit' => $this->rowEnricher->enrichVisitRow($updated)];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function closeWalkinWithoutDispense(
+        int $visitId,
+        string $outcome,
+        int $actorUserId,
+        int $expectedVersion,
+        ?string $esignOverrideReason = null,
+    ): array {
+        $this->assertPharmacyRoleEnabled();
+
+        return $this->walkinService->closeWithoutDispense(
+            $visitId,
+            $outcome,
+            $actorUserId,
+            $expectedVersion,
+            $esignOverrideReason
+        );
     }
 
     public static function resolvePostPharmacyState(): string
@@ -427,7 +476,6 @@ class PharmacyService
         array $undispensedCounts = [],
     ): array {
         $visitId = (int) ($row['id'] ?? 0);
-        $row = $this->rowEnricher->enrichVisitRow($row, $visitId);
         $holder = $holders[$visitId] ?? null;
         $row['pharmacy_actor_id'] = $holder['actor_user_id'] ?? null;
         $row['pharmacy_actor_name'] = $holder['actor_name'] ?? null;
@@ -470,6 +518,7 @@ class PharmacyService
      */
     private function buildActivePayload(int $visitId, int $actorUserId): array
     {
+        $rawVisit = $this->queueService->getVisitForActor($visitId);
         $detail = $this->boardService->getVisitDetail($visitId, $actorUserId);
         $visit = $detail['visit'];
         $preview = $this->patientContextService->previewPayload(
@@ -491,7 +540,8 @@ class PharmacyService
                 'can_skip_to_payment' => AclMain::aclCheckCore('new_clinic', 'new_visit_skip_queue'),
             ],
             $this->pharmOpsDeskFlags($facilityId),
-            $this->undispensedDeskFlags((int) $visit['pid'], (int) $visit['encounter'])
+            $this->undispensedDeskFlags((int) $visit['pid'], (int) $visit['encounter']),
+            $this->walkinDeskFlags($rawVisit, $facilityId, (int) $visit['pid']),
         );
     }
 
@@ -526,6 +576,23 @@ class PharmacyService
         }
 
         return $count;
+    }
+
+    /**
+     * @param array<string, mixed> $visit
+     * @return array{walkin_triage?: array<string, mixed>}
+     */
+    private function walkinDeskFlags(array $visit, int $facilityId, int $pid): array
+    {
+        $triage = $this->walkinService->triagePayload($visit, $facilityId, $pid);
+        if ($triage === null) {
+            return [];
+        }
+
+        return [
+            'walkin_triage' => $triage,
+            'can_external_rx_override' => !empty($triage['external_rx']['can_override']),
+        ];
     }
 
     private function isInhousePharmacyEnabled(): bool

@@ -16,6 +16,8 @@ use OpenEMR\Common\Database\QueryUtils;
 
 class ClinicalDocCatalogService
 {
+    public const DEFAULT_BUNDLE_KEY = 'ghana_opd_v1';
+
     /** @var array<int, string> */
     private const BILLING_EXCLUDED = [
         'fee_sheet',
@@ -44,6 +46,8 @@ class ClinicalDocCatalogService
         'nursing' => [
             ['formdir' => 'vitals', 'title' => 'Vitals', 'description' => 'BP, temperature, SpO₂, etc.', 'kind' => 'form'],
             ['formdir' => 'clinical_instructions', 'title' => 'Clinical instructions', 'description' => 'Patient education notes.', 'kind' => 'form'],
+            ['formdir' => 'lab_intake', 'title' => 'Lab intake', 'description' => 'Lab-direct visit intake and attestation.', 'kind' => 'form'],
+            ['formdir' => 'pharmacy_service', 'title' => 'Pharmacy service note', 'description' => 'Pharmacy walk-in service attestation.', 'kind' => 'form'],
         ],
         'orders' => [
             ['formdir' => 'procedure_order', 'title' => 'Lab orders', 'description' => 'Order labs and imaging.', 'kind' => 'form'],
@@ -67,6 +71,28 @@ class ClinicalDocCatalogService
 
     /** @var array<string, list<string>>|null */
     private ?array $allowedFormdirsCache = null;
+
+    public static function normalizeBundleKey(string $key): string
+    {
+        $trimmed = trim($key);
+
+        return isset(self::BUNDLES[$trimmed]) ? $trimmed : self::DEFAULT_BUNDLE_KEY;
+    }
+
+    public function resolveBundleKey(?int $facilityId = null): string
+    {
+        if ($facilityId === null || $facilityId <= 0) {
+            $facilityId = $this->visitScope->resolveDeskFacilityId();
+        }
+
+        $raw = trim((string) ($this->config->get(
+            'clinical_doc_bundle',
+            self::DEFAULT_BUNDLE_KEY,
+            $facilityId
+        ) ?? self::DEFAULT_BUNDLE_KEY));
+
+        return self::normalizeBundleKey($raw);
+    }
 
     public function __construct(
         private readonly ClinicalDocAccessService $access = new ClinicalDocAccessService(),
@@ -98,6 +124,7 @@ class ClinicalDocCatalogService
         return [
             'lenses' => $allowedLenses,
             'cards' => $cards,
+            'bundle_key' => $this->resolveBundleKey($facilityId),
             'consult_note_formdir' => $this->consultNoteFormdir($facilityId),
             'show_us_quality' => $this->access->showUsQualityWidgets($facilityId),
         ];
@@ -272,6 +299,11 @@ class ClinicalDocCatalogService
         $this->allowedFormdirsCache = null;
     }
 
+    public function isFormInstalledAndActive(string $formdir): bool
+    {
+        return $this->isRegistryFormActive($this->resolveRegistryDirectory($formdir));
+    }
+
     /**
      * @return list<string>
      */
@@ -315,8 +347,8 @@ class ClinicalDocCatalogService
      */
     private function lensDefinitions(string $lens, int $facilityId): array
     {
-        $bundleKey = $this->config->get('clinical_doc_bundle', 'ghana_opd_v1', $facilityId) ?? 'ghana_opd_v1';
-        $bundle = self::BUNDLES[$bundleKey] ?? self::BUNDLE_GHANA_OPD;
+        $bundleKey = $this->resolveBundleKey($facilityId);
+        $bundle = self::BUNDLES[$bundleKey];
         $defs = $bundle[$lens] ?? [];
         if ($lens === 'specialty') {
             $defs = $this->filterSpecialtyPack($defs, $facilityId);
@@ -333,8 +365,8 @@ class ClinicalDocCatalogService
      */
     private function bundleLensIds(int $facilityId): array
     {
-        $bundleKey = $this->config->get('clinical_doc_bundle', 'ghana_opd_v1', $facilityId) ?? 'ghana_opd_v1';
-        $bundle = self::BUNDLES[$bundleKey] ?? self::BUNDLE_GHANA_OPD;
+        $bundleKey = $this->resolveBundleKey($facilityId);
+        $bundle = self::BUNDLES[$bundleKey];
 
         return array_keys($bundle);
     }
@@ -345,16 +377,28 @@ class ClinicalDocCatalogService
     private function visitLensCards(int $facilityId): array
     {
         $cards = [];
+        $seen = [];
         foreach (['consult', 'nursing', 'orders'] as $sourceLens) {
             if (!$this->access->canAccessLens($sourceLens, $facilityId)) {
                 continue;
             }
             foreach ($this->cardsForLens($sourceLens, $facilityId) as $card) {
-                if (!empty($card['primary']) || $sourceLens === 'orders') {
-                    $card['lens'] = 'visit';
-                    $card['source_lens'] = $sourceLens;
-                    $cards[] = $card;
+                $include = !empty($card['primary']) || $sourceLens === 'orders';
+                $formdirLower = strtolower((string) ($card['formdir'] ?? ''));
+                if (!$include && (str_contains($formdirLower, 'lab_intake') || str_contains($formdirLower, 'pharmacy_service'))) {
+                    $include = true;
                 }
+                if (!$include) {
+                    continue;
+                }
+                $formdirKey = strtolower((string) ($card['formdir'] ?? ''));
+                if ($formdirKey === '' || isset($seen[$formdirKey])) {
+                    continue;
+                }
+                $seen[$formdirKey] = true;
+                $card['lens'] = 'visit';
+                $card['source_lens'] = $sourceLens;
+                $cards[] = $card;
             }
         }
 
@@ -416,7 +460,7 @@ class ClinicalDocCatalogService
             if (!$this->isRegistryFormActive($formdir)) {
                 return null;
             }
-            if (!AclMain::aclCheckForm($canonical)) {
+            if (!$this->canViewRegistryForm($canonical)) {
                 return null;
             }
         }
@@ -439,6 +483,31 @@ class ClinicalDocCatalogService
         $formdir = strtolower(trim((string) ($this->config->get('consult_note_formdir', 'soap', $facilityId) ?? 'soap')));
 
         return $formdir !== '' ? $formdir : 'soap';
+    }
+
+    private function canViewRegistryForm(string $canonical): bool
+    {
+        if (!function_exists('getRegistryEntryByDirectory')) {
+            require_once $GLOBALS['fileroot'] . '/library/registry.inc.php';
+        }
+
+        $entry = getRegistryEntryByDirectory($canonical, 'aco_spec');
+        if (!is_array($entry) || empty($entry['aco_spec'])) {
+            foreach ($this->lbfFormIdCandidates($canonical) as $candidate) {
+                $lbfRow = QueryUtils::querySingleRow(
+                    "SELECT grp_form_id FROM layout_group_properties
+                     WHERE grp_form_id = ? AND grp_group_id = '' AND grp_activity = 1 LIMIT 1",
+                    [$candidate]
+                );
+                if (is_array($lbfRow)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        return AclMain::aclCheckAcoSpec($entry['aco_spec']);
     }
 
     private function isRegistryFormActive(string $formdir): bool

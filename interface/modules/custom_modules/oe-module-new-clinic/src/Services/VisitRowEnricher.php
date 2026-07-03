@@ -15,13 +15,48 @@ use OpenEMR\Common\Database\QueryUtils;
 
 class VisitRowEnricher
 {
+    public function __construct(
+        private readonly AncillaryVisitBadgeService $ancillaryBadges = new AncillaryVisitBadgeService(),
+    ) {
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $rows
+     * @return array<int, array<string, mixed>>
+     */
+    public function enrichVisitRows(array $rows): array
+    {
+        if ($rows === []) {
+            return [];
+        }
+
+        $visitIds = array_map(fn (array $row) => (int) ($row['id'] ?? 0), $rows);
+        $skippedMap = $this->batchSkippedTriage($visitIds);
+        $referredMap = $this->ancillaryBadges->batchReferredToOpd($visitIds);
+
+        return array_map(
+            fn (array $row) => $this->enrichVisitRow(
+                $row,
+                (int) ($row['id'] ?? 0),
+                $skippedMap,
+                $referredMap
+            ),
+            $rows
+        );
+    }
+
     /**
      * @param array<string, mixed> $row
      * @param array<int, bool>|null $skippedTriageMap visit_id => skipped
+     * @param array<int, bool>|null $referredToOpdMap visit_id => referred from pharmacy
      * @return array<string, mixed>
      */
-    public function enrichVisitRow(array $row, ?int $visitId = null, ?array $skippedTriageMap = null): array
-    {
+    public function enrichVisitRow(
+        array $row,
+        ?int $visitId = null,
+        ?array $skippedTriageMap = null,
+        ?array $referredToOpdMap = null,
+    ): array {
         $visitId = $visitId ?? (int) ($row['id'] ?? 0);
         $row['display_name'] = trim(($row['fname'] ?? '') . ' ' . ($row['lname'] ?? ''));
         $row['age_years'] = self::ageFromDob($row['DOB'] ?? null);
@@ -34,6 +69,14 @@ class VisitRowEnricher
             $row['skipped_triage'] = $this->hasSkippedTriage($visitId);
         }
         $row['visit_type_label'] = $row['visit_type_label'] ?? 'Visit';
+
+        $referredToOpd = false;
+        if ($referredToOpdMap !== null) {
+            $referredToOpd = !empty($referredToOpdMap[$visitId]);
+        } elseif ($this->ancillaryBadges->shouldCheckReferredToOpd($row)) {
+            $referredToOpd = $this->ancillaryBadges->isReferredToOpd($visitId);
+        }
+        $row['ancillary_badges'] = $this->ancillaryBadges->badgesForRow($row, $referredToOpd);
 
         return $row;
     }

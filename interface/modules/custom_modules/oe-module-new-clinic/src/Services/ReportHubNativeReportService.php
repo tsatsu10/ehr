@@ -19,16 +19,30 @@ class ReportHubNativeReportService
 
     public const KEY_DESTROYED_DRUGS = 'pharm_destroyed';
 
+    public const KEY_INVENTORY_TRANSACTIONS = ReportHubPharmacyNativeReportService::KEY_INVENTORY_TRANSACTIONS;
+
+    public const KEY_INVENTORY_ACTIVITY = ReportHubPharmacyNativeReportService::KEY_INVENTORY_ACTIVITY;
+
+    public const KEY_OPD_ATTENDANCE = ReportHubPublicHealthNativeReportService::KEY_OPD_ATTENDANCE;
+
+    public const KEY_MALARIA_SURVEILLANCE = ReportHubPublicHealthNativeReportService::KEY_MALARIA_SURVEILLANCE;
+
     private const EXPORT_CHUNK_SIZE = 500;
 
     /** @var array<int, string> */
     public const NATIVE_KEYS = [
         self::KEY_IMMUNIZATIONS,
         self::KEY_DESTROYED_DRUGS,
+        self::KEY_INVENTORY_TRANSACTIONS,
+        self::KEY_INVENTORY_ACTIVITY,
+        self::KEY_OPD_ATTENDANCE,
+        self::KEY_MALARIA_SURVEILLANCE,
     ];
 
     public function __construct(
         private readonly ClinicConfigService $config = new ClinicConfigService(),
+        private readonly ReportHubPharmacyNativeReportService $pharmacyReports = new ReportHubPharmacyNativeReportService(),
+        private readonly ReportHubPublicHealthNativeReportService $publicHealthReports = new ReportHubPublicHealthNativeReportService(),
     ) {
     }
 
@@ -55,6 +69,22 @@ class ReportHubNativeReportService
         return match ($reportKey) {
             self::KEY_IMMUNIZATIONS => $this->runImmunizations($dateFrom, $dateTo, $limit, $offset, $facilityId),
             self::KEY_DESTROYED_DRUGS => $this->runDestroyedDrugs($dateFrom, $dateTo, $limit, $offset, $facilityId),
+            self::KEY_INVENTORY_TRANSACTIONS, self::KEY_INVENTORY_ACTIVITY => $this->pharmacyReports->runReport(
+                $reportKey,
+                $dateFrom,
+                $dateTo,
+                $limit,
+                $offset,
+                $facilityId
+            ),
+            self::KEY_OPD_ATTENDANCE, self::KEY_MALARIA_SURVEILLANCE => $this->publicHealthReports->runReport(
+                $reportKey,
+                $dateFrom,
+                $dateTo,
+                $limit,
+                $offset,
+                $facilityId
+            ),
             default => throw new \InvalidArgumentException('Unsupported native report'),
         };
     }
@@ -68,6 +98,18 @@ class ReportHubNativeReportService
         return match ($reportKey) {
             self::KEY_IMMUNIZATIONS => $this->countImmunizations($dateFrom, $dateTo, $facilityId),
             self::KEY_DESTROYED_DRUGS => $this->countDestroyedDrugs($dateFrom, $dateTo, $facilityId),
+            self::KEY_INVENTORY_TRANSACTIONS, self::KEY_INVENTORY_ACTIVITY => $this->pharmacyReports->countRows(
+                $reportKey,
+                $dateFrom,
+                $dateTo,
+                $facilityId
+            ),
+            self::KEY_OPD_ATTENDANCE, self::KEY_MALARIA_SURVEILLANCE => $this->publicHealthReports->countRows(
+                $reportKey,
+                $dateFrom,
+                $dateTo,
+                $facilityId
+            ),
             default => 0,
         };
     }
@@ -116,6 +158,10 @@ class ReportHubNativeReportService
         $slug = match ($reportKey) {
             self::KEY_IMMUNIZATIONS => 'immunizations',
             self::KEY_DESTROYED_DRUGS => 'destroyed-medicines',
+            self::KEY_INVENTORY_TRANSACTIONS => 'inventory-transactions',
+            self::KEY_INVENTORY_ACTIVITY => 'inventory-activity',
+            self::KEY_OPD_ATTENDANCE => 'opd-attendance',
+            self::KEY_MALARIA_SURVEILLANCE => 'malaria-surveillance',
             default => 'report',
         };
 
@@ -162,6 +208,7 @@ class ReportHubNativeReportService
             'Visit date',
             'CVX',
             'Vaccine',
+            'Dose #',
             'Lot',
             'Manufacturer',
         ];
@@ -174,6 +221,19 @@ class ReportHubNativeReportService
                        i.vis_date,
                        i.cvx_code,
                        c.code_text_short AS vaccine_name,
+                       (SELECT COUNT(*)
+                        FROM immunizations i2
+                        WHERE i2.patient_id = i.patient_id
+                          AND i2.cvx_code = i.cvx_code
+                          AND i2.added_erroneously = 0
+                          AND (
+                            COALESCE(i2.administered_date, i2.create_date) < COALESCE(i.administered_date, i.create_date)
+                            OR (
+                              COALESCE(i2.administered_date, i2.create_date) = COALESCE(i.administered_date, i.create_date)
+                              AND i2.id <= i.id
+                            )
+                          )
+                       ) AS dose_number,
                        COALESCE(i.lot_number, '') AS lot_number,
                        COALESCE(i.manufacturer, '') AS manufacturer
                 FROM immunizations i
@@ -194,6 +254,7 @@ class ReportHubNativeReportService
                 (string) ($record['vis_date'] ?? ''),
                 (string) ($record['cvx_code'] ?? ''),
                 (string) ($record['vaccine_name'] ?? ''),
+                (string) ((int) ($record['dose_number'] ?? 0)),
                 (string) ($record['lot_number'] ?? ''),
                 (string) ($record['manufacturer'] ?? ''),
             ];

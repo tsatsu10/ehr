@@ -52,6 +52,7 @@ $reactBillOps = $config->get('enable_react_bill_ops', '1') === '1';
     'Charge correction',
     ['new_bill_ops_correct', 'new_admin'],
     [
+        'island_entry' => 'bill-ops-correct',
         'shell_nav_id' => 'clinicbillops',
         'visit_id' => $visitId,
         'bill_ops_url' => $moduleUrl . '/bill-ops/index.php?tab=corrections',
