@@ -478,6 +478,7 @@ cd frontend && npm run check && npm run build
 ## Reference
 
 - PRD & page designs: `Documentation/NewClinic/README.md`
+- **Pilot worksheets:** `Documentation/NewClinic/worksheets/README.md` — trainer [one-pager](../../../../Documentation/NewClinic/worksheets/NEW_CLINIC_V1_TRAINER_ONE_PAGER.md) · [pilot day checklist](../../../../Documentation/NewClinic/worksheets/NEW_CLINIC_V1_PILOT_DAY_CHECKLIST.md)
 - **Implementation scorecard:** `Documentation/NewClinic/NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md`
 - React islands: `Documentation/FRONTEND_MODULE_GUIDE.md`
 - Migration audit: `CODE_AUDIT_2026-06-27-REACT-MIGRATION.md`

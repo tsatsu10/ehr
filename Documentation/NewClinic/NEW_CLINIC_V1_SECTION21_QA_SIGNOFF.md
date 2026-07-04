@@ -166,6 +166,7 @@ All 19 hub smoke specs **57/57 green** (2026-07-04). Smoke covers shell/API path
 ## Related
 
 - [Pilot worksheets index](./worksheets/README.md)
-
+- [Trainer one-pager](./worksheets/NEW_CLINIC_V1_TRAINER_ONE_PAGER.md)
+- [Pilot day checklist](./worksheets/NEW_CLINIC_V1_PILOT_DAY_CHECKLIST.md)
 - [Implementation scorecard](./NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md)
 - [NEXT_STEPS.md](../../interface/modules/custom_modules/oe-module-new-clinic/NEXT_STEPS.md)

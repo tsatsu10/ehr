@@ -13,3 +13,12 @@ Fillable worksheets for Product and training sign-off referenced in PRD §17.2 a
 **Engineering evidence:** [NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md](../NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md) · [NEW_CLINIC_V1_SECTION21_E2E_MAP.md](../NEW_CLINIC_V1_SECTION21_E2E_MAP.md)
 
 **Retain signed copies** with the clinic training log (G6) and pilot records.
+
+---
+
+## Quick reference (printable)
+
+| Document | Use |
+|----------|-----|
+| [Trainer one-pager](NEW_CLINIC_V1_TRAINER_ONE_PAGER.md) | Day-1 drill order, taglines, G12 **6/6** gate — hand to trainer before staff arrive |
+| [Pilot day checklist](NEW_CLINIC_V1_PILOT_DAY_CHECKLIST.md) | Before doors open, during-day spot checks, EOD reconciliation — first live day + every cash day |
