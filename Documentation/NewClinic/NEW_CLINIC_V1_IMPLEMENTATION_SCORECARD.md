@@ -4,8 +4,8 @@
 
 | Field | Value |
 |-------|-------|
-| **Last audited** | 2026-07-03 |
-| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260703sp59notifye2e` |
+| **Last audited** | 2026-07-04 |
+| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260704sp75goldenpath` |
 | **Maintainer** | Engineering lead updates after each sprint; Product owns pilot sign-off |
 | **How to update** | Change `%` and `Status` cells; bump **Last audited**; sync PRD §5.6 row if shell status changes |
 
@@ -18,17 +18,17 @@
 | **Post-pilot slice %** | Mean of §20.1 release slices |
 | **Overall product %** | `0.50 × pilot_path + 0.35 × post_pilot_slices + 0.10 × v12_advanced + 0.05 × ui_shadcn` |
 
-### Executive rollup (2026-07-03)
+### Executive rollup (2026-07-04)
 
 | Lens | % | Notes |
 |------|---|-------|
-| Specs written | **95** | PRD v1.20.50 + companions; most Draft, M1a/COM Approved |
+| Specs written | **95** | PRD v1.20.50 + companions; §21 E2E map added |
 | Module shells (§5.6) | **96** | 22 Shipped + T2 Partial / 24 packages |
-| **V1 pilot path** | **92** code · **75** QA | B0–B7 + S1 when enabled |
-| Post-pilot slices (§20.1) | **82** | V1.2 assign+notify E2E tests 34–35 green; LIS deferred |
-| §21 acceptance (documented) | **0** | Checkboxes open in PRD; CI covers ~75% |
+| **V1 pilot path** | **92** code · **78** QA | B0–B7 + S1 when enabled |
+| Post-pilot slices (§20.1) | **82** | Mandatory contracts through **63** |
+| §21 acceptance (documented) | **0** signed · **~78** CI | E2E map links smoke specs to PRD rows |
 | shadcn §9 | **25** | Phase A infra; Phase B started |
-| **Overall product** | **79** | Weighted blend |
+| **Overall product** | **80** | Weighted blend |
 
 ---
 
@@ -115,9 +115,9 @@ Formal PRD checkboxes. **QA** updates `Signed` when E2E + pilot worksheet row pa
 | §21.1p–y | Hubs M11–M18 | ~40 | 0 | 0 | QA |
 | §21.1z | Legacy chart context CTX-1–5 | 5 | 0 | 0 | QA |
 
-**Automated evidence (not yet mirrored in PRD):** PHPUnit NewClinic suite · Vitest islands · Playwright golden-path / hub smoke specs.
+**Automated evidence (not yet mirrored in PRD):** PHPUnit NewClinic suite · Vitest islands · Playwright golden-path / hub smoke specs · [§21 E2E map](./NEW_CLINIC_V1_SECTION21_E2E_MAP.md).
 
-**Estimated CI coverage of §21:** **~75** (engineering estimate; not doc-signed)
+**Estimated CI coverage of §21:** **~78** (engineering estimate; not doc-signed)
 
 ---
 
@@ -230,6 +230,7 @@ Use PRD §8 tables as source of truth. Below: **representative** IDs for spot au
 | 2026-07-03 | Engineering | Roster fix (`DoctorRosterService` `authorized` column); E2E `v12-hard-assign-smoke` + `golden-path` green; asset `sp58rosterfix` |
 | 2026-07-03 | Engineering | PRD test 35: doctor-ready notify debounce E2E; pilot script + fixture; asset `sp59notifye2e` |
 | 2026-07-03 | Engineering | Post-V1.2 audit fixes: triage vitals gate via `TriageService`, stale `row_version` guards, notify audit log, roster error logging, today filter on doctor queue, admin notify coupling, shared pilot seed; PHPUnit + E2E green; asset `sp60auditfix` |
+| 2026-07-04 | Engineering | S1 scheduling smoke (`testMandatory60`); V1.2-BILL depth (`61`); V1.1-COM (`62`); §21 golden path rollout (`63`) + `NEW_CLINIC_V1_SECTION21_E2E_MAP.md`; asset `sp75goldenpath` |
 
 ---
 
@@ -238,5 +239,6 @@ Use PRD §8 tables as source of truth. Below: **representative** IDs for spot au
 - [PRD §5.6 matrix](./NEW_CLINIC_V1_PRD.md#56-implementation-status-matrix)
 - [PRD §20.1 slices](./NEW_CLINIC_V1_PRD.md#201-post-pilot-release-slices-v11-family--independent-ships)
 - [PRD §21 acceptance](./NEW_CLINIC_V1_PRD.md#21-acceptance-criteria-v1-pilot)
+- [§21 E2E evidence map](./NEW_CLINIC_V1_SECTION21_E2E_MAP.md)
 - [NEXT_STEPS.md](../../interface/modules/custom_modules/oe-module-new-clinic/NEXT_STEPS.md) — deploy / pilot commands
 - [CODE_AUDIT React migration](../../interface/modules/custom_modules/oe-module-new-clinic/CODE_AUDIT_2026-06-27-REACT-MIGRATION.md)

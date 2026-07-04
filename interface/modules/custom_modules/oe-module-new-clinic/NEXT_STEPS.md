@@ -1,8 +1,8 @@
 # New Clinic V1 — Next Steps
 
-**Current status (July 4, 2026):** V1.1-COM Communications Hub smoke shipped · asset `20260704sp74comms`  
+**Current status (July 4, 2026):** §21 golden path rollout smoke shipped · asset `20260704sp75goldenpath`  
 **Product repo:** [github.com/tsatsu10/ehr](https://github.com/tsatsu10/ehr) — see root [EHR.md](../../../../EHR.md)  
-**Remaining work:** Run `upgrade_sql.php` on existing DBs; pilot `pilot-rollout.php` + §21 golden path
+**Remaining work:** QA sign-off of PRD §21 checkboxes; `upgrade_sql.php` on existing DBs
 
 ### V1.1-DOC rollout (M17 clinical documentation hub)
 
@@ -339,6 +339,39 @@ php interface/modules/custom_modules/oe-module-new-clinic/scripts/smoke-communic
 ```
 
 Hub URL: `.../public/communications.php`
+
+### §21 golden path rollout (full clinic pilot stack)
+
+```bash
+php interface/modules/custom_modules/oe-module-new-clinic/bin/upgrade_sql.php
+php interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-v21-golden-path.php
+php interface/modules/custom_modules/oe-module-new-clinic/acl/seed_pilot_users.php
+cd frontend && npm run build
+```
+
+Chains `pilot-rollout.php` product flags + `e2e-prep-golden-path.php` desk release and ACL grants.
+
+E2E evidence map: [NEW_CLINIC_V1_SECTION21_E2E_MAP.md](../../../../Documentation/NewClinic/NEW_CLINIC_V1_SECTION21_E2E_MAP.md)
+
+Rollout smoke (desk chain readiness):
+
+```bash
+npm run test:e2e-new-clinic -- tests/e2e/new-clinic/specs/v21-golden-path-smoke.spec.js
+```
+
+Full journey specs (PRD §21.1):
+
+```bash
+npm run test:e2e-new-clinic -- tests/e2e/new-clinic/specs/golden-path.spec.js
+npm run test:e2e-new-clinic -- tests/e2e/new-clinic/specs/golden-path-pharm-dispense.spec.js
+npm run test:e2e-new-clinic -- tests/e2e/new-clinic/specs/golden-path-lab-close-day.spec.js
+```
+
+HTTP smoke:
+
+```bash
+php interface/modules/custom_modules/oe-module-new-clinic/scripts/smoke-golden-path-http.php
+```
 
 ---
 

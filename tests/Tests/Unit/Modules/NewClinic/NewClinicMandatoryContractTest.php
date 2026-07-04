@@ -1277,4 +1277,50 @@ class NewClinicMandatoryContractTest extends TestCase
         $serviceTest = __DIR__ . '/CommunicationsHubServiceIntegrationTest.php';
         $this->assertFileExists($serviceTest, 'Communications hub service integration test must exist');
     }
+
+    public function testMandatory63GoldenPathRolloutSmokeE2e(): void
+    {
+        $e2eDir = dirname(__DIR__, 4) . '/e2e/new-clinic';
+        $specPath = $e2eDir . '/specs/v21-golden-path-smoke.spec.js';
+        $this->assertFileExists($specPath, '§21 golden path rollout smoke spec must exist');
+
+        $spec = file_get_contents($specPath);
+        $this->assertStringContainsString('pilot-enable-v21-golden-path.php', $spec);
+        $this->assertStringContainsString('v21-golden-path-smoke-fixture.php', $spec);
+        $this->assertStringContainsString('golden_path_ready', $spec);
+        $this->assertStringContainsString('front-desk.php', $spec);
+        $this->assertStringContainsString('triage.php', $spec);
+        $this->assertStringContainsString('doctor.php', $spec);
+        $this->assertStringContainsString('visit-board.php', $spec);
+
+        $baseSpec = $e2eDir . '/specs/golden-path.spec.js';
+        $this->assertFileExists($baseSpec, 'Core golden path spec must exist');
+
+        $pilotScript = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-v21-golden-path.php';
+        $this->assertFileExists($pilotScript, '§21 golden path pilot script must exist');
+        $pilotBody = file_get_contents($pilotScript);
+        $this->assertStringContainsString('goldenPathRunRollout', $pilotBody);
+
+        $rolloutLib = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/lib/golden-path-rollout-lib.php';
+        $this->assertFileExists($rolloutLib, 'Golden path rollout lib must exist');
+        $rolloutBody = file_get_contents($rolloutLib);
+        $this->assertStringContainsString('goldenPathReadinessSnapshot', $rolloutBody);
+        $this->assertStringContainsString('golden-path.spec.js', $rolloutBody);
+
+        $fixtureScript = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/v21-golden-path-smoke-fixture.php';
+        $this->assertFileExists($fixtureScript, 'Golden path smoke fixture must exist');
+
+        $httpSmoke = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/smoke-golden-path-http.php';
+        $this->assertFileExists($httpSmoke, 'Golden path HTTP smoke must exist');
+
+        $e2eMap = dirname(__DIR__, 5) . '/Documentation/NewClinic/NEW_CLINIC_V1_SECTION21_E2E_MAP.md';
+        $this->assertFileExists($e2eMap, '§21 E2E evidence map must exist');
+        $mapBody = file_get_contents($e2eMap);
+        $this->assertStringContainsString('pilot-enable-v21-golden-path.php', $mapBody);
+        $this->assertStringContainsString('v21-golden-path-smoke.spec.js', $mapBody);
+    }
 }
