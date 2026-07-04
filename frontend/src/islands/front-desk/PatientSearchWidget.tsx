@@ -8,6 +8,7 @@ import {
   CommandList,
 } from '@components/ui/command';
 import { Badge } from '@components/ui/badge';
+import { Card } from '@components/ui/card';
 import { Avatar, AvatarFallback } from '@components/ui/avatar';
 import { Button } from '@components/ui/button';
 import { usePatientSearch } from '@core/usePatientSearch';
@@ -164,9 +165,9 @@ export function PatientSearchWidget({
   const showIdleState = !searching && results.length === 0 && query.length < 2;
 
   return (
-    <section
+    <Card
       id="nc-patient-search"
-      className="oe-nc-search-panel nc-patient-search rounded-xl border border-[var(--oe-nc-border)] bg-white shadow-[var(--shadow-sm)] overflow-hidden"
+      className="oe-nc-search-panel nc-patient-search overflow-hidden"
       aria-label="Patient search"
     >
       <Command shouldFilter={false} className="oe-nc-desk-split__search nc-search-results flex flex-col">
@@ -306,6 +307,6 @@ export function PatientSearchWidget({
           )}
         </CommandList>
       </Command>
-    </section>
+    </Card>
   );
 }

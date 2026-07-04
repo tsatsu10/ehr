@@ -6,7 +6,8 @@ import { CompletionRing } from '@components/CompletionRing';
 import { CompletionScorePill } from '@components/CompletionScorePill';
 import { PatientContextBanner } from '@components/PatientContextBanner';
 import { bannerPropsFromPreview } from '@components/bannerPreviewProps';
-import { WidgetCard } from '@components/WidgetCard';
+import { Card, CardContent } from '@components/ui/card';
+import { cn } from '@/lib/utils';
 import { Button } from '@components/ui/button';
 import { Badge } from '@components/ui/badge';
 import { StartVisitForm } from './StartVisitForm';
@@ -20,7 +21,6 @@ import { PreviewEmptyState } from './PreviewEmptyState';
 import { PreviewLoadingState } from './PreviewLoadingState';
 import { Pencil, FolderOpen, CalendarCheck, AlertCircle, XCircle, BellRing } from 'lucide-react';
 import { badgeVariants } from '@components/ui/badge';
-import { cn } from '@/lib/utils';
 
 type PreviewPaneMode = 'empty' | 'loading' | 'preview' | 'registration' | 'registration-pinned';
 
@@ -464,20 +464,18 @@ export function PatientPreviewPane({
     }
     if (title) {
       return (
-        <WidgetCard title={title} className="oe-nc-desk-split__preview" bodyPad="pad">
-          {inner}
-        </WidgetCard>
+        <Card className="oe-nc-desk-split__preview oe-nc-preview-pane overflow-hidden" id="nc-preview-pane">
+          <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[var(--oe-nc-border)]">
+            <h2 className="text-sm font-semibold leading-tight text-[var(--oe-nc-text)] m-0">{title}</h2>
+          </div>
+          <CardContent className="p-5">{inner}</CardContent>
+        </Card>
       );
     }
     return (
-      <div
-        className="oe-nc-desk-split__preview oe-nc-preview-pane rounded-xl border border-(--oe-nc-border) bg-white shadow-(--shadow-sm) overflow-hidden"
-        id="nc-preview-pane"
-      >
-        <div className="oe-nc-preview-pane__scroll p-4">
-          {inner}
-        </div>
-      </div>
+      <Card className="oe-nc-desk-split__preview oe-nc-preview-pane overflow-hidden" id="nc-preview-pane">
+        <CardContent className="oe-nc-preview-pane__scroll p-4">{inner}</CardContent>
+      </Card>
     );
   };
 
