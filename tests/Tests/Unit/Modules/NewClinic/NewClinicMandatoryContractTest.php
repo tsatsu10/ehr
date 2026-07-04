@@ -1224,4 +1224,57 @@ class NewClinicMandatoryContractTest extends TestCase
         $billOpsTest = __DIR__ . '/BillOpsServicesTest.php';
         $this->assertFileExists($billOpsTest, 'Bill ops services test must exist');
     }
+
+    public function testMandatory62CommsSmokeE2e(): void
+    {
+        $e2eDir = dirname(__DIR__, 4) . '/e2e/new-clinic';
+        $specPath = $e2eDir . '/specs/v11-comms-smoke.spec.js';
+        $this->assertFileExists($specPath, 'V1.1-COM smoke spec must exist');
+
+        $spec = file_get_contents($specPath);
+        $this->assertStringContainsString('pilot-enable-v11-comms.php', $spec);
+        $this->assertStringContainsString('v11-comms-fixture-seed.php', $spec);
+        $this->assertStringContainsString('v11-comms-smoke-fixture.php', $spec);
+        $this->assertStringContainsString('communications.messages_list', $spec);
+        $this->assertStringContainsString('communications.hub_counts', $spec);
+        $this->assertStringContainsString('communications.message_done', $spec);
+        $this->assertStringContainsString('communications.reminders_list', $spec);
+        $this->assertStringContainsString('communications.reminder_done', $spec);
+        $this->assertStringContainsString('nc-comm-mark-done', $spec);
+        $this->assertStringContainsString('nc-comm-reminder-complete', $spec);
+
+        $pilotScript = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-v11-comms.php';
+        $this->assertFileExists($pilotScript, 'Pilot V1.1-COM enable script must exist');
+        $pilotBody = file_get_contents($pilotScript);
+        $this->assertStringContainsString('communications_hub_enable', $pilotBody);
+        $this->assertStringContainsString('enable_react_communications_hub', $pilotBody);
+
+        $seedScript = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/v11-comms-fixture-seed.php';
+        $this->assertFileExists($seedScript, 'Communications fixture seed must exist');
+
+        $fixtureScript = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/v11-comms-smoke-fixture.php';
+        $this->assertFileExists($fixtureScript, 'Communications smoke fixture must exist');
+        $fixtureBody = file_get_contents($fixtureScript);
+        $this->assertStringContainsString('NC-COMMS-SMOKE-MSG', file_get_contents(
+            dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/lib/comms-fixture-lib.php'
+        ));
+
+        $httpSmoke = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/smoke-communications-http.php';
+        $this->assertFileExists($httpSmoke, 'Communications HTTP smoke must exist');
+
+        $hubPhp = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/public/communications.php';
+        $this->assertFileExists($hubPhp, 'Communications hub entry must exist');
+
+        $hubComponent = dirname(__DIR__, 5) . '/frontend/src/islands/communications-hub/CommunicationsHub.tsx';
+        $this->assertFileExists($hubComponent, 'CommunicationsHub React component must exist');
+
+        $serviceTest = __DIR__ . '/CommunicationsHubServiceIntegrationTest.php';
+        $this->assertFileExists($serviceTest, 'Communications hub service integration test must exist');
+    }
 }

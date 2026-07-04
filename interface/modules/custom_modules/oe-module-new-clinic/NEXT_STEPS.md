@@ -1,8 +1,8 @@
 # New Clinic V1 — Next Steps
 
-**Current status (July 3, 2026):** V1.2-BILL depth (charge correct + payment reverse) shipped · asset `20260703sp73billdepth`  
+**Current status (July 4, 2026):** V1.1-COM Communications Hub smoke shipped · asset `20260704sp74comms`  
 **Product repo:** [github.com/tsatsu10/ehr](https://github.com/tsatsu10/ehr) — see root [EHR.md](../../../../EHR.md)  
-**Remaining work:** Run `upgrade_sql.php` on existing DBs; Communications Hub rollout slice; pilot `pilot-rollout.php`
+**Remaining work:** Run `upgrade_sql.php` on existing DBs; pilot `pilot-rollout.php` + §21 golden path
 
 ### V1.1-DOC rollout (M17 clinical documentation hub)
 
@@ -315,6 +315,30 @@ php interface/modules/custom_modules/oe-module-new-clinic/scripts/smoke-bill-ops
 ```
 
 Hub URL: `.../bill-ops/index.php`
+
+### V1.1-COM rollout (Communications Hub)
+
+```bash
+php interface/modules/custom_modules/oe-module-new-clinic/bin/upgrade_sql.php
+php interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-v11-comms.php
+php interface/modules/custom_modules/oe-module-new-clinic/scripts/v11-comms-fixture-seed.php
+php interface/modules/custom_modules/oe-module-new-clinic/acl/seed_pilot_users.php
+cd frontend && npm run build
+```
+
+E2E smoke (PRD COM-1/2 subset):
+
+```bash
+npm run test:e2e-new-clinic -- tests/e2e/new-clinic/specs/v11-comms-smoke.spec.js
+```
+
+HTTP smoke:
+
+```bash
+php interface/modules/custom_modules/oe-module-new-clinic/scripts/smoke-communications-http.php
+```
+
+Hub URL: `.../public/communications.php`
 
 ---
 
