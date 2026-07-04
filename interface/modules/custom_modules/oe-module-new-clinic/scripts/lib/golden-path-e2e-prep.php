@@ -15,10 +15,14 @@ use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 
 /**
  * @param 'with_doctor'|'in_pharmacy'|'in_lab' $activeState
- * @param 'ready_for_doctor'|'ready_for_pharmacy'|'ready_for_lab' $releaseState
+ * @param 'ready_for_doctor'|'ready_for_pharmacy'|'ready_for_lab'|'completed' $releaseState
  */
-function goldenPathReleaseStaleDeskWork(string $username, string $activeState, string $releaseState): void
-{
+function goldenPathReleaseStaleDeskWork(
+    string $username,
+    string $activeState,
+    string $releaseState,
+    bool $todayOnly = true
+): void {
     $user = sqlQuery("SELECT id FROM users WHERE username = ? LIMIT 1", [$username]);
     $userId = (int) ($user['id'] ?? 0);
     if ($userId <= 0) {
@@ -26,9 +30,10 @@ function goldenPathReleaseStaleDeskWork(string $username, string $activeState, s
         return;
     }
 
+    $dateClause = $todayOnly ? ' AND visit_date = CURDATE()' : '';
     sqlStatement(
         "UPDATE new_visit SET state = ?, assigned_provider_id = NULL "
-        . "WHERE assigned_provider_id = ? AND visit_date = CURDATE() AND state = ?",
+        . "WHERE assigned_provider_id = ? AND state = ?{$dateClause}",
         [$releaseState, $userId, $activeState]
     );
 

@@ -33,7 +33,7 @@ function readRtFixture() {
 
 async function waitForQueueCard(page, lname) {
   const card = page.locator(`.nc-queue-card:has-text("${lname}")`).first();
-  for (let attempt = 0; attempt < 12; attempt += 1) {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
     if (await card.isVisible().catch(() => false) && await card.isEnabled().catch(() => false)) {
       return card;
     }
@@ -43,7 +43,18 @@ async function waitForQueueCard(page, lname) {
     }
     await page.waitForTimeout(2000);
   }
+  await expect(card, 'queue card must be enabled — clear doctor active consult first').toBeEnabled({
+    timeout: 5000,
+  });
   return card;
+}
+
+async function resetDoctorDeskSession(page) {
+  await page.evaluate(() => {
+    sessionStorage.removeItem('doctor_desk_active_visit_id');
+    sessionStorage.removeItem('doctor_desk_left_via');
+  });
+  await page.reload({ waitUntil: 'domcontentloaded' });
 }
 
 async function triageSendPatient(page, lname) {
@@ -170,11 +181,7 @@ test.describe('V1.1-RT smoke', () => {
     await test.step('Primary doctor queue shows Routing suggests chip', async () => {
       await login(page, creds.doctor.username, creds.doctor.password);
       await page.goto(`${MODULE_BASE}/doctor.php`);
-
-      await page.waitForResponse(
-        (resp) => resp.url().includes('doctor.queue') && resp.ok(),
-        { timeout: 30000 },
-      ).catch(() => {});
+      await resetDoctorDeskSession(page);
 
       const doctorCard = await waitForQueueCard(page, visit.lname);
       await expect(doctorCard.getByText(/Routing suggests:/i)).toContainText(primaryDoctor.display_name, {
@@ -185,14 +192,11 @@ test.describe('V1.1-RT smoke', () => {
     });
 
     await test.step('Paused secondary doctor takes patient from All queue', async () => {
-      runModulePhp('scripts/v11-rt-smoke-fixture.php');
+      await logout(page);
+      runModulePhp('scripts/release-pilot-doctor-desks.php');
       await login(page, creds.doctor2.username, creds.doctor2.password);
       await page.goto(`${MODULE_BASE}/doctor.php`);
-
-      await page.waitForResponse(
-        (resp) => resp.url().includes('doctor.queue') && resp.ok(),
-        { timeout: 30000 },
-      ).catch(() => {});
+      await resetDoctorDeskSession(page);
 
       const scopeSelect = page.locator('#nc-doctor-scope');
       if (await scopeSelect.isVisible().catch(() => false)) {

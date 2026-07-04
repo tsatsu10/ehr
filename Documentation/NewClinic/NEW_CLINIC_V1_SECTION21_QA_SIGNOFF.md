@@ -6,7 +6,7 @@ Formal acceptance worksheet for [PRD §21](./NEW_CLINIC_V1_PRD.md#21-acceptance-
 |-------|--------|
 | **Sign-off date** | 2026-07-04 |
 | **Environment** | XAMPP · Windows · `http://localhost/openemr/` |
-| **Asset** | `20260704sp77qasignoff` |
+| **Asset** | `20260704sp79hubsmoke` |
 | **Rollout script** | `scripts/pilot-enable-v21-golden-path.php` |
 | **Signed by** | Engineering QA (automated evidence + worksheet) |
 | **Product owner** | Pending live pilot week-1 observation |
@@ -17,7 +17,7 @@ Formal acceptance worksheet for [PRD §21](./NEW_CLINIC_V1_PRD.md#21-acceptance-
 |------|--------|---------|------|-------|
 | **§21.1 Golden path (full)** | 13 | 0 | 0 | All golden-path E2E specs green |
 | **§21.1b Minimal clinic** | 1 | 0 | 0 | Pharmacy-skip path in `golden-path.spec.js` |
-| **§21.1c–z Post-pilot hubs** | 0 | 12 | 4 | Hub smokes 47/57; 10 flaky/timeout failures |
+| **§21.1c–z Post-pilot hubs** | 0 | 14 | 2 | Hub smokes 51/57; 6 flaky/timeout failures remain |
 | **§21.2–21.4 Non-E2E** | 0 | 0 | 8 | Manual training, perf, SUS |
 | **§21.5 CI / reconciliation** | 1 | 3 | 0 | Mandatory contracts 62/62; rollout contract 63 |
 
@@ -59,23 +59,35 @@ npm run test:e2e-new-clinic -- \
 | `v11-admin-smoke.spec.js` | all | — | §21.1v |
 | `v11-bridge-smoke.spec.js` | all | — | §21.1y |
 | `v11-cd-smoke.spec.js` | all | — | §21.1p |
-| `v11-comms-smoke.spec.js` | 1 | **2** | COM |
+| `v11-comms-smoke.spec.js` | all | — | COM |
 | `v11-doc-smoke.spec.js` | 2 | **1** | §21.1x |
 | `v11-lab-smoke.spec.js` | all | — | §21.1q |
 | `v11-lab-ord-smoke.spec.js` | — | **1** | §21.1q (LAB-ORD) |
 | `v11-print-rx-smoke.spec.js` | all | — | §21.1s |
 | `v11-reg-smoke.spec.js` | all | — | §21.1ae |
 | `v11-rep-smoke.spec.js` | — | **1** | §21.1w |
-| `v11-rt-smoke.spec.js` | — | **2** | §21.1j / RT |
+| `v11-rt-smoke.spec.js` | all | — | §21.1j / RT |
 | `v11-scheduling-smoke.spec.js` | all | — | §21.1f–h |
 | `v12-bill-smoke.spec.js` | all | — | §21.1u |
-| `v12-bill-depth-smoke.spec.js` | — | **1** | §21.1u BILL-3 |
+| `v12-bill-depth-smoke.spec.js` | all | — | §21.1u BILL-3 |
 | `v12-ctx-smoke.spec.js` | all | — | §21.1z |
 | `v12-hard-assign-smoke.spec.js` | all | — | V1.2 hard assign |
 | `v12-doctor-ready-notify-smoke.spec.js` | — | **1** | V1.2 notify |
 | `v12-pharm-rx-smoke.spec.js` | — | **1** | V1.2-PHARM-RX |
 
-**Hub smoke total:** **47 / 57 pass** (~35 min across 4 batches). Failures were Playwright timeouts (45s response wait or 10s click) — likely DB/fixture contention when running long batches on XAMPP; re-run individually before Product signs hub rows.
+**Hub smoke total:** **51 / 57 pass** (COM + RT + BILL-3 stabilized 2026-07-04). Remaining failures: DOC, LAB-ORD, REP, doctor-ready notify, PHARM-RX — re-run individually before Product signs hub rows.
+
+### E2E — COM + RT (isolated re-run 2026-07-04)
+
+```bash
+npm run test:e2e-new-clinic -- \
+  tests/e2e/new-clinic/specs/v11-comms-smoke.spec.js \
+  tests/e2e/new-clinic/specs/v11-rt-smoke.spec.js
+```
+
+| Result | Detail |
+|--------|--------|
+| **5 / 5 pass** | COM message list + mark done; RT roster + advisory routing (~2.4 min) |
 
 ---
 
@@ -111,12 +123,9 @@ Smoke spec fully green; not every normative §21 row has dedicated E2E:
 
 | Item | Reason |
 |------|--------|
-| COM hub message detail / mark done | 2 E2E timeouts |
 | §21.1x Clinical doc doctor route | 1 E2E timeout (3.1m) |
 | §21.1q LAB-ORD quick order | 1 E2E failure |
 | §21.1w REP immunization CSV | 1 E2E timeout |
-| §21.1j / RT roster + advisory routing | 2 E2E failures |
-| §21.1u BILL-3 payment reverse | 1 E2E failure |
 | V1.2 doctor-ready notify debounce | 1 E2E failure |
 | V1.2-PHARM-RX quick prescribe | 1 E2E failure |
 | §21.1c–e, §21.1k–ad, §21.1m–o | Manual training, MRD B7, wrong-patient script, week-4 observation |
@@ -127,10 +136,9 @@ Smoke spec fully green; not every normative §21 row has dedicated E2E:
 
 ## Follow-up before Product marks hub §21 rows
 
-1. Re-run failed specs **individually** after `pilot-enable-v21-golden-path.php` + fixture seed.
-2. Fix or stabilize COM message list / mark-done selectors if failures reproduce in isolation.
-3. Trainer delivery: §17.2.2, §17.2.3, §17.4.3 manual scripts (§21.1m, §21.1j trainer rows).
-4. Live pilot: M7 reconciliation worksheet (§21.5), queue slip print, week-4 G11 observation.
+1. Re-run remaining failed specs **individually** after `pilot-enable-v21-golden-path.php` + fixture seed.
+2. Trainer delivery: §17.2.2, §17.2.3, §17.4.3 manual scripts (§21.1m, §21.1j trainer rows).
+3. Live pilot: M7 reconciliation worksheet (§21.5), queue slip print, week-4 G11 observation.
 
 ---
 

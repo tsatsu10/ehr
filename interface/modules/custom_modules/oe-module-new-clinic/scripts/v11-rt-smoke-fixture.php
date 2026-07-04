@@ -31,8 +31,8 @@ function v11RtReleaseStaleDoctors(): void
         }
         sqlStatement(
             'UPDATE new_visit SET state = ?, assigned_provider_id = NULL '
-            . 'WHERE assigned_provider_id = ? AND visit_date = CURDATE() AND state = ?',
-            ['ready_for_doctor', $userId, 'with_doctor']
+            . 'WHERE assigned_provider_id = ? AND state = ?',
+            ['completed', $userId, 'with_doctor']
         );
     }
 }
@@ -87,6 +87,16 @@ v11RtSetTaking($facilityId, $primaryDoctor['user_id'], true);
 v11RtSetTaking($facilityId, $secondaryDoctor['user_id'], false);
 
 v11RtReleaseStaleDoctors();
+
+sqlStatement(
+    "UPDATE new_visit v
+     INNER JOIN patient_data pd ON pd.pid = v.pid
+     SET v.state = 'waiting', v.assigned_provider_id = NULL, v.routing_suggested_provider_id = NULL
+     WHERE v.facility_id = ? AND v.visit_date = ?
+       AND pd.lname LIKE 'RtE2E%'
+       AND v.state IN ('ready_for_doctor', 'with_doctor')",
+    [$facilityId, $today]
+);
 
 sqlStatement(
     "UPDATE new_visit v
@@ -159,6 +169,16 @@ if (!is_array($existing) || empty($existing['visit_id'])) {
     ];
 }
 
+// Cancel extra RtE2E waiting visits so the queue stays deterministic.
+sqlStatement(
+    "UPDATE new_visit v
+     INNER JOIN patient_data pd ON pd.pid = v.pid
+     SET v.state = 'cancelled', v.updated_at = NOW()
+     WHERE v.facility_id = ? AND v.visit_date = ?
+       AND pd.lname LIKE 'RtE2E%' AND v.state = 'waiting' AND v.id <> ?",
+    [$facilityId, $today, (int) ($existing['visit_id'] ?? 0)]
+);
+
 echo json_encode([
     'facility_id' => $facilityId,
     'primary_doctor' => $primaryDoctor,
@@ -167,6 +187,7 @@ echo json_encode([
         'visit_id' => (int) ($existing['visit_id'] ?? 0),
         'queue_number' => (int) ($existing['queue_number'] ?? 0),
         'row_version' => (int) ($existing['row_version'] ?? 0),
+        'state' => (string) ($existing['state'] ?? 'waiting'),
         'fname' => (string) ($existing['fname'] ?? ''),
         'lname' => (string) ($existing['lname'] ?? ''),
         'pid' => (int) ($existing['pid'] ?? 0),

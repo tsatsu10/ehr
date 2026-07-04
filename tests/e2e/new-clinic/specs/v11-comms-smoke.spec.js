@@ -53,6 +53,20 @@ async function fetchMessagesList(page, props) {
   return response.json();
 }
 
+async function selectMessagesLens(page) {
+  const lensBtn = page.locator('#nc-comm-lens-messages');
+  const isActive = await lensBtn.evaluate((el) => el.classList.contains('active')).catch(() => false);
+  if (isActive) {
+    return;
+  }
+  const listResp = page.waitForResponse(
+    (resp) => resp.url().includes('communications.messages_list') && resp.ok(),
+    { timeout: 45000 },
+  );
+  await lensBtn.click();
+  await listResp;
+}
+
 test.describe('V1.1-COM smoke', () => {
   test.beforeAll(() => {
     runModulePhp('bin/upgrade_sql.php');
@@ -96,12 +110,16 @@ test.describe('V1.1-COM smoke', () => {
 
     await logout(page);
     await login(page, ADMIN_USER, ADMIN_PASS);
-    await page.goto(COMMS_URL);
-    await readIslandProps(page);
-    await page.locator('#nc-comm-refresh').click();
-    const messageRow = page.locator('.oe-nc-comm-row').filter({ hasText: fixture.message_type }).first();
-    await expect(messageRow).toBeVisible({ timeout: 30000 });
+    await page.goto(`${COMMS_URL}?lens=messages`);
+    const props = await readIslandProps(page);
+    await selectMessagesLens(page);
+    const listBody = await fetchMessagesList(page, props);
+    expect(listBody.success, JSON.stringify(listBody)).toBe(true);
+    const rowIndex = (listBody.data?.rows ?? []).findIndex((row) => row.id === fixture.message_id);
+    expect(rowIndex, JSON.stringify(listBody.data)).toBeGreaterThanOrEqual(0);
 
+    const messageRow = page.locator('.oe-nc-comm-row').nth(rowIndex);
+    await expect(messageRow).toBeVisible({ timeout: 30000 });
     await messageRow.click();
     await expect(page.getByText(fixture.message_marker)).toBeVisible({ timeout: 20000 });
 
