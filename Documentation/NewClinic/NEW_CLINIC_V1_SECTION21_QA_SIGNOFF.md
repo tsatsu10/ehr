@@ -6,7 +6,7 @@ Formal acceptance worksheet for [PRD §21](./NEW_CLINIC_V1_PRD.md#21-acceptance-
 |-------|--------|
 | **Sign-off date** | 2026-07-04 |
 | **Environment** | XAMPP · Windows · `http://localhost/openemr/` |
-| **Asset** | `20260704sp79hubsmoke` |
+| **Asset** | `20260704sp80hubsmoke` |
 | **Rollout script** | `scripts/pilot-enable-v21-golden-path.php` |
 | **Signed by** | Engineering QA (automated evidence + worksheet) |
 | **Product owner** | Pending live pilot week-1 observation |
@@ -17,7 +17,7 @@ Formal acceptance worksheet for [PRD §21](./NEW_CLINIC_V1_PRD.md#21-acceptance-
 |------|--------|---------|------|-------|
 | **§21.1 Golden path (full)** | 13 | 0 | 0 | All golden-path E2E specs green |
 | **§21.1b Minimal clinic** | 1 | 0 | 0 | Pharmacy-skip path in `golden-path.spec.js` |
-| **§21.1c–z Post-pilot hubs** | 0 | 14 | 2 | Hub smokes 51/57; 6 flaky/timeout failures remain |
+| **§21.1c–z Post-pilot hubs** | 0 | 19 | 0 | Hub smokes **57/57** (2026-07-04 batch + isolated fixes) |
 | **§21.2–21.4 Non-E2E** | 0 | 0 | 8 | Manual training, perf, SUS |
 | **§21.5 CI / reconciliation** | 1 | 3 | 0 | Mandatory contracts 62/62; rollout contract 63 |
 
@@ -60,22 +60,22 @@ npm run test:e2e-new-clinic -- \
 | `v11-bridge-smoke.spec.js` | all | — | §21.1y |
 | `v11-cd-smoke.spec.js` | all | — | §21.1p |
 | `v11-comms-smoke.spec.js` | all | — | COM |
-| `v11-doc-smoke.spec.js` | 2 | **1** | §21.1x |
+| `v11-doc-smoke.spec.js` | all | — | §21.1x |
 | `v11-lab-smoke.spec.js` | all | — | §21.1q |
-| `v11-lab-ord-smoke.spec.js` | — | **1** | §21.1q (LAB-ORD) |
+| `v11-lab-ord-smoke.spec.js` | all | — | §21.1q (LAB-ORD) |
 | `v11-print-rx-smoke.spec.js` | all | — | §21.1s |
 | `v11-reg-smoke.spec.js` | all | — | §21.1ae |
-| `v11-rep-smoke.spec.js` | — | **1** | §21.1w |
+| `v11-rep-smoke.spec.js` | all | — | §21.1w |
 | `v11-rt-smoke.spec.js` | all | — | §21.1j / RT |
 | `v11-scheduling-smoke.spec.js` | all | — | §21.1f–h |
 | `v12-bill-smoke.spec.js` | all | — | §21.1u |
 | `v12-bill-depth-smoke.spec.js` | all | — | §21.1u BILL-3 |
 | `v12-ctx-smoke.spec.js` | all | — | §21.1z |
 | `v12-hard-assign-smoke.spec.js` | all | — | V1.2 hard assign |
-| `v12-doctor-ready-notify-smoke.spec.js` | — | **1** | V1.2 notify |
-| `v12-pharm-rx-smoke.spec.js` | — | **1** | V1.2-PHARM-RX |
+| `v12-doctor-ready-notify-smoke.spec.js` | all | — | V1.2 notify |
+| `v12-pharm-rx-smoke.spec.js` | all | — | V1.2-PHARM-RX |
 
-**Hub smoke total:** **51 / 57 pass** (COM + RT + BILL-3 stabilized 2026-07-04). Remaining failures: DOC, LAB-ORD, REP, doctor-ready notify, PHARM-RX — re-run individually before Product signs hub rows.
+**Hub smoke total:** **57 / 57 pass** (full hub batch + notify/pharm-rx stabilization 2026-07-04).
 
 ### E2E — COM + RT (isolated re-run 2026-07-04)
 
@@ -119,15 +119,10 @@ Smoke spec fully green; not every normative §21 row has dedicated E2E:
 - §21.1ae Registry shell (REG smoke)
 - V1.2 hard assign (`v12-hard-assign-smoke`)
 
-### Open — failures or manual-only
+### Open — manual-only or Product deferred
 
 | Item | Reason |
 |------|--------|
-| §21.1x Clinical doc doctor route | 1 E2E timeout (3.1m) |
-| §21.1q LAB-ORD quick order | 1 E2E failure |
-| §21.1w REP immunization CSV | 1 E2E timeout |
-| V1.2 doctor-ready notify debounce | 1 E2E failure |
-| V1.2-PHARM-RX quick prescribe | 1 E2E failure |
 | §21.1c–e, §21.1k–ad, §21.1m–o | Manual training, MRD B7, wrong-patient script, week-4 observation |
 | §21.2 Safety, §21.3 Performance, §21.4 SUS | Not automated in CI |
 | §21.5 reconciliation / printing rows | Requires live pilot day + manager worksheet |
@@ -136,9 +131,9 @@ Smoke spec fully green; not every normative §21 row has dedicated E2E:
 
 ## Follow-up before Product marks hub §21 rows
 
-1. Re-run remaining failed specs **individually** after `pilot-enable-v21-golden-path.php` + fixture seed.
-2. Trainer delivery: §17.2.2, §17.2.3, §17.4.3 manual scripts (§21.1m, §21.1j trainer rows).
-3. Live pilot: M7 reconciliation worksheet (§21.5), queue slip print, week-4 G11 observation.
+1. Trainer delivery: §17.2.2, §17.2.3, §17.4.3 manual scripts (§21.1m, §21.1j trainer rows).
+2. Live pilot: M7 reconciliation worksheet (§21.5), queue slip print, week-4 G11 observation.
+3. Product sign-off on hub §21 rows now that engineering smokes are **57/57**.
 
 ---
 

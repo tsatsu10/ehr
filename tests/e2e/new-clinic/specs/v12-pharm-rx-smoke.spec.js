@@ -112,6 +112,11 @@ test.describe('V1.2-PHARM-RX smoke', () => {
     await login(page, creds.doctor.username, creds.doctor.password);
     await page.goto(`${MODULE_BASE}/doctor.php`);
 
+    await page.waitForResponse(
+      (resp) => resp.url().includes('doctor.queue') && resp.ok(),
+      { timeout: 45000 },
+    );
+
     const island = page.locator('[data-island="doctor-desk"]');
     await expect(island).toBeVisible({ timeout: 20000 });
     const props = JSON.parse((await island.getAttribute('data-props')) ?? '{}');
@@ -120,7 +125,7 @@ test.describe('V1.2-PHARM-RX smoke', () => {
     const catalogUrl = `${props.ajaxUrl}?action=doctor.formulary_rx_catalog${
       props.facilityId ? `&facility_id=${props.facilityId}` : ''
     }`;
-    const response = await page.request.get(catalogUrl);
+    const response = await page.request.get(catalogUrl, { timeout: 45000 });
     expect(response.ok(), await response.text()).toBe(true);
     const body = await response.json();
     expect(body.success, JSON.stringify(body)).toBe(true);

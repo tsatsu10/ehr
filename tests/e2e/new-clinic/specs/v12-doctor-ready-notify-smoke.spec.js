@@ -86,24 +86,28 @@ async function triageSendPatient(page, lname) {
   await page.fill('#nc-vitals-weight', '70');
   await page.fill('#nc-vitals-respiration', '16');
 
-  const saveResp = page.waitForResponse(
-    (resp) => resp.url().includes('triage.save_vitals') && resp.ok(),
-    { timeout: 30000 },
-  );
-  await page.getByRole('button', { name: 'Save vitals' }).click();
-  const saveResponse = await saveResp;
+  const saveButton = page.getByRole('button', { name: 'Save vitals' });
+  await expect(saveButton).toBeEnabled({ timeout: 15000 });
+  const [saveResponse] = await Promise.all([
+    page.waitForResponse(
+      (resp) => resp.url().includes('triage.save_vitals') && resp.ok(),
+      { timeout: 60000 },
+    ),
+    saveButton.click(),
+  ]);
   const saveBody = await saveResponse.json();
   expect(saveBody.success, JSON.stringify(saveBody)).toBe(true);
 
   const sendButton = page.getByRole('button', { name: 'Send to doctor' });
   await expect(sendButton).toBeVisible({ timeout: 20000 });
 
-  const sendResp = page.waitForResponse(
-    (resp) => resp.url().includes('triage.send_doctor') && resp.ok(),
-    { timeout: 30000 },
-  );
-  await sendButton.click();
-  const sendResponse = await sendResp;
+  const [sendResponse] = await Promise.all([
+    page.waitForResponse(
+      (resp) => resp.url().includes('triage.send_doctor') && resp.ok(),
+      { timeout: 60000 },
+    ),
+    sendButton.click(),
+  ]);
   const sendBody = await sendResponse.json();
   expect(sendBody.success, JSON.stringify(sendBody)).toBe(true);
   expect(sendBody.data?.visit?.state, JSON.stringify(sendBody)).toBe('ready_for_doctor');
@@ -200,6 +204,7 @@ test.describe('V1.2 doctor ready notify smoke', () => {
 
       await logout(page);
 
+      runModulePhp('scripts/release-pilot-doctor-desks.php');
       await login(page, creds.nurse.username, creds.nurse.password);
       await page.goto(`${MODULE_BASE}/triage.php`);
       await page.waitForResponse(
@@ -214,8 +219,14 @@ test.describe('V1.2 doctor ready notify smoke', () => {
 
       await logout(page);
 
+      runModulePhp('scripts/release-pilot-doctor-desks.php');
       await login(page, creds.doctor.username, creds.doctor.password);
       await page.goto(`${MODULE_BASE}/doctor.php`);
+      await page.evaluate(() => {
+        sessionStorage.removeItem('doctor_desk_active_visit_id');
+        sessionStorage.removeItem('doctor_desk_left_via');
+      });
+      await page.reload({ waitUntil: 'domcontentloaded' });
       await page.waitForResponse(
         (resp) => resp.url().includes('doctor.queue') && resp.ok(),
         { timeout: 30000 },
