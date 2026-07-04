@@ -35,7 +35,7 @@ Tagline: *“Reopen = more orders, not rewrite the note.”*
 PHPUnit mandatory test **44** (signed lock + reopen) — run before go-live:
 
 ```bash
-vendor/bin/phpunit -c phpunit.xml --filter SignedRecordAmendmentMandatoryTest
+vendor/bin/phpunit -c phpunit.xml --filter testMandatory44SignedLockAndReopenPragmaticPath
 ```
 
 ## Sign-off

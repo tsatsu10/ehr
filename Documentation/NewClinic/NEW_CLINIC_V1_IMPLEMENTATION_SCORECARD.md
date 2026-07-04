@@ -233,7 +233,7 @@ Use PRD §8 tables as source of truth. Below: **representative** IDs for spot au
 | 2026-07-03 | Engineering | PRD test 35: doctor-ready notify debounce E2E; pilot script + fixture; asset `sp59notifye2e` |
 | 2026-07-03 | Engineering | Post-V1.2 audit fixes: triage vitals gate via `TriageService`, stale `row_version` guards, notify audit log, roster error logging, today filter on doctor queue, admin notify coupling, shared pilot seed; PHPUnit + E2E green; asset `sp60auditfix` |
 | 2026-07-04 | Engineering | §21 hub smokes 57/57 engineering sign-off; asset `sp81hubcomplete` |
-| 2026-07-04 | Product prep | Pilot/training worksheets (G12, med safety, doc integrity, reconciliation, hub Product sign-off); [worksheets/README.md](./worksheets/README.md) |
+| 2026-07-04 | Product prep | Pilot/training worksheets + [readiness pack](./worksheets/NEW_CLINIC_V1_PILOT_READINESS_PACK.md); tests **43**/**44** re-verified |
 | 2026-07-04 | Engineering | §21 QA sign-off + fix BILL-3 `row_version` in payment reverse; COM/RT e2e stability; asset `sp77qasignoff` |
 | 2026-07-04 | Engineering | §21 QA sign-off: golden path 11/11 E2E, PHPUnit 62/62, hub smokes 47/57; PRD §21.1/§21.1b/§21.5 CI signed; `NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md`; asset `sp76qasignoff` |
 | 2026-07-04 | Engineering | S1 scheduling smoke (`testMandatory60`); V1.2-BILL depth (`61`); V1.1-COM (`62`); §21 golden path rollout (`63`) + `NEW_CLINIC_V1_SECTION21_E2E_MAP.md`; asset `sp75goldenpath` |

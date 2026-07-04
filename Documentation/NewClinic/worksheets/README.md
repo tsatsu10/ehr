@@ -22,3 +22,4 @@ Fillable worksheets for Product and training sign-off referenced in PRD §17.2 a
 |----------|-----|
 | [Trainer one-pager](NEW_CLINIC_V1_TRAINER_ONE_PAGER.md) | Day-1 drill order, taglines, G12 **6/6** gate — hand to trainer before staff arrive |
 | [Pilot day checklist](NEW_CLINIC_V1_PILOT_DAY_CHECKLIST.md) | Before doors open, during-day spot checks, EOD reconciliation — first live day + every cash day |
+| [Pilot readiness pack](NEW_CLINIC_V1_PILOT_READINESS_PACK.md) | **Start here** — full handoff order for manager, trainer, Product, tech lead |

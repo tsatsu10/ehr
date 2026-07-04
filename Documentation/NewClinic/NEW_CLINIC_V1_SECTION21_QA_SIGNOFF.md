@@ -99,6 +99,16 @@ vendor/bin/phpunit -c phpunit.xml --filter WrongPatientPreventionMandatoryTest
 |--------|--------|
 | **14 / 14 pass** | Test **43** · 67 assertions · go-live gate per §21.5 |
 
+### PHPUnit — test 44 signed record amendment (2026-07-04 re-run)
+
+```bash
+vendor/bin/phpunit -c phpunit.xml --filter testMandatory44SignedLockAndReopenPragmaticPath
+```
+
+| Result | Detail |
+|--------|--------|
+| **1 / 1 pass** | Test **44** · doc integrity drill engineering gate |
+
 ---
 
 ## Section sign-off detail
@@ -166,6 +176,7 @@ All 19 hub smoke specs **57/57 green** (2026-07-04). Smoke covers shell/API path
 ## Related
 
 - [Pilot worksheets index](./worksheets/README.md)
+- [Pilot readiness pack](./worksheets/NEW_CLINIC_V1_PILOT_READINESS_PACK.md)
 - [Trainer one-pager](./worksheets/NEW_CLINIC_V1_TRAINER_ONE_PAGER.md)
 - [Pilot day checklist](./worksheets/NEW_CLINIC_V1_PILOT_DAY_CHECKLIST.md)
 - [Implementation scorecard](./NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md)

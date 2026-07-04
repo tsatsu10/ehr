@@ -20,6 +20,7 @@ Engineering completed **57/57** Playwright hub smokes on **2026-07-04** (asset `
 | Hub smokes (19 specs) | 57/57 | 2026-07-04 |
 | PHPUnit mandatory contracts | 62/62 | 2026-07-04 |
 | Test 43 wrong patient | 14/14 | 2026-07-04 |
+| Test 44 signed lock + reopen | 1/1 | 2026-07-04 |
 
 Full map: [NEW_CLINIC_V1_SECTION21_E2E_MAP.md](../NEW_CLINIC_V1_SECTION21_E2E_MAP.md)
 

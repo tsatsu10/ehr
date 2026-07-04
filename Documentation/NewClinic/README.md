@@ -12,7 +12,7 @@ Read in this order for a full picture:
 
 **UI/UX entry point:** **[NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md)** (v2.0.0) — start at **§0 TL;DR** for 60-second orientation. Full rewrite: trunk-test IA, single component reference with contract template, interaction-state taxonomy, scoring rubric, and phased **shadcn/ui migration plan (§9)**. PAGE_DESIGNS remains normative for per-page build detail.
 
-**Implementation tracking:** **[NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md](./NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md)** — living module × slice × % tracker synced to PRD §5.6 and §20.1 (last audited 2026-07-04). **§21 E2E map:** [NEW_CLINIC_V1_SECTION21_E2E_MAP.md](./NEW_CLINIC_V1_SECTION21_E2E_MAP.md) · **§21 QA sign-off:** [NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md) · **Pilot worksheets:** [worksheets/README.md](./worksheets/README.md) · [Trainer one-pager](./worksheets/NEW_CLINIC_V1_TRAINER_ONE_PAGER.md) · [Pilot day checklist](./worksheets/NEW_CLINIC_V1_PILOT_DAY_CHECKLIST.md)
+**Implementation tracking:** **[NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md](./NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md)** — living module × slice × % tracker synced to PRD §5.6 and §20.1 (last audited 2026-07-04). **§21 E2E map:** [NEW_CLINIC_V1_SECTION21_E2E_MAP.md](./NEW_CLINIC_V1_SECTION21_E2E_MAP.md) · **§21 QA sign-off:** [NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md) · **Pilot readiness:** [worksheets/NEW_CLINIC_V1_PILOT_READINESS_PACK.md](./worksheets/NEW_CLINIC_V1_PILOT_READINESS_PACK.md)
 
 ## Feature redesign specs
 
