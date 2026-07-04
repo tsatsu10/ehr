@@ -137,7 +137,7 @@ class BillOpsPaymentsSearchService
 
         $facilityId = $this->visitScope->resolveDeskFacilityId();
         $receipt = QueryUtils::querySingleRow(
-            "SELECT r.*, v.state AS visit_state, v.version AS visit_version
+            "SELECT r.*, v.state AS visit_state, v.row_version AS visit_version
              FROM new_receipt r
              INNER JOIN new_visit v ON v.id = r.visit_id
              WHERE r.id = ? AND r.facility_id = ?",

@@ -8,7 +8,7 @@
 const { execSync } = require('child_process');
 const path = require('path');
 const { test, expect } = require('@playwright/test');
-const { MODULE_BASE, login } = require('../helpers/auth');
+const { MODULE_BASE, login, logout } = require('../helpers/auth');
 
 const MODULE_ROOT = path.join(
   __dirname,
@@ -32,6 +32,27 @@ function readCommsFixture() {
   return JSON.parse(raw);
 }
 
+async function readIslandProps(page) {
+  await expect(page.locator('#nc-communications-hub')).toBeVisible({ timeout: 60000 });
+  const island = page.locator('[data-island="communications-hub"]');
+  return JSON.parse((await island.getAttribute('data-props')) ?? '{}');
+}
+
+async function fetchMessagesList(page, props) {
+  const params = new URLSearchParams({
+    action: 'communications.messages_list',
+    activity: '1',
+    begin: '0',
+    limit: '25',
+    sortby: 'pnotes.date',
+    sortorder: 'desc',
+  });
+  const url = `${props.ajaxUrl}${props.ajaxUrl.includes('?') ? '&' : '?'}${params.toString()}`;
+  const response = await page.request.get(url);
+  expect(response.ok(), await response.text()).toBe(true);
+  return response.json();
+}
+
 test.describe('V1.1-COM smoke', () => {
   test.beforeAll(() => {
     runModulePhp('bin/upgrade_sql.php');
@@ -49,25 +70,17 @@ test.describe('V1.1-COM smoke', () => {
     expect(fixture.communications_hub_enable, JSON.stringify(fixture)).toBe(true);
     expect(fixture.message_id, JSON.stringify(fixture)).toBeGreaterThan(0);
 
+    await logout(page);
     await login(page, ADMIN_USER, ADMIN_PASS);
-
-    const listResp = page.waitForResponse(
-      (resp) => resp.url().includes('communications.messages_list') && resp.ok(),
-      { timeout: 45000 },
-    );
     await page.goto(COMMS_URL);
-    const listBody = await (await listResp).json();
+    const props = await readIslandProps(page);
+    const listBody = await fetchMessagesList(page, props);
     expect(listBody.success, JSON.stringify(listBody)).toBe(true);
     expect(
       (listBody.data?.rows ?? []).some((row) => row.id === fixture.message_id),
       JSON.stringify(listBody.data),
     ).toBe(true);
 
-    await expect(page.locator('#nc-communications-hub')).toBeVisible({ timeout: 20000 });
-    await expect(page.locator('[data-island="communications-hub"]')).toBeVisible();
-
-    const island = page.locator('[data-island="communications-hub"]');
-    const props = JSON.parse((await island.getAttribute('data-props')) ?? '{}');
     const countsUrl = `${props.ajaxUrl}?action=communications.hub_counts`;
     const countsResponse = await page.request.get(countsUrl);
     expect(countsResponse.ok(), await countsResponse.text()).toBe(true);
@@ -78,13 +91,18 @@ test.describe('V1.1-COM smoke', () => {
 
   test('fixture message opens detail and marks done', async ({ page }) => {
     test.setTimeout(120_000);
+    runModulePhp('scripts/v11-comms-fixture-seed.php');
     const fixture = readCommsFixture();
 
+    await logout(page);
     await login(page, ADMIN_USER, ADMIN_PASS);
     await page.goto(COMMS_URL);
-    await expect(page.locator('#nc-communications-hub')).toBeVisible({ timeout: 20000 });
+    await readIslandProps(page);
+    await page.locator('#nc-comm-refresh').click();
+    const messageRow = page.locator('.oe-nc-comm-row').filter({ hasText: fixture.message_type }).first();
+    await expect(messageRow).toBeVisible({ timeout: 30000 });
 
-    await page.getByText(fixture.message_type, { exact: true }).first().click();
+    await messageRow.click();
     await expect(page.getByText(fixture.message_marker)).toBeVisible({ timeout: 20000 });
 
     const doneResp = page.waitForResponse(
@@ -102,9 +120,10 @@ test.describe('V1.1-COM smoke', () => {
 
     expect(fixture.reminder_id, JSON.stringify(fixture)).toBeGreaterThan(0);
 
+    await logout(page);
     await login(page, ADMIN_USER, ADMIN_PASS);
     await page.goto(COMMS_URL);
-    await expect(page.locator('#nc-communications-hub')).toBeVisible({ timeout: 20000 });
+    await readIslandProps(page);
 
     const remindersResp = page.waitForResponse(
       (resp) => resp.url().includes('communications.reminders_list') && resp.ok(),

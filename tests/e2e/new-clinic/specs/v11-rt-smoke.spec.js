@@ -123,6 +123,7 @@ test.describe('V1.1-RT smoke', () => {
     runModulePhp('bin/upgrade_sql.php');
     runModulePhp('scripts/pilot-enable-v11-rt.php');
     runModulePhp('scripts/e2e-prep-golden-path.php');
+    runModulePhp('scripts/v11-rt-smoke-fixture.php');
     const seedScript = path.join(MODULE_ROOT, 'acl/seed_pilot_users.php');
     const php = process.env.PHP_BIN || 'C:\\xampp\\php\\php.exe';
     execSync(`"${php}" "${seedScript}"`, { stdio: 'inherit' });
@@ -184,6 +185,7 @@ test.describe('V1.1-RT smoke', () => {
     });
 
     await test.step('Paused secondary doctor takes patient from All queue', async () => {
+      runModulePhp('scripts/v11-rt-smoke-fixture.php');
       await login(page, creds.doctor2.username, creds.doctor2.password);
       await page.goto(`${MODULE_BASE}/doctor.php`);
 

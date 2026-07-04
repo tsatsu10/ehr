@@ -25,6 +25,7 @@ use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 
 goldenPathReleaseStaleDeskWork('doctor_user', 'with_doctor', 'ready_for_doctor');
+goldenPathReleaseStaleDeskWork('doctor2_user', 'with_doctor', 'ready_for_doctor');
 goldenPathReleaseStaleDeskWork('pharmacy_user', 'in_pharmacy', 'ready_for_pharmacy');
 goldenPathReleaseStaleDeskWork('lab_user', 'in_lab', 'ready_for_lab');
 

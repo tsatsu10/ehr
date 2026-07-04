@@ -1,8 +1,8 @@
 # New Clinic V1 — Next Steps
 
-**Current status (July 4, 2026):** §21 golden path rollout smoke shipped · asset `20260704sp75goldenpath`  
+**Current status (July 4, 2026):** §21 QA sign-off complete (pilot week-1 gate) · asset `20260704sp77qasignoff`  
 **Product repo:** [github.com/tsatsu10/ehr](https://github.com/tsatsu10/ehr) — see root [EHR.md](../../../../EHR.md)  
-**Remaining work:** QA sign-off of PRD §21 checkboxes; `upgrade_sql.php` on existing DBs
+**Remaining work:** Re-run 10 failing hub smoke specs in isolation; Product sign-off on hub §21 rows; live pilot reconciliation (§21.5)
 
 ### V1.1-DOC rollout (M17 clinical documentation hub)
 

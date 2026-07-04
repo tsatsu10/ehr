@@ -18,6 +18,25 @@ $ignoreAuth = true;
 require_once dirname(__DIR__, 4) . '/globals.php';
 require_once __DIR__ . '/lib/v12-pilot-seed.php';
 
+/**
+ * Release stale with_doctor visits without polluting JSON fixture stdout.
+ */
+function v11RtReleaseStaleDoctors(): void
+{
+    foreach (['doctor_user', 'doctor2_user'] as $username) {
+        $user = sqlQuery('SELECT id FROM users WHERE username = ? LIMIT 1', [$username]);
+        $userId = (int) ($user['id'] ?? 0);
+        if ($userId <= 0) {
+            continue;
+        }
+        sqlStatement(
+            'UPDATE new_visit SET state = ?, assigned_provider_id = NULL '
+            . 'WHERE assigned_provider_id = ? AND visit_date = CURDATE() AND state = ?',
+            ['ready_for_doctor', $userId, 'with_doctor']
+        );
+    }
+}
+
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Modules\NewClinic\Services\ClinicDateService;
 use OpenEMR\Modules\NewClinic\Services\VisitQueueService;
@@ -66,6 +85,8 @@ $secondaryDoctor = v11RtDoctorMeta('doctor2_user');
 
 v11RtSetTaking($facilityId, $primaryDoctor['user_id'], true);
 v11RtSetTaking($facilityId, $secondaryDoctor['user_id'], false);
+
+v11RtReleaseStaleDoctors();
 
 sqlStatement(
     "UPDATE new_visit v

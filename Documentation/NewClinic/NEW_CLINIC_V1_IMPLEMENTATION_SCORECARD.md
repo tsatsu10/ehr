@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | **Last audited** | 2026-07-04 |
-| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260704sp75goldenpath` |
+| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260704sp77qasignoff` |
 | **Maintainer** | Engineering lead updates after each sprint; Product owns pilot sign-off |
 | **How to update** | Change `%` and `Status` cells; bump **Last audited**; sync PRD §5.6 row if shell status changes |
 
@@ -24,9 +24,9 @@
 |------|---|-------|
 | Specs written | **95** | PRD v1.20.50 + companions; §21 E2E map added |
 | Module shells (§5.6) | **96** | 22 Shipped + T2 Partial / 24 packages |
-| **V1 pilot path** | **92** code · **78** QA | B0–B7 + S1 when enabled |
+| **V1 pilot path** | **92** code · **85** QA | B0–B7 signed; §21.1 + §21.1b green |
 | Post-pilot slices (§20.1) | **82** | Mandatory contracts through **63** |
-| §21 acceptance (documented) | **0** signed · **~78** CI | E2E map links smoke specs to PRD rows |
+| §21 acceptance (documented) | **15** signed · **~47** CI smoke · **252** open | [QA sign-off](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md) 2026-07-04 |
 | shadcn §9 | **25** | Phase A infra; Phase B started |
 | **Overall product** | **80** | Weighted blend |
 
@@ -204,7 +204,7 @@ Use PRD §8 tables as source of truth. Below: **representative** IDs for spot au
 | §6.8.8 walk-in ACL keys | P1 | 100 | Done | `new_pharmacy_walkin_dispense`, `new_pharmacy_refer_to_opd` |
 | M7-F18 ancillary report | P1 | 100 | Done | `AncillarySection` |
 | §6.8.6 visit board badges | P1 | 100 | Done | `AncillaryVisitBadges` |
-| §21.1i pilot acceptance | P1 | 0 | Open | QA worksheet — engineering complete |
+| §21.1i pilot acceptance | P1 | 50 | Partial | ANC smoke green; normative §21.1i rows open for Product |
 
 ### V1.2 hard assign (sample)
 
@@ -230,6 +230,8 @@ Use PRD §8 tables as source of truth. Below: **representative** IDs for spot au
 | 2026-07-03 | Engineering | Roster fix (`DoctorRosterService` `authorized` column); E2E `v12-hard-assign-smoke` + `golden-path` green; asset `sp58rosterfix` |
 | 2026-07-03 | Engineering | PRD test 35: doctor-ready notify debounce E2E; pilot script + fixture; asset `sp59notifye2e` |
 | 2026-07-03 | Engineering | Post-V1.2 audit fixes: triage vitals gate via `TriageService`, stale `row_version` guards, notify audit log, roster error logging, today filter on doctor queue, admin notify coupling, shared pilot seed; PHPUnit + E2E green; asset `sp60auditfix` |
+| 2026-07-04 | Engineering | §21 QA sign-off + fix BILL-3 `row_version` in payment reverse; COM/RT e2e stability; asset `sp77qasignoff` |
+| 2026-07-04 | Engineering | §21 QA sign-off: golden path 11/11 E2E, PHPUnit 62/62, hub smokes 47/57; PRD §21.1/§21.1b/§21.5 CI signed; `NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md`; asset `sp76qasignoff` |
 | 2026-07-04 | Engineering | S1 scheduling smoke (`testMandatory60`); V1.2-BILL depth (`61`); V1.1-COM (`62`); §21 golden path rollout (`63`) + `NEW_CLINIC_V1_SECTION21_E2E_MAP.md`; asset `sp75goldenpath` |
 
 ---
@@ -240,5 +242,6 @@ Use PRD §8 tables as source of truth. Below: **representative** IDs for spot au
 - [PRD §20.1 slices](./NEW_CLINIC_V1_PRD.md#201-post-pilot-release-slices-v11-family--independent-ships)
 - [PRD §21 acceptance](./NEW_CLINIC_V1_PRD.md#21-acceptance-criteria-v1-pilot)
 - [§21 E2E evidence map](./NEW_CLINIC_V1_SECTION21_E2E_MAP.md)
+- [§21 QA sign-off record](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md)
 - [NEXT_STEPS.md](../../interface/modules/custom_modules/oe-module-new-clinic/NEXT_STEPS.md) — deploy / pilot commands
 - [CODE_AUDIT React migration](../../interface/modules/custom_modules/oe-module-new-clinic/CODE_AUDIT_2026-06-27-REACT-MIGRATION.md)

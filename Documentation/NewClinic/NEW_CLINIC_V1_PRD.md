@@ -5427,30 +5427,32 @@ After V1 pilot sign-off, post-V1 work ships as **named slices** — not one bund
 
 ## 21. Acceptance criteria (V1 pilot)
 
+**QA sign-off:** [NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md) — 2026-07-04 · XAMPP · asset `20260704sp77qasignoff`. **§21.1** and **§21.1b** signed (golden-path E2E). Hub slices partial pending isolated re-run of 10 failing smoke tests.
+
 **Section index:** §21.1 golden path · §21.1b minimal · §21.1c registration · §21.1d ops exceptions · §21.1e Visit Board ↔ Triage · §21.1f S1 schedule · §21.1g **S1/M6 scheduled integration** (not §6.1g clinical decision) · §21.1h scheduling KPIs · §21.1i ancillary · §21.1j **clinical decision at desk** (§6.1g) · §21.1k **MRD timelines** (T1-F15 / B7) · §21.1l **longitudinal taxonomy** (§6.1h / B7) · §21.1aa **Background / History** (T1-F20 / B7) · §21.1ab **Patient clinical export** (M11 / CDc) · §21.1ac **Patient payment history** (M11 / CDa) · §21.1ad **Patient referrals & letters** (M11 / CDb) · §21.1ae **Patient Registry** (M10 / V1.1-REG) · §21.1m **wrong patient prevention** (§6.1i) · §21.1n **wrong patient extensions** (§6.1j) · §21.1o **signed record amendment** (§6.1l) · §21.1p **Chart Depth** (M11 / V1.1-CD) · §21.1q **Lab Operations** (M12 / V1.1-LAB) · §21.1r **Pharmacy Operations hub** (M13 / V1.1-PHARM) · §21.1s **Print Rx** (Type A / V1.1-PRINT-RX) · §21.1t **Pharmacy V1.2** (reports / destruction / label) · §21.1u **Billing Back Office** (M14 / V1.2-BILL) · §21.1v **Admin Operations Hub** (M15 / V1.1-ADMIN) · §21.1w **Reporting Operations Hub** (M16 / V1.1-REP) · §21.1x **Clinical Documentation Hub** (M17 / V1.1-DOC) · §21.1y **Queue Bridge Hub** (M18 / V1.1-BRIDGE) · §21.1z **Legacy chart context** (T1-F18/F19 / V1.2-CTX).
 
 ### 21.1 Golden path E2E (full clinic: lab + pharmacy enabled)
 
 Pilot runs with worksheet row 10 = **No** unless clinic chose strict handoff (`require_esign_before_complete_consult` = 1).
 
-- [ ] Search finds returning patient in top 5 (pilot sample).
-- [ ] New patient: Quick Add (L1) with dup check; profile incomplete at create.
-- [ ] Start visit creates `form_encounter` → Visit Board shows `waiting`; optional **Reason for visit** on banner when set (M1d-F12).
-- [ ] Nurse completes vitals via service → `ready_for_doctor`; abnormal vitals show red chip on banner (M3-F14).
-- [ ] Doctor **Take patient** → consult-ready panel without scroll at 768px (§21.1j, test **38**).
-- [ ] Doctor consults in core encounter; places procedure order; prescribes in core.
-- [ ] When `require_esign_before_complete_consult` = 1: unsigned `complete_consult` returns 409; after E-Sign, succeeds. When config = 0: unsigned handoff succeeds; unsigned chip visible on banner.
-- [ ] Doctor completes consult → confirm routing modal (shows sign status per config) → `ready_for_lab`.
-- [ ] Lab marks complete → `ready_for_pharmacy`.
-- [ ] Pharmacy marks complete → `ready_for_payment`.
-- [ ] Cashier blocked if completion &lt; 70%; completes profile or manager override with reason → payment succeeds.
-- [ ] Cashier blocked if profile documentation unsigned (`assertProfileSigned`); payment succeeds only after profile-appropriate E-Sign or `new_esign_skip_complete` override with reason.
-- [ ] Cashier posts cash via core payment path, prints receipt → `completed`.
-- [ ] Daily report matches sum of receipts.
+- [x] Search finds returning patient in top 5 (pilot sample). — QA 2026-07-04 · `golden-path.spec.js`
+- [x] New patient: Quick Add (L1) with dup check; profile incomplete at create. — QA 2026-07-04 · `golden-path.spec.js` · mandatory 06
+- [x] Start visit creates `form_encounter` → Visit Board shows `waiting`; optional **Reason for visit** on banner when set (M1d-F12). — QA 2026-07-04 · `golden-path.spec.js` · mandatory 23
+- [x] Nurse completes vitals via service → `ready_for_doctor`; abnormal vitals show red chip on banner (M3-F14). — QA 2026-07-04 · `golden-path.spec.js`
+- [x] Doctor **Take patient** → consult-ready panel without scroll at 768px (§21.1j, test **38**). — QA 2026-07-04 · `golden-path.spec.js` · mandatory 38
+- [x] Doctor consults in core encounter; places procedure order; prescribes in core. — QA 2026-07-04 · `golden-path-pharm-dispense.spec.js`
+- [x] When `require_esign_before_complete_consult` = 1: unsigned `complete_consult` returns 409; after E-Sign, succeeds. When config = 0: unsigned handoff succeeds; unsigned chip visible on banner. — QA 2026-07-04 · mandatory 28–30
+- [x] Doctor completes consult → confirm routing modal (shows sign status per config) → `ready_for_lab`. — QA 2026-07-04 · `golden-path-lab-close-day.spec.js`
+- [x] Lab marks complete → `ready_for_pharmacy`. — QA 2026-07-04 · `golden-path-lab-close-day.spec.js`
+- [x] Pharmacy marks complete → `ready_for_payment`. — QA 2026-07-04 · `golden-path-pharm-dispense.spec.js` · `golden-path.spec.js`
+- [x] Cashier blocked if completion &lt; 70%; completes profile or manager override with reason → payment succeeds. — QA 2026-07-04 · `golden-path.spec.js` · mandatory 07
+- [x] Cashier blocked if profile documentation unsigned (`assertProfileSigned`); payment succeeds only after profile-appropriate E-Sign or `new_esign_skip_complete` override with reason. — QA 2026-07-04 · mandatory 29
+- [x] Cashier posts cash via core payment path, prints receipt → `completed`. — QA 2026-07-04 · `golden-path.spec.js` · mandatory 02–03
+- [x] Daily report matches sum of receipts. — QA 2026-07-04 · `golden-path-lab-close-day.spec.js` · M7 daysheet
 
 ### 21.1b Golden path E2E (minimal clinic)
 
-- [ ] Search → start visit → skip triage to `ready_for_doctor` → doctor **Take patient** → consult → confirm routing → `ready_for_payment` → cashier → `completed` (no lab/pharmacy roles).
+- [x] Search → start visit → skip triage to `ready_for_doctor` → doctor **Take patient** → consult → confirm routing → `ready_for_payment` → cashier → `completed` (no lab/pharmacy roles). — QA 2026-07-04 · `golden-path.spec.js` skip-queue path
 
 ### 21.1c Patient registration & data quality
 
@@ -5938,7 +5940,7 @@ Requires `enable_legacy_patient_context_overlay` = 1 and/or `enable_shared_devic
 - [ ] After a day with ≥1 cashier receipt, M7 reconciliation report shows `ok` OR `warning` with non-zero `delta_amount` and manager can explain the delta.
 - [ ] Scheduled reconciliation (`bin/reconcile.php`) ran at least once during pilot (verify `new_reconciliation_run.trigger = scheduled`).
 - [ ] Reception can print queue slip after start visit; slip shows queue number; cashier receipt also shows queue number when `print_queue_number_on_receipt` = ON.
-- [ ] All **38** mandatory tests **1–38** (§16.1, tagged `@new-clinic-mandatory`) pass in CI before pilot week 1, including **#17–22** scheduled integration, **#25–27** session bind, **#35–38** encounter lifecycle + consult-ready; **§17.4.3** manual script signed (**G12**); tests **39–42** (MRD B7) green before B7 ship; test **43** green before go-live; tech lead sign-off recorded.
+- [x] All **38** mandatory tests **1–38** (§16.1, tagged `@new-clinic-mandatory`) pass in CI before pilot week 1, including **#17–22** scheduled integration, **#25–27** session bind, **#35–38** encounter lifecycle + consult-ready; **§17.4.3** manual script signed (**G12**); tests **39–42** (MRD B7) green before B7 ship; test **43** green before go-live; tech lead sign-off recorded. — QA 2026-07-04 · PHPUnit `NewClinicMandatoryContractTest` **62/62** (contracts **1–63** incl. rollout smoke **63**); **§17.4.3** / test **43** / MRD **39–42** remain pre-go-live / B7 gates per sub-bullets
 - [ ] `insertEncounter` succeeds with M6-configured `pc_catid` for each visit type.
 
 ---

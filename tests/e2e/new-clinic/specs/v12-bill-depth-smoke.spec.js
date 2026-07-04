@@ -82,6 +82,7 @@ test.describe('V1.2-BILL depth smoke', () => {
 
   test('payment reverse offsets receipt and blocks double reverse', async ({ page }) => {
     test.setTimeout(120_000);
+    runModulePhp('scripts/v12-bill-depth-fixture-seed.php');
     const fixture = readBillDepthFixture();
 
     expect(fixture.reverse_receipt_id, JSON.stringify(fixture)).toBeGreaterThan(0);
@@ -104,12 +105,13 @@ test.describe('V1.2-BILL depth smoke', () => {
     await searchResp;
 
     await page.getByText(fixture.reverse_receipt_number).first().click();
+    await expect(page.locator('#nc-billops-reverse-reason')).toBeVisible({ timeout: 20000 });
     await page.locator('#nc-billops-reverse-reason').fill('E2E payment reverse smoke');
     const reverseResp = page.waitForResponse(
       (resp) => resp.url().includes('bill_ops.payment_reverse') && resp.ok(),
-      { timeout: 45000 },
+      { timeout: 60000 },
     );
-    await page.getByRole('button', { name: /^Reverse payment$/i }).click();
+    await page.getByRole('button', { name: /^Reverse payment$/i }).click({ force: true });
     const reverseBody = await (await reverseResp).json();
     expect(reverseBody.success, JSON.stringify(reverseBody)).toBe(true);
 

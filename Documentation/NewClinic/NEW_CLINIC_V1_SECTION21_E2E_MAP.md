@@ -5,7 +5,7 @@ Living worksheet mapping [PRD §21 acceptance](./NEW_CLINIC_V1_PRD.md#21-accepta
 | Field | Value |
 |-------|--------|
 | **Last updated** | 2026-07-04 |
-| **Asset** | `20260704sp75goldenpath` |
+| **Asset** | `20260704sp77qasignoff` |
 | **Rollout script** | `scripts/pilot-enable-v21-golden-path.php` |
 | **Readiness fixture** | `scripts/v21-golden-path-smoke-fixture.php` |
 
@@ -80,6 +80,14 @@ npm run test:e2e-new-clinic -- tests/e2e/new-clinic/specs/v21-golden-path-smoke.
 
 ## QA sign-off
 
-PRD checkboxes remain **unsigned** until Product/QA marks them in [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md#21-acceptance-criteria-v1-pilot). This map is **engineering evidence only**.
+Formal record: [NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md) — **2026-07-04** · asset `20260704sp76qasignoff`.
+
+| Status | §21 rows | Evidence |
+|--------|----------|----------|
+| **Signed** | §21.1 (13), §21.1b (1), §21.5 CI (1) | Golden-path E2E 11/11; PHPUnit 62/62 |
+| **Partial** | Hub slices (smoke shell) | Hub smokes 47/57 — re-run 10 failures in isolation |
+| **Open** | Training, MRD B7, perf, reconciliation | Manual pilot worksheet |
+
+PRD checkboxes for signed rows are marked in [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md#21-acceptance-criteria-v1-pilot).
 
 Update [NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md](./NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md) when new smoke specs land.
