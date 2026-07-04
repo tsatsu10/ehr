@@ -27,7 +27,7 @@
 | **V1 pilot path** | **92** code · **90** QA | B0–B7 signed; §21.1 + §21.1b + hub smokes 57/57 |
 | Post-pilot slices (§20.1) | **82** | Mandatory contracts through **63** |
 | §21 acceptance (documented) | **15** signed · **19** hub smokes · **~235** open | [QA sign-off](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md) 2026-07-04 |
-| shadcn §9 | **25** | Phase A infra; Phase B started |
+| shadcn §9 | **35** | Phase A infra; Phase B in progress |
 | **Overall product** | **81** | Weighted blend |
 
 ---
@@ -128,7 +128,7 @@ Formal PRD checkboxes. **QA** updates `Signed` when E2E + pilot worksheet row pa
 | Phase | Scope | % | Owner | Status |
 |-------|-------|---|-------|--------|
 | A | Tokens, Tailwind, `ui/` primitives | **85** | Eng | Done |
-| B | S-effort wrappers (Card, Badge, …) | **15** | Eng | Started |
+| B | S-effort wrappers (Card, Badge, …) | **55** | Eng | In progress |
 | C | Dialog, Sheet, Command, DataTable | **5** | Eng | Not started |
 | D | PatientContextBanner, chart-line | **0** | Eng | Not started |
 | E | Retire BEM CSS | **0** | Eng | Not started |
@@ -151,7 +151,7 @@ Prioritized from lowest module/slice %.
 | P1 | M10 | M10 | Patient Registry product sign-off | 82 | Product |
 | P2 | M0-F07 | M0 | REST `GET /api/new/visits` | 0 | Eng |
 | P2 | T2 | Platform | Globals installer profile | 40 | Eng |
-| P2 | §9-B | UI | shadcn Phase B component swap | 15 | Eng |
+| P2 | §9-B | UI | shadcn Phase B component swap | 55 | Eng |
 
 ---
 

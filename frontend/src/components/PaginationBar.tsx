@@ -1,3 +1,6 @@
+import { Button } from './ui/button';
+import { cn } from '@/lib/utils';
+
 interface PaginationBarProps {
   page: number;
   pageSize: number;
@@ -20,28 +23,32 @@ export function PaginationBar({
 
   return (
     <div
-      className="oe-nc-pagination-bar d-flex justify-content-between align-items-center"
+      className="oe-nc-pagination-bar mt-3 flex items-center justify-between gap-2"
       id={id}
     >
-      <button
+      <Button
         type="button"
-        className="btn btn-link btn-sm p-0 oe-nc-pagination-bar__btn"
+        variant="link"
+        size="sm"
+        className="h-auto shrink-0 p-0"
         disabled={page <= 1}
         onClick={() => onPageChange(Math.max(1, page - 1))}
       >
         Prev
-      </button>
-      <span className="oe-nc-pagination-bar__summary small text-muted">
+      </Button>
+      <span className="flex-1 text-center text-sm text-[var(--oe-nc-text-muted)]">
         Showing {from}–{to} of {total}
       </span>
-      <button
+      <Button
         type="button"
-        className="btn btn-link btn-sm p-0 oe-nc-pagination-bar__btn"
+        variant="link"
+        size="sm"
+        className={cn('h-auto shrink-0 p-0')}
         disabled={to >= total}
         onClick={() => onPageChange(page + 1)}
       >
         Next
-      </button>
+      </Button>
     </div>
   );
 }

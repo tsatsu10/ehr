@@ -1,3 +1,5 @@
+import { cn } from '@/lib/utils';
+
 export interface SegmentedControlItem {
   id: string;
   label: string;
@@ -12,6 +14,12 @@ interface SegmentedControlProps {
   className?: string;
 }
 
+const segmentBase =
+  'oe-nc-segmented-control__segment min-h-11 cursor-pointer rounded border-none bg-transparent px-2.5 py-1.5 text-[0.8125rem] font-medium leading-tight text-[var(--oe-nc-text-muted)] hover:bg-white hover:text-[var(--oe-nc-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--oe-nc-primary)]';
+
+const segmentSelected =
+  'oe-nc-segmented-control__segment--selected bg-white font-semibold text-[var(--oe-nc-primary)] shadow-[var(--oe-nc-shadow-sm,0_1px_2px_rgba(0,0,0,0.05))]';
+
 export function SegmentedControl({
   segments,
   value,
@@ -21,7 +29,10 @@ export function SegmentedControl({
 }: SegmentedControlProps) {
   return (
     <div
-      className={`oe-nc-segmented-control${className ? ` ${className}` : ''}`}
+      className={cn(
+        'oe-nc-segmented-control inline-flex flex-wrap gap-1 rounded-md border border-[var(--oe-nc-border)] bg-slate-50 p-0.5',
+        className,
+      )}
       role="tablist"
       aria-label={ariaLabel}
     >
@@ -35,7 +46,7 @@ export function SegmentedControl({
             key={segment.id}
             type="button"
             role="tab"
-            className={`oe-nc-segmented-control__segment${selected ? ' oe-nc-segmented-control__segment--selected' : ''}`}
+            className={cn(segmentBase, selected && segmentSelected)}
             aria-selected={selected}
             onClick={() => onChange(segment.id)}
           >
