@@ -1,8 +1,8 @@
 # New Clinic V1 — Next Steps
 
-**Current status (July 3, 2026):** S1 Scheduling smoke package shipped · asset `20260703sp72scheduling`  
+**Current status (July 3, 2026):** V1.2-BILL depth (charge correct + payment reverse) shipped · asset `20260703sp73billdepth`  
 **Product repo:** [github.com/tsatsu10/ehr](https://github.com/tsatsu10/ehr) — see root [EHR.md](../../../../EHR.md)  
-**Remaining work:** Run `upgrade_sql.php` on existing DBs; V1.2-BILL depth fixtures; Communications Hub rollout slice
+**Remaining work:** Run `upgrade_sql.php` on existing DBs; Communications Hub rollout slice; pilot `pilot-rollout.php`
 
 ### V1.1-DOC rollout (M17 clinical documentation hub)
 
@@ -288,6 +288,33 @@ php interface/modules/custom_modules/oe-module-new-clinic/scripts/smoke-scheduli
 ```
 
 Hub URL: `.../scheduling/index.php?lens=calendar|flow|recalls`
+
+### V1.2-BILL rollout (M14 billing back office)
+
+```bash
+php interface/modules/custom_modules/oe-module-new-clinic/bin/upgrade_sql.php
+php interface/modules/custom_modules/oe-module-new-clinic/scripts/e2e-prep-golden-path.php
+php interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-v12-bill.php
+php interface/modules/custom_modules/oe-module-new-clinic/scripts/v12-bill-depth-fixture-seed.php
+php interface/modules/custom_modules/oe-module-new-clinic/acl/seed_pilot_users.php
+cd frontend && npm run build
+```
+
+E2E smoke:
+
+```bash
+npm run test:e2e-new-clinic -- tests/e2e/new-clinic/specs/v12-bill-smoke.spec.js
+npm run test:e2e-new-clinic -- tests/e2e/new-clinic/specs/v12-bill-depth-smoke.spec.js
+```
+
+HTTP smoke:
+
+```bash
+php interface/modules/custom_modules/oe-module-new-clinic/scripts/smoke-bill-ops-http.php
+php interface/modules/custom_modules/oe-module-new-clinic/scripts/smoke-bill-ops-depth-http.php
+```
+
+Hub URL: `.../bill-ops/index.php`
 
 ---
 

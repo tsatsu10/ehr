@@ -13,5 +13,5 @@ namespace OpenEMR\Modules\NewClinic;
 
 class ModuleAssetVersion
 {
-    public const VERSION = '20260703sp72scheduling';
+    public const VERSION = '20260703sp73billdepth';
 }

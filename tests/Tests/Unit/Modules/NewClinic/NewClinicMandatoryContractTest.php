@@ -1167,4 +1167,61 @@ class NewClinicMandatoryContractTest extends TestCase
         $calendarTest = __DIR__ . '/SchedulingCalendarServiceTest.php';
         $this->assertFileExists($calendarTest, 'Scheduling calendar service test must exist');
     }
+
+    public function testMandatory61BillDepthSmokeE2e(): void
+    {
+        $e2eDir = dirname(__DIR__, 4) . '/e2e/new-clinic';
+        $specPath = $e2eDir . '/specs/v12-bill-depth-smoke.spec.js';
+        $this->assertFileExists($specPath, 'V1.2-BILL depth smoke spec must exist');
+
+        $spec = file_get_contents($specPath);
+        $this->assertStringContainsString('pilot-enable-v12-bill.php', $spec);
+        $this->assertStringContainsString('e2e-prep-golden-path.php', $spec);
+        $this->assertStringContainsString('v12-bill-depth-fixture-seed.php', $spec);
+        $this->assertStringContainsString('v12-bill-depth-smoke-fixture.php', $spec);
+        $this->assertStringContainsString('bill_ops.charge_correct', $spec);
+        $this->assertStringContainsString('bill_ops.payment_reverse', $spec);
+        $this->assertStringContainsString('Save correction', $spec);
+        $this->assertStringContainsString('Reverse payment', $spec);
+        $this->assertStringContainsString('Reversed', $spec);
+
+        $baseSpecPath = $e2eDir . '/specs/v12-bill-smoke.spec.js';
+        $this->assertFileExists($baseSpecPath, 'V1.2-BILL base smoke spec must exist');
+
+        $pilotScript = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-v12-bill.php';
+        $this->assertFileExists($pilotScript, 'Pilot V1.2-BILL enable script must exist');
+        $pilotBody = file_get_contents($pilotScript);
+        $this->assertStringContainsString('enable_bill_ops', $pilotBody);
+
+        $seedScript = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/v12-bill-depth-fixture-seed.php';
+        $this->assertFileExists($seedScript, 'Bill depth fixture seed must exist');
+
+        $fixtureScript = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/v12-bill-depth-smoke-fixture.php';
+        $this->assertFileExists($fixtureScript, 'Bill depth smoke fixture must exist');
+        $fixtureBody = file_get_contents($fixtureScript);
+        $this->assertStringContainsString('NC-BILLDEPTH-CORRECT', file_get_contents(
+            dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/lib/bill-depth-fixture-lib.php'
+        ));
+
+        $httpSmoke = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/smoke-bill-ops-depth-http.php';
+        $this->assertFileExists($httpSmoke, 'Bill depth HTTP smoke must exist');
+
+        $hubPhp = dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/public/bill-ops/index.php';
+        $this->assertFileExists($hubPhp, 'Bill ops hub entry must exist');
+
+        $chargeForm = dirname(__DIR__, 5) . '/frontend/src/islands/bill-ops/ChargeCorrectionForm.tsx';
+        $this->assertFileExists($chargeForm, 'ChargeCorrectionForm React component must exist');
+
+        $paymentsPane = dirname(__DIR__, 5) . '/frontend/src/islands/bill-ops/PaymentsPane.tsx';
+        $this->assertFileExists($paymentsPane, 'PaymentsPane React component must exist');
+
+        $billOpsTest = __DIR__ . '/BillOpsServicesTest.php';
+        $this->assertFileExists($billOpsTest, 'Bill ops services test must exist');
+    }
 }
