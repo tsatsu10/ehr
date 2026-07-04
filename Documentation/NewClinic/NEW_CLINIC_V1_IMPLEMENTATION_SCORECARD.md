@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | **Last audited** | 2026-07-04 |
-| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260704sp77qasignoff` |
+| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260704sp81hubcomplete` |
 | **Maintainer** | Engineering lead updates after each sprint; Product owns pilot sign-off |
 | **How to update** | Change `%` and `Status` cells; bump **Last audited**; sync PRD §5.6 row if shell status changes |
 
@@ -24,11 +24,11 @@
 |------|---|-------|
 | Specs written | **95** | PRD v1.20.50 + companions; §21 E2E map added |
 | Module shells (§5.6) | **96** | 22 Shipped + T2 Partial / 24 packages |
-| **V1 pilot path** | **92** code · **85** QA | B0–B7 signed; §21.1 + §21.1b green |
+| **V1 pilot path** | **92** code · **90** QA | B0–B7 signed; §21.1 + §21.1b + hub smokes 57/57 |
 | Post-pilot slices (§20.1) | **82** | Mandatory contracts through **63** |
-| §21 acceptance (documented) | **15** signed · **~47** CI smoke · **252** open | [QA sign-off](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md) 2026-07-04 |
+| §21 acceptance (documented) | **15** signed · **19** hub smokes · **~235** open | [QA sign-off](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md) 2026-07-04 |
 | shadcn §9 | **25** | Phase A infra; Phase B started |
-| **Overall product** | **80** | Weighted blend |
+| **Overall product** | **81** | Weighted blend |
 
 ---
 
@@ -72,7 +72,7 @@
 
 | Release | Config gate(s) | % | Owner | Status | Evidence / gaps |
 |---------|------------------|---|-------|--------|-----------------|
-| **V1.1-ANC** | `enable_ancillary_services` | **88** | Eng | Partial | Lab-direct + pharmacy walk-in shipped; ACL keys; badges; M7 ancillary report; §21.1i QA open |
+| **V1.1-ANC** | `enable_ancillary_services` | **88** | Eng | Partial | Lab-direct + pharmacy walk-in shipped; `v11-anc-smoke` green |
 | **V1.1-RTa** | `enable_doctor_roster` | **90** | Eng | Done | `DoctorRosterBar`, `new_doctor_availability` |
 | **V1.1-RTb** | `enable_advisory_routing` | **85** | Eng | Done | `VisitRoutingService`, queue chip, override modal |
 | **V1.1-OPS** | per-feature §23 | **30** | Eng | Partial | Faster poll, surname warning, MoMo label scattered |
@@ -91,8 +91,8 @@
 | **V1.2-BILL** | `enable_bill_ops` | **72** | Eng | Partial | correct, payments, close, outstanding |
 | **V1.2-CTX** | `enable_legacy_patient_context_overlay` | **90** | Eng | Done | strip inject + shared-device warning |
 | **V1.2-PHARM** | OPS policy | **50** | Eng | Partial | destroy reports; expiry alerts |
-| **V1.2-PHARM-RX** | `enable_pharm_rx_favorites` | **70** | Eng | Partial | `FormularyRxModal` on doctor desk |
-| **V1.2** | hard assign, notify, LIS | **70** | Eng | Partial | §6.5.3–4 shipped (triage, FD, doctor override, toast); `enable_lab_lis` not built; Web Push deferred |
+| **V1.2-PHARM-RX** | `enable_pharm_rx_favorites` | **75** | Eng | Partial | `FormularyRxModal`; `v12-pharm-rx-smoke` green |
+| **V1.2** | hard assign, notify, LIS | **75** | Eng | Partial | §6.5.3–4 shipped; `v12-doctor-ready-notify-smoke` + `v12-hard-assign-smoke` green |
 
 **§20.1 mean:** **80**
 
@@ -102,22 +102,24 @@
 
 Formal PRD checkboxes. **QA** updates `Signed` when E2E + pilot worksheet row passes.
 
-| Section | Topic | Items | Signed | % | Owner |
-|---------|-------|-------|--------|---|-------|
-| §21.1 | Golden path (full clinic) | 14 | 0 | 0 | QA |
-| §21.1b | Golden path (minimal) | 1 | 0 | 0 | QA |
-| §21.1c | Registration & data quality | 4 | 0 | 0 | QA |
-| §21.1d | Operational exceptions | 12 | 0 | 0 | QA |
-| §21.1e | Visit Board ↔ Triage | 6 | 0 | 0 | QA |
-| §21.1f–h | Scheduling integration | ~15 | 0 | 0 | QA |
-| §21.1i | Ancillary | ~8 | 0 | 0 | QA |
-| §21.1j–k | Clinical decision / MRD | ~12 | 0 | 0 | QA |
-| §21.1p–y | Hubs M11–M18 | ~40 | 0 | 0 | QA |
-| §21.1z | Legacy chart context CTX-1–5 | 5 | 0 | 0 | QA |
+| Section | Topic | Items | Signed | Eng smoke | Owner |
+|---------|-------|-------|--------|-----------|-------|
+| §21.1 | Golden path (full clinic) | 13 | 13 | — | QA |
+| §21.1b | Golden path (minimal) | 1 | 1 | — | QA |
+| §21.1c | Registration & data quality | 4 | 0 | partial | Product |
+| §21.1d | Operational exceptions | 12 | 0 | partial | Product |
+| §21.1e | Visit Board ↔ Triage | 6 | 0 | partial | Product |
+| §21.1f–h | Scheduling integration | ~15 | 0 | **yes** | Product |
+| §21.1i | Ancillary | ~14 | 0 | **yes** | Product |
+| §21.1j–k | Clinical decision / MRD | ~12 | 0 | partial | Product |
+| §21.1p–y | Hubs M11–M18 | ~40 | 0 | **yes** | Product |
+| §21.1z | Legacy chart context CTX-1–5 | 5 | 0 | **yes** | Product |
+| COM | Communications hub | 3 | 0 | **yes** | Product |
+| V1.2 | Notify, PHARM-RX, hard assign | 3 | 0 | **yes** | Product |
 
-**Automated evidence (not yet mirrored in PRD):** PHPUnit NewClinic suite · Vitest islands · Playwright golden-path / hub smoke specs · [§21 E2E map](./NEW_CLINIC_V1_SECTION21_E2E_MAP.md).
+**Automated evidence:** PHPUnit NewClinic **62/62** · Playwright golden-path **11/11** · hub smokes **57/57** · [§21 E2E map](./NEW_CLINIC_V1_SECTION21_E2E_MAP.md).
 
-**Estimated CI coverage of §21:** **~78** (engineering estimate; not doc-signed)
+**Estimated CI coverage of §21:** **~85** (engineering estimate; normative PRD checkboxes mostly open for Product)
 
 ---
 
@@ -144,7 +146,7 @@ Prioritized from lowest module/slice %.
 | P1 | — | V1.2 | Web Push doctor notify (`enable_doctor_ready_web_push`) | 0 | Eng |
 | P1 | — | V1.2 | Doctor ready notify E2E (test 35) | 100 | Done |
 | P1 | — | V1.2-LIS | Lab LIS / DORN integration | 0 | Eng |
-| P1 | — | V1.1-ANC | §21.1i pilot acceptance sign-off | 0 | QA |
+| P1 | — | V1.1-ANC | §21.1i Product normative sign-off | 88 | Product |
 | P1 | — | V1.1-OPS | Bundle MoMo label, faster poll, surname warn | 30 | Eng |
 | P1 | M10 | M10 | Patient Registry product sign-off | 82 | Product |
 | P2 | M0-F07 | M0 | REST `GET /api/new/visits` | 0 | Eng |
@@ -204,7 +206,7 @@ Use PRD §8 tables as source of truth. Below: **representative** IDs for spot au
 | §6.8.8 walk-in ACL keys | P1 | 100 | Done | `new_pharmacy_walkin_dispense`, `new_pharmacy_refer_to_opd` |
 | M7-F18 ancillary report | P1 | 100 | Done | `AncillarySection` |
 | §6.8.6 visit board badges | P1 | 100 | Done | `AncillaryVisitBadges` |
-| §21.1i pilot acceptance | P1 | 50 | Partial | ANC smoke green; normative §21.1i rows open for Product |
+| §21.1i pilot acceptance | P1 | 88 | Eng smoke | `v11-anc-smoke` green; normative §21.1i rows for Product |
 
 ### V1.2 hard assign (sample)
 
@@ -230,6 +232,7 @@ Use PRD §8 tables as source of truth. Below: **representative** IDs for spot au
 | 2026-07-03 | Engineering | Roster fix (`DoctorRosterService` `authorized` column); E2E `v12-hard-assign-smoke` + `golden-path` green; asset `sp58rosterfix` |
 | 2026-07-03 | Engineering | PRD test 35: doctor-ready notify debounce E2E; pilot script + fixture; asset `sp59notifye2e` |
 | 2026-07-03 | Engineering | Post-V1.2 audit fixes: triage vitals gate via `TriageService`, stale `row_version` guards, notify audit log, roster error logging, today filter on doctor queue, admin notify coupling, shared pilot seed; PHPUnit + E2E green; asset `sp60auditfix` |
+| 2026-07-04 | Engineering | Hub E2E smokes **57/57** (COM, RT, notify, PHARM-RX fixes); PRD/scorecard/E2E map updated; asset `sp80hubsmoke` |
 | 2026-07-04 | Engineering | §21 QA sign-off + fix BILL-3 `row_version` in payment reverse; COM/RT e2e stability; asset `sp77qasignoff` |
 | 2026-07-04 | Engineering | §21 QA sign-off: golden path 11/11 E2E, PHPUnit 62/62, hub smokes 47/57; PRD §21.1/§21.1b/§21.5 CI signed; `NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md`; asset `sp76qasignoff` |
 | 2026-07-04 | Engineering | S1 scheduling smoke (`testMandatory60`); V1.2-BILL depth (`61`); V1.1-COM (`62`); §21 golden path rollout (`63`) + `NEW_CLINIC_V1_SECTION21_E2E_MAP.md`; asset `sp75goldenpath` |

@@ -6,7 +6,7 @@ Formal acceptance worksheet for [PRD §21](./NEW_CLINIC_V1_PRD.md#21-acceptance-
 |-------|--------|
 | **Sign-off date** | 2026-07-04 |
 | **Environment** | XAMPP · Windows · `http://localhost/openemr/` |
-| **Asset** | `20260704sp80hubsmoke` |
+| **Asset** | `20260704sp81hubcomplete` |
 | **Rollout script** | `scripts/pilot-enable-v21-golden-path.php` |
 | **Signed by** | Engineering QA (automated evidence + worksheet) |
 | **Product owner** | Pending live pilot week-1 observation |
@@ -17,11 +17,11 @@ Formal acceptance worksheet for [PRD §21](./NEW_CLINIC_V1_PRD.md#21-acceptance-
 |------|--------|---------|------|-------|
 | **§21.1 Golden path (full)** | 13 | 0 | 0 | All golden-path E2E specs green |
 | **§21.1b Minimal clinic** | 1 | 0 | 0 | Pharmacy-skip path in `golden-path.spec.js` |
-| **§21.1c–z Post-pilot hubs** | 0 | 19 | 0 | Hub smokes **57/57** (2026-07-04 batch + isolated fixes) |
+| **§21.1c–z Post-pilot hubs** | 0 | 19 | 0 | Hub smokes **57/57** — engineering signed; Product normative rows open |
 | **§21.2–21.4 Non-E2E** | 0 | 0 | 8 | Manual training, perf, SUS |
 | **§21.5 CI / reconciliation** | 1 | 3 | 0 | Mandatory contracts 62/62; rollout contract 63 |
 
-**Pilot week-1 gate (B0–B5):** **PASS** — golden path + mandatory contracts green. Post-pilot hub slices require follow-up on listed E2E failures before Product marks those §21 rows signed.
+**Pilot week-1 gate (B0–B5):** **PASS** — golden path + mandatory contracts green. **Hub engineering smokes 57/57 PASS** — Product sign-off on normative §21 rows below remains open until training + live pilot worksheets.
 
 ---
 
@@ -102,6 +102,32 @@ npm run test:e2e-new-clinic -- \
 | §21.5 (CI row) | 1/1 | PHPUnit mandatory 1–63 file contracts + integration subset |
 
 PRD checkboxes for §21.1, §21.1b, and §21.5 CI row are marked `[x]` in [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md#21-acceptance-criteria-v1-pilot).
+
+### Signed — hub engineering smokes (2026-07-04)
+
+All 19 hub smoke specs green (57 tests). Shell/API coverage only — not every normative checkbox in §21.1f–z.
+
+| Smoke spec | Tests | §21 / slice |
+|------------|-------|-------------|
+| `v11-scheduling-smoke.spec.js` | 3 | §21.1f–h |
+| `v11-anc-smoke.spec.js` | 3 | §21.1i |
+| `v11-rt-smoke.spec.js` | 2 | RT / §21.1j partial |
+| `v11-cd-smoke.spec.js` | 3 | §21.1p shell |
+| `v11-lab-smoke.spec.js` | 3 | §21.1q |
+| `v11-lab-ord-smoke.spec.js` | 2 | §21.1q LAB-ORD |
+| `v11-print-rx-smoke.spec.js` | 2 | §21.1s |
+| `v12-bill-smoke.spec.js` | 3 | §21.1u |
+| `v12-bill-depth-smoke.spec.js` | 4 | §21.1u BILL-3 |
+| `v11-admin-smoke.spec.js` | 3 | §21.1v |
+| `v11-rep-smoke.spec.js` | 3 | §21.1w |
+| `v11-doc-smoke.spec.js` | 3 | §21.1x |
+| `v11-bridge-smoke.spec.js` | 3 | §21.1y |
+| `v12-ctx-smoke.spec.js` | 3 | §21.1z |
+| `v11-reg-smoke.spec.js` | 3 | §21.1ae shell |
+| `v11-comms-smoke.spec.js` | 3 | COM |
+| `v12-hard-assign-smoke.spec.js` | 3 | V1.2 hard assign |
+| `v12-doctor-ready-notify-smoke.spec.js` | 1 | V1.2 notify |
+| `v12-pharm-rx-smoke.spec.js` | 2 | V1.2-PHARM-RX |
 
 ### Partial — engineering smoke pass, Product sign-off deferred
 

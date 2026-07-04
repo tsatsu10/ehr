@@ -1,8 +1,8 @@
 # New Clinic V1 — Next Steps
 
-**Current status (July 4, 2026):** §21 QA sign-off complete (pilot week-1 gate) · asset `20260704sp77qasignoff`  
+**Current status (July 4, 2026):** §21 engineering QA complete — golden path + **57/57 hub smokes** · asset `20260704sp81hubcomplete`  
 **Product repo:** [github.com/tsatsu10/ehr](https://github.com/tsatsu10/ehr) — see root [EHR.md](../../../../EHR.md)  
-**Remaining work:** Re-run 10 failing hub smoke specs in isolation; Product sign-off on hub §21 rows; live pilot reconciliation (§21.5)
+**Remaining work:** Product sign-off on normative §21 rows; trainer scripts (§17.2.2, §17.2.3, §17.4.3); live pilot reconciliation (§21.5)
 
 ### V1.1-DOC rollout (M17 clinical documentation hub)
 
