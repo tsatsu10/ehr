@@ -89,6 +89,16 @@ npm run test:e2e-new-clinic -- \
 |--------|--------|
 | **5 / 5 pass** | COM message list + mark done; RT roster + advisory routing (~2.4 min) |
 
+### PHPUnit — test 43 wrong patient (2026-07-04 re-run)
+
+```bash
+vendor/bin/phpunit -c phpunit.xml --filter WrongPatientPreventionMandatoryTest
+```
+
+| Result | Detail |
+|--------|--------|
+| **14 / 14 pass** | Test **43** · 67 assertions · go-live gate per §21.5 |
+
 ---
 
 ## Section sign-off detail
@@ -131,39 +141,31 @@ All 19 hub smoke specs green (57 tests). Shell/API coverage only — not every n
 
 ### Partial — engineering smoke pass, Product sign-off deferred
 
-Smoke spec fully green; not every normative §21 row has dedicated E2E:
-
-- §21.1f–h Scheduling (S1 shell smoke)
-- §21.1i Ancillary (ANC smoke)
-- §21.1p Chart Depth shell (CD smoke)
-- §21.1q Lab ops shell (LAB smoke — LAB-ORD failure separate)
-- §21.1s Print Rx (PRINT-RX smoke)
-- §21.1u Bill ops shell (BILL smoke — BILL-3 depth failure separate)
-- §21.1v Admin hub (ADMIN smoke)
-- §21.1y Queue bridge (BRIDGE smoke)
-- §21.1z Legacy CTX (CTX smoke)
-- §21.1ae Registry shell (REG smoke)
-- V1.2 hard assign (`v12-hard-assign-smoke`)
+All 19 hub smoke specs **57/57 green** (2026-07-04). Smoke covers shell/API paths only — not every normative §21 row. Product walkthrough worksheet: [worksheets/NEW_CLINIC_V1_HUB_PRODUCT_SIGNOFF_WORKSHEET.md](./worksheets/NEW_CLINIC_V1_HUB_PRODUCT_SIGNOFF_WORKSHEET.md).
 
 ### Open — manual-only or Product deferred
 
-| Item | Reason |
-|------|--------|
-| §21.1c–e, §21.1k–ad, §21.1m–o | Manual training, MRD B7, wrong-patient script, week-4 observation |
-| §21.2 Safety, §21.3 Performance, §21.4 SUS | Not automated in CI |
-| §21.5 reconciliation / printing rows | Requires live pilot day + manager worksheet |
+| Item | Reason | Worksheet |
+|------|--------|-----------|
+| §21.1c–e, §21.1k–ad | Manual training, MRD B7, week-4 observation | Hub Product sign-off |
+| §21.1m wrong patient | §17.4.3 manual script **6/6** on staging | [G12 worksheet](./worksheets/NEW_CLINIC_V1_G12_WRONG_PATIENT_WORKSHEET.md) |
+| §21.1o signed amendment | §17.2.4 drill + test **44** | [Documentation integrity](./worksheets/NEW_CLINIC_V1_DOCUMENTATION_INTEGRITY_WORKSHEET.md) |
+| §21.2 Safety, §21.3 Performance, §21.4 SUS | Not automated in CI | — |
+| §21.5 reconciliation / printing | Live pilot day | [Pilot day reconciliation](./worksheets/NEW_CLINIC_V1_PILOT_DAY_RECONCILIATION_WORKSHEET.md) |
 
 ---
 
 ## Follow-up before Product marks hub §21 rows
 
-1. Trainer delivery: §17.2.2, §17.2.3, §17.4.3 manual scripts (§21.1m, §21.1j trainer rows).
-2. Live pilot: M7 reconciliation worksheet (§21.5), queue slip print, week-4 G11 observation.
-3. Product sign-off on hub §21 rows now that engineering smokes are **57/57**.
+1. Trainer delivery using worksheets: [G12](./worksheets/NEW_CLINIC_V1_G12_WRONG_PATIENT_WORKSHEET.md) · [medication safety](./worksheets/NEW_CLINIC_V1_MEDICATION_SAFETY_WORKSHEET.md) · [documentation integrity](./worksheets/NEW_CLINIC_V1_DOCUMENTATION_INTEGRITY_WORKSHEET.md).
+2. Live pilot: [reconciliation worksheet](./worksheets/NEW_CLINIC_V1_PILOT_DAY_RECONCILIATION_WORKSHEET.md) (§21.5), queue slip print, week-4 G11 observation.
+3. Product: [hub Product sign-off worksheet](./worksheets/NEW_CLINIC_V1_HUB_PRODUCT_SIGNOFF_WORKSHEET.md) after staging walkthrough.
 
 ---
 
 ## Related
+
+- [Pilot worksheets index](./worksheets/README.md)
 
 - [Implementation scorecard](./NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md)
 - [NEXT_STEPS.md](../../interface/modules/custom_modules/oe-module-new-clinic/NEXT_STEPS.md)

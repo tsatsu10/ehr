@@ -5427,7 +5427,7 @@ After V1 pilot sign-off, post-V1 work ships as **named slices** — not one bund
 
 ## 21. Acceptance criteria (V1 pilot)
 
-**QA sign-off:** [NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md) — 2026-07-04 · XAMPP · asset `20260704sp81hubcomplete`. **§21.1** and **§21.1b** signed (golden-path E2E). **Hub engineering smokes 57/57** — Product normative rows below remain open until live pilot + training worksheets.
+**QA sign-off:** [NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md) — 2026-07-04 · XAMPP · asset `20260704sp81hubcomplete`. **§21.1** and **§21.1b** signed (golden-path E2E). **Hub engineering smokes 57/57** — Product normative rows below remain open until live pilot + [training worksheets](./worksheets/README.md).
 
 **Hub smoke index (engineering — 2026-07-04):** `v11-scheduling-smoke` (§21.1f–h) · `v11-anc-smoke` (§21.1i) · `v11-rt-smoke` (RT) · `v11-cd-smoke` (§21.1p shell) · `v11-lab-smoke` + `v11-lab-ord-smoke` (§21.1q) · `golden-path-pharm-dispense` + `pharm-ops-hub` (§21.1r partial) · `v11-print-rx-smoke` (§21.1s) · `v12-bill-smoke` + `v12-bill-depth-smoke` (§21.1u) · `v11-admin-smoke` (§21.1v) · `v11-rep-smoke` (§21.1w) · `v11-doc-smoke` (§21.1x) · `v11-bridge-smoke` (§21.1y) · `v12-ctx-smoke` (§21.1z) · `v11-reg-smoke` (§21.1ae shell) · `v11-comms-smoke` (COM) · `v12-doctor-ready-notify-smoke` · `v12-pharm-rx-smoke` · `v12-hard-assign-smoke`.
 

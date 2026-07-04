@@ -46,7 +46,7 @@ npm run test:e2e-new-clinic -- tests/e2e/new-clinic/specs/v21-golden-path-smoke.
 | Cashier completion gate + payment | `golden-path.spec.js` · mandatory 07 | |
 | E-sign at payment | mandatory 29 | |
 | Receipt + completed | `golden-path.spec.js` · mandatory 02–03 | |
-| Daily report = receipt sum | `golden-path-lab-close-day.spec.js` bill_ops.daysheet | M7 reconciliation worksheet |
+| Daily report = receipt sum | `golden-path-lab-close-day.spec.js` bill_ops.daysheet | [Pilot day reconciliation worksheet](./worksheets/NEW_CLINIC_V1_PILOT_DAY_RECONCILIATION_WORKSHEET.md) |
 
 ## §21.1b Minimal clinic
 
@@ -80,13 +80,13 @@ npm run test:e2e-new-clinic -- tests/e2e/new-clinic/specs/v21-golden-path-smoke.
 
 ## QA sign-off
 
-Formal record: [NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md) — **2026-07-04** · asset `20260704sp80hubsmoke`.
+Formal record: [NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md) — **2026-07-04** · asset `20260704sp81hubcomplete`.
 
 | Status | §21 rows | Evidence |
 |--------|----------|----------|
 | **Signed** | §21.1 (13), §21.1b (1), §21.5 CI (1) | Golden-path E2E 11/11; PHPUnit 62/62 |
 | **Engineering signed** | Hub smokes (19 specs) | Playwright **57/57** — 2026-07-04 |
-| **Open** | Normative §21.1c–z checkboxes, training, MRD B7, perf, reconciliation | Product + live pilot worksheets |
+| **Open** | Normative §21.1c–z checkboxes, training, MRD B7, perf, reconciliation | [Pilot worksheets](./worksheets/README.md) |
 
 PRD checkboxes for signed rows are marked in [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md#21-acceptance-criteria-v1-pilot).
 
