@@ -52,6 +52,7 @@ const props = {
 
 describe('FrontDesk', () => {
   beforeEach(() => {
+    window.localStorage.clear();
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
       value: vi.fn().mockImplementation((query: string) => ({
@@ -126,6 +127,14 @@ describe('FrontDesk', () => {
 
     expect(await screen.findByRole('button', { name: /Start visit/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Kwame Boateng/i })).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: /Profile 82% complete/i })).toBeInTheDocument();
+    expect(screen.getByText(/Profile completion/i)).toBeInTheDocument();
+  });
+
+  it('shows search idle hint before typing', async () => {
+    render(<FrontDesk {...props} />);
+    expect(await screen.findByText(/Search to find a patient/i)).toBeInTheDocument();
+    expect(screen.getByText(/Type name, phone, NHIS/i)).toBeInTheDocument();
   });
 
   it('surfaces scheduling info on the status bar when enabled', () => {

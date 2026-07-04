@@ -100,7 +100,7 @@ function CompletionSummary({
           )}
         </div>
       )}
-      <div className="oe-nc-completion-summary flex items-center gap-3 mb-3">
+      <div className="oe-nc-completion-summary flex items-center gap-3 mb-3 rounded-lg border border-[var(--oe-nc-border)] bg-[var(--oe-nc-bg-tint)] px-3 py-2.5">
         <CompletionRing
           score={completion.score ?? 0}
           threshold={threshold}

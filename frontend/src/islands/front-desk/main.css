@@ -412,6 +412,29 @@
   max-width: 28rem;
 }
 
+.oe-nc-front-desk-react-active .oe-nc-preview-empty__icon {
+  box-shadow: inset 0 0 0 1px var(--oe-nc-border, #e2e8f0);
+}
+
+.oe-nc-front-desk-react-active .oe-nc-command__idle p {
+  max-width: 20rem;
+}
+
+/* ── Start visit panel ───────────────────────────────────────────────────── */
+
+.oe-nc-front-desk-react-active .oe-nc-start-visit-panel {
+  border-radius: 0.625rem;
+  background: linear-gradient(to bottom, var(--oe-nc-bg-tint, #f8fafc) 0%, #fff 40%);
+}
+
+.oe-nc-front-desk-react-active .oe-nc-start-visit-panel .space-y-4 {
+  padding: 0.25rem 0 0.5rem;
+}
+
+.oe-nc-front-desk-react-active .oe-nc-completion-summary {
+  box-shadow: inset 0 0 0 1px var(--oe-nc-border, #e2e8f0);
+}
+
 .oe-nc-front-desk-react-active .oe-nc-preview-loading__avatar {
   width: 3.5rem;
   height: 3.5rem;

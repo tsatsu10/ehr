@@ -428,8 +428,8 @@ export function StartVisitForm({
       : startLabel;
 
   return (
-    <div className="mt-4 pt-4 border-t border-(--oe-nc-border)" id="nc-start-visit-mount">
-      <h6 className="text-sm font-semibold text-(--oe-nc-text) mb-3">{startLabel}</h6>
+    <div className="oe-nc-start-visit-panel mt-4 pt-4 border-t border-(--oe-nc-border)" id="nc-start-visit-mount">
+      <h6 className="text-sm font-semibold text-(--oe-nc-text) mb-3 m-0">{startLabel}</h6>
 
       {showArrivalAdvisor && (
         <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">

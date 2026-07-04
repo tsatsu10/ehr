@@ -254,23 +254,37 @@ export function PatientSearchWidget({
           />
         )}
 
+        {showIdleState && (
+          <div
+            className="oe-nc-command__idle flex flex-col items-center px-4 py-8 text-center text-sm text-[var(--oe-nc-text-muted)] border-t border-[var(--oe-nc-border)]"
+            id="nc-search-idle-hint"
+            role="status"
+          >
+            <div
+              className="flex items-center justify-center h-10 w-10 rounded-full bg-[var(--oe-nc-bg-tint)] text-[var(--oe-nc-text-muted)] mb-3"
+              aria-hidden="true"
+            >
+              <Search className="h-4 w-4" />
+            </div>
+            <p className="m-0 font-medium text-[var(--oe-nc-text)]">
+              {recentPatients.length > 0 || todaysAppointments.length > 0
+                ? 'Pick from recent or appointments above'
+                : 'Search to find a patient'}
+            </p>
+            <p className="m-0 mt-1 text-xs">
+              {recentPatients.length > 0 || todaysAppointments.length > 0
+                ? 'Or type ≥ 2 characters to search all patients.'
+                : 'Type name, phone, NHIS, National ID, or MRN.'}
+            </p>
+          </div>
+        )}
+
         <CommandList id="nc-search-results" aria-label="Search results" className="flex-1 min-h-0">
           {searching && <SearchResultSkeleton rows={3} />}
           {showEmptyResults && (
             <CommandEmpty id="nc-search-empty" className="py-8 text-center text-sm text-[var(--oe-nc-text-muted)]">
               No match — try phone or MRN, or register a new patient.
             </CommandEmpty>
-          )}
-          {showIdleState && (
-            <div
-              className="oe-nc-command__idle px-4 py-4 text-center text-sm text-[var(--oe-nc-text-muted)]"
-              id="nc-search-idle-hint"
-              role="status"
-            >
-              {recentPatients.length > 0 || todaysAppointments.length > 0
-                ? 'Or start typing to search all patients.'
-                : 'Start typing to find a patient.'}
-            </div>
           )}
           {!searching && results.length > 0 && (
             <CommandGroup className="p-2">
