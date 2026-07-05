@@ -55,19 +55,19 @@ export function DeskStatusBar({
       onRefresh={onRefresh}
       trailing={
         schedulingEnabled && (calendarUrl || recallsUrl) ? (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1" role="navigation" aria-label="Quick actions">
             {calendarUrl ? (
               <Button variant="ghost" size="sm" className="h-7 px-2" asChild>
-                <a href={calendarUrl} target="_top">
-                  <ExternalLink className="h-3.5 w-3.5" />
+                <a href={calendarUrl} target="_top" aria-label="Open scheduling calendar">
+                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                   <span>Calendar</span>
                 </a>
               </Button>
             ) : null}
             {recallsUrl ? (
               <Button variant="ghost" size="sm" className="h-7 px-2" asChild>
-                <a href={recallsUrl} target="_top">
-                  <BellRing className="h-3.5 w-3.5" />
+                <a href={recallsUrl} target="_top" aria-label="View patient recalls">
+                  <BellRing className="h-3.5 w-3.5" aria-hidden="true" />
                   <span>Recalls</span>
                 </a>
               </Button>

@@ -110,7 +110,7 @@ export function FrontDesk({
 
   return (
     <>
-      <div className="nc-front-desk-status-shell">
+      <div className="nc-front-desk-status-shell" role="banner" aria-label="Front desk status and navigation">
         <DeskStatusBar
           stats={deskStats}
           loading={deskStatsLoading}
@@ -123,13 +123,13 @@ export function FrontDesk({
         />
       </div>
 
-      <div id="nc-front-desk" className={rootClassName}>
+      <div id="nc-front-desk" className={rootClassName} role="main" aria-label="Front desk patient management">
         <FrontDeskFlowCharts ajaxUrl={ajaxUrl} csrfToken={csrfToken} facilityId={facilityId} />
 
         <div className="nc-front-desk-workspace">
           <div className="nc-front-desk-grid">
             {showSearchInGrid && (
-              <div className="nc-front-desk-grid-search">
+              <div className="nc-front-desk-grid-search" role="search" aria-label="Patient search">
                 <PatientSearchWidget
                   ajaxUrl={ajaxUrl}
                   csrfToken={csrfToken}
@@ -149,7 +149,9 @@ export function FrontDesk({
               </div>
             )}
             {showPreviewColumn && (
-              <div className="nc-front-desk-grid-preview">{previewPane}</div>
+              <div className="nc-front-desk-grid-preview" role="region" aria-label="Patient preview and registration">
+                {previewPane}
+              </div>
             )}
           </div>
         </div>
@@ -162,6 +164,7 @@ export function FrontDesk({
             title={mobileSheetTitle}
             placement="bottom"
             width="lg"
+            aria-label={`${mobileSheetTitle} details`}
           >
             {previewPane}
           </SlideOver>
