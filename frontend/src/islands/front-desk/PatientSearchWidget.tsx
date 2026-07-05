@@ -11,6 +11,7 @@ import { Badge, badgeVariants } from '@components/ui/badge';
 import { Card } from '@components/ui/card';
 import { Avatar, AvatarFallback } from '@components/ui/avatar';
 import { Button } from '@components/ui/button';
+import { LiveRegion, useLiveAnnounce } from '@components/LiveRegion';
 import { usePatientSearch } from '@core/usePatientSearch';
 import { useTypeAheadSuggestions } from './useTypeAheadSuggestions';
 import type { PatientSearchRow } from '@core/types';
@@ -197,6 +198,7 @@ export function PatientSearchWidget({
 }: PatientSearchWidgetProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [previousResults, setPreviousResults] = useState<PatientSearchRow[]>([]);
+  const { message, politeness, announce } = useLiveAnnounce();
   
   const {
     query,
@@ -241,6 +243,39 @@ export function PatientSearchWidget({
   useEffect(() => {
     onResultsChange?.(results);
   }, [onResultsChange, results]);
+
+  // Announce search results to screen readers
+  useEffect(() => {
+    if (query.length >= 2 && !searching) {
+      if (error) {
+        announce('Error loading search results', { politeness: 'assertive' });
+      } else if (results.length === 0) {
+        announce('No patients found', { politeness: 'polite' });
+      } else {
+        const count = results.length;
+        const plural = count === 1 ? 'patient' : 'patients';
+        announce(`${count} ${plural} found`, { politeness: 'polite' });
+      }
+    }
+  }, [results, searching, query, error, announce]);
+
+  // Announce type-ahead suggestions
+  useEffect(() => {
+    if (typeAheadSuggestions.length > 0 && query.length >= 1) {
+      const count = typeAheadSuggestions.length;
+      const plural = count === 1 ? 'suggestion' : 'suggestions';
+      announce(`${count} quick ${plural} available`, { politeness: 'polite', clearAfter: 3000 });
+    }
+  }, [typeAheadSuggestions.length, query, announce]);
+
+  // Announce appointments loading
+  useEffect(() => {
+    if (!appointmentsLoading && todaysAppointments.length > 0 && query.length === 0) {
+      const count = todaysAppointments.length;
+      const plural = count === 1 ? 'appointment' : 'appointments';
+      announce(`${count} ${plural} scheduled for today`, { politeness: 'polite', clearAfter: 4000 });
+    }
+  }, [appointmentsLoading, todaysAppointments.length, query, announce]);
 
   // M1a-F01 — auto-focus search on desk load (slight delay lets React paint the card first)
   useEffect(() => {
@@ -462,6 +497,8 @@ export function PatientSearchWidget({
             </CommandGroup>
           )}
         </CommandList>
+        
+        <LiveRegion message={message} politeness={politeness} />
       </Command>
     </Card>
   );

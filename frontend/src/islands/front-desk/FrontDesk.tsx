@@ -3,11 +3,13 @@
  * All state and data-fetching live in useFrontDesk; this file is layout + render only.
  */
 
+import React from 'react';
 import type { FrontDeskProps } from '@core/types';
 import { ConfirmModal, IdentityConfirmBanner } from '@components/ConfirmModal';
 import { SlideOver } from '@components/SlideOver';
 import { KeyboardShortcutsHelp } from '@components/KeyboardShortcutsHelp';
 import { SkipNav } from '@components/SkipNav';
+import { LiveRegion, useLiveAnnounce } from '@components/LiveRegion';
 import { PatientSearchWidget } from './PatientSearchWidget';
 import { PatientPreviewPane } from './PatientPreviewPane';
 import { DeskStatusBar } from './DeskStatusBar';
@@ -33,6 +35,7 @@ export function FrontDesk({
   recallsUrl,
 }: FrontDeskProps) {
   const desk = useFrontDesk({ ajaxUrl, csrfToken, facilityId, pinnedPreview, scheduledIntegrationEnabled });
+  const { message: liveMessage, politeness: livePoliteness, announce } = useLiveAnnounce();
 
   const {
     selectedPid, preview, mode, arrivedAtMs, deskStats, deskStatsLoading,
@@ -56,6 +59,19 @@ export function FrontDesk({
     mode === 'registration' ? 'nc-front-desk-registration-only' : '',
     mode === 'registration-pinned' ? 'nc-front-desk-registration-pinned' : '',
   ].filter(Boolean).join(' ');
+
+  // Announce preview state changes to screen readers
+  React.useEffect(() => {
+    if (mode === 'loading' && preview) {
+      announce(`Loading ${preview.display_name}`, { politeness: 'polite' });
+    } else if (mode === 'preview' && preview) {
+      announce(`Viewing ${preview.display_name}`, { politeness: 'polite' });
+    } else if (mode === 'registration' && registrationDraft.pid) {
+      announce('Editing patient registration', { politeness: 'polite' });
+    } else if (mode === 'registration' && !registrationDraft.pid) {
+      announce('New patient registration', { politeness: 'polite' });
+    }
+  }, [mode, preview, registrationDraft.pid, announce]);
 
   const previewPane = (
     <PatientPreviewPane
@@ -222,6 +238,8 @@ export function FrontDesk({
 
         <KeyboardShortcutsHelp />
       </div>
+
+      <LiveRegion message={liveMessage} politeness={livePoliteness} />
     </>
   );
 }
