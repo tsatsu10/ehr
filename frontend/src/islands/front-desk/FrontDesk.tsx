@@ -10,6 +10,7 @@ import { SlideOver } from '@components/SlideOver';
 import { KeyboardShortcutsHelp } from '@components/KeyboardShortcutsHelp';
 import { SkipNav } from '@components/SkipNav';
 import { LiveRegion, useLiveAnnounce } from '@components/LiveRegion';
+import { SwipeablePane } from '@components/SwipeablePane';
 import { PatientSearchWidget } from './PatientSearchWidget';
 import { PatientPreviewPane } from './PatientPreviewPane';
 import { DeskStatusBar } from './DeskStatusBar';
@@ -196,7 +197,16 @@ export function FrontDesk({
             width="lg"
             aria-label={`${mobileSheetTitle} details`}
           >
-            {previewPane}
+            <SwipeablePane
+              onSwipeDown={() => {
+                // Swipe down to close mobile sheet
+                setMobileSheetOpen(false);
+              }}
+              threshold={80}
+              aria-label="Swipe down to close"
+            >
+              {previewPane}
+            </SwipeablePane>
           </SlideOver>
         )}
 
