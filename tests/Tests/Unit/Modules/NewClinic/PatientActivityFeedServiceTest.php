@@ -52,6 +52,11 @@ class PatientActivityFeedServiceTest extends TestCase
         $this->assertStringContainsString('vitals_saved', $source);
         $this->assertStringContainsString('rx_prescribed', $source);
         $this->assertStringContainsString('lab_ordered', $source);
+        $this->assertStringContainsString('payment_posted', $source);
+        $this->assertStringContainsString('encounter_signed', $source);
+        $this->assertStringContainsString('routing_confirmed', $source);
+        $this->assertStringContainsString('visit_cancelled', $source);
+        $this->assertStringContainsString('hard_assigned', $source);
         $this->assertStringContainsString('buildFeedSuppressKeys', $source);
         $this->assertStringContainsString('can_extend_lookback', $source);
     }

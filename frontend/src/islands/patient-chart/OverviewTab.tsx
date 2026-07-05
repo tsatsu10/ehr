@@ -124,7 +124,16 @@ function ActivityFeedItemRow({
           onToggleExpand();
           break;
         case 'tab':
-          onNavigateChartSection('clinical', action.target);
+          if (action.target?.startsWith('clinical-')) {
+            onNavigateChartSection('clinical', action.target);
+          } else if (action.target === 'profile') {
+            onNavigateChartSection('profile');
+          }
+          break;
+        case 'core':
+          if (action.target) {
+            window.location.assign(action.target);
+          }
           break;
         case 'board':
           if (visitBoardUrl) {

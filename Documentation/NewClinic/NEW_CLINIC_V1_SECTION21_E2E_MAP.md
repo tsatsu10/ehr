@@ -64,7 +64,7 @@ npm run test:e2e-new-clinic -- tests/e2e/new-clinic/specs/v21-golden-path-smoke.
 | §21.1f–h | Scheduling | `v11-scheduling-smoke.spec.js` | 59–60 |
 | §21.1i | Ancillary | `v11-anc-smoke.spec.js` | — |
 | §21.1j | Clinical decision | `v11-rt-smoke.spec.js` | 38, 49 |
-| §21.1k–l, aa | MRD / history | `mrd-activity-feed.spec.js` | 39–42 |
+| §21.1k–l, aa | MRD / history | `mrd-activity-feed.spec.js` · `mrd-visits-clinical.spec.js` | 39–42 |
 | §21.1p | Chart depth | `v11-cd-smoke.spec.js` | 50 |
 | §21.1q | Lab ops | `v11-lab-smoke.spec.js` | 51–52 |
 | §21.1r, t | Pharm ops | `pharm-ops-hub.spec.js` · `golden-path-pharm-dispense` | 45, 53 |

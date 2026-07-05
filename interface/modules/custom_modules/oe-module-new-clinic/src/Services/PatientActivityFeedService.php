@@ -78,6 +78,9 @@ class PatientActivityFeedService
             $this->fetchLabResultReadyItems($pid, $since, $facilityFilter, $visitId),
             $this->fetchRxPrescribedItems($pid, $since, $facilityFilter, $visitId),
             $this->fetchPharmacyDispensedItems($pid, $since, $facilityFilter, $visitId),
+            $this->fetchPaymentPostedItems($pid, $since, $facilityFilter, $visitId),
+            $this->fetchEncounterSignedItems($pid, $since, $facilityFilter, $visitId),
+            $this->fetchHardAssignedItems($pid, $since, $facilityFilter, $visitId),
         );
 
         usort($merged, static function (array $a, array $b): int {
@@ -387,6 +390,127 @@ class PatientActivityFeedService
     }
 
     /**
+     * @param array{sql: string, bind: array<int, mixed>} $facilityFilter
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchPaymentPostedItems(
+        int $pid,
+        string $since,
+        array $facilityFilter,
+        ?int $visitId,
+    ): array {
+        $visitSql = $visitId !== null && $visitId > 0 ? ' AND r.visit_id = ?' : '';
+        $bind = array_merge([$pid, $since], $facilityFilter['bind']);
+        if ($visitSql !== '') {
+            $bind[] = $visitId;
+        }
+
+        $rows = QueryUtils::fetchRecords(
+            "SELECT r.id, r.receipt_number, r.amount_paid, r.created_at, r.visit_id, r.encounter,
+                    v.queue_number, u.fname, u.lname
+             FROM new_receipt r
+             LEFT JOIN new_visit v ON v.id = r.visit_id
+             LEFT JOIN users u ON u.id = r.actor_user_id
+             WHERE r.pid = ? AND r.created_at >= ?{$facilityFilter['sql']}{$visitSql}
+             ORDER BY r.created_at DESC, r.id DESC
+             LIMIT 500",
+            $bind
+        ) ?: [];
+
+        return array_map(fn (array $row): array => $this->mapPaymentPostedItem($row), $rows);
+    }
+
+    /**
+     * @param array{sql: string, bind: array<int, mixed>} $facilityFilter
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchEncounterSignedItems(
+        int $pid,
+        string $since,
+        array $facilityFilter,
+        ?int $visitId,
+    ): array {
+        $visitSql = $visitId !== null && $visitId > 0 ? ' AND nv.id = ?' : '';
+        $bind = array_merge([$pid, $since], $facilityFilter['bind']);
+        if ($visitSql !== '') {
+            $bind[] = $visitId;
+        }
+
+        $rows = QueryUtils::fetchRecords(
+            "SELECT es.id AS signature_id, es.datetime AS occurred_at, es.user,
+                    f.encounter AS encounter_id, nv.id AS visit_id, nv.queue_number,
+                    u.fname, u.lname
+             FROM esign_signatures es
+             INNER JOIN forms f ON f.id = es.tid AND es.`table` = 'forms'
+             LEFT JOIN new_visit nv ON nv.pid = f.pid AND nv.encounter = f.encounter
+             LEFT JOIN new_visit v ON v.id = nv.id
+             LEFT JOIN users u ON u.username = es.user
+             WHERE f.pid = ? AND es.is_lock = 1 AND es.datetime >= ?{$facilityFilter['sql']}{$visitSql}
+             ORDER BY es.datetime DESC, es.id DESC
+             LIMIT 500",
+            $bind
+        ) ?: [];
+
+        return array_map(fn (array $row): array => $this->mapEncounterSignedItem($pid, $row), $rows);
+    }
+
+    /**
+     * @param array{sql: string, bind: array<int, mixed>} $facilityFilter
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchHardAssignedItems(
+        int $pid,
+        string $since,
+        array $facilityFilter,
+        ?int $visitId,
+    ): array {
+        $rows = QueryUtils::fetchRecords(
+            "SELECT l.id, l.date AS occurred_at, l.comments, l.user
+             FROM log l
+             WHERE l.category = 'new_visit'
+               AND l.success = 'hard_assigned'
+               AND l.comments LIKE ?
+               AND l.date >= ?
+             ORDER BY l.date DESC, l.id DESC
+             LIMIT 200",
+            ['pid=' . $pid . ';%', $since]
+        ) ?: [];
+
+        $items = [];
+        foreach ($rows as $row) {
+            $parsedVisitId = $this->parseVisitIdFromLogComments((string) ($row['comments'] ?? ''));
+            if ($visitId !== null && $visitId > 0 && $parsedVisitId !== $visitId) {
+                continue;
+            }
+
+            $visitRow = $parsedVisitId > 0
+                ? QueryUtils::querySingleRow(
+                    "SELECT v.id, v.queue_number FROM new_visit v
+                     WHERE v.id = ? AND v.pid = ?{$facilityFilter['sql']}",
+                    array_merge([$parsedVisitId, $pid], $facilityFilter['bind'])
+                )
+                : null;
+
+            if ($parsedVisitId > 0 && !is_array($visitRow)) {
+                continue;
+            }
+
+            $items[] = $this->mapHardAssignedItem($row, $parsedVisitId, is_array($visitRow) ? $visitRow : []);
+        }
+
+        return $items;
+    }
+
+    private function parseVisitIdFromLogComments(string $comments): int
+    {
+        if (preg_match('/visit_id=(\d+)/', $comments, $matches) === 1) {
+            return (int) ($matches[1] ?? 0);
+        }
+
+        return 0;
+    }
+
+    /**
      * @return array<int, array<string, mixed>>
      */
     private function buildActionRequired(int $pid): array
@@ -498,6 +622,7 @@ class PatientActivityFeedService
     {
         $fromState = $row['from_state'] ?? null;
         $toState = (string) ($row['to_state'] ?? '');
+        $reason = trim((string) ($row['reason'] ?? ''));
         $actor = trim(((string) ($row['fname'] ?? '')) . ' ' . ((string) ($row['lname'] ?? '')));
         if ($actor === '') {
             $actor = 'System';
@@ -505,13 +630,22 @@ class PatientActivityFeedService
 
         $visitId = (int) ($row['visit_id'] ?? 0);
         $logId = (int) ($row['id'] ?? 0);
-        $eventType = $fromState === null || $fromState === '' ? 'visit_created' : 'state_changed';
+        $eventType = $this->resolveStateEventType(
+            $fromState === null || $fromState === '' ? null : (string) $fromState,
+            $toState,
+            $reason
+        );
         $createdAt = (string) ($row['created_at'] ?? '');
 
-        $title = $eventType === 'visit_created'
-            ? 'Visit started'
-            : 'Visit: ' . $this->formatStateLabel((string) $fromState)
-                . ' → ' . $this->formatStateLabel($toState);
+        $title = match ($eventType) {
+            'visit_created' => 'Visit started',
+            'visit_cancelled' => 'Visit cancelled',
+            'routing_confirmed' => 'Consult routing confirmed',
+            'lab_complete' => 'Lab complete',
+            'pharmacy_complete' => 'Pharmacy complete',
+            default => 'Visit: ' . $this->formatStateLabel((string) $fromState)
+                . ' → ' . $this->formatStateLabel($toState),
+        };
 
         return [
             'event_type' => $eventType,
@@ -524,7 +658,7 @@ class PatientActivityFeedService
             'expand' => [
                 'from_state' => $fromState,
                 'to_state' => $toState,
-                'reason' => $row['reason'] ?? null,
+                'reason' => $reason !== '' ? $reason : null,
                 'visit_date' => $row['visit_date'] ?? null,
             ],
             'primary_action' => [
@@ -536,6 +670,35 @@ class PatientActivityFeedService
                 'kind' => 'board',
             ],
         ];
+    }
+
+    private function resolveStateEventType(?string $fromState, string $toState, string $reason): string
+    {
+        if ($toState === 'cancelled') {
+            return 'visit_cancelled';
+        }
+
+        if ($fromState === null || $fromState === '') {
+            return 'visit_created';
+        }
+
+        if ($fromState === 'with_doctor' && in_array($toState, ['ready_for_lab', 'ready_for_pharmacy', 'ready_for_payment'], true)) {
+            return 'routing_confirmed';
+        }
+
+        if ($toState === 'lab_complete') {
+            return 'lab_complete';
+        }
+
+        if ($toState === 'pharmacy_complete') {
+            return 'pharmacy_complete';
+        }
+
+        if (str_contains($reason, 'complete_consult')) {
+            return 'routing_confirmed';
+        }
+
+        return 'state_changed';
     }
 
     /**
@@ -714,6 +877,138 @@ class PatientActivityFeedService
                 'label' => 'Open medications',
                 'kind' => 'tab',
                 'target' => 'clinical-meds',
+            ],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private function mapPaymentPostedItem(array $row): array
+    {
+        $visitId = (int) ($row['visit_id'] ?? 0);
+        $receiptId = (int) ($row['id'] ?? 0);
+        $amount = number_format((float) ($row['amount_paid'] ?? 0), 2);
+        $receiptNumber = trim((string) ($row['receipt_number'] ?? ''));
+        $createdAt = (string) ($row['created_at'] ?? '');
+        $cashier = trim(((string) ($row['fname'] ?? '')) . ' ' . ((string) ($row['lname'] ?? '')));
+
+        return [
+            'event_type' => 'payment_posted',
+            'event_id' => 'payment_posted:' . $visitId . ':' . $receiptId,
+            'title' => 'Payment posted',
+            'subtitle' => ($receiptNumber !== '' ? '#' . $receiptNumber . ' · ' : '')
+                . $amount
+                . ($cashier !== '' ? ' · ' . $cashier : '')
+                . ' · '
+                . $this->relativeTime($createdAt),
+            'occurred_at' => $createdAt,
+            'visit_id' => $visitId,
+            'encounter_id' => (int) ($row['encounter'] ?? 0),
+            'queue_number' => (int) ($row['queue_number'] ?? 0),
+            'expand' => [
+                'receipt_number' => $receiptNumber,
+                'amount_paid' => $amount,
+                'cashier' => $cashier !== '' ? $cashier : null,
+            ],
+            'primary_action' => [
+                'label' => 'View payments',
+                'kind' => 'tab',
+                'target' => 'profile',
+            ],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private function mapEncounterSignedItem(int $pid, array $row): array
+    {
+        $visitId = (int) ($row['visit_id'] ?? 0);
+        $signatureId = (int) ($row['signature_id'] ?? 0);
+        $encounterId = (int) ($row['encounter_id'] ?? 0);
+        $createdAt = (string) ($row['occurred_at'] ?? '');
+        $signer = trim(((string) ($row['fname'] ?? '')) . ' ' . ((string) ($row['lname'] ?? '')));
+        if ($signer === '') {
+            $signer = trim((string) ($row['user'] ?? 'Staff'));
+        }
+        $webroot = $GLOBALS['webroot'] ?? '';
+
+        return [
+            'event_type' => 'encounter_signed',
+            'event_id' => 'encounter_signed:' . $visitId . ':' . $signatureId,
+            'title' => 'Documentation signed',
+            'subtitle' => $signer . ' · ' . $this->relativeTime($createdAt),
+            'occurred_at' => $createdAt,
+            'visit_id' => $visitId,
+            'encounter_id' => $encounterId,
+            'queue_number' => (int) ($row['queue_number'] ?? 0),
+            'expand' => [
+                'signer' => $signer,
+                'encounter_id' => $encounterId,
+            ],
+            'primary_action' => [
+                'label' => 'Details',
+                'kind' => 'expand',
+            ],
+            'secondary_action' => $encounterId > 0 ? [
+                'label' => 'Open encounter',
+                'kind' => 'core',
+                'target' => EncounterSignService::buildEncounterUrl($webroot, $pid, $encounterId),
+            ] : null,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @param array<string, mixed> $visitRow
+     * @return array<string, mixed>
+     */
+    private function mapHardAssignedItem(array $row, int $visitId, array $visitRow): array
+    {
+        $logId = (int) ($row['id'] ?? 0);
+        $createdAt = (string) ($row['occurred_at'] ?? '');
+        $payload = [];
+        $comments = (string) ($row['comments'] ?? '');
+        if (preg_match('/\{.*\}$/s', $comments, $matches) === 1) {
+            $decoded = json_decode($matches[0], true);
+            if (is_array($decoded)) {
+                $payload = $decoded;
+            }
+        }
+
+        $providerId = (int) ($payload['hard_assigned_provider_id'] ?? 0);
+        $providerName = 'Assigned provider';
+        if ($providerId > 0) {
+            $provider = QueryUtils::querySingleRow(
+                'SELECT fname, lname FROM users WHERE id = ?',
+                [$providerId]
+            );
+            if (is_array($provider)) {
+                $name = trim(((string) ($provider['fname'] ?? '')) . ' ' . ((string) ($provider['lname'] ?? '')));
+                if ($name !== '') {
+                    $providerName = 'Dr ' . $name;
+                }
+            }
+        }
+
+        return [
+            'event_type' => 'hard_assigned',
+            'event_id' => 'hard_assigned:' . $visitId . ':' . $logId,
+            'title' => 'Assigned: ' . $providerName,
+            'subtitle' => $this->relativeTime($createdAt),
+            'occurred_at' => $createdAt,
+            'visit_id' => $visitId,
+            'queue_number' => (int) ($visitRow['queue_number'] ?? 0),
+            'expand' => [
+                'provider_id' => $providerId,
+                'provider_name' => $providerName,
+            ],
+            'primary_action' => [
+                'label' => 'Details',
+                'kind' => 'expand',
             ],
         ];
     }
