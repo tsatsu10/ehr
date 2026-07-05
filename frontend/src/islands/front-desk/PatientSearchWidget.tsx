@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Command,
   CommandEmpty,
@@ -12,6 +12,7 @@ import { Card } from '@components/ui/card';
 import { Avatar, AvatarFallback } from '@components/ui/avatar';
 import { Button } from '@components/ui/button';
 import { usePatientSearch } from '@core/usePatientSearch';
+import { useTypeAheadSuggestions } from './useTypeAheadSuggestions';
 import type { PatientSearchRow } from '@core/types';
 import { cn } from '@/lib/utils';
 import { completionVariant, initialsFromName } from './frontDeskUtils';
@@ -20,7 +21,7 @@ import { RecentlyViewed } from './RecentlyViewed';
 import { TodaysAppointmentsList } from './TodaysAppointmentsList';
 import type { RecentPatient } from '@core/useRecentlyViewedPatients';
 import type { TodaysAppointmentRow } from '@core/types';
-import { UserPlus, X, Check, CalendarCheck, Search, BellRing } from 'lucide-react';
+import { UserPlus, X, Check, CalendarCheck, Search, BellRing, Sparkles, Zap } from 'lucide-react';
 
 interface PatientSearchWidgetProps {
   ajaxUrl: string;
@@ -195,6 +196,8 @@ export function PatientSearchWidget({
   onBulkCheckIn,
 }: PatientSearchWidgetProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [previousResults, setPreviousResults] = useState<PatientSearchRow[]>([]);
+  
   const {
     query,
     results,
@@ -209,6 +212,31 @@ export function PatientSearchWidget({
     initialQuery,
     onSelectPatient,
   });
+
+  // Get instant type-ahead suggestions from cached data
+  const typeAheadSuggestions = useTypeAheadSuggestions({
+    query,
+    recentPatients,
+    todaysAppointments,
+    previousResults,
+    maxSuggestions: 5,
+  });
+
+  // Cache results for type-ahead
+  useEffect(() => {
+    if (results.length > 0) {
+      setPreviousResults((prev) => {
+        const newResults = [...results];
+        // Merge with previous, keeping unique PIDs
+        const merged = [...newResults, ...prev];
+        const unique = merged.filter(
+          (r, i, arr) => arr.findIndex((x) => x.pid === r.pid) === i
+        );
+        // Keep only last 50 results
+        return unique.slice(0, 50);
+      });
+    }
+  }, [results]);
 
   useEffect(() => {
     onResultsChange?.(results);
@@ -307,6 +335,57 @@ export function PatientSearchWidget({
             </div>
           )}
         </div>
+
+        {/* Type-ahead quick suggestions - instant matches from cache */}
+        {query.length >= 1 && typeAheadSuggestions.length > 0 && (searching || results.length === 0) && (
+          <CommandGroup heading={
+            <div className="flex items-center gap-1.5 text-xs text-[var(--oe-nc-text-muted)]">
+              <Zap className="h-3 w-3 text-amber-500" aria-hidden="true" />
+              <span>Quick suggestions</span>
+            </div>
+          }>
+            {typeAheadSuggestions.map((suggestion) => (
+              <CommandItem
+                key={`typeahead-${suggestion.pid}`}
+                value={`${suggestion.displayName}-${suggestion.pubpid}`}
+                onSelect={() => onSelectPatient(suggestion.pid)}
+                className="nc-search-result-item cursor-pointer px-3 py-2.5"
+              >
+                <div className="flex w-full min-w-0 items-center gap-2.5">
+                  <Avatar className="h-9 w-9 shrink-0 opacity-90">
+                    <AvatarFallback
+                      className="text-xs font-semibold"
+                      style={{ 
+                        backgroundColor: nameToAvatarColor(suggestion.displayName).bg, 
+                        color: nameToAvatarColor(suggestion.displayName).text 
+                      }}
+                    >
+                      {initialsFromName(suggestion.displayName)}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold">
+                      {suggestion.displayName}
+                    </div>
+                    <div className="truncate text-xs text-[var(--oe-nc-text-muted)]">
+                      {suggestion.match}
+                    </div>
+                  </div>
+
+                  <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                    <Badge 
+                      variant={suggestion.source === 'recent' ? 'neutral' : suggestion.source === 'appointment' ? 'info' : 'ghost'}
+                      className="text-[0.6875rem]"
+                    >
+                      {suggestion.source === 'recent' ? 'Recent' : suggestion.source === 'appointment' ? 'Today' : 'Cached'}
+                    </Badge>
+                  </div>
+                </div>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
 
         {recentPatients.length > 0 && query.length < 2 && (
           <RecentlyViewed
