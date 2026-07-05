@@ -8,7 +8,7 @@ import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@components/ui/card';
 import { cn } from '@/lib/utils';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import { RegistrationDupPanel } from './RegistrationDupPanel';
 import { RegistrationFormSections, type RegistrationFormValues } from './RegistrationFormSections';
 import { parseSearchQuery } from './registrationFormUtils';
@@ -26,6 +26,7 @@ import {
     getValidationSummary,
     type ValidationErrors,
 } from './registrationFormValidation';
+import { useAutoSave } from './useAutoSave';
 
 export interface RegistrationFormHandle {
     isDirty: () => boolean;
@@ -86,11 +87,39 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
     const [allergyNoneConfirmOpen, setAllergyNoneConfirmOpen] = useState(false);
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
     const [touchedFields, setTouchedFields] = useState<Set<keyof RegistrationFormValues>>(new Set());
+    const [draftRestoreOpen, setDraftRestoreOpen] = useState(false);
+    const [autoSaveTimestamp, setAutoSaveTimestamp] = useState<number | null>(null);
     const prefillAppliedRef = useRef(false);
+    const draftCheckedRef = useRef(false);
 
     useImperativeHandle(ref, () => ({
         isDirty: () => dirty,
     }), [dirty]);
+
+    // Auto-save hook
+    const { autoSaveState, getDraft, clearDraft, forceSave } = useAutoSave(
+        form,
+        dirty && !currentPid, // Only auto-save for new registrations (not edits)
+        {
+            storageKey: `nc_reg_draft_${registrationMode}`,
+            saveIntervalMs: 30000, // 30 seconds
+            debounceMs: 2000, // 2 seconds after user stops typing
+            enabled: registrationMode === 'desk_full_form' && !chartMode,
+        },
+        (timestamp) => {
+            setAutoSaveTimestamp(timestamp);
+        }
+    );
+
+    // Check for draft on mount
+    useEffect(() => {
+        if (draftCheckedRef.current || pid || chartMode) return;
+        draftCheckedRef.current = true;
+
+        if (autoSaveState.hasDraft && !prefillAppliedRef.current) {
+            setDraftRestoreOpen(true);
+        }
+    }, [autoSaveState.hasDraft, pid, chartMode]);
 
     const requestDiscard = useCallback((onProceed: () => void) => {
         if (!dirty) {
@@ -354,6 +383,7 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
             setDirty(false);
             setValidationErrors({});
             setTouchedFields(new Set());
+            clearDraft(); // Clear auto-saved draft on successful save
             showSuccess(`Section ${section} saved.`);
             await loadForm(savedPid);
 
@@ -369,13 +399,45 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
 
     const formTitle = chartMode ? 'Patient profile' : currentPid ? 'Edit profile' : 'Register patient';
 
+    // Format auto-save timestamp
+    const autoSaveLabel = useMemo(() => {
+        if (!autoSaveTimestamp) return null;
+        const seconds = Math.floor((Date.now() - autoSaveTimestamp) / 1000);
+        if (seconds < 60) return 'Auto-saved just now';
+        if (seconds < 3600) return `Auto-saved ${Math.floor(seconds / 60)}m ago`;
+        return `Auto-saved ${Math.floor(seconds / 3600)}h ago`;
+    }, [autoSaveTimestamp]);
+
+    const handleRestoreDraft = () => {
+        const draft = getDraft();
+        if (draft) {
+            setForm(draft);
+            setDirty(true);
+            showDeskToast('Draft restored', 'success');
+        }
+        setDraftRestoreOpen(false);
+    };
+
+    const handleDiscardDraft = () => {
+        clearDraft();
+        setDraftRestoreOpen(false);
+    };
+
     return (
         <Card className="nc-registration-form border-0 bg-transparent shadow-none" id="nc-registration-form">
             <CardHeader className={cn('mb-2 border-0 px-0 py-0', hideTitle ? 'justify-end' : 'gap-3')}>
                 {!hideTitle && <CardTitle className="text-lg">{formTitle}</CardTitle>}
-                <Badge variant="neutral" id="nc-reg-completion">
-                    {completionScore == null ? '—' : `${completionScore}% complete`}
-                </Badge>
+                <div className="flex items-center gap-2">
+                    <Badge variant="neutral" id="nc-reg-completion">
+                        {completionScore == null ? '—' : `${completionScore}% complete`}
+                    </Badge>
+                    {autoSaveLabel && dirty && !currentPid && (
+                        <Badge variant="ghost" className="text-xs gap-1.5" id="nc-reg-autosave">
+                            <Clock className="h-3 w-3" aria-hidden />
+                            {autoSaveLabel}
+                        </Badge>
+                    )}
+                </div>
             </CardHeader>
 
             <CardContent className="space-y-0 p-0">
@@ -503,6 +565,22 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
                 }}
             >
                 <p className="mb-0">No allergies listed. Continue without documenting allergies?</p>
+            </ConfirmModal>
+
+            <ConfirmModal
+                open={draftRestoreOpen}
+                onClose={() => setDraftRestoreOpen(false)}
+                title="Resume unsaved registration?"
+                modalId="nc-reg-draft-restore-modal"
+                cancelLabel="Start fresh"
+                confirmLabel="Resume"
+                confirmVariant="default"
+                onConfirm={handleRestoreDraft}
+                onCancel={handleDiscardDraft}
+            >
+                <p className="mb-0">
+                    You have unsaved registration data from a previous session. Would you like to resume where you left off?
+                </p>
             </ConfirmModal>
         </Card>
     );

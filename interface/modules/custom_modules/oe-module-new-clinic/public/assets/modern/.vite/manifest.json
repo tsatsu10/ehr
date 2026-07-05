@@ -153,8 +153,8 @@
       "_pharmOpsPrintRx-DNxdMQxr.js"
     ]
   },
-  "_RegistrationForm-5fuTq5uO.js": {
-    "file": "chunks/RegistrationForm-5fuTq5uO.js",
+  "_RegistrationForm-Dq9qpzh0.js": {
+    "file": "chunks/RegistrationForm-Dq9qpzh0.js",
     "name": "RegistrationForm",
     "imports": [
       "_deskCalloutStyles-sccuUACN.js",
@@ -164,6 +164,7 @@
       "_circle-check-OdSinwkY.js",
       "_checkbox-CPswd-of.js",
       "_select-C_GxGt4L.js",
+      "_clock-J1hZ8jZc.js",
       "_input-BwaDVzge.js",
       "_dist-BG_laL1a.js",
       "_dialog-B9wqMDjl.js",
@@ -801,7 +802,7 @@
       "_StatusPill-uYqiBn4x.js",
       "_card-BqZ3_I52.js",
       "_createLucideIcon-VgbHBosm.js",
-      "_RegistrationForm-5fuTq5uO.js",
+      "_RegistrationForm-Dq9qpzh0.js",
       "_circle-check-OdSinwkY.js",
       "_user-plus-D2OXiq6r.js",
       "_circle-x-ClDyifmx.js",
@@ -886,7 +887,7 @@
       "_deskCalloutStyles-sccuUACN.js",
       "_badge-R6atlcwF.js",
       "_AncillaryVisitBadges-BiQPWWHZ.js",
-      "_RegistrationForm-5fuTq5uO.js",
+      "_RegistrationForm-Dq9qpzh0.js",
       "_SegmentedControl-DzXFqMVd.js",
       "_input-BwaDVzge.js",
       "_PatientContextBanner-DJF13AFX.js",
