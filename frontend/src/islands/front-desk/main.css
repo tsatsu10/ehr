@@ -6,7 +6,7 @@
    All selectors scoped to .nc-front-desk-react-active
    ───────────────────────────────────────────────────────────────────────────
    Sections (Ctrl+F the anchor):
-   §1  Shell / workspace / split grid
+   §1  Shell / workspace / split grid / optimistic UI states
    §2  Preview pane scroll + sticky footer
    §3  Today's appointments list
    §4  Search hero input + spinner + skeleton
@@ -23,6 +23,56 @@
 }
 
 /* ── §1  Shell / workspace / split grid ────────────────────────────────── */
+
+/* ── Optimistic update states ──────────────────────────────────────────── */
+
+@keyframes nc-optimistic-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.nc-optimistic-pending {
+  animation: nc-optimistic-pulse 1.5s ease-in-out infinite;
+  position: relative;
+}
+
+.nc-optimistic-pending::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(59, 130, 246, 0.1) 50%, 
+    transparent 100%);
+  pointer-events: none;
+  animation: nc-optimistic-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes nc-optimistic-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.nc-optimistic-confirmed {
+  animation: nc-optimistic-confirm 0.4s ease-out;
+}
+
+@keyframes nc-optimistic-confirm {
+  0% { background-color: rgba(34, 197, 94, 0.15); }
+  100% { background-color: transparent; }
+}
+
+.nc-optimistic-failed {
+  animation: nc-optimistic-failed 0.4s ease-out;
+}
+
+@keyframes nc-optimistic-failed {
+  0% { background-color: rgba(239, 68, 68, 0.15); }
+  100% { background-color: transparent; }
+}
 
 /* ── Workspace wrapper ─────────────────────────────────────────────────── */
 
