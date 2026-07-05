@@ -1,11 +1,20 @@
 @import '../../core/tokens.css';
+@import '../../core/clinical-tokens.css';
 @import '../../components/ui/ui-primitives.css';
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Front Desk island — visual styles 2026
+   Front Desk island — clinical visual styles 2026 (redesign 2026-07-05)
    All selectors scoped to .nc-front-desk-react-active
+   
+   Design system: Professional Clinical Aesthetic ("Calm Authority")
+   - Trust blue (#1e40af) for primary actions
+   - Increased typography weight (450) for medical authority  
+   - Tighter spacing (12px default) for clinic efficiency
+   - Softer shadows for clinical depth
+   - WCAG 2.1 AA compliant throughout
    ───────────────────────────────────────────────────────────────────────────
    Sections (Ctrl+F the anchor):
+   §0  Clinical typography & base styles
    §1  Shell / workspace / split grid / optimistic UI states
    §2  Preview pane scroll + sticky footer
    §3  Today's appointments list
@@ -16,6 +25,37 @@
    §8  Patient photo capture
    §9  Today's flow charts strip
    ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── §0  Clinical Typography & Base Styles ─────────────────────────────── */
+
+.nc-front-desk-react-active {
+  /* Clinical typography — increased weight for authority */
+  font-weight: var(--oe-clinical-font-normal, 450);
+  line-height: var(--oe-clinical-leading-normal, 1.4);
+  color: var(--oe-clinical-text);
+  
+  /* Enable font feature settings for tabular figures */
+  font-feature-settings: 'tnum' on, 'lnum' on;
+}
+
+.nc-front-desk-react-active h1,
+.nc-front-desk-react-active h2,
+.nc-front-desk-react-active h3 {
+  font-weight: var(--oe-clinical-font-semibold, 600);
+  letter-spacing: var(--oe-clinical-tracking-tight, -0.005em);
+  color: var(--oe-clinical-text);
+}
+
+.nc-front-desk-react-active small,
+.nc-front-desk-react-active .text-sm {
+  font-size: var(--oe-clinical-text-sm, 0.875rem);
+  line-height: var(--oe-clinical-leading-snug, 1.35);
+}
+
+.nc-front-desk-react-active .text-xs {
+  font-size: var(--oe-clinical-text-xs, 0.8125rem); /* 13px — bumped from 12px */
+  line-height: var(--oe-clinical-leading-tight, 1.25);
+}
 
 .nc-t1-desk-focus .nc-front-desk-react-active.nc-desk-split {
   margin-top: 0;

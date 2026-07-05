@@ -1,0 +1,14 @@
+# Clean URL routing for New Clinic module desks.
+# Maps /openemr/clinic/{slug} → /openemr/clinic/index.php?_desk={slug}
+
+RewriteEngine On
+
+# Pass through actual files (index.php itself)
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# /clinic/ with no slug → front desk
+RewriteRule ^$ index.php?_desk=front-desk [L,QSA]
+
+# /clinic/{slug} → front controller
+RewriteRule ^([a-z0-9-]+)/?$ index.php?_desk=$1 [L,QSA]
