@@ -27,6 +27,7 @@ $title = xlt('SMS');
 $title = $service == "2" ? xlt('Twilio SMS') : $title;
 $title = $service == "3" ? xlt('etherFAX') : $title;
 $title = $service == "5" ? xlt('Clickatell') : $title;
+$title = $service == "7" ? xlt('Android SMS Gateway') : $title;
 $module_config = $_REQUEST['module_config'] ?? 0;
 $mode = $_REQUEST['mode'] ?? null;
 ?>
@@ -250,6 +251,44 @@ $mode = $_REQUEST['mode'] ?? null;
                             </span>
                             <textarea id="form_message" type="text" rows="3" name="smsmessage" class="form-control"
                                 value='<?php echo attr($c['smsMessage']) ?>'><?php echo text($c['smsMessage']) ?></textarea>
+                        </div>
+                    <?php } elseif ($service == '7') {
+                        ?> <!-- Android SMS Gateway -->
+                        <div class="alert alert-info mb-3">
+                            <strong><?php echo xlt('Free SMS via Android phone') ?></strong><br/>
+                            <?php echo xlt('Install the free "Android SMS Gateway" app on any Android phone. Open the app, tap Start Server, and note the URL shown (e.g. http://192.168.1.100:8080). The phone must be on the same WiFi as this server.') ?>
+                            <br/><a href="https://github.com/android-sms-gateway/android-app" target="_blank"><?php echo xlt('Download app (GitHub — free & open source)') ?></a>
+                        </div>
+                        <div class="form-group">
+                            <label for="form_server"><?php echo xlt("Gateway URL") ?> *</label>
+                            <input id="form_server" type="text" name="server" class="form-control"
+                                placeholder="http://192.168.1.100:8080"
+                                required value='<?php echo attr($c['server'] ?? '') ?>' />
+                            <small class="form-text text-muted"><?php echo xlt('The URL shown in the Android app when the server is running.') ?></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="form_username"><?php echo xlt("App Username") ?> *</label>
+                            <input id="form_username" type="text" name="username" class="form-control"
+                                required value='<?php echo attr($c['username'] ?? '') ?>' />
+                            <small class="form-text text-muted"><?php echo xlt('Set in the Android app under Settings → Credentials.') ?></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="form_password"><?php echo xlt("App Password") ?> *</label>
+                            <input id="form_password" type="password" name="password" class="form-control"
+                                required value='<?php echo attr($c['password'] ?? '') ?>' />
+                        </div>
+                        <div class="form-group">
+                            <label for="form_nhours"><?php echo xlt("Appointments Advance Notify (Hours)") ?> *</label>
+                            <input id="form_nhours" type="text" name="smshours" class="form-control"
+                                placeholder="<?php echo xla('Hours before appointment to send reminder') ?>"
+                                required value='<?php echo attr($c['smsHours'] ?? '24') ?>' />
+                        </div>
+                        <div class="form-group">
+                            <label for="form_message"><?php echo xlt("Message Template") ?></label>
+                            <span style="font-size:12px;font-style:italic">&nbsp;
+                                <?php echo xlt("Replace Tags") ?>: <?php echo text("***NAME***, ***PROVIDER***, ***DATE***, ***STARTTIME***, ***ENDTIME***, ***ORG***"); ?>
+                            </span>
+                            <textarea id="form_message" rows="3" name="smsmessage" class="form-control"><?php echo text($c['smsMessage'] ?? '') ?></textarea>
                         </div>
                     <?php } elseif ($service == '6') {
                         ?> <!-- SignalWire -->

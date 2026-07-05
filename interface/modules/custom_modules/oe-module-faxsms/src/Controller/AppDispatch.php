@@ -258,6 +258,7 @@ abstract class AppDispatch
                 1 => fn(): RCFaxClient => new RCFaxClient(),
                 2 => fn(): TwilioSMSClient => new TwilioSMSClient(),
                 5 => fn(): ClickatellSMSClient => new ClickatellSMSClient(),
+                7 => fn(): AndroidSmsGatewayClient => new AndroidSmsGatewayClient(),
             ],
             'fax' => [
                 1 => fn(): RCFaxClient => new RCFaxClient(),
