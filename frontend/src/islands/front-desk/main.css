@@ -1,6 +1,7 @@
 @import '../../core/tokens.css';
 @import '../../core/clinical-tokens.css';
 @import '../../components/ui/ui-primitives.css';
+@import './clinical-workspace.css';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Front Desk island — clinical visual styles 2026 (redesign 2026-07-05)
@@ -730,6 +731,55 @@
   }
   100% {
     background-position: -200% 0;
+  }
+}
+
+/* ── §14  Clinical Preview Pane Layout ──────────────────────────────────────── */
+
+.nc-clinical-preview-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--oe-clinical-bg, #fafaf9);
+}
+
+.nc-clinical-preview-content {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: var(--oe-clinical-space-lg, 1.5rem);
+  padding: var(--oe-clinical-space-lg, 1.5rem);
+  flex: 1;
+  overflow: hidden;
+}
+
+.nc-clinical-preview-timeline {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--oe-clinical-border) transparent;
+  padding: var(--oe-clinical-space-lg, 1.5rem);
+  background: var(--oe-clinical-surface, #ffffff);
+  border-radius: var(--oe-clinical-radius-lg, 12px);
+  box-shadow: var(--oe-clinical-shadow-md, 0 2px 8px rgba(0, 0, 0, 0.06));
+}
+
+/* Tablet: Stack timeline and actions */
+@media (max-width: 1280px) {
+  .nc-clinical-preview-content {
+    grid-template-columns: 1fr;
+    gap: var(--oe-clinical-space-md, 1rem);
+  }
+}
+
+/* Mobile: Simplified layout */
+@media (max-width: 768px) {
+  .nc-clinical-preview-content {
+    padding: var(--oe-clinical-space-md, 1rem);
+  }
+  
+  .nc-clinical-preview-timeline {
+    padding: var(--oe-clinical-space-md, 1rem);
+    border-radius: var(--oe-clinical-radius-md, 8px);
   }
 }
 

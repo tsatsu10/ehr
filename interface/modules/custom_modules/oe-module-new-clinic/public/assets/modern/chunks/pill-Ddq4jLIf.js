@@ -1,0 +1,2 @@
+import{t as e}from"./createLucideIcon-VgbHBosm.js";var t=e(`circle-x`,[[`circle`,{cx:`12`,cy:`12`,r:`10`,key:`1mglay`}],[`path`,{d:`m15 9-6 6`,key:`1uzhvr`}],[`path`,{d:`m9 9 6 6`,key:`z0biqf`}]]),n=e(`pill`,[[`path`,{d:`m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z`,key:`wa1lgi`}],[`path`,{d:`m8.5 8.5 7 7`,key:`rvfmvr`}]]);export{t as n,n as t};
+//# sourceMappingURL=pill-Ddq4jLIf.js.map

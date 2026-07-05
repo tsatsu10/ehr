@@ -1,0 +1,225 @@
+/**
+ * Clinical Workspace Layout
+ * Three-column grid for desktop, responsive breakpoints for tablet/mobile
+ * Updated 2026-07-05 for Front Desk clinical redesign
+ */
+
+/* ── §1  Three-Column Grid (Desktop) ───────────────────────────────────────── */
+
+.nc-clinical-workspace {
+  display: grid;
+  grid-template-columns: 320px 1fr 360px;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    'search  identity identity'
+    'search  content  actions';
+  gap: var(--oe-clinical-space-lg, 1.5rem);
+  height: 100%;
+  padding: var(--oe-clinical-space-lg, 1.5rem);
+  background: var(--oe-clinical-bg, #fafaf9);
+}
+
+.nc-clinical-workspace__search {
+  grid-area: search;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--oe-clinical-border) transparent;
+}
+
+.nc-clinical-workspace__identity {
+  grid-area: identity;
+  position: sticky;
+  top: 0;
+  z-index: var(--oe-clinical-z-sticky, 10);
+  background: var(--oe-clinical-bg, #fafaf9);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.nc-clinical-workspace__content {
+  grid-area: content;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--oe-clinical-border) transparent;
+  padding: var(--oe-clinical-space-lg, 1.5rem);
+  background: var(--oe-clinical-surface, #ffffff);
+  border-radius: var(--oe-clinical-radius-lg, 12px);
+  box-shadow: var(--oe-clinical-shadow-md, 0 2px 8px rgba(0, 0, 0, 0.06));
+}
+
+.nc-clinical-workspace__actions {
+  grid-area: actions;
+  position: sticky;
+  top: calc(var(--oe-clinical-identity-height, 120px) + var(--oe-clinical-space-lg, 1.5rem));
+  max-height: calc(100vh - var(--oe-clinical-identity-height, 120px) - (var(--oe-clinical-space-lg, 1.5rem) * 3));
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--oe-clinical-border) transparent;
+}
+
+/* ── §2  Two-Column Grid (Tablet) ──────────────────────────────────────────── */
+
+@media (max-width: 1280px) {
+  .nc-clinical-workspace {
+    grid-template-columns: 280px 1fr;
+    grid-template-areas:
+      'search  identity'
+      'search  content';
+    gap: var(--oe-clinical-space-md, 1rem);
+    padding: var(--oe-clinical-space-md, 1rem);
+  }
+
+  /* Actions panel becomes a slide-over or bottom sheet on tablet */
+  .nc-clinical-workspace__actions {
+    display: none;
+  }
+
+  /* Mobile actions appear in content area */
+  .nc-clinical-workspace__content {
+    padding: var(--oe-clinical-space-md, 1rem);
+  }
+}
+
+/* ── §3  Single-Column Grid (Mobile) ───────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .nc-clinical-workspace {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'identity'
+      'content';
+    gap: var(--oe-clinical-space-sm, 0.5rem);
+    padding: var(--oe-clinical-space-sm, 0.5rem);
+  }
+
+  /* Search becomes a slide-over or modal on mobile */
+  .nc-clinical-workspace__search {
+    display: none;
+  }
+
+  .nc-clinical-workspace__identity {
+    position: static; /* Not sticky on mobile to save vertical space */
+  }
+
+  .nc-clinical-workspace__content {
+    padding: var(--oe-clinical-space-md, 1rem);
+    border-radius: var(--oe-clinical-radius-md, 8px);
+  }
+}
+
+/* ── §4  Empty & Loading States ────────────────────────────────────────────── */
+
+.nc-clinical-workspace--empty .nc-clinical-workspace__identity,
+.nc-clinical-workspace--empty .nc-clinical-workspace__actions {
+  display: none;
+}
+
+.nc-clinical-workspace--empty .nc-clinical-workspace__content {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nc-clinical-workspace--loading .nc-clinical-workspace__actions {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ── §5  Registration Mode Override ────────────────────────────────────────── */
+
+.nc-clinical-workspace--registration {
+  grid-template-areas:
+    'search  identity identity'
+    'search  content  content';
+}
+
+.nc-clinical-workspace--registration .nc-clinical-workspace__actions {
+  display: none;
+}
+
+.nc-clinical-workspace--registration .nc-clinical-workspace__content {
+  grid-column: 2 / -1;
+  max-width: 900px;
+  justify-self: center;
+}
+
+/* ── §6  Scroll Shadows (Progressive Disclosure) ───────────────────────────── */
+
+.nc-clinical-workspace__search::after,
+.nc-clinical-workspace__content::after,
+.nc-clinical-workspace__actions::after {
+  content: '';
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: linear-gradient(to bottom, transparent, var(--oe-clinical-bg, #fafaf9));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.nc-clinical-workspace__search.is-scrolled::after,
+.nc-clinical-workspace__content.is-scrolled::after,
+.nc-clinical-workspace__actions.is-scrolled::after {
+  opacity: 1;
+}
+
+/* ── §7  Print Styles ──────────────────────────────────────────────────────── */
+
+@media print {
+  .nc-clinical-workspace {
+    display: block;
+    height: auto;
+    padding: 0;
+  }
+
+  .nc-clinical-workspace__search,
+  .nc-clinical-workspace__actions {
+    display: none;
+  }
+
+  .nc-clinical-workspace__identity {
+    position: static;
+    box-shadow: none;
+  }
+
+  .nc-clinical-workspace__content {
+    box-shadow: none;
+    border-radius: 0;
+  }
+}
+
+/* ── §8  High Contrast Mode ────────────────────────────────────────────────── */
+
+@media (prefers-contrast: high) {
+  .nc-clinical-workspace {
+    gap: var(--oe-clinical-space-xl, 2rem);
+  }
+
+  .nc-clinical-workspace__content {
+    border: 2px solid var(--oe-clinical-border);
+  }
+
+  .nc-clinical-workspace__identity {
+    border-bottom: 2px solid var(--oe-clinical-border);
+  }
+}
+
+/* ── §9  Reduced Motion ────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .nc-clinical-workspace__search::after,
+  .nc-clinical-workspace__content::after,
+  .nc-clinical-workspace__actions::after {
+    transition: none;
+  }
+
+  .nc-clinical-workspace__identity {
+    transition: none;
+  }
+}
