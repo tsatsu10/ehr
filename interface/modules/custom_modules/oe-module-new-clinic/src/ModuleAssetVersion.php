@@ -13,5 +13,5 @@ namespace OpenEMR\Modules\NewClinic;
 
 class ModuleAssetVersion
 {
-    public const VERSION = '20260705sp190swipegestures';
+    public const VERSION = '20260705sp191fuzzydup';
 }

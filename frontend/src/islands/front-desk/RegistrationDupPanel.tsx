@@ -1,10 +1,12 @@
 import { DeskAlert } from '@components/DeskAlert';
 import type { RegistrationDupResult } from '@core/types';
 import { Button } from '@components/ui/button';
+import { Badge } from '@components/ui/badge';
 import { Checkbox } from '@components/ui/checkbox';
 import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
 import { ExternalLink } from 'lucide-react';
+import { getConfidenceLabel } from './fuzzyDuplicateDetection';
 
 interface RegistrationDupPanelProps {
   dup: RegistrationDupResult;
@@ -37,20 +39,40 @@ export function RegistrationDupPanel({
   return (
     <DeskAlert tone={tone} className="mb-2" id="nc-dup-panel">
       <strong>{title}</strong>
-      <ul className="mb-2 list-disc pl-5">
-        {(dup.candidates ?? []).map((candidate) => (
-          <li key={candidate.pid} className="mb-1">
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              className="nc-use-existing-patient h-auto p-0"
-              onClick={() => onUseExisting(candidate.pid)}
-            >
-              {candidate.display_name} · MRN {candidate.pubpid} (score {candidate.score})
-            </Button>
-          </li>
-        ))}
+      <ul className="mb-2 list-none pl-0">
+        {(dup.candidates ?? []).map((candidate) => {
+          const confidence = getConfidenceLabel(candidate.score);
+          const hasMatchReasons = Array.isArray(candidate.match_reasons) && candidate.match_reasons.length > 0;
+          
+          return (
+            <li key={candidate.pid} className="mb-2 border-l-2 border-[var(--oe-nc-border)] pl-3">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="nc-use-existing-patient h-auto p-0"
+                  onClick={() => onUseExisting(candidate.pid)}
+                >
+                  {candidate.display_name} · MRN {candidate.pubpid}
+                </Button>
+                <Badge variant={confidence.variant} className="text-xs">
+                  {confidence.label} ({candidate.score}%)
+                </Badge>
+              </div>
+              {hasMatchReasons && (
+                <div className="text-xs text-[var(--oe-nc-text-muted)] space-x-2">
+                  {candidate.match_reasons.map((reason: string, idx: number) => (
+                    <span key={idx} className="inline-block">
+                      {reason}
+                      {idx < candidate.match_reasons.length - 1 && ' •'}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
       {dup.level === 'block' && mergeToolBaseUrl && dup.candidates && dup.candidates.length >= 2 && (
         <p className="text-xs mb-2">
