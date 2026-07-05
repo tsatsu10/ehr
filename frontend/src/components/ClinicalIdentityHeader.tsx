@@ -256,3 +256,6 @@ export function ClinicalIdentityHeader({
     </div>
   );
 }
+
+// Export memoized version for performance
+export const MemoizedClinicalIdentityHeader = React.memo(ClinicalIdentityHeader);

@@ -13,7 +13,7 @@ import { ClinicalIdentityHeader } from '@components/ClinicalIdentityHeader';
 import { ClinicalTaskPanel } from '@components/ClinicalTaskPanel';
 import type { TaskAction, QuickStat, TaskAlert, PatientStatus } from '@components/ClinicalTaskPanel';
 import { ClinicalTimelineEntry } from '@components/ClinicalTimelineEntry';
-import type { TimelineEntry } from '@components/ClinicalTimelineEntry';
+import type { TimelineEntry, VisitEntry, AppointmentEntry } from '@components/ClinicalTimelineEntry';
 import { PatientPreviewBanner } from './PatientPreviewBanner';
 import { QuickAddRegistration } from './QuickAddRegistration';
 import { PreviewEmptyState } from './PreviewEmptyState';
@@ -46,6 +46,7 @@ interface PatientPreviewPaneProps {
   onCompleteNow: () => void;
   onPreviewRefresh: () => void;
   onStartVisitDirtyChange: (dirty: boolean) => void;
+  onStartVisit?: () => void;
   registrationPid?: number;
   registrationPrefill?: string;
   registrationFormRef?: RefObject<RegistrationFormHandle | null>;
@@ -155,6 +156,7 @@ function buildPanelActions(
   mode: PreviewPaneMode,
   onEditProfile: () => void,
   onCompleteNow: () => void,
+  onStartVisit?: () => void,
 ): TaskAction[] {
   if (!preview || mode === 'registration' || mode === 'registration-pinned') {
     return [];
@@ -166,13 +168,13 @@ function buildPanelActions(
   const belowThreshold = (completion?.score || 0) < threshold;
 
   // Primary action: Start visit or Edit profile
-  if (!preview.active_visit) {
+  if (!preview.active_visit && onStartVisit) {
     actions.push({
       id: 'start-visit',
       label: 'Start visit',
       variant: 'default',
       icon: Play,
-      onClick: () => { /* Wire up start visit logic */ },
+      onClick: onStartVisit,
     });
   }
 
@@ -287,12 +289,14 @@ function buildTimelineEntries(preview: FrontDeskPreviewData | null): TimelineEnt
       entries.push({
         id: `visit-${visit.visit_id || idx}`,
         type: 'visit',
-        date: new Date(), // Would use actual visit date from API
+        date: new Date().toISOString(),
         title: visit.chief_complaint || 'Visit',
         subtitle: visit.visit_state_label || 'Active',
-        preview: visit.chief_complaint ? { label: 'Chief complaint', value: visit.chief_complaint } : undefined,
-        status: visit.visit_state_label,
-      });
+        status: visit.visit_state_label ? {
+          label: visit.visit_state_label,
+          variant: 'default' as const,
+        } : undefined,
+      } as VisitEntry);
     });
   }
 
@@ -301,11 +305,15 @@ function buildTimelineEntries(preview: FrontDeskPreviewData | null): TimelineEnt
     entries.push({
       id: 'appt-today',
       type: 'appointment',
-      date: new Date(), // Would use actual appointment time
+      date: new Date().toISOString(),
       title: preview.appointment_today.time_label || 'Appointment today',
       subtitle: preview.appointment_today.pc_catname || 'Scheduled',
-      status: 'Scheduled',
-    });
+      appointmentStatus: 'scheduled',
+      status: {
+        label: 'Scheduled',
+        variant: 'default' as const,
+      },
+    } as AppointmentEntry);
   }
 
   // Placeholder for future data: medications, labs, etc.
@@ -338,6 +346,7 @@ export function PatientPreviewPane({
   onCompleteNow,
   onPreviewRefresh,
   onStartVisitDirtyChange,
+  onStartVisit,
   registrationPid,
   registrationPrefill,
   registrationFormRef,
@@ -356,8 +365,8 @@ export function PatientPreviewPane({
   // Build clinical panel data from preview
   const patientStatus = useMemo(() => buildPatientStatus(preview), [preview]);
   const panelActions = useMemo(
-    () => buildPanelActions(preview, mode, onEditProfile, onCompleteNow),
-    [preview, mode, onEditProfile, onCompleteNow]
+    () => buildPanelActions(preview, mode, onEditProfile, onCompleteNow, onStartVisit),
+    [preview, mode, onEditProfile, onCompleteNow, onStartVisit]
   );
   const panelStats = useMemo(() => buildPanelStats(preview), [preview]);
   const panelAlerts = useMemo(() => buildPanelAlerts(preview), [preview]);
@@ -448,27 +457,25 @@ export function PatientPreviewPane({
   // ── Clinical Preview Layout ───────────────────────────────────────────────
   // NEW: Use clinical three-zone layout for normal preview mode
   return (
-    <div className="nc-clinical-preview-pane" id="nc-preview-pane">
+    <main className="nc-clinical-preview-pane" id="nc-preview-pane" aria-label="Patient clinical preview">
       {/* Fixed Identity Header */}
-      <ClinicalIdentityHeader
+      <header>
+        <ClinicalIdentityHeader
         identity={{
+          pid: preview.pid,
           display_name: preview.identity.display_name,
-          mrn: preview.identity.mrn,
+          pubpid: preview.identity.mrn,
           dob: preview.identity.dob,
           sex: preview.identity.sex,
           photo_url: preview.identity.photo_url,
         }}
-        allergyChips={preview.safety?.allergies_severe?.map((allergy, idx) => ({
-          id: `allergy-${idx}`,
-          label: allergy,
-          variant: 'critical' as const,
-        })) || []}
+        safety={preview.safety}
         completion={preview.completion}
         visitHistory={{
-          last_visit_date: undefined, // Would come from API expansion
-          visit_count: preview.visits_today?.length || 0,
+          total_visits: preview.visits_today?.length || 0,
+          last_visit_date: undefined,
         }}
-        size="md"
+        photoUrl={preview.identity.photo_url}
       >
         {/* Quick actions in header */}
         <div className="flex items-center gap-2 mt-2">
@@ -478,7 +485,7 @@ export function PatientPreviewPane({
           >
             Edit profile
           </button>
-          {preview.completion.chart_url && (
+          {preview.completion?.chart_url && (
             <a
               href={preview.completion.chart_url}
               className="text-xs font-medium text-[var(--oe-clinical-primary)] hover:text-[var(--oe-clinical-primary-hover)] transition-colors"
@@ -490,11 +497,12 @@ export function PatientPreviewPane({
           )}
         </div>
       </ClinicalIdentityHeader>
+      </header>
 
       {/* Main content area with actions panel */}
       <div className="nc-clinical-preview-content">
         {/* Scrollable Timeline */}
-        <div className="nc-clinical-preview-timeline">
+        <article className="nc-clinical-preview-timeline" aria-label="Clinical timeline">
           {timelineEntries.length > 0 ? (
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-[var(--oe-clinical-text)] mb-2">
@@ -511,17 +519,19 @@ export function PatientPreviewPane({
               </p>
             </div>
           )}
-        </div>
+        </article>
 
         {/* Sticky Actions Panel */}
-        <ClinicalTaskPanel
-          status={patientStatus}
-          actions={panelActions}
-          stats={panelStats}
-          alerts={panelAlerts}
-          sticky
-        />
+        <aside aria-label="Patient tasks and actions">
+          <ClinicalTaskPanel
+            status={patientStatus}
+            actions={panelActions}
+            stats={panelStats}
+            alerts={panelAlerts}
+            sticky
+          />
+        </aside>
       </div>
-    </div>
+    </main>
   );
 }

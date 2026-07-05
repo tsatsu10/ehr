@@ -310,3 +310,6 @@ export function ClinicalTaskPanel({
     </div>
   );
 }
+
+// Export memoized version for performance
+export const MemoizedClinicalTaskPanel = React.memo(ClinicalTaskPanel);

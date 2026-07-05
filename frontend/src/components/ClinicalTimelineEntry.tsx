@@ -338,3 +338,6 @@ export function ClinicalTimelineEntry({
     </div>
   );
 }
+
+// Export memoized version for performance
+export const MemoizedClinicalTimelineEntry = React.memo(ClinicalTimelineEntry);

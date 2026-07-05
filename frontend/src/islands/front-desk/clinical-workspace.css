@@ -240,3 +240,50 @@
     transition: none;
   }
 }
+
+/* ── §10  Clinical Preview Pane Layout ────────────────────────────────────── */
+
+.nc-clinical-preview-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--oe-clinical-bg, #fafaf9);
+}
+
+.nc-clinical-preview-content {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: var(--oe-clinical-space-lg, 1.5rem);
+  padding: var(--oe-clinical-space-lg, 1.5rem);
+  overflow: hidden;
+  flex: 1;
+}
+
+.nc-clinical-preview-timeline {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: var(--oe-clinical-space-md, 1rem);
+  scrollbar-width: thin;
+  scrollbar-color: var(--oe-clinical-border) transparent;
+}
+
+/* Responsive: Two-column for tablet */
+@media (max-width: 1280px) {
+  .nc-clinical-preview-content {
+    grid-template-columns: 1fr;
+    gap: var(--oe-clinical-space-md, 1rem);
+  }
+  
+  /* Task panel becomes bottom sheet or modal on tablet/mobile */
+  .nc-clinical-preview-content > aside {
+    display: none;
+  }
+}
+
+/* Responsive: Single column for mobile */
+@media (max-width: 768px) {
+  .nc-clinical-preview-content {
+    padding: var(--oe-clinical-space-md, 1rem);
+  }
+}
