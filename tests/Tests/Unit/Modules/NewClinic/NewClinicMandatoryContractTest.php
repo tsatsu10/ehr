@@ -170,6 +170,7 @@ class NewClinicMandatoryContractTest extends TestCase
 
         $this->assertStringContainsString('postPatientPayment', $body);
         $this->assertStringContainsString('normalizePaymentMethod', $body);
+        $this->assertStringContainsString('logCompletionOverride', $body);
         $this->assertStringContainsString('issueReceipt', $body);
         $this->assertStringContainsString('posted_payment_id', $receiptBody);
         $this->assertStringContainsString("'completed'", $body);

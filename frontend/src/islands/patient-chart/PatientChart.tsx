@@ -336,6 +336,15 @@ export function PatientChart({
     }
   }, []);
 
+  const scrollToProfileAnchor = useCallback((anchor: string) => {
+    if (anchor === 'profile-payments') {
+      const el = document.getElementById('nc-profile-payments-strip-panel');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, []);
+
   const handleTabChange = useCallback(
     (tab: ChartTabId, anchor?: string) => {
       setActiveTab(tab);
@@ -367,8 +376,17 @@ export function PatientChart({
       } else if (tab === 'clinical' && nextAnchor) {
         scrollToClinicalAnchor(nextAnchor);
       }
-      if (tab === 'profile' && !paymentsLoaded) {
-        void loadPaymentsStrip();
+      if (tab === 'profile') {
+        const scrollProfile = () => {
+          if (anchor) {
+            scrollToProfileAnchor(anchor);
+          }
+        };
+        if (!paymentsLoaded) {
+          void loadPaymentsStrip().then(scrollProfile);
+        } else {
+          scrollProfile();
+        }
       }
       if (tab === 'messages' && !messagesLoaded) {
         void loadMessages(true);
@@ -384,6 +402,7 @@ export function PatientChart({
       paymentsLoaded,
       pendingClinicalAnchor,
       scrollToClinicalAnchor,
+      scrollToProfileAnchor,
       visitsLoaded,
     ]
   );

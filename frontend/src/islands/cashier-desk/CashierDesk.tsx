@@ -112,10 +112,12 @@ export function CashierDesk({
   const [payPaymentMethod, setPayPaymentMethod] = useState<CashierPaymentMethod>('cash');
   const [payMomoReference, setPayMomoReference] = useState('');
   const [payEsignReason, setPayEsignReason] = useState<string | null>(null);
+  const [payCompletionReason, setPayCompletionReason] = useState<string | null>(null);
   const [paySubmitting, setPaySubmitting] = useState(false);
   const clientRequestIdRef = useRef<string | null>(null);
 
   const [esignOpen, setEsignOpen] = useState(false);
+  const [completionOverrideOpen, setCompletionOverrideOpen] = useState(false);
   const [discountOpen, setDiscountOpen] = useState(false);
 
   const [pickVisits, setPickVisits] = useState<CashierResolveData['ready_for_payment']>([]);
@@ -372,7 +374,12 @@ export function CashierDesk({
     setPayPaymentMethod(paymentMethod);
     setPayMomoReference(momoReference);
     setPayEsignReason(null);
+    setPayCompletionReason(null);
     clientRequestIdRef.current = newClientRequestId();
+    if (selectData.completion_blocked && selectData.can_skip_completion) {
+      setCompletionOverrideOpen(true);
+      return;
+    }
     setPayConfirmOpen(true);
   }, [selectData, sharedSession.blocked]);
 
@@ -410,6 +417,7 @@ export function CashierDesk({
         ...(payPaymentMethod === 'momo' ? { momo_reference: payMomoReference } : {}),
         client_request_id: clientRequestIdRef.current,
         ...(payEsignReason ? { esign_override_reason: payEsignReason } : {}),
+        ...(payCompletionReason ? { completion_override_reason: payCompletionReason } : {}),
       },
     });
 
@@ -435,6 +443,7 @@ export function CashierDesk({
     csrfToken,
     facilityId,
     payAmount,
+    payCompletionReason,
     payEsignReason,
     payReceiptNote,
     payPaymentMethod,
@@ -598,6 +607,7 @@ export function CashierDesk({
         momoReference={payMomoReference}
         completionBlocked={!!mergedSelectData?.completion_blocked}
         canSkipCompletion={!!mergedSelectData?.can_skip_completion}
+        completionOverride={!!payCompletionReason}
         esignOverride={!!payEsignReason}
         submitting={paySubmitting}
         onClose={() => setPayConfirmOpen(false)}
@@ -614,6 +624,26 @@ export function CashierDesk({
         onConfirm={(reason) => {
           setPayEsignReason(reason);
           setEsignOpen(false);
+          if (mergedSelectData?.completion_blocked && mergedSelectData?.can_skip_completion) {
+            setCompletionOverrideOpen(true);
+            return;
+          }
+          clientRequestIdRef.current = newClientRequestId();
+          setPayConfirmOpen(true);
+        }}
+      />
+
+      <EsignOverrideModal
+        open={completionOverrideOpen}
+        preview={mergedSelectData?.preview ?? null}
+        visit={mergedSelectData?.visit ?? null}
+        title="Override completion"
+        confirmLabel="Continue to payment"
+        reasonFieldId="nc-cashier-completion-override-reason"
+        onClose={() => setCompletionOverrideOpen(false)}
+        onConfirm={(reason) => {
+          setPayCompletionReason(reason);
+          setCompletionOverrideOpen(false);
           clientRequestIdRef.current = newClientRequestId();
           setPayConfirmOpen(true);
         }}

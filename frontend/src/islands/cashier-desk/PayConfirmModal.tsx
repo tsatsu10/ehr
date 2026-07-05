@@ -13,6 +13,7 @@ interface PayConfirmModalProps {
   momoReference?: string;
   completionBlocked: boolean;
   canSkipCompletion: boolean;
+  completionOverride?: boolean;
   esignOverride?: boolean;
   submitting: boolean;
   onClose: () => void;
@@ -29,6 +30,7 @@ export function PayConfirmModal({
   momoReference = '',
   completionBlocked,
   canSkipCompletion,
+  completionOverride = false,
   esignOverride = false,
   submitting,
   onClose,
@@ -59,7 +61,7 @@ export function PayConfirmModal({
         />
       )}
     >
-      {completionBlocked && canSkipCompletion && (
+      {completionBlocked && canSkipCompletion && completionOverride && (
         <div className={deskCalloutClass('warn', 'text-sm mb-3')}>
           Profile completion override — payment will proceed despite incomplete profile (
           {preview.completion.score}% vs {preview.completion.billing_threshold}% required).

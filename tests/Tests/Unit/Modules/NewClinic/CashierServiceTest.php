@@ -42,6 +42,9 @@ class CashierServiceTest extends TestCase
         $body = implode('', array_slice(explode("\n", $source), $start - 1, $end - $start + 1));
 
         $this->assertStringContainsString('Payment amount must be greater than zero', $body);
+        $this->assertStringContainsString('completionOverrideReason', $body);
+        $this->assertStringContainsString('logCompletionOverride', $body);
+        $this->assertStringContainsString("'billing'", $body);
     }
 
     public function testResolvePatientCheckoutRequiresPid(): void

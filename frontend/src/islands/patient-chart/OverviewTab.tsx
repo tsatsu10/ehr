@@ -147,6 +147,8 @@ function ActivityFeedItemRow({
         case 'tab':
           if (action.target?.startsWith('clinical-')) {
             onNavigateChartSection('clinical', action.target);
+          } else if (action.target === 'profile-payments') {
+            onNavigateChartSection('profile', 'profile-payments');
           } else if (action.target === 'profile') {
             onNavigateChartSection('profile');
           }

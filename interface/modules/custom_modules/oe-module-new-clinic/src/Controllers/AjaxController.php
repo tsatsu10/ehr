@@ -1173,6 +1173,9 @@ class AjaxController
                         (float) ($body['amount_received'] ?? 0),
                         isset($body['receipt_note']) ? (string) $body['receipt_note'] : null,
                         $this->esignOverrideReason($body),
+                        isset($body['completion_override_reason'])
+                            ? (string) $body['completion_override_reason']
+                            : null,
                         isset($body['client_request_id']) ? (string) $body['client_request_id'] : null,
                         isset($body['payment_method']) ? (string) $body['payment_method'] : 'cash',
                         isset($body['momo_reference']) ? (string) $body['momo_reference'] : null,

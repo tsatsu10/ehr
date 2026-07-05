@@ -60,6 +60,9 @@ class PatientActivityFeedServiceTest extends TestCase
         $this->assertStringContainsString('encounter_document_saved', $source);
         $this->assertStringContainsString('completion_override', $source);
         $this->assertStringContainsString('esign_override', $source);
+        $this->assertStringContainsString('canNavigatePaymentHistory', $source);
+        $this->assertStringContainsString('resolveStateSecondaryAction', $source);
+        $this->assertStringContainsString('profile-payments', $source);
         $this->assertStringContainsString('buildFeedSuppressKeys', $source);
         $this->assertStringContainsString('can_extend_lookback', $source);
     }

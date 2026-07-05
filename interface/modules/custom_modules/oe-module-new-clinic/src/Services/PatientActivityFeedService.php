@@ -11,6 +11,7 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
+use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Database\QueryUtils;
 
 class PatientActivityFeedService
@@ -410,7 +411,7 @@ class PatientActivityFeedService
 
         $rows = QueryUtils::fetchRecords(
             "SELECT r.id, r.receipt_number, r.amount_paid, r.created_at, r.visit_id, r.encounter,
-                    v.queue_number, u.fname, u.lname
+                    v.queue_number, v.facility_id, u.fname, u.lname
              FROM new_receipt r
              LEFT JOIN new_visit v ON v.id = r.visit_id
              LEFT JOIN users u ON u.id = r.actor_user_id
@@ -797,10 +798,11 @@ class PatientActivityFeedService
                 'label' => 'Details',
                 'kind' => 'expand',
             ],
-            'secondary_action' => [
-                'label' => 'View on Visit Board',
-                'kind' => 'board',
-            ],
+            'secondary_action' => $this->resolveStateSecondaryAction(
+                $eventType,
+                $visitId,
+                isset($row['visit_state']) ? (string) $row['visit_state'] : null
+            ),
         ];
     }
 
@@ -1025,8 +1027,9 @@ class PatientActivityFeedService
         $receiptNumber = trim((string) ($row['receipt_number'] ?? ''));
         $createdAt = (string) ($row['created_at'] ?? '');
         $cashier = trim(((string) ($row['fname'] ?? '')) . ' ' . ((string) ($row['lname'] ?? '')));
+        $canNavigatePayments = $this->canNavigatePaymentHistory((int) ($row['facility_id'] ?? 0));
 
-        return [
+        $item = [
             'event_type' => 'payment_posted',
             'event_id' => 'payment_posted:' . $visitId . ':' . $receiptId,
             'title' => 'Payment posted',
@@ -1044,12 +1047,26 @@ class PatientActivityFeedService
                 'amount_paid' => $amount,
                 'cashier' => $cashier !== '' ? $cashier : null,
             ],
-            'primary_action' => [
+        ];
+
+        if ($canNavigatePayments) {
+            $item['primary_action'] = [
                 'label' => 'View payments',
                 'kind' => 'tab',
-                'target' => 'profile',
-            ],
-        ];
+                'target' => 'profile-payments',
+            ];
+            $item['secondary_action'] = [
+                'label' => 'Details',
+                'kind' => 'expand',
+            ];
+        } else {
+            $item['primary_action'] = [
+                'label' => 'Details',
+                'kind' => 'expand',
+            ];
+        }
+
+        return $item;
     }
 
     /**
@@ -1280,6 +1297,82 @@ class PatientActivityFeedService
     private function formatStateLabel(string $state): string
     {
         return ucwords(str_replace('_', ' ', $state));
+    }
+
+    private function canNavigatePaymentHistory(int $facilityId): bool
+    {
+        if (!AclMain::aclCheckCore('new_clinic', 'new_chart_depth_finance')) {
+            return false;
+        }
+
+        return $this->config->getInt('enable_chart_depth', 0, $facilityId) === 1
+            && $this->config->getInt('enable_chart_depth_finance', 0, $facilityId) === 1;
+    }
+
+    private function isVisitStillActive(?string $state): bool
+    {
+        if ($state === null || $state === '') {
+            return false;
+        }
+
+        return !in_array($state, ['completed', 'closed_unpaid', 'cancelled'], true);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function resolveStateSecondaryAction(string $eventType, int $visitId, ?string $visitState): ?array
+    {
+        if ($this->isVisitStillActive($visitState)) {
+            if ($eventType === 'lab_complete') {
+                $deskUrl = $this->buildRoleDeskUrl('lab', $visitId);
+
+                return $deskUrl !== '' ? [
+                    'label' => 'Open in Lab Desk',
+                    'kind' => 'core',
+                    'target' => $deskUrl,
+                ] : null;
+            }
+
+            if ($eventType === 'pharmacy_complete') {
+                $deskUrl = $this->buildRoleDeskUrl('pharmacy', $visitId);
+
+                return $deskUrl !== '' ? [
+                    'label' => 'Open in Pharmacy Desk',
+                    'kind' => 'core',
+                    'target' => $deskUrl,
+                ] : null;
+            }
+        }
+
+        return [
+            'label' => 'View on Visit Board',
+            'kind' => 'board',
+        ];
+    }
+
+    private function buildRoleDeskUrl(string $desk, int $visitId): string
+    {
+        if ($visitId <= 0) {
+            return '';
+        }
+
+        $webroot = $GLOBALS['webroot'] ?? '';
+        $page = match ($desk) {
+            'lab' => 'lab.php',
+            'pharmacy' => 'pharmacy.php',
+            default => '',
+        };
+
+        if ($page === '') {
+            return '';
+        }
+
+        return $webroot
+            . '/interface/modules/custom_modules/oe-module-new-clinic/public/'
+            . $page
+            . '?visit_id='
+            . urlencode((string) $visitId);
     }
 
     /**

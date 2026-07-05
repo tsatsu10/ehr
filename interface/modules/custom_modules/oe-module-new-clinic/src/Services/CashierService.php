@@ -26,6 +26,7 @@ class CashierService
         private readonly PatientCompletionService $completionService = new PatientCompletionService(),
         private readonly ClinicConfigService $configService = new ClinicConfigService(),
         private readonly EncounterSignService $signService = new EncounterSignService(),
+        private readonly RevisitCompletionGateService $revisitGate = new RevisitCompletionGateService(),
         private readonly CashierChargeService $chargeService = new CashierChargeService(),
         private readonly ClinicDateService $clinicDate = new ClinicDateService(),
         private readonly BillOpsAccessService $billOpsAccess = new BillOpsAccessService(),
@@ -219,6 +220,7 @@ class CashierService
         float $amountReceived,
         ?string $receiptNote = null,
         ?string $esignOverrideReason = null,
+        ?string $completionOverrideReason = null,
         ?string $clientRequestId = null,
         ?string $paymentMethod = 'cash',
         ?string $momoReference = null,
@@ -261,6 +263,24 @@ class CashierService
             throw new \InvalidArgumentException(
                 'Profile is ' . $completionGate['score'] . '% complete ('
                 . $completionGate['threshold'] . '% required). Missing: ' . $missing
+            );
+        }
+
+        if ($completionGate['blocked'] && $completionGate['can_skip']) {
+            $overrideReason = trim((string) ($completionOverrideReason ?? ''));
+            if ($overrideReason === '') {
+                throw new \InvalidArgumentException(
+                    'Profile incomplete — manager override reason is required before payment'
+                );
+            }
+
+            $this->revisitGate->logCompletionOverride(
+                $pid,
+                $actorUserId,
+                'billing',
+                $completionGate,
+                $overrideReason,
+                $visitId
             );
         }
 

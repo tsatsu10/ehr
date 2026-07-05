@@ -89,13 +89,30 @@ class RevisitCompletionGateService
      */
     public function logOverride(int $pid, int $actorUserId, array $gate, string $reason): void
     {
+        $this->logCompletionOverride($pid, $actorUserId, 'start_visit', $gate, $reason);
+    }
+
+    /**
+     * @param array<string, mixed> $gate
+     */
+    public function logCompletionOverride(
+        int $pid,
+        int $actorUserId,
+        string $chokepoint,
+        array $gate,
+        string $reason,
+        ?int $visitId = null,
+    ): void {
         $payload = [
             'pid' => $pid,
             'actor' => $actorUserId,
-            'chokepoint' => 'start_visit',
+            'chokepoint' => $chokepoint,
             'score' => (int) ($gate['score'] ?? 0),
             'reason' => mb_substr(trim($reason), 0, 200),
         ];
+        if ($visitId !== null && $visitId > 0) {
+            $payload['visit_id'] = $visitId;
+        }
 
         $this->auditRevisitEvent('completion_override', $pid, $actorUserId, $payload);
     }
