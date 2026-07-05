@@ -1,8 +1,19 @@
 import { useEffect, useRef } from 'react';
+import {
+  Activity,
+  AlertTriangle,
+  ClipboardList,
+  FlaskConical,
+  HeartPulse,
+  Pill,
+  Share2,
+  Stethoscope,
+} from 'lucide-react';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { ncShadcnTableClass } from '@components/ncTableStyles';
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
+import { ChartLoadingState, ChartSection, ChartStack } from './chartUi';
 import {
   Table,
   TableBody,
@@ -65,19 +76,23 @@ function ClinicalListSectionBlock({
   }
 
   return (
-    <section className="border rounded p-3 mb-3" id={section.anchor ?? undefined}>
-      <div className="flex justify-between items-start mb-2">
-        <h5 className="mb-0">{title}</h5>
-        {section.editor_url && (
+    <ChartSection
+      id={section.anchor ?? undefined}
+      title={title}
+      icon={<ClipboardList className="h-4 w-4" aria-hidden />}
+      action={
+        section.editor_url ? (
           <Button variant="outline" size="sm" asChild>
             <a href={section.editor_url} target="_top">
               Edit
             </a>
           </Button>
-        )}
-      </div>
+        ) : undefined
+      }
+      bodyClassName="py-3"
+    >
       {body}
-    </section>
+    </ChartSection>
   );
 }
 
@@ -85,17 +100,22 @@ function ClinicalBackground({ section }: { section: ClinicalBackgroundSection })
   const lines = section.lines ?? [];
 
   return (
-    <section className="border rounded p-3 mb-3" id={section.anchor ?? 'clinical-background'}>
-      <div className="flex justify-between items-start mb-2">
-        <h5 className="mb-0">Background</h5>
-        {section.editor_url && (
+    <ChartSection
+      id={section.anchor ?? 'clinical-background'}
+      title="Background"
+      description="Medical history and social context"
+      icon={<Stethoscope className="h-4 w-4" aria-hidden />}
+      action={
+        section.editor_url ? (
           <Button variant="outline" size="sm" asChild>
             <a href={section.editor_url} target="_top">
               Edit history
             </a>
           </Button>
-        )}
-      </div>
+        ) : undefined
+      }
+      bodyClassName="py-3"
+    >
       {lines.length ? (
         <dl className="mb-0">
           {lines.map((line) => (
@@ -108,27 +128,31 @@ function ClinicalBackground({ section }: { section: ClinicalBackgroundSection })
       ) : (
         <p className="text-[var(--oe-nc-text-muted)] mb-0">No background documented.</p>
       )}
-    </section>
+    </ChartSection>
   );
 }
 
 function ClinicalVitals({ section }: { section: ClinicalVitalsSection }) {
   return (
-    <section className="border rounded p-3 mb-3" id={section.anchor ?? 'clinical-vitals'}>
-      <h5 className="mb-2">Vitals today</h5>
+    <ChartSection
+      id={section.anchor ?? 'clinical-vitals'}
+      title="Vitals today"
+      icon={<HeartPulse className="h-4 w-4" aria-hidden />}
+      bodyClassName="py-3"
+    >
       {section.summary ? (
         <>
-          <div>
+          <p className="mb-0 text-sm font-medium text-[var(--oe-nc-text)]">
             {section.summary}
             {section.pain_score !== null &&
               section.pain_score !== undefined &&
               section.pain_score !== '' &&
               ` · Pain ${section.pain_score}`}
-          </div>
+          </p>
           {section.abnormal && (section.warnings ?? []).length > 0 && (
-            <div className="mt-2">
+            <div className="mt-2 flex flex-wrap gap-1">
               {(section.warnings ?? []).map((w) => (
-                <Badge key={w} variant="danger" className="mr-1">
+                <Badge key={w} variant="danger">
                   {w}
                 </Badge>
               ))}
@@ -138,7 +162,7 @@ function ClinicalVitals({ section }: { section: ClinicalVitalsSection }) {
       ) : (
         <p className="text-[var(--oe-nc-text-muted)] mb-0">No vitals recorded today.</p>
       )}
-    </section>
+    </ChartSection>
   );
 }
 
@@ -148,17 +172,23 @@ function ClinicalThisVisit({ section }: { section: ClinicalThisVisitSection }) {
   const forms = section.forms ?? [];
 
   return (
-    <section className="border rounded p-3 mb-3" id={section.anchor ?? 'clinical-encounter-forms'}>
-      <div className="flex justify-between items-start mb-2 flex-wrap">
-        <h5 className="mb-0">This visit</h5>
-        {section.open_encounter_url && (
+    <ChartSection
+      id={section.anchor ?? 'clinical-encounter-forms'}
+      title="This visit"
+      description="Encounter forms and documentation"
+      icon={<Activity className="h-4 w-4" aria-hidden />}
+      variant="accent"
+      action={
+        section.open_encounter_url ? (
           <Button size="sm" asChild>
             <a href={section.open_encounter_url} target="_top">
               Open encounter
             </a>
           </Button>
-        )}
-      </div>
+        ) : undefined
+      }
+      bodyClassName="py-3"
+    >
       {forms.length ? (
         <div className="overflow-x-auto">
           <Table className={ncShadcnTableClass({ className: 'mb-0' })}>
@@ -197,7 +227,7 @@ function ClinicalThisVisit({ section }: { section: ClinicalThisVisitSection }) {
       ) : (
         <p className="text-[var(--oe-nc-text-muted)] mb-0">No encounter forms recorded yet.</p>
       )}
-    </section>
+    </ChartSection>
   );
 }
 
@@ -214,21 +244,24 @@ function ReferralsStrip({
     : 'Referrals on file for this visit.';
 
   return (
-    <section className="border rounded p-3 mb-3 bg-[var(--oe-nc-bg-tint)]" id="nc-clinical-referrals-strip">
-      <div className="flex flex-wrap justify-between items-start">
-        <div className="flex-grow mb-2 md:mb-0">
-          <h5 className="mb-1">Referrals</h5>
-          <div className="text-sm">→ {summary}</div>
-        </div>
-        {strip.open_referrals_url && (
+    <ChartSection
+      id="nc-clinical-referrals-strip"
+      title="Referrals"
+      icon={<Share2 className="h-4 w-4" aria-hidden />}
+      variant="muted"
+      action={
+        strip.open_referrals_url ? (
           <Button variant="outline" size="sm" asChild>
             <a href={strip.open_referrals_url} target="_top">
               Open referrals
             </a>
           </Button>
-        )}
-      </div>
-    </section>
+        ) : undefined
+      }
+      bodyClassName="py-3"
+    >
+      <p className="mb-0 text-sm text-[var(--oe-nc-text-muted)]">{summary}</p>
+    </ChartSection>
   );
 }
 
@@ -241,52 +274,59 @@ function LabsStrip({
 }) {
   if (strip.hidden) return null;
 
+  const actions = (
+    <div className="flex flex-wrap gap-2">
+      {strip.lab_ops_url && (
+        <Button variant="outline" size="sm" asChild>
+          <a href={strip.lab_ops_url} target="_top">
+            Open in Lab Ops
+          </a>
+        </Button>
+      )}
+      {strip.place_order_url && (
+        <Button variant="outline" size="sm" asChild>
+          <a href={strip.place_order_url} target="_top">
+            Place lab order
+          </a>
+        </Button>
+      )}
+      {strip.pending_orders_url && (
+        <Button variant="outline" size="sm" asChild>
+          <a href={strip.pending_orders_url} target="_top">
+            Pending orders
+          </a>
+        </Button>
+      )}
+      {strip.view_trends_anchor && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onScrollToAnchor(strip.view_trends_anchor ?? '')}
+        >
+          View trends
+        </Button>
+      )}
+    </div>
+  );
+
   return (
-    <section
-      className={`border rounded p-3 mb-3 bg-[var(--oe-nc-bg-tint)]${strip.pending_warning ? ' border-warning' : ''}`}
+    <ChartSection
       id="nc-clinical-labs-strip"
+      title="Labs"
+      description={strip.labs_strip_label ?? 'Labs on file for this visit.'}
+      icon={<FlaskConical className="h-4 w-4" aria-hidden />}
+      variant={strip.pending_warning ? 'alert' : 'muted'}
+      action={actions}
+      bodyClassName="py-3"
     >
-      <div className="flex flex-wrap justify-between items-start">
-        <div className="flex-grow mb-2 md:mb-0">
-          <h5 className="mb-1">Labs</h5>
-          <div className="text-sm">{strip.labs_strip_label ?? 'Labs on file for this visit.'}</div>
-        </div>
-        <div className="flex flex-wrap">
-          {strip.lab_ops_url && (
-            <Button variant="outline" size="sm" className="mr-2 mb-1" asChild>
-              <a href={strip.lab_ops_url} target="_top">
-                Open in Lab Ops
-              </a>
-            </Button>
-          )}
-          {strip.place_order_url && (
-            <Button variant="outline" size="sm" className="mr-2 mb-1" asChild>
-              <a href={strip.place_order_url} target="_top">
-                Place lab order
-              </a>
-            </Button>
-          )}
-          {strip.pending_orders_url && (
-            <Button variant="outline" size="sm" className="mr-2 mb-1" asChild>
-              <a href={strip.pending_orders_url} target="_top">
-                Pending orders
-              </a>
-            </Button>
-          )}
-          {strip.view_trends_anchor && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mb-1"
-              onClick={() => onScrollToAnchor(strip.view_trends_anchor ?? '')}
-            >
-              View trends
-            </Button>
-          )}
-        </div>
-      </div>
-    </section>
+      {strip.pending_warning && (
+        <p className="mb-0 flex items-center gap-2 text-sm text-[var(--color-oe-warning,#d97706)]">
+          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
+          Pending lab orders need follow-up.
+        </p>
+      )}
+    </ChartSection>
   );
 }
 
@@ -299,38 +339,45 @@ function MedsStrip({
 }) {
   if (strip.hidden) return null;
 
+  const actions = (
+    <div className="flex flex-wrap gap-2">
+      {strip.pharm_ops_url && (
+        <Button variant="outline" size="sm" asChild>
+          <a href={strip.pharm_ops_url} target="_top">
+            Open in Pharm Ops
+          </a>
+        </Button>
+      )}
+      {strip.view_meds_anchor && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onScrollToAnchor(strip.view_meds_anchor ?? '')}
+        >
+          View meds
+        </Button>
+      )}
+    </div>
+  );
+
   return (
-    <section
-      className={`border rounded p-3 mb-3 bg-[var(--oe-nc-bg-tint)]${strip.undispensed_warning ? ' border-warning' : ''}`}
+    <ChartSection
       id="nc-clinical-meds-strip"
+      title="Medications"
+      description={strip.meds_strip_label ?? 'Medications on file for this visit.'}
+      icon={<Pill className="h-4 w-4" aria-hidden />}
+      variant={strip.undispensed_warning ? 'alert' : 'muted'}
+      action={actions}
+      bodyClassName="py-3"
     >
-      <div className="flex flex-wrap justify-between items-start">
-        <div className="flex-grow mb-2 md:mb-0">
-          <h5 className="mb-1">Medications</h5>
-          <div className="text-sm">{strip.meds_strip_label ?? 'Medications on file for this visit.'}</div>
-        </div>
-        <div className="flex flex-wrap">
-          {strip.pharm_ops_url && (
-            <Button variant="outline" size="sm" className="mr-2 mb-1" asChild>
-              <a href={strip.pharm_ops_url} target="_top">
-                Open in Pharm Ops
-              </a>
-            </Button>
-          )}
-          {strip.view_meds_anchor && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mb-1"
-              onClick={() => onScrollToAnchor(strip.view_meds_anchor ?? '')}
-            >
-              View meds
-            </Button>
-          )}
-        </div>
-      </div>
-    </section>
+      {strip.undispensed_warning && (
+        <p className="mb-0 flex items-center gap-2 text-sm text-[var(--color-oe-warning,#d97706)]">
+          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
+          Undispensed medications on this visit.
+        </p>
+      )}
+    </ChartSection>
   );
 }
 
@@ -353,7 +400,7 @@ export function ClinicalTab({
   }, [clinicalAnchor, data, onScrollToAnchor]);
 
   if (loading) {
-    return <em>Loading clinical summary…</em>;
+    return <ChartLoadingState label="Loading clinical summary…" />;
   }
 
   if (error) {
@@ -365,7 +412,7 @@ export function ClinicalTab({
   const immunizations = data.immunizations;
 
   return (
-    <>
+    <ChartStack>
       <ClinicalBackground section={data.background ?? {}} />
       <ClinicalListSectionBlock
         title="Problems"
@@ -395,6 +442,6 @@ export function ClinicalTab({
       {medsStrip && <MedsStrip strip={medsStrip} onScrollToAnchor={onScrollToAnchor} />}
       <ClinicalVitals section={data.vitals ?? {}} />
       <ClinicalThisVisit section={data.this_visit ?? {}} />
-    </>
+    </ChartStack>
   );
 }

@@ -1,7 +1,23 @@
 import { useCallback, useState } from 'react';
+import {
+  Activity,
+  AlertTriangle,
+  ChevronRight,
+  HeartPulse,
+  History,
+  LayoutGrid,
+  ShieldAlert,
+} from 'lucide-react';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
+import { cn } from '@/lib/utils';
+import {
+  ChartEmptyState,
+  ChartMetricTile,
+  ChartSection,
+  ChartStack,
+} from './chartUi';
 import type {
   ActivityFeedAction,
   ActivityFeedItem,
@@ -28,28 +44,39 @@ function ActionRequired({ items }: { items: ChartActionRequired[] }) {
   if (!items.length) return null;
 
   return (
-    <div className="mb-3">
-      <h6 className="mb-2">Action required</h6>
-      {items.map((item, idx) => (
-        <div
-          key={`${item.title ?? 'action'}-${idx}`}
-          className="flex flex-wrap items-start border rounded p-2 mb-2 bg-[var(--oe-nc-bg-tint)]"
-        >
-          <div className="flex-grow">
-            {item.badge && <Badge variant="warning" className="mr-2">{item.badge}</Badge>}
-            <strong>{item.title ?? 'Action required'}</strong>
-            {item.message && <div className="text-sm text-[var(--oe-nc-text-muted)]">{item.message}</div>}
+    <ChartSection
+      title="Action required"
+      description="Items needing attention before this visit can proceed"
+      icon={<AlertTriangle className="h-4 w-4" aria-hidden />}
+      variant="alert"
+    >
+      <div className="space-y-2">
+        {items.map((item, idx) => (
+          <div
+            key={`${item.title ?? 'action'}-${idx}`}
+            className="nc-chart-action-card flex flex-wrap items-start gap-3 p-3"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                {item.badge && <Badge variant="warning">{item.badge}</Badge>}
+                <strong className="text-sm">{item.title ?? 'Action required'}</strong>
+              </div>
+              {item.message && (
+                <div className="mt-1 text-sm text-[var(--oe-nc-text-muted)]">{item.message}</div>
+              )}
+            </div>
+            {item.action_url && (
+              <Button variant="outline" size="sm" asChild>
+                <a href={item.action_url} target="_top">
+                  Open encounter
+                  <ChevronRight className="ml-1 h-4 w-4" aria-hidden />
+                </a>
+              </Button>
+            )}
           </div>
-          {item.action_url && (
-            <Button variant="outline" size="sm" className="ml-2" asChild>
-              <a href={item.action_url} target="_top">
-                Open encounter
-              </a>
-            </Button>
-          )}
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </ChartSection>
   );
 }
 
@@ -57,12 +84,12 @@ function renderExpandDetail(item: ActivityFeedItem): React.ReactNode {
   const expand = item.expand ?? {};
 
   if (item.event_type === 'vitals_saved' && expand.summary) {
-    return <div className="text-sm mt-1">{expand.summary}</div>;
+    return <div className="text-sm">{expand.summary}</div>;
   }
 
   if (item.event_type === 'lab_result_ready' && expand.procedure_name) {
     return (
-      <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">
+      <div className="text-sm text-[var(--oe-nc-text-muted)]">
         {expand.procedure_name}
         {item.queue_number ? ` · Queue #${item.queue_number}` : ''}
       </div>
@@ -71,7 +98,7 @@ function renderExpandDetail(item: ActivityFeedItem): React.ReactNode {
 
   if (item.event_type === 'pharmacy_dispensed' && expand.drug_name) {
     return (
-      <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">
+      <div className="text-sm text-[var(--oe-nc-text-muted)]">
         {expand.drug_name}
         {item.queue_number ? ` · Queue #${item.queue_number}` : ''}
       </div>
@@ -80,7 +107,7 @@ function renderExpandDetail(item: ActivityFeedItem): React.ReactNode {
 
   if (expand.to_state || expand.from_state) {
     return (
-      <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">
+      <div className="text-sm text-[var(--oe-nc-text-muted)]">
         Queue #{item.queue_number ?? '—'}
         {expand.from_state ? ` · ${formatStateLabel(String(expand.from_state))}` : ''}
         {expand.to_state ? ` → ${formatStateLabel(String(expand.to_state))}` : ''}
@@ -90,16 +117,16 @@ function renderExpandDetail(item: ActivityFeedItem): React.ReactNode {
   }
 
   if (expand.procedure_name) {
-    return <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">{expand.procedure_name}</div>;
+    return <div className="text-sm text-[var(--oe-nc-text-muted)]">{expand.procedure_name}</div>;
   }
 
   if (expand.drug_name) {
-    return <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">{expand.drug_name}</div>;
+    return <div className="text-sm text-[var(--oe-nc-text-muted)]">{expand.drug_name}</div>;
   }
 
   if (item.event_type === 'encounter_document_saved') {
     return (
-      <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">
+      <div className="text-sm text-[var(--oe-nc-text-muted)]">
         {expand.form_title ?? 'Clinical form'}
         {expand.author ? ` · ${expand.author}` : ''}
         {expand.saved_at ? ` · ${expand.saved_at}` : ''}
@@ -109,7 +136,7 @@ function renderExpandDetail(item: ActivityFeedItem): React.ReactNode {
 
   if (item.event_type === 'completion_override' || item.event_type === 'esign_override') {
     return (
-      <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">
+      <div className="text-sm text-[var(--oe-nc-text-muted)]">
         {expand.chokepoint ? `Chokepoint: ${expand.chokepoint.replace(/_/g, ' ')}` : null}
         {expand.score ? ` · Score ${expand.score}%` : null}
         {expand.reason ? ` · ${expand.reason}` : ' · Reason not recorded'}
@@ -172,14 +199,23 @@ function ActivityFeedItemRow({
 
   const primary = item.primary_action;
   const secondary = item.secondary_action;
-  const showInline = expanded || primary?.kind === 'expand';
+  const detail = renderExpandDetail(item);
+  const showInline = expanded || (primary?.kind === 'expand' && detail);
 
   return (
-    <div className="border-bottom py-2 nc-activity-feed-item" data-event-type={item.event_type ?? ''}>
+    <article
+      className={cn(
+        'nc-chart-feed-item nc-activity-feed-item',
+        expanded && 'nc-chart-feed-item--expanded',
+      )}
+      data-event-type={item.event_type ?? ''}
+    >
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="flex-grow min-w-0">
-          <strong className="text-sm">{item.title ?? '—'}</strong>
-          {item.subtitle && <div className="text-sm text-[var(--oe-nc-text-muted)]">{item.subtitle}</div>}
+        <div className="min-w-0 flex-1">
+          <strong className="text-sm text-[var(--oe-nc-text)]">{item.title ?? '—'}</strong>
+          {item.subtitle && (
+            <div className="mt-0.5 text-sm text-[var(--oe-nc-text-muted)]">{item.subtitle}</div>
+          )}
         </div>
         <div className="flex flex-wrap gap-1">
           {primary?.label && (
@@ -187,6 +223,7 @@ function ActivityFeedItemRow({
               type="button"
               variant="outline"
               size="sm"
+              className="cursor-pointer"
               onClick={() => handleAction(primary)}
             >
               {primary.label}
@@ -197,6 +234,7 @@ function ActivityFeedItemRow({
               type="button"
               variant="ghost"
               size="sm"
+              className="cursor-pointer"
               onClick={() => handleAction(secondary)}
             >
               {secondary.label}
@@ -204,8 +242,21 @@ function ActivityFeedItemRow({
           )}
         </div>
       </div>
-      {showInline && renderExpandDetail(item)}
-    </div>
+      {detail && (
+        <div
+          className={cn(
+            'nc-chart-feed-item__detail',
+            showInline && 'nc-chart-feed-item__detail--open',
+          )}
+        >
+          <div className="nc-chart-feed-item__detail-inner">
+            {showInline && (
+              <div className="nc-chart-feed-item__detail-content">{detail}</div>
+            )}
+          </div>
+        </div>
+      )}
+    </article>
   );
 }
 
@@ -239,66 +290,96 @@ export function OverviewTab({
   }, []);
 
   return (
-    <>
+    <ChartStack>
       {preview.pediatric_dob_block && (
-        <div className={deskCalloutClass('warn', 'py-2')}>Estimated DOB — verify for patients under 5.</div>
+        <div className={deskCalloutClass('warn', 'py-2')}>
+          Estimated DOB — verify for patients under 5.
+        </div>
       )}
 
       {active?.visit_id ? (
-        <div className="border rounded p-3 mb-3 bg-[var(--oe-nc-bg-tint)]">
-          <h5 className="mb-2">Today&apos;s visit</h5>
-          <div>
-            <strong>#{active.queue_number}</strong> · {formatStateLabel(active.state)}
-            {visitBoardUrl && (
-              <Button variant="outline" size="sm" className="ml-2" asChild>
+        <ChartSection
+          title="Today's visit"
+          description="Active queue status and chief complaint"
+          icon={<LayoutGrid className="h-4 w-4" aria-hidden />}
+          variant="accent"
+          action={
+            visitBoardUrl ? (
+              <Button variant="outline" size="sm" asChild>
                 <a href={visitBoardUrl}>
                   Open visit board
+                  <ChevronRight className="ml-1 h-4 w-4" aria-hidden />
                 </a>
               </Button>
+            ) : undefined
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ChartMetricTile
+              label="Queue"
+              value={`#${active.queue_number}`}
+              hint={formatStateLabel(active.state ?? '')}
+            />
+            {active.chief_complaint && (
+              <ChartMetricTile
+                label="Chief complaint"
+                value={active.chief_complaint}
+              />
             )}
           </div>
-          {active.chief_complaint && (
-            <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">CC: {active.chief_complaint}</div>
-          )}
-        </div>
+        </ChartSection>
       ) : (
-        <div className="border rounded p-3 mb-3 text-[var(--oe-nc-text-muted)]">No active visit today.</div>
+        <ChartEmptyState
+          title="No active visit today."
+          description="Start a visit from Front Desk or the Visit Board when the patient arrives."
+        />
       )}
 
       <ActionRequired items={preview.action_required ?? []} />
 
-      {vitals.summary ? (
-        <div className="border rounded p-3 mb-3">
-          <h6 className="mb-2">Vitals today</h6>
-          <div>
-            {vitals.summary}
+      <ChartSection
+        title="Vitals today"
+        icon={<HeartPulse className="h-4 w-4" aria-hidden />}
+        bodyClassName={vitals.summary ? undefined : 'py-2'}
+      >
+        {vitals.summary ? (
+          <>
+            <p className="mb-0 text-sm font-medium text-[var(--oe-nc-text)]">{vitals.summary}</p>
             {vitals.pain_score !== null &&
               vitals.pain_score !== undefined &&
-              vitals.pain_score !== '' &&
-              ` · Pain ${vitals.pain_score}`}
-          </div>
-          {vitals.vitals_abnormal_today && (vitals.vitals_breach_list ?? []).length > 0 && (
-            <div className="mt-2">
-              {(vitals.vitals_breach_list ?? []).map((w) => (
-                <Badge key={w} variant="danger" className="mr-1">
-                  {w}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="border rounded p-3 mb-3 text-[var(--oe-nc-text-muted)] text-sm">No vitals recorded today.</div>
-      )}
-
-      <div className="mb-3">
-        <h6 className="mb-2">
-          Recent activity <span className="text-[var(--oe-nc-text-muted)] text-sm">({lookbackDays}d)</span>
-        </h6>
-        {activityItems.length === 0 ? (
-          <p className="text-[var(--oe-nc-text-muted)] text-sm mb-0">No recent visit activity.</p>
+              vitals.pain_score !== '' && (
+                <p className="mb-0 mt-1 text-sm text-[var(--oe-nc-text-muted)]">
+                  Pain score {vitals.pain_score}
+                </p>
+              )}
+            {vitals.vitals_abnormal_today && (vitals.vitals_breach_list ?? []).length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {(vitals.vitals_breach_list ?? []).map((w) => (
+                  <Badge key={w} variant="danger">
+                    {w}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </>
         ) : (
-          <div id="nc-chart-activity-feed-list">
+          <ChartEmptyState
+            title="No vitals recorded today"
+            description="Record vitals from Triage or the clinical encounter."
+          />
+        )}
+      </ChartSection>
+
+      <ChartSection
+        title="Recent activity"
+        description={`Timeline from the last ${lookbackDays} days`}
+        icon={<Activity className="h-4 w-4" aria-hidden />}
+        bodyClassName="pt-2"
+      >
+        {activityItems.length === 0 ? (
+          <ChartEmptyState title="No recent visit activity" />
+        ) : (
+          <div id="nc-chart-activity-feed-list" className="nc-chart-feed-list">
             {activityItems.map((item, idx) => {
               const rowKey = item.event_id ?? `${item.event_type ?? 'evt'}-${idx}`;
               return (
@@ -319,55 +400,74 @@ export function OverviewTab({
             type="button"
             variant="outline"
             size="sm"
-            className="mt-2"
+            className="mt-3 cursor-pointer"
             disabled={loadingMore}
             onClick={onLoadMoreActivity}
           >
-            Load more
+            {loadingMore ? 'Loading…' : 'Load more'}
           </Button>
         )}
         {!activityHasMore && olderHistoryMessage && (
-          <p className="text-sm text-[var(--oe-nc-text-muted)] mt-2 mb-0">{olderHistoryMessage}</p>
+          <p className="mb-0 mt-3 text-sm text-[var(--oe-nc-text-muted)]">{olderHistoryMessage}</p>
         )}
-      </div>
+      </ChartSection>
 
       {last.label && (
-        <div className="mb-3">
-          <strong>Last visit:</strong> {last.label}
-        </div>
+        <ChartSection
+          title="Last visit"
+          icon={<History className="h-4 w-4" aria-hidden />}
+          variant="muted"
+          bodyClassName="py-3"
+        >
+          <p className="mb-0 text-sm">{last.label}</p>
+        </ChartSection>
       )}
 
       {(safety.allergies_undocumented || (safety.allergies_severe ?? []).length > 0) && (
-        <div className="mb-3">
-          <h6 className="mb-2">Safety</h6>
-          {safety.allergies_undocumented && (
-            <Badge variant="warning" className="mr-1">Allergies undocumented</Badge>
+        <ChartSection
+          title="Safety"
+          icon={<ShieldAlert className="h-4 w-4" aria-hidden />}
+          variant="alert"
+        >
+          <div className="flex flex-wrap gap-1">
+            {safety.allergies_undocumented && (
+              <Badge variant="warning">Allergies undocumented</Badge>
+            )}
+            {(safety.allergies_severe ?? []).map((title) => (
+              <Badge key={title} variant="danger">
+                {title}
+              </Badge>
+            ))}
+          </div>
+          {!!safety.problem_count && (
+            <p className="mb-0 mt-2 text-sm text-[var(--oe-nc-text-muted)]">
+              Active problems: {safety.problem_count}
+            </p>
           )}
-          {(safety.allergies_severe ?? []).map((title) => (
-            <Badge key={title} variant="danger" className="mr-1">
-              {title}
-            </Badge>
-          ))}
+        </ChartSection>
+      )}
+
+      <ChartSection title="Profile readiness" variant="muted">
+        {(completion.missing_labels ?? []).length > 0 && (
+          <p className="mb-3 text-sm text-[var(--oe-nc-text-muted)]">
+            Missing for billing: {(completion.missing_labels ?? []).slice(0, 3).join(', ')}
+            {(completion.missing_labels ?? []).length > 3 ? '…' : ''}
+          </p>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <CompletionPill score={completion.score} threshold={completion.billing_threshold} />
+          <Button
+            type="button"
+            variant="link"
+            size="sm"
+            className="h-auto cursor-pointer p-0"
+            onClick={onEditProfile}
+          >
+            Edit profile
+            <ChevronRight className="ml-0.5 h-4 w-4" aria-hidden />
+          </Button>
         </div>
-      )}
-
-      {!!safety.problem_count && (
-        <div className="mb-3 text-sm text-[var(--oe-nc-text-muted)]">Active problems: {safety.problem_count}</div>
-      )}
-
-      {(completion.missing_labels ?? []).length > 0 && (
-        <div className="mb-3 text-sm text-[var(--oe-nc-text-muted)]">
-          Missing for billing: {(completion.missing_labels ?? []).slice(0, 3).join(', ')}
-          {(completion.missing_labels ?? []).length > 3 ? '…' : ''}
-        </div>
-      )}
-
-      <div className="flex items-center flex-wrap">
-        <CompletionPill score={completion.score} threshold={completion.billing_threshold} />
-        <Button type="button" variant="link" size="sm" className="ml-2 h-auto p-0" onClick={onEditProfile}>
-          Edit profile
-        </Button>
-      </div>
-    </>
+      </ChartSection>
+    </ChartStack>
   );
 }

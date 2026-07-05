@@ -1,3 +1,6 @@
+import { CheckCircle2, Circle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { ChartSection } from './chartUi';
 import type { PatientCompletion } from '@core/types';
 import type { ChecklistLevel } from './patientChartTypes';
 
@@ -13,27 +16,43 @@ export function ProfileChecklist({ levels, completion }: ProfileChecklistProps) 
   const score = completion.score ?? 0;
 
   return (
-    <div className="nc-profile-checklist mb-3">
-      <h5 className="mb-2">
-        Profile completion{' '}
-        <span className="text-[var(--oe-nc-text-muted)] text-sm">
-          ({score}% · {threshold}% for billing)
-        </span>
-      </h5>
+    <ChartSection
+      title="Profile completion"
+      description={`${score}% complete · ${threshold}% required for billing`}
+      variant="muted"
+    >
       <div className="grid grid-cols-12 gap-3">
         {levels.map((level) => (
-          <div key={level.label} className="col-span-12 md:col-span-6 lg:col-span-3 mb-2">
-            <div className={`border rounded p-2 h-full${level.complete ? ' bg-[var(--oe-nc-bg-tint)]' : ''}`}>
-              <strong>
-                {level.complete ? '✓' : '○'} {level.label}
-              </strong>
-              <ul className="list-none m-0 p-0 mb-0 mt-1 pl-2">
+          <div key={level.label} className="col-span-12 md:col-span-6 lg:col-span-3">
+            <div
+              className={cn(
+                'nc-profile-checklist-card h-full p-3',
+                level.complete && 'nc-profile-checklist-card--complete',
+              )}
+            >
+              <div className="flex items-center gap-2">
+                {level.complete ? (
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--color-oe-cta,#047857)]" aria-hidden />
+                ) : (
+                  <Circle className="h-4 w-4 shrink-0 text-[var(--oe-nc-text-muted)]" aria-hidden />
+                )}
+                <strong className="text-sm">{level.label}</strong>
+              </div>
+              <ul className="m-0 mt-2 list-none space-y-1 p-0 pl-1">
                 {(level.fields ?? []).map((field) => (
                   <li
                     key={field.label}
-                    className={`text-sm ${field.complete ? 'text-green-600' : 'text-[var(--oe-nc-text-muted)]'}`}
+                    className={cn(
+                      'flex items-start gap-1.5 text-sm',
+                      field.complete ? 'text-[var(--color-oe-cta,#047857)]' : 'text-[var(--oe-nc-text-muted)]',
+                    )}
                   >
-                    {field.complete ? '✓' : '○'} {field.label}
+                    {field.complete ? (
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                    ) : (
+                      <Circle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                    )}
+                    <span>{field.label}</span>
                   </li>
                 ))}
               </ul>
@@ -41,6 +60,6 @@ export function ProfileChecklist({ levels, completion }: ProfileChecklistProps) 
           </div>
         ))}
       </div>
-    </div>
+    </ChartSection>
   );
 }

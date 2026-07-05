@@ -1,12 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ClipboardList,
+  Download,
+  LayoutGrid,
+} from 'lucide-react';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
-import { WidgetCard } from '@components/WidgetCard';
 import { SegmentedControl } from '@components/SegmentedControl';
 import { Button } from '@components/ui/button';
+import { Card, CardContent } from '@components/ui/card';
 import { oeFetch } from '@core/oeFetch';
 import { ChartBanner } from './ChartBanner';
 import { ChartInChartSearch } from './ChartInChartSearch';
 import { ClinicalTab } from './ClinicalTab';
+import {
+  ChartLoadingState,
+  ChartShell,
+  ChartShellHeader,
+  ChartStickyTabs,
+  ChartTabPanel,
+} from './chartUi';
 import { MessagesTab } from './MessagesTab';
 import { OverviewTab } from './OverviewTab';
 import { ProfileTab } from './ProfileTab';
@@ -468,71 +480,77 @@ export function PatientChart({
     };
   }, [activeTab, preview?.active_visit?.visit_id, reloadContext]);
 
+  const tabSegments = CHART_TAB_IDS.map((tab) => ({
+    id: tab,
+    label: TAB_LABELS[tab],
+  }));
+
   return (
     <div className="nc-patient-chart" id="nc-patient-chart" data-pid={pid}>
-      <WidgetCard
-        className="mb-3"
-        title="Patient chart"
-        headerClassName="flex justify-between items-center flex-wrap"
-        bodyPad="pad"
-        actions={(
-          <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
-            {exportChartUrl && (
-              <Button variant="outline" size="sm" asChild>
-                <a href={exportChartUrl} target="_top">
-                  Export chart
-                </a>
-              </Button>
+      <Card className="overflow-hidden border-[var(--oe-nc-border)] shadow-[var(--oe-nc-shadow-md)]">
+        <CardContent className="p-4 md:p-5">
+          <ChartShell>
+            <ChartShellHeader
+              title="Medical record"
+              subtitle="Patient chart · overview, profile, visits, and clinical summary"
+              actions={(
+                <>
+                  {exportChartUrl && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={exportChartUrl} target="_top">
+                        <Download className="mr-1.5 h-4 w-4" aria-hidden />
+                        Export
+                      </a>
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={frontDeskUrl} target="_top">
+                      <ClipboardList className="mr-1.5 h-4 w-4" aria-hidden />
+                      Front Desk
+                    </a>
+                  </Button>
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={visitBoardUrl} target="_top">
+                      <LayoutGrid className="mr-1.5 h-4 w-4" aria-hidden />
+                      Visit Board
+                    </a>
+                  </Button>
+                </>
+              )}
+            />
+
+            <div id="nc-chart-banner">
+              {previewLoading && !preview && <ChartLoadingState label="Loading patient…" />}
+              {previewError && <div className={deskCalloutClass('error')}>{previewError}</div>}
+              {preview && <ChartBanner preview={preview} />}
+            </div>
+
+            {enableInChartPatientSearch && (
+              <ChartInChartSearch
+                ajaxUrl={ajaxUrl}
+                csrfToken={csrfToken}
+                pid={pid}
+                onNavigate={navigateToChartSection}
+              />
             )}
-            <Button variant="outline" size="sm" asChild>
-              <a href={frontDeskUrl} target="_top">
-                Front Desk
-              </a>
-            </Button>
-            <Button variant="outline" size="sm" asChild>
-              <a href={visitBoardUrl} target="_top">
-                Visit Board
-              </a>
-            </Button>
-          </div>
-        )}
-      >
-        <div id="nc-chart-banner" className="mb-3">
-          {previewLoading && !preview && <em>Loading patient…</em>}
-          {previewError && <div className={deskCalloutClass('error')}>{previewError}</div>}
-          {preview && <ChartBanner preview={preview} />}
-        </div>
 
-        {enableInChartPatientSearch && (
-          <ChartInChartSearch
-            ajaxUrl={ajaxUrl}
-            csrfToken={csrfToken}
-            pid={pid}
-            onNavigate={navigateToChartSection}
-          />
-        )}
+            <ChartStickyTabs>
+              <div id="nc-chart-tabs" className="nc-chart-tabs">
+                <SegmentedControl
+                  segments={tabSegments}
+                  value={activeTab}
+                  onChange={(id) => {
+                    handleTabChange(id as ChartTabId);
+                  }}
+                  ariaLabel="Chart sections"
+                  className="w-full max-w-full flex-wrap"
+                />
+              </div>
+            </ChartStickyTabs>
 
-        <div id="nc-chart-tabs">
-          <SegmentedControl
-            segments={CHART_TAB_IDS.map((tab) => ({ id: tab, label: TAB_LABELS[tab] }))}
-            value={activeTab}
-            onChange={(id) => {
-              handleTabChange(id as ChartTabId);
-            }}
-            ariaLabel="Chart sections"
-            className="mb-3"
-          />
-        </div>
-
-        <div className="nc-tab-content" id="nc-chart-tab-panes">
-          <div
-            className={activeTab === 'overview' ? 'nc-tab-pane' : 'nc-tab-pane hidden'}
-            id="nc-chart-tab-overview"
-            role="tabpanel"
-          >
-            {activeTab === 'overview' && (
-              <>
-                {previewLoading && !preview && <em>Loading overview…</em>}
+            <div className="nc-tab-content" id="nc-chart-tab-panes">
+              <ChartTabPanel tabId="overview" active={activeTab === 'overview'}>
+                {previewLoading && !preview && <ChartLoadingState label="Loading overview…" />}
                 {preview && (
                   <OverviewTab
                     preview={preview}
@@ -549,87 +567,63 @@ export function PatientChart({
                     onNavigateChartSection={navigateToChartSection}
                   />
                 )}
-              </>
-            )}
-          </div>
+              </ChartTabPanel>
 
-          <div
-            className={activeTab === 'profile' ? 'nc-tab-pane' : 'nc-tab-pane hidden'}
-            id="nc-chart-tab-profile"
-            role="tabpanel"
-          >
-            {activeTab === 'profile' && (
-              <ProfileTab
-                ajaxUrl={ajaxUrl}
-                csrfToken={csrfToken}
-                pid={pid}
-                registrationMode={registrationMode}
-                checklist={checklist}
-                payments={payments}
-                onProfileSaved={handleProfileSaved}
-              />
-            )}
-          </div>
+              <ChartTabPanel tabId="profile" active={activeTab === 'profile'}>
+                <ProfileTab
+                  ajaxUrl={ajaxUrl}
+                  csrfToken={csrfToken}
+                  pid={pid}
+                  registrationMode={registrationMode}
+                  checklist={checklist}
+                  payments={payments}
+                  onProfileSaved={handleProfileSaved}
+                />
+              </ChartTabPanel>
 
-          <div
-            className={activeTab === 'visits' ? 'nc-tab-pane' : 'nc-tab-pane hidden'}
-            id="nc-chart-tab-visits"
-            role="tabpanel"
-          >
-            {activeTab === 'visits' && (
-              <VisitsTab
-                todayVisits={visitsData?.today_visits ?? []}
-                pastVisits={visitsData?.past_visits ?? []}
-                pastHasMore={pastHasMore}
-                loading={visitsLoading && !visitsData}
-                loadingMore={visitsLoadingMore}
-                error={visitsError}
-                visitBoardUrl={visitBoardUrl}
-                onLoadMore={() => {
-                  void loadVisits(false);
-                }}
-              />
-            )}
-          </div>
+              <ChartTabPanel tabId="visits" active={activeTab === 'visits'}>
+                <VisitsTab
+                  todayVisits={visitsData?.today_visits ?? []}
+                  pastVisits={visitsData?.past_visits ?? []}
+                  pastHasMore={pastHasMore}
+                  loading={visitsLoading && !visitsData}
+                  loadingMore={visitsLoadingMore}
+                  error={visitsError}
+                  visitBoardUrl={visitBoardUrl}
+                  onLoadMore={() => {
+                    void loadVisits(false);
+                  }}
+                />
+              </ChartTabPanel>
 
-          <div
-            className={activeTab === 'clinical' ? 'nc-tab-pane' : 'nc-tab-pane hidden'}
-            id="nc-chart-tab-clinical"
-            role="tabpanel"
-          >
-            {activeTab === 'clinical' && (
-              <ClinicalTab
-                data={clinicalData}
-                referralsStrip={referralsStrip}
-                labsStrip={labsStrip}
-                medsStrip={medsStrip}
-                loading={clinicalLoading && !clinicalData}
-                error={clinicalError}
-                clinicalAnchor={pendingClinicalAnchor || clinicalAnchor}
-                onScrollToAnchor={scrollToClinicalAnchor}
-              />
-            )}
-          </div>
+              <ChartTabPanel tabId="clinical" active={activeTab === 'clinical'}>
+                <ClinicalTab
+                  data={clinicalData}
+                  referralsStrip={referralsStrip}
+                  labsStrip={labsStrip}
+                  medsStrip={medsStrip}
+                  loading={clinicalLoading && !clinicalData}
+                  error={clinicalError}
+                  clinicalAnchor={pendingClinicalAnchor || clinicalAnchor}
+                  onScrollToAnchor={scrollToClinicalAnchor}
+                />
+              </ChartTabPanel>
 
-          <div
-            className={activeTab === 'messages' ? 'nc-tab-pane' : 'nc-tab-pane hidden'}
-            id="nc-chart-tab-messages"
-            role="tabpanel"
-          >
-            {activeTab === 'messages' && (
-              <MessagesTab
-                data={messagesData}
-                loading={messagesLoading && !messagesData}
-                loadingMore={messagesLoadingMore}
-                error={messagesError}
-                onLoadMore={() => {
-                  void loadMessages(false);
-                }}
-              />
-            )}
-          </div>
-        </div>
-      </WidgetCard>
+              <ChartTabPanel tabId="messages" active={activeTab === 'messages'}>
+                <MessagesTab
+                  data={messagesData}
+                  loading={messagesLoading && !messagesData}
+                  loadingMore={messagesLoadingMore}
+                  error={messagesError}
+                  onLoadMore={() => {
+                    void loadMessages(false);
+                  }}
+                />
+              </ChartTabPanel>
+            </div>
+          </ChartShell>
+        </CardContent>
+      </Card>
     </div>
   );
 }

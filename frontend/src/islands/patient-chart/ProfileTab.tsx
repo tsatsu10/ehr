@@ -1,5 +1,6 @@
 import { RegistrationForm } from '@islands/front-desk/RegistrationForm';
 import type { ChecklistLevel, PaymentsStripData, RegistrationGetData } from './patientChartTypes';
+import { ChartStack } from './chartUi';
 import { PaymentsStrip } from './PaymentsStrip';
 import { ProfileChecklist } from './ProfileChecklist';
 
@@ -26,25 +27,27 @@ export function ProfileTab({
   const completion = checklist?.completion ?? { score: 0, billing_threshold: 70, missing_labels: [] };
 
   return (
-    <>
+    <ChartStack>
       <PaymentsStrip data={payments} />
       <ProfileChecklist levels={levels} completion={completion} />
-      <RegistrationForm
-        ajaxUrl={ajaxUrl}
-        csrfToken={csrfToken}
-        pid={pid}
-        registrationMode={registrationMode}
-        chartMode
-        onSaved={() => {
-          onProfileSaved();
-        }}
-        onUseExisting={() => {
-          /* chart mode always has pid */
-        }}
-        onCancel={() => {
-          window.history.back();
-        }}
-      />
-    </>
+      <div className="overflow-hidden rounded-xl border border-[var(--oe-nc-border)] bg-[var(--oe-nc-surface,#fff)] p-4 shadow-[var(--oe-nc-shadow-sm)]">
+        <RegistrationForm
+          ajaxUrl={ajaxUrl}
+          csrfToken={csrfToken}
+          pid={pid}
+          registrationMode={registrationMode}
+          chartMode
+          onSaved={() => {
+            onProfileSaved();
+          }}
+          onUseExisting={() => {
+            /* chart mode always has pid */
+          }}
+          onCancel={() => {
+            window.history.back();
+          }}
+        />
+      </div>
+    </ChartStack>
   );
 }
