@@ -304,7 +304,16 @@ class AjaxController
                     $this->assertPatientChartPid($pid);
                     $offset = max(0, (int) ($_REQUEST['offset'] ?? 0));
                     $limit = (int) ($_REQUEST['limit'] ?? PatientActivityFeedService::PAGE_SIZE);
-                    $feed = $this->activityFeedService->getActivityFeed($pid, $offset, $limit, true);
+                    $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                    $lookbackDays = (int) ($_REQUEST['lookback_days'] ?? 0);
+                    $feed = $this->activityFeedService->getActivityFeed(
+                        $pid,
+                        $offset,
+                        $limit,
+                        true,
+                        $visitId > 0 ? $visitId : null,
+                        $lookbackDays > 0 ? $lookbackDays : null,
+                    );
                     $this->respond(true, 'ok', $feed);
                     break;
                 case 'patients.chart.messages':

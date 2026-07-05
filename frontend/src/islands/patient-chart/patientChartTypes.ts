@@ -10,6 +10,7 @@ export interface PatientChartProps {
   pid: number;
   activeTab: ChartTabId;
   clinicalAnchor?: string;
+  visitIdFilter?: number;
   visitBoardUrl: string;
   frontDeskUrl: string;
   exportChartUrl?: string;
@@ -62,23 +63,42 @@ export interface ChartActionRequired {
   action_url?: string;
 }
 
+export interface ActivityFeedAction {
+  label?: string;
+  kind?: 'expand' | 'tab' | 'core' | 'board' | 'ledger';
+  target?: string;
+}
+
 export interface ActivityFeedItem {
   event_type?: string;
+  event_id?: string;
   title?: string;
   subtitle?: string;
   queue_number?: number | string;
+  visit_id?: number;
+  encounter_id?: number;
   expand?: {
     procedure_name?: string;
+    drug_name?: string;
+    summary?: string;
+    from_state?: string;
     to_state?: string;
     reason?: string;
   };
+  primary_action?: ActivityFeedAction;
+  secondary_action?: ActivityFeedAction;
 }
 
 export interface ActivityFeed {
   items?: ActivityFeedItem[];
   has_more?: boolean;
   lookback_days?: number;
+  max_lookback_days?: number;
+  can_extend_lookback?: boolean;
+  older_history_message?: string | null;
 }
+
+export type ActivityFeedResponse = ActivityFeed;
 
 export interface ChartIdentity extends PatientIdentity {
   phone_masked?: string;

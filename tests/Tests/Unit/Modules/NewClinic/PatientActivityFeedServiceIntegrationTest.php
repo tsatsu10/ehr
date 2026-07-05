@@ -43,6 +43,8 @@ class PatientActivityFeedServiceIntegrationTest extends TestCase
         $this->assertArrayHasKey('total', $feed);
         $this->assertArrayHasKey('has_more', $feed);
         $this->assertArrayHasKey('lookback_days', $feed);
+        $this->assertArrayHasKey('can_extend_lookback', $feed);
+        $this->assertArrayHasKey('max_lookback_days', $feed);
         $this->assertIsArray($feed['items']);
 
         if ($feed['items'] !== []) {

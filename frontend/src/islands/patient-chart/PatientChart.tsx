@@ -12,6 +12,7 @@ import { OverviewTab } from './OverviewTab';
 import { ProfileTab } from './ProfileTab';
 import {
   CHART_TAB_IDS,
+  type ActivityFeedResponse,
   type ActivityFeedItem,
   type ChartMessagesData,
   type ChartPreview,
@@ -42,6 +43,7 @@ export function PatientChart({
   pid,
   activeTab: initialTab,
   clinicalAnchor = '',
+  visitIdFilter = 0,
   visitBoardUrl,
   frontDeskUrl,
   exportChartUrl,
@@ -63,6 +65,8 @@ export function PatientChart({
   const [activityHasMore, setActivityHasMore] = useState(false);
   const [activityLoadingMore, setActivityLoadingMore] = useState(false);
   const [lookbackDays, setLookbackDays] = useState(90);
+  const [canExtendLookback, setCanExtendLookback] = useState(false);
+  const [olderHistoryMessage, setOlderHistoryMessage] = useState<string | null>(null);
 
   const [checklist, setChecklist] = useState<RegistrationGetData | null>(null);
   const [payments, setPayments] = useState<PaymentsStripData | null>(null);
@@ -92,6 +96,30 @@ export function PatientChart({
   const [messagesOffset, setMessagesOffset] = useState(0);
   const [pendingClinicalAnchor, setPendingClinicalAnchor] = useState(clinicalAnchor ?? '');
 
+  const applyActivityFeed = useCallback((feed: ActivityFeedResponse) => {
+    setActivityItems(feed.items ?? []);
+    setActivityOffset((feed.items ?? []).length);
+    setActivityHasMore(!!feed.has_more);
+    setLookbackDays(feed.lookback_days ?? 90);
+    setCanExtendLookback(!!feed.can_extend_lookback);
+    setOlderHistoryMessage(feed.older_history_message ?? null);
+  }, []);
+
+  const fetchActivityFeed = useCallback(
+    async (offset: number, lookback: number) => {
+      const params: Record<string, number> = { pid, offset, lookback_days: lookback };
+      if (visitIdFilter > 0) {
+        params.visit_id = visitIdFilter;
+      }
+
+      return oeFetch<ActivityFeedResponse>('patients.chart.activity_feed', {
+        ...fetchOptions,
+        params,
+      });
+    },
+    [fetchOptions, pid, visitIdFilter]
+  );
+
   const reloadContext = useCallback(async () => {
     setPreviewLoading(true);
     setPreviewError(null);
@@ -102,17 +130,19 @@ export function PatientChart({
         json: { pid, context: 'patient-chart' },
       });
       setPreview(data);
-      const feed = data.activity_feed ?? {};
-      setActivityItems(feed.items ?? []);
-      setActivityOffset((feed.items ?? []).length);
-      setActivityHasMore(!!feed.has_more);
-      setLookbackDays(feed.lookback_days ?? 90);
+
+      if (visitIdFilter > 0) {
+        const feed = await fetchActivityFeed(0, data.activity_feed?.lookback_days ?? 90);
+        applyActivityFeed(feed);
+      } else {
+        applyActivityFeed(data.activity_feed ?? {});
+      }
     } catch (err) {
       setPreviewError(err instanceof Error ? err.message : 'Could not load chart.');
     } finally {
       setPreviewLoading(false);
     }
-  }, [fetchOptions, pid]);
+  }, [applyActivityFeed, fetchActivityFeed, fetchOptions, pid, visitIdFilter]);
 
   const reloadChecklist = useCallback(async () => {
     try {
@@ -274,18 +304,29 @@ export function PatientChart({
   const loadMoreActivity = useCallback(async () => {
     setActivityLoadingMore(true);
     try {
-      const feed = await oeFetch<{ items?: ActivityFeedItem[]; has_more?: boolean }>(
-        'patients.chart.activity_feed',
-        { ...fetchOptions, params: { pid, offset: activityOffset } }
-      );
+      if (canExtendLookback) {
+        const feed = await fetchActivityFeed(0, 365);
+        applyActivityFeed(feed);
+        return;
+      }
+
+      const feed = await fetchActivityFeed(activityOffset, lookbackDays);
       const newItems = feed.items ?? [];
       setActivityItems((prev) => [...prev, ...newItems]);
       setActivityOffset((prev) => prev + newItems.length);
       setActivityHasMore(!!feed.has_more);
+      setCanExtendLookback(!!feed.can_extend_lookback);
+      setOlderHistoryMessage(feed.older_history_message ?? null);
     } finally {
       setActivityLoadingMore(false);
     }
-  }, [activityOffset, fetchOptions, pid]);
+  }, [
+    activityOffset,
+    applyActivityFeed,
+    canExtendLookback,
+    fetchActivityFeed,
+    lookbackDays,
+  ]);
 
   const scrollToClinicalAnchor = useCallback((anchor: string) => {
     if (!anchor) return;
@@ -391,6 +432,23 @@ export function PatientChart({
     }
   }, [activeTab, loadMessages, messagesLoaded]);
 
+  useEffect(() => {
+    if (activeTab !== 'overview' || !preview?.active_visit?.visit_id) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      if (document.hidden) {
+        return;
+      }
+      void reloadContext();
+    }, 60_000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [activeTab, preview?.active_visit?.visit_id, reloadContext]);
+
   return (
     <div className="nc-patient-chart" id="nc-patient-chart" data-pid={pid}>
       <WidgetCard
@@ -463,11 +521,13 @@ export function PatientChart({
                     activityItems={activityItems}
                     activityHasMore={activityHasMore}
                     lookbackDays={lookbackDays}
+                    olderHistoryMessage={olderHistoryMessage}
                     loadingMore={activityLoadingMore}
                     onEditProfile={() => handleTabChange('profile')}
                     onLoadMoreActivity={() => {
                       void loadMoreActivity();
                     }}
+                    onNavigateChartSection={navigateToChartSection}
                   />
                 )}
               </>

@@ -1,7 +1,14 @@
+import { useCallback, useState } from 'react';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
-import type { ActivityFeedItem, ChartActionRequired, ChartPreview } from './patientChartTypes';
+import type {
+  ActivityFeedAction,
+  ActivityFeedItem,
+  ChartActionRequired,
+  ChartPreview,
+  ChartTabId,
+} from './patientChartTypes';
 import { completionVariant, formatStateLabel } from './patientChartUtils';
 
 interface OverviewTabProps {
@@ -10,9 +17,11 @@ interface OverviewTabProps {
   activityItems: ActivityFeedItem[];
   activityHasMore: boolean;
   lookbackDays?: number;
+  olderHistoryMessage?: string | null;
   loadingMore: boolean;
   onEditProfile: () => void;
   onLoadMoreActivity: () => void;
+  onNavigateChartSection: (tab: ChartTabId, anchor?: string) => void;
 }
 
 function ActionRequired({ items }: { items: ChartActionRequired[] }) {
@@ -44,33 +53,126 @@ function ActionRequired({ items }: { items: ChartActionRequired[] }) {
   );
 }
 
-function ActivityFeedItemRow({ item }: { item: ActivityFeedItem }) {
+function renderExpandDetail(item: ActivityFeedItem): React.ReactNode {
   const expand = item.expand ?? {};
-  let detail: React.ReactNode = null;
+
+  if (item.event_type === 'vitals_saved' && expand.summary) {
+    return <div className="text-sm mt-1">{expand.summary}</div>;
+  }
 
   if (item.event_type === 'lab_result_ready' && expand.procedure_name) {
-    detail = (
+    return (
       <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">
         {expand.procedure_name}
         {item.queue_number ? ` · Queue #${item.queue_number}` : ''}
       </div>
     );
-  } else if (expand.to_state) {
-    detail = (
+  }
+
+  if (item.event_type === 'pharmacy_dispensed' && expand.drug_name) {
+    return (
+      <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">
+        {expand.drug_name}
+        {item.queue_number ? ` · Queue #${item.queue_number}` : ''}
+      </div>
+    );
+  }
+
+  if (expand.to_state || expand.from_state) {
+    return (
       <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">
         Queue #{item.queue_number ?? '—'}
+        {expand.from_state ? ` · ${formatStateLabel(String(expand.from_state))}` : ''}
+        {expand.to_state ? ` → ${formatStateLabel(String(expand.to_state))}` : ''}
         {expand.reason ? ` · ${expand.reason}` : ''}
       </div>
     );
   }
 
+  if (expand.procedure_name) {
+    return <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">{expand.procedure_name}</div>;
+  }
+
+  if (expand.drug_name) {
+    return <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">{expand.drug_name}</div>;
+  }
+
+  return null;
+}
+
+function ActivityFeedItemRow({
+  item,
+  visitBoardUrl,
+  expanded,
+  onToggleExpand,
+  onNavigateChartSection,
+}: {
+  item: ActivityFeedItem;
+  visitBoardUrl: string;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  onNavigateChartSection: (tab: ChartTabId, anchor?: string) => void;
+}) {
+  const handleAction = useCallback(
+    (action?: ActivityFeedAction) => {
+      if (!action?.kind) {
+        return;
+      }
+
+      switch (action.kind) {
+        case 'expand':
+          onToggleExpand();
+          break;
+        case 'tab':
+          onNavigateChartSection('clinical', action.target);
+          break;
+        case 'board':
+          if (visitBoardUrl) {
+            window.location.assign(visitBoardUrl);
+          }
+          break;
+        default:
+          break;
+      }
+    },
+    [onNavigateChartSection, onToggleExpand, visitBoardUrl],
+  );
+
+  const primary = item.primary_action;
+  const secondary = item.secondary_action;
+  const showInline = expanded || primary?.kind === 'expand';
+
   return (
     <div className="border-bottom py-2 nc-activity-feed-item" data-event-type={item.event_type ?? ''}>
-      <div className="flex justify-between">
-        <strong className="text-sm">{item.title ?? '—'}</strong>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex-grow min-w-0">
+          <strong className="text-sm">{item.title ?? '—'}</strong>
+          {item.subtitle && <div className="text-sm text-[var(--oe-nc-text-muted)]">{item.subtitle}</div>}
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {primary?.label && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handleAction(primary)}
+            >
+              {primary.label}
+            </Button>
+          )}
+          {secondary?.label && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => handleAction(secondary)}
+            >
+              {secondary.label}
+            </Button>
+          )}
+        </div>
       </div>
-      {item.subtitle && <div className="text-sm text-[var(--oe-nc-text-muted)]">{item.subtitle}</div>}
-      {detail}
+      {showInline && renderExpandDetail(item)}
     </div>
   );
 }
@@ -87,15 +189,22 @@ export function OverviewTab({
   activityItems,
   activityHasMore,
   lookbackDays = 90,
+  olderHistoryMessage = null,
   loadingMore,
   onEditProfile,
   onLoadMoreActivity,
+  onNavigateChartSection,
 }: OverviewTabProps) {
+  const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
   const active = preview.active_visit;
   const last = preview.last_visit ?? {};
   const safety = preview.safety ?? {};
   const completion = preview.completion;
   const vitals = preview.vitals_today ?? {};
+
+  const toggleExpanded = useCallback((key: string) => {
+    setExpandedKeys((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
 
   return (
     <>
@@ -158,9 +267,19 @@ export function OverviewTab({
           <p className="text-[var(--oe-nc-text-muted)] text-sm mb-0">No recent visit activity.</p>
         ) : (
           <div id="nc-chart-activity-feed-list">
-            {activityItems.map((item, idx) => (
-              <ActivityFeedItemRow key={`${item.event_type ?? 'evt'}-${idx}`} item={item} />
-            ))}
+            {activityItems.map((item, idx) => {
+              const rowKey = item.event_id ?? `${item.event_type ?? 'evt'}-${idx}`;
+              return (
+                <ActivityFeedItemRow
+                  key={rowKey}
+                  item={item}
+                  visitBoardUrl={visitBoardUrl}
+                  expanded={!!expandedKeys[rowKey]}
+                  onToggleExpand={() => toggleExpanded(rowKey)}
+                  onNavigateChartSection={onNavigateChartSection}
+                />
+              );
+            })}
           </div>
         )}
         {activityHasMore && (
@@ -174,6 +293,9 @@ export function OverviewTab({
           >
             Load more
           </Button>
+        )}
+        {!activityHasMore && olderHistoryMessage && (
+          <p className="text-sm text-[var(--oe-nc-text-muted)] mt-2 mb-0">{olderHistoryMessage}</p>
         )}
       </div>
 

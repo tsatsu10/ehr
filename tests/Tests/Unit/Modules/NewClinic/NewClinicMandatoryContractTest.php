@@ -621,10 +621,13 @@ class NewClinicMandatoryContractTest extends TestCase
     {
         $this->assertSame(25, PatientActivityFeedService::PAGE_SIZE);
         $this->assertSame(90, PatientActivityFeedService::LOOKBACK_DAYS);
+        $this->assertSame(365, PatientActivityFeedService::MAX_LOOKBACK_DAYS);
 
         $body = $this->methodBody(PatientActivityFeedService::class, 'getActivityFeed');
-        $this->assertStringContainsString('visit_id', $body);
-        $this->assertStringContainsString('limit', $body);
+        $this->assertStringContainsString('visitId', $body);
+        $this->assertStringContainsString('lookbackDays', $body);
+        $this->assertStringContainsString('can_extend_lookback', $body);
+        $this->assertStringContainsString('older_history_message', $body);
     }
 
     public function testMandatory40MrdFeedInteractionEventTypes(): void
@@ -633,6 +636,10 @@ class NewClinicMandatoryContractTest extends TestCase
 
         $this->assertStringContainsString('lab_result_ready', $source);
         $this->assertStringContainsString('state_changed', $source);
+        $this->assertStringContainsString('vitals_saved', $source);
+        $this->assertStringContainsString('lab_ordered', $source);
+        $this->assertStringContainsString('rx_prescribed', $source);
+        $this->assertStringContainsString('primary_action', $source);
         $this->assertStringContainsString('event_type', $source);
     }
 
