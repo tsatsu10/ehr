@@ -8,6 +8,7 @@ import { oeFetch } from '@core/oeFetch';
 import { hardAssignVisit } from '@core/hardAssignVisit';
 import { showDeskToast } from '@components/deskToast';
 import { uploadReferralDocument } from './referralUploadApi';
+import { useOptimisticUpdate } from './useOptimisticUpdate';
 import type {
   AppointmentTodayChip,
   DeskVisitType,
@@ -124,6 +125,9 @@ export function useStartVisit({
   const [hardAssignDoctorId, setHardAssignDoctorId] = useState('');
   const [referralUploadError, setReferralUploadError] = useState<string | null>(null);
   const autoStartAttemptedRef = useRef(false);
+  
+  // Optimistic update for visit start
+  const optimisticVisitStart = useOptimisticUpdate<VisitStartData>();
 
   // ── Derived from preview ──────────────────────────────────────────────────
 
@@ -262,54 +266,79 @@ export function useStartVisit({
     setSubmitting(true);
     setError(null);
 
-    try {
-      const action = fromAppointment ? 'visit.start_from_appointment' : 'visit.start';
-      const body: Record<string, unknown> = {
-        pid,
-        visit_type_id: parseInt(visitTypeId, 10),
-        chief_complaint: chiefComplaint.trim(),
-        is_urgent: priorityFlag !== 'standard',
-        priority_flag: priorityFlag,
-      };
-      if (facilityId > 0) body.facility_id = facilityId;
-      if (fromAppointment && appointment) {
-        body.pc_eid = appointment.pc_eid;
-        body.appt_date = appointment.appt_date;
-      }
-      if (gateBlocked && revisitPath === 'manager_override') {
-        body.revisit_override_reason = overrideReason.trim();
-      }
-      if (referralDocumentId != null && referralDocumentId > 0) {
-        body.referral_document_id = referralDocumentId;
-      }
+    // Create optimistic visit data
+    const optimisticData: VisitStartData = {
+      visit: {
+        id: 0, // Temporary ID
+        queue_number: '⏳',
+        state: 'awaiting_triage' as VisitState,
+        row_version: 0,
+      },
+      appointment_status_updated: fromAppointment,
+      recurring_guard_fired: false,
+    };
 
-      const data = await oeFetch<VisitStartData>(action, {
-        ajaxUrl, csrfToken, method: 'POST', json: body,
+    const queueNumberLabel = fromAppointment ? 'Queue #⏳' : 'Queue #⏳';
+    const optimisticMsg = `Starting visit ${queueNumberLabel}...`;
+    showDeskToast(optimisticMsg, 'info');
+
+    try {
+      // Execute optimistic update
+      await optimisticVisitStart.execute(optimisticData, async () => {
+        const action = fromAppointment ? 'visit.start_from_appointment' : 'visit.start';
+        const body: Record<string, unknown> = {
+          pid,
+          visit_type_id: parseInt(visitTypeId, 10),
+          chief_complaint: chiefComplaint.trim(),
+          is_urgent: priorityFlag !== 'standard',
+          priority_flag: priorityFlag,
+        };
+        if (facilityId > 0) body.facility_id = facilityId;
+        if (fromAppointment && appointment) {
+          body.pc_eid = appointment.pc_eid;
+          body.appt_date = appointment.appt_date;
+        }
+        if (gateBlocked && revisitPath === 'manager_override') {
+          body.revisit_override_reason = overrideReason.trim();
+        }
+        if (referralDocumentId != null && referralDocumentId > 0) {
+          body.referral_document_id = referralDocumentId;
+        }
+
+        const data = await oeFetch<VisitStartData>(action, {
+          ajaxUrl, csrfToken, method: 'POST', json: body,
+        });
+
+        const parsedDoctorId = hardAssignDoctorId ? Number.parseInt(hardAssignDoctorId, 10) : 0;
+        if (parsedDoctorId > 0 && data.visit.id) {
+          await hardAssignVisit({
+            ajaxUrl, csrfToken, facilityId,
+            visitId: data.visit.id,
+            rowVersion: data.visit.row_version ?? 0,
+            hardAssignedProviderId: parsedDoctorId,
+          });
+        }
+
+        return data;
       });
 
-      const parsedDoctorId = hardAssignDoctorId ? Number.parseInt(hardAssignDoctorId, 10) : 0;
-      if (parsedDoctorId > 0 && data.visit.id) {
-        await hardAssignVisit({
-          ajaxUrl, csrfToken, facilityId,
-          visitId: data.visit.id,
-          rowVersion: data.visit.row_version ?? 0,
-          hardAssignedProviderId: parsedDoctorId,
-        });
-      }
+      // Success confirmed
+      if (optimisticVisitStart.isConfirmed && optimisticVisitStart.data) {
+        const data = optimisticVisitStart.data;
+        const queueNumber = data.visit.queue_number ?? '?';
+        let msg = `Visit #${queueNumber} started — patient is now on the Triage queue.`;
+        if (fromAppointment && data.recurring_guard_fired) {
+          msg = `Visit #${queueNumber} started. Recurring appointment — update Flow Board if needed.`;
+        } else if (fromAppointment && data.appointment_status_updated) {
+          msg = `Visit #${queueNumber} started and appointment marked arrived.`;
+        }
 
-      const queueNumber = data.visit.queue_number ?? '?';
-      let msg = `Visit #${queueNumber} started — patient is now on the Triage queue.`;
-      if (fromAppointment && data.recurring_guard_fired) {
-        msg = `Visit #${queueNumber} started. Recurring appointment — update Flow Board if needed.`;
-      } else if (fromAppointment && data.appointment_status_updated) {
-        msg = `Visit #${queueNumber} started and appointment marked arrived.`;
+        setSuccess(data);
+        setSuccessMsg(msg);
+        showDeskToast(msg, 'success');
+        onChiefComplaintChange?.('');
+        onDirtyChange?.(false);
       }
-
-      setSuccess(data);
-      setSuccessMsg(msg);
-      showDeskToast(msg, 'success');
-      onChiefComplaintChange?.('');
-      onDirtyChange?.(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to start visit';
       setError(message);
@@ -319,8 +348,8 @@ export function useStartVisit({
     }
   }, [
     ajaxUrl, appointment, chiefComplaint, csrfToken, facilityId, fromAppointment,
-    gateBlocked, hardAssignDoctorId, priorityFlag, onChiefComplaintChange, onCompleteNow,
-    onDirtyChange, overrideReason, pid, referralDocumentId, revisitPath, visitTypeId,
+    gateBlocked, hardAssignDoctorId, optimisticVisitStart, priorityFlag, onChiefComplaintChange,
+    onCompleteNow, onDirtyChange, overrideReason, pid, referralDocumentId, revisitPath, visitTypeId,
   ]);
 
   const handleSkipTriage = useCallback(async (reason: string) => {

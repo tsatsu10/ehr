@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
+import { showDeskToast } from '@components/deskToast';
 import type {
   FrontDeskDeskStats,
   FrontDeskPreviewData,
@@ -167,7 +168,6 @@ export function useFrontDesk({
   }, [ajaxUrl, csrfToken, facilityId, scheduledIntegrationEnabled]);
 
   const loadPreview = useCallback(async (pid: number) => {
-    setMode('loading');
     // Read the current selectedPid synchronously via ref to decide whether to
     // update arrivedAtMs — avoids calling setArrivedAtMs inside an updater fn.
     if (selectedPidRef.current !== pid) {
@@ -175,6 +175,30 @@ export function useFrontDesk({
     }
     setSelectedPid(pid);
     startVisitDirtyRef.current = false;
+
+    // Check if we have a recent patient entry to show optimistically
+    const recentPatient = recent.find((r) => r.pid === pid);
+    const searchResult = searchResultsRef.current.find((r) => r.pid === pid);
+    
+    // Show optimistic preview immediately if we have cached data
+    if (recentPatient || searchResult) {
+      const optimisticPreview: Partial<FrontDeskPreviewData> = {
+        identity: {
+          pid,
+          display_name: recentPatient?.display_name ?? searchResult?.display_name ?? 'Loading...',
+          pubpid: recentPatient?.pubpid ?? searchResult?.pubpid ?? '...',
+          age_display: searchResult?.age_display,
+          sex: searchResult?.sex,
+          phone_formatted: searchResult?.phone_formatted,
+        },
+        // Other fields will be loaded from server
+      };
+      setPreview(optimisticPreview as FrontDeskPreviewData);
+      setMode('loading'); // Show as loading but with optimistic data
+    } else {
+      setMode('loading');
+      setPreview(null);
+    }
 
     try {
       const data = await oeFetch<FrontDeskPreviewData>('patients.preview', {
@@ -193,7 +217,7 @@ export function useFrontDesk({
       setPreview(null);
       setMode('empty');
     }
-  }, [ajaxUrl, csrfToken, remember]);
+  }, [ajaxUrl, csrfToken, recent, remember]);
 
   useEffect(() => { selectedPidRef.current = selectedPid; }, [selectedPid]);
   useEffect(() => { void loadDeskStats(); }, [loadDeskStats]);
@@ -283,28 +307,69 @@ export function useFrontDesk({
   }, [applyPatientSwitch, mode, preview, requestRegistrationDiscard, selectedPid, viewport]);
 
   const handleBulkCheckIn = useCallback(async (pids: number[]) => {
-    const results = await Promise.allSettled(
-      pids.map((pid) =>
-        oeFetch<{ visit: { id: number } }>('visit.start', {
-          ajaxUrl,
-          csrfToken,
-          method: 'POST',
-          json: {
-            pid,
-            use_default_type: true,
-            chief_complaint: '',
-            is_urgent: false,
-            priority_flag: 'standard',
-            ...(facilityId > 0 ? { facility_id: facilityId } : {}),
-          },
-        })
+    // Show optimistic toast immediately
+    const count = pids.length;
+    showDeskToast(`Checking in ${count} patient${count > 1 ? 's' : ''}...`, 'info');
+
+    // Optimistically mark appointments as "checking in" by filtering them from the list
+    // This provides instant visual feedback
+    const previousAppointments = [...todaysAppointments];
+    setTodaysAppointments((prev) =>
+      prev.map((appt) =>
+        pids.includes(appt.pid)
+          ? { ...appt, pc_apptstatus: '@' } // Use @ as temporary "checking in" marker
+          : appt
       )
     );
-    const failures = results.filter((r) => r.status === 'rejected');
-    if (failures.length > 0) {
-      throw new Error(`${failures.length} check-in${failures.length > 1 ? 's' : ''} failed`);
+
+    try {
+      const results = await Promise.allSettled(
+        pids.map((pid) =>
+          oeFetch<{ visit: { id: number } }>('visit.start', {
+            ajaxUrl,
+            csrfToken,
+            method: 'POST',
+            json: {
+              pid,
+              use_default_type: true,
+              chief_complaint: '',
+              is_urgent: false,
+              priority_flag: 'standard',
+              ...(facilityId > 0 ? { facility_id: facilityId } : {}),
+            },
+          })
+        )
+      );
+      
+      const failures = results.filter((r) => r.status === 'rejected');
+      
+      if (failures.length === 0) {
+        // All successful - show success and reload
+        showDeskToast(`${count} patient${count > 1 ? 's' : ''} checked in successfully.`, 'success');
+        void loadTodaysAppointments(); // Reload to get updated statuses
+        void loadDeskStats();
+      } else if (failures.length < results.length) {
+        // Partial success
+        const successCount = results.length - failures.length;
+        showDeskToast(
+          `${successCount} checked in, ${failures.length} failed. Refreshing...`,
+          'warning'
+        );
+        void loadTodaysAppointments();
+        void loadDeskStats();
+      } else {
+        // All failed - rollback optimistic update
+        setTodaysAppointments(previousAppointments);
+        throw new Error(`${failures.length} check-in${failures.length > 1 ? 's' : ''} failed`);
+      }
+    } catch (err) {
+      // Rollback on error
+      setTodaysAppointments(previousAppointments);
+      const message = err instanceof Error ? err.message : 'Bulk check-in failed';
+      showDeskToast(message, 'danger');
+      throw err;
     }
-  }, [ajaxUrl, csrfToken, facilityId]);
+  }, [ajaxUrl, csrfToken, facilityId, loadDeskStats, loadTodaysAppointments, todaysAppointments]);
 
   const handlePreviewRefresh = useCallback(() => {
     if (selectedPid) void loadPreview(selectedPid);
