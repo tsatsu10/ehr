@@ -231,7 +231,7 @@ export function ClinicalTaskPanel({
   sticky = true,
   compact = false,
 }: ClinicalTaskPanelProps) {
-  const statusConfig = STATUS_CONFIG[status];
+  const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.not_checked_in; // Fallback if status invalid
   const StatusIcon = statusConfig.icon;
   
   return (

@@ -134,17 +134,16 @@ function RegistrationContent({
  * Build patient status from preview data
  */
 function buildPatientStatus(preview: FrontDeskPreviewData | null): PatientStatus {
-  if (!preview) return 'waiting';
+  if (!preview) return 'not_checked_in';
   if (preview.active_visit) {
     const state = preview.active_visit.state;
-    if (state === 'checked_in') return 'waiting-triage';
-    if (state === 'ready_for_doctor') return 'waiting-doctor';
-    if (state === 'with_doctor') return 'with-doctor';
-    if (state === 'ready_for_lab') return 'waiting-lab';
-    if (state === 'ready_for_pharmacy') return 'waiting-pharmacy';
-    if (state === 'ready_for_cashier') return 'waiting-cashier';
+    if (state === 'checked_in') return 'waiting_triage';
+    if (state === 'ready_for_doctor' || state === 'with_doctor') return 'ready_to_start';
+    if (state === 'with_doctor') return 'in_progress';
+    // For any active visit state, consider it in progress
+    return 'in_progress';
   }
-  return 'waiting';
+  return 'not_checked_in';
 }
 
 /**
