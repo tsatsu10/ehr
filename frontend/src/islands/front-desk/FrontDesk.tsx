@@ -7,6 +7,7 @@ import type { FrontDeskProps } from '@core/types';
 import { ConfirmModal, IdentityConfirmBanner } from '@components/ConfirmModal';
 import { SlideOver } from '@components/SlideOver';
 import { KeyboardShortcutsHelp } from '@components/KeyboardShortcutsHelp';
+import { SkipNav } from '@components/SkipNav';
 import { PatientSearchWidget } from './PatientSearchWidget';
 import { PatientPreviewPane } from './PatientPreviewPane';
 import { DeskStatusBar } from './DeskStatusBar';
@@ -111,6 +112,14 @@ export function FrontDesk({
 
   return (
     <>
+      <SkipNav
+        links={[
+          { id: 'skip-to-search', label: 'Skip to patient search', targetId: 'nc-search-input' },
+          { id: 'skip-to-preview', label: 'Skip to patient preview', targetId: 'nc-preview-pane' },
+          { id: 'skip-to-main', label: 'Skip to main content', targetId: 'nc-front-desk' },
+        ]}
+      />
+      
       <div className="nc-front-desk-status-shell" role="banner" aria-label="Front desk status and navigation">
         <DeskStatusBar
           stats={deskStats}
@@ -154,7 +163,7 @@ export function FrontDesk({
               </div>
             )}
             {showPreviewColumn && (
-              <div className="nc-front-desk-grid-preview" role="region" aria-label="Patient preview and registration">
+              <div className="nc-front-desk-grid-preview" role="region" aria-label="Patient preview and registration" id="nc-preview-pane">
                 {previewPane}
               </div>
             )}
