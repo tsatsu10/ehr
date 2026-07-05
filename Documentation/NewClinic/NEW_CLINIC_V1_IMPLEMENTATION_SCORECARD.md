@@ -4,8 +4,8 @@
 
 | Field | Value |
 |-------|-------|
-| **Last audited** | 2026-07-04 |
-| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260705sp169esignfix` |
+| **Last audited** | 2026-07-05 |
+| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260705sp183aria` |
 | **Maintainer** | Engineering lead updates after each sprint; Product owns pilot sign-off |
 | **How to update** | Change `%` and `Status` cells; bump **Last audited**; sync PRD §5.6 row if shell status changes |
 
@@ -237,6 +237,7 @@ Use PRD §8 tables as source of truth. Below: **representative** IDs for spot au
 | 2026-07-04 | Engineering | §21 QA sign-off + fix BILL-3 `row_version` in payment reverse; COM/RT e2e stability; asset `sp77qasignoff` |
 | 2026-07-04 | Engineering | §21 QA sign-off: golden path 11/11 E2E, PHPUnit 62/62, hub smokes 47/57; PRD §21.1/§21.1b/§21.5 CI signed; `NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md`; asset `sp76qasignoff` |
 | 2026-07-04 | Engineering | S1 scheduling smoke (`testMandatory60`); V1.2-BILL depth (`61`); V1.1-COM (`62`); §21 golden path rollout (`63`) + `NEW_CLINIC_V1_SECTION21_E2E_MAP.md`; asset `sp75goldenpath` |
+| 2026-07-05 | Engineering | M1 Front Desk UX enhancements: touch target optimization (WCAG AA); keyboard shortcuts help (`?` overlay); field-level validation with inline errors; auto-save with draft recovery; ARIA landmarks & labels (screen reader A11y); asset `sp179touchopt` → `sp183aria`; session doc `FRONT_DESK_UX_IMPROVEMENTS_SESSION_20260705.md` |
 
 ---
 
