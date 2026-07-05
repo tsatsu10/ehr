@@ -18,6 +18,16 @@ const SHORTCUTS: KeyboardShortcut[] = [
     context: 'Front Desk',
   },
   {
+    keys: ['Ctrl', 'Z'],
+    description: 'Undo - Go back to previous patient',
+    context: 'Front Desk',
+  },
+  {
+    keys: ['Ctrl', 'Shift', 'Z'],
+    description: 'Redo - Go forward to next patient',
+    context: 'Front Desk',
+  },
+  {
     keys: ['Esc'],
     description: 'Close dialogs / Clear selection',
     context: 'Global',

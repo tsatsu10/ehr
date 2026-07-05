@@ -39,7 +39,8 @@ export function FrontDesk({
     autoStartVisit, mobileSheetOpen, isMobile, isRegistrationWork,
     showSearchInGrid, showPreviewColumn, hasPatientWork, mobileSheetTitle,
     initialQuery, registrationWorkRef, registrationFormRef, searchResultsRef,
-    recent, clearRecent, loadDeskStats, loadTodaysAppointments, loadPreview,
+    recent, clearRecent, canUndo, canRedo, handleUndo, handleRedo,
+    loadDeskStats, loadTodaysAppointments, loadPreview,
     handleSelectPatient, handleBulkCheckIn, handlePreviewRefresh, openRegistration,
     resetEmpty, revertToPreview, applyPatientSwitch, setPendingConfirm, setAutoStartVisit,
     setMobileSheetOpen, setRegistrationDraft, requestRegistrationDiscard,
@@ -120,6 +121,10 @@ export function FrontDesk({
           appointmentsTodayCount={appointmentsTodayCount}
           calendarUrl={calendarUrl}
           recallsUrl={recallsUrl}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
         />
       </div>
 

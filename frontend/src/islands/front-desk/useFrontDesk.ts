@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
 import { showDeskToast } from '@components/deskToast';
+import { usePatientHistory } from './usePatientHistory';
 import type {
   FrontDeskDeskStats,
   FrontDeskPreviewData,
@@ -69,6 +70,11 @@ export interface UseFrontDeskReturn {
   // Recent patients
   recent: RecentPatient[];
   clearRecent: () => void;
+  // Patient history (undo/redo)
+  canUndo: boolean;
+  canRedo: boolean;
+  handleUndo: () => void;
+  handleRedo: () => void;
   // Actions
   loadDeskStats: () => Promise<void>;
   loadTodaysAppointments: () => Promise<void>;
@@ -118,6 +124,7 @@ export function useFrontDesk({
 
   const viewport = useDeskViewport();
   const { recent, remember, clear: clearRecent } = useRecentlyViewedPatients({ ajaxUrl, csrfToken });
+  const patientHistory = usePatientHistory();
 
   const initialQuery = useMemo(() =>
     typeof window !== 'undefined'
@@ -211,13 +218,19 @@ export function useFrontDesk({
       setMode('preview');
       if (data?.identity?.display_name) {
         remember({ pid, display_name: data.identity.display_name, pubpid: data.identity.pubpid ?? '' });
+        // Add to undo/redo history
+        patientHistory.push({
+          pid,
+          displayName: data.identity.display_name,
+          pubpid: data.identity.pubpid ?? '',
+        });
       }
       document.dispatchEvent(new CustomEvent('nc:patient-selected', { detail: pid }));
     } catch {
       setPreview(null);
       setMode('empty');
     }
-  }, [ajaxUrl, csrfToken, recent, remember]);
+  }, [ajaxUrl, csrfToken, patientHistory, recent, remember]);
 
   useEffect(() => { selectedPidRef.current = selectedPid; }, [selectedPid]);
   useEffect(() => { void loadDeskStats(); }, [loadDeskStats]);
@@ -377,6 +390,47 @@ export function useFrontDesk({
     void loadTodaysAppointments();
   }, [loadDeskStats, loadPreview, loadTodaysAppointments, selectedPid]);
 
+  // ── Undo/Redo handlers ────────────────────────────────────────────────────
+
+  const handleUndo = useCallback(() => {
+    const previous = patientHistory.undo();
+    if (previous) {
+      showDeskToast(`Undo: Switched back to ${previous.displayName}`, 'info');
+      void loadPreview(previous.pid);
+    }
+  }, [loadPreview, patientHistory]);
+
+  const handleRedo = useCallback(() => {
+    const next = patientHistory.redo();
+    if (next) {
+      showDeskToast(`Redo: Switched to ${next.displayName}`, 'info');
+      void loadPreview(next.pid);
+    }
+  }, [loadPreview, patientHistory]);
+
+  // ── Keyboard shortcuts: Undo/Redo ─────────────────────────────────────────
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      // Ctrl+Z or Cmd+Z for undo
+      if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
+        if (patientHistory.canUndo) {
+          event.preventDefault();
+          handleUndo();
+        }
+      }
+      // Ctrl+Shift+Z or Cmd+Shift+Z for redo
+      if ((event.ctrlKey || event.metaKey) && event.key === 'z' && event.shiftKey) {
+        if (patientHistory.canRedo) {
+          event.preventDefault();
+          handleRedo();
+        }
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [handleRedo, handleUndo, patientHistory.canRedo, patientHistory.canUndo]);
+
   // ── Computed layout values ────────────────────────────────────────────────
 
   const isMobile = viewport === 'mobile';
@@ -414,6 +468,10 @@ export function useFrontDesk({
     searchResultsRef,
     recent,
     clearRecent,
+    canUndo: patientHistory.canUndo,
+    canRedo: patientHistory.canRedo,
+    handleUndo,
+    handleRedo,
     loadDeskStats,
     loadTodaysAppointments,
     loadPreview,
