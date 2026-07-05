@@ -20,6 +20,10 @@ export interface DeskQueueStatusBarProps {
   trailing?: React.ReactNode;
 }
 
+/**
+ * DeskQueueStatusBar - Clinical redesign Phase 5
+ * Updated 2026-07-05: Larger stat cards, clinical colors, improved spacing
+ */
 export function DeskQueueStatusBar({
   id,
   ariaLabel,
@@ -32,19 +36,21 @@ export function DeskQueueStatusBar({
   return (
     <div
       className={cn(
-        'mb-3 grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm shadow-sm',
-        compact && '[&_.nc-desk-stat-group]:gap-x-3.5 [&_.nc-desk-stat-group]:text-[0.8125rem]',
+        'mb-4 grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 rounded-xl',
+        'border border-[var(--oe-clinical-border)] bg-[var(--oe-clinical-surface)]',
+        'px-5 py-3.5 text-sm shadow-[var(--oe-clinical-shadow-sm)]',
+        compact && '[&_.nc-desk-stat-group]:gap-x-3.5 [&_.nc-desk-stat-group]:text-[var(--oe-clinical-text-xs)]',
       )}
       role="status"
       aria-label={ariaLabel}
       id={id}
     >
-      <div className="nc-desk-stat-group flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2">
+      <div className="nc-desk-stat-group flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2">
         {items.map((item, index) => (
           <Fragment key={`${item.label}-${index}`}>
             {index > 0 && (
               <span
-                className="hidden h-3.5 w-px shrink-0 bg-gray-200 sm:inline-block"
+                className="hidden h-4 w-px shrink-0 bg-[var(--oe-clinical-border)] sm:inline-block"
                 aria-hidden="true"
               />
             )}
@@ -58,13 +64,16 @@ export function DeskQueueStatusBar({
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 px-2"
+          className="h-8 px-2.5"
           onClick={onRefresh}
           disabled={loading}
           aria-label="Refresh status"
           title="Refresh"
         >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={cn(
+            'h-4 w-4 text-[var(--oe-clinical-text-muted)]',
+            loading && 'animate-spin'
+          )} />
         </Button>
       </div>
     </div>
@@ -73,19 +82,19 @@ export function DeskQueueStatusBar({
 
 function StatusItem({ label, value, href, icon }: DeskStatusItem) {
   const inner = (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap leading-none">
+    <span className="inline-flex items-center gap-2 whitespace-nowrap leading-none">
       {icon}
-      <span className="font-semibold tabular-nums text-gray-900">{value}</span>
-      <span className="text-gray-500">{label}</span>
+      <span className="font-semibold tabular-nums text-[var(--oe-clinical-text)] text-base">{value}</span>
+      <span className="text-[var(--oe-clinical-text-muted)] font-medium">{label}</span>
     </span>
   );
   if (href) {
     return (
-      <a href={href} target="_top" className="group text-inherit no-underline">
-        <span className="inline-flex items-center gap-1.5 whitespace-nowrap leading-none">
+      <a href={href} target="_top" className="group text-inherit no-underline hover:opacity-90 transition-opacity">
+        <span className="inline-flex items-center gap-2 whitespace-nowrap leading-none">
           {icon}
-          <span className="font-semibold tabular-nums text-gray-900 group-hover:text-[var(--oe-nc-primary,#2563eb)]">{value}</span>
-          <span className="text-gray-500">{label}</span>
+          <span className="font-semibold tabular-nums text-[var(--oe-clinical-primary)] text-base group-hover:text-[var(--oe-clinical-primary-hover)]">{value}</span>
+          <span className="text-[var(--oe-clinical-text-muted)] font-medium">{label}</span>
         </span>
       </a>
     );

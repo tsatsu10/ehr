@@ -1,7 +1,11 @@
 /**
  * QueueCard — React version of renderQueueCard() in ui-components.js.
  *
- * shadcn Card shell + Tailwind layout (queueCardStyles). WaitTimeSpan rule unchanged.
+ * Updated 2026-07-05 for clinical redesign Phase 5:
+ * - Clinical color palette and typography
+ * - Larger avatar with photo support
+ * - Wait time thresholds with color coding
+ * - Improved spacing and touch targets
  */
 
 import type { VisitCard } from '@core/types';
@@ -10,6 +14,7 @@ import { WaitTimeSpan } from './WaitTimeSpan';
 import { AncillaryVisitBadges } from './AncillaryVisitBadges';
 import { Card } from './ui/card';
 import { Badge, badgeVariants } from './ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { cn } from '@/lib/utils';
 import { Clock } from 'lucide-react';
 import {
@@ -77,6 +82,11 @@ export function QueueCard({ card, privacyMode = false, onClick, selected = false
       className={cn(
         queueCardShellClass({ urgent: isUrgent, active: selected, claimLost: isClaimLost }),
         'overflow-hidden p-0 shadow-none',
+        // Clinical styling
+        'border-[var(--oe-clinical-border)]',
+        'hover:border-[var(--oe-clinical-primary-light)]',
+        'hover:shadow-[var(--oe-clinical-shadow-md)]',
+        'transition-all duration-200',
       )}
     >
       <button
@@ -84,6 +94,8 @@ export function QueueCard({ card, privacyMode = false, onClick, selected = false
         className={cn(
           'block w-full border-0 bg-transparent p-0 text-left',
           isClaimLost ? 'cursor-not-allowed' : 'cursor-pointer',
+          // Clinical touch target - min 44px height
+          'min-h-[44px]',
         )}
         data-visit-id={card.id}
         disabled={isClaimLost}
@@ -91,14 +103,33 @@ export function QueueCard({ card, privacyMode = false, onClick, selected = false
         onClick={onClick && !isClaimLost ? () => onClick(card) : undefined}
         aria-pressed={selected}
       >
-        <div className={queueCardRowClass}>
-          <span className={queueCardAvatarClass(isUrgent, isClaimLost)} aria-hidden="true">
-            {patientInitials(card.display_name)}
-          </span>
-          <div className={queueCardBodyClass}>
-            <div className={queueCardHeaderClass}>
-              <span className={queueCardQueueNumClass}>#{card.queue_number}</span>
-              <span className={queueCardNameClass}>{displayName}</span>
+        <div className={cn(queueCardRowClass, 'gap-3 p-3')}>
+          {/* Clinical Avatar - Larger with photo support */}
+          <Avatar className="shrink-0 h-12 w-12 ring-2 ring-[var(--oe-clinical-border)]">
+            {card.photo_url && <AvatarImage src={card.photo_url} alt={displayName} />}
+            <AvatarFallback className={cn(
+              'text-sm font-semibold',
+              isUrgent && 'bg-[var(--oe-clinical-warning-bg)] text-[var(--oe-clinical-warning)]',
+              isClaimLost && 'bg-[var(--oe-clinical-muted)] text-[var(--oe-clinical-text-muted)]',
+            )}>
+              {patientInitials(card.display_name)}
+            </AvatarFallback>
+          </Avatar>
+
+          <div className={cn(queueCardBodyClass, 'flex-1 min-w-0')}>
+            <div className={cn(queueCardHeaderClass, 'gap-2 mb-1')}>
+              <span className={cn(
+                queueCardQueueNumClass,
+                'text-[var(--oe-clinical-text-muted)] font-semibold',
+              )}>
+                #{card.queue_number}
+              </span>
+              <span className={cn(
+                queueCardNameClass,
+                'text-[var(--oe-clinical-text)] font-semibold',
+              )}>
+                {displayName}
+              </span>
               {isUrgent && (
                 <Badge variant="warning">URGENT</Badge>
               )}
@@ -122,18 +153,27 @@ export function QueueCard({ card, privacyMode = false, onClick, selected = false
                 </a>
               )}
               {isStale && (
-                <span className={queueCardStaleBadgeClass} title={`Visit opened on ${card.visit_date.slice(0, 10)}`}>
+                <span className={cn(
+                  queueCardStaleBadgeClass,
+                  'text-[var(--oe-clinical-warning)]',
+                )} title={`Visit opened on ${card.visit_date.slice(0, 10)}`}>
                   <Clock className="h-3 w-3" aria-hidden="true" /> {formatStaleDate(card.visit_date)}
                 </span>
               )}
             </div>
 
-            <div className={queueCardMetaClass}>
+            <div className={cn(
+              queueCardMetaClass,
+              'text-[var(--oe-clinical-text-muted)] text-[var(--oe-clinical-text-xs)] mb-1',
+            )}>
               {card.sex} · {card.age_years} · <WaitTimeSpan card={card} suffix=" waiting" /> · {card.visit_type_label}
             </div>
 
             {card.chief_complaint && (
-              <div className={queueCardCcClass}>
+              <div className={cn(
+                queueCardCcClass,
+                'text-[var(--oe-clinical-text)] text-sm mb-2',
+              )}>
                 CC: {card.chief_complaint}
               </div>
             )}
