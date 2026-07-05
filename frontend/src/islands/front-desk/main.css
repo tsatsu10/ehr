@@ -761,6 +761,20 @@
   background: var(--oe-clinical-surface, #ffffff);
   border-radius: var(--oe-clinical-radius-lg, 12px);
   box-shadow: var(--oe-clinical-shadow-md, 0 2px 8px rgba(0, 0, 0, 0.06));
+  transition: box-shadow 0.2s ease;
+}
+
+.nc-clinical-preview-timeline:focus-within {
+  box-shadow: var(--oe-clinical-shadow-lg, 0 4px 12px rgba(0, 0, 0, 0.1));
+  outline: 2px solid var(--oe-clinical-primary-light);
+  outline-offset: -2px;
+}
+
+/* Focus indicators for keyboard navigation */
+.nc-clinical-preview-pane :focus-visible {
+  outline: 2px solid var(--oe-clinical-primary);
+  outline-offset: 2px;
+  border-radius: var(--oe-clinical-radius-sm, 4px);
 }
 
 /* Tablet: Stack timeline and actions */

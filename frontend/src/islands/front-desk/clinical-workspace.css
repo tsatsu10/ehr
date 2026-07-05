@@ -2,6 +2,7 @@
  * Clinical Workspace Layout
  * Three-column grid for desktop, responsive breakpoints for tablet/mobile
  * Updated 2026-07-05 for Front Desk clinical redesign
+ * Phase 6: Added transitions, reduced motion support, focus indicators
  */
 
 /* ── §1  Three-Column Grid (Desktop) ───────────────────────────────────────── */
@@ -25,6 +26,12 @@
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: var(--oe-clinical-border) transparent;
+  transition: box-shadow 0.2s ease;
+}
+
+.nc-clinical-workspace__search:focus-within {
+  box-shadow: 0 0 0 2px var(--oe-clinical-primary-light);
+  border-radius: var(--oe-clinical-radius-md, 8px);
 }
 
 .nc-clinical-workspace__identity {
@@ -34,6 +41,11 @@
   z-index: var(--oe-clinical-z-sticky, 10);
   background: var(--oe-clinical-bg, #fafaf9);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease;
+}
+
+.nc-clinical-workspace__identity:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .nc-clinical-workspace__content {
@@ -46,6 +58,11 @@
   background: var(--oe-clinical-surface, #ffffff);
   border-radius: var(--oe-clinical-radius-lg, 12px);
   box-shadow: var(--oe-clinical-shadow-md, 0 2px 8px rgba(0, 0, 0, 0.06));
+  transition: box-shadow 0.2s ease;
+}
+
+.nc-clinical-workspace__content:focus-within {
+  box-shadow: var(--oe-clinical-shadow-lg, 0 4px 12px rgba(0, 0, 0, 0.1));
 }
 
 .nc-clinical-workspace__actions {
