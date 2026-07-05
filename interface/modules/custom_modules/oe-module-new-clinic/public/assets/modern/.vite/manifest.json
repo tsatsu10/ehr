@@ -124,8 +124,8 @@
       "_usePatientSearch-DNldz5n3.js"
     ]
   },
-  "_PatientSearchWidget-BJuAqbNe.js": {
-    "file": "chunks/PatientSearchWidget-BJuAqbNe.js",
+  "_PatientSearchWidget-CToSm_2s.js": {
+    "file": "chunks/PatientSearchWidget-CToSm_2s.js",
     "name": "PatientSearchWidget",
     "imports": [
       "_deskCalloutStyles-sccuUACN.js",
@@ -806,7 +806,7 @@
       "_circle-check-OdSinwkY.js",
       "_user-plus-D2OXiq6r.js",
       "_circle-x-ClDyifmx.js",
-      "_PatientSearchWidget-BJuAqbNe.js",
+      "_PatientSearchWidget-CToSm_2s.js",
       "_triangle-alert-BL1DEnCk.js",
       "_select-C_GxGt4L.js",
       "_clock-J1hZ8jZc.js",
@@ -1114,7 +1114,7 @@
       "_StatusPill-uYqiBn4x.js",
       "_AncillaryVisitBadges-BiQPWWHZ.js",
       "_card-BqZ3_I52.js",
-      "_PatientSearchWidget-BJuAqbNe.js",
+      "_PatientSearchWidget-CToSm_2s.js",
       "_checkbox-CPswd-of.js",
       "_DeskQueueStatusBar-B-Gt7IEH.js",
       "_input-BwaDVzge.js",

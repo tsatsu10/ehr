@@ -12,6 +12,7 @@ import { Card } from '@components/ui/card';
 import { Avatar, AvatarFallback } from '@components/ui/avatar';
 import { Button } from '@components/ui/button';
 import { LiveRegion, useLiveAnnounce } from '@components/LiveRegion';
+import { VirtualizedSearchResults } from '@components/VirtualizedSearchResults';
 import { usePatientSearch } from '@core/usePatientSearch';
 import { useTypeAheadSuggestions } from './useTypeAheadSuggestions';
 import type { PatientSearchRow } from '@core/types';
@@ -23,6 +24,9 @@ import { TodaysAppointmentsList } from './TodaysAppointmentsList';
 import type { RecentPatient } from '@core/useRecentlyViewedPatients';
 import type { TodaysAppointmentRow } from '@core/types';
 import { UserPlus, X, Check, CalendarCheck, Search, BellRing, Sparkles, Zap } from 'lucide-react';
+
+// Virtual scrolling threshold: use virtualization for result sets > 50
+const VIRTUALIZATION_THRESHOLD = 50;
 
 interface PatientSearchWidgetProps {
   ajaxUrl: string;
@@ -471,7 +475,25 @@ export function PatientSearchWidget({
               No match — check spelling, or register a new patient.
             </CommandEmpty>
           )}
-          {!searching && results.length > 0 && (
+          {!searching && results.length > 0 && results.length > VIRTUALIZATION_THRESHOLD ? (
+            // Virtual scrolling for large result sets (>50 items)
+            <CommandGroup className="p-2">
+              <VirtualizedSearchResults
+                results={results}
+                selectedPid={selectedPid}
+                onSelectPatient={onSelectPatient}
+                estimatedRowHeight={72}
+                renderRow={(patient, isSelected) => (
+                  <SearchResultRow
+                    patient={patient}
+                    selectedPid={selectedPid}
+                    sharedPhone={!!(patient.phone_masked && sharedPhoneSet.has(patient.phone_masked.trim()))}
+                  />
+                )}
+              />
+            </CommandGroup>
+          ) : !searching && results.length > 0 ? (
+            // Standard rendering for small result sets (≤50 items)
             <CommandGroup className="p-2">
               {results.map((patient) => (
                 <CommandItem
@@ -495,7 +517,7 @@ export function PatientSearchWidget({
                 </CommandItem>
               ))}
             </CommandGroup>
-          )}
+          ) : null}
         </CommandList>
         
         <LiveRegion message={message} politeness={politeness} />
