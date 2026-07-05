@@ -19,6 +19,13 @@ import {
 } from './registrationFormModel';
 import { useRegistrationGeo } from './useRegistrationGeo';
 import { useRegistrationDupCheck } from './useRegistrationDupCheck';
+import {
+    validateField,
+    validateSection,
+    hasValidationErrors,
+    getValidationSummary,
+    type ValidationErrors,
+} from './registrationFormValidation';
 
 export interface RegistrationFormHandle {
     isDirty: () => boolean;
@@ -77,6 +84,8 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
     const [discardOpen, setDiscardOpen] = useState(false);
     const [discardProceed, setDiscardProceed] = useState<(() => void) | null>(null);
     const [allergyNoneConfirmOpen, setAllergyNoneConfirmOpen] = useState(false);
+    const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+    const [touchedFields, setTouchedFields] = useState<Set<keyof RegistrationFormValues>>(new Set());
     const prefillAppliedRef = useRef(false);
 
     useImperativeHandle(ref, () => ({
@@ -113,7 +122,33 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
         });
         setDirty(true);
         setSuccess('');
+
+        // Clear validation error for this field when user starts typing
+        if (validationErrors[name]) {
+            setValidationErrors((prev) => {
+                const next = { ...prev };
+                delete next[name];
+                return next;
+            });
+        }
     };
+
+    const handleFieldBlur = useCallback((name: keyof RegistrationFormValues) => {
+        // Mark field as touched
+        setTouchedFields((prev) => new Set(prev).add(name));
+
+        // Validate field on blur
+        const errorMessage = validateField(name, form[name], form);
+        setValidationErrors((prev) => {
+            const next = { ...prev };
+            if (errorMessage) {
+                next[name] = errorMessage;
+            } else {
+                delete next[name];
+            }
+            return next;
+        });
+    }, [form]);
 
     const handleCheckboxChange = (name: keyof RegistrationFormValues, checked: boolean) => {
         setForm((prev) => {
@@ -258,6 +293,16 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
 
     const saveSection = async (section: number, startAfter: boolean) => {
         setError('');
+
+        // Validate section before saving
+        const sectionErrors = validateSection(section, form);
+        if (hasValidationErrors(sectionErrors)) {
+            setValidationErrors(sectionErrors);
+            const summary = getValidationSummary(sectionErrors);
+            showError(`Cannot save: ${summary}. Please fix the errors and try again.`);
+            return;
+        }
+
         const patient = collectRegistrationSection(form, section);
 
         if (section === 1 && form.no_phone) {
@@ -307,6 +352,8 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
             setCompletionScore(result.completion_score ?? completionScore);
             setCompletionMissing(result.completion_missing ?? completionMissing);
             setDirty(false);
+            setValidationErrors({});
+            setTouchedFields(new Set());
             showSuccess(`Section ${section} saved.`);
             await loadForm(savedPid);
 
@@ -354,6 +401,7 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
                 districts={districts}
                 loadingDistricts={loadingDistricts}
                 wizardMode={wizardMode}
+                validationErrors={validationErrors}
                 onSectionToggle={setActiveSection}
                 onSaveSection={(section) => {
                     setActiveSection(section);
@@ -362,6 +410,7 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
                 onFieldChange={handleFieldChange}
                 onCheckboxChange={handleCheckboxChange}
                 onRegionChange={handleRegionChange}
+                onFieldBlur={handleFieldBlur}
             />
 
             {error && (
