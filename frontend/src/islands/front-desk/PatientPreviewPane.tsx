@@ -11,7 +11,7 @@ import { Card, CardContent } from '@components/ui/card';
 import { DeskAlert } from '@components/DeskAlert';
 import { ClinicalIdentityHeader } from '@components/ClinicalIdentityHeader';
 import { ClinicalTaskPanel } from '@components/ClinicalTaskPanel';
-import type { ClinicalTaskPanelAction, ClinicalTaskPanelStat, ClinicalTaskPanelAlert, PatientStatus } from '@components/ClinicalTaskPanel';
+import type { TaskAction, QuickStat, TaskAlert, PatientStatus } from '@components/ClinicalTaskPanel';
 import { ClinicalTimelineEntry } from '@components/ClinicalTimelineEntry';
 import type { TimelineEntry } from '@components/ClinicalTimelineEntry';
 import { PatientPreviewBanner } from './PatientPreviewBanner';
@@ -20,6 +20,7 @@ import { PreviewEmptyState } from './PreviewEmptyState';
 import { PreviewLoadingState } from './PreviewLoadingState';
 import type { RegistrationFormHandle } from './RegistrationForm';
 import { RegistrationForm } from './RegistrationForm';
+import { Play, Edit, AlertCircle } from 'lucide-react';
 
 type PreviewPaneMode = 'empty' | 'loading' | 'preview' | 'registration' | 'registration-pinned';
 
@@ -154,12 +155,12 @@ function buildPanelActions(
   mode: PreviewPaneMode,
   onEditProfile: () => void,
   onCompleteNow: () => void,
-): ClinicalTaskPanelAction[] {
+): TaskAction[] {
   if (!preview || mode === 'registration' || mode === 'registration-pinned') {
     return [];
   }
 
-  const actions: ClinicalTaskPanelAction[] = [];
+  const actions: TaskAction[] = [];
   const completion = preview.completion;
   const threshold = completion?.billing_threshold || 70;
   const belowThreshold = (completion?.score || 0) < threshold;
@@ -169,8 +170,8 @@ function buildPanelActions(
     actions.push({
       id: 'start-visit',
       label: 'Start visit',
-      variant: 'primary',
-      icon: 'play',
+      variant: 'default',
+      icon: Play,
       onClick: () => { /* Wire up start visit logic */ },
     });
   }
@@ -180,7 +181,7 @@ function buildPanelActions(
     id: 'edit-profile',
     label: 'Edit profile',
     variant: 'secondary',
-    icon: 'edit',
+    icon: Edit,
     onClick: onEditProfile,
   });
 
@@ -188,8 +189,8 @@ function buildPanelActions(
     actions.push({
       id: 'complete-now',
       label: 'Complete profile',
-      variant: 'warning',
-      icon: 'alert-circle',
+      variant: 'outline',
+      icon: AlertCircle,
       onClick: onCompleteNow,
     });
   }
@@ -200,28 +201,26 @@ function buildPanelActions(
 /**
  * Build quick stats for ClinicalTaskPanel
  */
-function buildPanelStats(preview: FrontDeskPreviewData | null): ClinicalTaskPanelStat[] {
+function buildPanelStats(preview: FrontDeskPreviewData | null): QuickStat[] {
   if (!preview) return [];
 
-  const stats: ClinicalTaskPanelStat[] = [];
+  const stats: QuickStat[] = [];
 
   // Balance due
   if (preview.unpaid_visits_count && preview.unpaid_visits_count > 0) {
     stats.push({
-      id: 'balance',
       label: 'Balance due',
       value: `${preview.unpaid_visits_count} visit${preview.unpaid_visits_count > 1 ? 's' : ''}`,
-      tone: 'warning',
+      variant: 'warning',
     });
   }
 
   // Insurance
   if (preview.insurance_label) {
     stats.push({
-      id: 'insurance',
       label: 'Insurance',
       value: preview.insurance_label,
-      tone: preview.insurance_effective === 'cash' ? 'neutral' : 'success',
+      variant: preview.insurance_effective === 'cash' ? 'default' : 'success',
     });
   }
 
@@ -230,10 +229,9 @@ function buildPanelStats(preview: FrontDeskPreviewData | null): ClinicalTaskPane
     const score = preview.completion.score;
     const threshold = preview.completion.billing_threshold || 70;
     stats.push({
-      id: 'completion',
       label: 'Profile',
       value: `${score}%`,
-      tone: score >= threshold ? 'success' : 'warning',
+      variant: score >= threshold ? 'success' : 'warning',
     });
   }
 
@@ -243,23 +241,23 @@ function buildPanelStats(preview: FrontDeskPreviewData | null): ClinicalTaskPane
 /**
  * Build alert items for ClinicalTaskPanel
  */
-function buildPanelAlerts(preview: FrontDeskPreviewData | null): ClinicalTaskPanelAlert[] {
+function buildPanelAlerts(preview: FrontDeskPreviewData | null): TaskAlert[] {
   if (!preview) return [];
 
-  const alerts: ClinicalTaskPanelAlert[] = [];
+  const alerts: TaskAlert[] = [];
 
   // Allergy alert
   if (preview.safety?.allergies_undocumented) {
     alerts.push({
       id: 'allergy-undoc',
       message: 'Allergies not documented',
-      tone: 'critical',
+      severity: 'error',
     });
   } else if (preview.safety?.allergies_severe && preview.safety.allergies_severe.length > 0) {
     alerts.push({
       id: 'allergy-severe',
       message: `Severe allergies: ${preview.safety.allergies_severe.slice(0, 2).join(', ')}`,
-      tone: 'warning',
+      severity: 'warning',
     });
   }
 
@@ -268,7 +266,7 @@ function buildPanelAlerts(preview: FrontDeskPreviewData | null): ClinicalTaskPan
     alerts.push({
       id: 'pregnant',
       message: 'Patient may be pregnant',
-      tone: 'info',
+      severity: 'info',
     });
   }
 
