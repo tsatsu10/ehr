@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { SegmentedControl } from '@components/SegmentedControl';
 import { oeFetch, OeFetchError } from '@core/oeFetch';
 import { resolveDeskConflict } from '@core/deskConflict';
@@ -380,17 +381,17 @@ export function DailyReports({
   }, [fetchOptions, loadReport, markUnpaidTarget]);
 
   const errorBanner = loadError ? (
-    <div className="alert alert-danger">{loadError}</div>
+    <div className={deskCalloutClass('error')}>{loadError}</div>
   ) : null;
 
   const tabContent = loading && !lastUpdated ? (
-    <div className="text-muted"><em>Loading report…</em></div>
+    <div className="text-[var(--oe-nc-text-muted)]"><em>Loading report…</em></div>
   ) : (
     <>
       {activeTab === 'visits' && <VisitsSection visits={report.visits} />}
       {activeTab === 'scheduling' && (
         schedulingError
-          ? <div className="alert alert-danger">{schedulingError}</div>
+          ? <div className={deskCalloutClass('error')}>{schedulingError}</div>
           : schedulingReport
             ? (
               <SchedulingSection
@@ -398,11 +399,11 @@ export function DailyReports({
                 visitDate={visitDate}
               />
             )
-            : <div className="text-muted"><em>Loading scheduling report…</em></div>
+            : <div className="text-[var(--oe-nc-text-muted)]"><em>Loading scheduling report…</em></div>
       )}
       {activeTab === 'ancillary' && (
         ancillaryError
-          ? <div className="alert alert-danger">{ancillaryError}</div>
+          ? <div className={deskCalloutClass('error')}>{ancillaryError}</div>
           : ancillaryReport
             ? (
               <AncillarySection
@@ -414,11 +415,11 @@ export function DailyReports({
                 onEndDateChange={setAncillaryEndDate}
               />
             )
-            : <div className="text-muted"><em>Loading ancillary report…</em></div>
+            : <div className="text-[var(--oe-nc-text-muted)]"><em>Loading ancillary report…</em></div>
       )}
       {activeTab === 'documentation_integrity' && (
         docIntegrityError
-          ? <div className="alert alert-danger">{docIntegrityError}</div>
+          ? <div className={deskCalloutClass('error')}>{docIntegrityError}</div>
           : docIntegrityReport
             ? (
               <DocumentationIntegritySection
@@ -430,7 +431,7 @@ export function DailyReports({
                 onEndDateChange={setDocIntegrityEndDate}
               />
             )
-            : <div className="text-muted"><em>Loading documentation integrity report…</em></div>
+            : <div className="text-[var(--oe-nc-text-muted)]"><em>Loading documentation integrity report…</em></div>
       )}
       {activeTab === 'cash' && <CashSection cash={report.cash} />}
       {activeTab === 'reconciliation' && (
@@ -466,7 +467,7 @@ export function DailyReports({
   return (
     <div id="nc-reports-desk">
       <SegmentedControl
-        className="oe-nc-daily-reports__tabs"
+        className="nc-daily-reports-tabs"
         ariaLabel="Daily report sections"
         segments={visibleTabs.map((tab) => ({ id: tab.id, label: tab.label }))}
         value={activeTab}
@@ -477,7 +478,7 @@ export function DailyReports({
         }}
       />
 
-      <div className="oe-nc-daily-reports__content">
+      <div className="nc-daily-reports-content">
         {errorBanner}
         {tabContent}
       </div>

@@ -355,7 +355,7 @@ class ShellService
             $grouped[$groupKey][] = [
                 'id' => $item['id'],
                 'label' => xlt($item['label']),
-                'url' => $publicBase . $item['path'],
+                'url' => $this->resolveNavUrl($publicBase, $item['path']),
                 'active' => $item['id'] === $activeNavId,
                 'icon' => $item['icon'],
                 'badge_key' => $badgeKey,
@@ -503,5 +503,21 @@ class ShellService
         }
 
         return strtoupper(mb_substr($parts[0], 0, 1) . mb_substr($parts[1], 0, 1));
+    }
+
+    /**
+     * Resolve the URL for a sidebar nav item.
+     *
+     * Simple desk pages (.php with no subdirectory) get a clean /clinic/{slug} URL.
+     * Sub-directory items (lab-ops/index.php etc.) keep the full module path so their
+     * own internal routing is not disturbed.
+     */
+    private function resolveNavUrl(string $publicBase, string $path): string
+    {
+        if (str_contains($path, '/')) {
+            return $publicBase . $path;
+        }
+
+        return ($GLOBALS['webroot'] ?? '') . '/clinic/' . basename($path, '.php');
     }
 }

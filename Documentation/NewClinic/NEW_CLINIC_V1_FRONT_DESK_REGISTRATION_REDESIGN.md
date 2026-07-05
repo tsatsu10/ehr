@@ -324,22 +324,22 @@ B7 Profile tab checklist (L1–L4) must mirror section completion state from thi
 
 ### P0
 
-- [ ] Search → no match → Register opens 4-section accordion (not L1-only drawer)
-- [ ] Section 1 creates patient with name, sex, phone or reach contact (no personal phone)
-- [ ] Region dropdown enables district dropdown with **district ⊆ region**
-- [ ] DOB in Section 1 clears estimated age flag
-- [ ] Dup check includes national ID when provided
-- [ ] Save & start visit after Section 1
-- [ ] Completion % updates after each save; 70% gate at cashier unchanged
-- [ ] Edit profile reopens same form for existing `pid`
-- [ ] M1a-F14b dirty-switch applies to registration form
+- [x] Search → no match → Register opens 4-section accordion (not L1-only drawer)
+- [x] Section 1 creates patient with name, sex, phone or reach contact (no personal phone)
+- [x] Region dropdown enables district dropdown with **district ⊆ region**
+- [x] DOB in Section 1 clears estimated age flag
+- [x] Dup check includes national ID when provided
+- [x] Save & start visit after Section 1
+- [x] Completion % updates after each save; 70% gate at cashier unchanged
+- [x] Edit profile reopens same form for existing `pid`
+- [x] M1a-F14b dirty-switch applies to registration form
 
 ### P1
 
-- [ ] NHIS expiry → display as Cash
-- [ ] Allergies “None known” sets NKDA list entry
-- [ ] Pregnancy field visible only for Female
-- [ ] `ghana_regions_districts` seeded in M6
+- [x] NHIS expiry -> display as Cash (PatientInsuranceUtil::effectiveType; preview badge sp168)
+- [x] Allergies "None known" sets NKDA list entry (replaceListEntries + NKDA check aligned sp168)
+- [x] Pregnancy field visible only for Female
+- [ ] `ghana_regions_districts` seeded in M6 — **admin M6 setup step, not registration form**
 
 ---
 

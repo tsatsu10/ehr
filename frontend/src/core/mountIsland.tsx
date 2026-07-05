@@ -17,6 +17,7 @@
 
 import { StrictMode, type ComponentType } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { AppToaster } from '@components/AppToaster';
 import type { IslandProps } from './types';
 
 const rootRegistry = new WeakMap<HTMLElement, Root>();
@@ -57,6 +58,7 @@ export function mountIsland(
     const props = decodeProps(node);
     root.render(
       <StrictMode>
+        <AppToaster />
         <Component {...props} />
       </StrictMode>
     );

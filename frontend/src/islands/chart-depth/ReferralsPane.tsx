@@ -1,4 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { ncShadcnTableClass } from '@components/ncTableStyles';
+import { Button } from '@components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@components/ui/table';
 import { oeFetch } from '@core/oeFetch';
 import type { ReferralRow, ReferralsListData } from './chartDepthTypes';
 
@@ -11,26 +22,30 @@ interface ReferralsPaneProps {
 
 function ReferralRowView({ item }: { item: ReferralRow }) {
   return (
-    <tr>
-      <td>
+    <TableRow>
+      <TableCell>
         <strong>{item.label ?? 'Referral'}</strong>
-        <div className="small text-muted">{item.author ?? '—'}</div>
-      </td>
-      <td>{item.status ?? '—'}</td>
-      <td>{item.occurred_at ?? '—'}</td>
-      <td className="text-right">
+        <div className="text-sm text-[var(--oe-nc-text-muted)]">{item.author ?? '—'}</div>
+      </TableCell>
+      <TableCell>{item.status ?? '—'}</TableCell>
+      <TableCell>{item.occurred_at ?? '—'}</TableCell>
+      <TableCell className="text-right">
         {item.print_url && (
-          <a className="btn btn-sm btn-outline-secondary mr-1" href={item.print_url} target="_top">
-            Print
-          </a>
+          <Button variant="outline" size="sm" className="mr-1" asChild>
+            <a href={item.print_url} target="_top">
+              Print
+            </a>
+          </Button>
         )}
         {item.edit_url && (
-          <a className="btn btn-sm btn-outline-primary" href={item.edit_url} target="_top">
-            Edit
-          </a>
+          <Button variant="outline" size="sm" asChild>
+            <a href={item.edit_url} target="_top">
+              Edit
+            </a>
+          </Button>
         )}
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -105,51 +120,55 @@ export function ReferralsPane({ ajaxUrl, csrfToken, pid, encounterId }: Referral
   }
 
   if (error) {
-    return <div className="alert alert-danger">{error}</div>;
+    return <div className={deskCalloutClass('error')}>{error}</div>;
   }
 
   return (
     <>
       {createUrl && (
         <div id="nc-referrals-actions" className="mb-3">
-          <a className="btn btn-sm btn-primary" href={createUrl} target="_top">
-            New referral
-          </a>
+          <Button size="sm" asChild>
+            <a href={createUrl} target="_top">
+              New referral
+            </a>
+          </Button>
         </div>
       )}
 
       {!rows.length ? (
-        <p className="text-muted mb-0">No referrals for this filter.</p>
+        <p className="text-[var(--oe-nc-text-muted)] mb-0">No referrals for this filter.</p>
       ) : (
         <>
-          <div className="table-responsive">
-            <table className="table table-sm mb-0">
-              <thead>
-                <tr>
-                  <th>Destination</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody id="nc-referrals-rows">
+          <div className="overflow-x-auto">
+            <Table className={ncShadcnTableClass({ className: 'mb-0' })}>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Destination</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody id="nc-referrals-rows">
                 {rows.map((row, idx) => (
                   <ReferralRowView key={`${row.label ?? idx}-${row.occurred_at ?? ''}`} item={row} />
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
           {hasMore && (
-            <button
+            <Button
               type="button"
-              className="btn btn-outline-secondary btn-sm mt-2"
+              variant="outline"
+              size="sm"
+              className="mt-2"
               disabled={loadingMore}
               onClick={() => {
                 void loadMore();
               }}
             >
               Load more
-            </button>
+            </Button>
           )}
         </>
       )}

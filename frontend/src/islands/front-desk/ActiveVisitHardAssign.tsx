@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react';
 import type { AssignableDoctor, VisitState } from '@core/types';
 import { hardAssignVisit, isHardAssignableVisitState } from '@core/hardAssignVisit';
 import { HardAssignDoctorSelect } from '@components/HardAssignDoctorSelect';
+import { showDeskToast } from '@components/deskToast';
+import { DeskAlert } from '@components/DeskAlert';
 import { Button } from '@components/ui/button';
-import { Loader2, UserRound } from 'lucide-react';
+import { Label } from '@components/ui/label';
+import { AlertCircle, Loader2, UserRound } from 'lucide-react';
 
 interface ActiveVisitHardAssignProps {
   visitId: number;
@@ -35,12 +38,10 @@ export function ActiveVisitHardAssign({
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     setDoctorId(currentProviderId != null && currentProviderId > 0 ? String(currentProviderId) : '');
     setError(null);
-    setSaved(false);
   }, [visitId, currentProviderId, rowVersion]);
 
   if (!isHardAssignableVisitState(state)) {
@@ -55,7 +56,6 @@ export function ActiveVisitHardAssign({
   const handleSave = async () => {
     setSubmitting(true);
     setError(null);
-    setSaved(false);
     try {
       await hardAssignVisit({
         ajaxUrl,
@@ -65,44 +65,53 @@ export function ActiveVisitHardAssign({
         rowVersion,
         hardAssignedProviderId: nextProviderId,
       });
-      setSaved(true);
+      showDeskToast('Doctor assignment saved.', 'success');
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Assignment failed');
+      const message = err instanceof Error ? err.message : 'Assignment failed';
+      setError(message);
+      showDeskToast(message, 'danger');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="alert alert-light border py-2 mb-3" id="nc-active-visit-hard-assign">
-      <div className="d-flex align-items-center mb-2">
-        <UserRound className="h-4 w-4 mr-2 text-muted" aria-hidden />
-        <strong className="small mb-0">Assign doctor</strong>
+    <DeskAlert
+      tone="info"
+      className="mb-3"
+      id="nc-active-visit-hard-assign"
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <UserRound className="h-4 w-4 text-[var(--oe-nc-text-muted)]" aria-hidden />
+        <strong className="text-sm font-semibold">Assign doctor</strong>
       </div>
       {currentProviderName && (
-        <div className="small text-muted mb-2">
+        <div className="text-xs text-[var(--oe-nc-text-muted)] mb-2">
           Currently assigned: {currentProviderName}
         </div>
       )}
-      <div className="form-group mb-2">
-        <label htmlFor="nc-fd-hard-assign-doctor" className="small mb-1">
+      <div className="mb-3 space-y-1">
+        <Label htmlFor="nc-fd-hard-assign-doctor" className="text-sm">
           Doctor (optional)
-        </label>
+        </Label>
         <HardAssignDoctorSelect
           id="nc-fd-hard-assign-doctor"
           doctors={doctors}
           value={doctorId}
           disabled={submitting}
-          onChange={(value) => {
-            setDoctorId(value);
-            setSaved(false);
-          }}
+          onChange={setDoctorId}
         />
       </div>
-      {error && <div className="small text-danger mb-2">{error}</div>}
-      {saved && !error && (
-        <div className="small text-success mb-2">Doctor assignment saved.</div>
+      {error && (
+        <DeskAlert
+          tone="error"
+          className="mb-3 rounded-md px-3 py-2 flex items-start gap-2 text-sm"
+          role="alert"
+        >
+          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden />
+          <span>{error}</span>
+        </DeskAlert>
       )}
       <Button
         type="button"
@@ -120,6 +129,6 @@ export function ActiveVisitHardAssign({
           'Save assignment'
         )}
       </Button>
-    </div>
+    </DeskAlert>
   );
 }

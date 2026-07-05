@@ -2,18 +2,16 @@
  * New Clinic module scoped styles (B0)
  */
 .nc-search-row.active,
-.nc-search-row:focus,
-.oe-nc-search-row.active,
-.oe-nc-search-row:focus {
+.nc-search-row:focus {
     background-color: #eff6ff;
     border-left-color: #2563eb;
 }
 
-.nc-patient-context-banner .badge {
+.nc-patient-context-banner .nc-badge {
     margin-right: 0.25rem;
 }
 
-.nc-quick-add .form-group {
+.nc-quick-add .nc-form-group {
     margin-bottom: 0.75rem;
 }
 
@@ -46,24 +44,12 @@
     background: #eff6ff !important;
 }
 
-.nc-board-stats .badge {
+.nc-board-stats .nc-badge {
     font-size: 0.85rem;
     font-weight: 500;
 }
 
-#nc-visit-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1050;
-    width: 100%;
-    height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    outline: 0;
-}
-
-.nc-visit-detail-modal .modal-dialog {
+.nc-visit-detail-modal {
     max-width: 480px;
 }
 
@@ -71,76 +57,8 @@
     font-size: 0.9rem;
 }
 
-.nc-visit-summary__badges .badge {
-    margin-right: 0.35rem;
-}
-
-.nc-visit-detail-drawer {
-    position: fixed;
-    top: 0;
-    right: 0;
-    z-index: 1060;
-    width: min(420px, 100vw);
-    height: 100vh;
-    pointer-events: none;
-}
-
-.nc-visit-detail-drawer.show {
-    display: block !important;
-    pointer-events: auto;
-}
-
-.nc-visit-detail-drawer__panel {
-    height: 100%;
-    background: #fff;
-    border-left: 1px solid #dee2e6;
-    box-shadow: -4px 0 24px rgba(15, 23, 42, 0.12);
-    display: flex;
-    flex-direction: column;
-}
-
-.nc-visit-detail-drawer__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.nc-visit-detail-drawer__body {
-    flex: 1 1 auto;
-    overflow-y: auto;
-    padding: 1rem;
-}
-
-.nc-visit-detail-drawer__footer {
-    display: flex;
-    gap: 0.5rem;
-    padding: 1rem;
-    border-top: 1px solid #dee2e6;
-}
-
 .nc-audit-timeline__item:last-child {
     border-bottom: 0 !important;
-}
-
-#nc-visit-modal.show {
-    display: block !important;
-}
-
-#nc-visit-modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1040;
-    width: 100vw;
-    height: 100vh;
-    background-color: #000;
-    opacity: 0.5;
-}
-
-#nc-visit-modal-backdrop.show {
-    display: block !important;
 }
 
 .nc-triage-queue-panel {
@@ -192,37 +110,7 @@
     border-radius: 0;
 }
 
-#nc-triage-auto-start-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1070;
-    width: 100%;
-    height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-}
-
-#nc-triage-auto-start-modal.show {
-    display: block !important;
-}
-
-#nc-triage-modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1065;
-    width: 100vw;
-    height: 100vh;
-    background-color: #000;
-    opacity: 0.5;
-}
-
-#nc-triage-modal-backdrop.show {
-    display: block !important;
-}
-
-.nc-triage-vitals-form .form-group {
+.nc-triage-vitals-form .nc-form-group {
     margin-bottom: 0.75rem;
 }
 
@@ -247,40 +135,6 @@
     min-height: 320px;
 }
 
-#nc-cashier-receipt-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1070;
-    width: 100%;
-    height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-}
-
-#nc-cashier-receipt-modal.show {
-    display: block !important;
-}
-
-#nc-cashier-modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1065;
-    width: 100vw;
-    height: 100vh;
-    background-color: #000;
-    opacity: 0.5;
-}
-
-#nc-cashier-modal-backdrop.show {
-    display: block !important;
-}
-
-.nc-doctor-shortcuts .btn {
+.nc-doctor-shortcuts .nc-shortcut-btn {
     min-width: 140px;
-}
-
-body.modal-open {
-    overflow: hidden;
 }

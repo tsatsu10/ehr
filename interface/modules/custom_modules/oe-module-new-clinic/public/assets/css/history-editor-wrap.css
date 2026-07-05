@@ -1,11 +1,11 @@
 /**
  * T1-F20b — History editor wrap (V1.1-HIST-WRAP)
  */
-body.oe-nc-history-editor-wrap {
+body.nc-history-editor-wrap {
     background: #f8fafc;
 }
 
-.oe-nc-history-editor-wrap__header {
+.nc-history-editor-wrap-header {
     position: sticky;
     top: 0;
     z-index: 1040;
@@ -14,11 +14,11 @@ body.oe-nc-history-editor-wrap {
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
-.oe-nc-history-editor-wrap__inner {
+.nc-history-editor-wrap-inner {
     max-width: 100%;
 }
 
-.oe-nc-history-editor-wrap__top {
+.nc-history-editor-wrap-top {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -26,25 +26,25 @@ body.oe-nc-history-editor-wrap {
     gap: 0.75rem;
 }
 
-.oe-nc-history-editor-wrap__brand {
+.nc-history-editor-wrap-brand {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
     gap: 0.5rem 0.75rem;
 }
 
-.oe-nc-history-editor-wrap__clinic {
+.nc-history-editor-wrap-clinic {
     font-size: 0.9375rem;
     color: #0f172a;
 }
 
-.oe-nc-history-editor-wrap__role,
-.oe-nc-history-editor-wrap__date {
+.nc-history-editor-wrap-role,
+.nc-history-editor-wrap-date {
     font-size: 0.8125rem;
     color: #64748b;
 }
 
-.oe-nc-history-editor-wrap__title-row {
+.nc-history-editor-wrap-title-row {
     margin-top: 0.5rem;
     display: flex;
     flex-wrap: wrap;
@@ -53,24 +53,24 @@ body.oe-nc-history-editor-wrap {
     gap: 0.5rem 1rem;
 }
 
-.oe-nc-history-editor-wrap__title {
+.nc-history-editor-wrap-title {
     font-weight: 600;
     color: #0f172a;
 }
 
-.oe-nc-history-editor-wrap__breadcrumb {
+.nc-history-editor-wrap-breadcrumb {
     margin: 0;
 }
 
-body.oe-nc-history-editor-wrap #container_div > .row:first-child {
+body.nc-history-editor-wrap #container_div > .row:first-child {
     display: none !important;
 }
 
-body.oe-nc-history-editor-wrap .oemr_ui_heading,
-body.oe-nc-history-editor-wrap .title {
+body.nc-history-editor-wrap .oemr_ui_heading,
+body.nc-history-editor-wrap .title {
     display: none !important;
 }
 
-body.oe-nc-history-editor-wrap .oe-nc-history-editor-wrap__back {
+body.nc-history-editor-wrap .nc-history-editor-wrap-back {
     margin-right: 0.35rem;
 }

@@ -75,7 +75,7 @@ export function RegistryResultsTable({
               <>
                 {row.condition_summary || '—'}
                 {row.age_at_diagnosis != null && (
-                  <span className="text-muted"> ({row.age_at_diagnosis}y)</span>
+                  <span className="text-[var(--oe-nc-text-muted)]"> ({row.age_at_diagnosis}y)</span>
                 )}
               </>
             ) : (
@@ -95,8 +95,8 @@ export function RegistryResultsTable({
   }
 
   return (
-    <section className="col-lg-8">
-      <div className="oe-nc-registry-summary text-muted small mb-2">{summaryText}</div>
+    <section className="col-span-12 lg:col-span-8">
+      <div className="nc-registry-summary text-[var(--oe-nc-text-muted)] text-sm mb-2">{summaryText}</div>
       <DataTable
         id="nc-registry-table"
         hover
@@ -107,7 +107,7 @@ export function RegistryResultsTable({
             <th>Sex</th>
             <th>MRN</th>
             <th
-              className="oe-nc-registry-col-condition"
+              className="nc-registry-col-condition"
               style={{ display: hasClinical ? undefined : 'none' }}
             >
               Condition

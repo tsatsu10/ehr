@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { ConfirmModal } from '@components/ConfirmModal';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { PatientContextBanner } from '@components/PatientContextBanner';
 import { PatientSearchDropdown } from '@components/PatientSearchDropdown';
+import { identityFromLabels } from '@components/patientBannerUtils';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { NativeSelect } from '@components/ui/native-select';
 import { printMessageThread } from './printMessageThread';
 import type { MessageDetail, ReminderListRow } from './communicationsTypes';
 
@@ -38,10 +44,10 @@ export function CommunicationsDetail({
   assigningPatient = false,
 }: CommunicationsDetailProps) {
   if (loading) {
-    return <div className="text-muted"><em>Loading…</em></div>;
+    return <div className="text-[var(--oe-nc-text-muted)]"><em>Loading…</em></div>;
   }
   if (error) {
-    return <div className="text-danger">{error}</div>;
+    return <div className="text-[var(--oe-nc-danger,#dc2626)]">{error}</div>;
   }
   if (message) {
     return (
@@ -68,7 +74,7 @@ export function CommunicationsDetail({
     );
   }
   return (
-    <div className="oe-nc-comm-empty text-muted">
+    <div className="nc-comm-empty text-[var(--oe-nc-text-muted)]">
       <p className="mb-0">Select an item to read details.</p>
     </div>
   );
@@ -105,9 +111,9 @@ function MessageDetailView({
   }, [detail.id, detail.can_assign_patient]);
 
   const statusControl = detail.can_change_status && (detail.message_statuses?.length ?? 0) > 0 ? (
-    <select
+    <NativeSelect
       id="nc-comm-detail-status"
-      className="form-control form-control-sm d-inline-block w-auto ml-1"
+      className="h-8 inline-block w-auto ml-1"
       value={detail.status || ''}
       disabled={statusChanging}
       aria-label="Message status"
@@ -116,31 +122,36 @@ function MessageDetailView({
       {(detail.message_statuses ?? []).map((opt) => (
         <option key={opt.id} value={opt.id}>{opt.label}</option>
       ))}
-    </select>
+    </NativeSelect>
   ) : (
     <span>{detail.status || ''}</span>
   );
 
+  const patientIdentity = identityFromLabels(detail.patient_name, { pid: detail.pid ?? undefined });
+  const showPatientBanner = patientIdentity != null && !detail.can_assign_patient;
+
   return (
     <>
       {detail.is_supervisory_read && detail.supervisory_banner && (
-        <div className="alert alert-warning oe-nc-comm-detail__banner py-2 small">
+        <div className={deskCalloutClass('warn', 'nc-comm-detail-banner py-2 text-sm')}>
           {detail.supervisory_banner}
         </div>
       )}
       {detail.can_assign_patient && (
-        <div className="alert alert-warning oe-nc-comm-orphan py-2">
-          <p className="small mb-2 mb-md-1">
+        <div className={deskCalloutClass('warn', 'nc-comm-orphan py-2')}>
+          <p className="text-sm mb-2 mb-md-1">
             <strong>No patient linked.</strong> Assign a patient to this message.
           </p>
           {assignPid ? (
-            <div className="d-flex flex-wrap align-items-center">
-              <span className="badge badge-light border text-dark mr-2 mb-1 py-2 px-2">
+            <div className="flex flex-wrap items-center">
+              <Badge variant="outline" className="mr-2 mb-1 py-2 px-2">
                 {assignName || `PID ${assignPid}`}
-              </span>
-              <button
+              </Badge>
+              <Button
                 type="button"
-                className="btn btn-link btn-sm p-0 mr-2 mb-1"
+                variant="link"
+                size="sm"
+                className="h-auto p-0 mr-2 mb-1"
                 disabled={assigningPatient}
                 onClick={() => {
                   setAssignPid(null);
@@ -148,15 +159,17 @@ function MessageDetailView({
                 }}
               >
                 Clear
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn btn-warning btn-sm mb-1"
+                variant="warning"
+                size="sm"
+                className="mb-1"
                 disabled={assigningPatient}
                 onClick={() => onAssignPatient?.(detail.id, assignPid)}
               >
                 {assigningPatient ? 'Assigning…' : 'Assign patient'}
-              </button>
+              </Button>
             </div>
           ) : (
             <PatientSearchDropdown
@@ -165,7 +178,6 @@ function MessageDetailView({
               inputId="nc-comm-assign-patient"
               resultsId="nc-comm-assign-patient-results"
               placeholder="Search by name, phone, NHIS, National ID, MRN"
-              inputClassName="form-control form-control-sm"
               onSelectPatient={(selectedPid, row) => {
                 setAssignPid(selectedPid);
                 setAssignName(row?.display_name ?? '');
@@ -174,59 +186,84 @@ function MessageDetailView({
           )}
         </div>
       )}
-      <header className="oe-nc-comm-detail__header">
-        <h2 className="h5 mb-1">
-          {detail.patient_name || detail.type || 'Message'}
-          {detail.patient_unassigned && !detail.can_assign_patient && (
-            <span className="badge badge-warning ml-2">No patient</span>
-          )}
-        </h2>
-        <div className="text-muted small mb-2">
-          {detail.from_name} · {detail.date_display || detail.date}
-        </div>
-        <div className="small mb-2">
+      {showPatientBanner && patientIdentity ? (
+        <PatientContextBanner
+          layout="compact"
+          identity={patientIdentity}
+          aside={<Badge variant="outline">{detail.type}</Badge>}
+        >
+          <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">
+            {detail.from_name} · {detail.date_display || detail.date}
+          </div>
+        </PatientContextBanner>
+      ) : null}
+      <header className="nc-comm-detail-header">
+        {!showPatientBanner ? (
+          <h2 className="text-lg font-semibold mb-1">
+            {detail.patient_name || detail.type || 'Message'}
+            {detail.patient_unassigned && !detail.can_assign_patient && (
+              <Badge variant="warning" className="ml-2">No patient</Badge>
+            )}
+          </h2>
+        ) : (
+          <h2 className="h6 mb-1 text-[var(--oe-nc-text-muted)]">{detail.type || 'Message'}</h2>
+        )}
+        {!showPatientBanner ? (
+          <div className="text-[var(--oe-nc-text-muted)] text-sm mb-2">
+            {detail.from_name} · {detail.date_display || detail.date}
+          </div>
+        ) : null}
+        <div className="text-sm mb-2">
           <strong>Type:</strong> {detail.type} · <strong>Status:</strong> {statusControl}
         </div>
         <div className="mb-2">
           {detail.chart_url && (
-            <a className="btn btn-outline-primary btn-sm mr-1" href={detail.chart_url} target="_top">
-              Open chart
-            </a>
+            <Button variant="outline" size="sm" className="mr-1" asChild>
+              <a href={detail.chart_url} target="_top">
+                Open chart
+              </a>
+            </Button>
           )}
           {detail.can_reply && onReply && (
-            <button
+            <Button
               type="button"
-              className="btn btn-primary btn-sm"
+              size="sm"
               onClick={() => onReply(detail.id)}
             >
               Reply
-            </button>
+            </Button>
           )}
           {detail.can_reply && !onReply && detail.legacy_reply_url && (
-            <a className="btn btn-primary btn-sm" href={detail.legacy_reply_url} target="_top">
-              Reply
-            </a>
+            <Button size="sm" asChild>
+              <a href={detail.legacy_reply_url} target="_top">
+                Reply
+              </a>
+            </Button>
           )}
-          <button
+          <Button
             type="button"
-            className="btn btn-outline-secondary btn-sm ml-1"
+            variant="outline"
+            size="sm"
+            className="ml-1"
             onClick={() => printMessageThread(detail)}
           >
             Print
-          </button>
+          </Button>
           {detail.can_delete && onDelete && (
-            <button
+            <Button
               type="button"
-              className="btn btn-outline-danger btn-sm ml-1"
+              variant="outline"
+              size="sm"
+              className="ml-1 border-red-300 text-red-700 hover:bg-red-50"
               onClick={() => setDeleteConfirmOpen(true)}
             >
               Delete
-            </button>
+            </Button>
           )}
         </div>
       </header>
       <div
-        className="oe-nc-comm-thread"
+        className="nc-comm-thread"
         dangerouslySetInnerHTML={{ __html: detail.thread_html || '' }}
       />
       <ConfirmModal
@@ -259,33 +296,58 @@ function ReminderDetailView({
   const chartUrl = reminder.pid
     ? `${webroot}/interface/modules/custom_modules/oe-module-new-clinic/public/patient-chart.php?pid=${reminder.pid}`
     : null;
+  const patientIdentity = identityFromLabels(reminder.patient_name, { pid: reminder.pid });
 
   return (
     <>
-      <header className="oe-nc-comm-detail__header">
-        <h2 className="h5 mb-1">{reminder.patient_name || 'Reminder'}</h2>
-        <div className="text-muted small mb-2">
-          <span className={`oe-nc-comm-urgency--${reminder.urgency}`}>
-            {reminder.urgency_label}
-          </span>
-          {' · '}
-          {reminder.due_display || reminder.due_date}
-        </div>
-        <div className="small mb-2"><strong>From:</strong> {reminder.from_name}</div>
+      {patientIdentity ? (
+        <PatientContextBanner
+          layout="compact"
+          identity={patientIdentity}
+          aside={(
+            <span className={`nc-comm-urgency--${reminder.urgency}`}>
+              {reminder.urgency_label}
+            </span>
+          )}
+        >
+          <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">
+            Due {reminder.due_display || reminder.due_date} · From {reminder.from_name}
+          </div>
+        </PatientContextBanner>
+      ) : null}
+      <header className="nc-comm-detail-header">
+        {!patientIdentity ? (
+          <>
+            <h2 className="text-lg font-semibold mb-1">{reminder.patient_name || 'Reminder'}</h2>
+            <div className="text-[var(--oe-nc-text-muted)] text-sm mb-2">
+              <span className={`nc-comm-urgency--${reminder.urgency}`}>
+                {reminder.urgency_label}
+              </span>
+              {' · '}
+              {reminder.due_display || reminder.due_date}
+            </div>
+            <div className="text-sm mb-2"><strong>From:</strong> {reminder.from_name}</div>
+          </>
+        ) : (
+          <h2 className="h6 mb-1 text-[var(--oe-nc-text-muted)]">Reminder</h2>
+        )}
         <div className="mb-2">
           {chartUrl && (
-            <a className="btn btn-outline-primary btn-sm mr-1" href={chartUrl} target="_top">
-              Open chart
-            </a>
+            <Button variant="outline" size="sm" className="mr-1" asChild>
+              <a href={chartUrl} target="_top">
+                Open chart
+              </a>
+            </Button>
           )}
           {onForwardReminder && (
-            <button
+            <Button
               type="button"
-              className="btn btn-outline-secondary btn-sm"
+              variant="outline"
+              size="sm"
               onClick={() => onForwardReminder(reminder.id)}
             >
               Forward
-            </button>
+            </Button>
           )}
         </div>
       </header>

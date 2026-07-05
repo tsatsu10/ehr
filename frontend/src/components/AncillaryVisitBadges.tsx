@@ -1,3 +1,6 @@
+import { Badge } from '@components/ui/badge';
+import type { BadgeProps } from '@components/ui/badge';
+
 export type AncillaryVisitBadgeKey =
   | 'lab_direct'
   | 'pharmacy_walkin'
@@ -6,14 +9,14 @@ export type AncillaryVisitBadgeKey =
 
 export const ANCILLARY_BADGE_META: Record<
   AncillaryVisitBadgeKey,
-  { label: string; className: string; title?: string }
+  { label: string; variant: NonNullable<BadgeProps['variant']>; title?: string }
 > = {
-  lab_direct: { label: 'Direct lab', className: 'badge-info' },
-  pharmacy_walkin: { label: 'Pharmacy walk-in', className: 'badge-info' },
-  referral_on_file: { label: 'Referral on file', className: 'badge-secondary' },
+  lab_direct: { label: 'Direct lab', variant: 'info' },
+  pharmacy_walkin: { label: 'Pharmacy walk-in', variant: 'info' },
+  referral_on_file: { label: 'Referral on file', variant: 'neutral' },
   referred_to_opd: {
     label: 'Referred to OPD',
-    className: 'badge-secondary',
+    variant: 'neutral',
     title: 'Pharmacy walk-in referred this patient to OPD today',
   },
 };
@@ -43,13 +46,14 @@ export function AncillaryVisitBadges({
         }
         const meta = ANCILLARY_BADGE_META[key];
         return (
-          <span
+          <Badge
             key={key}
-            className={`badge ${meta.className} ${className}`.trim()}
+            variant={meta.variant}
+            className={className}
             title={meta.title}
           >
             {meta.label}
-          </span>
+          </Badge>
         );
       })}
     </>

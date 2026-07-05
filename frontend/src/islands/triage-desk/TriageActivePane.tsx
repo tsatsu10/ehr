@@ -16,6 +16,9 @@ import type {
   VitalName,
 } from '@core/types';
 import { useVitalsValidation } from '@core/useVitalsValidation';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Button } from '@components/ui/button';
+import { Card, CardContent } from '@components/ui/card';
 import { PatientBanner } from './PatientBanner';
 import { VitalsForm } from './VitalsForm';
 import { VitalsSavedPanel } from './VitalsSavedPanel';
@@ -90,7 +93,7 @@ export function TriageActivePane({
   // setSubmitted(true) triggers the re-render; this effect runs once it's committed.
   useEffect(() => {
     if (!submitted || validation.valid) return;
-    const first = formRef.current?.querySelector<HTMLElement>('.is-invalid, .nc-vitals-warning');
+    const first = formRef.current?.querySelector<HTMLElement>('[class*="--oe-nc-danger"], .nc-vitals-warning');
     first?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     first?.focus();
   }, [submitted, validation.valid]);
@@ -111,24 +114,24 @@ export function TriageActivePane({
   // ── Idle ────────────────────────────────────────────────────────────────
   if (mode === 'idle') {
     return (
-      <div className="card" id="nc-triage-active-pane">
-        <div className="card-body text-muted text-center py-5">
+      <Card id="nc-triage-active-pane">
+        <CardContent className="text-[var(--oe-nc-text-muted)] text-center py-5">
           <em>Select a patient from the queue or use Find patient.</em>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   // ── Loading ─────────────────────────────────────────────────────────────
   if (mode === 'loading') {
     return (
-      <div className="card" id="nc-triage-active-pane">
-        <div className="card-body">
-          <div className="oe-nc-vb-skeleton mb-3" style={{ height: '5rem' }} aria-hidden="true" />
-          <div className="oe-nc-vb-skeleton mb-2" aria-hidden="true" />
-          <div className="oe-nc-vb-skeleton mb-2" style={{ height: '8rem' }} aria-hidden="true" />
-        </div>
-      </div>
+      <Card id="nc-triage-active-pane">
+        <CardContent>
+          <div className="nc-vb-skeleton mb-3" style={{ height: '5rem' }} aria-hidden="true" />
+          <div className="nc-vb-skeleton mb-2" aria-hidden="true" />
+          <div className="nc-vb-skeleton mb-2" style={{ height: '8rem' }} aria-hidden="true" />
+        </CardContent>
+      </Card>
     );
   }
 
@@ -136,9 +139,9 @@ export function TriageActivePane({
 
   // ── Form + Saved shared wrapper ─────────────────────────────────────────
   return (
-    <div className="card" id="nc-triage-active-pane">
-      <div className="card-body">
-        <PatientBanner preview={preview} visit={visit} />
+    <Card id="nc-triage-active-pane">
+      <CardContent>
+        <PatientBanner preview={preview} visit={visit} chiefComplaint={chiefComplaint} />
 
         {mode === 'saved' ? (
           <VitalsSavedPanel
@@ -148,7 +151,7 @@ export function TriageActivePane({
             savedAt={savedAt ?? new Date()}
           />
         ) : vitalsRules == null ? (
-          <div className="alert alert-warning" role="alert">
+          <div className={deskCalloutClass('warn', 'text-sm')} role="alert">
             Vitals rules are still loading. Please wait a moment and try again.
           </div>
         ) : (
@@ -165,61 +168,57 @@ export function TriageActivePane({
         )}
 
         {/* Actions */}
-        <div className="d-flex flex-wrap align-items-center mt-3">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           {mode === 'saved' ? (
             <>
-              <button
+              <Button
                 type="button"
-                className="btn btn-info mr-2"
                 disabled={sending}
                 onClick={onSend}
               >
                 {sending ? 'Sending…' : 'Send to doctor'}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn btn-outline-primary mr-2"
+                variant="outline"
                 onClick={handleReenter}
               >
                 Record another set
-              </button>
+              </Button>
             </>
           ) : (
             <>
               {visit.state === 'waiting' && (
-                <button
+                <Button
                   type="button"
-                  className="btn btn-primary mr-2"
                   disabled={starting}
                   onClick={onStart}
                 >
                   {starting ? 'Starting…' : 'Start triage'}
-                </button>
+                </Button>
               )}
               {visit.state === 'in_triage' && (
-                <button
+                <Button
                   type="button"
-                  className="btn btn-success mr-2"
+                  variant="cta"
                   disabled={saving}
                   onClick={handleSave}
                 >
                   {saving ? 'Saving…' : 'Save vitals'}
-                </button>
+                </Button>
               )}
             </>
           )}
 
           {visitBoardUrl && (
-            <a
-              className="btn btn-outline-secondary btn-sm ml-auto"
-              href={visitBoardUrl}
-              target="_top"
-            >
-              View on Visit Board
-            </a>
+            <Button variant="outline" size="sm" className="ml-auto" asChild>
+              <a href={visitBoardUrl} target="_top">
+                View on Visit Board
+              </a>
+            </Button>
           )}
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

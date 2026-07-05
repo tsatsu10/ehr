@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { PatientContextBanner } from '@components/PatientContextBanner';
 import { PatientSearchDropdown } from '@components/PatientSearchDropdown';
+import { identityFromLabels } from '@components/patientBannerUtils';
+import { Button } from '@components/ui/button';
+import { Checkbox } from '@components/ui/checkbox';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
+import { NativeSelect } from '@components/ui/native-select';
+import { Textarea } from '@components/ui/textarea';
 import { oeFetch } from '@core/oeFetch';
 import type { ComposeAttachment, ComposeOptions, ComposeReplySeed } from './communicationsTypes';
 
@@ -151,30 +160,32 @@ export function MessageComposePane({
   };
 
   if (loading) {
-    return <div className="text-muted"><em>Loading compose form…</em></div>;
+    return <div className="text-[var(--oe-nc-text-muted)]"><em>Loading compose form…</em></div>;
   }
 
   if (error) {
-    return <div className="alert alert-danger py-2">{error}</div>;
+    return <div className={deskCalloutClass('error', 'py-2')}>{error}</div>;
   }
 
+  const patientIdentity = identityFromLabels(patientName, { pid: pid ?? undefined });
+
   return (
-    <form className="oe-nc-comm-compose" onSubmit={(e) => { void handleSubmit(e); }}>
-      <header className="oe-nc-comm-detail__header mb-3">
-        <h2 className="h5 mb-0">{isReply ? 'Reply to message' : 'Compose message'}</h2>
+    <form className="nc-comm-compose" onSubmit={(e) => { void handleSubmit(e); }}>
+      <header className="nc-comm-detail-header mb-3">
+        <h2 className="text-lg font-semibold mb-0">{isReply ? 'Reply to message' : 'Compose message'}</h2>
       </header>
 
       {attachment && !isReply && (
-        <div className="alert alert-info py-2 small mb-3">
+        <div className={deskCalloutClass('info', 'py-2 text-sm mb-3')}>
           Attaching fax ID: {attachment.job_id || attachment.attachment_id}
         </div>
       )}
 
-      <div className="form-group">
-        <label htmlFor="nc-comm-compose-type">Type</label>
-        <select
+      <div className="space-y-1.5 mb-3">
+        <Label htmlFor="nc-comm-compose-type" className="normal-case">Type</Label>
+        <NativeSelect
           id="nc-comm-compose-type"
-          className="form-control form-control-sm"
+          className="h-8"
           value={noteType}
           onChange={(e) => setNoteType(e.target.value)}
         >
@@ -182,14 +193,14 @@ export function MessageComposePane({
           {(options?.note_types ?? []).map((opt) => (
             <option key={opt.id} value={opt.id}>{opt.label}</option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
 
-      <div className="form-group">
-        <label htmlFor="nc-comm-compose-status">Status</label>
-        <select
+      <div className="space-y-1.5 mb-3">
+        <Label htmlFor="nc-comm-compose-status" className="normal-case">Status</Label>
+        <NativeSelect
           id="nc-comm-compose-status"
-          className="form-control form-control-sm"
+          className="h-8"
           value={messageStatus}
           onChange={(e) => setMessageStatus(e.target.value)}
         >
@@ -199,38 +210,37 @@ export function MessageComposePane({
           {!options?.message_statuses?.length && (
             <option value="New">New</option>
           )}
-        </select>
+        </NativeSelect>
       </div>
 
-      <div className="form-group">
-        <label htmlFor="nc-comm-compose-patient">Patient (optional)</label>
-        {isReply ? (
-          <input
+      <div className="space-y-1.5 mb-3">
+        <Label htmlFor="nc-comm-compose-patient" className="normal-case">Patient (optional)</Label>
+        {isReply && patientIdentity ? (
+          <PatientContextBanner layout="compact" identity={patientIdentity} />
+        ) : isReply ? (
+          <Input
             id="nc-comm-compose-patient"
             type="text"
-            className="form-control form-control-sm"
+            className="h-8"
             readOnly
             value={patientName || (pid ? `PID ${pid}` : 'No patient linked')}
           />
-        ) : pid ? (
-          <div className="d-flex align-items-center flex-wrap">
-            <span
-              id="nc-comm-compose-patient"
-              className="badge badge-light border text-dark mr-2 mb-1 py-2 px-2"
-            >
-              {patientName || `PID ${pid}`}
-            </span>
-            <button
+        ) : patientIdentity ? (
+          <>
+            <PatientContextBanner layout="compact" identity={patientIdentity} />
+            <Button
               type="button"
-              className="btn btn-link btn-sm p-0 mb-1"
+              variant="link"
+              size="sm"
+              className="h-auto p-0 mt-1"
               onClick={() => {
                 setPid(null);
                 setPatientName('');
               }}
             >
-              Clear
-            </button>
-          </div>
+              Clear patient
+            </Button>
+          </>
         ) : (
           <PatientSearchDropdown
             ajaxUrl={ajaxUrl}
@@ -238,7 +248,6 @@ export function MessageComposePane({
             inputId="nc-comm-compose-patient"
             resultsId="nc-comm-compose-patient-results"
             placeholder="Search by name, phone, NHIS, National ID, MRN"
-            inputClassName="form-control form-control-sm"
             onSelectPatient={(selectedPid, row) => {
               setPid(selectedPid);
               setPatientName(row?.display_name ?? '');
@@ -248,21 +257,19 @@ export function MessageComposePane({
       </div>
 
       {!isReply && (
-        <div className="form-group">
+        <div className="nc-form-group">
           <label>To</label>
-          <div className="oe-nc-comm-compose-recipients border rounded p-2" style={{ maxHeight: '10rem', overflowY: 'auto' }}>
+          <div className="nc-comm-compose-recipients border rounded p-2" style={{ maxHeight: '10rem', overflowY: 'auto' }}>
             {(options?.users ?? []).map((user) => (
-              <div key={user.username} className="form-check">
-                <input
-                  type="checkbox"
-                  className="form-check-input"
+              <div key={user.username} className="flex items-center gap-2 mb-1">
+                <Checkbox
                   id={`nc-comm-to-${user.username}`}
                   checked={assignedTo.includes(user.username)}
-                  onChange={() => toggleAssignee(user.username)}
+                  onCheckedChange={() => toggleAssignee(user.username)}
                 />
-                <label className="form-check-label small" htmlFor={`nc-comm-to-${user.username}`}>
+                <Label htmlFor={`nc-comm-to-${user.username}`} className="font-normal normal-case cursor-pointer mb-0">
                   {user.label}
-                </label>
+                </Label>
               </div>
             ))}
           </div>
@@ -270,23 +277,22 @@ export function MessageComposePane({
       )}
 
       {options?.show_due_date && (
-        <div className="form-group">
-          <label htmlFor="nc-comm-compose-due">Due date</label>
-          <input
+        <div className="space-y-1.5 mb-3">
+          <Label htmlFor="nc-comm-compose-due" className="normal-case">Due date</Label>
+          <Input
             id="nc-comm-compose-due"
             type="datetime-local"
-            className="form-control form-control-sm"
+            className="h-8"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
           />
         </div>
       )}
 
-      <div className="form-group">
-        <label htmlFor="nc-comm-compose-body">Message</label>
-        <textarea
+      <div className="space-y-1.5 mb-3">
+        <Label htmlFor="nc-comm-compose-body" className="normal-case">Message</Label>
+        <Textarea
           id="nc-comm-compose-body"
-          className="form-control"
           rows={5}
           required
           minLength={2}
@@ -296,16 +302,16 @@ export function MessageComposePane({
       </div>
 
       {submitError && (
-        <div className="alert alert-danger py-2">{submitError}</div>
+        <div className={deskCalloutClass('error', 'py-2 mb-3')}>{submitError}</div>
       )}
 
-      <div className="d-flex flex-wrap">
-        <button type="submit" className="btn btn-primary btn-sm mr-2" disabled={submitting}>
+      <div className="flex flex-wrap">
+        <Button type="submit" size="sm" className="mr-2" disabled={submitting}>
           {submitting ? 'Sending…' : 'Send'}
-        </button>
-        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={onCancel} disabled={submitting}>
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={onCancel} disabled={submitting}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );

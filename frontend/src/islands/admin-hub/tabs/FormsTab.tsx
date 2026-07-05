@@ -1,3 +1,5 @@
+import { Button } from '@components/ui/button';
+import { Card, CardContent } from '@components/ui/card';
 import type {
   AncillaryLbfPackStatus,
   FormBundleBoardPayload,
@@ -34,23 +36,29 @@ export function FormsTab({
         togglingId={catalogTogglingId}
         onToggle={onToggleCatalogForm}
       />
-      <div className="card">
-        <div className="card-body">
-          <h6 className="text-muted text-uppercase small">Advanced</h6>
-          <p className="small text-muted mb-2">
+      <Card>
+        <CardContent>
+          <h6 className="text-[var(--oe-nc-text-muted)] uppercase text-sm">Advanced</h6>
+          <p className="text-sm text-[var(--oe-nc-text-muted)] mb-2">
             Full OpenEMR layout and list editors. Changes here can affect M1a search and M3–M9 gates.
           </p>
-          <a className="btn btn-outline-warning btn-sm mr-2 mb-1" href={catalog.forms_admin_url} target="_top">
-            Registered forms (stock)
-          </a>
-          <a className="btn btn-outline-warning btn-sm mr-2 mb-1" href={catalog.layout_editor_url} target="_top">
-            Layout-Based Forms editor
-          </a>
-          <a className="btn btn-outline-warning btn-sm mb-1" href={catalog.list_editor_url} target="_top">
-            List options editor
-          </a>
-        </div>
-      </div>
+          <Button variant="warning" size="sm" className="mr-2 mb-1" asChild>
+            <a href={catalog.forms_admin_url} target="_top">
+              Registered forms (stock)
+            </a>
+          </Button>
+          <Button variant="warning" size="sm" className="mr-2 mb-1" asChild>
+            <a href={catalog.layout_editor_url} target="_top">
+              Layout-Based Forms editor
+            </a>
+          </Button>
+          <Button variant="warning" size="sm" className="mb-1" asChild>
+            <a href={catalog.list_editor_url} target="_top">
+              List options editor
+            </a>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

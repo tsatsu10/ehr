@@ -14,8 +14,10 @@ import {
   Percent,
 } from 'lucide-react';
 import { formatMoney, formatWaitMinutes } from './reportsFormatters';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { DataTable } from '@components/DataTable';
 import { StatCard } from '@components/StatCard';
+import { Button } from '@components/ui/button';
 
 const STAT_ICON_SIZE = 18;
 import type {
@@ -40,21 +42,21 @@ interface OpenActionsProps {
 }
 
 export function SectionBlock({ children }: { children: ReactNode }) {
-  return <section className="oe-nc-report-section">{children}</section>;
+  return <section className="nc-report-section">{children}</section>;
 }
 
 export function SectionHeading({ children, hint }: { children: ReactNode; hint?: string }) {
   return (
-    <h3 className="oe-nc-report-heading">
+    <h3 className="nc-report-heading">
       {children}
-      {hint ? <span className="oe-nc-report-heading__hint">{hint}</span> : null}
+      {hint ? <span className="nc-report-heading-hint">{hint}</span> : null}
     </h3>
   );
 }
 
 export function ReportEmptyState({ icon = 'fa-inbox', children }: { icon?: string; children: ReactNode }) {
   return (
-    <div className="oe-nc-report-empty">
+    <div className="nc-report-empty">
       <i className={`fa ${icon}`} aria-hidden="true" />
       <span>{children}</span>
     </div>
@@ -62,11 +64,11 @@ export function ReportEmptyState({ icon = 'fa-inbox', children }: { icon?: strin
 }
 
 export function ReportTableCard({ children }: { children: ReactNode }) {
-  return <div className="oe-nc-report-table-card">{children}</div>;
+  return <div className="nc-report-table-card">{children}</div>;
 }
 
 export function StatGrid({ children }: { children: ReactNode }) {
-  return <div className="oe-nc-report-stat-grid">{children}</div>;
+  return <div className="nc-report-stat-grid">{children}</div>;
 }
 
 function UnsignedAlertsBanner({ alerts }: { alerts: UnsignedAlerts }) {
@@ -75,7 +77,7 @@ function UnsignedAlertsBanner({ alerts }: { alerts: UnsignedAlerts }) {
   if (!withDoctor && !readyPayment) return null;
 
   return (
-    <div className="alert alert-warning py-2 mb-3">
+    <div className={deskCalloutClass('warn', 'py-2 mb-3')}>
       <strong>Documentation gaps (unsigned)</strong>
       <ul className="mb-0 pl-3">
         {withDoctor > 0 && <li>With doctor + unsigned note: {withDoctor}</li>}
@@ -177,27 +179,28 @@ export function ReconciliationSection({
           <StatCard
             label="Status"
             value={
-              <span className={isOk ? 'text-success' : 'text-warning'}>
+              <span className={isOk ? 'text-green-600' : 'text-[var(--color-oe-warning,#ea580c)]'}>
                 {isOk ? 'OK' : 'Warning'}
               </span>
             }
             icon={<ShieldCheck size={STAT_ICON_SIZE} />}
           />
         </StatGrid>
-        <p className="oe-nc-report-note">Tolerance {formatMoney(reconciliation.tolerance)}</p>
+        <p className="nc-report-note">Tolerance {formatMoney(reconciliation.tolerance)}</p>
       </SectionBlock>
 
       {canRun && (
         <SectionBlock>
-          <button
+          <Button
             type="button"
-            className="btn btn-sm btn-outline-primary"
+            variant="outline"
+            size="sm"
             onClick={onRun}
             disabled={running}
           >
             {running ? 'Running…' : 'Run reconciliation now'}
-          </button>
-          {runError && <div className="text-danger small mt-2">{runError}</div>}
+          </Button>
+          {runError && <div className="text-[var(--oe-nc-danger,#dc2626)] text-sm mt-2">{runError}</div>}
         </SectionBlock>
       )}
 
@@ -223,7 +226,7 @@ export function ReconciliationSection({
                 <tr key={run.id}>
                   <td>{run.run_date}</td>
                   <td>{run.trigger}</td>
-                  <td className={run.status === 'ok' ? 'text-success' : 'text-warning'}>{run.status}</td>
+                  <td className={run.status === 'ok' ? 'text-green-600' : 'text-[var(--color-oe-warning,#ea580c)]'}>{run.status}</td>
                   <td className="text-right">{formatMoney(run.delta_amount)}</td>
                   <td>{run.completed_at || '—'}</td>
                 </tr>
@@ -254,7 +257,7 @@ export function EodOpenSection({
     return (
       <>
         <UnsignedAlertsBanner alerts={unsignedAlerts} />
-        <div className="alert alert-success py-2 mb-0">No open visits for this date.</div>
+        <div className={deskCalloutClass('success', 'py-2 mb-0')}>No open visits for this date.</div>
       </>
     );
   }
@@ -305,7 +308,7 @@ function OpenVisitList({
   onMarkUnpaid,
 }: { visits: OpenVisitRow[] } & OpenActionsProps) {
   if (!visits.length) {
-    return <div className="alert alert-success py-2 mb-0">No open visits for this date.</div>;
+    return <div className={deskCalloutClass('success', 'py-2 mb-0')}>No open visits for this date.</div>;
   }
 
   return (
@@ -320,26 +323,32 @@ function OpenVisitList({
             <td>{row.state}</td>
             <td>{row.wait_minutes}m</td>
             <td className="text-nowrap text-right">
-              <a className="btn btn-sm btn-outline-secondary mr-1" href={visitBoardUrl} target="_top">
-                Visit Board
-              </a>
+              <Button variant="outline" size="sm" className="mr-1" asChild>
+                <a href={visitBoardUrl} target="_top">
+                  Visit Board
+                </a>
+              </Button>
               {canMarkUnpaid && row.state === 'ready_for_payment' && (
-                <button
+                <Button
                   type="button"
-                  className="btn btn-sm btn-outline-warning mr-1"
+                  variant="warning"
+                  size="sm"
+                  className="mr-1"
                   onClick={() => onMarkUnpaid(row)}
                 >
                   Mark unpaid
-                </button>
+                </Button>
               )}
               {canCancel && (
-                <button
+                <Button
                   type="button"
-                  className="btn btn-sm btn-outline-danger"
+                  variant="outline"
+                  size="sm"
+                  className="border-red-300 text-red-700 hover:bg-red-50"
                   onClick={() => onCancel(row)}
                 >
                   Cancel
-                </button>
+                </Button>
               )}
             </td>
           </tr>
@@ -502,17 +511,20 @@ export function UnsignedSection({
             <td className="text-right">{row.hours_unsigned}h</td>
             <td>{row.service_profile || 'full_opd'}</td>
             <td className="text-nowrap text-right">
-              <a
-                className="btn btn-sm btn-outline-primary mr-1"
-                href={row.encounter_url}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Encounter
-              </a>
-              <a className="btn btn-sm btn-outline-secondary" href={visitBoardUrl} target="_top">
-                Visit Board
-              </a>
+              <Button variant="outline" size="sm" className="mr-1" asChild>
+                <a
+                  href={row.encounter_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Encounter
+                </a>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <a href={visitBoardUrl} target="_top">
+                  Visit Board
+                </a>
+              </Button>
             </td>
           </tr>
         ))}

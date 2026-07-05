@@ -29,7 +29,7 @@ export function CorrectionsPaneWrapper(props: BillOpsHubProps) {
   };
 
   return (
-    <div className="oe-nc-billops-pane">
+    <div className="nc-billops-pane">
       <ChargeCorrectionForm fetchOptions={fetchOptions} visitId={null} showVisitLookup />
       <CorrectionDrawer
         open={drawerVisitId !== null}

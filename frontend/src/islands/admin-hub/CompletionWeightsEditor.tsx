@@ -1,5 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { CompletionFieldWeightPayload, CompletionFieldWeightRow } from '../adminTypes';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { ncShadcnTableClass } from '@components/ncTableStyles';
+import { Button } from '@components/ui/button';
+import { Checkbox } from '@components/ui/checkbox';
+import { Input } from '@components/ui/input';
+import { Card, CardContent } from '@components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@components/ui/table';
+import type { CompletionFieldWeightPayload, CompletionFieldWeightRow } from './adminTypes';
 
 interface CompletionWeightsEditorProps {
   payload: CompletionFieldWeightPayload | null;
@@ -42,40 +56,40 @@ export function CompletionWeightsEditor({
   }, [items, onSave]);
 
   if (!payload || items.length === 0) {
-    return <p className="text-muted mb-0">Completion weights are not available.</p>;
+    return <p className="text-[var(--oe-nc-text-muted)] mb-0">Completion weights are not available.</p>;
   }
 
   return (
-    <div className="card mt-3">
-      <div className="card-body">
-        <h3 className="h6 mb-2">Field weights</h3>
-        <p className="small text-muted">
+    <Card className="mt-3">
+      <CardContent>
+        <h3 className="text-sm font-semibold mb-2">Field weights</h3>
+        <p className="text-sm text-[var(--oe-nc-text-muted)]">
           Active weights must total {targetTotal}. Disable optional fields instead of setting weight to 0
           when you do not want them in the score.
         </p>
 
-        <div className="table-responsive">
-          <table className="table table-sm table-bordered mb-3">
-            <thead>
-              <tr>
-                <th scope="col">Level</th>
-                <th scope="col">Field</th>
-                <th scope="col" className="text-right">Weight</th>
-                <th scope="col" className="text-center">Active</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="overflow-x-auto">
+          <Table className={ncShadcnTableClass({ bordered: true, className: 'mb-3' })}>
+            <TableHeader>
+              <TableRow>
+                <TableHead scope="col">Level</TableHead>
+                <TableHead scope="col">Field</TableHead>
+                <TableHead scope="col" className="text-right">Weight</TableHead>
+                <TableHead scope="col" className="text-center">Active</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {items.map((row) => (
-                <tr key={row.field_key}>
-                  <td>
-                    <span className="d-block small text-muted">{row.level_label}</span>
+                <TableRow key={row.field_key}>
+                  <TableCell>
+                    <span className="block text-sm text-[var(--oe-nc-text-muted)]">{row.level_label}</span>
                     <span className="sr-only">Level {row.level}</span>
-                  </td>
-                  <td>{row.label}</td>
-                  <td className="text-right" style={{ width: 110 }}>
-                    <input
+                  </TableCell>
+                  <TableCell>{row.label}</TableCell>
+                  <TableCell className="text-right" style={{ width: 110 }}>
+                    <Input
                       type="number"
-                      className="form-control form-control-sm text-right"
+                      className="h-8 text-right"
                       min={0}
                       max={100}
                       value={row.weight}
@@ -84,39 +98,38 @@ export function CompletionWeightsEditor({
                         updateRow(row.field_key, { weight: Number(event.target.value) || 0 });
                       }}
                     />
-                  </td>
-                  <td className="text-center" style={{ width: 72 }}>
-                    <input
-                      type="checkbox"
+                  </TableCell>
+                  <TableCell className="text-center" style={{ width: 72 }}>
+                    <Checkbox
                       checked={row.is_active}
                       aria-label={`Include ${row.label} in completion score`}
-                      onChange={(event) => {
-                        updateRow(row.field_key, { is_active: event.target.checked });
+                      onCheckedChange={(checked) => {
+                        updateRow(row.field_key, { is_active: checked === true });
                       }}
                     />
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
-        <div className="d-flex flex-wrap align-items-center justify-content-between gap-2">
-          <p className={`mb-0 font-weight-bold ${totalValid ? 'text-success' : 'text-danger'}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className={`mb-0 font-bold ${totalValid ? 'text-green-600' : 'text-[var(--oe-nc-danger,#dc2626)]'}`}>
             Active total: {activeTotal} / {targetTotal}
           </p>
-          <button
+          <Button
             type="button"
-            className="btn btn-primary btn-sm"
+            size="sm"
             disabled={!dirty || !totalValid || saving}
             onClick={handleSave}
           >
             {saving ? 'Saving…' : 'Save weights'}
-          </button>
+          </Button>
         </div>
 
-        {error && <div className="alert alert-danger mt-3 mb-0 py-2">{error}</div>}
-      </div>
-    </div>
+        {error && <div className={deskCalloutClass('error', 'mt-3 mb-0 py-2')}>{error}</div>}
+      </CardContent>
+    </Card>
   );
 }

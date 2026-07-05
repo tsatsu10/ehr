@@ -11,6 +11,16 @@ import type {
 import { WaitTimeSpan } from '@components/WaitTimeSpan';
 import { RoutingChips } from '@components/RoutingChips';
 import { AncillaryVisitBadges } from '@components/AncillaryVisitBadges';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import {
+  queueCardCcClass,
+  queueCardHeaderClass,
+  queueCardMetaClass,
+  queueCardShellClass,
+} from '@components/queueCardStyles';
+import { cn } from '@/lib/utils';
 
 interface DoctorQueueProps {
   cards: DoctorQueueCard[];
@@ -34,12 +44,6 @@ function DoctorQueueCardButton({
   onTake: (card: DoctorQueueCard) => void;
 }) {
   const isClaimLost = !!card.claim_lost;
-  const modifiers = [
-    card.is_urgent ? 'oe-nc-queue-card--urgent' : '',
-    isClaimLost ? 'oe-nc-queue-card--claim-lost' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
 
   const claimLostTitle =
     isClaimLost && card.claim_lost_by
@@ -49,46 +53,53 @@ function DoctorQueueCardButton({
   return (
     <button
       type="button"
-      className={`oe-nc-queue-card btn btn-light text-left w-100 mb-2 nc-queue-card${modifiers ? ` ${modifiers}` : ''}`}
+      className={queueCardShellClass({
+        urgent: Boolean(card.is_urgent),
+        claimLost: isClaimLost,
+      })}
       data-visit-id={card.id}
       data-from-state="ready_for_doctor"
       disabled={disabled || isClaimLost}
       title={disabled ? 'Complete your current patient first' : claimLostTitle}
       onClick={() => !disabled && !isClaimLost && onTake(card)}
     >
-      <div className="oe-nc-queue-card__header d-flex justify-content-between align-items-start flex-wrap">
+      <div className={cn(queueCardHeaderClass, 'justify-between')}>
         <span>
           <strong>#{card.queue_number} {card.display_name}</strong>
           {card.is_urgent === 1 && (
-            <span className="badge badge-warning ml-1">URGENT</span>
+            <Badge variant="warning" className="ml-1">URGENT</Badge>
           )}
           {card.skipped_triage && (
-            <span className="badge badge-secondary ml-1">Skipped triage</span>
+            <Badge variant="neutral" className="ml-1">Skipped triage</Badge>
           )}
           <AncillaryVisitBadges badges={card.ancillary_badges} />
           {card.assigned_provider_name && (
-            <span className="badge badge-info ml-1">
+            <Badge variant="info" className="ml-1">
               Appt: {card.assigned_provider_name}
-            </span>
+            </Badge>
           )}
           {card.routing_suggested_provider_name && (
-            <span className="badge badge-primary ml-1" title="Advisory routing suggestion">
+            <Badge className="ml-1" title="Advisory routing suggestion">
               Routing suggests: {card.routing_suggested_provider_name}
-            </span>
+            </Badge>
           )}
           {card.hard_assigned_provider_name && (
-            <span className="badge badge-dark ml-1" title="Hard-assigned provider">
+            <Badge
+              variant="neutral"
+              className="ml-1 border-transparent bg-slate-800 text-white"
+              title="Hard-assigned provider"
+            >
               Assigned: {card.hard_assigned_provider_name}
-            </span>
+            </Badge>
           )}
           <RoutingChips chips={card.routing_chips} />
         </span>
       </div>
-      <div className="oe-nc-queue-card__meta small text-muted">
+      <div className={queueCardMetaClass}>
         {card.sex} · {card.age_years} · <WaitTimeSpan card={card} suffix=" waiting" /> · {card.visit_type_label}
       </div>
       {card.chief_complaint && (
-        <div className="oe-nc-queue-card__cc small text-muted text-truncate">
+        <div className={queueCardCcClass}>
           CC: {card.chief_complaint}
         </div>
       )}
@@ -112,20 +123,22 @@ export function DoctorQueue({
 
   return (
     <div className="nc-doctor-queue-panel">
-      <div className="d-flex justify-content-between align-items-center mb-2">
+      <div className="mb-2 flex items-center justify-between">
         <strong>My queue</strong>
       </div>
 
       {error && (
-        <div className="alert alert-danger">{error}</div>
+        <div className={deskCalloutClass('error', 'mb-2 text-sm')} role="alert">
+          {error}
+        </div>
       )}
 
       {!error && loading && cards.length === 0 && (
-        <div className="text-muted py-3"><em>Loading queue…</em></div>
+        <div className="text-[var(--oe-nc-text-muted)] py-3"><em>Loading queue…</em></div>
       )}
 
       {!error && !loading && cards.length === 0 && (
-        <div className="text-muted py-3">
+        <div className="text-[var(--oe-nc-text-muted)] py-3">
           <em>No patients ready. New visits appear within 30s.</em>
         </div>
       )}
@@ -143,36 +156,40 @@ export function DoctorQueue({
 
       {canReopenConsult && (
         <div className="mt-3" id="nc-doctor-reopen-section">
-          <button
+          <Button
             type="button"
-            className="btn btn-link btn-sm p-0"
+            variant="link"
+            size="sm"
+            className="h-auto p-0"
             id="nc-doctor-reopen-toggle"
             onClick={() => setReopenOpen((v) => !v)}
           >
             Reopen consult ({reopenableToday.length})
-          </button>
+          </Button>
           {reopenOpen && (
             <div id="nc-doctor-reopen-list" className="mt-2">
               {reopenableToday.length === 0 ? (
-                <div className="small text-muted">None sent out today</div>
+                <div className="text-sm text-[var(--oe-nc-text-muted)]">None sent out today</div>
               ) : (
                 reopenableToday.map((row) => (
                   <div
                     key={row.id}
-                    className="d-flex justify-content-between align-items-start py-1 border-bottom"
+                    className="flex items-start justify-between border-b py-1"
                   >
-                    <div className="small">
+                    <div className="text-sm">
                       <div>#{row.queue_number} {row.display_name}</div>
-                      <div className="text-muted">{row.state.replace(/_/g, ' ')}</div>
+                      <div className="text-[var(--oe-nc-text-muted)]">{row.state.replace(/_/g, ' ')}</div>
                     </div>
-                    <button
+                    <Button
                       type="button"
-                      className="btn btn-outline-warning btn-sm nc-doctor-reopen-btn"
+                      variant="outline"
+                      size="sm"
+                      className="nc-doctor-reopen-btn border-amber-400 text-amber-800 hover:bg-amber-50"
                       data-visit-id={row.id}
                       onClick={() => onReopenClick(row)}
                     >
                       Reopen
-                    </button>
+                    </Button>
                   </div>
                 ))
               )}
@@ -182,21 +199,23 @@ export function DoctorQueue({
       )}
 
       <div className="mt-3">
-        <button
+        <Button
           type="button"
-          className="btn btn-link btn-sm p-0"
+          variant="link"
+          size="sm"
+          className="h-auto p-0"
           id="nc-doctor-done-toggle"
           onClick={() => setDoneOpen((v) => !v)}
         >
           Done today ({doneToday.length})
-        </button>
+        </Button>
         {doneOpen && (
           <div id="nc-doctor-done-list" className="mt-2">
             {doneToday.length === 0 ? (
-              <div className="small text-muted">None yet today</div>
+              <div className="text-sm text-[var(--oe-nc-text-muted)]">None yet today</div>
             ) : (
               doneToday.map((row) => (
-                <div key={row.id} className="small text-muted py-1">
+                <div key={row.id} className="text-sm text-[var(--oe-nc-text-muted)] py-1">
                   #{row.queue_number} {row.display_name}
                 </div>
               ))

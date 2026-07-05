@@ -1,9 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { PaginationBar } from '@components/PaginationBar';
+import { Button } from '@components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@components/ui/card';
+import { NativeSelect } from '@components/ui/native-select';
 import { oeFetch } from '@core/oeFetch';
 import type { BillOpsHubProps, OutstandingData, OutstandingRow } from './billOpsTypes';
 import { formatBillMoney } from './billOpsFormatters';
+import { ncShadcnTableClass } from '@components/ncTableStyles';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@components/ui/table';
 
 const PAGE_SIZE = 25;
 
@@ -47,14 +59,14 @@ export function OutstandingPane({ fetchOptions, moduleUrl }: Props) {
   const totalCount = data?.total ?? 0;
 
   return (
-    <Card className="oe-nc-billops-pane">
+    <Card className="nc-billops-pane">
       <CardHeader className="py-3">
         <CardTitle className="text-base">Outstanding balances</CardTitle>
       </CardHeader>
       <CardContent>
-      <div className="form-inline mb-3">
-        <select
-          className="form-control form-control-sm mr-2"
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <NativeSelect
+          className="h-8 w-auto mr-2"
           value={bucket}
           onChange={(e) => {
             setBucket(e.target.value);
@@ -65,57 +77,59 @@ export function OutstandingPane({ fetchOptions, moduleUrl }: Props) {
           <option value="0_7">0–7 days</option>
           <option value="8_30">8–30 days</option>
           <option value="31_plus">31+ days</option>
-        </select>
-        <button
+        </NativeSelect>
+        <Button
           type="button"
-          className="btn btn-outline-secondary btn-sm"
+          variant="outline"
+          size="sm"
           onClick={() => void load()}
           disabled={loading}
         >
           Refresh
-        </button>
+        </Button>
       </div>
 
-      {error && <div className="alert alert-warning py-2">{error}</div>}
+      {error && <div className={deskCalloutClass('warn', 'py-2')}>{error}</div>}
 
       {data && (
         <>
           <p className="mb-2">
             {totalCount} patients · Total owed {formatBillMoney(data.total_owed)}
           </p>
-          <table className="table table-sm table-hover">
-            <thead>
-              <tr>
-                <th scope="col">Patient</th>
-                <th scope="col">Phone</th>
-                <th scope="col" className="text-right">Owed</th>
-                <th scope="col">Since</th>
-                <th scope="col" />
-              </tr>
-            </thead>
-            <tbody>
+          <Table className={ncShadcnTableClass({ hover: true })}>
+            <TableHeader>
+              <TableRow>
+                <TableHead scope="col">Patient</TableHead>
+                <TableHead scope="col">Phone</TableHead>
+                <TableHead scope="col" className="text-right">Owed</TableHead>
+                <TableHead scope="col">Since</TableHead>
+                <TableHead scope="col" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {data.rows.map((row: OutstandingRow) => (
-                <tr key={row.visit_id}>
-                  <td>
+                <TableRow key={row.visit_id}>
+                  <TableCell>
                     {row.patient_name}
-                    <span className="text-muted small d-block">{row.pubpid}</span>
-                  </td>
-                  <td>{row.phone ?? '—'}</td>
-                  <td className="text-right">{formatBillMoney(row.owed)}</td>
-                  <td>{row.visit_date}</td>
-                  <td>
-                    <a
-                      href={`${moduleUrl}/patient-chart.php?pid=${row.pid}`}
-                      className="btn btn-outline-primary btn-sm"
-                      target="_top"
-                    >
-                      Chart
-                    </a>
-                  </td>
-                </tr>
+                    <span className="text-[var(--oe-nc-text-muted)] text-sm block">{row.pubpid}</span>
+                  </TableCell>
+                  <TableCell>{row.phone ?? '—'}</TableCell>
+                  <TableCell className="text-right">{formatBillMoney(row.owed)}</TableCell>
+                  <TableCell>{row.visit_date}</TableCell>
+                  <TableCell>
+                    <Button variant="outline" size="sm" asChild>
+                      <a
+                        href={`${moduleUrl}/patient-chart.php?pid=${row.pid}`}
+                        target="_top"
+                      >
+                        Chart
+                      </a>
+                    </Button>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
           <PaginationBar
             page={page}
             pageSize={PAGE_SIZE}

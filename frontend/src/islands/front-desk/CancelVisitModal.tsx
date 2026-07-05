@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ConfirmModal, IdentityConfirmBanner } from '@components/ConfirmModal';
+import { DeskAlert } from '@components/DeskAlert';
+import { Label } from '@components/ui/label';
+import { Textarea } from '@components/ui/textarea';
 
 interface CancelVisitModalProps {
   open: boolean;
@@ -54,23 +57,26 @@ export function CancelVisitModal({
         />
       )}
     >
-      <div className="form-group mb-0">
-        <label htmlFor="nc-cancel-visit-reason">Reason (required)</label>
+      <div className="space-y-2">
+        <Label htmlFor="nc-cancel-visit-reason">Reason (required)</Label>
         {suggestWrongVisitType && (
-          <p className="small text-muted mb-2">
+          <p className="text-sm text-[var(--oe-nc-text-muted)]">
             This visit is still waiting in queue. Use reason &quot;wrong_visit_type&quot; when reception
             started the wrong visit type; then start a new visit with the correct type.
           </p>
         )}
-        <textarea
+        <Textarea
           id="nc-cancel-visit-reason"
-          className="form-control"
           rows={2}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
         />
       </div>
-      {error && <div className="alert alert-danger mt-2 mb-0">{error}</div>}
+      {error && (
+        <DeskAlert tone="error" className="mt-2 text-sm" role="alert">
+          {error}
+        </DeskAlert>
+      )}
     </ConfirmModal>
   );
 }

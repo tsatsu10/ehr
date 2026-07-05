@@ -1,4 +1,20 @@
 import { useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { ncShadcnTableClass } from '@components/ncTableStyles';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { Card, CardContent } from '@components/ui/card';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
+import { NativeSelect } from '@components/ui/native-select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@components/ui/table';
 import type { CashierFeeScheduleItem, CashierStagedLine } from '@core/types';
 import { formatMoney } from './cashierUtils';
 
@@ -25,7 +41,7 @@ export function ChargePicker({
 
   if (feeSchedule.length === 0) {
     return (
-      <div className="alert alert-info py-2 mb-3">
+      <div className={deskCalloutClass('info', 'mb-3 text-sm')}>
         No clinic fee schedule yet. An admin can add fee lines under Clinic Setup → Fees.
       </div>
     );
@@ -62,14 +78,14 @@ export function ChargePicker({
   };
 
   return (
-    <div className="card mb-3 border-primary">
-      <div className="card-body py-3">
+    <Card className="mb-3 border-2 border-[var(--oe-nc-primary)]">
+      <CardContent className="py-3">
         <h6 className="mb-2">Add charges from clinic fee schedule</h6>
-        <div className="form-row align-items-end mb-2">
-          <div className="form-group col-md-8 mb-2">
-            <label className="small mb-1" htmlFor="nc-cashier-fee-pick">Fee line</label>
-            <select
-              className="form-control form-control-sm"
+        <div className="mb-2 grid grid-cols-1 items-end gap-2 md:grid-cols-12">
+          <div className="space-y-1.5 md:col-span-8">
+            <Label className="normal-case font-normal" htmlFor="nc-cashier-fee-pick">Fee line</Label>
+            <NativeSelect
+              className="h-8"
               id="nc-cashier-fee-pick"
               value={pickId}
               disabled={blocked}
@@ -81,99 +97,103 @@ export function ChargePicker({
                   {fee.name} ({fee.code}) — {formatMoney(fee.price_amount)}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </div>
-          <div className="form-group col-md-4 mb-2">
-            <button
+          <div className="md:col-span-4">
+            <Button
               type="button"
-              className="btn btn-outline-primary btn-sm btn-block"
+              variant="outline"
+              size="sm"
+              className="w-full"
               id="nc-cashier-fee-add"
               disabled={blocked || !pickId}
               onClick={addFee}
             >
               Add to list
-            </button>
+            </Button>
           </div>
         </div>
 
-        <table className="table table-sm table-bordered mb-2">
-          <thead>
-            <tr>
-              <th>Description</th>
-              <th className="text-right">Qty</th>
-              <th className="text-right">Unit price</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody id="nc-cashier-staged-body">
+        <Table className={ncShadcnTableClass({ bordered: true, className: 'mb-2' })}>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Description</TableHead>
+              <TableHead className="text-right">Qty</TableHead>
+              <TableHead className="text-right">Unit price</TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody id="nc-cashier-staged-body">
             {staged.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="text-muted">
+              <TableRow>
+                <TableCell colSpan={4} className="text-[var(--oe-nc-text-muted)]">
                   <em>Select fees to post, or use suggested lines.</em>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               staged.map((line, index) => (
-                <tr key={`${line.fee_schedule_id}-${index}`} data-staged-index={index}>
-                  <td>
+                <TableRow key={`${line.fee_schedule_id}-${index}`} data-staged-index={index}>
+                  <TableCell>
                     {line.name}
-                    {line.suggested && <span className="badge badge-info ml-1">Suggested</span>}
+                    {line.suggested && <Badge variant="info" className="ml-1">Suggested</Badge>}
                     <br />
-                    <span className="small text-muted"><code>{line.code}</code></span>
-                  </td>
-                  <td className="text-right" style={{ width: 90 }}>
-                    <input
+                    <span className="text-sm text-[var(--oe-nc-text-muted)]"><code>{line.code}</code></span>
+                  </TableCell>
+                  <TableCell className="text-right" style={{ width: 90 }}>
+                    <Input
                       type="number"
+                      className="h-8 nc-staged-units"
                       min={1}
                       max={99}
                       step={1}
-                      className="form-control form-control-sm nc-staged-units"
                       value={line.units}
                       disabled={blocked}
                       onChange={(e) => updateLine(index, { units: Number.parseInt(e.target.value, 10) || 1 })}
                     />
-                  </td>
-                  <td className="text-right" style={{ width: 110 }}>
+                  </TableCell>
+                  <TableCell className="text-right" style={{ width: 110 }}>
                     {allowDiscount ? (
-                      <input
+                      <Input
                         type="number"
+                        className="h-8 nc-staged-price"
                         min={0}
                         step={0.01}
-                        className="form-control form-control-sm nc-staged-price"
                         value={line.unit_price}
                         disabled={blocked}
                         onChange={(e) => updateLine(index, { unit_price: Number.parseFloat(e.target.value) || 0 })}
                       />
                     ) : (
-                      <span className="d-inline-block py-1">{formatMoney(line.unit_price)}</span>
+                      <span className="inline-block py-1">{formatMoney(line.unit_price)}</span>
                     )}
-                  </td>
-                  <td className="text-right" style={{ width: 40 }}>
-                    <button
+                  </TableCell>
+                  <TableCell className="text-right" style={{ width: 40 }}>
+                    <Button
                       type="button"
-                      className="btn btn-link btn-sm text-danger p-0 nc-staged-remove"
+                      variant="link"
+                      size="sm"
+                      className="nc-staged-remove h-auto p-0 text-red-600 hover:text-red-700"
                       disabled={blocked}
                       onClick={() => removeLine(index)}
                     >
                       &times;
-                    </button>
-                  </td>
-                </tr>
+                    </Button>
+                  </TableCell>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
 
-        <button
+        <Button
           type="button"
-          className="btn btn-primary btn-sm"
+          size="sm"
           id="nc-cashier-post-charges"
           disabled={blocked || posting || staged.length === 0}
           onClick={onPostCharges}
         >
           {posting ? 'Posting…' : 'Post charges to visit'}
-        </button>
-      </div>
-    </div>
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

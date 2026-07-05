@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { Button } from '@components/ui/button';
+import { Input } from '@components/ui/input';
+import { NativeSelect } from '@components/ui/native-select';
 import { useDeskViewport } from '@core/useDeskViewport';
 import type { SchedulingFilters, SchedulingLabels, SchedulingOption } from './schedulingTypes';
 import { ALL_PROVIDERS_ID } from './schedulingTypes';
@@ -25,36 +28,38 @@ export function SchedulingFilterBar({
   const collapsible = viewport === 'mobile';
 
   return (
-    <div className="oe-nc-scheduling__filters mb-3" aria-label="Scheduling filters">
+    <div className="nc-scheduling-filters mb-3" aria-label="Scheduling filters">
       {collapsible && (
-        <button
+        <Button
           type="button"
-          className="btn btn-outline-secondary btn-sm mb-2"
+          variant="outline"
+          size="sm"
+          className="mb-2"
           aria-expanded={expanded}
           onClick={() => setExpanded((value) => !value)}
         >
           {expanded ? labels.hideFilters : labels.showFilters}
-        </button>
+        </Button>
       )}
-      <div className={`row${collapsible && !expanded ? ' d-none' : ''}`}>
-        <div className="col-md-4 mb-2 mb-md-0">
-          <label className="small text-muted mb-1" htmlFor="nc-scheduling-facility">Facility</label>
-          <select
+      <div className={`grid grid-cols-12 gap-3${collapsible && !expanded ? ' hidden' : ''}`}>
+        <div className="col-span-12 md:col-span-4 mb-2 md:mb-0">
+          <label className="text-sm text-[var(--oe-nc-text-muted)] mb-1" htmlFor="nc-scheduling-facility">Facility</label>
+          <NativeSelect
             id="nc-scheduling-facility"
-            className="form-control form-control-sm"
+            className="h-8"
             value={filters.facilityId}
             onChange={(e) => onChange({ facilityId: Number.parseInt(e.target.value, 10) })}
           >
             {facilities.map((facility) => (
               <option key={facility.id} value={facility.id}>{facility.label}</option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
-        <div className="col-md-4 mb-2 mb-md-0">
-          <label className="small text-muted mb-1" htmlFor="nc-scheduling-provider">Provider</label>
-          <select
+        <div className="col-span-12 md:col-span-4 mb-2 md:mb-0">
+          <label className="text-sm text-[var(--oe-nc-text-muted)] mb-1" htmlFor="nc-scheduling-provider">Provider</label>
+          <NativeSelect
             id="nc-scheduling-provider"
-            className="form-control form-control-sm"
+            className="h-8"
             value={filters.providerId}
             onChange={(e) => onChange({ providerId: Number.parseInt(e.target.value, 10) })}
           >
@@ -62,14 +67,14 @@ export function SchedulingFilterBar({
             {providers.map((provider) => (
               <option key={provider.id} value={provider.id}>{provider.label}</option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
-        <div className="col-md-4">
-          <label className="small text-muted mb-1" htmlFor="nc-scheduling-date">Date</label>
-          <input
+        <div className="col-span-12 md:col-span-4">
+          <label className="text-sm text-[var(--oe-nc-text-muted)] mb-1" htmlFor="nc-scheduling-date">Date</label>
+          <Input
             id="nc-scheduling-date"
             type="date"
-            className="form-control form-control-sm"
+            className="h-8"
             value={filters.date}
             onChange={(e) => onChange({ date: e.target.value })}
           />

@@ -1,4 +1,20 @@
 import { useMemo, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { ncShadcnTableClass } from '@components/ncTableStyles';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { Checkbox } from '@components/ui/checkbox';
+import { Card, CardContent } from '@components/ui/card';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@components/ui/table';
 import type { FormsCatalogItem, FormsCatalogPayload } from './adminTypes';
 
 interface FormsCatalogProps {
@@ -27,81 +43,86 @@ export function FormsCatalog({ catalog, togglingId, onToggle }: FormsCatalogProp
   }, [bundleOnly, catalog.items, query]);
 
   return (
-    <div className="card mb-3" id="nc-admin-forms-catalog">
-      <div className="card-body">
-        <div className="d-flex flex-wrap align-items-start justify-content-between mb-2">
+    <Card className="mb-3" id="nc-admin-forms-catalog">
+      <CardContent>
+        <div className="flex flex-wrap items-start justify-between mb-2">
           <div>
-            <h5 className="card-title mb-1">Registered forms</h5>
-            <p className="text-muted small mb-0">
+            <h5 className="text-base font-semibold mb-1">Registered forms</h5>
+            <p className="text-[var(--oe-nc-text-muted)] text-sm mb-0">
               Enable or disable encounter forms. Bundle-required forms are listed first (M15-F07).
             </p>
           </div>
-          <a className="btn btn-outline-secondary btn-sm" href={catalog.forms_admin_url} target="_top">
-            Full Forms Administration
-          </a>
+          <Button variant="outline" size="sm" asChild>
+            <a href={catalog.forms_admin_url} target="_top">
+              Full Forms Administration
+            </a>
+          </Button>
         </div>
 
         {!catalog.can_edit && (
-          <div className="alert alert-info py-2 small mb-3">
+          <div className={deskCalloutClass('info', 'py-2 text-sm mb-3')}>
             Read-only — enabling or disabling forms requires core <code>admin/forms</code> ACL.
           </div>
         )}
 
-        <div className="d-flex flex-wrap align-items-center mb-3">
-          <input
+        <div className="flex flex-wrap items-center mb-3">
+          <Input
             type="search"
-            className="form-control form-control-sm mr-2 mb-2"
+            className="h-8 mr-2 mb-2"
             style={{ maxWidth: '16rem' }}
             placeholder="Search forms…"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             aria-label="Search registered forms"
           />
-          <label className="small mb-2">
-            <input
-              type="checkbox"
-              className="mr-1"
+          <div className="flex items-center gap-2 mb-2">
+            <Checkbox
+              id="nc-admin-forms-bundle-only"
               checked={bundleOnly}
-              onChange={(event) => setBundleOnly(event.target.checked)}
+              onCheckedChange={(checked) => setBundleOnly(checked === true)}
             />
-            Bundle forms only
-          </label>
+            <Label htmlFor="nc-admin-forms-bundle-only" className="font-normal normal-case cursor-pointer mb-0">
+              Bundle forms only
+            </Label>
+          </div>
         </div>
 
-        <div className="table-responsive">
-          <table className="table table-sm table-bordered mb-0">
-            <thead className="thead-light">
-              <tr>
-                <th scope="col">Form</th>
-                <th scope="col">Directory</th>
-                <th scope="col">Category</th>
-                <th scope="col" className="text-center">Enabled</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="overflow-x-auto">
+          <Table className={ncShadcnTableClass({ bordered: true, className: 'mb-0' })}>
+            <TableHeader className="bg-[var(--oe-nc-bg-tint)]">
+              <TableRow>
+                <TableHead scope="col">Form</TableHead>
+                <TableHead scope="col">Directory</TableHead>
+                <TableHead scope="col">Category</TableHead>
+                <TableHead scope="col" className="text-center">Enabled</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filtered.map((item) => {
                 const blockedOff = item.enabled && item.disable_blocked;
                 const canToggle = catalog.can_edit && !blockedOff;
                 return (
-                  <tr key={item.id}>
-                    <td>
+                  <TableRow key={item.id}>
+                    <TableCell>
                       <div>{item.name}</div>
                       {item.bundle_required && (
-                        <span className="badge badge-primary badge-sm mr-1">Bundle</span>
+                        <Badge className="mr-1">Bundle</Badge>
                       )}
                       {item.enable_warning && item.enabled && (
-                        <div className="small text-warning mt-1">{item.enable_warning}</div>
+                        <div className="text-sm text-[var(--color-oe-warning,#ea580c)] mt-1">{item.enable_warning}</div>
                       )}
                       {!item.enabled && item.disable_block_reason && (
-                        <div className="small text-muted mt-1">{item.disable_block_reason}</div>
+                        <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">{item.disable_block_reason}</div>
                       )}
-                    </td>
-                    <td><code className="small">{item.directory}</code></td>
-                    <td className="small text-muted">{item.category || '—'}</td>
-                    <td className="text-center">
-                      <button
+                    </TableCell>
+                    <TableCell><code className="text-sm">{item.directory}</code></TableCell>
+                    <TableCell className="text-sm text-[var(--oe-nc-text-muted)]">{item.category || '—'}</TableCell>
+                    <TableCell className="text-center">
+                      <Button
                         type="button"
-                        className={`btn btn-sm ${item.enabled ? 'btn-success' : 'btn-outline-secondary'}`}
+                        size="sm"
+                        variant={item.enabled ? 'default' : 'outline'}
+                        className={item.enabled ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : undefined}
                         disabled={!canToggle || togglingId === item.id}
                         title={
                           blockedOff
@@ -113,20 +134,20 @@ export function FormsCatalog({ catalog, togglingId, onToggle }: FormsCatalogProp
                         onClick={() => onToggle(item, !item.enabled)}
                       >
                         {togglingId === item.id ? '…' : item.enabled ? 'On' : 'Off'}
-                      </button>
-                    </td>
-                  </tr>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
               {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="text-muted small">No forms match your filter.</td>
-                </tr>
+                <TableRow>
+                  <TableCell colSpan={4} className="text-[var(--oe-nc-text-muted)] text-sm">No forms match your filter.</TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

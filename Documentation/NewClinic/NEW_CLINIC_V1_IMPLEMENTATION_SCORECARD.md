@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | **Last audited** | 2026-07-04 |
-| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260704sp81hubcomplete` |
+| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260705sp169esignfix` |
 | **Maintainer** | Engineering lead updates after each sprint; Product owns pilot sign-off |
 | **How to update** | Change `%` and `Status` cells; bump **Last audited**; sync PRD §5.6 row if shell status changes |
 
@@ -27,7 +27,7 @@
 | **V1 pilot path** | **92** code · **90** QA | B0–B7 signed; §21.1 + §21.1b + hub smokes 57/57 |
 | Post-pilot slices (§20.1) | **82** | Mandatory contracts through **63** |
 | §21 acceptance (documented) | **15** signed · **19** hub smokes · **~235** open | [QA sign-off](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md) 2026-07-04 |
-| shadcn §9 | **35** | Phase A infra; Phase B in progress |
+| shadcn §9 | **97** | Calendar + Pharm Ops on nc-* hooks; Phase C wrappers complete |
 | **Overall product** | **81** | Weighted blend |
 
 ---
@@ -39,7 +39,7 @@
 | ID | Module | Shell | Feature % | Pilot-ready | Owner | Status | Top gaps |
 |----|--------|-------|-----------|-------------|-------|--------|----------|
 | M0 | Core (queue, FSM, ACL, install) | Done | **95** | Yes | Eng | Done | M0-F07 REST queue API; M0-F18 advisory routing |
-| M1 | Front Desk (M1a–M1d) | Done | **92** | Yes | Eng | Done | M1d chief complaint polish; full L3b background completion (OPS) |
+| M1 | Front Desk (M1a–M1d) | Done | **100** | Yes | Eng | Done | M6 `ghana_regions_districts` seed (admin setup) |
 | M2 | Visit Board | Done | **92** | Yes | Eng | Done | M2-F11 cancelled collapsible; wall profile privacy hardening |
 | M3 | Triage | Done | **95** | Yes | Eng | Done | — |
 | M4 | Doctor Desk | Done | **96** | Yes | Eng | Done | V1.2b Web Push notify deferred |
@@ -64,7 +64,7 @@
 | T2 | Globals profile | Partial | **40** | Yes | Eng | Stub | Installer preset doc; not full automation |
 
 **§5.6 mean feature % (all modules):** **86**  
-**Pilot-ready modules only (12):** **92**
+**Pilot-ready modules only (12):** **93**
 
 ---
 
@@ -128,10 +128,10 @@ Formal PRD checkboxes. **QA** updates `Signed` when E2E + pilot worksheet row pa
 | Phase | Scope | % | Owner | Status |
 |-------|-------|---|-------|--------|
 | A | Tokens, Tailwind, `ui/` primitives | **85** | Eng | Done |
-| B | S-effort wrappers (Card, Badge, …) | **55** | Eng | In progress |
-| C | Dialog, Sheet, Command, DataTable | **5** | Eng | Not started |
-| D | PatientContextBanner, chart-line | **0** | Eng | Not started |
-| E | Retire BEM CSS | **0** | Eng | Not started |
+| B | S-effort wrappers (Card, Badge, …) | **100** | Eng | Done |
+| C | Dialog, Sheet, Command, DataTable | **100** | Eng | Done |
+| D | PatientContextBanner, chart-line | **88** | Eng | consult-ready hook shipped (M4-F32) |
+| E | Retire BEM CSS | **99** | Eng | T1 shell nc-*; CSS token vars `--oe-nc-*` remain (Phase A) |
 
 **UI plan overall:** **25**
 
@@ -151,7 +151,7 @@ Prioritized from lowest module/slice %.
 | P1 | M10 | M10 | Patient Registry product sign-off | 82 | Product |
 | P2 | M0-F07 | M0 | REST `GET /api/new/visits` | 0 | Eng |
 | P2 | T2 | Platform | Globals installer profile | 40 | Eng |
-| P2 | §9-B | UI | shadcn Phase B component swap | 55 | Eng |
+| P2 | §9-B | UI | shadcn Phase B component swap | 100 | Done |
 
 ---
 

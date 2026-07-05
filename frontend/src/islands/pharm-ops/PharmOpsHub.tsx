@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { oeFetch } from '@core/oeFetch';
 import { useInterval } from '@core/useInterval';
 import { localDateString } from '@islands/daily-reports/reportsFormatters';
@@ -207,19 +208,19 @@ export function PharmOpsHub({
   });
 
   return (
-    <div id="nc-pharm-ops-hub" className="oe-nc-pharmops">
+    <div id="nc-pharm-ops-hub" className="nc-pharmops">
       {loadError ? (
-        <div className="alert alert-warning oe-nc-pharmops-alert" role="alert">
+        <div className={deskCalloutClass('warn', 'nc-pharmops-alert')} role="alert">
           {loadError}
         </div>
       ) : null}
       {printError ? (
-        <div className="alert alert-warning oe-nc-pharmops-alert" role="alert">
+        <div className={deskCalloutClass('warn', 'nc-pharmops-alert')} role="alert">
           {printError}
         </div>
       ) : null}
       {setupError ? (
-        <div className="alert alert-warning oe-nc-pharmops-alert" role="alert">
+        <div className={deskCalloutClass('warn', 'nc-pharmops-alert')} role="alert">
           {setupError}
         </div>
       ) : null}

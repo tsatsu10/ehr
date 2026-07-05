@@ -1,5 +1,28 @@
 import { useEffect, useState } from 'react';
 import { useModalDismiss } from '@components/useModalDismiss';
+import { Button } from '@components/ui/button';
+import { Checkbox } from '@components/ui/checkbox';
+import {
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  dialogContentSizeClass,
+} from '@components/ui/dialog';
+import { Label } from '@components/ui/label';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Input } from '@components/ui/input';
+import { NativeSelect } from '@components/ui/native-select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@components/ui/select';
 import type {
   CalendarCategory,
   FeeScheduleRow,
@@ -59,100 +82,89 @@ export function VisitTypeModal({
   if (!open) return null;
 
   return (
-    <>
-      <div
-        className="modal fade show d-block"
+    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogContent
         id="nc-admin-visit-type-modal"
-        tabIndex={-1}
-        role="dialog"
+        className={dialogContentSizeClass.lg}
         aria-labelledby="nc-admin-visit-type-title"
-        aria-modal="true"
       >
-        <div className="modal-dialog" role="document">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5 className="modal-title" id="nc-admin-visit-type-title">
-                {row ? 'Edit visit type' : 'Add visit type'}
-              </h5>
-              <button
-                type="button"
-                className="btn btn-link close"
-                id="nc-admin-visit-type-close"
-                aria-label="Close"
-                onClick={onClose}
-              >
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
-            <div className="modal-body">
+        <DialogHeader>
+          <DialogTitle id="nc-admin-visit-type-title">
+            {row ? 'Edit visit type' : 'Add visit type'}
+          </DialogTitle>
+          <DialogClose
+            id="nc-admin-visit-type-close"
+            aria-label="Close"
+          >
+            <span aria-hidden="true">&times;</span>
+          </DialogClose>
+        </DialogHeader>
+        <DialogBody>
               <input type="hidden" id="nc-admin-visit-type-id" value={row?.id ?? ''} />
-              <div className="form-group">
-                <label htmlFor="nc-admin-visit-type-label">Name</label>
-                <input
+              <div className="space-y-1.5 mb-3">
+                <Label htmlFor="nc-admin-visit-type-label">Name</Label>
+                <Input
                   type="text"
-                  className="form-control"
                   id="nc-admin-visit-type-label"
                   maxLength={128}
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
                 />
               </div>
-              <div className="form-group">
-                <label htmlFor="nc-admin-visit-type-category">Calendar category</label>
-                <select
-                  className="form-control"
-                  id="nc-admin-visit-type-category"
-                  value={pcCatid}
-                  onChange={(e) => setPcCatid(Number.parseInt(e.target.value, 10))}
+              <div className="space-y-1.5 mb-3">
+                <Label htmlFor="nc-admin-visit-type-category">Calendar category</Label>
+                <Select
+                  value={String(pcCatid)}
+                  onValueChange={(val) => setPcCatid(Number.parseInt(val, 10))}
                 >
-                  {calendarCategories.map((cat) => (
-                    <option key={cat.pc_catid} value={cat.pc_catid}>
-                      {cat.name} ({cat.pc_catid})
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id="nc-admin-visit-type-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {calendarCategories.map((cat) => (
+                      <SelectItem key={cat.pc_catid} value={String(cat.pc_catid)}>
+                        {cat.name} ({cat.pc_catid})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="form-group">
-                <label htmlFor="nc-admin-visit-type-profile">Service profile</label>
-                <select
-                  className="form-control"
-                  id="nc-admin-visit-type-profile"
-                  value={serviceProfile}
-                  onChange={(e) => setServiceProfile(e.target.value)}
-                >
-                  <option value="full_opd">Full OPD</option>
-                  <option value="lab_direct">Lab direct</option>
-                  <option value="pharmacy_walkin">Pharmacy walk-in</option>
-                </select>
+              <div className="space-y-1.5 mb-3">
+                <Label htmlFor="nc-admin-visit-type-profile">Service profile</Label>
+                <Select value={serviceProfile} onValueChange={setServiceProfile}>
+                  <SelectTrigger id="nc-admin-visit-type-profile">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="full_opd">Full OPD</SelectItem>
+                    <SelectItem value="lab_direct">Lab direct</SelectItem>
+                    <SelectItem value="pharmacy_walkin">Pharmacy walk-in</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="form-group form-check">
-                <input
-                  type="checkbox"
-                  className="form-check-input"
+              <div className="flex items-center gap-2 mb-3">
+                <Checkbox
                   id="nc-admin-visit-type-referral"
                   checked={referralRequired}
-                  onChange={(e) => setReferralRequired(e.target.checked)}
+                  onCheckedChange={(checked) => setReferralRequired(checked === true)}
                 />
-                <label className="form-check-label" htmlFor="nc-admin-visit-type-referral">
+                <Label htmlFor="nc-admin-visit-type-referral" className="font-normal cursor-pointer">
                   Referral required
-                </label>
+                </Label>
               </div>
-              <div className="form-group form-check">
-                <input
-                  type="checkbox"
-                  className="form-check-input"
+              <div className="flex items-center gap-2 mb-3">
+                <Checkbox
                   id="nc-admin-visit-type-default"
                   checked={isDefault}
-                  onChange={(e) => setIsDefault(e.target.checked)}
+                  onCheckedChange={(checked) => setIsDefault(checked === true)}
                 />
-                <label className="form-check-label" htmlFor="nc-admin-visit-type-default">
+                <Label htmlFor="nc-admin-visit-type-default" className="font-normal cursor-pointer">
                   Default for Front Desk
-                </label>
+                </Label>
               </div>
-              <div className="form-group">
-                <label htmlFor="nc-admin-visit-type-fee-hints">Suggested cashier fees</label>
-                <select
-                  className="form-control"
+              <div className="space-y-1.5 mb-3">
+                <Label htmlFor="nc-admin-visit-type-fee-hints">Suggested cashier fees</Label>
+                <NativeSelect
                   id="nc-admin-visit-type-fee-hints"
                   multiple
                   size={5}
@@ -169,46 +181,44 @@ export function VisitTypeModal({
                       {fee.name} ({fee.code})
                     </option>
                   ))}
-                </select>
-                <small className="form-text text-muted">
+                </NativeSelect>
+                <p className="text-xs text-[var(--oe-nc-text-muted)] m-0">
                   Pre-selects fee lines when a visit reaches cashier (hold Ctrl to select multiple).
-                </small>
+                </p>
               </div>
               {error && (
-                <div className="alert alert-danger" id="nc-admin-visit-type-error">{error}</div>
+                <div className={deskCalloutClass('error', 'text-sm')} id="nc-admin-visit-type-error" role="alert">
+                  {error}
+                </div>
               )}
-            </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                id="nc-admin-visit-type-cancel"
-                onClick={onClose}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                id="nc-admin-visit-type-save"
-                disabled={saving || label.trim() === ''}
-                onClick={() => onSave({
-                  id: row?.id ?? 0,
-                  label: label.trim(),
-                  pc_catid: pcCatid,
-                  service_profile: serviceProfile,
-                  referral_required: referralRequired,
-                  is_default: isDefault,
-                  cashier_fee_hint_ids: feeHintIds,
-                })}
-              >
-                {saving ? 'Saving…' : 'Save visit type'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="modal-backdrop fade show" id="nc-admin-modal-backdrop" />
-    </>
+            </DialogBody>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="secondary"
+            id="nc-admin-visit-type-cancel"
+            onClick={onClose}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            id="nc-admin-visit-type-save"
+            disabled={saving || label.trim() === ''}
+            onClick={() => onSave({
+              id: row?.id ?? 0,
+              label: label.trim(),
+              pc_catid: pcCatid,
+              service_profile: serviceProfile,
+              referral_required: referralRequired,
+              is_default: isDefault,
+              cashier_fee_hint_ids: feeHintIds,
+            })}
+          >
+            {saving ? 'Saving…' : 'Save visit type'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

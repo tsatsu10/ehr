@@ -2,24 +2,37 @@
 @import '../../components/ui/ui-primitives.css';
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Front Desk island — complete visual overhaul 2026
-   All selectors scoped to .oe-nc-front-desk-react-active
+   Front Desk island — visual styles 2026
+   All selectors scoped to .nc-front-desk-react-active
+   ───────────────────────────────────────────────────────────────────────────
+   Sections (Ctrl+F the anchor):
+   §1  Shell / workspace / split grid
+   §2  Preview pane scroll + sticky footer
+   §3  Today's appointments list
+   §4  Search hero input + spinner + skeleton
+   §5  Preview empty / loading states
+   §6  Start visit panel + priority chips + arrival pill
+   §7  Bulk check-in bar
+   §8  Patient photo capture
+   §9  Today's flow charts strip
    ═══════════════════════════════════════════════════════════════════════════ */
 
-.oe-nc-t1--desk-focus .oe-nc-front-desk-react-active.oe-nc-desk-split {
+.nc-t1-desk-focus .nc-front-desk-react-active.nc-desk-split {
   margin-top: 0;
   width: 100%;
 }
 
+/* ── §1  Shell / workspace / split grid ────────────────────────────────── */
+
 /* ── Workspace wrapper ─────────────────────────────────────────────────── */
 
-.oe-nc-front-desk-react-active .oe-nc-front-desk-workspace {
+.nc-front-desk-react-active .nc-front-desk-workspace {
   width: 100%;
 }
 
 /* ── Search-first split grid ───────────────────────────────────────────── */
 
-.oe-nc-front-desk-react-active .oe-nc-front-desk-grid {
+.nc-front-desk-react-active .nc-front-desk-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1rem;
@@ -28,121 +41,119 @@
 }
 
 @media (min-width: 992px) {
-  .oe-nc-front-desk--has-selection .oe-nc-front-desk-grid {
+  .nc-front-desk-split .nc-front-desk-grid {
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
   }
 
-  .oe-nc-front-desk--has-selection .oe-nc-front-desk-grid__search {
+  .nc-front-desk-split .nc-front-desk-grid-search {
     position: sticky;
     top: 0.5rem;
     align-self: start;
   }
 }
 
-.oe-nc-front-desk-react-active .oe-nc-front-desk-grid__search,
-.oe-nc-front-desk-react-active .oe-nc-front-desk-grid__preview {
+.nc-front-desk-react-active .nc-front-desk-grid-search,
+.nc-front-desk-react-active .nc-front-desk-grid-preview {
   min-width: 0;
 }
 
 @media (min-width: 768px) {
-  .oe-nc-front-desk--registration .oe-nc-front-desk-grid {
+  .nc-front-desk-registration .nc-front-desk-grid {
     grid-template-columns: 1fr;
   }
 
-  .oe-nc-front-desk--registration .oe-nc-front-desk-grid__preview {
+  .nc-front-desk-registration .nc-front-desk-grid-preview {
     width: 100%;
   }
 
-  .oe-nc-front-desk--registration .oe-nc-preview-pane {
+  .nc-front-desk-registration .nc-preview-pane {
     max-height: none;
   }
 
-  .oe-nc-front-desk--registration .oe-nc-preview-pane__scroll {
+  .nc-front-desk-registration .nc-preview-pane-scroll {
     overflow: visible;
   }
 
-  .oe-nc-front-desk--registration .oe-nc-desk-split__preview {
+  .nc-front-desk-registration .nc-desk-split-preview {
     width: 100%;
   }
 
-  .oe-nc-front-desk--registration .nc-registration-form {
+  .nc-front-desk-registration .nc-registration-form {
     width: 100%;
-  }
-
-  .oe-nc-front-desk--registration .oe-nc-reg-intake-panel {
-    padding: 1.25rem 1.5rem;
   }
 }
 
 @media (min-width: 992px) {
-  .oe-nc-front-desk--registration .oe-nc-reg-intake-panel {
-    padding: 1.5rem 2rem;
-  }
-
-  .oe-nc-front-desk--registration-pinned .oe-nc-front-desk-grid__preview .oe-nc-preview-pane__scroll {
+  .nc-front-desk-registration-pinned .nc-front-desk-grid-preview .nc-preview-pane-scroll {
     overflow-y: auto;
     max-height: calc(100vh - 8rem);
   }
 }
 
+/* ── §2  Preview pane scroll + sticky Start Visit footer ────────────────── */
+
 /* ── Preview pane: scroll body + sticky Start Visit footer (desktop) ─────── */
 
 @media (min-width: 992px) {
-  .oe-nc-front-desk--has-selection .oe-nc-preview-pane {
+  .nc-front-desk-has-selection .nc-preview-pane {
     display: flex;
     flex-direction: column;
     max-height: calc(100vh - 6rem);
   }
 
-  .oe-nc-front-desk--has-selection .oe-nc-preview-pane__scroll {
+  .nc-front-desk-has-selection .nc-preview-pane-scroll {
     flex: 1 1 auto;
     overflow-y: auto;
     min-height: 0;
     -webkit-overflow-scrolling: touch;
   }
 
-  .oe-nc-front-desk-react-active #nc-start-visit-mount .oe-nc-start-visit__footer {
+  .nc-front-desk-react-active #nc-start-visit-mount .nc-start-visit-footer {
     position: sticky;
     bottom: 0;
     z-index: 2;
     margin: 1rem -1rem -1rem;
     padding: 0.75rem 1rem;
-    background: #fff;
-    border-top: 1px solid #e5e7eb;
+    background: var(--oe-nc-surface, #fff);
+    border-top: 1px solid var(--oe-nc-border, #e5e7eb);
     box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.06);
   }
 }
 
 @media (max-width: 991.98px) {
-  .oe-nc-front-desk-react-active .oe-nc-start-visit__footer {
+  .nc-front-desk-react-active .nc-start-visit-footer {
     position: sticky;
     bottom: 0;
     z-index: 2;
     margin: 0 -1.25rem -1.25rem;
     padding: 0.875rem 1.25rem;
-    background: #fff;
-    border-top: 1px solid #e5e7eb;
+    background: var(--oe-nc-surface, #fff);
+    border-top: 1px solid var(--oe-nc-border, #e5e7eb);
     box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.06);
   }
 }
 
+/* ── §3  Today's appointments idle list ─────────────────────────────────── */
+
 /* ── Today's appointments idle list ─────────────────────────────────────── */
 
-.oe-nc-front-desk-react-active .oe-nc-todays-appts__row:focus-visible {
+.nc-front-desk-react-active .nc-todays-appts-row:focus-visible {
   outline: 2px solid var(--oe-nc-primary, #2563eb);
   outline-offset: -2px;
 }
 
-.oe-nc-front-desk-react-active .oe-nc-todays-appts__list {
+.nc-front-desk-react-active .nc-todays-appts-list {
   max-height: 16rem;
   overflow-y: auto;
 }
 
+/* ── §4  Search hero input + spinner + skeleton ─────────────────────────── */
+
 /* ── Search hero input ─────────────────────────────────────────────────── */
 
-.oe-nc-front-desk-react-active .oe-nc-search-hero__input,
-.oe-nc-front-desk-react-active input.oe-nc-search-hero__input {
+.nc-front-desk-react-active .nc-search-hero-input,
+.nc-front-desk-react-active input.nc-search-hero-input {
   width: 100%;
   border-radius: 0.5rem;
   border: 1px solid var(--oe-nc-border);
@@ -151,47 +162,27 @@
   transition: border-color var(--oe-nc-transition), box-shadow var(--oe-nc-transition), background var(--oe-nc-transition);
 }
 
-.oe-nc-front-desk-react-active .oe-nc-search-hero__input:focus,
-.oe-nc-front-desk-react-active .oe-nc-search-hero__input:focus-visible {
+.nc-front-desk-react-active .nc-search-hero-input:focus,
+.nc-front-desk-react-active .nc-search-hero-input:focus-visible {
   border-color: var(--oe-nc-primary);
   background: white;
   box-shadow: var(--oe-nc-focus-ring);
   outline: none;
 }
 
-/* Override generic command styles for the hero variant */
-.oe-nc-front-desk-react-active .oe-nc-search-panel .oe-nc-command__search-icon {
-  display: none;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-search-panel .oe-nc-command__input-wrap {
-  padding: 0;
-}
-
 /* ── Recently viewed pill row ──────────────────────────────────────────── */
 
-.oe-nc-front-desk-react-active .oe-nc-recently-viewed__pill:hover {
+.nc-front-desk-react-active .nc-recently-viewed-pill:hover {
   box-shadow: 0 0 0 1px var(--oe-nc-primary);
 }
 
-/* ── Active-visit row promotion ────────────────────────────────────────── */
-
-.oe-nc-front-desk-react-active .oe-nc-search-row--active-visit {
-  background: linear-gradient(to right, var(--oe-nc-bg, #eff6ff) 0%, white 35%);
-  border-left-color: var(--oe-nc-primary);
-}
-
-.oe-nc-front-desk-react-active .oe-nc-search-row--active-visit:hover {
-  background: linear-gradient(to right, var(--oe-nc-bg, #eff6ff) 0%, var(--oe-nc-bg-tint) 35%);
-}
-
-.oe-nc-front-desk-react-active .oe-nc-front-desk-layout {
+.nc-front-desk-react-active .nc-front-desk-layout {
   --bs-gutter-x: 1.25rem;
 }
 
 /* ── Keyboard shortcut indicator ─────────────────────────────────────────── */
 
-.oe-nc-front-desk-react-active .oe-nc-kbd {
+.nc-front-desk-react-active .nc-kbd {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -206,86 +197,9 @@
   color: var(--oe-nc-text-muted);
 }
 
-/* ── Patient banner (full layout) ───────────────────────────────────────── */
+/* ── Inline error (legacy hook) ─────────────────────────────────────────── */
 
-.oe-nc-front-desk-react-active .oe-nc-patient-banner {
-  border-radius: 0.5rem;
-  border: 1px solid var(--oe-nc-border, #e2e8f0);
-  background: var(--oe-nc-bg-tint);
-  padding: 0.875rem 1rem;
-  margin-bottom: 0.75rem;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-patient-banner__name {
-  font-size: 1.25rem;
-  letter-spacing: -0.01em;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-patient-banner__header {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.875rem;
-  flex-wrap: wrap;
-  margin-bottom: 0.75rem;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-patient-banner__identity {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-patient-banner__name {
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--oe-nc-text, #111827);
-  margin: 0 0 0.15rem;
-  line-height: 1.25;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-patient-banner__meta {
-  font-size: 0.8125rem;
-  color: var(--oe-nc-text-muted);
-  line-height: 1.4;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-patient-banner__safety {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-patient-banner__aside {
-  flex-shrink: 0;
-}
-
-/* ── Callout boxes ──────────────────────────────────────────────────────── */
-
-.oe-nc-front-desk-react-active .oe-nc-warn-callout {
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
-  color: #78350f;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-success-callout {
-  background: #f0fdf4;
-  border: 1px solid #86efac;
-  color: #14532d;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-info-callout {
-  background: #eff6ff;
-  border: 1px solid #93c5fd;
-  color: #1e3a5f;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-error-callout {
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  color: #7f1d1d;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-inline-error {
+.nc-front-desk-react-active .nc-inline-error {
   background: #fef2f2;
   border: 1px solid #fca5a5;
   color: #7f1d1d;
@@ -293,7 +207,7 @@
 
 /* ── Search widget ──────────────────────────────────────────────────────── */
 
-.oe-nc-front-desk-react-active .oe-nc-search-input__spinner {
+.nc-front-desk-react-active .nc-search-input-spinner {
   position: absolute;
   right: 0.5rem;
   top: 50%;
@@ -303,74 +217,24 @@
   border: 2px solid var(--oe-nc-border, #e2e8f0);
   border-top-color: var(--oe-nc-primary, #2563eb);
   border-radius: 50%;
-  animation: oe-nc-search-spin 0.7s linear infinite;
+  animation: nc-search-spin 0.7s linear infinite;
 }
 
-@keyframes oe-nc-search-spin {
+@keyframes nc-search-spin {
   to { transform: rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .oe-nc-front-desk-react-active .oe-nc-search-input__spinner {
+  .nc-front-desk-react-active .nc-search-input-spinner {
     animation: none;
     opacity: 0.7;
   }
 }
-
-.oe-nc-front-desk-react-active .oe-nc-search-row {
-  border-radius: 0.5rem;
-  border-left: 3px solid transparent;
-  transition: background-color 120ms ease, border-color 120ms ease;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-search-row--selected {
-  background-color: var(--oe-nc-bg, #eff6ff);
-  border-left-color: var(--oe-nc-primary, #2563eb);
-}
-
-.oe-nc-front-desk-react-active .oe-nc-search-row__inner {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  width: 100%;
-  min-width: 0;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-search-row__chips {
-  margin-left: auto;
-}
-
-/* ── Skeleton shimmer ───────────────────────────────────────────────────── */
-
-.oe-nc-front-desk-react-active .oe-nc-vb-skeleton {
-  border-radius: 0.375rem;
-  background: linear-gradient(
-    90deg,
-    var(--oe-nc-border, #e2e8f0) 25%,
-    #f1f5f9 50%,
-    var(--oe-nc-border, #e2e8f0) 75%
-  );
-  background-size: 200% 100%;
-  animation: oe-nc-shimmer 1.4s infinite;
-}
-
-@keyframes oe-nc-shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .oe-nc-front-desk-react-active .oe-nc-vb-skeleton {
-    animation: none;
-    background: var(--oe-nc-border, #e2e8f0);
-  }
-}
-
-.oe-nc-front-desk-react-active .oe-nc-search-skeleton {
+.nc-front-desk-react-active .nc-search-skeleton {
   padding: 0.5rem 0.75rem;
 }
 
-.oe-nc-front-desk-react-active .oe-nc-search-skeleton__row {
+.nc-front-desk-react-active .nc-search-skeleton-row {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -378,194 +242,329 @@
   border-bottom: 1px solid var(--oe-nc-border, #e2e8f0);
 }
 
-.oe-nc-front-desk-react-active .oe-nc-search-skeleton__row:last-child {
+.nc-front-desk-react-active .nc-search-skeleton-row:last-child {
   border-bottom: none;
 }
 
-.oe-nc-front-desk-react-active .oe-nc-search-skeleton__avatar {
+.nc-front-desk-react-active .nc-search-skeleton-avatar {
   width: 2.25rem;
   height: 2.25rem;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.oe-nc-front-desk-react-active .oe-nc-search-skeleton__line--title {
+.nc-front-desk-react-active .nc-search-skeleton-line-title {
   width: 55%;
   height: 0.875rem;
   margin-bottom: 0.35rem;
 }
 
-.oe-nc-front-desk-react-active .oe-nc-search-skeleton__line--meta {
+.nc-front-desk-react-active .nc-search-skeleton-line-meta {
   width: 75%;
   height: 0.7rem;
 }
 
+/* ── §5  Preview empty / loading states ─────────────────────────────────── */
+
 /* ── Preview empty / loading ────────────────────────────────────────────── */
 
-.oe-nc-front-desk-react-active .oe-nc-preview-empty__title {
+.nc-front-desk-react-active .nc-preview-empty-title {
   font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
   color: var(--oe-nc-text, #111827);
 }
 
-.oe-nc-front-desk-react-active .oe-nc-preview-empty__hint {
+.nc-front-desk-react-active .nc-preview-empty-hint {
   max-width: 28rem;
 }
 
-.oe-nc-front-desk-react-active .oe-nc-preview-empty__icon {
+.nc-front-desk-react-active .nc-preview-empty-icon {
   box-shadow: inset 0 0 0 1px var(--oe-nc-border, #e2e8f0);
 }
 
-.oe-nc-front-desk-react-active .oe-nc-command__idle p {
-  max-width: 20rem;
-}
+/* ── §6  Start visit panel + priority chips + arrival pill ──────────────── */
 
 /* ── Start visit panel ───────────────────────────────────────────────────── */
 
-.oe-nc-front-desk-react-active .oe-nc-start-visit-panel {
+.nc-front-desk-react-active .nc-start-visit-panel {
   border-radius: 0.625rem;
   background: linear-gradient(to bottom, var(--oe-nc-bg-tint, #f8fafc) 0%, #fff 40%);
 }
 
-.oe-nc-front-desk-react-active .oe-nc-start-visit-panel .space-y-4 {
+.nc-front-desk-react-active .nc-start-visit-panel .space-y-4 {
   padding: 0.25rem 0 0.5rem;
 }
 
-.oe-nc-front-desk-react-active .oe-nc-completion-summary {
-  box-shadow: inset 0 0 0 1px var(--oe-nc-border, #e2e8f0);
-}
-
-.oe-nc-front-desk-react-active .oe-nc-preview-loading__avatar {
+.nc-front-desk-react-active .nc-preview-loading-avatar {
   width: 3.5rem;
   height: 3.5rem;
 }
 
-.oe-nc-front-desk-react-active .oe-nc-preview-loading__line--title {
+.nc-front-desk-react-active .nc-preview-loading-line-title {
   width: 60%;
   height: 1rem;
 }
 
-.oe-nc-front-desk-react-active .oe-nc-preview-loading__line--meta {
+.nc-front-desk-react-active .nc-preview-loading-line-meta {
   width: 40%;
   height: 0.8rem;
 }
 
-/* ── Completion ring ────────────────────────────────────────────────────── */
-
-.oe-nc-front-desk-react-active .oe-nc-completion-ring {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-completion-ring__svg {
-  display: block;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-completion-ring__track {
-  stroke: var(--oe-nc-border, #e2e8f0);
-}
-
-.oe-nc-front-desk-react-active .oe-nc-completion-ring__fill {
-  transition: stroke-dashoffset 0.6s ease-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .oe-nc-front-desk-react-active .oe-nc-completion-ring__fill {
-    transition: none;
-  }
-}
-
-.oe-nc-front-desk-react-active .oe-nc-completion-ring__center {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  line-height: 1.1;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-completion-ring__value {
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: var(--oe-nc-text, #111827);
-  font-feature-settings: 'tnum';
-}
-
-.oe-nc-front-desk-react-active .oe-nc-completion-ring__caption {
-  font-size: 0.6rem;
-  color: var(--oe-nc-text-muted);
-  text-align: center;
-  margin-top: 0.1rem;
-}
-
-/* ── Chip cloud (allergy / safety chips) ────────────────────────────────── */
-
-.oe-nc-front-desk-react-active .oe-nc-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.75rem;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-chip--severe {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fca5a5;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-chip--warn {
-  background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fcd34d;
-}
-
-/* ── Registration accordion ─────────────────────────────────────────────── */
-
-.oe-nc-front-desk-react-active .oe-nc-reg-accordion .oe-nc-accordion__item {
-  border-radius: 0.625rem;
-  margin-bottom: 0.5rem;
-  border: 1px solid var(--oe-nc-border, #e2e8f0);
-  overflow: hidden;
-}
-
-.oe-nc-front-desk-react-active .oe-nc-reg-accordion .oe-nc-accordion__item[data-state="open"] {
-  border-color: var(--oe-nc-primary, #2563eb);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
-}
-
-.oe-nc-front-desk-react-active .oe-nc-reg-accordion .oe-nc-accordion__trigger {
-  padding: 0.875rem 1rem;
-  background: var(--oe-nc-bg-tint, #f8fafc);
-}
-
-.oe-nc-front-desk-react-active .oe-nc-reg-accordion .oe-nc-accordion__item[data-state="open"] .oe-nc-accordion__trigger {
-  background: var(--oe-nc-bg, #eff6ff);
-}
-
-.oe-nc-front-desk-react-active .oe-nc-reg-accordion .oe-nc-accordion__content {
-  padding: 1rem;
-}
-
 /* ── Stats strip ────────────────────────────────────────────────────────── */
 
-.oe-nc-front-desk-react-active .oe-nc-desk-stats-strip {
+.nc-front-desk-react-active .nc-desk-stats-strip {
   background: var(--oe-nc-bg-tint, #f8fafc);
 }
 
 /* ── Scrollable search results on desktop ───────────────────────────────── */
 
 @media (min-width: 992px) {
-  .oe-nc-front-desk-layout .oe-nc-desk-split__search .oe-nc-search-results,
-  .oe-nc-front-desk-layout .oe-nc-desk-split__search .nc-search-results {
+  .nc-front-desk-layout .nc-desk-split-search .nc-search-results {
     max-height: calc(100vh - 16rem);
     overflow-y: auto;
   }
 }
+
+/* ── Priority chips (#2) ────────────────────────────────────────────────── */
+
+.nc-front-desk-react-active .nc-priority-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.nc-front-desk-react-active .nc-priority-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  border: 1px solid var(--oe-nc-border, #e5e7eb);
+  background: var(--oe-nc-surface, #fff);
+  color: var(--oe-nc-text-muted, #6b7280);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+
+.nc-front-desk-react-active .nc-priority-chip:hover {
+  border-color: var(--oe-nc-primary, #2563eb);
+  color: var(--oe-nc-primary, #2563eb);
+  background: var(--oe-nc-bg, #eff6ff);
+}
+
+.nc-front-desk-react-active .nc-priority-chip--active {
+  border-color: var(--oe-nc-primary, #2563eb);
+  background: var(--oe-nc-primary, #2563eb);
+  color: #fff;
+}
+
+.nc-front-desk-react-active .nc-priority-chip--flag.nc-priority-chip--active {
+  background: #b45309; /* amber-700 — passes WCAG AA with white text */
+  border-color: #92400e;
+  color: #fff;
+}
+
+/* ── Arrival time pill (#3) ─────────────────────────────────────────────── */
+
+.nc-front-desk-react-active .nc-arrival-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1875rem 0.5rem;
+  border-radius: 9999px;
+  background: var(--oe-nc-bg, #eff6ff);
+  border: 1px solid #bfdbfe; /* blue-200 */
+  color: var(--oe-nc-primary, #2563eb);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* ── §7  Bulk check-in bar ───────────────────────────────────────────────── */
+
+/* ── Bulk check-in bar (#9) ─────────────────────────────────────────────── */
+
+.nc-front-desk-react-active .nc-bulk-checkin-bar {
+  background: var(--oe-nc-bg-tint, #f8fafc);
+  min-height: 2.5rem;
+}
+
+.nc-front-desk-react-active .nc-bulk-select-col {
+  background: transparent;
+  border-right: 1px solid var(--oe-nc-border, #e5e7eb);
+  cursor: pointer;
+}
+
+/* ── §8  Patient photo capture ───────────────────────────────────────────── */
+
+/* ── Patient photo capture (#8) ─────────────────────────────────────────── */
+
+.nc-front-desk-react-active .nc-photo-capture-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.nc-front-desk-react-active .nc-photo-capture-viewport {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nc-front-desk-react-active .nc-photo-capture-video {
+  width: 100%;
+  max-width: 18rem;
+  aspect-ratio: 4/3;
+  border-radius: var(--radius-oe-md, 0.5rem);
+  border: 1px solid var(--oe-nc-border, #e5e7eb);
+  object-fit: cover;
+  background: #000;
+}
+
+.nc-front-desk-react-active .nc-photo-capture-img {
+  width: 7rem;
+  height: 7rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--oe-nc-border, #e5e7eb);
+}
+
+.nc-front-desk-react-active .nc-photo-capture-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.nc-front-desk-react-active .nc-photo-capture-status {
+  font-size: 0.8125rem;
+  color: var(--oe-nc-text-muted, #6b7280);
+}
+
+/* ── §9  Today's flow charts strip ──────────────────────────────────────── */
+
+/* ── Today's flow charts strip (#charts) ───────────────────────────────── */
+
+.nc-front-desk-react-active .nc-flow-charts {
+  border-top: 1px solid var(--oe-nc-border, #e5e7eb);
+  border-bottom: 1px solid var(--oe-nc-border, #e5e7eb);
+  background: var(--oe-nc-surface, #fff);
+}
+
+.nc-front-desk-react-active .nc-flow-charts-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--oe-nc-text, #111827);
+  background: var(--oe-nc-bg-tint, #f8fafc);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 120ms;
+}
+
+.nc-front-desk-react-active .nc-flow-charts-live-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #10b981; /* emerald-500 */
+  flex-shrink: 0;
+  animation: nc-flow-pulse 2s ease-in-out infinite;
+}
+
+@keyframes nc-flow-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nc-front-desk-react-active .nc-flow-charts-live-dot {
+    animation: none;
+  }
+}
+
+.nc-front-desk-react-active .nc-flow-charts-toggle:hover {
+  background: var(--oe-nc-bg, #eff6ff);
+  color: var(--oe-nc-primary, #2563eb);
+}
+
+.nc-front-desk-react-active .nc-flow-charts-body {
+  padding: 1rem;
+  border-top: 1px solid var(--oe-nc-border, #e5e7eb);
+}
+
+.nc-front-desk-react-active .nc-flow-charts-placeholder {
+  font-size: 0.8125rem;
+  color: var(--oe-nc-text-muted, #6b7280);
+  padding: 0.5rem 0;
+}
+
+.nc-front-desk-react-active .nc-flow-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+.nc-front-desk-react-active .nc-flow-chart-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--oe-nc-border, #e5e7eb);
+  border-radius: var(--radius-oe-md, 0.5rem);
+  background: var(--oe-nc-surface, #fff);
+  min-height: 8rem;
+}
+
+.nc-front-desk-react-active .nc-flow-chart-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--oe-nc-text-muted, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.nc-front-desk-react-active .nc-flow-chart-hint {
+  font-size: 0.6875rem;
+  color: var(--oe-nc-text-muted, #9ca3af);
+  margin: 0;
+}
+
+.nc-front-desk-react-active .nc-flow-sparkline-axis {
+  display: flex;
+  justify-content: space-between;
+}
+
+.nc-front-desk-react-active .nc-flow-sparkline-label {
+  font-size: 0.625rem;
+  color: var(--oe-nc-text-muted, #9ca3af);
+}
+
+/* Wait trend pill */
+.nc-front-desk-react-active .nc-flow-wait-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.nc-front-desk-react-active .nc-flow-wait-pill--better {
+  color: #059669;
+}
+
+.nc-front-desk-react-active .nc-flow-wait-pill--worse {
+  color: #dc2626;
+}
+
+.nc-front-desk-react-active .nc-flow-wait-pill--neutral {
+  color: var(--oe-nc-text-muted, #6b7280);
+}
+
+

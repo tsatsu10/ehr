@@ -1,9 +1,12 @@
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { Card, CardContent } from '@components/ui/card';
+import { AdminConfigField } from '../AdminConfigField';
 import {
   CLINIC_CURRENCY_FIELDS,
   CLINIC_PRINT_FIELDS,
   CLINIC_RECONCILIATION_FIELDS,
 } from '../adminFieldDefs';
-import { AdminConfigField } from '../AdminConfigField';
 import type { CashProfileStatus } from '../adminTypes';
 import { formatPrice } from '../adminUtils';
 
@@ -41,40 +44,40 @@ export function ClinicTab({
 }: ClinicTabProps) {
   return (
     <>
-      <div className="card mb-3">
-        <div className="card-body">
-          <div className="d-flex flex-wrap align-items-start justify-content-between">
-            <div className="mb-2 mb-md-0">
-              <h5 className="card-title mb-1">Cash clinic profile</h5>
-              <p className="text-muted small mb-2">
+      <Card className="mb-3">
+        <CardContent>
+          <div className="flex flex-wrap items-start justify-between">
+            <div className="mb-2 md:mb-0">
+              <h5 className="text-base font-semibold mb-1">Cash clinic profile</h5>
+              <p className="text-[var(--oe-nc-text-muted)] text-sm mb-2">
                 Applies recommended OpenEMR globals for a private cash clinic (Appendix E):
                 disables insurance eligibility noise, enables E-Sign defaults, syncs currency
                 symbol, and turns on pinned reception preview plus print Rx.
               </p>
-              <p className="small mb-0" id="nc-admin-cash-profile-status">
-                <span className={`badge badge-${cashProfile.applied ? 'success' : 'secondary'} mr-2`}>
+              <p className="text-sm mb-0" id="nc-admin-cash-profile-status">
+                <Badge variant={cashProfile.applied ? 'success' : 'neutral'} className="mr-2">
                   {cashProfile.applied ? 'Applied' : 'Not applied'}
-                </span>
+                </Badge>
                 Last applied: {formatAppliedAt(cashProfile.last_applied_at)}
               </p>
             </div>
-            <button
+            <Button
               type="button"
-              className="btn btn-primary btn-sm"
+              size="sm"
               id="nc-admin-apply-cash-profile"
               disabled={cashProfileApplying}
               onClick={onApplyCashProfile}
             >
               {cashProfileApplying ? 'Applying…' : 'Apply cash clinic profile'}
-            </button>
+            </Button>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className="card mb-3">
-        <div className="card-body">
-          <h5 className="card-title">Clinic currency</h5>
-          <p className="text-muted small">
+      <Card className="mb-3">
+        <CardContent>
+          <h5 className="text-base font-semibold">Clinic currency</h5>
+          <p className="text-[var(--oe-nc-text-muted)] text-sm">
             Example: {formatPrice(160, settings)}
           </p>
           {CLINIC_CURRENCY_FIELDS.map((def) => (
@@ -85,12 +88,12 @@ export function ClinicTab({
               onChange={onFieldChange}
             />
           ))}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className="card mb-3">
-        <div className="card-body">
-          <h5 className="card-title">Queue slip & receipt print</h5>
+      <Card className="mb-3">
+        <CardContent>
+          <h5 className="text-base font-semibold">Queue slip & receipt print</h5>
           {CLINIC_PRINT_FIELDS.map((def) => (
             <AdminConfigField
               key={def.key}
@@ -99,12 +102,12 @@ export function ClinicTab({
               onChange={onFieldChange}
             />
           ))}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className="card">
-        <div className="card-body">
-          <h5 className="card-title">Cashier reconciliation</h5>
+      <Card>
+        <CardContent>
+          <h5 className="text-base font-semibold">Cashier reconciliation</h5>
           {CLINIC_RECONCILIATION_FIELDS.map((def) => (
             <AdminConfigField
               key={def.key}
@@ -113,20 +116,21 @@ export function ClinicTab({
               onChange={onFieldChange}
             />
           ))}
-          <p className="text-muted small mb-2" id="nc-admin-reconciliation-status">
+          <p className="text-[var(--oe-nc-text-muted)] text-sm mb-2" id="nc-admin-reconciliation-status">
             {reconciliationStatus}
           </p>
-          <button
+          <Button
             type="button"
-            className="btn btn-outline-primary btn-sm"
+            variant="outline"
+            size="sm"
             id="nc-admin-run-reconciliation"
             disabled={reconciliationRunning}
             onClick={onRunReconciliation}
           >
             {reconciliationRunning ? 'Running…' : 'Run reconciliation now'}
-          </button>
-        </div>
-      </div>
+          </Button>
+        </CardContent>
+      </Card>
     </>
   );
 }

@@ -160,7 +160,7 @@ export function ReportHub(props: ReportHubProps) {
   });
 
   return (
-    <div className="oe-nc-reporthub" id="nc-report-hub-root">
+    <div className="nc-reporthub" id="nc-report-hub-root">
       <ReportHubLensPane
         lens={tab}
         cards={cards}

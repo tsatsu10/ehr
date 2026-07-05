@@ -646,6 +646,11 @@ class AjaxController
                     $stats = $this->frontDeskStatsService->getDeskStats($userId, $facilityId);
                     $this->respond(true, 'ok', $stats);
                     break;
+                case 'front_desk.flow_charts':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $charts = $this->frontDeskStatsService->getFlowCharts($facilityId);
+                    $this->respond(true, 'ok', $charts);
+                    break;
                 case 'front_desk.todays_appointments':
                     $facilityId = $this->resolveRequestFacilityId();
                     $limit = (int) ($_REQUEST['limit'] ?? 50);

@@ -76,9 +76,9 @@
     function renderStatusPill(label, variant, showDot) {
         var v = variant || 'neutral';
         var dot = showDot !== false
-            ? '<span class="oe-nc-status-pill__dot" aria-hidden="true"></span>'
+            ? '<span class="nc-status-pill-dot" aria-hidden="true"></span>'
             : '';
-        return '<span class="oe-nc-status-pill oe-nc-status-pill--' + escapeHtml(v) + '">' +
+        return '<span class="nc-status-pill nc-status-pill-' + escapeHtml(v) + '">' +
             dot + '<span>' + escapeHtml(label) + '</span></span>';
     }
 
@@ -99,14 +99,14 @@
             : escapeHtml(initials);
         var metaHtml = opts.metaHtml || '';
 
-        return '<div class="oe-nc-cell-identity">' +
-            '<span class="oe-nc-cell-identity__avatar" aria-hidden="true">' + avatarInner + '</span>' +
-            '<div class="oe-nc-cell-identity__body">' +
-            '<div class="oe-nc-cell-identity__primary" title="' + escapeHtml(opts.primary) + '">' +
+        return '<div class="nc-cell-identity">' +
+            '<span class="nc-cell-identity-avatar" aria-hidden="true">' + avatarInner + '</span>' +
+            '<div class="nc-cell-identity-body">' +
+            '<div class="nc-cell-identity-primary" title="' + escapeHtml(opts.primary) + '">' +
             escapeHtml(opts.primary) + '</div>' +
-            '<div class="oe-nc-cell-identity__secondary" title="' + escapeHtml(opts.secondary || '') + '">' +
+            '<div class="nc-cell-identity-secondary" title="' + escapeHtml(opts.secondary || '') + '">' +
             escapeHtml(opts.secondary || '') + '</div>' +
-            (metaHtml ? '<div class="oe-nc-cell-identity__meta">' + metaHtml + '</div>' : '') +
+            (metaHtml ? '<div class="nc-cell-identity-meta">' + metaHtml + '</div>' : '') +
             '</div></div>';
     }
 
@@ -114,13 +114,13 @@
         var value = parseInt(score, 10) || 0;
         var min = threshold || 70;
         var mod = value >= min ? 'success' : (value >= min - 20 ? 'warning' : 'warning');
-        return '<div class="oe-nc-progress-bar oe-nc-progress-bar--' + mod + '" role="progressbar" ' +
+        return '<div class="nc-progress-bar nc-progress-bar-' + mod + '" role="progressbar" ' +
             'aria-valuenow="' + value + '" aria-valuemin="0" aria-valuemax="100">' +
-            '<div class="oe-nc-progress-bar__header">' +
-            '<span class="oe-nc-progress-bar__label">Profile complete</span>' +
-            '<span class="oe-nc-progress-bar__value">' + value + '%</span></div>' +
-            '<div class="oe-nc-progress-bar__track">' +
-            '<div class="oe-nc-progress-bar__fill" style="width:' + value + '%"></div></div></div>';
+            '<div class="nc-progress-bar-header">' +
+            '<span class="nc-progress-bar-label">Profile complete</span>' +
+            '<span class="nc-progress-bar-value">' + value + '%</span></div>' +
+            '<div class="nc-progress-bar-track">' +
+            '<div class="nc-progress-bar-fill" style="width:' + value + '%"></div></div></div>';
     }
 
     function completionBannerTone(score) {
@@ -181,7 +181,7 @@
         var threshold = completion.billing_threshold || 70;
         var missing = completion.missing_labels || [];
         var missingHtml = missing.length
-            ? '<div class="small mt-1 text-muted">Missing: ' +
+            ? '<div class="nc-text-sm nc-mt-1 nc-text-muted">Missing: ' +
             escapeHtml(missing.slice(0, 3).join(', ')) +
             (missing.length > 3 ? '…' : '') + '</div>'
             : '';
@@ -194,25 +194,26 @@
 
         var completeHref = completion.chart_url || completion.demographics_url || '';
         var completeBtn = options.registrationMode === 'desk_full_form'
-            ? '<button type="button" class="btn btn-sm btn-outline-' + tone.css + ' ml-2 oe-nc-completion-complete" data-pid="' +
+            ? '<button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-' + tone.css + ' nc-ml-2 nc-completion-complete" data-pid="' +
             escapeHtml(pid) + '">Complete now</button>'
             : (completeHref
-                ? '<a href="' + escapeHtml(completeHref) + '" class="btn btn-sm btn-outline-' + tone.css +
-                ' ml-2" target="_top">Complete now</a>'
+                ? '<a href="' + escapeHtml(completeHref) + '" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-' + tone.css +
+                ' nc-ml-2" target="_top">Complete now</a>'
                 : '');
 
-        return '<div class="alert alert-' + tone.css + ' oe-nc-completion-banner py-2 mb-2" role="status" ' +
+        return '<div class="nc-callout nc-callout-' + (tone.css === 'danger' ? 'error' : (tone.css === 'warning' ? 'warn' : 'info')) +
+            ' nc-completion-banner nc-py-2 nc-mb-2" role="status" ' +
             'data-pid="' + escapeHtml(pid) + '" id="nc-completion-banner">' +
-            '<div class="d-flex flex-wrap align-items-start justify-content-between">' +
+            '<div class="nc-flex nc-flex-wrap nc-items-start nc-justify-between">' +
             '<div class="flex-grow-1 pr-2">' +
-            '<i class="fa ' + tone.icon + ' mr-1" aria-hidden="true"></i>' +
+            '<i class="fa ' + tone.icon + ' nc-mr-1" aria-hidden="true"></i>' +
             '<strong>' + escapeHtml(tone.label) + '</strong> — ' + escapeHtml(message) +
             missingHtml +
             renderProgressBar(score, threshold) +
             '</div>' +
-            '<div class="d-flex flex-wrap align-items-center mt-1 mt-md-0">' +
+            '<div class="nc-flex nc-flex-wrap nc-items-center nc-mt-1 nc-mt-md-0">' +
             completeBtn +
-            '<button type="button" class="btn btn-sm btn-link oe-nc-completion-remind" data-pid="' +
+            '<button type="button" class="nc-btn nc-btn-sm nc-btn-link nc-completion-remind" data-pid="' +
             escapeHtml(pid) + '">Remind later</button>' +
             '</div></div></div>';
     }
@@ -223,16 +224,16 @@
         }
         hooks = hooks || {};
         root.addEventListener('click', function (event) {
-            var remind = event.target.closest('.oe-nc-completion-remind');
+            var remind = event.target.closest('.nc-completion-remind');
             if (remind) {
                 dismissCompletionBanner(remind.getAttribute('data-pid'));
-                var banner = remind.closest('.oe-nc-completion-banner');
+                var banner = remind.closest('.nc-completion-banner');
                 if (banner) {
                     banner.remove();
                 }
                 return;
             }
-            var complete = event.target.closest('.oe-nc-completion-complete');
+            var complete = event.target.closest('.nc-completion-complete');
             if (complete && typeof hooks.onCompleteNow === 'function') {
                 hooks.onCompleteNow(parseInt(complete.getAttribute('data-pid'), 10) || 0);
             }
@@ -243,24 +244,24 @@
         if (!chips || !chips.length) {
             return '';
         }
-        return '<div class="oe-nc-chip-cloud" role="list">' +
+        return '<div class="nc-chip-cloud" role="list">' +
             chips.map(function (chip) {
-                return '<span class="oe-nc-chip oe-nc-chip--' + escapeHtml(chip.variant || 'warn') +
+                return '<span class="nc-chip nc-chip-' + escapeHtml(chip.variant || 'warn') +
                     '" role="listitem">' + escapeHtml(chip.label) + '</span>';
             }).join('') +
             '</div>';
     }
 
     function renderEmptyState(title, message, iconClass) {
-        return '<div class="oe-nc-empty-state">' +
-            '<div class="oe-nc-empty-state__icon"><i class="fa ' + escapeHtml(iconClass || 'fa-user') +
+        return '<div class="nc-empty-state">' +
+            '<div class="nc-empty-state-icon"><i class="fa ' + escapeHtml(iconClass || 'fa-user') +
             '" aria-hidden="true"></i></div>' +
-            '<div class="oe-nc-empty-state__title">' + escapeHtml(title) + '</div>' +
-            '<p class="mb-0 small">' + escapeHtml(message) + '</p></div>';
+            '<div class="nc-empty-state-title">' + escapeHtml(title) + '</div>' +
+            '<p class="nc-mb-0 nc-text-sm">' + escapeHtml(message) + '</p></div>';
     }
 
     function shellRoot() {
-        return document.getElementById('oe-nc-t1');
+        return document.getElementById('nc-t1');
     }
 
     function resolveFacilityId(root) {
@@ -296,39 +297,6 @@
         if (el) {
             el.textContent = text;
         }
-    }
-
-    function bindBootstrapTabUrlState(options) {
-        var opts = options || {};
-        var tabSelector = opts.tabSelector || '[data-toggle="tab"]';
-        var panePrefix = opts.panePrefix || '';
-        var defaultTab = opts.defaultTab || '';
-        if (!panePrefix || !window.jQuery) {
-            return;
-        }
-
-        var initialTab = new URL(window.location.href).searchParams.get('tab') || defaultTab;
-        if (initialTab) {
-            var initialLink = document.querySelector(tabSelector + '[href="#' + panePrefix + initialTab + '"]');
-            if (initialLink) {
-                window.jQuery(initialLink).tab('show');
-            }
-        }
-
-        window.jQuery(document).on('shown.bs.tab', tabSelector, function (event) {
-            var href = event.target.getAttribute('href') || '';
-            if (href.indexOf('#' + panePrefix) !== 0) {
-                return;
-            }
-            var tab = href.slice(('#' + panePrefix).length);
-            var url = new URL(window.location.href);
-            if (tab && tab !== defaultTab) {
-                url.searchParams.set('tab', tab);
-            } else {
-                url.searchParams.delete('tab');
-            }
-            window.history.replaceState({}, '', url.toString());
-        });
     }
 
     function createRequestGuard() {
@@ -381,7 +349,7 @@
     }
 
     function postJson(url, body) {
-        var shell = document.getElementById('oe-nc-t1');
+        var shell = document.getElementById('nc-t1');
         var csrfToken = shell ? (shell.getAttribute('data-csrf-token') || '') : '';
         var payload = Object.assign({}, body || {});
         if (!payload.csrf_token_form && !payload.csrf_token && csrfToken) {
@@ -509,7 +477,7 @@
         if (!card || !card.similar_surname_today) {
             return '';
         }
-        return '<span class="badge badge-warning ml-1" title="Another patient in today\'s queue shares this surname">' +
+        return '<span class="nc-badge nc-badge-warning nc-ml-1" title="Another patient in today\'s queue shares this surname">' +
             'Same surname today</span>';
     }
 
@@ -536,7 +504,7 @@
     }
 
     /**
-     * Returns a small amber badge when the visit was opened on a previous day.
+     * Returns a nc-text-sm amber badge when the visit was opened on a previous day.
      * Gives staff a clear visual signal without the system acting on it.
      *
      * @param {object} card
@@ -555,7 +523,7 @@
             var mon = months[parseInt(parts[1], 10) - 1] || parts[1];
             label = mon + ' ' + parseInt(parts[2], 10);
         }
-        return '<span class="oe-nc-stale-badge" title="Visit opened on ' + escapeHtml(vd) + '">' +
+        return '<span class="nc-stale-badge" title="Visit opened on ' + escapeHtml(vd) + '">' +
             '<i class="fa fa-clock-o" aria-hidden="true"></i> ' + escapeHtml(label) +
             '</span>';
     }
@@ -579,13 +547,13 @@
         var waitMins = parseInt(minutes, 10) || 0;
         var vd = (visitDate || '').slice(0, 10);
         if (vd && vd < TODAY_DATE) {
-            return 'oe-nc-wait-long';
+            return 'nc-wait-long';
         }
         if (waitMins >= 240) {
-            return 'oe-nc-wait-long';
+            return 'nc-wait-long';
         }
         if (waitMins >= 120) {
-            return 'oe-nc-wait-medium';
+            return 'nc-wait-medium';
         }
         return '';
     }
@@ -620,17 +588,17 @@
             return '';
         }
         var meta = {
-            lab_direct: { label: 'Direct lab', cls: 'badge-info' },
-            pharmacy_walkin: { label: 'Pharmacy walk-in', cls: 'badge-info' },
-            referral_on_file: { label: 'Referral on file', cls: 'badge-secondary' },
-            referred_to_opd: { label: 'Referred to OPD', cls: 'badge-secondary' }
+            lab_direct: { label: 'Direct lab', cls: 'nc-badge-info' },
+            pharmacy_walkin: { label: 'Pharmacy walk-in', cls: 'nc-badge-info' },
+            referral_on_file: { label: 'Referral on file', cls: 'nc-badge-neutral' },
+            referred_to_opd: { label: 'Referred to OPD', cls: 'nc-badge-neutral' }
         };
         return badges.map(function (key) {
             var item = meta[key];
             if (!item) {
                 return '';
             }
-            return '<span class="badge ' + item.cls + ' ml-1">' + escapeHtml(item.label) + '</span>';
+            return '<span class="nc-badge ' + item.cls + ' nc-ml-1">' + escapeHtml(item.label) + '</span>';
         }).join('');
     }
 
@@ -650,7 +618,7 @@
             modifiers.push('claim-lost');
         }
         var modifierClass = modifiers.map(function (modifier) {
-            return ' oe-nc-queue-card--' + modifier;
+            return ' nc-queue-card-' + modifier;
         }).join('');
 
         var claimTitle = card.claim_lost ? ' title="' + escapeHtml(claimLostTooltip(card)) + '"' : '';
@@ -666,28 +634,28 @@
             var bridge = card.queue_bridge_badge;
             var hubUrl = bridge.hub_url || '#';
             var bridgeTitle = bridge.code ? ' title="' + escapeHtml(bridge.code) + '"' : '';
-            bridgeBadge = '<a href="' + escapeHtml(hubUrl) + '" class="badge badge-info ml-1"' +
+            bridgeBadge = '<a href="' + escapeHtml(hubUrl) + '" class="nc-badge nc-badge-info nc-ml-1"' +
                 bridgeTitle + ' onclick="event.stopPropagation();">' +
                 escapeHtml(bridge.label) + '</a>';
         }
         var titleHtml = opts.titleHtml
             ? (opts.titleHtml + surnameBadge + staleBadge + bridgeBadge)
-            : ('<span class="oe-nc-queue-card__queue-num">#' + escapeHtml(card.queue_number) + '</span>' +
-                '<span class="oe-nc-queue-card__name">' + escapeHtml(displayName) + '</span>' +
+            : ('<span class="nc-queue-card-queue-num">#' + escapeHtml(card.queue_number) + '</span>' +
+                '<span class="nc-queue-card-name">' + escapeHtml(displayName) + '</span>' +
                 renderAncillaryBadges(card) +
                 (opts.badgesHtml || '') + bridgeBadge + surnameBadge + staleBadge);
         var waitLabel = resolveWaitLabel(card);
         var subtitleHtml = opts.subtitleHtml || (
-            '<div class="oe-nc-queue-card__meta small text-muted">' +
+            '<div class="nc-queue-card-meta nc-text-sm nc-text-muted">' +
             escapeHtml(card.sex || '') + ' · ' + escapeHtml(card.age_years || '—') +
             ' · ' + renderWaitTimeSpan(card, { suffix: ' waiting' }) +
             '</div>'
         );
         var cc = card.chief_complaint && opts.showChiefComplaint !== false
-            ? '<div class="oe-nc-queue-card__cc small text-muted text-truncate">CC: ' +
+            ? '<div class="nc-queue-card-cc nc-text-sm nc-text-muted nc-text-truncate">CC: ' +
             escapeHtml(card.chief_complaint) + '</div>' : '';
         var footerHtml = opts.footerHtml || '';
-        var avatarHtml = '<span class="oe-nc-queue-card__avatar" aria-hidden="true">' +
+        var avatarHtml = '<span class="nc-queue-card-avatar" aria-hidden="true">' +
             escapeHtml(patientInitials(card.display_name)) + '</span>';
 
         var dataAttrs = '';
@@ -698,17 +666,17 @@
             dataAttrs += ' data-visit-id="' + escapeHtml(card.id) + '"';
         }
 
-        var btnClasses = interactive ? ' btn btn-light text-left' : '';
+        var btnClasses = interactive ? ' nc-queue-card-interactive' : '';
 
         return '<' + tag + typeAttr +
-            ' class="oe-nc-queue-card nc-queue-card' + btnClasses + ' w-100 mb-2' + modifierClass + '"' +
+            ' class="nc-queue-card' + btnClasses + ' nc-w-full nc-mb-2' + modifierClass + '"' +
             dataAttrs + claimTitle + disabledTitle + disabledAttr + '>' +
-            '<div class="oe-nc-queue-card__row">' +
+            '<div class="nc-queue-card-row">' +
             avatarHtml +
-            '<div class="oe-nc-queue-card__body">' +
-            '<div class="oe-nc-queue-card__header">' + titleHtml + '</div>' +
+            '<div class="nc-queue-card-body">' +
+            '<div class="nc-queue-card-header">' + titleHtml + '</div>' +
             subtitleHtml + cc +
-            (footerHtml ? '<div class="oe-nc-queue-card__footer">' + footerHtml + '</div>' : '') +
+            (footerHtml ? '<div class="nc-queue-card-footer">' + footerHtml + '</div>' : '') +
             '</div></div>' +
             '</' + tag + '>';
     }
@@ -796,9 +764,9 @@
             (session.pubpid ? ' · MRN ' + session.pubpid : '');
 
         return '<strong>Browser session is on another patient.</strong>' +
-            '<div class="small mt-1">' + escapeHtml(visitLine) + '</div>' +
-            '<div class="small">' + escapeHtml(sessionLine) + '</div>' +
-            '<div class="small mt-1">Restore encounter session or return to the queue before saving.</div>';
+            '<div class="nc-text-sm nc-mt-1">' + escapeHtml(visitLine) + '</div>' +
+            '<div class="nc-text-sm">' + escapeHtml(sessionLine) + '</div>' +
+            '<div class="nc-text-sm nc-mt-1">Restore encounter session or return to the queue before saving.</div>';
     }
 
     function wireSharedDeviceSessionWarning(root, options) {
@@ -816,7 +784,7 @@
 
         function hideBanner() {
             if (banner) {
-                banner.classList.add('d-none');
+                banner.classList.add('nc-hidden');
             }
             root.dataset.sharedDeviceBlocked = '0';
         }
@@ -826,13 +794,13 @@
                 bannerText.innerHTML = html;
             }
             if (banner) {
-                banner.classList.remove('d-none');
+                banner.classList.remove('nc-hidden');
             }
             if (restoreBtn) {
                 if (compareMode === 'pid_only') {
-                    restoreBtn.classList.add('d-none');
+                    restoreBtn.classList.add('nc-hidden');
                 } else {
-                    restoreBtn.classList.remove('d-none');
+                    restoreBtn.classList.remove('nc-hidden');
                 }
             }
             root.dataset.sharedDeviceBlocked = '1';
@@ -878,7 +846,7 @@
                 if (visitId <= 0) {
                     return;
                 }
-                var shell = document.getElementById('oe-nc-t1');
+                var shell = document.getElementById('nc-t1');
                 var restoreCsrf = root.dataset.csrfToken
                     || (shell ? shell.getAttribute('data-csrf-token') : '')
                     || '';
@@ -967,7 +935,7 @@
             detailParts.push('Vitals today: ' + vitals.summary);
         }
         var detailLine = detailParts.length
-            ? '<div class="oe-nc-patient-banner__detail small text-muted mt-1">' +
+            ? '<div class="nc-patient-banner-detail nc-text-sm nc-text-muted nc-mt-1">' +
             escapeHtml(detailParts.join(' · ')) + '</div>'
             : '';
 
@@ -979,18 +947,18 @@
             )
             : '';
 
-        return '<div class="oe-nc-patient-banner nc-patient-context-banner" id="nc-patient-context-banner"' +
+        return '<div class="nc-patient-banner nc-patient-context-banner" id="nc-patient-context-banner"' +
             ' data-tier="1" data-host="' + escapeHtml(host) + '">' +
-            '<div class="oe-nc-patient-banner__header">' +
-            '<div class="oe-nc-patient-banner__avatar" aria-hidden="true">' + escapeHtml(initials) + '</div>' +
-            '<div class="oe-nc-patient-banner__identity">' +
-            '<h3 class="oe-nc-patient-banner__name">' + escapeHtml(identity.display_name || '—') + '</h3>' +
-            '<div class="oe-nc-patient-banner__meta">' + escapeHtml(metaLine) + '</div>' +
+            '<div class="nc-patient-banner-header">' +
+            '<div class="nc-patient-banner-avatar" aria-hidden="true">' + escapeHtml(initials) + '</div>' +
+            '<div class="nc-patient-banner-identity">' +
+            '<h3 class="nc-patient-banner-name">' + escapeHtml(identity.display_name || '—') + '</h3>' +
+            '<div class="nc-patient-banner-meta">' + escapeHtml(metaLine) + '</div>' +
             detailLine +
             '</div>' +
-            (completionPill ? '<div class="oe-nc-patient-banner__aside text-right">' + completionPill + '</div>' : '') +
+            (completionPill ? '<div class="nc-patient-banner-aside text-right">' + completionPill + '</div>' : '') +
             '</div>' +
-            (chips.length ? '<div class="oe-nc-patient-banner__section">' + renderChipCloud(chips) + '</div>' : '') +
+            (chips.length ? '<div class="nc-patient-banner-section">' + renderChipCloud(chips) + '</div>' : '') +
             '</div>';
     }
 
@@ -1000,16 +968,16 @@
      */
     function renderAuditTimeline(items) {
         if (!items || !items.length) {
-            return '<em class="text-muted small">No recent activity.</em>';
+            return '<em class="nc-text-muted nc-text-sm">No recent activity.</em>';
         }
-        return '<ul class="list-unstyled mb-0 nc-audit-timeline">' + items.map(function (item) {
+        return '<ul class="nc-list-plain nc-mb-0 nc-audit-timeline">' + items.map(function (item) {
             var subtitle = item.subtitle
-                ? '<div class="small text-muted">' + escapeHtml(item.subtitle) + '</div>'
+                ? '<div class="nc-text-sm nc-text-muted">' + escapeHtml(item.subtitle) + '</div>'
                 : '';
-            return '<li class="nc-audit-timeline__item py-2 border-bottom">' +
-                '<div class="d-flex justify-content-between">' +
-                '<strong class="small">' + escapeHtml(item.label || '') + '</strong>' +
-                '<span class="small text-muted">' + escapeHtml(item.at_label || '') + '</span>' +
+            return '<li class="nc-audit-timeline__item nc-py-2 nc-border-b">' +
+                '<div class="nc-flex nc-justify-between">' +
+                '<strong class="nc-text-sm">' + escapeHtml(item.label || '') + '</strong>' +
+                '<span class="nc-text-sm nc-text-muted">' + escapeHtml(item.at_label || '') + '</span>' +
                 '</div>' + subtitle + '</li>';
         }).join('') + '</ul>';
     }
@@ -1034,7 +1002,6 @@
         resolveQueuePollMs: resolveQueuePollMs,
         pageEl: pageEl,
         setPageText: setPageText,
-        bindBootstrapTabUrlState: bindBootstrapTabUrlState,
         createRequestGuard: createRequestGuard,
         parseJsonResponse: parseJsonResponse,
         getJson: getJson,

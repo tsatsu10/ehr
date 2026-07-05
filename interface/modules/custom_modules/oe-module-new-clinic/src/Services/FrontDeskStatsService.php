@@ -73,4 +73,88 @@ class FrontDeskStatsService
             'recent_starts' => $recent,
         ];
     }
+
+    /**
+     * @return array{
+     *   hourly_visits: list<array{hour: int, count: int}>,
+     *   adherence: array{scheduled: int, arrived: int, no_show: int, pending: int},
+     *   wait_avg_today_mins: int,
+     *   wait_avg_yesterday_mins: int,
+     * }
+     */
+    public function getFlowCharts(int $facilityId): array
+    {
+        $today = $this->clinicDate->today();
+        $yesterday = date('Y-m-d', strtotime($today . ' -1 day'));
+
+        // ── Hourly visit volume today ────────────────────────────────────────
+        $hourlyRows = QueryUtils::fetchRecords(
+            "SELECT HOUR(started_at) AS hr, COUNT(*) AS cnt
+             FROM new_visit
+             WHERE facility_id = ? AND visit_date = ? AND started_at IS NOT NULL
+             GROUP BY HOUR(started_at)
+             ORDER BY hr",
+            [$facilityId, $today]
+        ) ?: [];
+
+        $hourlyMap = [];
+        foreach ($hourlyRows as $row) {
+            $hourlyMap[(int) $row['hr']] = (int) $row['cnt'];
+        }
+
+        $hourlyVisits = [];
+        $openHour  = 6;
+        $closeHour = 20;
+        for ($h = $openHour; $h <= $closeHour; $h++) {
+            $hourlyVisits[] = ['hour' => $h, 'count' => $hourlyMap[$h] ?? 0];
+        }
+
+        // ── Appointment adherence (today, this facility) ─────────────────────
+        $apptRows = QueryUtils::fetchRecords(
+            "SELECT pce.pc_apptstatus,
+                    (SELECT COUNT(*) FROM new_visit nv
+                     WHERE nv.pc_eid = pce.pc_eid AND nv.visit_date = ?) AS has_visit
+             FROM openemr_postcalendar_events pce
+             WHERE DATE(pce.pc_eventDate) = ?
+               AND pce.pc_facility = ?
+               AND pce.pc_apptstatus NOT IN ('~', 'x~')",
+            [$today, $today, $facilityId]
+        ) ?: [];
+
+        $adherence = ['scheduled' => 0, 'arrived' => 0, 'no_show' => 0, 'pending' => 0];
+        foreach ($apptRows as $row) {
+            $adherence['scheduled']++;
+            $status = trim((string) ($row['pc_apptstatus'] ?? ''));
+            if ($status === 'x') {
+                $adherence['no_show']++;
+            } elseif ((int) ($row['has_visit'] ?? 0) > 0 || in_array($status, ['@', '$', '<'], true)) {
+                $adherence['arrived']++;
+            } else {
+                $adherence['pending']++;
+            }
+        }
+
+        // ── Average wait time (started_at → completed_at for completed visits) ─
+        $avgToday = QueryUtils::querySingleRow(
+            "SELECT AVG(TIMESTAMPDIFF(MINUTE, started_at, completed_at)) AS avg_wait
+             FROM new_visit
+             WHERE facility_id = ? AND visit_date = ?
+               AND completed_at IS NOT NULL AND started_at IS NOT NULL",
+            [$facilityId, $today]
+        );
+        $avgYesterday = QueryUtils::querySingleRow(
+            "SELECT AVG(TIMESTAMPDIFF(MINUTE, started_at, completed_at)) AS avg_wait
+             FROM new_visit
+             WHERE facility_id = ? AND visit_date = ?
+               AND completed_at IS NOT NULL AND started_at IS NOT NULL",
+            [$facilityId, $yesterday]
+        );
+
+        return [
+            'hourly_visits'           => $hourlyVisits,
+            'adherence'               => $adherence,
+            'wait_avg_today_mins'     => is_array($avgToday) ? (int) round((float) ($avgToday['avg_wait'] ?? 0)) : 0,
+            'wait_avg_yesterday_mins' => is_array($avgYesterday) ? (int) round((float) ($avgYesterday['avg_wait'] ?? 0)) : 0,
+        ];
+    }
 }

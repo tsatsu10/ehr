@@ -38,7 +38,7 @@ test.describe('React island bundle assets', () => {
     const body = await response.text();
     expect(body.length, 'CSS should not be empty').toBeGreaterThan(100);
     // Must contain the island-specific non-layered BEM rules
-    expect(body, 'CSS should contain oe-nc-vb column styles').toContain('oe-nc-vb-column');
+    expect(body, 'CSS should contain nc-vb column styles').toContain('nc-vb-column');
   });
 
   // ── Phase 2A — triage-desk ────────────────────────────────────────────────
@@ -57,7 +57,7 @@ test.describe('React island bundle assets', () => {
 
     const body = await response.text();
     expect(body.length, 'CSS should not be empty').toBeGreaterThan(100);
-    expect(body, 'CSS should contain triage mine-card styles').toContain('oe-nc-triage-card--mine');
+    expect(body, 'CSS should contain triage queue panel styles').toContain('nc-triage-queue-panel');
   });
 
   // ── Phase 3A — doctor-desk ────────────────────────────────────────────────
@@ -152,7 +152,7 @@ test.describe('React island bundle assets', () => {
 
     const body = await response.text();
     expect(body.length, 'CSS should not be empty').toBeGreaterThan(100);
-    expect(body, 'CSS should contain front desk search styles').toContain('oe-nc-front-desk-react-active');
+    expect(body, 'CSS should contain front desk search styles').toContain('nc-front-desk-react-active');
   });
 
   // ── Shared chunk ──────────────────────────────────────────────────────────
@@ -272,7 +272,7 @@ test.describe('React island bundle assets', () => {
 
     const body = await response.text();
     expect(body.length, 'CSS should not be empty').toBeGreaterThan(100);
-    expect(body, 'CSS should contain pharm ops hub styles').toContain('oe-nc-pharmops');
+    expect(body, 'CSS should contain pharm ops hub styles').toContain('nc-pharmops');
   });
 
   test('pharm-ops lazy chunks resolve relative to the entry bundle', async ({ request }) => {

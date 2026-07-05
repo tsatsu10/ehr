@@ -4,6 +4,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { SlideOver } from '@components/SlideOver';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Button } from '@components/ui/button';
 import { oeFetch } from '@core/oeFetch';
 import type { DoctorVisit } from '@core/types';
 import type { ClinicalDocCard } from '../clinical-doc/clinicalDocTypes';
@@ -124,40 +126,41 @@ export function DocFavoritesDrawer({
       id="nc-doctor-doc-favorites"
       width="sm"
       footer={(
-        <button
+        <Button
           type="button"
-          className="btn btn-outline-primary btn-sm"
+          variant="outline"
+          size="sm"
           disabled={blocked || !hubUrl}
           onClick={() => { void openFullHub(); }}
         >
           Open full documentation
-        </button>
+        </Button>
       )}
     >
-      {loading ? <p className="text-muted mb-0">Loading favorites…</p> : null}
-      {error ? <div className="alert alert-danger py-2">{error}</div> : null}
+      {loading ? <p className="text-[var(--oe-nc-text-muted)] mb-0">Loading favorites…</p> : null}
+      {error ? <div className={deskCalloutClass('error', 'py-2')}>{error}</div> : null}
       {!loading && !error && favorites.length === 0 ? (
-        <p className="text-muted mb-0">No pinned forms are available for your role and clinic setup.</p>
+        <p className="text-[var(--oe-nc-text-muted)] mb-0">No pinned forms are available for your role and clinic setup.</p>
       ) : null}
-      <div className="list-group list-group-flush">
+      <div className="nc-list-group nc-list-group-flush">
         {favorites.map((card) => (
-          <div key={card.id} className="list-group-item px-0">
-            <div className="d-flex justify-content-between align-items-start">
+          <div key={card.id} className="nc-list-group-item px-0">
+            <div className="flex justify-between items-start">
               <div className="pr-2">
-                <div className="font-weight-bold">
+                <div className="font-bold">
                   {card.pin != null ? `${card.pin}. ` : ''}{card.title}
                 </div>
-                <div className="small text-muted">{card.description}</div>
-                <div className="small mt-1">{statusLine(card)}</div>
+                <div className="text-sm text-[var(--oe-nc-text-muted)]">{card.description}</div>
+                <div className="text-sm mt-1">{statusLine(card)}</div>
               </div>
-              <button
+              <Button
                 type="button"
-                className="btn btn-sm btn-primary"
+                size="sm"
                 disabled={blocked || opening === card.id}
                 onClick={() => { void openFavorite(card); }}
               >
                 {opening === card.id ? 'Opening…' : card.started ? 'Continue' : 'Open'}
-              </button>
+              </Button>
             </div>
           </div>
         ))}

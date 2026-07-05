@@ -2,10 +2,23 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import { oeFetch } from '@core/oeFetch';
 import type { RegistrationDupResult, RegistrationFormData, RegistrationSaveResult } from '@core/types';
 import { ConfirmModal } from '@components/ConfirmModal';
+import { DeskAlert } from '@components/DeskAlert';
+import { showDeskToast } from '@components/deskToast';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@components/ui/card';
+import { cn } from '@/lib/utils';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { RegistrationDupPanel } from './RegistrationDupPanel';
 import { RegistrationFormSections, type RegistrationFormValues } from './RegistrationFormSections';
-import { parseSearchQuery, tagsToString } from './registrationFormUtils';
+import { parseSearchQuery } from './registrationFormUtils';
+import {
+    collectRegistrationSection,
+    DEFAULT_REGISTRATION_FORM,
+    mapServerToRegistrationForm,
+} from './registrationFormModel';
 import { useRegistrationGeo } from './useRegistrationGeo';
+import { useRegistrationDupCheck } from './useRegistrationDupCheck';
 
 export interface RegistrationFormHandle {
     isDirty: () => boolean;
@@ -20,176 +33,14 @@ interface RegistrationFormProps {
     wizardMode?: boolean;
     /** Patient chart profile tab — hides Save & Start and uses chart title. */
     chartMode?: boolean;
+    /** Front Desk preview pane already renders the section title — omit duplicate heading. */
+    hideTitle?: boolean;
     onSaved: (pid: number, startAfter?: boolean) => void;
     onUseExisting: (pid: number) => void;
     onCancel: () => void;
     /** Parent-owned discard modal (front desk). Falls back to inline ConfirmModal when omitted. */
     onDiscardConfirm?: (onProceed: () => void) => void;
-}
-
-const DEFAULT_FORM: RegistrationFormValues = {
-    fname: '',
-    lname: '',
-    mname: '',
-    sex: '',
-    DOB: '',
-    age_years: '',
-    phone: '',
-    no_phone: false,
-    reach_contact_name: '',
-    reach_contact_phone: '',
-    reach_contact_relationship: '',
-    national_id: '',
-    street: '',
-    landmark: '',
-    nationality: '',
-    region_code: '',
-    district_code: '',
-    place_of_birth: '',
-    tribe: '',
-    phone_home: '',
-    email: '',
-    emergency_contact_name: '',
-    emergency_contact_phone: '',
-    blood_group: '',
-    allergies_none_known: false,
-    allergies_unknown: false,
-    allergies: '',
-    chronic_conditions: '',
-    pregnancy_status: '',
-    disability_flag: false,
-    religion: '',
-    race: '',
-    education_level: '',
-    occupation: '',
-    insurance_type: 'cash',
-    nhis_number: '',
-    nhis_expiry: '',
-    private_insurer: '',
-    private_policy: '',
-    insurance_label: '',
-};
-
-function mapServerToForm(data: RegistrationFormData): RegistrationFormValues {
-    const section1 = data.section_1 ?? {};
-    const section2 = data.section_2 ?? {};
-    const section3 = data.section_3 ?? {};
-    const section4 = data.section_4 ?? {};
-
-    return {
-        ...DEFAULT_FORM,
-        fname: String(section1.fname ?? ''),
-        lname: String(section1.lname ?? ''),
-        mname: String(section1.mname ?? ''),
-        sex: String(section1.sex ?? ''),
-        DOB: section1.DOB && section1.DOB !== '0000-00-00' ? String(section1.DOB) : '',
-        age_years: section1.age_years == null ? '' : String(section1.age_years),
-        phone: String(section1.phone ?? ''),
-        no_phone: !!section1.no_phone,
-        reach_contact_name: String(section1.reach_contact_name ?? ''),
-        reach_contact_phone: String(section1.reach_contact_phone ?? ''),
-        reach_contact_relationship: String(section1.reach_contact_relationship ?? ''),
-        national_id: String(section1.national_id ?? section2.national_id ?? ''),
-        street: String(section2.street ?? ''),
-        landmark: String(section2.landmark ?? ''),
-        nationality: String(section2.nationality ?? ''),
-        region_code: String(section2.region_code ?? ''),
-        district_code: String(section2.district_code ?? ''),
-        place_of_birth: String(section2.place_of_birth ?? ''),
-        tribe: String(section2.tribe ?? ''),
-        phone_home: String(section2.phone_home ?? ''),
-        email: String(section2.email ?? ''),
-        emergency_contact_name: String(section2.emergency_contact_name ?? ''),
-        emergency_contact_phone: String(section2.emergency_contact_phone ?? ''),
-        blood_group: String(section3.blood_group ?? ''),
-        allergies_none_known: !!section3.allergies_none_known,
-        allergies_unknown: !!section3.allergies_unknown,
-        allergies: tagsToString(Array.isArray(section3.allergies) ? section3.allergies : []),
-        chronic_conditions: tagsToString(Array.isArray(section3.chronic_conditions) ? section3.chronic_conditions : []),
-        pregnancy_status: String(section3.pregnancy_status ?? ''),
-        disability_flag: !!section3.disability_flag,
-        religion: String(section3.religion ?? ''),
-        race: String(section3.race ?? ''),
-        education_level: String(section3.education_level ?? ''),
-        occupation: String(section3.occupation ?? ''),
-        insurance_type: String(section4.insurance_type ?? 'cash'),
-        nhis_number: String(section4.nhis_number ?? ''),
-        nhis_expiry: String(section4.nhis_expiry ?? ''),
-        private_insurer: String(section4.private_insurer ?? ''),
-        private_policy: String(section4.private_policy ?? ''),
-        insurance_label: String(section4.insurance_label ?? ''),
-    };
-}
-
-function shouldRunDupCheck(payload: {
-    fname: string;
-    lname: string;
-    phone: string;
-    reach_contact_phone: string;
-    national_id: string;
-}): boolean {
-    return payload.fname.length >= 2
-        || payload.lname.length >= 2
-        || payload.phone.length >= 2
-        || payload.reach_contact_phone.length >= 2
-        || payload.national_id.length >= 2;
-}
-
-function collectSection(form: RegistrationFormValues, section: number): Record<string, unknown> {
-    if (section === 1) {
-        return {
-            fname: form.fname.trim(),
-            lname: form.lname.trim(),
-            mname: form.mname.trim(),
-            sex: form.sex,
-            phone: form.phone.trim(),
-            no_phone: form.no_phone,
-            reach_contact_name: form.reach_contact_name.trim(),
-            reach_contact_phone: form.reach_contact_phone.trim(),
-            reach_contact_relationship: form.reach_contact_relationship.trim(),
-            DOB: form.DOB,
-            age_years: form.age_years.trim() === '' ? null : Number.parseInt(form.age_years, 10),
-            national_id: form.national_id.trim(),
-        };
-    }
-    if (section === 2) {
-        return {
-            street: form.street.trim(),
-            landmark: form.landmark.trim(),
-            nationality: form.nationality.trim(),
-            region_code: form.region_code,
-            district_code: form.district_code,
-            place_of_birth: form.place_of_birth.trim(),
-            tribe: form.tribe.trim(),
-            national_id: form.national_id.trim(),
-            phone_home: form.phone_home.trim(),
-            email: form.email.trim(),
-            emergency_contact_name: form.emergency_contact_name.trim(),
-            emergency_contact_phone: form.emergency_contact_phone.trim(),
-        };
-    }
-    if (section === 3) {
-        return {
-            blood_group: form.blood_group,
-            allergies_none_known: form.allergies_none_known,
-            allergies_unknown: form.allergies_unknown,
-            allergies: form.allergies.trim(),
-            chronic_conditions: form.chronic_conditions.trim(),
-            pregnancy_status: form.pregnancy_status,
-            disability_flag: form.disability_flag,
-            religion: form.religion.trim(),
-            race: form.race.trim(),
-            education_level: form.education_level.trim(),
-            occupation: form.occupation.trim(),
-        };
-    }
-    return {
-        insurance_type: form.insurance_type,
-        nhis_number: form.nhis_number.trim(),
-        nhis_expiry: form.nhis_expiry,
-        private_insurer: form.private_insurer.trim(),
-        private_policy: form.private_policy.trim(),
-    };
+    mergeToolBaseUrl?: string;
 }
 
 export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationFormProps>(function RegistrationForm(
@@ -201,16 +52,18 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
         registrationMode = 'desk_full_form',
         wizardMode = false,
         chartMode = false,
+        hideTitle = false,
         onSaved,
         onUseExisting,
         onCancel,
         onDiscardConfirm,
+        mergeToolBaseUrl,
     },
     ref
 ) {
     const [currentPid, setCurrentPid] = useState<number | null>(pid ?? null);
     const [activeSection, setActiveSection] = useState(1);
-    const [form, setForm] = useState<RegistrationFormValues>(DEFAULT_FORM);
+    const [form, setForm] = useState<RegistrationFormValues>(DEFAULT_REGISTRATION_FORM);
     const [dirty, setDirty] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
@@ -334,7 +187,7 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
                 method: 'POST',
                 json: { pid: pidToLoad },
             });
-            const nextForm = mapServerToForm(data);
+            const nextForm = mapServerToRegistrationForm(data);
             setForm(nextForm);
             setCompletionScore(data.completion?.score ?? null);
             setCompletionMissing(data.completion?.missing ?? []);
@@ -350,7 +203,7 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
 
     useEffect(() => {
         setCurrentPid(pid ?? null);
-        setForm(DEFAULT_FORM);
+        setForm(DEFAULT_REGISTRATION_FORM);
         setCompletionScore(null);
         setCompletionMissing([]);
         setError('');
@@ -386,30 +239,11 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
         prefillAppliedRef.current = true;
     }, [pid, prefill]);
 
-    useEffect(() => {
-        if (!shouldRunDupCheck(dupPayload)) {
-            setDup({ level: 'none', candidates: [] });
-            return undefined;
-        }
+    const handleDupResult = useCallback((result: RegistrationDupResult) => {
+        setDup(result ?? { level: 'none', candidates: [] });
+    }, []);
 
-        const timer = window.setTimeout(async () => {
-            try {
-                const result = await oeFetch<RegistrationDupResult>('patients.dup_check', {
-                    ajaxUrl,
-                    csrfToken,
-                    method: 'POST',
-                    json: {
-                        ...dupPayload,
-                        exclude_pid: currentPid ?? 0,
-                    },
-                });
-                setDup(result ?? { level: 'none', candidates: [] });
-            } catch {
-                setDup({ level: 'none', candidates: [] });
-            }
-        }, 300);
-        return () => window.clearTimeout(timer);
-    }, [ajaxUrl, csrfToken, currentPid, dupPayload]);
+    useRegistrationDupCheck(ajaxUrl, csrfToken, currentPid, dupPayload, handleDupResult);
 
     const showError = (message: string) => {
         setError(message);
@@ -419,11 +253,12 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
     const showSuccess = (message: string) => {
         setSuccess(message);
         setError('');
+        showDeskToast(message, 'success');
     };
 
     const saveSection = async (section: number, startAfter: boolean) => {
         setError('');
-        const patient = collectSection(form, section);
+        const patient = collectRegistrationSection(form, section);
 
         if (section === 1 && form.no_phone) {
             if (!form.reach_contact_name.trim() || !form.reach_contact_phone.trim() || !form.reach_contact_relationship.trim()) {
@@ -485,17 +320,18 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
         }
     };
 
-    return (
-        <div className="nc-registration-form" id="nc-registration-form">
-            <div className="d-flex justify-content-between align-items-center mb-2">
-                <h4 className="mb-0">
-                    {chartMode ? 'Patient profile' : currentPid ? 'Edit profile' : 'Register patient'}
-                </h4>
-                <span className="badge badge-secondary" id="nc-reg-completion">
-                    {completionScore == null ? '—' : `${completionScore}% complete`}
-                </span>
-            </div>
+    const formTitle = chartMode ? 'Patient profile' : currentPid ? 'Edit profile' : 'Register patient';
 
+    return (
+        <Card className="nc-registration-form border-0 bg-transparent shadow-none" id="nc-registration-form">
+            <CardHeader className={cn('mb-2 border-0 px-0 py-0', hideTitle ? 'justify-end' : 'gap-3')}>
+                {!hideTitle && <CardTitle className="text-lg">{formTitle}</CardTitle>}
+                <Badge variant="neutral" id="nc-reg-completion">
+                    {completionScore == null ? '—' : `${completionScore}% complete`}
+                </Badge>
+            </CardHeader>
+
+            <CardContent className="space-y-0 p-0">
             <div id="nc-dup-panel">
                 <RegistrationDupPanel
                     dup={dup}
@@ -506,6 +342,7 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
                     onDupOverrideChange={setDupOverride}
                     onDupOverrideReasonChange={setDupOverrideReason}
                     onUseExisting={onUseExisting}
+                    mergeToolBaseUrl={mergeToolBaseUrl}
                 />
             </div>
 
@@ -528,20 +365,21 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
             />
 
             {error && (
-                <div className="alert alert-danger mt-2" id="nc-reg-error">
-                    {error}
-                </div>
+                <DeskAlert tone="error" className="mt-3 flex items-start gap-3" id="nc-reg-error" role="alert">
+                    <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-red-600" aria-hidden />
+                    <span className="text-sm">{error}</span>
+                </DeskAlert>
             )}
             {success && (
-                <div className="alert alert-success mt-2" id="nc-reg-success">
-                    {success}
-                </div>
+                <DeskAlert tone="success" className="mt-3 flex items-start gap-3" id="nc-reg-success" role="status">
+                    <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-600" aria-hidden />
+                    <span className="text-sm font-medium">{success}</span>
+                </DeskAlert>
             )}
 
-            <div className="d-flex flex-wrap mt-3">
-                <button
+            <div className="flex flex-wrap gap-2 mt-3">
+                <Button
                     type="button"
-                    className="btn btn-primary mr-2 mb-2"
                     id="nc-reg-save"
                     disabled={busy}
                     onClick={() => {
@@ -549,11 +387,11 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
                     }}
                 >
                     Save
-                </button>
+                </Button>
                 {registrationMode === 'desk_full_form' && !chartMode && (
-                    <button
+                    <Button
                         type="button"
-                        className="btn btn-success mr-2 mb-2"
+                        variant="cta"
                         id="nc-reg-save-start"
                         disabled={busy}
                         onClick={() => {
@@ -561,11 +399,11 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
                         }}
                     >
                         Save &amp; Start visit
-                    </button>
+                    </Button>
                 )}
-                <button
+                <Button
                     type="button"
-                    className="btn btn-outline-secondary mb-2"
+                    variant="outline"
                     id="nc-reg-cancel"
                     disabled={busy}
                     onClick={() => {
@@ -576,8 +414,9 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
                     }}
                 >
                     Cancel
-                </button>
+                </Button>
             </div>
+            </CardContent>
 
             <ConfirmModal
                 open={discardOpen}
@@ -616,6 +455,6 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
             >
                 <p className="mb-0">No allergies listed. Continue without documenting allergies?</p>
             </ConfirmModal>
-        </div>
+        </Card>
     );
 });

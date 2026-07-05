@@ -1,7 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import { ConfirmModal, IdentityConfirmBanner } from './ConfirmModal';
-import { DataTable, DataTableStatusRow } from './DataTable';
+import { DataTable, DataTableStatusRow, MatrixDataTable } from './DataTable';
 import { RowActionsMenu } from './RowActionsMenu';
 import { SlideOver } from './SlideOver';
 import { TrendPill } from './TrendPill';
@@ -53,29 +53,61 @@ describe('DataTable', () => {
   });
 });
 
+describe('MatrixDataTable', () => {
+  it('renders dynamic columns and empty state', () => {
+    render(
+      <MatrixDataTable
+        columns={['Patient', 'MRN']}
+        rows={[]}
+        emptyMessage="No rows in preview."
+      />
+    );
+    expect(screen.getByText('Patient')).toBeInTheDocument();
+    expect(screen.getByText('MRN')).toBeInTheDocument();
+    expect(screen.getByText('No rows in preview.')).toBeInTheDocument();
+  });
+
+  it('renders matrix rows', () => {
+    render(
+      <MatrixDataTable
+        columns={['Name', 'Count']}
+        rows={[['Alice', '3'], ['Bob', '1']]}
+      />
+    );
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+    expect(screen.getByText('Bob')).toBeInTheDocument();
+  });
+});
+
 describe('RowActionsMenu', () => {
-  it('renders action items in dropdown', () => {
+  it('renders action items in dropdown', async () => {
     render(
       <RowActionsMenu
         label="Actions for Jane"
         items={[{ id: 'chart', label: 'Open chart', href: '/chart' }]}
       />
     );
-    expect(screen.getByRole('button', { name: 'Actions for Jane' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open chart' })).toHaveAttribute('href', '/chart');
+    const trigger = screen.getByRole('button', { name: 'Actions for Jane' });
+    fireEvent.pointerDown(trigger, { button: 0, pointerType: 'mouse' });
+    fireEvent.click(trigger);
+    await waitFor(() => {
+      expect(screen.getByRole('menuitem', { name: 'Open chart' })).toHaveAttribute('href', '/chart');
+    });
   });
 });
 
 describe('SlideOver', () => {
-  it('calls onClose when backdrop clicked', () => {
+  it('calls onClose when close button clicked', async () => {
     const onClose = vi.fn();
-    const { container } = render(
+    render(
       <SlideOver open title="Drawer" onClose={onClose}>
         Content
       </SlideOver>
     );
-    fireEvent.click(container.querySelector('.oe-nc-slide-over__backdrop')!);
-    expect(onClose).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
   });
 });
 

@@ -64,12 +64,12 @@ class QueueBridgeFlowBoardService
       var rows = document.querySelectorAll('tr[data-pid="' + chip.pid + '"][data-apptstatus="@"]');
       rows.forEach(function (row, index) {
         if (index > 0) return;
-        if (row.querySelector('.oe-nc-flowbridge-chip')) return;
+        if (row.querySelector('.nc-flowbridge-chip')) return;
         var cell = row.querySelector('td.detail.text-center[name="kiosk_hide"] a')
           || row.querySelector('td.detail.text-center a');
         if (!cell || !cell.parentElement) return;
         var wrap = document.createElement('span');
-        wrap.className = 'oe-nc-flowbridge-chip badge badge-warning ml-1';
+        wrap.className = 'nc-flowbridge-chip nc-badge nc-badge-warning ml-1';
         wrap.innerHTML = 'No clinical visit <a href="' + chip.fix_url + '" class="text-dark ml-1"><u>Fix</u></a>';
         cell.parentElement.appendChild(wrap);
       });

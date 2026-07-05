@@ -94,7 +94,7 @@ test.describe('Scheduling & Flow shell', () => {
     await page.getByRole('button', { name: 'List' }).click();
     await expect(page.getByRole('columnheader', { name: 'Patient' })).toBeVisible();
     await page.getByRole('button', { name: 'Board' }).click();
-    await expect(page.locator('.oe-nc-flowboard-board')).toBeVisible();
+    await expect(page.locator('.nc-flowboard-board')).toBeVisible();
   });
 
   test('admin switches calendar to week layout', async ({ page }) => {
@@ -109,8 +109,8 @@ test.describe('Scheduling & Flow shell', () => {
     await dayResp;
 
     await page.getByRole('button', { name: 'Week' }).click();
-    await expect(page.locator('.oe-nc-calendar-week')).toBeVisible();
-    await expect(page.locator('.oe-nc-calendar-week thead tr').nth(1).locator('th')).not.toHaveCount(0);
+    await expect(page.locator('.nc-calendar-week')).toBeVisible();
+    await expect(page.locator('.nc-calendar-week thead tr').nth(1).locator('th')).not.toHaveCount(0);
   });
 
   test('admin daily reports scheduling tab loads KPIs', async ({ page }) => {

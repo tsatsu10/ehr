@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { WidgetCard } from '@components/WidgetCard';
+import { SegmentedControl } from '@components/SegmentedControl';
+import { Button } from '@components/ui/button';
 import { oeFetch } from '@core/oeFetch';
 import { ChartBanner } from './ChartBanner';
 import { ChartInChartSearch } from './ChartInChartSearch';
@@ -389,31 +392,37 @@ export function PatientChart({
   }, [activeTab, loadMessages, messagesLoaded]);
 
   return (
-    <div className="oe-nc-patient-chart" id="nc-patient-chart" data-pid={pid}>
+    <div className="nc-patient-chart" id="nc-patient-chart" data-pid={pid}>
       <WidgetCard
         className="mb-3"
-        title={<h2 className="oe-nc-widget-card__title mb-0">Patient chart</h2>}
-        headerClassName="d-flex justify-content-between align-items-center flex-wrap"
+        title="Patient chart"
+        headerClassName="flex justify-between items-center flex-wrap"
         bodyPad="pad"
         actions={(
-          <div className="btn-group btn-group-sm mt-2 mt-md-0">
+          <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
             {exportChartUrl && (
-              <a href={exportChartUrl} className="btn btn-outline-secondary" target="_top">
-                Export chart
-              </a>
+              <Button variant="outline" size="sm" asChild>
+                <a href={exportChartUrl} target="_top">
+                  Export chart
+                </a>
+              </Button>
             )}
-            <a href={frontDeskUrl} className="btn btn-outline-secondary" target="_top">
-              Front Desk
-            </a>
-            <a href={visitBoardUrl} className="btn btn-outline-primary" target="_top">
-              Visit Board
-            </a>
+            <Button variant="outline" size="sm" asChild>
+              <a href={frontDeskUrl} target="_top">
+                Front Desk
+              </a>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <a href={visitBoardUrl} target="_top">
+                Visit Board
+              </a>
+            </Button>
           </div>
         )}
       >
         <div id="nc-chart-banner" className="mb-3">
           {previewLoading && !preview && <em>Loading patient…</em>}
-          {previewError && <div className="alert alert-danger">{previewError}</div>}
+          {previewError && <div className={deskCalloutClass('error')}>{previewError}</div>}
           {preview && <ChartBanner preview={preview} />}
         </div>
 
@@ -426,28 +435,21 @@ export function PatientChart({
           />
         )}
 
-        <ul className="nav nav-tabs mb-3" id="nc-chart-tabs" role="tablist">
-          {CHART_TAB_IDS.map((tab) => (
-            <li key={tab} className="nav-item" role="presentation">
-              <button
-                type="button"
-                className={`nav-link${activeTab === tab ? ' active' : ''}`}
-                role="tab"
-                aria-selected={activeTab === tab}
-                aria-controls={`nc-chart-tab-${tab}`}
-                onClick={() => {
-                  handleTabChange(tab);
-                }}
-              >
-                {TAB_LABELS[tab]}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div id="nc-chart-tabs">
+          <SegmentedControl
+            segments={CHART_TAB_IDS.map((tab) => ({ id: tab, label: TAB_LABELS[tab] }))}
+            value={activeTab}
+            onChange={(id) => {
+              handleTabChange(id as ChartTabId);
+            }}
+            ariaLabel="Chart sections"
+            className="mb-3"
+          />
+        </div>
 
-        <div className="tab-content" id="nc-chart-tab-panes">
+        <div className="nc-tab-content" id="nc-chart-tab-panes">
           <div
-            className={`tab-pane fade${activeTab === 'overview' ? ' show active' : ''}`}
+            className={activeTab === 'overview' ? 'nc-tab-pane' : 'nc-tab-pane hidden'}
             id="nc-chart-tab-overview"
             role="tabpanel"
           >
@@ -473,7 +475,7 @@ export function PatientChart({
           </div>
 
           <div
-            className={`tab-pane fade${activeTab === 'profile' ? ' show active' : ''}`}
+            className={activeTab === 'profile' ? 'nc-tab-pane' : 'nc-tab-pane hidden'}
             id="nc-chart-tab-profile"
             role="tabpanel"
           >
@@ -491,7 +493,7 @@ export function PatientChart({
           </div>
 
           <div
-            className={`tab-pane fade${activeTab === 'visits' ? ' show active' : ''}`}
+            className={activeTab === 'visits' ? 'nc-tab-pane' : 'nc-tab-pane hidden'}
             id="nc-chart-tab-visits"
             role="tabpanel"
           >
@@ -512,7 +514,7 @@ export function PatientChart({
           </div>
 
           <div
-            className={`tab-pane fade${activeTab === 'clinical' ? ' show active' : ''}`}
+            className={activeTab === 'clinical' ? 'nc-tab-pane' : 'nc-tab-pane hidden'}
             id="nc-chart-tab-clinical"
             role="tabpanel"
           >
@@ -531,7 +533,7 @@ export function PatientChart({
           </div>
 
           <div
-            className={`tab-pane fade${activeTab === 'messages' ? ' show active' : ''}`}
+            className={activeTab === 'messages' ? 'nc-tab-pane' : 'nc-tab-pane hidden'}
             id="nc-chart-tab-messages"
             role="tabpanel"
           >

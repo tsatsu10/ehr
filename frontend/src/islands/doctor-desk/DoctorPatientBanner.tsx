@@ -4,10 +4,13 @@
 
 import type { DoctorVisit, PatientPreview, RoutingChips, DocumentationStatus } from '@core/types';
 import { PatientContextBanner } from '@components/PatientContextBanner';
+import { Badge, badgeVariants } from '@components/ui/badge';
+import { useConsultReadyBanner } from '@components/useConsultReadyBanner';
 import { RoutingChips as RoutingChipsBadges } from '@components/RoutingChips';
 import { BannerClinicalLink } from '@components/BannerClinicalLink';
 import { bannerPropsFromPreview } from '@components/bannerPreviewProps';
 import { buildMrdClinicalDeepLink, MRD_CLINICAL_ANCHORS } from '@core/mrdBannerLinks';
+import { cn } from '@/lib/utils';
 import { DocumentationStatusChip } from './DocumentationStatusChip';
 
 export interface DoctorSignMeta {
@@ -37,22 +40,21 @@ export function DoctorPatientBanner({ preview, visit, signMeta }: DoctorPatientB
 
   const signed = signMeta.encounter_signed;
   const requireSign = signMeta.require_esign_before_complete_consult;
+  const bannerRef = useConsultReadyBanner();
 
   return (
-    <PatientContextBanner
-      identity={preview.identity}
-      layout="compact"
-      completion={preview.completion}
-      safety={preview.safety}
-      {...bannerProps}
-      aside={<span className="badge badge-success">In consult #{visit.queue_number}</span>}
-    >
-      {visit.chief_complaint && (
-        <div className="small mt-1">CC: {visit.chief_complaint}</div>
-      )}
-
+    <div ref={bannerRef} id="nc-patient-context-banner" className="mb-3">
+      <PatientContextBanner
+        identity={preview.identity}
+        layout="compact"
+        completion={preview.completion}
+        safety={preview.safety}
+        chiefComplaint={visit.chief_complaint}
+        {...bannerProps}
+        aside={<Badge variant="success">In consult #{visit.queue_number}</Badge>}
+      >
       {signMeta.routing_chips && (
-        <div className="small mt-1">
+        <div className="text-sm mt-1">
           <RoutingChipsBadges
             chips={signMeta.routing_chips}
             mrdDeepLinks={mrdEnabled}
@@ -62,7 +64,7 @@ export function DoctorPatientBanner({ preview, visit, signMeta }: DoctorPatientB
         </div>
       )}
 
-      <div className="small mt-1">
+      <div className="text-sm mt-1">
         Encounter #{visit.encounter}
         {' · '}
         {visit.visit_type_label || 'Visit'}
@@ -70,7 +72,7 @@ export function DoctorPatientBanner({ preview, visit, signMeta }: DoctorPatientB
           <BannerClinicalLink
             enabled={mrdEnabled}
             href={vitalsHref}
-            className="badge badge-danger ml-1"
+            className={cn(badgeVariants({ variant: 'danger' }), 'ml-1')}
           >
             Vitals abnormal
           </BannerClinicalLink>
@@ -82,7 +84,7 @@ export function DoctorPatientBanner({ preview, visit, signMeta }: DoctorPatientB
         />
       </div>
 
-      <div className="small mt-1">
+      <div className="text-sm mt-1">
         {vitalsToday?.summary ? (
           <>
             Vitals today:{' '}
@@ -94,12 +96,13 @@ export function DoctorPatientBanner({ preview, visit, signMeta }: DoctorPatientB
           <BannerClinicalLink
             enabled={mrdEnabled}
             href={vitalsHref}
-            className="text-warning"
+            className="text-[var(--color-oe-warning,#ea580c)]"
           >
             No vitals today
           </BannerClinicalLink>
         )}
       </div>
     </PatientContextBanner>
+    </div>
   );
 }

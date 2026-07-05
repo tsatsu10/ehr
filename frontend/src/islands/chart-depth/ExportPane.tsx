@@ -1,4 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Button } from '@components/ui/button';
+import { Checkbox } from '@components/ui/checkbox';
+import { Label } from '@components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@components/ui/select';
 import { oeFetch } from '@core/oeFetch';
 import type { ExportBuilderData, ExportGenerateResult, ExportIncludeOption } from './chartDepthTypes';
 
@@ -44,19 +55,17 @@ function IncludeOptions({
 
   return (
     <div className="mb-3">
-      <div className="font-weight-bold mb-2">Include</div>
+      <div className="font-bold mb-2">Include</div>
       {visible.map((opt) => (
-        <div key={opt.key} className="form-check">
-          <input
-            className="form-check-input"
-            type="checkbox"
+        <div key={opt.key} className="flex items-center gap-2 mb-2">
+          <Checkbox
             id={`nc-export-inc-${opt.key}`}
             checked={values[opt.key] ?? !!opt.checked}
-            onChange={(e) => onChange(opt.key, e.target.checked)}
+            onCheckedChange={(checked) => onChange(opt.key, checked === true)}
           />
-          <label className="form-check-label" htmlFor={`nc-export-inc-${opt.key}`}>
+          <Label htmlFor={`nc-export-inc-${opt.key}`} className="font-normal normal-case cursor-pointer mb-0">
             {opt.label}
-          </label>
+          </Label>
         </div>
       ))}
     </div>
@@ -150,70 +159,70 @@ export function ExportPane({ ajaxUrl, csrfToken, pid, initialPreset, initialEnco
   }
 
   if (error) {
-    return <div className="alert alert-danger">{error}</div>;
+    return <div className={deskCalloutClass('error')}>{error}</div>;
   }
 
   if (!data) return null;
 
-  const patient = data.patient ?? {};
   const canGenerate = !!(data.can_generate && data.has_pat_rep_acl);
 
   return (
     <div id="nc-export-builder">
-      <div className="mb-2">
-        <strong>{patient.name ?? 'Patient'}</strong>
-        {patient.pubpid ? ` · MRN ${patient.pubpid}` : ''}
-      </div>
 
       {!data.has_pat_rep_acl && (
-        <div className="alert alert-warning py-2 small">
+        <div className={deskCalloutClass('warn', 'py-2 text-sm')}>
           Your account also needs core Patient Report permission to generate PDFs.
         </div>
       )}
 
-      <div className="form-group">
-        <label htmlFor="nc-export-preset">Preset</label>
-        <select
-          className="form-control"
-          id="nc-export-preset"
+      <div className="space-y-1.5 mb-3">
+        <Label htmlFor="nc-export-preset">Preset</Label>
+        <Select
           value={preset}
-          onChange={(e) => {
-            const next = e.target.value;
+          onValueChange={(next) => {
             setPreset(next);
             void loadBuilder(next, encounterId);
           }}
         >
-          {(data.presets ?? []).map((p) => (
-            <option key={p.key} value={p.key}>
-              {p.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id="nc-export-preset">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(data.presets ?? []).map((p) => (
+              <SelectItem key={p.key} value={p.key}>
+                {p.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {data.requires_encounter && (
-        <div className="form-group">
-          <label htmlFor="nc-export-encounter">Encounter</label>
-          <select
-            className="form-control"
-            id="nc-export-encounter"
-            value={encounterId}
-            onChange={(e) => {
-              const next = e.target.value;
-              setEncounterId(next);
-              void loadBuilder(preset, next);
+        <div className="space-y-1.5 mb-3">
+          <Label htmlFor="nc-export-encounter">Encounter</Label>
+          <Select
+            value={encounterId || '_empty'}
+            onValueChange={(next) => {
+              const resolved = next === '_empty' ? '' : next;
+              setEncounterId(resolved);
+              void loadBuilder(preset, resolved);
             }}
           >
-            {(data.encounters ?? []).length === 0 ? (
-              <option value="">No encounters on file</option>
-            ) : (
-              (data.encounters ?? []).map((enc) => (
-                <option key={enc.encounter_id} value={String(enc.encounter_id)}>
-                  {enc.label}
-                </option>
-              ))
-            )}
-          </select>
+            <SelectTrigger id="nc-export-encounter">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(data.encounters ?? []).length === 0 ? (
+                <SelectItem value="_empty">No encounters on file</SelectItem>
+              ) : (
+                (data.encounters ?? []).map((enc) => (
+                  <SelectItem key={enc.encounter_id} value={String(enc.encounter_id)}>
+                    {enc.label}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
         </div>
       )}
 
@@ -226,7 +235,7 @@ export function ExportPane({ ajaxUrl, csrfToken, pid, initialPreset, initialEnco
       />
 
       {preset === 'custom' && (
-        <div className="alert alert-info py-2 small">
+        <div className={deskCalloutClass('info', 'py-2 text-sm')}>
           Custom export opens the stock patient report page.{' '}
           {data.stock_report_url && (
             <a href={data.stock_report_url} target="_top">
@@ -236,14 +245,14 @@ export function ExportPane({ ajaxUrl, csrfToken, pid, initialPreset, initialEnco
         </div>
       )}
 
-      <div className="border rounded p-3 bg-light mb-3 small" id="nc-export-confirm">
+      <div className="border rounded p-3 bg-[var(--oe-nc-bg-tint)] mb-3 text-sm" id="nc-export-confirm">
         {data.confirm_label ?? ''}
       </div>
 
-      <div className="d-flex flex-wrap">
-        <button
+      <div className="flex flex-wrap">
+        <Button
           type="button"
-          className="btn btn-primary mr-2 mb-2"
+          className="mr-2 mb-2"
           id="nc-export-generate"
           disabled={!canGenerate || generating}
           onClick={() => {
@@ -251,11 +260,13 @@ export function ExportPane({ ajaxUrl, csrfToken, pid, initialPreset, initialEnco
           }}
         >
           Generate PDF
-        </button>
+        </Button>
         {data.employer_letter_url && (
-          <a className="btn btn-outline-secondary mb-2" href={data.employer_letter_url} target="_top">
-            Employer / school letter
-          </a>
+          <Button variant="outline" className="mb-2" asChild>
+            <a href={data.employer_letter_url} target="_top">
+              Employer / school letter
+            </a>
+          </Button>
         )}
       </div>
     </div>

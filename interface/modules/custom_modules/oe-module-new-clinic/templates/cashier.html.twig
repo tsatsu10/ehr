@@ -1,14 +1,14 @@
 {% extends 'base.html.twig' %}
 
 {% block page_subtitle %}
-<div class="oe-nc-page-heading__subtitle" id="nc-cashier-date"></div>
+<div class="nc-page-heading-subtitle" id="nc-cashier-date"></div>
 {% endblock %}
 
 {% block page_heading_actions %}
-<button type="button" class="btn btn-outline-primary btn-sm" id="nc-cashier-refresh" aria-label="{{ 'Refresh'|xlt }}">
+<button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary" id="nc-cashier-refresh" aria-label="{{ 'Refresh'|xlt }}">
     <i class="fa fa-refresh" aria-hidden="true"></i>
 </button>
-<span class="text-muted small" id="nc-cashier-updated"></span>
+<span class="nc-text-muted nc-text-sm" id="nc-cashier-updated"></span>
 {% endblock %}
 
 {% block content %}

@@ -1,4 +1,7 @@
 import { ConfirmModal } from '@components/ConfirmModal';
+import { PatientContextBanner } from '@components/PatientContextBanner';
+import { identityFromLabels } from '@components/patientBannerUtils';
+import { Button } from '@components/ui/button';
 
 interface CalendarNotifyModalProps {
   open: boolean;
@@ -27,6 +30,8 @@ export function CalendarNotifyModal({
   onSkipNotify,
   onAbort,
 }: CalendarNotifyModalProps) {
+  const patientIdentity = identityFromLabels(patientName);
+
   return (
     <ConfirmModal
       open={open}
@@ -37,14 +42,19 @@ export function CalendarNotifyModal({
       onConfirm={onNotify}
     >
       <p className="mb-2">{body}</p>
-      <p className="mb-2 small text-muted">
-        <strong>{patientName}</strong>
-        {' · '}
-        {changeLabel}
-      </p>
-      <button type="button" className="btn btn-link btn-sm p-0" onClick={onAbort}>
+      {patientIdentity ? (
+        <PatientContextBanner
+          layout="compact"
+          identity={patientIdentity}
+          className="mb-2"
+          aside={<span className="text-sm text-[var(--oe-nc-text-muted)]">{changeLabel}</span>}
+        />
+      ) : (
+        <p className="mb-2 text-sm text-[var(--oe-nc-text-muted)]">{changeLabel}</p>
+      )}
+      <Button type="button" variant="link" size="sm" className="h-auto p-0" onClick={onAbort}>
         {abortLabel}
-      </button>
+      </Button>
     </ConfirmModal>
   );
 }

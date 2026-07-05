@@ -1,8 +1,18 @@
 import type { ReactNode } from 'react';
-import { useEffect, useRef } from 'react';
-import { useModalDismiss } from './useModalDismiss';
+import { useEffect } from 'react';
+import {
+  Sheet,
+  SheetBody,
+  SheetCloseButton,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  sheetWidthClass,
+  type SheetWidth,
+} from './ui/sheet';
 
-export type SlideOverWidth = 'sm' | 'md' | 'lg';
+export type SlideOverWidth = SheetWidth;
 export type SlideOverPlacement = 'end' | 'bottom';
 
 interface SlideOverProps {
@@ -19,12 +29,6 @@ interface SlideOverProps {
   children: ReactNode;
 }
 
-const WIDTH_CLASS: Record<SlideOverWidth, string> = {
-  sm: 'oe-nc-slide-over__panel--sm',
-  md: 'oe-nc-slide-over__panel--md',
-  lg: 'oe-nc-slide-over__panel--lg',
-};
-
 export function SlideOver({
   open,
   onClose,
@@ -38,59 +42,51 @@ export function SlideOver({
   initialFocusSelector,
   children,
 }: SlideOverProps) {
-  const panelRef = useRef<HTMLElement>(null);
-  useModalDismiss(open, onClose);
+  const resolvedTitleId = titleId ?? (id ? `${id}-title` : undefined);
+  const side = placement === 'bottom' ? 'bottom' : 'right';
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open || !initialFocusSelector) return undefined;
 
-    const selector = initialFocusSelector ?? 'input, button, select, textarea, [tabindex]:not([tabindex="-1"])';
     const t = window.setTimeout(() => {
-      panelRef.current?.querySelector<HTMLElement>(selector)?.focus();
+      document.querySelector<HTMLElement>(initialFocusSelector)?.focus();
     }, 80);
 
     return () => window.clearTimeout(t);
   }, [open, initialFocusSelector]);
 
-  if (!open) return null;
-
-  const resolvedTitleId = titleId ?? (id ? `${id}-title` : undefined);
-
   return (
-    <div
-      className="oe-nc-slide-over"
-      id={id}
-      role="dialog"
-      aria-modal="true"
-      aria-label={ariaLabel ?? (typeof title === 'string' ? title : undefined)}
-      aria-labelledby={resolvedTitleId}
-    >
-      <div
-        className="oe-nc-slide-over__backdrop"
-        aria-hidden="true"
-        onClick={onClose}
-      />
-      <aside
-        ref={panelRef}
-        className={`oe-nc-slide-over__panel ${WIDTH_CLASS[width]}${placement === 'bottom' ? ' oe-nc-slide-over__panel--bottom' : ''}`}
+    <Sheet open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <SheetContent
+        id={id}
+        side={side}
+        className={side === 'right' ? sheetWidthClass[width] : undefined}
+        aria-label={ariaLabel ?? (typeof title === 'string' ? title : undefined)}
+        aria-labelledby={resolvedTitleId}
+        onOpenAutoFocus={(event) => {
+          if (!initialFocusSelector) return;
+          event.preventDefault();
+          document.querySelector<HTMLElement>(initialFocusSelector)?.focus();
+        }}
       >
-        <header className="oe-nc-slide-over__header">
+        <SheetHeader>
           {typeof title === 'string' ? (
-            <h2 className="oe-nc-slide-over__title h6 mb-0" id={resolvedTitleId}>
-              {title}
-            </h2>
+            <SheetTitle id={resolvedTitleId}>{title}</SheetTitle>
           ) : (
-            <div className="oe-nc-slide-over__title" id={resolvedTitleId}>{title}</div>
+            <div
+              className="mb-0 text-base font-semibold leading-tight text-[var(--oe-nc-text)]"
+              id={resolvedTitleId}
+            >
+              {title}
+            </div>
           )}
-          <button type="button" className="close" aria-label="Close" onClick={onClose}>
+          <SheetCloseButton type="button" aria-label="Close">
             <span aria-hidden="true">&times;</span>
-          </button>
-        </header>
-        <div className="oe-nc-slide-over__body">{children}</div>
-        {footer != null && (
-          <footer className="oe-nc-slide-over__footer">{footer}</footer>
-        )}
-      </aside>
-    </div>
+          </SheetCloseButton>
+        </SheetHeader>
+        <SheetBody>{children}</SheetBody>
+        {footer != null && <SheetFooter>{footer}</SheetFooter>}
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -28,24 +28,23 @@ describe('WaitTimeSpan', () => {
     expect(screen.getByText('10m waiting')).toBeInTheDocument();
   });
 
-  it('applies long class for 4h+ wait', () => {
+  it('applies long severity for 4h+ wait', () => {
     const { container } = render(<WaitTimeSpan card={card(300)} />);
-    expect(container.querySelector('.oe-nc-wait-long')).toBeInTheDocument();
+    expect(container.querySelector('[data-wait-severity="long"]')).toBeInTheDocument();
   });
 
-  it('applies medium class for 2h+ wait', () => {
+  it('applies medium severity for 2h+ wait', () => {
     const { container } = render(<WaitTimeSpan card={card(150)} />);
-    expect(container.querySelector('.oe-nc-wait-medium')).toBeInTheDocument();
+    expect(container.querySelector('[data-wait-severity="medium"]')).toBeInTheDocument();
   });
 
-  it('applies long class for carry-over (past visit date)', () => {
+  it('applies long severity for carry-over (past visit date)', () => {
     const { container } = render(<WaitTimeSpan card={card(5, '2000-01-01')} />);
-    expect(container.querySelector('.oe-nc-wait-long')).toBeInTheDocument();
+    expect(container.querySelector('[data-wait-severity="long"]')).toBeInTheDocument();
   });
 
   it('renders plain text for short waits', () => {
     const { container } = render(<WaitTimeSpan card={card(30)} />);
-    expect(container.querySelector('.oe-nc-wait-long')).not.toBeInTheDocument();
-    expect(container.querySelector('.oe-nc-wait-medium')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-wait-severity]')).not.toBeInTheDocument();
   });
 });

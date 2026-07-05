@@ -5,6 +5,11 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { X } from 'lucide-react';
 import { oeFetch } from '@core/oeFetch';
 import type { DoctorProviderSearchResult, DoctorSupervisorMeta, DoctorVisit } from '@core/types';
 
@@ -124,13 +129,13 @@ export function SupervisorCombobox({
 
   return (
     <div className="nc-supervisor-combobox mb-3">
-      <label className="form-label" htmlFor="nc-supervisor-search">
+      <Label htmlFor="nc-supervisor-search" className="mb-1.5 block">
         <strong>Supervising provider</strong>
-      </label>
-      <div className="input-group">
-        <input
+      </Label>
+      <div className="flex">
+        <Input
           type="text"
-          className="form-control"
+          className="rounded-r-none"
           id="nc-supervisor-search"
           placeholder="Search providers..."
           autoComplete="off"
@@ -141,41 +146,42 @@ export function SupervisorCombobox({
           onFocus={() => results.length > 0 && setResultsOpen(true)}
         />
         {supervisor.supervisor_id ? (
-          <button
+          <Button
             type="button"
-            className="btn btn-outline-secondary"
+            variant="outline"
+            className="rounded-l-none border-l-0 px-3"
             id="nc-supervisor-clear"
             title="Clear"
             disabled={blocked || submitting}
             onClick={() => void setSupervisor(null)}
           >
-            <i className="fa fa-times" aria-hidden="true" />
-          </button>
+            <X className="h-4 w-4" aria-hidden="true" />
+          </Button>
         ) : null}
       </div>
 
       {resultsOpen && (
         <div
           id="nc-supervisor-results"
-          className="list-group mt-1"
+          className="nc-list-group mt-1"
           style={{ maxHeight: 200, overflowY: 'auto' }}
         >
           {searchError ? (
-            <div className="list-group-item text-danger small">{searchError}</div>
+            <div className="nc-list-group-item text-[var(--oe-nc-danger,#dc2626)] text-sm">{searchError}</div>
           ) : results.length === 0 ? (
-            <div className="list-group-item text-muted small">No providers found</div>
+            <div className="nc-list-group-item text-[var(--oe-nc-text-muted)] text-sm">No providers found</div>
           ) : (
             results.map((provider) => (
               <button
                 key={provider.id}
                 type="button"
-                className="list-group-item list-group-item-action"
+                className="nc-list-group-item nc-list-group-item-action"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => void setSupervisor(provider.id)}
               >
                 {provider.display_name}
                 {' '}
-                <span className="text-muted small">({provider.username})</span>
+                <span className="text-[var(--oe-nc-text-muted)] text-sm">({provider.username})</span>
               </button>
             ))
           )}
@@ -184,13 +190,11 @@ export function SupervisorCombobox({
 
       {supervisor.supervisor_display_name && (
         <div className="mt-2">
-          <span className="badge badge-info">
-            <i className="fa fa-user-md" aria-hidden="true" />
-            {' '}
+          <Badge variant="info">
             {supervisor.supervisor_display_name}
-          </span>
+          </Badge>
           {supervisor.supervisor_from_profile && (
-            <small className="text-muted ml-2">(Default from your profile)</small>
+            <span className="text-sm text-[var(--oe-nc-text-muted)] ml-2">(Default from your profile)</span>
           )}
         </div>
       )}

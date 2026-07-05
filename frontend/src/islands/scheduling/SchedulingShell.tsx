@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SegmentedControl } from '@components/SegmentedControl';
+import { Button } from '@components/ui/button';
 import { WidgetCard } from '@components/WidgetCard';
 import { usePageHeadingRefresh, usePageHeadingUpdated } from '@core/usePageHeadingToolbar';
 import { SchedulingFilterBar } from './SchedulingFilterBar';
@@ -59,7 +60,7 @@ export function SchedulingShell(props: SchedulingProps) {
   }, [summaryLine]);
 
   return (
-    <div className="oe-nc-scheduling" id="nc-scheduling-root">
+    <div className="nc-scheduling" id="nc-scheduling-root">
       <WidgetCard title="Scheduling & Flow" bodyPad="pad">
         <SchedulingFilterBar
           filters={filters}
@@ -69,16 +70,17 @@ export function SchedulingShell(props: SchedulingProps) {
           onChange={setFilters}
         />
 
-        <div className="d-flex flex-wrap align-items-center justify-content-between mb-3">
+        <div className="flex flex-wrap items-center justify-between mb-3">
           <SegmentedControl
             segments={segments}
             value={lens}
             onChange={(id) => setLens(id as SchedulingLens)}
             ariaLabel="Scheduling lenses"
           />
-          <button
+          <Button
             type="button"
-            className="btn btn-primary btn-sm mt-2 mt-md-0"
+            size="sm"
+            className="mt-2 md:mt-0"
             disabled={!props.canBook}
             title={
               lens === 'recalls'
@@ -94,7 +96,7 @@ export function SchedulingShell(props: SchedulingProps) {
             }}
           >
             {lens === 'recalls' ? `+ ${labels.newRecall}` : `+ ${labels.bookAppointment}`}
-          </button>
+          </Button>
         </div>
 
         {lens === 'calendar' && (

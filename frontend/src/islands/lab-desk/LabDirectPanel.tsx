@@ -1,4 +1,7 @@
 import type { LabDirectIntake } from '@core/types';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
 
 interface LabDirectPanelProps {
   intake: LabDirectIntake;
@@ -16,72 +19,70 @@ export function LabDirectPanel({
   onCreateOrder,
 }: LabDirectPanelProps) {
   return (
-    <div className="oe-nc-lab-direct-panel border rounded p-3 mb-3 bg-light">
+    <div className="nc-lab-direct-panel mb-3 rounded-lg border border-[var(--oe-nc-border)] bg-[var(--oe-nc-bg-tint)] p-3">
       <h5 className="mb-2">Lab-direct intake</h5>
-      <p className="small text-muted mb-3">
+      <p className="mb-3 text-sm text-[var(--oe-nc-text-muted)]">
         Reception started a lab-only visit. Enter the lab order, complete the lab intake note, and
         E-Sign before Lab complete.
       </p>
 
       {intake.has_referral && intake.referral_view_url && (
         <div className="mb-2">
-          <a
-            className="btn btn-outline-secondary btn-sm"
-            href={intake.referral_view_url}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            View referral on file
-          </a>
+          <Button variant="outline" size="sm" asChild>
+            <a href={intake.referral_view_url} target="_blank" rel="noopener noreferrer">
+              View referral on file
+            </a>
+          </Button>
         </div>
       )}
 
       {intake.referral_required_warning && (
-        <div className="alert alert-warning py-2 mb-3 small" role="alert">
+        <div className={deskCalloutClass('warn', 'mb-3 text-sm')} role="alert">
           This visit type expects a referral document, but none is on file yet.
         </div>
       )}
 
       <div className="mb-3">
-        <div className="small font-weight-bold mb-1">{intake.lab_intake_title}</div>
+        <div className="mb-1 text-sm font-semibold">{intake.lab_intake_title}</div>
         {intake.lab_intake_signed ? (
-          <span className="badge badge-success">Signed</span>
+          <Badge variant="success">Signed</Badge>
         ) : (
-          <span className="badge badge-warning">
+          <Badge variant="warning">
             {intake.lab_intake_started ? 'Unsigned' : 'Not started'}
-          </span>
+          </Badge>
         )}
         {(intake.order_count ?? 0) > 0 && (
-          <span className="badge badge-light border ml-2">
+          <Badge variant="outline" className="ml-2">
             {intake.order_count} order{(intake.order_count ?? 0) === 1 ? '' : 's'}
-          </span>
+          </Badge>
         )}
       </div>
 
-      <div className="d-flex flex-wrap gap-2">
-        <button
+      <div className="flex flex-wrap gap-2">
+        <Button
           type="button"
-          className="btn btn-sm btn-outline-primary"
+          variant="outline"
+          size="sm"
           disabled={disabled}
           onClick={onOpenLabIntake}
         >
           {intake.lab_intake_started ? 'Open lab intake' : 'Start lab intake'}
-        </button>
+        </Button>
         {intake.can_create_orders && (
-          <button
+          <Button
             type="button"
-            className="btn btn-sm btn-primary"
+            size="sm"
             disabled={disabled || !inLab}
             title={!inLab ? 'Take the patient before creating orders' : undefined}
             onClick={onCreateOrder}
           >
             Create lab order
-          </button>
+          </Button>
         )}
       </div>
 
       {!intake.lab_intake_signed && (
-        <p className="small text-muted mt-3 mb-0">
+        <p className="mb-0 mt-3 text-sm text-[var(--oe-nc-text-muted)]">
           Lab complete stays blocked until the lab intake note is E-Signed.
         </p>
       )}

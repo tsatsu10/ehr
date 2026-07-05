@@ -93,7 +93,7 @@ test.describe('V1.1-OPS smoke', () => {
 
     const hasResults = payload.data.items.length > 0;
     if (hasResults) {
-      await expect(page.locator('.oe-nc-chart-in-chart-search__results')).toBeVisible();
+      await expect(page.locator('.nc-chart-in-chart-search-results')).toBeVisible();
     } else {
       await expect(page.getByText(/No matches in this chart/i)).toBeVisible();
     }

@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ConfirmModal } from '@components/ConfirmModal';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Button } from '@components/ui/button';
+import { Textarea } from '@components/ui/textarea';
 import { SegmentedControl } from '@components/SegmentedControl';
 import { WidgetCard } from '@components/WidgetCard';
 import { localDateString } from '@islands/daily-reports/reportsFormatters';
@@ -39,6 +42,19 @@ function rowSubtitle(row: QueueBridgeRow): string {
   bits.push(row.summary);
   bits.push(`(${row.exception_code})`);
   return bits.join(' · ');
+}
+
+function resolveActionButtonProps(action: string): {
+  variant: 'default' | 'danger' | 'outline';
+  className?: string;
+} {
+  if (action === 'cancel_visit') {
+    return { variant: 'danger' };
+  }
+  if (action === 'unlink_appointment') {
+    return { variant: 'outline', className: 'border-red-300 text-red-700 hover:bg-red-50' };
+  }
+  return { variant: 'default' };
 }
 
 export function QueueBridgeHub(props: QueueBridgeProps) {
@@ -217,7 +233,7 @@ export function QueueBridgeHub(props: QueueBridgeProps) {
   ]);
 
   return (
-    <div className="oe-nc-queuebridge" id="nc-queue-bridge-root">
+    <div className="nc-queuebridge" id="nc-queue-bridge-root">
       <WidgetCard
         title={`Queue Bridge — Today ${data?.snapshot_date ?? localDateString()}`}
         bodyPad="pad"
@@ -231,50 +247,51 @@ export function QueueBridgeHub(props: QueueBridgeProps) {
         />
 
         {error && (
-          <div className="alert alert-danger" role="alert">{error}</div>
+          <div className={deskCalloutClass('error')} role="alert">{error}</div>
         )}
 
-        {loading && <p className="text-muted">Loading exceptions…</p>}
+        {loading && <p className="text-[var(--oe-nc-text-muted)]">Loading exceptions…</p>}
 
         {!loading && data && data.rows.length === 0 && (
-          <p className="text-muted mb-0">
+          <p className="text-[var(--oe-nc-text-muted)] mb-0">
             {lens === 'resolved' ? 'No exceptions resolved today.' : 'No exceptions in this lens.'}
           </p>
         )}
 
         {!loading && data && data.rows.length > 0 && (
-          <ul className="oe-nc-queuebridge__list list-unstyled mb-0">
+          <ul className="nc-queuebridge-list list-none m-0 p-0 mb-0">
             {data.rows.map((row) => {
               const rowKey = `${row.exception_code}:${row.pid}:${row.pc_eid ?? 0}:${row.visit_id ?? 0}`;
               const isBusy = busyKey === `${row.exception_code}:${row.pid}:${row.pc_eid ?? 0}`;
               const actions = row.available_actions ?? [];
 
               return (
-                <li key={rowKey} className="oe-nc-queuebridge__row">
-                  <div className="oe-nc-queuebridge__row-head">
+                <li key={rowKey} className="nc-queuebridge-row">
+                  <div className="nc-queuebridge-row-head">
                     <strong>{row.patient_name}</strong>
-                    <span className="text-muted small">{rowSubtitle(row)}</span>
+                    <span className="text-[var(--oe-nc-text-muted)] text-sm">{rowSubtitle(row)}</span>
                   </div>
                   {lens === 'resolved' && row.resolved_at && (
-                    <div className="text-muted small">{row.resolved_at}</div>
+                    <div className="text-[var(--oe-nc-text-muted)] text-sm">{row.resolved_at}</div>
                   )}
                   {lens !== 'resolved' && actions.length > 0 && (
-                    <div className="oe-nc-queuebridge__actions">
+                    <div className="nc-queuebridge-actions">
                       {actions.map((action) => {
                         if (action === 'dismiss') {
                           if (!row.can_dismiss && !props.canDismiss) {
                             return null;
                           }
                           return (
-                            <button
+                            <Button
                               key={action}
                               type="button"
-                              className="btn btn-outline-secondary btn-sm"
+                              variant="outline"
+                              size="sm"
                               disabled={isBusy}
                               onClick={() => handleOpenAction(row, action)}
                             >
                               {ACTION_LABELS[action] ?? action}
-                            </button>
+                            </Button>
                           );
                         }
 
@@ -282,34 +299,33 @@ export function QueueBridgeHub(props: QueueBridgeProps) {
                           if (!canResolve) {
                             return null;
                           }
-                          const variant = action === 'cancel_visit'
-                            ? 'btn-danger'
-                            : action === 'unlink_appointment'
-                              ? 'btn-outline-danger'
-                              : 'btn-primary';
+                          const btnProps = resolveActionButtonProps(action);
                           return (
-                            <button
+                            <Button
                               key={action}
                               type="button"
-                              className={`btn ${variant} btn-sm`}
+                              variant={btnProps.variant}
+                              size="sm"
+                              className={btnProps.className}
                               disabled={isBusy}
                               onClick={() => handleResolveClick(row, action)}
                             >
                               {ACTION_LABELS[action] ?? action}
-                            </button>
+                            </Button>
                           );
                         }
 
                         return (
-                          <button
+                          <Button
                             key={action}
                             type="button"
-                            className="btn btn-outline-secondary btn-sm"
+                            variant="outline"
+                            size="sm"
                             disabled={isBusy}
                             onClick={() => handleOpenAction(row, action)}
                           >
                             {ACTION_LABELS[action] ?? action}
-                          </button>
+                          </Button>
                         );
                       })}
                     </div>
@@ -342,9 +358,8 @@ export function QueueBridgeHub(props: QueueBridgeProps) {
           Explain why this exception can be ignored (e.g. walk-in OK, duplicate booking).
         </p>
         <label className="sr-only" htmlFor="nc-queuebridge-dismiss-reason">Dismiss reason</label>
-        <textarea
+        <Textarea
           id="nc-queuebridge-dismiss-reason"
-          className="form-control"
           rows={3}
           value={dismissReason}
           onChange={(e) => setDismissReason(e.target.value)}
@@ -376,9 +391,8 @@ export function QueueBridgeHub(props: QueueBridgeProps) {
           to keep the visit without a calendar link.
         </p>
         <label className="sr-only" htmlFor="nc-queuebridge-cancel-reason">Cancel reason</label>
-        <textarea
+        <Textarea
           id="nc-queuebridge-cancel-reason"
-          className="form-control"
           rows={3}
           maxLength={200}
           value={cancelReason}

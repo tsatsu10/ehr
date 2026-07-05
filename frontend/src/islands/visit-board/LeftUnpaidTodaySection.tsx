@@ -16,7 +16,7 @@ export function LeftUnpaidTodaySection({ visits }: LeftUnpaidTodaySectionProps) 
       dataToggleAttr="data-nc-unpaid-toggle"
     >
       {visits.length === 0 ? (
-        <em className="text-muted">None</em>
+        <em className="text-[var(--oe-nc-text-muted)]">None</em>
       ) : (
         visits.map((visit) => (
           <div key={visit.id ?? `${visit.queue_number}-${visit.display_name}`} className="border-bottom py-1">

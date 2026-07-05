@@ -515,7 +515,7 @@ export function CashierDesk({
   const esignOverrideAllowed = !!(signMeta?.can_esign_override ?? canEsignOverride);
 
   return (
-    <div id="nc-cashier-desk" className="oe-nc-cashier-react-active">
+    <div id="nc-cashier-desk" className="nc-cashier-react-active">
       <DeskInterruptBanner
         interrupt={interrupt}
         onDismiss={() => {
@@ -550,8 +550,8 @@ export function CashierDesk({
         onRefresh={() => { void fetchQueue(); }}
       />
 
-      <div className="row">
-        <div className="col-lg-4 mb-3">
+      <div className="grid grid-cols-12 gap-3">
+        <div className="col-span-12 lg:col-span-4 mb-3">
           <CashierQueue
             ajaxUrl={ajaxUrl}
             csrfToken={csrfToken}
@@ -566,7 +566,7 @@ export function CashierDesk({
           />
         </div>
 
-        <div className="col-lg-8 mb-3">
+        <div className="col-span-12 lg:col-span-8 mb-3">
           <CashierActivePane
             mode={mode}
             data={mergedSelectData}

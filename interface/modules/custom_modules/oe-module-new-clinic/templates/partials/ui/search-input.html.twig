@@ -1,23 +1,23 @@
 {# search-input — magnifier, clear button, debounce hint #}
-<div class="oe-nc-search-input">
-    <div class="oe-nc-search-input__wrap">
-        <span class="oe-nc-search-input__icon" aria-hidden="true"><i class="fa fa-search"></i></span>
+<div class="nc-search-input">
+    <div class="nc-search-input-wrap">
+        <span class="nc-search-input-icon" aria-hidden="true"><i class="fa fa-search"></i></span>
         <input type="search"
-               class="oe-nc-search-input__field form-control"
+               class="nc-search-input-field"
                id="{{ id }}"
                autocomplete="off"
                placeholder="{{ placeholder|xlt }}"
                {% if autofocus|default(false) %}autofocus{% endif %}
                {% if aria_label is defined %}aria-label="{{ aria_label|xlt }}"{% endif %}>
         <button type="button"
-                class="oe-nc-search-input__clear d-none"
+                class="nc-search-input-clear nc-hidden"
                 id="{{ id }}-clear"
                 aria-label="{{ 'Clear search'|xlt }}">
             <span aria-hidden="true">&times;</span>
         </button>
     </div>
     {% if hint_id is defined %}
-        <div class="oe-nc-search-input__hint small text-muted" id="{{ hint_id }}">
+        <div class="nc-search-input-hint nc-text-sm nc-text-muted" id="{{ hint_id }}">
             {{ hint_text|default('Type at least 2 characters')|xlt }}
         </div>
     {% endif %}

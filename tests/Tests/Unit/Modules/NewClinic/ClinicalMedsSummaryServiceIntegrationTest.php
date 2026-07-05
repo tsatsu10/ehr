@@ -15,6 +15,7 @@ require_once __DIR__ . '/ModuleAutoload.php';
 
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Modules\NewClinic\Services\ClinicalMedsSummaryService;
+use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 use PHPUnit\Framework\TestCase;
 
@@ -32,6 +33,12 @@ class ClinicalMedsSummaryServiceIntegrationTest extends TestCase
 
     public function testGetClinicalStripHiddenWhenPharmOpsDisabled(): void
     {
+        $config = new ClinicConfigService();
+        if ($config->getInt('enable_pharmacy_role', 0, $this->facilityId) === 1
+            && $config->getInt('enable_pharm_ops', 0, $this->facilityId) === 1) {
+            $this->markTestSkipped('Pharm ops enabled at default facility — strip is expected to render');
+        }
+
         $pid = $this->resolveAnyPatientPid();
         if ($pid <= 0) {
             $this->markTestSkipped('No patient in database');

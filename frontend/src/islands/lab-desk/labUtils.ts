@@ -1,7 +1,9 @@
-export function orderStatusBadgeClass(status: string): string {
+import type { BadgeProps } from '@components/ui/badge';
+
+export function orderStatusBadgeVariant(status: string): NonNullable<BadgeProps['variant']> {
   const s = status.toLowerCase();
-  if (s === 'complete') return 'badge-success';
-  if (s === 'routed' || s === 'in_progress') return 'badge-info';
-  if (s === 'canceled' || s === 'cancelled') return 'badge-secondary';
-  return 'badge-light border';
+  if (s === 'complete') return 'success';
+  if (s === 'routed' || s === 'in_progress') return 'info';
+  if (s === 'canceled' || s === 'cancelled') return 'neutral';
+  return 'outline';
 }

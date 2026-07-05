@@ -3,7 +3,3 @@
 .nc-lab-queue-panel {
   @apply rounded border bg-white p-3 shadow-sm;
 }
-
-.oe-nc-lab-react-active .oe-nc-queue-card--claim-lost {
-  opacity: 0.65;
-}

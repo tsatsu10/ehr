@@ -135,7 +135,7 @@ test.describe('Pharmacy Operations Hub', () => {
 
     await expect(page.locator('#nc-pharmops-receive-drawer')).toContainText(/Received/i, { timeout: 15000 });
     await page
-      .locator('#nc-pharmops-receive-drawer .oe-nc-slide-over__footer')
+      .locator('#nc-pharmops-receive-drawer .nc-slide-over-footer')
       .getByRole('button', { name: 'Close' })
       .click();
     await expect(page.locator('#nc-pharmops-receive-drawer')).toBeHidden({ timeout: 10000 });

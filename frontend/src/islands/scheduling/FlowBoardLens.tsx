@@ -1,6 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useInterval } from '@core/useInterval';
 import { useDeskViewport } from '@core/useDeskViewport';
+import { SegmentedControl } from '@components/SegmentedControl';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Button } from '@components/ui/button';
+import { ncShadcnTableClass } from '@components/ncTableStyles';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@components/ui/table';
 import {
   advanceFlowBoardStatus,
   fetchFlowBoard,
@@ -219,42 +231,36 @@ export function FlowBoardLens({
   }, [flatCards, data?.can_advance, handleStatusChange]);
 
   if (loading && !data) {
-    return <p className="text-muted mb-0">{labels.loadingFlowBoard}</p>;
+    return <p className="text-[var(--oe-nc-text-muted)] mb-0">{labels.loadingFlowBoard}</p>;
   }
 
   if (error && !data) {
-    return <div className="alert alert-danger mb-0">{error}</div>;
+    return <div className={deskCalloutClass('error', 'mb-0')}>{error}</div>;
   }
 
   return (
-    <div className="oe-nc-flowboard">
+    <div className="nc-flowboard">
       <div className="sr-only" aria-live="polite" aria-atomic="true">{liveMessage}</div>
-      <div className="d-flex flex-wrap align-items-center justify-content-between mb-3">
-        <p className="text-muted small mb-2 mb-md-0">
+      <div className="flex flex-wrap items-center justify-between mb-3">
+        <p className="text-[var(--oe-nc-text-muted)] text-sm mb-2 md:mb-0">
           {mode2Hint ?? labels.flowBoardMode2Hint}
         </p>
-        <div className="btn-group btn-group-sm mb-2" role="group" aria-label="Flow Board layout">
-          <button
-            type="button"
-            className={`btn btn-outline-secondary${view === 'board' ? ' active' : ''}`}
-            onClick={() => setView('board')}
-          >
-            {labels.flowBoardBoard}
-          </button>
-          <button
-            type="button"
-            className={`btn btn-outline-secondary${view === 'list' ? ' active' : ''}`}
-            onClick={() => setView('list')}
-          >
-            {labels.flowBoardList}
-          </button>
-        </div>
+        <SegmentedControl
+          className="mb-2"
+          segments={[
+            { id: 'board', label: labels.flowBoardBoard },
+            { id: 'list', label: labels.flowBoardList },
+          ]}
+          value={view}
+          onChange={(id) => setView(id as 'board' | 'list')}
+          ariaLabel="Flow Board layout"
+        />
       </div>
 
-      {error && <div className="alert alert-warning py-2">{error}</div>}
+      {error && <div className={deskCalloutClass('warn', 'py-2')}>{error}</div>}
 
       {view === 'board' ? (
-        <div className={`oe-nc-flowboard-board${mobileAccordion ? ' oe-nc-flowboard-board--mobile' : ''}`}>
+        <div className={`nc-flowboard-board${mobileAccordion ? ' nc-flowboard-board--mobile' : ''}`}>
           {lanes.map((lane) => (
             <FlowBoardLaneColumn
               key={lane.status}
@@ -286,40 +292,41 @@ export function FlowBoardLens({
           ))}
         </div>
       ) : (
-        <div className="table-responsive">
-          <table className="table table-sm table-striped mb-0">
-            <thead>
-              <tr>
-                <th scope="col">{labels.listColTime}</th>
-                <th scope="col">{labels.listColPatient}</th>
-                <th scope="col">{labels.listColStatus}</th>
-                <th scope="col">{labels.listColWait}</th>
-                <th scope="col">{labels.listColActions}</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="overflow-x-auto">
+          <Table className={ncShadcnTableClass({ striped: true, className: 'mb-0' })}>
+            <TableHeader>
+              <TableRow>
+                <TableHead scope="col">{labels.listColTime}</TableHead>
+                <TableHead scope="col">{labels.listColPatient}</TableHead>
+                <TableHead scope="col">{labels.listColStatus}</TableHead>
+                <TableHead scope="col">{labels.listColWait}</TableHead>
+                <TableHead scope="col">{labels.listColActions}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {flatCards.map((card) => (
-                <tr key={card.pc_eid}>
-                  <td>{card.appt_time_label ?? '—'}</td>
-                  <td>{card.patient_name}</td>
-                  <td>{card.status_label}</td>
-                  <td>{card.minutes_in_status > 0 ? `${card.minutes_in_status}m` : '—'}</td>
-                  <td>
+                <TableRow key={card.pc_eid}>
+                  <TableCell>{card.appt_time_label ?? '—'}</TableCell>
+                  <TableCell>{card.patient_name}</TableCell>
+                  <TableCell>{card.status_label}</TableCell>
+                  <TableCell>{card.minutes_in_status > 0 ? `${card.minutes_in_status}m` : '—'}</TableCell>
+                  <TableCell>
                     {card.next_status && data?.can_advance && !card.is_recurring && (
-                      <button
+                      <Button
                         type="button"
-                        className="btn btn-sm btn-outline-primary"
+                        variant="outline"
+                        size="sm"
                         disabled={busyEid === card.pc_eid}
                         onClick={() => { void handleStatusChange(card.pc_eid, card.next_status as string); }}
                       >
                         {labels.flowBoardNext}
-                      </button>
+                      </Button>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

@@ -1,2 +1,2 @@
-import{a as e}from"./chunks/oeFetch-Bh_9Pv0w.js";import{t}from"./chunks/main-C_IPPa6E.js";e(`daily-reports`,t);
+import{f as e}from"./chunks/deskCalloutStyles-sccuUACN.js";import{t}from"./chunks/main-kjvg7Ho_.js";e(`daily-reports`,t);
 //# sourceMappingURL=daily-reports.js.map

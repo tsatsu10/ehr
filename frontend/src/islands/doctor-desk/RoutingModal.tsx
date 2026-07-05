@@ -3,6 +3,22 @@
  */
 
 import { useState } from 'react';
+import { IdentityConfirmBanner } from '@components/ConfirmModal';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Button } from '@components/ui/button';
+import { Checkbox } from '@components/ui/checkbox';
+import {
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  dialogContentSizeClass,
+} from '@components/ui/dialog';
+import { Label } from '@components/ui/label';
+import { Textarea } from '@components/ui/textarea';
 import type { DoctorVisit, PatientPreview, RoutingPreview } from '@core/types';
 import { useModalDismiss } from '@components/useModalDismiss';
 import { postDoctorAction } from './postDoctorAction';
@@ -21,6 +37,7 @@ interface RoutingModalProps {
 }
 
 interface RoutingModalBodyProps {
+  open: boolean;
   visit: DoctorVisit;
   preview: PatientPreview;
   routingPreview: RoutingPreview | null;
@@ -33,6 +50,7 @@ interface RoutingModalBodyProps {
 }
 
 function RoutingModalBody({
+  open,
   visit,
   preview,
   routingPreview,
@@ -102,94 +120,77 @@ function RoutingModalBody({
   };
 
   return (
-    <>
-      <div
-        className="modal fade show d-block"
+    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogContent
         id="nc-doctor-routing-modal"
-        tabIndex={-1}
-        role="dialog"
+        className={dialogContentSizeClass.confirm}
         aria-labelledby="nc-doctor-routing-title"
-        aria-modal="true"
       >
-        <div className="modal-dialog" role="document">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5 className="modal-title" id="nc-doctor-routing-title">Confirm routing</h5>
-              <button type="button" className="close" aria-label="Close" onClick={onClose}>
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
-            <div className="modal-body">
-              <p id="nc-routing-patient" className="mb-2">
-                {identity.display_name} · MRN {identity.pubpid}
-              </p>
-              <p className="text-muted small" id="nc-routing-detected">
-                System detected: {routing.lab_count} lab order(s), {routing.rx_count} Rx today
-              </p>
-              <div className="form-check">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="nc-routing-lab"
-                  checked={needsLab}
-                  onChange={(e) => setNeedsLab(e.target.checked)}
-                />
-                <label className="form-check-label" htmlFor="nc-routing-lab">
-                  Send to lab
-                </label>
-              </div>
-              <div className="form-check">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="nc-routing-rx"
-                  checked={needsRx}
-                  onChange={(e) => setNeedsRx(e.target.checked)}
-                />
-                <label className="form-check-label" htmlFor="nc-routing-rx">
-                  Send to pharmacy
-                </label>
-              </div>
-              <div className="form-group mt-2">
-                <label htmlFor="nc-routing-notes">Notes (optional)</label>
-                <textarea
-                  className="form-control"
-                  id="nc-routing-notes"
-                  rows={2}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
-              </div>
-              {error && (
-                <div className="alert alert-danger mt-2" id="nc-routing-error" role="alert">
-                  {error}
-                </div>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button type="button" className="btn btn-secondary" onClick={onClose}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                id="nc-routing-confirm"
-                disabled={submitting || blocked}
-                onClick={() => void handleConfirm()}
-              >
-                {submitting ? 'Routing…' : 'Confirm and route'}
-              </button>
-            </div>
+        <DialogHeader>
+          <DialogTitle id="nc-doctor-routing-title">Confirm routing</DialogTitle>
+          <DialogClose aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </DialogClose>
+        </DialogHeader>
+        <DialogBody>
+          <IdentityConfirmBanner
+            displayName={identity.display_name}
+            pubpid={identity.pubpid}
+            queueNumber={visit.queue_number}
+          />
+          <p className="text-[var(--oe-nc-text-muted)] text-sm mb-3" id="nc-routing-detected">
+            System detected: {routing.lab_count} lab order(s), {routing.rx_count} Rx today
+          </p>
+          <div className="flex items-center gap-2 mb-2">
+            <Checkbox
+              id="nc-routing-lab"
+              checked={needsLab}
+              onCheckedChange={(checked) => setNeedsLab(checked === true)}
+            />
+            <Label htmlFor="nc-routing-lab" className="font-normal cursor-pointer">
+              Send to lab
+            </Label>
           </div>
-        </div>
-      </div>
-      <div
-        className="modal-backdrop fade show"
-        id="nc-doctor-modal-backdrop"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-    </>
+          <div className="flex items-center gap-2 mb-3">
+            <Checkbox
+              id="nc-routing-rx"
+              checked={needsRx}
+              onCheckedChange={(checked) => setNeedsRx(checked === true)}
+            />
+            <Label htmlFor="nc-routing-rx" className="font-normal cursor-pointer">
+              Send to pharmacy
+            </Label>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="nc-routing-notes">Notes (optional)</Label>
+            <Textarea
+              id="nc-routing-notes"
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+          {error && (
+            <div className={deskCalloutClass('error', 'text-sm mt-3 mb-0')} id="nc-routing-error" role="alert">
+              {error}
+            </div>
+          )}
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            id="nc-routing-confirm"
+            disabled={submitting || blocked}
+            onClick={() => void handleConfirm()}
+          >
+            {submitting ? 'Routing…' : 'Confirm and route'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -207,11 +208,12 @@ export function RoutingModal({
 }: RoutingModalProps) {
   useModalDismiss(open, onClose);
 
-  if (!open || !visit || !preview) return null;
+  if (!visit || !preview) return null;
 
   return (
     <RoutingModalBody
       key={`${visit.id}-${routingPreview?.lab_count ?? 0}-${routingPreview?.rx_count ?? 0}`}
+      open={open}
       visit={visit}
       preview={preview}
       routingPreview={routingPreview}

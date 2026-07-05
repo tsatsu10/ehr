@@ -46,6 +46,12 @@ describe('RegistrationForm', () => {
         expect(screen.getByRole('heading', { name: /Register patient/i })).toBeInTheDocument();
     });
 
+    it('hides title when hideTitle is set', () => {
+        render(<RegistrationForm {...props} hideTitle />);
+        expect(screen.queryByRole('heading', { name: /Register patient/i })).not.toBeInTheDocument();
+        expect(document.getElementById('nc-reg-completion')).toBeInTheDocument();
+    });
+
     it('shows section 1 content by default', () => {
         render(<RegistrationForm {...props} />);
         expect(screen.getByLabelText(/First name/i)).toBeInTheDocument();

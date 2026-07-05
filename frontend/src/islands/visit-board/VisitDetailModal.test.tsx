@@ -17,6 +17,7 @@ const detailData: VisitDetailData = {
     queue_number: '1',
     state: 'waiting',
     row_version: 1,
+    chief_complaint: 'Persistent cough',
   },
   preview: {
     identity: {
@@ -71,7 +72,7 @@ describe('VisitDetailModal', () => {
     render(<VisitDetailModal {...baseProps} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Kwame Mensah')).toBeInTheDocument();
+      expect(screen.getByText(/Kwame Mensah/)).toBeInTheDocument();
     });
 
     expect(mockFetch).toHaveBeenCalledWith(
@@ -82,10 +83,14 @@ describe('VisitDetailModal', () => {
       'href',
       '/front-desk',
     );
+    expect(screen.getByText(/Reason for visit:/i)).toBeInTheDocument();
+    expect(screen.getByText('Persistent cough')).toBeInTheDocument();
+    expect(document.getElementById('nc-visit-modal-banner')).toBeInTheDocument();
   });
 
   it('renders nothing when closed', () => {
     const { container } = render(<VisitDetailModal {...baseProps} open={false} />);
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(container.querySelector('#nc-visit-modal-body')).not.toBeInTheDocument();
   });
 });

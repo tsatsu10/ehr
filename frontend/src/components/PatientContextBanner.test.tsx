@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { vi } from 'vitest';
 import { PatientContextBanner } from './PatientContextBanner';
+import { identityFromLabels } from './patientBannerUtils';
 import { PaginationBar } from './PaginationBar';
 import { SegmentedControl } from './SegmentedControl';
 import { StatCard } from './StatCard';
@@ -42,6 +43,19 @@ describe('PatientContextBanner', () => {
     expect(screen.getByText('Penicillin')).toBeInTheDocument();
   });
 
+  it('renders chief complaint on Tier 1 when provided', () => {
+    render(
+      <PatientContextBanner
+        identity={identity}
+        layout="full"
+        chiefComplaint="Chest pain"
+      />
+    );
+
+    expect(screen.getByText(/Chest pain/)).toBeInTheDocument();
+    expect(screen.getByText(/Reason for visit:/)).toBeInTheDocument();
+  });
+
   it('renders pregnancy chip when flagged in safety payload', () => {
     render(
       <PatientContextBanner
@@ -69,6 +83,29 @@ describe('PatientContextBanner', () => {
     const link = screen.getByRole('link', { name: 'Penicillin' });
     expect(link).toHaveAttribute('href', expect.stringContaining('anchor=clinical-allergies'));
     expect(link).toHaveAttribute('target', '_blank');
+  });
+});
+
+describe('identityFromLabels', () => {
+  it('returns null when name and pid are missing', () => {
+    expect(identityFromLabels('', {})).toBeNull();
+    expect(identityFromLabels(null, {})).toBeNull();
+  });
+
+  it('builds identity from name and pid', () => {
+    expect(identityFromLabels('Jane Doe', { pid: 12, pubpid: 'MRN-12' })).toEqual({
+      pid: 12,
+      display_name: 'Jane Doe',
+      pubpid: 'MRN-12',
+    });
+  });
+
+  it('falls back to pid label when name is blank', () => {
+    expect(identityFromLabels('  ', { pid: 99 })).toEqual({
+      pid: 99,
+      display_name: 'PID 99',
+      pubpid: undefined,
+    });
   });
 });
 

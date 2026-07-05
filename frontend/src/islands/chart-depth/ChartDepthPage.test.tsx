@@ -96,5 +96,6 @@ describe('ChartDepthPage', () => {
       expect.objectContaining({ params: expect.objectContaining({ pid: 42 }) })
     );
     expect(await screen.findByText('Generate PDF')).toBeInTheDocument();
+    expect(screen.getByText('Jane Doe', { selector: 'h3' })).toBeInTheDocument();
   });
 });

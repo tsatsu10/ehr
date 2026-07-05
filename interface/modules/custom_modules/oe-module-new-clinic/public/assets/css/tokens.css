@@ -25,6 +25,9 @@
     --oe-nc-role-cashier: #ea580c;
     --oe-nc-role-admin: #64748b;
 
+    --oe-nc-content-gutter: 1.25rem;
+    --oe-nc-content-max: 90rem;
+
     --oe-nc-sidebar-width: 260px;
     --oe-nc-sidebar-width-collapsed: 72px;
     --oe-nc-sidebar-z: 1040;

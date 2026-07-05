@@ -173,13 +173,13 @@ export function createLabResultValidator(rules: ValidationRules | undefined): La
     if (result.level === 'error') {
       input.classList.add('is-invalid');
       feedback.textContent = result.message ?? '';
-      feedback.className = 'nc-labops-feedback invalid-feedback d-block';
+      feedback.className = 'nc-labops-feedback block text-sm text-[var(--oe-nc-danger,#dc2626)]';
       return;
     }
 
     input.classList.add('nc-labops-warning');
     feedback.textContent = result.message ?? '';
-    feedback.className = 'nc-labops-feedback nc-labops-feedback--warning d-block';
+    feedback.className = 'nc-labops-feedback nc-labops-feedback--warning block';
   }
 
   function applyDefaults(lineEl: HTMLElement, seq: number): void {
@@ -216,7 +216,7 @@ export function createLabResultValidator(rules: ValidationRules | undefined): La
     const fieldWarnings: Record<string, string> = {};
     const messages: string[] = [];
 
-    drawerBody.querySelectorAll<HTMLElement>('.oe-nc-labops-line').forEach((lineEl) => {
+    drawerBody.querySelectorAll<HTMLElement>('.nc-labops-line').forEach((lineEl) => {
       const seqInput = lineEl.querySelector<HTMLInputElement>('[data-field="procedure_order_seq"]');
       if (!seqInput) return;
       const seq = parseInt(seqInput.value, 10);
@@ -240,7 +240,7 @@ export function createLabResultValidator(rules: ValidationRules | undefined): La
     fieldErrors: Record<string, string>,
     fieldWarnings: Record<string, string>
   ): void {
-    drawerBody.querySelectorAll<HTMLElement>('.oe-nc-labops-line').forEach((lineEl) => {
+    drawerBody.querySelectorAll<HTMLElement>('.nc-labops-line').forEach((lineEl) => {
       const seqInput = lineEl.querySelector<HTMLInputElement>('[data-field="procedure_order_seq"]');
       if (!seqInput) return;
       const fieldKey = `line_${parseInt(seqInput.value, 10)}_result`;

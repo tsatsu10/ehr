@@ -1,13 +1,20 @@
 /**
  * TriageQueue — left-column queue panel with polling.
  *
- * Mirrors the #nc-triage-queue-list + renderQueueCard() from triage.js.
- * Visual modifiers: mine (in triage with you), muted (in triage elsewhere), active (selected).
+ * Visual modifiers: triageMine (in triage with you), muted (in triage elsewhere), active (selected).
  */
 
 import { WaitTimeSpan } from '@components/WaitTimeSpan';
 import { StatusPill } from '@components/StatusPill';
 import { AncillaryVisitBadges } from '@components/AncillaryVisitBadges';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Badge } from '@components/ui/badge';
+import {
+  queueCardHeaderClass,
+  queueCardMetaClass,
+  queueCardShellClass,
+} from '@components/queueCardStyles';
+import { cn } from '@/lib/utils';
 import type { TriageQueueCard, VisitCard, VisitState } from '@core/types';
 
 interface TriageQueueProps {
@@ -24,16 +31,6 @@ function isHeldByOtherNurse(card: TriageQueueCard): boolean {
   return card.state === 'in_triage'
     && !card.triage_mine
     && !!card.triage_actor_name;
-}
-
-function cardModifiers(card: TriageQueueCard, activeVisitId: number | null): string {
-  const parts: string[] = ['nc-queue-card', 'oe-nc-queue-card', 'btn', 'btn-light', 'text-left', 'w-100', 'mb-2'];
-  if (card.id === activeVisitId) parts.push('oe-nc-queue-card--active');
-  if (card.claim_lost) parts.push('oe-nc-queue-card--claim-lost');
-  if (card.is_urgent) parts.push('oe-nc-queue-card--urgent');
-  if (card.state === 'in_triage' && card.triage_mine) parts.push('oe-nc-triage-card--mine');
-  if (isHeldByOtherNurse(card)) parts.push('oe-nc-triage-card--muted', 'oe-nc-queue-card--disabled');
-  return parts.join(' ');
 }
 
 function triageSubtitle(card: TriageQueueCard): string {
@@ -53,30 +50,26 @@ export function TriageQueue({
 }: TriageQueueProps) {
   return (
     <div className="nc-triage-queue-panel">
-      {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-2">
+      <div className="mb-2 flex items-center justify-between">
         <strong>Queue</strong>
       </div>
 
-      {/* Error */}
       {error && (
-        <div className="alert alert-danger py-2 small" role="alert">
+        <div className={deskCalloutClass('error', 'mb-2 text-sm')} role="alert">
           {error}
         </div>
       )}
 
-      {/* Loading skeleton */}
       {loading && cards.length === 0 && (
         <div aria-busy="true">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="oe-nc-vb-skeleton oe-nc-vb-skeleton--card mb-2" aria-hidden="true" />
+            <div key={i} className="nc-vb-skeleton nc-vb-skeleton--card mb-2" aria-hidden="true" />
           ))}
         </div>
       )}
 
-      {/* Empty state */}
       {!loading && !error && cards.length === 0 && (
-        <div className="text-muted py-3 small">
+        <div className="text-[var(--oe-nc-text-muted)] py-3 text-sm">
           <em>
             {queueDateFilter
               ? `No visits for ${queueDateFilter}. Start a visit at Front Desk or refresh within 30s.`
@@ -85,16 +78,24 @@ export function TriageQueue({
         </div>
       )}
 
-      {/* Cards */}
       <div role="list" aria-label="Triage queue">
         {cards.map((card) => {
           const heldByOther = isHeldByOtherNurse(card);
           const disabled = !!card.claim_lost || heldByOther;
+          const triageMine = card.state === 'in_triage' && !!card.triage_mine;
+
           return (
           <div key={card.id} role="listitem">
             <button
               type="button"
-              className={cardModifiers(card, activeVisitId)}
+              className={queueCardShellClass({
+                active: card.id === activeVisitId,
+                claimLost: !!card.claim_lost,
+                urgent: !!card.is_urgent,
+                triageMine,
+                muted: heldByOther,
+                disabled: heldByOther,
+              })}
               data-visit-id={card.id}
               disabled={disabled}
               title={
@@ -107,28 +108,25 @@ export function TriageQueue({
               onClick={() => !disabled && onCardClick(card)}
               aria-pressed={card.id === activeVisitId}
             >
-              {/* Header */}
-              <div className="oe-nc-queue-card__header d-flex justify-content-between align-items-start flex-wrap">
+              <div className={cn(queueCardHeaderClass, 'justify-between')}>
                 <span>
                   <strong>#{card.queue_number} {card.display_name}</strong>
                   {!!card.is_urgent && (
-                    <span className="badge badge-warning ml-1">URGENT</span>
+                    <Badge variant="warning" className="ml-1">URGENT</Badge>
                   )}
                   <AncillaryVisitBadges badges={card.ancillary_badges} />
                   {card.claim_lost && (
-                    <span className="badge badge-secondary ml-1">Claimed</span>
+                    <Badge variant="neutral" className="ml-1">Claimed</Badge>
                   )}
                 </span>
               </div>
 
-              {/* Subtitle */}
-              <div className="oe-nc-queue-card__meta small text-muted">
+              <div className={queueCardMetaClass}>
                 {card.sex} · {card.age_years} · <WaitTimeSpan card={card as Pick<VisitCard, 'wait_minutes' | 'wait_label' | 'visit_date'>} suffix=" waiting" />
                 {' · '}
                 {triageSubtitle(card)}
               </div>
 
-              {/* State pill */}
               <div className="mt-1">
                 <StatusPill state={card.state as VisitState} />
               </div>
@@ -138,9 +136,8 @@ export function TriageQueue({
         })}
       </div>
 
-      {/* Skipped-triage hint */}
       {cards.length > 0 && (
-        <p className="text-muted small mt-3 mb-0">
+        <p className="text-[var(--oe-nc-text-muted)] text-sm mt-3 mb-0">
           Patients who skipped triage appear on Visit Board → Doctor, not here.
         </p>
       )}

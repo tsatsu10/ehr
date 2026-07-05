@@ -1,4 +1,8 @@
 import { useCallback, useMemo } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { NativeSelect } from '@components/ui/native-select';
 import { oeFetch } from '@core/oeFetch';
 import type { SetupModel, SetupStatus } from './labOpsTypes';
 
@@ -82,14 +86,14 @@ export function LabOpsSetupPanel({
   const model = setup.setup_model ?? 'in_house';
 
   return (
-    <div className="alert alert-light border mb-3">
+    <div className={deskCalloutClass('info', 'mb-3')}>
       <strong>Lab setup</strong>
-      <div className="form-group mb-2 mt-2">
-        <label className="small font-weight-bold mb-1" htmlFor="nc-labops-setup-model">
+      <div className="nc-form-group mb-2 mt-2">
+        <label className="text-sm font-bold mb-1" htmlFor="nc-labops-setup-model">
           Clinic lab model
         </label>
-        <select
-          className="form-control form-control-sm"
+        <NativeSelect
+          className="h-8"
           id="nc-labops-setup-model"
           style={{ maxWidth: '280px' }}
           value={model}
@@ -98,64 +102,64 @@ export function LabOpsSetupPanel({
           <option value="in_house">In-house bench</option>
           <option value="hybrid">Hybrid (in-house + send-out)</option>
           <option value="send_out_only">Send-out only</option>
-        </select>
+        </NativeSelect>
       </div>
 
       {setup.needs_inhouse_provider ? (
-        <div className="small mb-2">
+        <div className="text-sm mb-2">
           {setup.provider_name
             ? `In-house: ${setup.provider_name} · ${setup.test_count ?? 0} tests`
-            : <span className="text-muted">No in-house lab provider configured.</span>}
+            : <span className="text-[var(--oe-nc-text-muted)]">No in-house lab provider configured.</span>}
         </div>
       ) : null}
 
       {setup.needs_sendout_provider ? (
-        <div className="small mb-2">
+        <div className="text-sm mb-2">
           {setup.sendout_provider_name
             ? `Send-out partner: ${setup.sendout_provider_name}`
-            : <span className="text-muted">No send-out lab partner configured.</span>}
+            : <span className="text-[var(--oe-nc-text-muted)]">No send-out lab partner configured.</span>}
         </div>
       ) : null}
 
-      <div className="mt-2 d-flex flex-wrap" style={{ gap: '0.5rem' }}>
+      <div className="mt-2 flex flex-wrap gap-2">
         {setup.needs_inhouse_provider && !setup.provider_id ? (
-          <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => void createProvider()}>
+          <Button type="button" size="sm" variant="outline" onClick={() => void createProvider()}>
             Create in-house lab
-          </button>
+          </Button>
         ) : null}
         {setup.needs_sendout_provider && !setup.sendout_provider_id ? (
-          <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => void createSendOutProvider()}>
+          <Button type="button" size="sm" variant="outline" onClick={() => void createSendOutProvider()}>
             Add send-out lab partner
-          </button>
+          </Button>
         ) : null}
         {setup.needs_inhouse_provider && setup.provider_id && !setup.has_starter_panel && setup.starter_csv_available ? (
-          <button type="button" className="btn btn-sm btn-primary" onClick={() => void importStarter()}>
+          <Button type="button" size="sm" onClick={() => void importStarter()}>
             Import OPD starter panel
-          </button>
+          </Button>
         ) : null}
         {setup.needs_inhouse_provider && setup.has_starter_panel ? (
           <>
-            <span className="badge badge-success align-self-center">Starter panel ready</span>
+            <Badge variant="success" className="self-center">Starter panel ready</Badge>
             {setup.fees_mapped ? (
-              <span className="badge badge-success align-self-center">Fees mapped</span>
+              <Badge variant="success" className="self-center">Fees mapped</Badge>
             ) : (setup.unmapped_fee_count ?? 0) > 0 && setup.can_manage_catalog ? (
-              <button type="button" className="btn btn-sm btn-primary" onClick={() => void applyStarterFees()}>
+              <Button type="button" size="sm" onClick={() => void applyStarterFees()}>
                 Apply starter fee defaults
-              </button>
+              </Button>
             ) : null}
           </>
         ) : null}
         {setup.needs_sendout_provider && setup.sendout_provider_id && !setup.needs_inhouse_provider ? (
-          <span className="badge badge-success align-self-center">Send-out partner ready</span>
+          <Badge variant="success" className="self-center">Send-out partner ready</Badge>
         ) : null}
       </div>
 
       {setup.needs_sendout_provider && setup.sendout_provider_id && !setup.needs_inhouse_provider ? (
-        <div className="small text-muted mt-2">
+        <div className="text-sm text-[var(--oe-nc-text-muted)] mt-2">
           Load send-out test codes via Advanced → Procedure providers (core).
         </div>
       ) : setup.needs_inhouse_provider && setup.has_starter_panel && !setup.fees_mapped && (setup.unmapped_fee_count ?? 0) > 0 ? (
-        <div className="small text-muted mt-2">
+        <div className="text-sm text-[var(--oe-nc-text-muted)] mt-2">
           {setup.unmapped_fee_count} test(s) need fee schedule mapping.
         </div>
       ) : null}

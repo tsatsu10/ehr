@@ -2,10 +2,11 @@
  * Doctor Desk island styles
  *
  * CASCADE RULE: non-layered BEM CSS only (beats Bootstrap's unlayered styles).
- * Atom styles (oe-nc-queue-card, etc.) live in components.css — do NOT duplicate.
+ * Atom styles (nc-queue-card, etc.) live in components.css — do NOT duplicate.
  */
 
 @import '../../core/tokens.css';
+@import '../../components/ui/ui-primitives.css';
 
 .nc-doctor-queue-panel {
   position: sticky;
@@ -16,30 +17,6 @@
   min-height: 12rem;
 }
 
-.nc-patient-context-banner {
-  border-radius: var(--oe-nc-radius, 0.25rem);
-}
-
-.oe-nc-completion-bar {
-  height: 4px;
-  background: var(--oe-nc-border, #e2e8f0);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.oe-nc-completion-bar__fill {
-  height: 100%;
-  background: var(--oe-nc-warning, #f59e0b);
-  border-radius: 2px;
-  transition: width 0.3s ease;
-}
-
-.oe-nc-doctor-react-active .modal-backdrop {
+.nc-doctor-react-active .modal-backdrop {
   display: block !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .oe-nc-completion-bar__fill {
-    transition: none;
-  }
 }

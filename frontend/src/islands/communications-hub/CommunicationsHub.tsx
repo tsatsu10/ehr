@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button } from '@components/ui/button';
 import { oeFetch } from '@core/oeFetch';
 import { useInterval } from '@core/useInterval';
 import { CommunicationsDetail } from './CommunicationsDetail';
@@ -559,12 +560,12 @@ export function CommunicationsHub({
   ]);
 
   return (
-    <div className={`oe-nc-comm-hub${mobileDetailOpen ? ' is-detail-open' : ''}`} id="nc-communications-hub">
-      <div className="oe-nc-comm-split">
-        <section className="oe-nc-comm-list-pane" aria-label="List">
+    <div className={`nc-comm-hub${mobileDetailOpen ? ' is-detail-open' : ''}`} id="nc-communications-hub">
+      <div className="nc-comm-split">
+        <section className="nc-comm-list-pane" aria-label="List">
           <div
             ref={listRef}
-            className="oe-nc-comm-list"
+            className="nc-comm-list"
             id="nc-comm-list"
             role="listbox"
             tabIndex={0}
@@ -588,16 +589,18 @@ export function CommunicationsHub({
           />
         </section>
 
-        <section className="oe-nc-comm-detail-pane" id="nc-comm-detail-pane" aria-label="Detail">
-          <button
+        <section className="nc-comm-detail-pane" id="nc-comm-detail-pane" aria-label="Detail">
+          <Button
             type="button"
-            className="btn btn-link btn-sm d-md-none oe-nc-comm-back"
+            variant="link"
+            size="sm"
+            className="nc-hidden-md nc-comm-back h-auto p-0"
             id="nc-comm-back"
             onClick={() => setMobileDetailOpen(false)}
           >
             <i className="fa fa-arrow-left" aria-hidden="true" /> Back to list
-          </button>
-          <div id="nc-comm-detail" className="oe-nc-comm-detail">
+          </Button>
+          <div id="nc-comm-detail" className="nc-comm-detail">
             {composeMode === 'new' || composeMode === 'reply' ? (
               <MessageComposePane
                 ajaxUrl={ajaxUrl}
@@ -644,46 +647,49 @@ export function CommunicationsHub({
         </section>
       </div>
 
-      <footer className="oe-nc-comm-footer" id="nc-comm-footer">
+      <footer className="nc-comm-footer" id="nc-comm-footer">
         {showMarkDone && (
-          <button type="button" className="btn btn-primary btn-sm" id="nc-comm-mark-done" onClick={() => { void markMessageDone(); }}>
+          <Button type="button" size="sm" id="nc-comm-mark-done" onClick={() => { void markMessageDone(); }}>
             Mark done
-          </button>
+          </Button>
         )}
         {showReminderComplete && (
-          <button type="button" className="btn btn-primary btn-sm" id="nc-comm-reminder-complete" onClick={() => { void markReminderDone(); }}>
+          <Button type="button" size="sm" id="nc-comm-reminder-complete" onClick={() => { void markReminderDone(); }}>
             Mark completed
-          </button>
+          </Button>
         )}
         {lens === 'reminders' && composeMode === 'idle' && (
           <>
-            <button
+            <Button
               type="button"
-              className="btn btn-outline-secondary btn-sm"
+              variant="outline"
+              size="sm"
               id="nc-comm-create-reminder"
               onClick={openReminderCreate}
             >
               Create reminder
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn btn-outline-secondary btn-sm"
+              variant="outline"
+              size="sm"
               id="nc-comm-view-log"
               onClick={openReminderLog}
             >
               View log
-            </button>
+            </Button>
           </>
         )}
         {lens === 'messages' && composeMode === 'idle' && (
-          <button
+          <Button
             type="button"
-            className="btn btn-outline-primary btn-sm"
+            variant="outline"
+            size="sm"
             id="nc-comm-compose-link"
             onClick={openCompose}
           >
             Compose
-          </button>
+          </Button>
         )}
       </footer>
     </div>

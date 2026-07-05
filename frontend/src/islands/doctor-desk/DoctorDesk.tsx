@@ -1,7 +1,7 @@
 /**
  * DoctorDesk — Phase 3A/3B React island replacing jQuery NewClinicDoctor.
  *
- * Layout: col-lg-8 active pane (left) | col-lg-4 queue (right).
+ * Layout: col-span-12 lg:col-span-8 active pane (left) | col-span-12 lg:col-span-4 queue (right).
  * Mutations: doctor.take, doctor.active, doctor.complete, doctor.reopen,
  * doctor.set_supervisor, doctor.lab_panel_place
  */
@@ -12,7 +12,7 @@ import { resolveActionConflict, type DeskInterrupt } from '@core/deskConflict';
 import { useInterval } from '@core/useInterval';
 import { useQueueVisibilityRefresh } from '@core/useQueueVisibilityRefresh';
 import { usePageHeadingToolbar } from '@core/usePageHeadingToolbar';
-import { getDeskActiveVisitId, setDeskActiveVisitId } from '@core/deskSessionStorage';
+import { getDeskActiveVisitId } from '@core/deskSessionStorage';
 import { useSharedDeviceSession } from '@core/useSharedDeviceSession';
 import type {
   DoctorConsultPayload,
@@ -33,6 +33,8 @@ import { DoctorActivePane, type ActiveMode } from './DoctorActivePane';
 import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
+import { NativeSelect } from '@components/ui/native-select';
+import { showDeskNotice, showDeskToast } from '@components/deskToast';
 import { RoutingModal } from './RoutingModal';
 import { RoutingOverrideModal } from './RoutingOverrideModal';
 import { HardAssignOverrideModal } from './HardAssignOverrideModal';
@@ -50,12 +52,11 @@ import { pickDoctorReadyNotice } from './doctorReadyToast';
 import { printRxWithNotice } from '../pharm-ops/pharmOpsPrintRx';
 import { RxAllergyOverrideModal } from '@components/RxAllergyOverrideModal';
 import { useDoctorShortcutNav } from './useDoctorShortcutNav';
+import { DOCTOR_LEFT_VIA_KEY } from './doctorShortcutNav';
 import { setDoctorDeskCurrencyFormat } from './doctorDeskUtils';
 import type { DoctorSignMeta } from './DoctorPatientBanner';
 
 const STORAGE_KEY = 'doctor_desk_active_visit_id';
-
-type DeskNotice = { message: string; variant: 'success' | 'warning' | 'danger' | 'info' };
 
 function payloadToSignMeta(data: DoctorConsultPayload): DoctorSignMeta {
   return {
@@ -150,7 +151,6 @@ export function DoctorDesk({
     rx_list_url?: string;
   }>({});
   const [interrupt, setInterrupt] = useState<DeskInterrupt | null>(null);
-  const [notice, setNotice] = useState<DeskNotice | null>(null);
 
   const [routingOpen, setRoutingOpen] = useState(false);
   const [labPanelOpen, setLabPanelOpen] = useState(false);
@@ -164,7 +164,7 @@ export function DoctorDesk({
   const [requireOverrideReason, setRequireOverrideReason] = useState(false);
   const [advisoryEnabled, setAdvisoryEnabled] = useState(advisoryRoutingEnabled);
   const [canTakeAssignedOverride, setCanTakeAssignedOverride] = useState(false);
-  const [doctorReadyNotifyEnabled, setDoctorReadyNotifyEnabled] = useState(false);
+  const [, setDoctorReadyNotifyEnabled] = useState(false);
 
   const queueSeq = useRef(0);
   const resultsReadyRef = useRef<Record<number, boolean>>({});
@@ -185,7 +185,7 @@ export function DoctorDesk({
     canRxAllergyOverride,
     preview: activePreview,
     visit: activeVisit,
-    onError: (message) => setNotice({ message, variant: 'danger' }),
+    onError: (message) => showDeskToast(message, 'danger'),
   });
 
   const resetActivePane = useCallback(() => {
@@ -244,14 +244,14 @@ export function DoctorDesk({
       if (resultsReadyBaselinedRef.current) {
         const labNotice = buildLabResultsReadyNotice(
           data.visit.id,
-          data.preview.display_name,
+          data.preview.identity.display_name,
           data.visit.queue_number,
           previousReady,
           isReady,
           labResultsToastEnabled,
         );
         if (labNotice) {
-          setNotice((current) => current ?? labNotice);
+          showDeskNotice(labNotice);
         }
       }
 
@@ -314,7 +314,7 @@ export function DoctorDesk({
         !!data.doctor_ready_notify_enabled,
       );
       if (readyNotice) {
-        setNotice((current) => current ?? readyNotice);
+        showDeskNotice(readyNotice);
       }
       setQueueError(null);
       setLastUpdated(new Date());
@@ -354,7 +354,7 @@ export function DoctorDesk({
         }
 
         if (toastScan.notice) {
-          setNotice((current) => current ?? toastScan.notice!);
+          showDeskNotice(toastScan.notice);
         }
       }
 
@@ -439,7 +439,7 @@ export function DoctorDesk({
         if (leftVia === 'lab') {
           window.sessionStorage.removeItem(DOCTOR_LEFT_VIA_KEY);
           const returnNotice = labReturnNotice(payload.routing_chips);
-          if (returnNotice) setNotice(returnNotice);
+          if (returnNotice) showDeskNotice(returnNotice);
           void fetchQueueRef.current();
           return;
         }
@@ -447,7 +447,7 @@ export function DoctorDesk({
         if (leftVia === 'rx') {
           window.sessionStorage.removeItem(DOCTOR_LEFT_VIA_KEY);
           const returnNotice = rxReturnNotice(payload);
-          if (returnNotice) setNotice(returnNotice);
+          if (returnNotice) showDeskNotice(returnNotice);
           void fetchQueueRef.current();
         }
       });
@@ -572,7 +572,6 @@ export function DoctorDesk({
   const handleRoutingCompleted = useCallback(() => {
     setRoutingOpen(false);
     setInterrupt(null);
-    setNotice(null);
     resetActivePane();
     sharedSession.clearActiveVisitId();
     void fetchQueue();
@@ -580,10 +579,7 @@ export function DoctorDesk({
 
   const handleReopened = useCallback((payload: DoctorConsultPayload) => {
     setReopenTarget(null);
-    setNotice({
-      message: 'Consult reopened — you can order lab or Rx. Signed notes stay locked.',
-      variant: 'success',
-    });
+    showDeskToast('Consult reopened — you can order lab or Rx. Signed notes stay locked.', 'success');
     applyConsultPayload(
       payload,
       setActiveVisit,
@@ -609,7 +605,7 @@ export function DoctorDesk({
   const handleLabPlaced = useCallback((result: LabPanelPlaceResult) => {
     setLabPanelOpen(false);
     setSignMeta((prev) => (prev ? { ...prev, routing_chips: result.routing_chips } : prev));
-    setNotice(labPanelPlaceNotice(result));
+    showDeskNotice(labPanelPlaceNotice(result));
     void fetchQueue();
   }, [fetchQueue]);
 
@@ -619,13 +615,13 @@ export function DoctorDesk({
       ...prev,
       prescriptions: result.prescriptions ?? prev.prescriptions,
     }));
-    setNotice(formularyRxPlaceNotice(result));
+    showDeskNotice(formularyRxPlaceNotice(result));
     void fetchQueue();
   }, [fetchQueue]);
 
   const handlePrintRx = useCallback(async (prescriptionId: number) => {
     await printRxWithNotice(ajaxUrl, csrfToken, prescriptionId, (message) => {
-      setNotice({ variant: 'danger', message });
+      showDeskToast(message, 'danger');
     });
   }, [ajaxUrl, csrfToken]);
 
@@ -653,21 +649,7 @@ export function DoctorDesk({
       : null;
 
   return (
-    <div id="nc-doctor-desk" className="oe-nc-doctor-react-active">
-      {notice && (
-        <div className={`alert alert-${notice.variant} mb-3 d-flex align-items-center`} role="status">
-          <span className="grow">{notice.message}</span>
-          <button
-            type="button"
-            className="close ml-2"
-            aria-label="Dismiss"
-            onClick={() => setNotice(null)}
-          >
-            <span aria-hidden="true">×</span>
-          </button>
-        </div>
-      )}
-
+    <div id="nc-doctor-desk" className="nc-doctor-react-active">
       <DeskInterruptBanner interrupt={interrupt} onDismiss={handleInterruptDismiss} />
 
       {sharedSession.probeData && (
@@ -699,9 +681,9 @@ export function DoctorDesk({
         onRefresh={() => { void fetchQueue(); }}
         trailing={
           multiDoctorFilters ? (
-            <select
-              className="form-control form-control-sm"
-              style={{ maxWidth: 120, height: 28 }}
+            <NativeSelect
+              className="h-7 w-auto"
+              style={{ maxWidth: 120 }}
               id="nc-doctor-scope"
               value={scope}
               onChange={(e) => setScope(e.target.value === 'all' ? 'all' : 'me')}
@@ -709,13 +691,13 @@ export function DoctorDesk({
             >
               <option value="me">Me</option>
               <option value="all">All</option>
-            </select>
+            </NativeSelect>
           ) : undefined
         }
       />
 
-      <div className="row">
-        <div className="col-lg-8 mb-3">
+      <div className="grid grid-cols-12 gap-3">
+        <div className="col-span-12 lg:col-span-8 mb-3">
           <DoctorActivePane
             mode={mode}
             payload={consultPayload}
@@ -734,14 +716,14 @@ export function DoctorDesk({
               consultPayload?.clinical_doc_hub_enabled ? () => setDocFavoritesOpen(true) : undefined
             }
             runShortcut={shortcutNav.runShortcut}
-            onShortcutError={(msg) => setNotice({ message: msg, variant: 'danger' })}
+            onShortcutError={(msg) => showDeskToast(msg, 'danger')}
             onPrintRx={(id) => { void handlePrintRx(id); }}
             onSupervisorUpdated={handleSupervisorUpdated}
-            onSupervisorNotice={(message, variant) => setNotice({ message, variant })}
+            onSupervisorNotice={(message, variant) => showDeskToast(message, variant)}
           />
         </div>
 
-        <div className="col-lg-4 mb-3">
+        <div className="col-span-12 lg:col-span-4 mb-3">
           {doctorRosterEnabled && (
             <DoctorRosterBar
               ajaxUrl={ajaxUrl}
@@ -867,7 +849,7 @@ export function DoctorDesk({
         csrfToken={csrfToken}
         blocked={sharedSession.blocked}
         onClose={() => setDocFavoritesOpen(false)}
-        onError={(msg) => setNotice({ message: msg, variant: 'danger' })}
+        onError={(msg) => showDeskToast(msg, 'danger')}
       />
 
       <RxAllergyOverrideModal

@@ -66,7 +66,7 @@ test.describe('V1.1-BRIDGE smoke', () => {
     expect(listBody.data?.counts?.action ?? 0, JSON.stringify(listBody.data)).toBeGreaterThan(0);
 
     await expect(page.locator('#nc-queue-bridge-root')).toBeVisible({ timeout: 20000 });
-    await expect(page.locator('.oe-nc-queuebridge')).toBeVisible();
+    await expect(page.locator('.nc-queuebridge')).toBeVisible();
     await expect(page.getByText(/Arrived on schedule — no clinical visit/i)).toBeVisible({
       timeout: 20000,
     });

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { cardKindBadgeClass, cardKindLabel } from './reportHubLensMeta';
+import { cardKindBadgeVariant, cardKindLabel } from './reportHubLensMeta';
 import type { ReportHubCard } from './reportHubTypes';
 
 describe('reportHubLensMeta', () => {
-  it('maps card kinds to labels and badge classes', () => {
+  it('maps card kinds to labels and badge variants', () => {
     const kinds: ReportHubCard['kind'][] = ['native', 'stock', 'module', 'placeholder'];
     expect(kinds.map(cardKindLabel)).toEqual([
       'Built-in',
@@ -11,11 +11,11 @@ describe('reportHubLensMeta', () => {
       'Module',
       'Coming soon',
     ]);
-    expect(kinds.map(cardKindBadgeClass)).toEqual([
-      'badge-primary',
-      'badge-secondary',
-      'badge-info',
-      'badge-light text-muted border',
+    expect(kinds.map(cardKindBadgeVariant)).toEqual([
+      'default',
+      'neutral',
+      'info',
+      'outline',
     ]);
   });
 });

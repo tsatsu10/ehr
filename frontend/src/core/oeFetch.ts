@@ -3,7 +3,7 @@
  *
  * Used by all React islands to call `ajax.php?action=<name>` from the New
  * Clinic module. Page context (`ajaxUrl`, `csrfToken`) comes from island
- * `data-props` or `#oe-nc-t1` dataset attributes.
+ * `data-props` or `#nc-t1` dataset attributes.
  *
  * Contract with the backend:
  * - All staff-facing AJAX endpoints are session-authenticated.

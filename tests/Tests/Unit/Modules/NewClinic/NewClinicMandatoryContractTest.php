@@ -607,9 +607,13 @@ class NewClinicMandatoryContractTest extends TestCase
     {
         $banner = $this->readFrontendSource('src/islands/doctor-desk/DoctorPatientBanner.tsx');
         $context = $this->readFrontendSource('src/components/PatientContextBanner.tsx');
+        $consultReady = $this->readFrontendSource('src/components/useConsultReadyBanner.ts');
 
         $this->assertStringContainsString('PatientContextBanner', $banner);
-        $this->assertStringContainsString('oe-nc-patient-banner', $context);
+        $this->assertStringContainsString('id="nc-patient-context-banner"', $banner);
+        $this->assertStringContainsString('useConsultReadyBanner', $banner);
+        $this->assertStringContainsString("data-consult-ready", $consultReady);
+        $this->assertStringContainsString('rounded-lg border border-(--oe-nc-border)', $context);
         $this->assertStringContainsString("layout?: 'full' | 'compact'", $context);
     }
 

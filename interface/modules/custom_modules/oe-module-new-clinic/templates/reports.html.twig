@@ -1,12 +1,12 @@
 {% extends 'base.html.twig' %}
 
 {% block page_heading_actions %}
-<label class="mb-0" for="nc-reports-date">{{ 'Date'|xlt }}</label>
-<input type="date" class="form-control form-control-sm" id="nc-reports-date" style="width:auto;">
-<button type="button" class="btn btn-outline-primary btn-sm" id="nc-reports-refresh">
+<label class="nc-mb-0" for="nc-reports-date">{{ 'Date'|xlt }}</label>
+<input type="date" class="nc-input nc-input-sm" id="nc-reports-date" style="width:auto;">
+<button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary" id="nc-reports-refresh">
     {{ 'Refresh'|xlt }}
 </button>
-<span class="text-muted small" id="nc-reports-updated"></span>
+<span class="nc-text-muted nc-text-sm" id="nc-reports-updated"></span>
 {% endblock %}
 
 {% block content %}

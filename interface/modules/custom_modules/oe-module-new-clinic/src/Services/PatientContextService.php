@@ -13,6 +13,7 @@ namespace OpenEMR\Modules\NewClinic\Services;
 
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Modules\NewClinic\Dto\PatientPreviewDto;
+use OpenEMR\Modules\NewClinic\Services\PatientInsuranceUtil;
 use OpenEMR\Services\PatientService;
 
 class PatientContextService
@@ -234,6 +235,19 @@ class PatientContextService
             if ($hardEnabled && $canHardAssign) {
                 $payload['assignable_doctors'] = $hardAssign->listAssignableDoctors($facilityId);
             }
+
+            $insuranceMeta = QueryUtils::querySingleRow(
+                "SELECT insurance_type, nhis_expiry FROM new_patient_meta WHERE pid = ?",
+                [$pid]
+            ) ?: [];
+            $payload['insurance_effective'] = PatientInsuranceUtil::effectiveType($insuranceMeta);
+            $payload['insurance_label'] = PatientInsuranceUtil::displayLabel($insuranceMeta);
+
+            $unpaidRow = QueryUtils::querySingleRow(
+                "SELECT COUNT(*) AS cnt FROM new_visit WHERE pid = ? AND state = 'closed_unpaid'",
+                [$pid]
+            );
+            $payload['unpaid_visits_count'] = is_array($unpaidRow) ? (int) ($unpaidRow['cnt'] ?? 0) : 0;
         }
 
         return $payload;

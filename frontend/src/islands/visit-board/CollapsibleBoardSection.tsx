@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { Button } from '@components/ui/button';
 
 export interface CollapsibleBoardSectionProps {
   toggleId: string;
@@ -23,8 +24,9 @@ export function CollapsibleBoardSection({
 
   return (
     <div className="mt-4">
-      <button
-        className="btn btn-link p-0"
+      <Button
+        variant="link"
+        className="h-auto p-0"
         type="button"
         id={toggleId}
         {...(dataToggleAttr ? { [dataToggleAttr]: true } : {})}
@@ -33,13 +35,13 @@ export function CollapsibleBoardSection({
         onClick={() => setExpanded((prev) => !prev)}
       >
         {title} ({count})
-      </button>
+      </Button>
       <div
-        className={expanded ? 'mt-2' : 'd-none'}
+        className={expanded ? 'mt-2' : 'hidden'}
         id={sectionId}
         aria-labelledby={toggleId}
       >
-        <div id={listId} className="small">
+        <div id={listId} className="text-sm">
           {children}
         </div>
       </div>

@@ -1,8 +1,20 @@
 import { useMemo } from 'react';
 import { FileSignature, RotateCcw, ShieldAlert } from 'lucide-react';
 import { StatCard } from '@components/StatCard';
+import { ncShadcnTableClass } from '@components/ncTableStyles';
+import { Button } from '@components/ui/button';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@components/ui/table';
 import { SectionBlock, SectionHeading, StatGrid } from './ReportsSections';
-import type { DocumentationIntegrityReportData } from './reportsTypes';
+import type { DocumentationIntegrityReportData, DocumentationIntegritySummary } from './reportsTypes';
 
 const STAT_ICON_SIZE = 18;
 
@@ -41,31 +53,33 @@ export function DocumentationIntegritySection({
     return url.toString();
   }, [ajaxUrl, endDate, facilityId, startDate]);
 
-  const summary = data.summary ?? {};
+  const summary = (data.summary ?? {}) as Partial<DocumentationIntegritySummary>;
 
   return (
     <>
       <SectionBlock>
-        <div className="d-flex flex-wrap align-items-end gap-3 mb-3">
+        <div className="flex flex-wrap items-end gap-3 mb-3">
           <div>
-            <label className="form-label small mb-1" htmlFor="nc-doc-integrity-end-date">
+            <Label className="normal-case font-normal mb-1" htmlFor="nc-doc-integrity-end-date">
               End date
-            </label>
-            <input
+            </Label>
+            <Input
               id="nc-doc-integrity-end-date"
               type="date"
-              className="form-control form-control-sm"
+              className="h-8"
               value={endDate}
               min={startDate}
               onChange={(event) => onEndDateChange(event.target.value)}
             />
           </div>
-          <p className="small text-muted mb-0">
+          <p className="text-sm text-[var(--oe-nc-text-muted)] mb-0">
             Range: {data.start_date} – {data.end_date}
           </p>
-          <a className="btn btn-outline-secondary btn-sm ms-auto" href={exportUrl}>
-            Export CSV
-          </a>
+          <Button variant="outline" size="sm" className="ms-auto" asChild>
+            <a href={exportUrl}>
+              Export CSV
+            </a>
+          </Button>
         </div>
       </SectionBlock>
 
@@ -98,7 +112,7 @@ export function DocumentationIntegritySection({
             icon={<ShieldAlert size={STAT_ICON_SIZE} />}
           />
         </StatGrid>
-        <p className="small text-muted mb-0 mt-2">
+        <p className="text-sm text-[var(--oe-nc-text-muted)] mb-0 mt-2">
           E-sign overrides (workflow bypass) are distinct from signature amendment notes.
         </p>
       </SectionBlock>
@@ -106,23 +120,23 @@ export function DocumentationIntegritySection({
       <SectionBlock>
         <SectionHeading>Visits</SectionHeading>
         {(data.rows ?? []).length === 0 ? (
-          <p className="text-muted mb-0">No documentation integrity events in this range.</p>
+          <p className="text-[var(--oe-nc-text-muted)] mb-0">No documentation integrity events in this range.</p>
         ) : (
-          <div className="table-responsive">
-            <table className="table table-sm table-striped align-middle mb-0">
-              <thead>
-                <tr>
-                  <th>Queue</th>
-                  <th>Patient</th>
-                  <th>Date</th>
-                  <th>E-sign</th>
-                  <th>Amendments</th>
-                  <th>Reopened</th>
-                  <th>Override</th>
-                  <th className="text-right">Encounter</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="overflow-x-auto">
+            <Table className={ncShadcnTableClass({ striped: true, className: 'align-middle mb-0' })}>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Queue</TableHead>
+                  <TableHead>Patient</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>E-sign</TableHead>
+                  <TableHead>Amendments</TableHead>
+                  <TableHead>Reopened</TableHead>
+                  <TableHead>Override</TableHead>
+                  <TableHead className="text-right">Encounter</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {(data.rows ?? []).map((row) => {
                   const esignEvents = row.esign_events ?? [];
                   const amendmentCount = esignEvents.filter((event) => event.event_type === 'amendment').length;
@@ -130,18 +144,18 @@ export function DocumentationIntegritySection({
                   const overrideEvents = row.esign_override_events ?? [];
 
                   return (
-                    <tr key={row.visit_id}>
-                      <td>{row.queue_number}</td>
-                      <td>
+                    <TableRow key={row.visit_id}>
+                      <TableCell>{row.queue_number}</TableCell>
+                      <TableCell>
                         <div>{row.display_name}</div>
-                        <div className="small text-muted">{row.pubpid}</div>
-                      </td>
-                      <td>{row.visit_date}</td>
-                      <td>
+                        <div className="text-sm text-[var(--oe-nc-text-muted)]">{row.pubpid}</div>
+                      </TableCell>
+                      <TableCell>{row.visit_date}</TableCell>
+                      <TableCell>
                         {esignEvents.length === 0 ? (
-                          <span className="text-muted">—</span>
+                          <span className="text-[var(--oe-nc-text-muted)]">—</span>
                         ) : (
-                          <ul className="list-unstyled mb-0 small">
+                          <ul className="list-none m-0 p-0 mb-0 text-sm">
                             {esignEvents.map((event, index) => (
                               <li key={`${row.visit_id}-esign-${index}`}>
                                 {ESIGN_LABELS[event.event_type] ?? event.event_type}
@@ -151,12 +165,12 @@ export function DocumentationIntegritySection({
                             ))}
                           </ul>
                         )}
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         {amendmentCount === 0 ? (
-                          <span className="text-muted">—</span>
+                          <span className="text-[var(--oe-nc-text-muted)]">—</span>
                         ) : (
-                          <ul className="list-unstyled mb-0 small">
+                          <ul className="list-none m-0 p-0 mb-0 text-sm">
                             {esignEvents
                               .filter((event) => event.event_type === 'amendment')
                               .map((event, index) => (
@@ -166,12 +180,12 @@ export function DocumentationIntegritySection({
                               ))}
                           </ul>
                         )}
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         {reopenEvents.length === 0 ? (
-                          <span className="text-muted">—</span>
+                          <span className="text-[var(--oe-nc-text-muted)]">—</span>
                         ) : (
-                          <ul className="list-unstyled mb-0 small">
+                          <ul className="list-none m-0 p-0 mb-0 text-sm">
                             {reopenEvents.map((event, index) => (
                               <li key={`${row.visit_id}-reopen-${index}`}>
                                 {event.from_state ? `${event.from_state} → ` : ''}
@@ -181,12 +195,12 @@ export function DocumentationIntegritySection({
                             ))}
                           </ul>
                         )}
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         {overrideEvents.length === 0 ? (
-                          <span className="text-muted">—</span>
+                          <span className="text-[var(--oe-nc-text-muted)]">—</span>
                         ) : (
-                          <ul className="list-unstyled mb-0 small">
+                          <ul className="list-none m-0 p-0 mb-0 text-sm">
                             {overrideEvents.map((event, index) => (
                               <li key={`${row.visit_id}-override-${index}`}>
                                 {event.reason ?? 'Override'}
@@ -195,21 +209,21 @@ export function DocumentationIntegritySection({
                             ))}
                           </ul>
                         )}
-                      </td>
-                      <td className="text-right">
+                      </TableCell>
+                      <TableCell className="text-right">
                         {row.encounter_url ? (
                           <a href={row.encounter_url} target="_blank" rel="noopener noreferrer">
                             Open
                           </a>
                         ) : (
-                          <span className="text-muted">—</span>
+                          <span className="text-[var(--oe-nc-text-muted)]">—</span>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </SectionBlock>

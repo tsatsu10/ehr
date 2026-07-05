@@ -3,6 +3,9 @@ import { oeFetch } from '@core/oeFetch';
 import { ConfirmModal } from '@components/ConfirmModal';
 import { PatientContextBanner } from '@components/PatientContextBanner';
 import { SlideOver } from '@components/SlideOver';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Button } from '@components/ui/button';
+import { Input } from '@components/ui/input';
 import type { DispenseConfirmResult, DispenseForm } from './pharmOpsTypes';
 import { openDispenseLabelPdf } from './labelPrintUtils';
 import { formatFefoLotLabel } from './pharmOpsLotUtils';
@@ -132,49 +135,51 @@ export function PharmOpsDispenseDrawer({
         footer={success ? (
           <>
             {success.can_print_label && success.sale_id ? (
-              <button
+              <Button
                 type="button"
-                className="btn btn-outline-primary btn-sm mr-2"
+                variant="outline"
+                size="sm"
+                className="mr-2"
                 onClick={() => {
                   void openDispenseLabelPdf(ajaxUrl, csrfToken, success.sale_id);
                 }}
               >
                 Print label
-              </button>
+              </Button>
             ) : null}
-            <button type="button" className="btn btn-primary btn-sm" onClick={onClose}>
+            <Button type="button" size="sm" onClick={onClose}>
               Close
-            </button>
+            </Button>
           </>
         ) : (
           <>
-            <button type="button" className="btn btn-outline-secondary btn-sm" onClick={onClose}>
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn btn-primary btn-sm"
+              size="sm"
               disabled={!canSubmit}
               onClick={() => setConfirmOpen(true)}
             >
               Confirm dispense
-            </button>
+            </Button>
           </>
         )}
       >
         {loading ? (
-          <p className="text-muted mb-0">Loading…</p>
+          <p className="text-[var(--oe-nc-text-muted)] mb-0">Loading…</p>
         ) : loadError ? (
-          <div className="alert alert-danger mb-0">{loadError}</div>
+          <div className={deskCalloutClass('error', 'mb-0')}>{loadError}</div>
         ) : success ? (
-          <div className="alert alert-success mb-0" role="status">
+          <div className={deskCalloutClass('success', 'mb-0')} role="status">
             Dispensed {success.drug_name ?? drugName}
             {success.dispense_status === 'partial' ? ' (partial)' : ''}.
             {success.can_print_label ? (
-              <div className="small mt-1 mb-0">Patient label opened in a new tab when pop-ups are allowed.</div>
+              <div className="text-sm mt-1 mb-0">Patient label opened in a new tab when pop-ups are allowed.</div>
             ) : null}
             {labelError ? (
-              <div className="alert alert-warning mt-2 mb-0 py-2" role="alert">{labelError}</div>
+              <div className={deskCalloutClass('warn', 'mt-2 mb-0 py-2')} role="alert">{labelError}</div>
             ) : null}
           </div>
         ) : form ? (
@@ -188,67 +193,67 @@ export function PharmOpsDispenseDrawer({
                   : (form.safety?.allergies ?? []).slice(0, 3),
               }}
             />
-            <div className="oe-nc-pharmops-dispense__meta small text-muted mb-2">
+            <div className="nc-pharmops-dispense-meta text-sm text-[var(--oe-nc-text-muted)] mb-2">
               {form.visit?.queue_number ? `Q#${form.visit.queue_number}` : null}
               {form.visit?.queue_number && form.visit?.visit_date ? ' · ' : null}
               {form.visit?.visit_date ? `Enc ${form.visit.visit_date}` : null}
             </div>
-            <div className="oe-nc-pharmops-dispense__rx mb-3">
-              <div className="font-weight-bold">{drugName}</div>
+            <div className="nc-pharmops-dispense-rx mb-3">
+              <div className="font-bold">{drugName}</div>
               {form.drug?.sig ? (
-                <div className="small text-muted">{form.drug.sig}</div>
+                <div className="text-sm text-[var(--oe-nc-text-muted)]">{form.drug.sig}</div>
               ) : null}
               {form.drug?.qty_ordered ? (
-                <div className="small text-muted">
+                <div className="text-sm text-[var(--oe-nc-text-muted)]">
                   Prescribed {form.drug.qty_ordered}
                   {form.drug.qty_dispensed ? ` · dispensed ${form.drug.qty_dispensed}` : ''}
                   {form.drug.qty_remaining ? ` · remaining ${form.drug.qty_remaining}` : ''}
                 </div>
               ) : null}
             </div>
-            <div className="oe-nc-pharmops-dispense__stock mb-3 small">
+            <div className="nc-pharmops-dispense-stock mb-3 text-sm">
               <div>
                 QOH: {form.inventory?.on_hand ?? 0}
                 {lotLabel ? ` · FEFO ${lotLabel}` : ''}
               </div>
               {form.inventory?.message ? (
-                <div className="text-warning mt-1">{form.inventory.message}</div>
+                <div className="text-[var(--color-oe-warning,#ea580c)] mt-1">{form.inventory.message}</div>
               ) : null}
             </div>
-            <div className="form-row">
-              <div className="form-group col-md-6">
+            <div className="grid grid-cols-12 gap-3">
+              <div className="nc-form-group col-span-12 md:col-span-6">
                 <label htmlFor="nc-pharmops-dispense-qty">Dispense qty</label>
-                <input
+                <Input
                   id="nc-pharmops-dispense-qty"
                   type="number"
                   min={1}
-                  className="form-control form-control-sm"
+                  className="h-8"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
                 />
               </div>
-              <div className="form-group col-md-6">
+              <div className="nc-form-group col-span-12 md:col-span-6">
                 <label htmlFor="nc-pharmops-dispense-fee">Fee ({currency})</label>
-                <input
+                <Input
                   id="nc-pharmops-dispense-fee"
                   type="number"
                   min={0}
                   step="0.01"
-                  className="form-control form-control-sm"
+                  className="h-8"
                   value={fee}
                   onChange={(e) => setFee(e.target.value)}
                 />
               </div>
             </div>
             {form.safety?.allergy_warning ? (
-              <div className="alert alert-warning py-2 px-3 small">
-                <div className="font-weight-bold mb-1">Allergy warning</div>
+              <div className={deskCalloutClass('warn', 'py-2 px-3 text-sm')}>
+                <div className="font-bold mb-1">Allergy warning</div>
                 <div className="mb-2">
                   Documented allergies may match this medication:
                   {' '}
                   {(form.safety.allergies ?? []).join(', ')}
                 </div>
-                <label className="mb-0 d-flex align-items-center">
+                <label className="mb-0 flex items-center">
                   <input
                     type="checkbox"
                     className="mr-2"
@@ -260,7 +265,7 @@ export function PharmOpsDispenseDrawer({
               </div>
             ) : null}
             {submitError ? (
-              <div className="alert alert-danger py-2 px-3 small mb-0">{submitError}</div>
+              <div className={deskCalloutClass('error', 'py-2 px-3 text-sm mb-0')}>{submitError}</div>
             ) : null}
           </>
         ) : null}
@@ -285,7 +290,7 @@ export function PharmOpsDispenseDrawer({
           qty {quantity}
           {currency ? ` · ${currency}${fee}` : ''}
         </p>
-        {lotLabel ? <p className="small text-muted mb-0">FEFO {lotLabel}</p> : null}
+        {lotLabel ? <p className="text-sm text-[var(--oe-nc-text-muted)] mb-0">FEFO {lotLabel}</p> : null}
       </ConfirmModal>
     </>
   );

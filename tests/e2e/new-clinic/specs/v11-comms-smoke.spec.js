@@ -118,7 +118,7 @@ test.describe('V1.1-COM smoke', () => {
     const rowIndex = (listBody.data?.rows ?? []).findIndex((row) => row.id === fixture.message_id);
     expect(rowIndex, JSON.stringify(listBody.data)).toBeGreaterThanOrEqual(0);
 
-    const messageRow = page.locator('.oe-nc-comm-row').nth(rowIndex);
+    const messageRow = page.locator('.nc-comm-row').nth(rowIndex);
     await expect(messageRow).toBeVisible({ timeout: 30000 });
     await messageRow.click();
     await expect(page.getByText(fixture.message_marker)).toBeVisible({ timeout: 20000 });

@@ -601,31 +601,31 @@ flowchart LR
 
 ### 17.1 Search core (P0)
 
-- [ ] Auto-focus on Front Desk load (M1a-F01)
-- [ ] Debounced search; 8 rows UI / 25 scored server (M1a-F02)
-- [ ] SOUNDEX + phone + startswith ranking (M1a-F03)
-- [ ] Phone format parity (M1a-F04, test #5)
-- [ ] Row shows F05 fields
-- [ ] Zero results → Add new patient CTA on Front Desk (M1a-F09)
-- [ ] P95 ≤ 1.5s @ 10k (M1a-F11)
-- [ ] Facility scope (M1a-F12)
-- [ ] No `dynamic_finder.php` usage
-- [ ] POST-only query string (SEC04)
-- [ ] Rate limit 429 (SEC06)
+- [x] Auto-focus on Front Desk load (M1a-F01)
+- [x] Debounced search; 8 rows UI / 25 scored server (M1a-F02)
+- [x] SOUNDEX + phone + startswith ranking (M1a-F03)
+- [x] Phone format parity (M1a-F04, test #5)
+- [x] Row shows F05 fields (name, sex/age, phone, MRN, completion, last visit, active-visit CC)
+- [x] Zero results → Add new patient CTA on Front Desk (M1a-F09)
+- [ ] P95 ≤ 1.5s @ 10k (M1a-F11) — **needs live G7 benchmark**
+- [x] Facility scope (M1a-F12)
+- [x] No `dynamic_finder.php` usage
+- [x] POST-only query string (SEC04)
+- [ ] Rate limit 429 (SEC06) — **needs live smoke with rate-limit header**
 
 ### 17.2 Preview & embed (P1)
 
-- [ ] Preview pane on row select (M1a-F06)
-- [ ] Start visit on row CTA (M1a-F07)
-- [ ] Open full chart link (M1a-F08)
-- [ ] Triage Find patient embed works
-- [ ] Scheduled chips when integration ON
+- [x] Preview pane on row select (M1a-F06)
+- [x] Start visit on row CTA (M1a-F07)
+- [x] Open full chart link (M1a-F08)
+- [x] Triage Find patient embed works
+- [x] Scheduled chips when integration ON
 
 ### 17.3 Regression
 
-- [ ] Dup check still independent (`patients.dup_check`)
-- [ ] Patient Registry not affected
-- [ ] Core `PatientService::insert` unchanged
+- [x] Dup check still independent (`patients.dup_check`)
+- [x] Patient Registry not affected
+- [x] Core `PatientService::insert` unchanged
 
 ---
 

@@ -64,7 +64,7 @@ test.describe('New Clinic module pages (authenticated)', () => {
       expect(response?.status(), `${label} HTTP status`).toBe(200);
 
       const html = await page.content();
-      const hasShell = html.includes('oe-nc-t1') || html.includes('id="oe-nc-t1"');
+      const hasShell = html.includes('nc-t1') || html.includes('id="nc-t1"');
       const killSwitch = html.includes('react-island-disabled');
       const unauthorized = /unauthorized|Authentication Error/i.test(html);
 

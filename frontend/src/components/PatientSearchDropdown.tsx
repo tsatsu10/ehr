@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Input } from '@components/ui/input';
+import { cn } from '@/lib/utils';
 import { usePatientSearch } from '@core/usePatientSearch';
 import type { PatientSearchRow } from '@core/types';
 
@@ -22,9 +24,9 @@ export function PatientSearchDropdown({
   resultsId,
   placeholder = 'Name or MRN',
   disabled = false,
-  inputClassName = 'form-control form-control-sm',
+  inputClassName,
   label,
-  labelClassName = 'small font-weight-bold mb-1',
+  labelClassName = 'text-sm font-bold mb-1',
   onSelectPatient,
 }: PatientSearchDropdownProps) {
   const [open, setOpen] = useState(false);
@@ -43,9 +45,9 @@ export function PatientSearchDropdown({
           {label}
         </label>
       )}
-      <input
+      <Input
         type="search"
-        className={inputClassName}
+        className={cn('h-8', inputClassName)}
         id={inputId}
         placeholder={placeholder}
         autoComplete="off"
@@ -62,23 +64,23 @@ export function PatientSearchDropdown({
       />
       {open && query.length >= 2 && (
         <div
-          className="list-group position-absolute w-100 shadow-sm"
+          className="nc-list-group absolute w-full shadow-sm"
           id={resultsId}
           style={{ zIndex: 20, maxHeight: 240, overflowY: 'auto' }}
         >
           {results.length === 0 ? (
-            <div className="list-group-item text-muted">No patients found</div>
+            <div className="nc-list-group-item text-[var(--oe-nc-text-muted)]">No patients found</div>
           ) : (
             results.map((row) => (
               <button
                 key={row.pid}
                 type="button"
-                className="list-group-item list-group-item-action text-left"
+                className="nc-list-group-item nc-list-group-item-action text-left"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handlePick(row)}
               >
                 <strong>{row.display_name}</strong>
-                <div className="small text-muted">MRN {row.pubpid}</div>
+                {row.pubpid && <span className="text-[var(--oe-nc-text-muted)] ml-2">{row.pubpid}</span>}
               </button>
             ))
           )}

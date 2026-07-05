@@ -1,12 +1,13 @@
+import { Button } from '@components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@components/ui/dialog';
-import '@components/ui/ui-primitives.css';
 import type { SchedulingLabels } from './schedulingTypes';
 
 export type RecurringEditScope = 'current' | 'future' | 'all';
@@ -27,47 +28,50 @@ export function CalendarRecurringScopeModal({
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onCancel(); }}>
       <DialogContent
-        className="oe-nc-recurr-scope-modal"
+        className="nc-recurr-scope-modal"
         aria-labelledby="nc-recurr-scope-title"
       >
         <DialogHeader>
           <DialogTitle id="nc-recurr-scope-title">
             {labels.recurringScopeTitle}
           </DialogTitle>
-          <DialogClose className="oe-nc-dialog__close" aria-label="Close">
+          <DialogClose aria-label="Close">
             <span aria-hidden="true">&times;</span>
           </DialogClose>
         </DialogHeader>
-        <div className="oe-nc-dialog__body">
+        <DialogBody>
           <p className="mb-3">{labels.recurringScopePrompt}</p>
-          <div className="d-flex flex-column">
-            <button
+          <div className="flex flex-col gap-2">
+            <Button
               type="button"
-              className="btn btn-outline-primary mb-2 text-left"
+              variant="outline"
+              className="justify-start w-full"
               onClick={() => onSelect('current')}
             >
               {labels.recurringScopeCurrent}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn btn-outline-primary mb-2 text-left"
+              variant="outline"
+              className="justify-start w-full"
               onClick={() => onSelect('future')}
             >
               {labels.recurringScopeFuture}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn btn-outline-primary text-left"
+              variant="outline"
+              className="justify-start w-full"
               onClick={() => onSelect('all')}
             >
               {labels.recurringScopeAll}
-            </button>
+            </Button>
           </div>
-        </div>
+        </DialogBody>
         <DialogFooter>
-          <button type="button" className="btn btn-secondary" onClick={onCancel}>
+          <Button type="button" variant="secondary" onClick={onCancel}>
             {labels.cancel}
-          </button>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

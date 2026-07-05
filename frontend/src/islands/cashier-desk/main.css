@@ -1,4 +1,5 @@
 @import '../../core/tokens.css';
+@import '../../components/ui/ui-primitives.css';
 
 .nc-cashier-queue-panel {
   position: sticky;
@@ -9,32 +10,6 @@
   min-height: 12rem;
 }
 
-.nc-patient-context-banner {
-  border-radius: var(--oe-nc-radius, 0.25rem);
-}
-
-.oe-nc-cashier-react-active .modal-backdrop {
+.nc-cashier-react-active .modal-backdrop {
   display: block !important;
-}
-
-#nc-cashier-pay-confirm-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 1070;
-  width: 100%;
-  height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
-#nc-cashier-pay-confirm-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 1065;
-  width: 100vw;
-  height: 100vh;
-  background-color: #000;
-  opacity: 0.5;
 }

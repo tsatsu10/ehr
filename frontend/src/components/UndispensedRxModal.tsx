@@ -1,4 +1,8 @@
 import { useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Button } from '@components/ui/button';
+import { Label } from '@components/ui/label';
+import { Textarea } from '@components/ui/textarea';
 import type { PatientPreview } from '@core/types';
 import { ConfirmModal, IdentityConfirmBanner } from './ConfirmModal';
 
@@ -70,37 +74,37 @@ export function UndispensedRxModal({
       )}
     >
       <p className="mb-3">{countLabel}</p>
-      <p className="small text-muted mb-3">
+      <p className="text-sm text-[var(--oe-nc-text-muted)] mb-3">
         Dispense all prescriptions before completing pharmacy, or use Skip to payment with a reason.
       </p>
       <div className="mb-3">
-        <button
+        <Button
           type="button"
-          className="btn btn-outline-primary btn-sm"
+          variant="outline"
+          size="sm"
           disabled={submitting}
           onClick={onOpenDispense}
         >
           Open dispense
-        </button>
+        </Button>
       </div>
       {canOverride ? (
-        <div className="form-group mb-0">
-          <label htmlFor="nc-pharmacy-undispensed-reason">Override reason</label>
-          <textarea
-            className="form-control"
+        <div className="space-y-1.5 mb-0">
+          <Label htmlFor="nc-pharmacy-undispensed-reason" className="normal-case">Override reason</Label>
+          <Textarea
             id="nc-pharmacy-undispensed-reason"
             rows={3}
             maxLength={200}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
-          <p className="small text-muted mb-0 mt-1">
+          <p className="text-sm text-[var(--oe-nc-text-muted)] mb-0 mt-1">
             Supervisor override — reason is recorded in the audit log.
           </p>
         </div>
       ) : null}
-      {reasonError ? <div className="alert alert-danger mt-2 mb-0 py-2">{reasonError}</div> : null}
-      {error ? <div className="alert alert-danger mt-2 mb-0 py-2">{error}</div> : null}
+      {reasonError ? <div className={deskCalloutClass('error', 'mt-2 mb-0 py-2')}>{reasonError}</div> : null}
+      {error ? <div className={deskCalloutClass('error', 'mt-2 mb-0 py-2')}>{error}</div> : null}
     </ConfirmModal>
   );
 }

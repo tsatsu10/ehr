@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
 import { ConfirmModal } from '@components/ConfirmModal';
 import { SlideOver } from '@components/SlideOver';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Button } from '@components/ui/button';
+import { Input } from '@components/ui/input';
 import type { DestroyConfirmResult, DestroyForm, DestroyLotContext } from './pharmOpsTypes';
 
 interface PharmOpsDestroyDrawerProps {
@@ -129,22 +132,22 @@ export function PharmOpsDestroyDrawer({
       width="md"
     >
       {loading ? (
-        <p className="text-muted">Loading lot…</p>
+        <p className="text-[var(--oe-nc-text-muted)]">Loading lot…</p>
       ) : null}
 
       {loadError ? (
-        <div className="alert alert-warning" role="alert">{loadError}</div>
+        <div className={deskCalloutClass('warn')} role="alert">{loadError}</div>
       ) : null}
 
       {success ? (
-        <div className="alert alert-success" role="status">
+        <div className={deskCalloutClass('success')} role="status">
           Lot {success.lot_number} marked destroyed on {success.destroy_date}.
         </div>
       ) : null}
 
       {lot && !success ? (
-        <div className="oe-nc-pharmops-destroy-form">
-          <dl className="oe-nc-pharmops-destroy-form__meta mb-3">
+        <div className="nc-pharmops-destroy-form">
+          <dl className="nc-pharmops-destroy-form-meta mb-3">
             <div>
               <dt>Lot number</dt>
               <dd>{lot.lot_number || '—'}</dd>
@@ -176,69 +179,70 @@ export function PharmOpsDestroyDrawer({
           </dl>
 
           {!canDestroy ? (
-            <div className="alert alert-secondary" role="status">
+            <div className={deskCalloutClass('info')} role="status">
               You do not have permission to destroy lots. Ask a pharmacy lead or administrator.
             </div>
           ) : (
             <>
-              <div className="form-group">
+              <div className="nc-form-group">
                 <label htmlFor="nc-pharmops-destroy-date">Date destroyed</label>
-                <input
+                <Input
                   id="nc-pharmops-destroy-date"
                   type="date"
-                  className="form-control form-control-sm"
+                  className="h-8"
                   value={destroyDate}
                   onChange={(event) => setDestroyDate(event.target.value)}
                 />
               </div>
-              <div className="form-group">
+              <div className="nc-form-group">
                 <label htmlFor="nc-pharmops-destroy-method">Method of destruction</label>
-                <input
+                <Input
                   id="nc-pharmops-destroy-method"
                   type="text"
-                  className="form-control form-control-sm"
+                  className="h-8"
                   maxLength={250}
                   value={method}
                   onChange={(event) => setMethod(event.target.value)}
                 />
               </div>
-              <div className="form-group">
+              <div className="nc-form-group">
                 <label htmlFor="nc-pharmops-destroy-witness">Witness</label>
-                <input
+                <Input
                   id="nc-pharmops-destroy-witness"
                   type="text"
-                  className="form-control form-control-sm"
+                  className="h-8"
                   maxLength={250}
                   value={witness}
                   onChange={(event) => setWitness(event.target.value)}
                 />
               </div>
-              <div className="form-group">
+              <div className="nc-form-group">
                 <label htmlFor="nc-pharmops-destroy-notes">Notes</label>
-                <input
+                <Input
                   id="nc-pharmops-destroy-notes"
                   type="text"
-                  className="form-control form-control-sm"
+                  className="h-8"
                   maxLength={250}
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
                 />
               </div>
               {submitError ? (
-                <div className="alert alert-warning" role="alert">{submitError}</div>
+                <div className={deskCalloutClass('warn')} role="alert">{submitError}</div>
               ) : null}
-              <div className="d-flex justify-content-end gap-2">
-                <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="secondary" size="sm" onClick={onClose}>
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className="btn btn-danger btn-sm"
+                  variant="danger"
+                  size="sm"
                   disabled={!canSubmit}
                   onClick={() => setConfirmOpen(true)}
                 >
                   Destroy lot
-                </button>
+                </Button>
               </div>
             </>
           )}

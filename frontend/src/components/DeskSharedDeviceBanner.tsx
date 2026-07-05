@@ -1,3 +1,5 @@
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Button } from '@components/ui/button';
 import type { SharedDeviceProbeData } from '@core/useSharedDeviceSession';
 
 interface DeskSharedDeviceBannerProps {
@@ -26,46 +28,49 @@ export function DeskSharedDeviceBanner({
   return (
     <div
       id={`${prefix}-session-banner`}
-      className="alert alert-danger mb-3 nc-shared-device-banner"
+      className={deskCalloutClass('error', 'mb-3 nc-shared-device-banner')}
       role="alert"
       aria-live="assertive"
     >
-      <div className="d-flex justify-content-between align-items-start flex-wrap">
+      <div className="flex justify-between items-start flex-wrap">
         <div id={`${prefix}-session-banner-text`}>
           <strong>Browser session is on another patient.</strong>
           {visit && (
-            <div className="small mt-1">
+            <div className="text-sm mt-1">
               Desk visit: {visit.display_name || '—'} · Queue #{visit.queue_number ?? '—'}
             </div>
           )}
           {session && (
-            <div className="small">
+            <div className="text-sm">
               Session patient: {session.display_name || '—'}
               {session.pubpid ? ` · MRN ${session.pubpid}` : ''}
             </div>
           )}
-          <div className="small mt-1">{hint}</div>
+          <div className="text-sm mt-1">{hint}</div>
         </div>
-        <div className="mt-2 mt-md-0 text-nowrap">
+        <div className="mt-2 md:mt-0 text-nowrap">
           {showRestore && (
-            <button
+            <Button
               type="button"
               id={`${prefix}-restore-session`}
-              className="btn btn-sm btn-outline-light mr-2"
+              variant="outline"
+              size="sm"
+              className="mr-2 border-white/80 text-white hover:bg-white/10 hover:text-white"
               disabled={restoring}
               onClick={onRestore}
             >
               {restoring ? 'Restoring…' : 'Restore encounter session'}
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             type="button"
             id={`${prefix}-return-queue`}
-            className="btn btn-sm btn-outline-secondary"
+            variant="outline"
+            size="sm"
             onClick={onReturnToQueue}
           >
             Return to queue
-          </button>
+          </Button>
         </div>
       </div>
     </div>

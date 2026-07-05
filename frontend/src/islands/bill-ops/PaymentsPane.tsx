@@ -1,10 +1,24 @@
 import { useCallback, useEffect, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { PaginationBar } from '@components/PaginationBar';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
 import { oeFetch } from '@core/oeFetch';
 import { ReprintReceiptModal } from '@islands/chart-depth/ReprintReceiptModal';
 import type { ReceiptReprintPayload } from '@islands/chart-depth/chartDepthTypes';
 import type { BillOpsHubProps, PaymentRow, PaymentsSearchData } from './billOpsTypes';
 import { formatBillMoney, localDateString } from './billOpsFormatters';
+import { ncShadcnTableClass, ncTableSelectedRowClass } from '@components/ncTableStyles';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@components/ui/table';
 
 const PAGE_SIZE = 25;
 
@@ -108,11 +122,11 @@ export function PaymentsPane({ fetchOptions, facilityId }: Props) {
   };
 
   return (
-    <div className="oe-nc-billops-pane">
-      <div className="form-inline mb-3 flex-wrap">
-        <input
+    <div className="nc-billops-pane">
+      <div className="flex flex-wrap items-center gap-2 mb-3 flex-wrap">
+        <Input
           type="search"
-          className="form-control form-control-sm mr-2 mb-1"
+          className="h-8 w-auto mr-2 mb-1"
           placeholder="Receipt # / MRN / name"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -120,54 +134,55 @@ export function PaymentsPane({ fetchOptions, facilityId }: Props) {
             if (e.key === 'Enter') runSearch();
           }}
         />
-        <input
+        <Input
           type="date"
-          className="form-control form-control-sm mr-2 mb-1"
+          className="h-8 w-auto mr-2 mb-1"
           value={date}
           onChange={(e) => setDate(e.target.value)}
         />
-        <button
+        <Button
           type="button"
-          className="btn btn-primary btn-sm mb-1"
+          size="sm"
+          className="mb-1"
           onClick={runSearch}
           disabled={loading}
         >
           Search
-        </button>
+        </Button>
       </div>
 
-      {error && <div className="alert alert-warning py-2">{error}</div>}
+      {error && <div className={deskCalloutClass('warn', 'py-2')}>{error}</div>}
 
-      <table className="table table-sm table-hover">
-        <thead>
-          <tr>
-            <th scope="col">Receipt</th>
-            <th scope="col">Patient</th>
-            <th scope="col" className="text-right">Amount</th>
-            <th scope="col">Cashier</th>
-            <th scope="col">Visit</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table className={ncShadcnTableClass({ hover: true })}>
+        <TableHeader>
+          <TableRow>
+            <TableHead scope="col">Receipt</TableHead>
+            <TableHead scope="col">Patient</TableHead>
+            <TableHead scope="col" className="text-right">Amount</TableHead>
+            <TableHead scope="col">Cashier</TableHead>
+            <TableHead scope="col">Visit</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {rows.map((row) => (
-            <tr
+            <TableRow
               key={row.id}
-              className={selected?.id === row.id ? 'table-active' : undefined}
+              className={selected?.id === row.id ? ncTableSelectedRowClass : undefined}
               onClick={() => setSelected(row)}
               style={{ cursor: 'pointer' }}
             >
-              <td>
+              <TableCell>
                 {row.receipt_number}
-                {row.reversed_at && <span className="badge badge-secondary ml-1">Reversed</span>}
-              </td>
-              <td>{row.patient_name}</td>
-              <td className="text-right">{formatBillMoney(row.amount_paid)}</td>
-              <td>{row.cashier ?? '—'}</td>
-              <td>#{row.queue_number}</td>
-            </tr>
+                {row.reversed_at && <Badge variant="neutral" className="ml-1">Reversed</Badge>}
+              </TableCell>
+              <TableCell>{row.patient_name}</TableCell>
+              <TableCell className="text-right">{formatBillMoney(row.amount_paid)}</TableCell>
+              <TableCell>{row.cashier ?? '—'}</TableCell>
+              <TableCell>#{row.queue_number}</TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
 
       <PaginationBar
         page={page}
@@ -179,47 +194,51 @@ export function PaymentsPane({ fetchOptions, facilityId }: Props) {
 
       {selected && (
         <div className="border rounded p-3 mt-2">
-          <h3 className="h6">Payment detail</h3>
-          <p className="small mb-2">
+          <h3 className="text-sm font-semibold">Payment detail</h3>
+          <p className="text-sm mb-2">
             Receipt {selected.receipt_number} · Visit #{selected.queue_number} ·{' '}
             {formatBillMoney(selected.amount_paid)}
             {selected.posted_payment_id ? (
-              <span className="text-muted"> · Posted #{selected.posted_payment_id}</span>
+              <span className="text-[var(--oe-nc-text-muted)]"> · Posted #{selected.posted_payment_id}</span>
             ) : null}
           </p>
           {selected.reversed_at ? (
-            <p className="small text-muted mb-0">Reversed: {selected.reversal_reason}</p>
+            <p className="text-sm text-[var(--oe-nc-text-muted)] mb-0">Reversed: {selected.reversal_reason}</p>
           ) : (
-            <div className="d-flex flex-wrap align-items-start">
+            <div className="flex flex-wrap items-start">
               <div className="mr-3 mb-2">
-                <div className="form-group mb-2">
-                  <label htmlFor="nc-billops-reverse-reason">Reverse reason</label>
-                  <input
+                <div className="space-y-1.5 mb-2">
+                  <Label htmlFor="nc-billops-reverse-reason">Reverse reason</Label>
+                  <Input
                     id="nc-billops-reverse-reason"
                     type="text"
-                    className="form-control form-control-sm"
+                    className="h-8"
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                   />
                 </div>
-                <button
+                <Button
                   type="button"
-                  className="btn btn-outline-danger btn-sm"
+                  variant="outline"
+                  size="sm"
+                  className="border-red-300 text-red-700 hover:bg-red-50"
                   onClick={() => void reversePayment()}
                   disabled={reversing}
                 >
                   {reversing ? 'Reversing…' : 'Reverse payment'}
-                </button>
+                </Button>
               </div>
               {selected.can_reprint && (
-                <button
+                <Button
                   type="button"
-                  className="btn btn-outline-secondary btn-sm mb-2"
+                  variant="outline"
+                  size="sm"
+                  className="mb-2"
                   onClick={() => void reprintReceipt()}
                   disabled={reprintSubmitting}
                 >
                   {reprintSubmitting ? 'Loading…' : 'Reprint receipt'}
-                </button>
+                </Button>
               )}
             </div>
           )}

@@ -1,4 +1,16 @@
 import { useEffect, useRef } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { ncShadcnTableClass } from '@components/ncTableStyles';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@components/ui/table';
 import type {
   ClinicalBackgroundSection,
   ClinicalData,
@@ -34,32 +46,34 @@ function ClinicalListSectionBlock({
 
   let body: React.ReactNode;
   if (section.undocumented) {
-    body = <p className="text-warning small mb-2">Allergies not documented.</p>;
+    body = <p className="text-[var(--color-oe-warning,#ea580c)] text-sm mb-2">Allergies not documented.</p>;
   } else if (section.none_known) {
-    body = <p className="text-muted mb-0">No known drug allergies.</p>;
+    body = <p className="text-[var(--oe-nc-text-muted)] mb-0">No known drug allergies.</p>;
   } else if (items.length) {
     body = (
-      <ul className="list-unstyled mb-0">
+      <ul className="list-none m-0 p-0 mb-0">
         {items.map((item, idx) => (
           <li key={`${item.title ?? idx}`} className="mb-2">
             <strong>{item.title}</strong>
-            {item.detail && <div className="small text-muted">{item.detail}</div>}
+            {item.detail && <div className="text-sm text-[var(--oe-nc-text-muted)]">{item.detail}</div>}
           </li>
         ))}
       </ul>
     );
   } else {
-    body = <p className="text-muted mb-0">{emptyLabel}</p>;
+    body = <p className="text-[var(--oe-nc-text-muted)] mb-0">{emptyLabel}</p>;
   }
 
   return (
     <section className="border rounded p-3 mb-3" id={section.anchor ?? undefined}>
-      <div className="d-flex justify-content-between align-items-start mb-2">
+      <div className="flex justify-between items-start mb-2">
         <h5 className="mb-0">{title}</h5>
         {section.editor_url && (
-          <a className="btn btn-sm btn-outline-secondary" href={section.editor_url} target="_top">
-            Edit
-          </a>
+          <Button variant="outline" size="sm" asChild>
+            <a href={section.editor_url} target="_top">
+              Edit
+            </a>
+          </Button>
         )}
       </div>
       {body}
@@ -72,25 +86,27 @@ function ClinicalBackground({ section }: { section: ClinicalBackgroundSection })
 
   return (
     <section className="border rounded p-3 mb-3" id={section.anchor ?? 'clinical-background'}>
-      <div className="d-flex justify-content-between align-items-start mb-2">
+      <div className="flex justify-between items-start mb-2">
         <h5 className="mb-0">Background</h5>
         {section.editor_url && (
-          <a className="btn btn-sm btn-outline-secondary" href={section.editor_url} target="_top">
-            Edit history
-          </a>
+          <Button variant="outline" size="sm" asChild>
+            <a href={section.editor_url} target="_top">
+              Edit history
+            </a>
+          </Button>
         )}
       </div>
       {lines.length ? (
         <dl className="mb-0">
           {lines.map((line) => (
             <div key={line.label ?? line.value}>
-              <dt className="small text-muted">{line.label}</dt>
+              <dt className="text-sm text-[var(--oe-nc-text-muted)]">{line.label}</dt>
               <dd className="mb-2">{line.value}</dd>
             </div>
           ))}
         </dl>
       ) : (
-        <p className="text-muted mb-0">No background documented.</p>
+        <p className="text-[var(--oe-nc-text-muted)] mb-0">No background documented.</p>
       )}
     </section>
   );
@@ -112,15 +128,15 @@ function ClinicalVitals({ section }: { section: ClinicalVitalsSection }) {
           {section.abnormal && (section.warnings ?? []).length > 0 && (
             <div className="mt-2">
               {(section.warnings ?? []).map((w) => (
-                <span key={w} className="badge badge-danger mr-1">
+                <Badge key={w} variant="danger" className="mr-1">
                   {w}
-                </span>
+                </Badge>
               ))}
             </div>
           )}
         </>
       ) : (
-        <p className="text-muted mb-0">No vitals recorded today.</p>
+        <p className="text-[var(--oe-nc-text-muted)] mb-0">No vitals recorded today.</p>
       )}
     </section>
   );
@@ -133,29 +149,31 @@ function ClinicalThisVisit({ section }: { section: ClinicalThisVisitSection }) {
 
   return (
     <section className="border rounded p-3 mb-3" id={section.anchor ?? 'clinical-encounter-forms'}>
-      <div className="d-flex justify-content-between align-items-start mb-2 flex-wrap">
+      <div className="flex justify-between items-start mb-2 flex-wrap">
         <h5 className="mb-0">This visit</h5>
         {section.open_encounter_url && (
-          <a className="btn btn-sm btn-primary" href={section.open_encounter_url} target="_top">
-            Open encounter
-          </a>
+          <Button size="sm" asChild>
+            <a href={section.open_encounter_url} target="_top">
+              Open encounter
+            </a>
+          </Button>
         )}
       </div>
       {forms.length ? (
-        <div className="table-responsive">
-          <table className="table table-sm mb-0">
-            <thead>
-              <tr>
-                <th>Form</th>
-                <th>Date</th>
-                <th>Author</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
+        <div className="overflow-x-auto">
+          <Table className={ncShadcnTableClass({ className: 'mb-0' })}>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Form</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Author</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {forms.map((form, idx) => (
-                <tr key={`${form.title ?? idx}-${form.date ?? ''}`}>
-                  <td>
+                <TableRow key={`${form.title ?? idx}-${form.date ?? ''}`}>
+                  <TableCell>
                     {form.form_url ? (
                       <a href={form.form_url} target="_top">
                         {form.title ?? 'Form'}
@@ -163,21 +181,21 @@ function ClinicalThisVisit({ section }: { section: ClinicalThisVisitSection }) {
                     ) : (
                       form.title ?? 'Form'
                     )}
-                  </td>
-                  <td className="text-muted small">{form.date ?? '—'}</td>
-                  <td className="text-muted small">{form.author ?? '—'}</td>
-                  <td className="text-right">
-                    <span className={`badge badge-${form.signed ? 'success' : 'secondary'}`}>
+                  </TableCell>
+                  <TableCell className="text-[var(--oe-nc-text-muted)] text-sm">{form.date ?? '—'}</TableCell>
+                  <TableCell className="text-[var(--oe-nc-text-muted)] text-sm">{form.author ?? '—'}</TableCell>
+                  <TableCell className="text-right">
+                    <Badge variant={form.signed ? 'success' : 'neutral'}>
                       {form.signed ? 'Signed' : 'Unsigned'}
-                    </span>
-                  </td>
-                </tr>
+                    </Badge>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       ) : (
-        <p className="text-muted mb-0">No encounter forms recorded yet.</p>
+        <p className="text-[var(--oe-nc-text-muted)] mb-0">No encounter forms recorded yet.</p>
       )}
     </section>
   );
@@ -196,16 +214,18 @@ function ReferralsStrip({
     : 'Referrals on file for this visit.';
 
   return (
-    <section className="border rounded p-3 mb-3 bg-light" id="nc-clinical-referrals-strip">
-      <div className="d-flex flex-wrap justify-content-between align-items-start">
-        <div className="flex-grow-1 mb-2 mb-md-0">
+    <section className="border rounded p-3 mb-3 bg-[var(--oe-nc-bg-tint)]" id="nc-clinical-referrals-strip">
+      <div className="flex flex-wrap justify-between items-start">
+        <div className="flex-grow mb-2 md:mb-0">
           <h5 className="mb-1">Referrals</h5>
-          <div className="small">→ {summary}</div>
+          <div className="text-sm">→ {summary}</div>
         </div>
         {strip.open_referrals_url && (
-          <a className="btn btn-sm btn-outline-primary" href={strip.open_referrals_url} target="_top">
-            Open referrals
-          </a>
+          <Button variant="outline" size="sm" asChild>
+            <a href={strip.open_referrals_url} target="_top">
+              Open referrals
+            </a>
+          </Button>
         )}
       </div>
     </section>
@@ -223,42 +243,46 @@ function LabsStrip({
 
   return (
     <section
-      className={`border rounded p-3 mb-3 bg-light${strip.pending_warning ? ' border-warning' : ''}`}
+      className={`border rounded p-3 mb-3 bg-[var(--oe-nc-bg-tint)]${strip.pending_warning ? ' border-warning' : ''}`}
       id="nc-clinical-labs-strip"
     >
-      <div className="d-flex flex-wrap justify-content-between align-items-start">
-        <div className="flex-grow-1 mb-2 mb-md-0">
+      <div className="flex flex-wrap justify-between items-start">
+        <div className="flex-grow mb-2 md:mb-0">
           <h5 className="mb-1">Labs</h5>
-          <div className="small">{strip.labs_strip_label ?? 'Labs on file for this visit.'}</div>
+          <div className="text-sm">{strip.labs_strip_label ?? 'Labs on file for this visit.'}</div>
         </div>
-        <div className="d-flex flex-wrap">
+        <div className="flex flex-wrap">
           {strip.lab_ops_url && (
-            <a className="btn btn-sm btn-outline-primary mr-2 mb-1" href={strip.lab_ops_url} target="_top">
-              Open in Lab Ops
-            </a>
+            <Button variant="outline" size="sm" className="mr-2 mb-1" asChild>
+              <a href={strip.lab_ops_url} target="_top">
+                Open in Lab Ops
+              </a>
+            </Button>
           )}
           {strip.place_order_url && (
-            <a className="btn btn-sm btn-outline-primary mr-2 mb-1" href={strip.place_order_url} target="_top">
-              Place lab order
-            </a>
+            <Button variant="outline" size="sm" className="mr-2 mb-1" asChild>
+              <a href={strip.place_order_url} target="_top">
+                Place lab order
+              </a>
+            </Button>
           )}
           {strip.pending_orders_url && (
-            <a
-              className="btn btn-sm btn-outline-secondary mr-2 mb-1"
-              href={strip.pending_orders_url}
-              target="_top"
-            >
-              Pending orders
-            </a>
+            <Button variant="outline" size="sm" className="mr-2 mb-1" asChild>
+              <a href={strip.pending_orders_url} target="_top">
+                Pending orders
+              </a>
+            </Button>
           )}
           {strip.view_trends_anchor && (
-            <button
+            <Button
               type="button"
-              className="btn btn-sm btn-outline-secondary mb-1"
+              variant="outline"
+              size="sm"
+              className="mb-1"
               onClick={() => onScrollToAnchor(strip.view_trends_anchor ?? '')}
             >
               View trends
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -277,28 +301,32 @@ function MedsStrip({
 
   return (
     <section
-      className={`border rounded p-3 mb-3 bg-light${strip.undispensed_warning ? ' border-warning' : ''}`}
+      className={`border rounded p-3 mb-3 bg-[var(--oe-nc-bg-tint)]${strip.undispensed_warning ? ' border-warning' : ''}`}
       id="nc-clinical-meds-strip"
     >
-      <div className="d-flex flex-wrap justify-content-between align-items-start">
-        <div className="flex-grow-1 mb-2 mb-md-0">
+      <div className="flex flex-wrap justify-between items-start">
+        <div className="flex-grow mb-2 md:mb-0">
           <h5 className="mb-1">Medications</h5>
-          <div className="small">{strip.meds_strip_label ?? 'Medications on file for this visit.'}</div>
+          <div className="text-sm">{strip.meds_strip_label ?? 'Medications on file for this visit.'}</div>
         </div>
-        <div className="d-flex flex-wrap">
+        <div className="flex flex-wrap">
           {strip.pharm_ops_url && (
-            <a className="btn btn-sm btn-outline-primary mr-2 mb-1" href={strip.pharm_ops_url} target="_top">
-              Open in Pharm Ops
-            </a>
+            <Button variant="outline" size="sm" className="mr-2 mb-1" asChild>
+              <a href={strip.pharm_ops_url} target="_top">
+                Open in Pharm Ops
+              </a>
+            </Button>
           )}
           {strip.view_meds_anchor && (
-            <button
+            <Button
               type="button"
-              className="btn btn-sm btn-outline-secondary mb-1"
+              variant="outline"
+              size="sm"
+              className="mb-1"
               onClick={() => onScrollToAnchor(strip.view_meds_anchor ?? '')}
             >
               View meds
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -329,7 +357,7 @@ export function ClinicalTab({
   }
 
   if (error) {
-    return <div className="alert alert-danger">{error}</div>;
+    return <div className={deskCalloutClass('error')}>{error}</div>;
   }
 
   if (!data) return null;

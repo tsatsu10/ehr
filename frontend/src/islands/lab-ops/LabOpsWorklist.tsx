@@ -1,3 +1,4 @@
+import { Button } from '@components/ui/button';
 import type { LabOpsTab, WorklistRow } from './labOpsTypes';
 
 interface LabOpsWorklistProps {
@@ -31,14 +32,14 @@ export function LabOpsWorklist({
 }: LabOpsWorklistProps) {
   if (!rows.length) {
     return (
-      <div id="nc-labops-list" className="oe-nc-labops-list" role="list" aria-label="Lab worklist">
-        <div className="oe-nc-labops-empty">{emptyMessage(tab)}</div>
+      <div id="nc-labops-list" className="nc-labops-list" role="list" aria-label="Lab worklist">
+        <div className="nc-labops-empty">{emptyMessage(tab)}</div>
       </div>
     );
   }
 
   return (
-    <div id="nc-labops-list" className="oe-nc-labops-list" role="list" aria-label="Lab worklist">
+    <div id="nc-labops-list" className="nc-labops-list" role="list" aria-label="Lab worklist">
       {rows.map((row) => {
         const qLabel = row.queue_number ? `Q#${row.queue_number} ` : '';
         const reqLabel = row.fulfillment === 'send_out'
@@ -48,57 +49,63 @@ export function LabOpsWorklist({
         return (
           <article
             key={row.procedure_order_id}
-            className={`oe-nc-labops-row${row.is_urgent ? ' oe-nc-labops-row--urgent' : ''}`}
+            className={`nc-labops-row${row.is_urgent ? ' nc-labops-row-urgent' : ''}`}
             role="listitem"
           >
-            <div className="oe-nc-labops-row__title">
+            <div className="nc-labops-row-title">
               {qLabel}{row.patient_name}
               {row.pubpid ? (
-                <span className="text-muted font-weight-normal"> · {row.pubpid}</span>
+                <span className="text-[var(--oe-nc-text-muted)] font-normal"> · {row.pubpid}</span>
               ) : null}
             </div>
-            <div className="oe-nc-labops-row__meta">{row.test_names}</div>
-            <div className="oe-nc-labops-row__meta">
+            <div className="nc-labops-row-meta">{row.test_names}</div>
+            <div className="nc-labops-row-meta">
               {row.fulfillment_label} · {row.status_label}
               {row.ordered_display ? ` · ${row.ordered_display}` : ''}
             </div>
-            <div className="oe-nc-labops-row__actions">
+            <div className="nc-labops-row-actions">
               {row.can_open_lab_desk && row.lab_desk_url ? (
-                <a className="btn btn-outline-secondary btn-sm" href={row.lab_desk_url} target="_top">
-                  Open in Lab Desk
-                </a>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={row.lab_desk_url} target="_top">
+                    Open in Lab Desk
+                  </a>
+                </Button>
               ) : null}
               {row.requisition_url ? (
-                <a className="btn btn-outline-secondary btn-sm" href={row.requisition_url} target="_blank" rel="noreferrer">
-                  {reqLabel}
-                </a>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={row.requisition_url} target="_blank" rel="noreferrer">
+                    {reqLabel}
+                  </a>
+                </Button>
               ) : null}
               {canEnter && !row.collected && row.fulfillment !== 'send_out' ? (
-                <button
+                <Button
                   type="button"
-                  className="btn btn-outline-warning btn-sm"
+                  variant="warning"
+                  size="sm"
                   onClick={() => onSendOut(row.procedure_order_id)}
                 >
                   Mark send-out
-                </button>
+                </Button>
               ) : null}
               {canEnter && !row.collected ? (
-                <button
+                <Button
                   type="button"
-                  className="btn btn-outline-primary btn-sm"
+                  variant="outline"
+                  size="sm"
                   onClick={() => onCollect(row.procedure_order_id)}
                 >
                   Mark collected
-                </button>
+                </Button>
               ) : null}
               {canEnter ? (
-                <button
+                <Button
                   type="button"
-                  className="btn btn-primary btn-sm"
+                  size="sm"
                   onClick={() => onEnter(row.procedure_order_id)}
                 >
                   Enter results
-                </button>
+                </Button>
               ) : null}
             </div>
           </article>

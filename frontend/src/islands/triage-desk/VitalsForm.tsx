@@ -9,6 +9,11 @@ import { useRef } from 'react';
 import type { VitalsData, VitalsRules, VitalName } from '@core/types';
 import { VITAL_ORDER } from '@core/types';
 import type { FieldValidations } from '@core/useVitalsValidation';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Textarea } from '@components/ui/textarea';
+import { cn } from '@/lib/utils';
 
 interface VitalsFormProps {
   rules: VitalsRules;
@@ -23,12 +28,14 @@ interface VitalsFormProps {
   formError?: string | null;
 }
 
-function fieldClassName(name: VitalName, fieldErrors: FieldValidations): string {
+function vitalInputClassName(name: VitalName, fieldErrors: FieldValidations): string {
   const result = fieldErrors[name];
-  if (!result || result.level === 'ok' || result.level === null) return 'form-control';
-  if (result.level === 'error') return 'form-control is-invalid';
-  if (result.level === 'warning') return 'form-control nc-vitals-warning';
-  return 'form-control';
+  if (!result || result.level === 'ok' || result.level === null) return '';
+  if (result.level === 'error') {
+    return 'border-[var(--oe-nc-danger,#dc2626)] focus-visible:ring-[var(--oe-nc-danger,#dc2626)]';
+  }
+  if (result.level === 'warning') return 'nc-vitals-warning';
+  return '';
 }
 
 export function VitalsForm({
@@ -53,38 +60,37 @@ export function VitalsForm({
       onSubmit={(e) => e.preventDefault()}
     >
       <h5 className="mb-3">Vitals</h5>
-      <p className="nc-vitals-required-note small text-muted mb-3">
-        <span className="text-danger">*</span> Required.{' '}
-        <span className="text-warning font-weight-bold">Amber</span> border = outside normal clinical range but still saveable.{' '}
-        <span className="text-danger font-weight-bold">Red</span> = fix before saving.
+      <p className="nc-vitals-required-note text-sm text-[var(--oe-nc-text-muted)] mb-3">
+        <span className="text-[var(--oe-nc-danger,#dc2626)]">*</span> Required.{' '}
+        <span className="text-[var(--color-oe-warning,#ea580c)] font-bold">Amber</span> border = outside normal clinical range but still saveable.{' '}
+        <span className="text-[var(--oe-nc-danger,#dc2626)] font-bold">Red</span> = fix before saving.
       </p>
 
-      {/* Field rows */}
       {VITAL_ORDER.map((row, rowIdx) => (
-        <div className="form-row" key={rowIdx}>
+        <div className="grid grid-cols-12 gap-3" key={rowIdx}>
           {row.map((name) => {
             const def = rules.fields[name];
             if (!def) return null;
             const result = fieldErrors[name];
             const showFeedback = !!result && result.level !== 'ok';
             return (
-              <div className="form-group col-md-3" key={name} data-vitals-field={name}>
-                <label
-                  className="nc-vitals-field-label"
+              <div className="nc-form-group col-span-12 md:col-span-3" key={name} data-vitals-field={name}>
+                <Label
+                  className="nc-vitals-field-label font-normal"
                   htmlFor={`nc-vitals-${name}`}
                 >
                   {def.label}
                   {def.unit && ` (${def.unit})`}
-                  {def.required && <span className="text-danger ml-1">*</span>}
-                  <span className="nc-vitals-range-hint d-block text-muted" style={{ fontSize: '0.72rem' }}>
+                  {def.required && <span className="text-[var(--oe-nc-danger,#dc2626)] ml-1">*</span>}
+                  <span className="nc-vitals-range-hint block text-[var(--oe-nc-text-muted)]">
                     Acceptable: {def.min}–{def.max}
                   </span>
-                </label>
-                <input
+                </Label>
+                <Input
                   type="number"
                   id={`nc-vitals-${name}`}
                   name={name}
-                  className={fieldClassName(name, fieldErrors)}
+                  className={cn('h-9', vitalInputClassName(name, fieldErrors))}
                   value={values[name] ?? ''}
                   min={def.min}
                   max={def.max}
@@ -97,8 +103,8 @@ export function VitalsForm({
                   <div
                     className={
                       result.level === 'error'
-                        ? 'nc-vitals-feedback invalid-feedback d-block'
-                        : 'nc-vitals-feedback nc-vitals-feedback--warning d-block'
+                        ? 'nc-vitals-feedback block text-sm text-[var(--oe-nc-danger,#dc2626)]'
+                        : 'nc-vitals-feedback nc-vitals-feedback--warning block'
                     }
                     aria-live="polite"
                   >
@@ -111,23 +117,33 @@ export function VitalsForm({
         </div>
       ))}
 
-      {/* Chief complaint — fully controlled so value always reflects parent state */}
-      <div className="form-group">
-        <label htmlFor="nc-vitals-chief-complaint">Chief complaint (optional)</label>
-        <textarea
+      <div className="space-y-1.5 mt-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <Label htmlFor="nc-vitals-chief-complaint">Reason for visit</Label>
+          <span
+            className="text-xs tabular-nums text-(--oe-nc-text-muted)"
+            id="nc-vitals-chief-complaint-count"
+            aria-live="polite"
+          >
+            {chiefComplaint.length}/500
+          </span>
+        </div>
+        <Textarea
           id="nc-vitals-chief-complaint"
-          className="form-control"
           name="chief_complaint"
           rows={2}
           maxLength={500}
+          placeholder="Why the patient came today…"
           value={chiefComplaint}
           onChange={(e) => onChiefComplaintChange(e.target.value)}
         />
+        <p className="text-xs text-(--oe-nc-text-muted) m-0">
+          Optional — overwrites reception text when saved; shown on the patient banner.
+        </p>
       </div>
 
-      {/* Form-level error */}
       {formError && (
-        <div className="alert alert-danger" role="alert">
+        <div className={deskCalloutClass('error', 'mt-3 text-sm')} role="alert">
           {formError}
         </div>
       )}

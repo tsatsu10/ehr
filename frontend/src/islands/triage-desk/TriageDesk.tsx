@@ -1,7 +1,7 @@
 /**
  * TriageDesk — Phase 2A React island replacing jQuery NewClinicTriage.
  *
- * Layout: two-column (col-lg-4 queue | col-lg-8 active pane).
+ * Layout: two-column (col-span-12 lg:col-span-4 queue | col-span-12 lg:col-span-8 active pane).
  * State machine: idle → loading → form → saved → (back to queue).
  *
  * Mutation bridge:
@@ -419,7 +419,7 @@ export function TriageDesk({
         setActiveVisit(freshSelect.visit);
       }
 
-      const data = await oeFetch<{ visit: TriageVisit }>('triage.send_doctor', {
+      const data = await oeFetch<{ visit: { state: string } }>('triage.send_doctor', {
         ajaxUrl,
         csrfToken,
         method: 'POST',
@@ -622,9 +622,9 @@ export function TriageDesk({
         onRefresh={() => { void fetchQueue(); }}
       />
 
-      <div className="row">
+      <div className="grid grid-cols-12 gap-3">
         {/* Left: queue */}
-        <div className="col-lg-4 mb-3">
+        <div className="col-span-12 lg:col-span-4 mb-3">
           <TriageQueue
             cards={cards}
             activeVisitId={activeVisit?.id ?? null}
@@ -636,7 +636,7 @@ export function TriageDesk({
         </div>
 
         {/* Right: active pane */}
-        <div className="col-lg-8 mb-3">
+        <div className="col-span-12 lg:col-span-8 mb-3">
           <TriageActivePane
             mode={mode}
             visit={activeVisit}

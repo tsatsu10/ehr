@@ -2,22 +2,22 @@
 
 {% block page_subtitle %}
 {% if board_profile|default('default') != 'wall' %}
-<div class="oe-nc-page-heading__subtitle" id="nc-board-date"></div>
+<div class="nc-page-heading-subtitle" id="nc-board-date"></div>
 {% endif %}
 {% endblock %}
 
 {% block page_heading_actions %}
 {% if board_profile|default('default') != 'wall' %}
-<button type="button" class="btn btn-outline-primary btn-sm" id="nc-refresh-queue">
+<button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary" id="nc-refresh-queue">
     {{ 'Refresh'|xlt }}
 </button>
-<span class="text-muted small" id="nc-board-updated"></span>
+<span class="nc-text-muted nc-text-sm" id="nc-board-updated"></span>
 {% endif %}
 {% endblock %}
 
 {% block content %}
 {% if board_profile|default('default') == 'wall' %}
-<div class="oe-nc-wall-banner" id="nc-wall-now-serving" aria-live="polite"
+<div class="nc-wall-banner" id="nc-wall-now-serving" aria-live="polite"
      data-clinic-name="{{ shell.brand.clinic_name|e('html_attr') }}">
     {{ shell.brand.clinic_name|text }}
 </div>

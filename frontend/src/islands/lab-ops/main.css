@@ -1,48 +1,49 @@
 @import '../../core/tokens.css';
+@import '../../components/ui/ui-primitives.css';
 
 /* Lab Operations Hub — mirrors public/assets/css/lab-ops.css for React island */
 
-.oe-nc-labops-list {
+.nc-labops-list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.oe-nc-labops-row {
+.nc-labops-row {
   border: 1px solid var(--oe-nc-border, #dee2e6);
   border-radius: 0.35rem;
   padding: 0.75rem 1rem;
   background: #fff;
 }
 
-.oe-nc-labops-row--urgent {
+.nc-labops-row-urgent {
   border-left: 4px solid #dc3545;
 }
 
-.oe-nc-labops-row__title {
+.nc-labops-row-title {
   font-weight: 600;
 }
 
-.oe-nc-labops-row__meta {
+.nc-labops-row-meta {
   color: #6c757d;
   font-size: 0.875rem;
 }
 
-.oe-nc-labops-row__actions {
+.nc-labops-row-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
   margin-top: 0.5rem;
 }
 
-.oe-nc-labops-drawer-backdrop {
+.nc-labops-drawer-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.35);
   z-index: 1040;
 }
 
-.oe-nc-labops-drawer {
+.nc-labops-drawer {
   position: fixed;
   top: 0;
   right: 0;
@@ -55,13 +56,13 @@
   box-shadow: -4px 0 16px rgba(0, 0, 0, 0.12);
 }
 
-.oe-nc-labops-drawer__header,
-.oe-nc-labops-drawer__footer {
+.nc-labops-drawer-header,
+.nc-labops-drawer-footer {
   padding: 0.75rem 1rem;
   border-bottom: 1px solid #dee2e6;
 }
 
-.oe-nc-labops-drawer__footer {
+.nc-labops-drawer-footer {
   border-bottom: 0;
   border-top: 1px solid #dee2e6;
   display: flex;
@@ -69,13 +70,13 @@
   gap: 0.5rem;
 }
 
-.oe-nc-labops-drawer__body {
+.nc-labops-drawer-body {
   flex: 1;
   overflow: auto;
   padding: 1rem;
 }
 
-.oe-nc-labops-line {
+.nc-labops-line {
   border: 1px solid #e9ecef;
   border-radius: 0.25rem;
   padding: 0.75rem;
@@ -87,13 +88,13 @@
   font-size: 0.875rem;
 }
 
-.oe-nc-labops-empty {
+.nc-labops-empty {
   color: #6c757d;
   padding: 1.5rem 0;
 }
 
-.oe-nc-labops-saved__summary li.text-danger,
-.oe-nc-labops-saved__summary span.text-danger {
+.nc-labops-saved-summary li[class*="--oe-nc-danger"],
+.nc-labops-saved-summary span[class*="--oe-nc-danger"] {
   color: #dc3545;
   font-weight: 600;
 }

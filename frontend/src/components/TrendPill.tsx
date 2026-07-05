@@ -1,5 +1,4 @@
 import { Badge } from './ui/badge';
-import { cn } from '@/lib/utils';
 
 interface TrendPillProps {
   /** Signed percentage change vs prior period. */
@@ -31,7 +30,6 @@ export function TrendPill({ value, ariaLabel }: TrendPillProps) {
   return (
     <Badge
       variant={VARIANT_BY_DIRECTION[dir]}
-      className={cn('oe-nc-trend-pill', `oe-nc-trend-pill--${dir}`)}
       aria-label={label}
       title={label}
     >

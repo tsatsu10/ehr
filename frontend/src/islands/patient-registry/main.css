@@ -1,6 +1,6 @@
 /* Patient Registry island — relies on module patient-registry.css for layout. */
 
-.oe-nc-registry-clinical-filters summary,
-.oe-nc-registry-scheduling-filters summary {
+.nc-registry-clinical-filters summary,
+.nc-registry-scheduling-filters summary {
   cursor: pointer;
 }

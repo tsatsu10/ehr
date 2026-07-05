@@ -1,20 +1,20 @@
 {% extends 'base.html.twig' %}
 
 {% block page_subtitle %}
-<div class="oe-nc-page-heading__subtitle" id="nc-doctor-date"></div>
+<div class="nc-page-heading-subtitle" id="nc-doctor-date"></div>
 {% endblock %}
 
 {% block page_heading_actions %}
 {% if enable_multi_doctor_filters %}
-<select class="form-control form-control-sm" style="max-width:120px;" id="nc-doctor-scope">
+<select class="nc-select nc-select-sm" style="max-width:120px;" id="nc-doctor-scope">
     <option value="me">{{ 'Me'|xlt }}</option>
     <option value="all">{{ 'All'|xlt }}</option>
 </select>
 {% endif %}
-<button type="button" class="btn btn-outline-primary btn-sm" id="nc-doctor-refresh" aria-label="{{ 'Refresh'|xlt }}">
+<button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary" id="nc-doctor-refresh" aria-label="{{ 'Refresh'|xlt }}">
     <i class="fa fa-refresh" aria-hidden="true"></i>
 </button>
-<span class="text-muted small" id="nc-doctor-updated"></span>
+<span class="nc-text-muted nc-text-sm" id="nc-doctor-updated"></span>
 {% endblock %}
 
 {% block content %}

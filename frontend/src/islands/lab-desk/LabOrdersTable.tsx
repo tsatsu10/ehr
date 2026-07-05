@@ -1,5 +1,17 @@
 import type { LabOrderLine } from '@core/types';
-import { orderStatusBadgeClass } from './labUtils';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { ncShadcnTableClass } from '@components/ncTableStyles';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@components/ui/table';
+import { orderStatusBadgeVariant } from './labUtils';
 
 interface LabOrdersTableProps {
   orders: LabOrderLine[];
@@ -16,62 +28,67 @@ export function LabOrdersTable({
 }: LabOrdersTableProps) {
   if (orders.length === 0) {
     return (
-      <div className="alert alert-info py-2 mb-0">
+      <div className={deskCalloutClass('info', 'py-2 mb-0')}>
         No lab orders on this encounter yet. Doctor creates orders in core.
       </div>
     );
   }
 
   return (
-    <table className="table table-sm table-bordered mb-0">
-      <thead>
-        <tr>
-          <th>Test</th>
-          <th>Code</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
+    <Table className={ncShadcnTableClass({ bordered: true, className: 'mb-0' })}>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Test</TableHead>
+          <TableHead>Code</TableHead>
+          <TableHead>Status</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
         {orders.map((line) => (
-          <tr key={line.id || line.code}>
-            <td>
+          <TableRow key={line.id || line.code}>
+            <TableCell>
               {line.title}
               {line.fulfillment_label && (
-                <span className="badge badge-light border ml-1">{line.fulfillment_label}</span>
+                <Badge variant="outline" className="ml-1 align-middle">
+                  {line.fulfillment_label}
+                </Badge>
               )}
               {labOpsEnabled && line.id > 0 && inLab && onEnterResults && (
                 <>
                   {' '}
-                  <button
+                  <Button
                     type="button"
-                    className="btn btn-link btn-sm p-0 ml-1 nc-lab-enter-results"
+                    variant="link"
+                    size="sm"
+                    className="nc-lab-enter-results ml-1 h-auto p-0 align-baseline"
                     onClick={() => onEnterResults(line.id)}
                   >
                     Enter results
-                  </button>
+                  </Button>
                 </>
               )}
               {line.requisition_url && (
                 <>
                   {' '}
-                  <a
-                    className="btn btn-link btn-sm p-0 ml-1"
-                    href={line.requisition_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Print req
-                  </a>
+                  <Button variant="link" size="sm" className="ml-1 h-auto p-0 align-baseline" asChild>
+                    <a
+                      href={line.requisition_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Print req
+                    </a>
+                  </Button>
                 </>
               )}
-            </td>
-            <td>{line.code}</td>
-            <td>
-              <span className={`badge ${orderStatusBadgeClass(line.status)}`}>{line.status}</span>
-            </td>
-          </tr>
+            </TableCell>
+            <TableCell>{line.code}</TableCell>
+            <TableCell>
+              <Badge variant={orderStatusBadgeVariant(line.status)}>{line.status}</Badge>
+            </TableCell>
+          </TableRow>
         ))}
-      </tbody>
-    </table>
+      </TableBody>
+    </Table>
   );
 }

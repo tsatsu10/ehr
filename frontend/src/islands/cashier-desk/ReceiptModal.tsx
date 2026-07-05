@@ -1,4 +1,15 @@
 import { useRef } from 'react';
+import { Button } from '@components/ui/button';
+import {
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  dialogContentSizeClass,
+} from '@components/ui/dialog';
 import type { CashierReceipt, PatientPreview } from '@core/types';
 import { formatMoney } from './cashierUtils';
 
@@ -12,7 +23,7 @@ interface ReceiptModalProps {
 export function ReceiptModal({ open, preview, receipt, onClose }: ReceiptModalProps) {
   const printRef = useRef<HTMLDivElement>(null);
 
-  if (!open || !preview || !receipt) return null;
+  if (!preview || !receipt) return null;
 
   const identity = preview.identity;
 
@@ -26,65 +37,59 @@ export function ReceiptModal({ open, preview, receipt, onClose }: ReceiptModalPr
   };
 
   return (
-    <>
-      <div
-        className="modal fade show d-block"
+    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogContent
         id="nc-cashier-receipt-modal"
-        tabIndex={-1}
-        role="dialog"
+        className={dialogContentSizeClass.confirm}
         aria-labelledby="nc-cashier-receipt-title"
-        aria-modal="true"
       >
-        <div className="modal-dialog" role="document">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5 className="modal-title" id="nc-cashier-receipt-title">Receipt</h5>
-              <button type="button" className="close" aria-label="Close" onClick={onClose}>
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
-            <div className="modal-body" id="nc-cashier-receipt-body">
-              <div className="nc-receipt-print" ref={printRef}>
-                <p>
-                  <strong>{identity.display_name}</strong>
+        <DialogHeader>
+          <DialogTitle id="nc-cashier-receipt-title">Receipt</DialogTitle>
+          <DialogClose aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </DialogClose>
+        </DialogHeader>
+        <DialogBody id="nc-cashier-receipt-body">
+          <div className="nc-receipt-print" ref={printRef}>
+            <p>
+              <strong>{identity.display_name}</strong>
+              <br />
+              {receipt.receipt_number ? <>Receipt #{receipt.receipt_number}<br /></> : null}
+              Queue #{receipt.queue_number}
+              <br />
+              {receipt.payment_method_label ? (
+                <>
+                  Method: {receipt.payment_method_label}
                   <br />
-                  {receipt.receipt_number ? <>Receipt #{receipt.receipt_number}<br /></> : null}
-                  Queue #{receipt.queue_number}
+                </>
+              ) : null}
+              Paid: {formatMoney(receipt.amount_paid)}
+              <br />
+              {receipt.payment_method === 'momo' && receipt.momo_reference ? (
+                <>
+                  MoMo ref: {receipt.momo_reference}
                   <br />
-                  {receipt.payment_method_label ? (
-                    <>
-                      Method: {receipt.payment_method_label}
-                      <br />
-                    </>
-                  ) : null}
-                  Paid: {formatMoney(receipt.amount_paid)}
+                </>
+              ) : null}
+              {receipt.payment_method !== 'momo' ? (
+                <>
+                  Change: {formatMoney(receipt.change_due)}
                   <br />
-                  {receipt.payment_method === 'momo' && receipt.momo_reference ? (
-                    <>
-                      MoMo ref: {receipt.momo_reference}
-                      <br />
-                    </>
-                  ) : null}
-                  {receipt.payment_method !== 'momo' ? (
-                    <>
-                      Change: {formatMoney(receipt.change_due)}
-                      <br />
-                    </>
-                  ) : null}
-                  {new Date().toLocaleString()}
-                </p>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button type="button" className="btn btn-primary" id="nc-cashier-print-receipt" onClick={handlePrint}>
-                Print
-              </button>
-              <button type="button" className="btn btn-secondary" onClick={onClose}>Close</button>
-            </div>
+                </>
+              ) : null}
+              {new Date().toLocaleString()}
+            </p>
           </div>
-        </div>
-      </div>
-      <div className="modal-backdrop fade show" id="nc-cashier-modal-backdrop" />
-    </>
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="cta" id="nc-cashier-print-receipt" onClick={handlePrint}>
+            Print
+          </Button>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

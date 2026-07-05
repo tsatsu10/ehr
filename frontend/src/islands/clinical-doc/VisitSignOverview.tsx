@@ -1,4 +1,5 @@
 import type { ClinicalDocSignOverview } from './clinicalDocTypes';
+import { Badge } from '@components/ui/badge';
 
 interface VisitSignOverviewProps {
   overview: ClinicalDocSignOverview;
@@ -6,26 +7,26 @@ interface VisitSignOverviewProps {
 
 export function VisitSignOverview({ overview }: VisitSignOverviewProps) {
   return (
-    <section className="oe-nc-clinicaldoc-sign-overview mb-3" aria-label="Sign overview">
-      <h2 className="h6 mb-2">Sign overview</h2>
-      <div className="oe-nc-clinicaldoc-sign-overview__stats d-flex flex-wrap mb-2">
-        <span className="badge badge-light border mr-2 mb-1">
+    <section className="nc-clinicaldoc-sign-overview mb-3" aria-label="Sign overview">
+      <h2 className="text-sm font-semibold mb-2">Sign overview</h2>
+      <div className="nc-clinicaldoc-sign-overview-stats flex flex-wrap mb-2">
+        <Badge variant="outline" className="mr-2 mb-1">
           {overview.started_count} started
-        </span>
-        <span className="badge badge-success mr-2 mb-1">
+        </Badge>
+        <Badge variant="success" className="mr-2 mb-1">
           {overview.signed_count} signed
-        </span>
-        <span className={`badge mr-2 mb-1 ${overview.unsigned_count > 0 ? 'badge-warning' : 'badge-secondary'}`}>
+        </Badge>
+        <Badge variant={overview.unsigned_count > 0 ? 'warning' : 'neutral'} className="mr-2 mb-1">
           {overview.unsigned_count} unsigned
-        </span>
+        </Badge>
         {overview.encounter_signed ? (
-          <span className="badge badge-success mb-1">Encounter signed</span>
+          <Badge variant="success" className="mb-1">Encounter signed</Badge>
         ) : (
-          <span className="badge badge-warning mb-1">Encounter unsigned</span>
+          <Badge variant="warning" className="mb-1">Encounter unsigned</Badge>
         )}
       </div>
       {overview.required_forms.length > 0 && (
-        <ul className="list-unstyled small mb-0 oe-nc-clinicaldoc-sign-overview__required">
+        <ul className="list-none m-0 p-0 text-sm mb-0 nc-clinicaldoc-sign-overview-required">
           {overview.required_forms.map((form) => (
             <li key={form.formdir} className="mb-1">
               <strong>{form.title}</strong>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { stockBadgeClass, stockLabel } from './pharmOpsStockUtils';
+import { stockBadgeVariant, stockLabel } from './pharmOpsStockUtils';
 
 describe('pharmOpsStockUtils', () => {
   it('maps stock status to labels', () => {
@@ -9,9 +9,9 @@ describe('pharmOpsStockUtils', () => {
     expect(stockLabel('unknown')).toBeNull();
   });
 
-  it('maps stock status to badge classes', () => {
-    expect(stockBadgeClass('in_stock')).toBe('badge-success');
-    expect(stockBadgeClass('low')).toBe('badge-warning');
-    expect(stockBadgeClass('out_of_stock')).toBe('badge-danger');
+  it('maps stock status to badge variants', () => {
+    expect(stockBadgeVariant('in_stock')).toBe('success');
+    expect(stockBadgeVariant('low')).toBe('warning');
+    expect(stockBadgeVariant('out_of_stock')).toBe('danger');
   });
 });

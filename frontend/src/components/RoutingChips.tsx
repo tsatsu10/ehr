@@ -4,7 +4,8 @@
  * Mirrors renderRoutingChips() in doctor.js and ui-components.js.
  */
 
-import type { PatientPreview, RoutingChips as RoutingChipsData } from '@core/types';
+import type { RoutingChips as RoutingChipsData } from '@core/types';
+import { Badge } from '@components/ui/badge';
 import { BannerClinicalLink } from './BannerClinicalLink';
 import { buildMrdClinicalDeepLink, MRD_CLINICAL_ANCHORS } from '@core/mrdBannerLinks';
 
@@ -35,39 +36,31 @@ export function RoutingChips({
   return (
     <span className={className}>
       {chips.results_ready && (
-        <BannerClinicalLink
-          enabled={mrdDeepLinks}
-          href={labsHref}
-          className="badge badge-success ml-1"
-        >
-          Results ready
+        <BannerClinicalLink enabled={mrdDeepLinks} href={labsHref}>
+          <Badge variant="success" className="ml-1">
+            Results ready
+          </Badge>
         </BannerClinicalLink>
       )}
       {!chips.results_ready && chips.lab_order_incomplete && (
-        <BannerClinicalLink
-          enabled={mrdDeepLinks}
-          href={labsHref}
-          className="badge badge-danger ml-1"
-        >
-          Lab order incomplete
+        <BannerClinicalLink enabled={mrdDeepLinks} href={labsHref}>
+          <Badge variant="danger" className="ml-1">
+            Lab order incomplete
+          </Badge>
         </BannerClinicalLink>
       )}
       {!chips.results_ready && !chips.lab_order_incomplete && chips.lab_ordered && (
-        <BannerClinicalLink
-          enabled={mrdDeepLinks}
-          href={labsHref}
-          className="badge badge-warning ml-1"
-        >
-          Lab ordered
+        <BannerClinicalLink enabled={mrdDeepLinks} href={labsHref}>
+          <Badge variant="warning" className="ml-1">
+            Lab ordered
+          </Badge>
         </BannerClinicalLink>
       )}
       {chips.rx_pending && (
-        <BannerClinicalLink
-          enabled={mrdDeepLinks}
-          href={medsHref}
-          className="badge badge-info ml-1"
-        >
-          Rx pending
+        <BannerClinicalLink enabled={mrdDeepLinks} href={medsHref}>
+          <Badge variant="info" className="ml-1">
+            Rx pending
+          </Badge>
         </BannerClinicalLink>
       )}
     </span>

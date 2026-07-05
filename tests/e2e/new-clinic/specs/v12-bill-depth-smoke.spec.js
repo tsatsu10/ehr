@@ -93,7 +93,7 @@ test.describe('V1.2-BILL depth smoke', () => {
     await expect(page.locator('[data-island="bill-ops"]')).toBeVisible({ timeout: 30000 });
 
     if (fixture.reverse_receipt_date) {
-      await page.locator('.oe-nc-billops-pane input[type="date"]').fill(fixture.reverse_receipt_date);
+      await page.locator('.nc-billops-pane input[type="date"]').fill(fixture.reverse_receipt_date);
     }
 
     const searchResp = page.waitForResponse(

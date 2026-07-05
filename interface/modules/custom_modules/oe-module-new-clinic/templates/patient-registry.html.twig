@@ -1,10 +1,10 @@
 {% extends 'base.html.twig' %}
 
 {% block page_heading_actions %}
-<button type="button" class="btn btn-outline-secondary btn-sm" id="nc-registry-refresh">{{ 'Refresh'|xlt }}</button>
-<button type="button" class="btn btn-outline-secondary btn-sm" id="nc-registry-save-filter">{{ 'Save filters'|xlt }}</button>
-<button type="button" class="btn btn-outline-danger btn-sm d-none" id="nc-registry-delete-filter">{{ 'Delete saved'|xlt }}</button>
-<button type="button" class="btn btn-outline-primary btn-sm" id="nc-registry-export">{{ 'Export CSV'|xlt }}</button>
+<button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary" id="nc-registry-refresh">{{ 'Refresh'|xlt }}</button>
+<button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary" id="nc-registry-save-filter">{{ 'Save filters'|xlt }}</button>
+<button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-danger nc-hidden" id="nc-registry-delete-filter">{{ 'Delete saved'|xlt }}</button>
+<button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary" id="nc-registry-export">{{ 'Export CSV'|xlt }}</button>
 {% endblock %}
 
 {% block content %}

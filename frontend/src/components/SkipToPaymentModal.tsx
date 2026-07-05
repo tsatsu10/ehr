@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Label } from '@components/ui/label';
+import { Textarea } from '@components/ui/textarea';
 import type { PatientPreview } from '@core/types';
 import { ConfirmModal, IdentityConfirmBanner } from './ConfirmModal';
 
@@ -52,11 +55,10 @@ function SkipToPaymentModalBody({
         <IdentityConfirmBanner displayName={identity.display_name} pubpid={identity.pubpid} />
       )}
     >
-      <p className="text-muted small">Sends visit to payment, bypassing {bypassLabel}.</p>
-      <div className="form-group mb-0">
-        <label htmlFor={`${prefix}-reason`}>Reason (required)</label>
-        <textarea
-          className="form-control"
+      <p className="text-[var(--oe-nc-text-muted)] text-sm">Sends visit to payment, bypassing {bypassLabel}.</p>
+      <div className="space-y-1.5 mb-0">
+        <Label htmlFor={`${prefix}-reason`} className="normal-case">Reason (required)</Label>
+        <Textarea
           id={`${prefix}-reason`}
           rows={2}
           value={reason}
@@ -64,7 +66,7 @@ function SkipToPaymentModalBody({
         />
       </div>
       {error && (
-        <div className="alert alert-danger mt-2 mb-0" id={`${prefix}-error`}>
+        <div className={deskCalloutClass('error', 'mt-2 mb-0')} id={`${prefix}-error`}>
           {error}
         </div>
       )}

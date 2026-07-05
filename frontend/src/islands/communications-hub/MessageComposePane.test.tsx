@@ -85,7 +85,7 @@ describe('MessageComposePane', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Pick patient' }));
-    expect(screen.getByText('Ama Mensah')).toBeInTheDocument();
+    expect(screen.getByText(/Ama Mensah/)).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Hello team' } });
     fireEvent.click(screen.getByLabelText('Dr One'));
@@ -133,7 +133,7 @@ describe('MessageComposePane', () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByDisplayValue('Jane Doe')).toBeInTheDocument();
+    expect(screen.getByText(/Jane Doe/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Pick patient' })).not.toBeInTheDocument();
   });
 

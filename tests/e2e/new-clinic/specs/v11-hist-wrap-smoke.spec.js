@@ -39,8 +39,8 @@ test.describe('V1.1-HIST-WRAP smoke', () => {
       + `?set_pid=${CHART_PID}&return=clinical-background`;
 
     await page.goto(editorUrl);
-    await expect(page.locator('#oe-nc-history-editor-wrap')).toBeVisible({ timeout: 30000 });
+    await expect(page.locator('#nc-history-editor-wrap')).toBeVisible({ timeout: 30000 });
     await expect(page.getByRole('link', { name: /Back to chart/i }).first()).toBeVisible();
-    await expect(page.locator('body.oe-nc-history-editor-wrap')).toBeVisible();
+    await expect(page.locator('body.nc-history-editor-wrap')).toBeVisible();
   });
 });

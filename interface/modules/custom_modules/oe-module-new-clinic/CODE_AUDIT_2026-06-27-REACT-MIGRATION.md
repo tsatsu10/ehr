@@ -2,8 +2,206 @@
 
 **Date:** June 27, 2026  
 **Baseline:** `CODE_AUDIT_2026-06-27.md` (legacy jQuery, asset `20260626g12s`, 61 PHPUnit tests)  
-**Current asset version:** `20260703sp71auditfix`  
-**Scope:** Phases 1–10 React island migration through July 3 post-pilot release slices (sp49–sp71)
+**Current asset version:** `20260705sp170frontdeskfeatures`
+**Scope:** Phases 1–10 React island migration through July 5 §21 engineering gate + shadcn Phases B–E + Bootstrap retirement (sp150–sp170)
+
+---
+
+## Addendum — July 5 UI polish batches (`sp150`–`sp170`)
+
+Follow-up to July 4 `sp137auditfix`. Closes Bootstrap retirement in React islands + Twig shell, migrates all island tables to shadcn `Table`, inline card shells to shadcn `Card`, registration form polish, and audit gaps **Q-21** / **Q-28**.
+
+### Asset tag summary
+
+| Tag | Focus |
+|-----|--------|
+| **sp150depthregistry** | chart-depth, patient-registry, report-hub — last island Bootstrap btn/alert/badge |
+| **sp151sharedui** | Shared components (modals, banners, badges, routing chips) |
+| **sp152legacyshell** | Twig SSR + `ui-components.js` — `nc-btn*` / `nc-callout*` / `nc-badge*` |
+| **sp153shellforms** | Twig toolbars — `form-control` → `nc-input` / `nc-select` |
+| **sp154listgroup** | Twig + React pickers — `list-group` → `nc-list-group*` |
+| **sp155dropdownmodal** | Shell dropdowns + role modal — vanilla JS (no jQuery) |
+| **sp156legacycss** | Dead Bootstrap modal/tab CSS in `new-clinic.css` |
+| **sp157utilities** | Twig SSR — Bootstrap layout utilities → `nc-flex` / `nc-hidden` / spacing tokens |
+| **sp158reactutils** | React islands — Bootstrap grid/forms/utilities → Tailwind + `nc-form-group` |
+| **sp159reactcards** | React — Bootstrap cards/tabs → shadcn card tokens + `SegmentedControl` |
+| **sp160reacttables** | `ncTableStyles.ts` + 24 raw `<table>` call sites consolidated |
+| **sp161tableprimitives** | First 5 desks/admin tables → shadcn `Table` + `ncShadcnTableClass()` |
+| **sp162tableprimitives2** | 7 more simple table shells → shadcn `Table` |
+| **sp163tableprimitivescomplete** | All remaining island `<table>` shells → shadcn `Table` (25 files total) |
+| **sp164reactcards** | Inline card div shells → shadcn `Card` / `CardContent` / `CardHeader` (~26 files) |
+| **sp165reactregistration** | Registration form Card shells; reach-contact panel; dead `registration-form.css` removed |
+| **sp166regtitlecleanup** | Front Desk registration `hideTitle` (no duplicate pane heading); `ncTableClass()` removed |
+| **sp167frontdeskauditfix** | Front Desk audit remediation: `recallsUrl` wired; `DeskAlert` primitive; registration model extract; CC banner wiring; registration desktop render fix; expanded Vitest |
+| **sp168frontdesk100** | Front Desk 100%: auto-focus on load (M1a-F01); `last_visit_label`/`dob_estimated`/CC in search rows (M1a-F05); NHIS expired badge on preview pane; NKDA title alignment across PharmOps; spec §17/§16 acceptance checkboxes ticked |
+| **sp169esignfix** | `EsignOverrideModal`: reset stale reason state on close/confirm; remove obsolete Bootstrap `#nc-esign-override-modal` CSS that made dialog full-screen on Radix; tighten `nhisExpired` to exact label match |
+| **sp170frontdeskfeatures** | Queue position hint (waiting count + "first in line") above Start Visit button; unpaid balance warning when patient has `closed_unpaid` visits; appointment check-in strip (time + provider) always shown when `fromAppointment` |
+
+### Resolved audit gaps
+
+| ID | Was | Now |
+|----|-----|-----|
+| **Q-21** | Phase B incomplete — Registration Bootstrap fields, legacy QueueCard feel | Registration on shadcn Accordion/Input/Select; card/table primitives shipped sp159–sp165 |
+| **Q-28** | Registration form largest legacy Front Desk surface | React + shadcn since M1b; sp165 Card shells; sp166 title dedup in preview pane |
+
+### Verification snapshot (July 5)
+
+| Check | Result |
+|-------|--------|
+| Vitest (`frontend/`) | **358/358** (95 files) |
+| Island raw `<table>` | **0** — all use shadcn `Table` + `ncShadcnTableClass()` |
+| Island inline card shells | **0** outside `ui/card.tsx` |
+| `ncTableClass()` call sites | **0** — helper removed; use `ncShadcnTableClass()` only |
+| Asset version | `20260705sp170frontdeskfeatures` |
+
+### Still deferred
+
+| ID | Item |
+|----|------|
+| **Q-12 / Q-30** | `AjaxController.php` / `AdminHub.tsx` size |
+| **Q-29** | `--oe-nc-*` CSS token rename (Phase A debt) |
+| **Q-24** | Product §21 normative sign-off (manual trainer drills) |
+| **R-11** | Large uncommitted WIP — split into focused commits before merge |
+
+---
+
+## Addendum — July 4 post-sp71 (`20260704sp84shadcnphaseb`)
+
+Follow-up to `20260703sp71auditfix`. Covers §21 engineering gate closure, Product/training worksheets, Front Desk Phase A/B polish, and global shadcn Phase B wrapper batch.
+
+### Shipped since sp71
+
+| Stream | Commits | Asset tags | Notes |
+|--------|---------|------------|-------|
+| **§21 engineering gate** | `6a87e23`–`cfd550e` | sp60–sp81 | Mandatory contracts **60–63**; golden-path rollout; hub smokes **57/57**; BILL-3 payment reverse |
+| **Product / training** | `d3f54f5`–`ea3b4d7` | — | Pilot readiness pack, trainer one-pager, pilot day checklist, §21 worksheets |
+| **Front Desk Phase A** | `0c7d600` | sp82fdphasea | Empty/loading states, completion ring card, stats strip, cmdk idle fix |
+| **Front Desk Phase B** | `cde2d69` | sp83fdphaseb | Card shells, Progress `CompletionBar`, legacy BEM removed from `main.css` |
+| **shadcn Phase B (global)** | `c6d1b6b` | sp84shadcnphaseb | `PaginationBar`, `StatCard`, `TrendPill`, `SegmentedControl` → shadcn primitives |
+
+### Verification snapshot (July 4)
+
+| Check | Result |
+|-------|--------|
+| Vitest (`frontend/`) | **335/335** (91 files) — was 327/327 at sp71 |
+| `NewClinicMandatoryContractTest` | **62/62** pass (contracts 60–63 added) |
+| PHPUnit `--filter NewClinic` | **623/624** — 1 failure (see R-10) |
+| §21 golden path (Playwright) | **11/11** (per engineering sign-off) |
+| §21 hub smokes (Playwright) | **57/57** (per engineering sign-off) |
+| Asset version | `20260704sp84shadcnphaseb` |
+
+### Regressions / risks (P1)
+
+| ID | Issue | Cause | Recommendation |
+|----|-------|-------|----------------|
+| **R-10** | `ClinicalMedsSummaryServiceIntegrationTest::testGetClinicalStripHiddenWhenPharmOpsDisabled` fails on polluted XAMPP DB | Test reads live `enable_pharm_ops` / `enable_pharmacy_role` without mock; local pilot scripts may leave flags ON | Mock `ClinicConfigService` in test (Q-17 pattern) or run `pilot-reset-facility-config.php` before PHPUnit |
+
+### Quality gaps (P2)
+
+| ID | Item | Notes |
+|----|------|-------|
+| **Q-20** | `NEXT_STEPS.md` stale | Still cites `20260704sp81hubcomplete`; update to sp84 + Front Desk/shadcn status |
+| **Q-21** | §9 Phase B incomplete | `RowActionsMenu`, `QueueCard` still legacy; Registration form still Bootstrap `form-control` |
+| **Q-22** | SegmentedControl dual styling | Component now ships Tailwind base + island overrides (`daily-reports/main.css`, `scheduling/main.css`) still target BEM hooks — smoke Daily Reports + Recalls tabs |
+| **Q-23** | Dead BEM in `components.css` | `.oe-nc-pagination-bar*`, `.oe-nc-trend-pill*`, `.oe-nc-segmented-control*` unused by React wrappers; retire in Phase E |
+| **Q-24** | Product §21 normative checkboxes | Engineering gate closed; trainer drills + live pilot reconciliation still manual |
+
+### Fixes worth keeping (good patterns)
+
+| Pattern | Where |
+|---------|-------|
+| **BILL-3 payment reverse** | `BillOpsPaymentsSearchService` — `v.row_version AS visit_version` (was wrong column `v.version`) |
+| **cmdk idle state** | `PatientSearchWidget` — idle hint **sibling** of `CommandList`, not child (cmdk hides non-item content) |
+| **Test isolation** | `FrontDesk.test.tsx` — `localStorage.clear()` in `beforeEach` prevents recent-patient pollution |
+| **§21 contract expansion** | `testMandatory60`–`63` — scheduling, bill depth, comms, golden-path rollout wired to fixtures + pilot scripts |
+| **shadcn drop-in API** | Phase B wrappers keep public props identical — zero island call-site churn |
+
+### Front Desk polish review (Phase A/B)
+
+| Area | Verdict | Notes |
+|------|---------|-------|
+| Search idle / skeleton | **Pass** | Lucide icons, spinner, skeleton rows; tests cover idle hint + completion ring |
+| Preview empty / loading | **Pass** | Token-based layout; no Bootstrap `d-flex`/`mr-3` in loading state |
+| Card shells | **Pass** | `PatientSearchWidget` + `PatientPreviewPane` use shadcn `Card`; sticky preview CSS class retained |
+| `CompletionBar` | **Pass** | Radix-free `Progress` primitive with a11y `role="progressbar"` |
+| Registration form | **Defer** | Still Bootstrap fields — largest remaining “legacy feel” on Front Desk |
+
+### Still deferred (carry-forward from sp71)
+
+| ID | Item |
+|----|------|
+| **Q-12** | `AjaxController.php` ~3.7k lines |
+| **Q-13** | `AdminHub.tsx` ~1.1k lines |
+| **Q-17** | Live-DB PHPUnit pollution (R-10 is another instance) |
+| **Phase C–E** | Sonner toast, Sheet, TanStack DataTable, BEM retirement |
+
+---
+
+## Addendum — July 4 post-sp85 audit remediation (`20260704sp137auditfix`)
+
+Follow-up to July 4 post-sp85 review (Phase E BEM batches sp130–sp136 + audit findings R-11–R-14, Q-25–Q-30).
+
+### Resolved
+
+| ID | Fix |
+|----|-----|
+| **R-12** | This addendum documents sp130–sp136 Phase E + shadcn Phase C/D |
+| **R-14** | Pruned orphan `main-*.css` hashes not in `.vite/manifest.json` (`prune-orphan-vite-css.cjs`) |
+| **Q-25** | Removed orphan `DeskQueueStatusBar.css` (styles live in `components.css`; component uses Tailwind) |
+| **Q-26** | `HistoryEditorWrapService::appendHistoryEditorWrapBodyClass()` merges `nc-history-editor-wrap` with existing `<body class>` |
+| **Q-27** | `FlowBoardLens.test.tsx` waits for controlled input value before blur |
+| **P3** | `@keyframes nc-spin`; test toaster id `nc-test-toaster`; `NcPageContext` type (+ `OeNcPageContext` alias) |
+
+### Verification snapshot (July 4 post-audit fix)
+
+| Check | Result |
+|-------|--------|
+| Vitest | **349/349** (94 files) |
+| PHPUnit `HistoryEditorWrapServiceTest` | **5/5** |
+| Asset version | `20260704sp137auditfix` |
+| E2E smokes (post-sp136) | **30/30** — golden path + module-pages + hist-wrap |
+
+### Still deferred
+
+| ID | Item | Notes |
+|----|------|-------|
+| **R-11** | Large uncommitted WIP | Split into focused commits before merge |
+| **Q-28** | Registration form Bootstrap fields | Largest remaining legacy Front Desk surface — separate slice |
+| **Q-29** | `--oe-nc-*` CSS token rename | Phase A debt; not BEM class retirement |
+| **Q-30** | `AjaxController.php` / `AdminHub.tsx` size | Structural; incremental extraction |
+| **Q-24** | Product §21 normative sign-off | Manual trainer drills |
+
+---
+
+## Addendum — July 4 audit remediation (`20260704sp85auditfix`)
+
+Follow-up to July 4 post-sp71 review. Closes R-10 and Q-20–Q-24 from the audit.
+
+### Resolved
+
+| ID | Fix |
+|----|-----|
+| **R-10** | `ClinicalMedsSummaryServiceIntegrationTest` skips when pharm ops enabled (parity with labs integration test) |
+| **Q-20** | `NEXT_STEPS.md` updated — asset sp85, Vitest 335, Phase B status |
+| **Q-21** | `RowActionsMenu` → Radix `DropdownMenu`; `QueueCard` → shadcn `Badge` + Card tokens |
+| **Q-22** | `daily-reports/main.css` segmented overrides reduced to layout-only |
+| **Q-23** | Removed dead BEM from `components.css` (segmented, pagination, trend, row-actions, stat-card value/label) |
+| **Q-24** | Front Desk modals + Quick Add → shadcn `Input`/`Label`/`Select`/`Textarea`/`Checkbox`/`Button` |
+| **P3** | Duplicate `badge` import removed from `PatientSearchWidget.tsx` |
+
+### Verification snapshot (July 4 post-remediation)
+
+| Check | Result |
+|-------|--------|
+| Vitest | run `npm run test -- --run` in `frontend/` |
+| PHPUnit `--filter NewClinic` | run `vendor/bin/phpunit --filter NewClinic` |
+| Asset version | `20260704sp85auditfix` |
+
+### Still manual
+
+| ID | Item |
+|----|------|
+| **Q-24** | Product §21 normative sign-off — trainer drills + live pilot reconciliation |
 
 ---
 
@@ -727,7 +925,7 @@ Follow-up to M13 Pharm Ops addendum — all P1–P3 audit items addressed except
 | Priority | Issue | Root cause | Resolution / status |
 |----------|-------|------------|---------------------|
 | **P0** | Pharm Ops worklist always empty with facility set | Extra `$visitDate` in SQL bind shifted facility `IN (...)` params | **Fixed** — `$bind = [$visitDate]` only |
-| **P1** | 3 mandatory contract PHPUnit tests fail | `PatientContextBanner` no longer uses `nc-patient-context-banner`; Front Desk switch uses `resolveSwitchTarget` / `pendingConfirm` not `confirmStartVisitSwitch` / `confirmRegistrationSwitch` | **Open** — update contract tests to match shipped UX |
+| **P1** | 3 mandatory contract PHPUnit tests fail | `PatientContextBanner` no longer uses `nc-patient-context-banner`; Front Desk switch uses `resolveSwitchTarget` / `pendingConfirm` not `confirmStartVisitSwitch` / `confirmRegistrationSwitch` | **Fixed** — contract tests aligned to shipped UX (76/76 pass) |
 | **P1** | Hardcoded `ConfirmModal-F0Be-mJK.css` in `pharm-ops/index.html.twig` | Manual link to Vite chunk hash | **Open** — use manifest lookup or import CSS from island entry only |
 | **P2** | `enable_react_pharm_ops` not in `install.sql` | Flag added in `ClinicAdminService` only | **Open** — add install migration row |
 | **P2** | No `ClinicAdminServiceTest` for pharm ops coupling | Still deferred from prior audit | **Open** — mirror `enable_lab_ops` test |
@@ -751,7 +949,7 @@ Follow-up to M13 Pharm Ops addendum — all P1–P3 audit items addressed except
 
 - **E2E golden path** — seeded role users + XAMPP base URL
 - **PRD palette alignment** — Front Desk `#2563eb` vs PRD tokens
-- **Contract test drift** — 3 PHPUnit failures block clean `NewClinic` filter run
+- **Contract test drift** — ~~3 PHPUnit failures~~ **resolved** (76/76 mandatory pass)
 - **M13 remainder** — low stock, OTC, receive, setup (V1.1-PHARM)
 
 ---

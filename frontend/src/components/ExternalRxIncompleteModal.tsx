@@ -1,4 +1,8 @@
 import { useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Button } from '@components/ui/button';
+import { Label } from '@components/ui/label';
+import { Textarea } from '@components/ui/textarea';
 import type { PatientPreview } from '@core/types';
 import { ConfirmModal, IdentityConfirmBanner } from './ConfirmModal';
 
@@ -70,35 +74,35 @@ export function ExternalRxIncompleteModal({
       )}
     >
       <p className="mb-3">{missingLabel}</p>
-      <p className="small text-muted mb-3">
+      <p className="text-sm text-[var(--oe-nc-text-muted)] mb-3">
         Enter prescriber name, registration/ID, and Rx date on the pharmacy service note, or use a
         supervisor override when the paper Rx cannot be verified.
       </p>
       <div className="mb-3">
-        <button
+        <Button
           type="button"
-          className="btn btn-outline-primary btn-sm"
+          variant="outline"
+          size="sm"
           disabled={submitting}
           onClick={onOpenPharmacyService}
         >
           Open pharmacy service note
-        </button>
+        </Button>
       </div>
       {canOverride && (
-        <div className="form-group mb-0">
-          <label htmlFor="nc-pharm-external-rx-override-reason">Override reason (required)</label>
-          <textarea
-            className="form-control"
+        <div className="space-y-1.5 mb-0">
+          <Label htmlFor="nc-pharm-external-rx-override-reason" className="normal-case">Override reason (required)</Label>
+          <Textarea
             id="nc-pharm-external-rx-override-reason"
             rows={2}
             value={reason}
             disabled={submitting}
             onChange={(event) => setReason(event.target.value)}
           />
-          {reasonError && <div className="text-danger small mt-1">{reasonError}</div>}
+          {reasonError && <div className="text-[var(--oe-nc-danger,#dc2626)] text-sm mt-1">{reasonError}</div>}
         </div>
       )}
-      {error && <div className="alert alert-danger mt-3 mb-0 py-2 small">{error}</div>}
+      {error && <div className={deskCalloutClass('error', 'mt-3 mb-0 py-2 text-sm')}>{error}</div>}
     </ConfirmModal>
   );
 }

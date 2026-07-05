@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react';
 import { PaginationBar } from '@components/PaginationBar';
-import { DataTable, DataTableStatusRow } from '@components/DataTable';
+import { MatrixDataTable } from '@components/DataTable';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { SegmentedControl } from '@components/SegmentedControl';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
 import type { ReportHubCard } from './reportHubTypes';
 import { reportDateRangeForPreset, type ReportDatePreset } from './reportHubDatePresets';
 import {
@@ -81,38 +87,37 @@ export function ReportHubNativeCard({
   };
 
   return (
-    <article className="oe-nc-reporthub-card oe-nc-reporthub-card--native" role="listitem">
-      <div className="oe-nc-reporthub-card__head">
-        <h3 className="oe-nc-reporthub-card__title h6 mb-0">{card.title}</h3>
-        <span className="badge badge-primary oe-nc-reporthub-card__badge">Built-in</span>
+    <article className="nc-reporthub-card nc-reporthub-card--native" role="listitem">
+      <div className="nc-reporthub-card-head">
+        <h3 className="nc-reporthub-card-title text-base font-semibold mb-0">{card.title}</h3>
+        <Badge variant="default" className="nc-reporthub-card-badge">Built-in</Badge>
       </div>
-      <p className="oe-nc-reporthub-card__blurb small text-muted mb-3">{card.blurb}</p>
+      <p className="nc-reporthub-card-blurb text-sm text-[var(--oe-nc-text-muted)] mb-3">{card.blurb}</p>
 
-      <div className="oe-nc-reporthub-native-filters">
-        <div className="oe-nc-reporthub-native-filters__presets">
-          <span className="oe-nc-reporthub-native-filters__label">Quick range</span>
-          <div className="btn-group btn-group-sm" role="group" aria-label="Date presets">
-            <button type="button" className="btn btn-outline-secondary" onClick={() => applyPreset('today')}>
-              Today
-            </button>
-            <button type="button" className="btn btn-outline-secondary" onClick={() => applyPreset('this_week')}>
-              This week
-            </button>
-            <button type="button" className="btn btn-outline-secondary" onClick={() => applyPreset('this_month')}>
-              This month
-            </button>
-          </div>
+      <div className="nc-reporthub-native-filters">
+        <div className="nc-reporthub-native-filters-presets">
+          <span className="nc-reporthub-native-filters-label">Quick range</span>
+          <SegmentedControl
+            segments={[
+              { id: 'today', label: 'Today' },
+              { id: 'this_week', label: 'This week' },
+              { id: 'this_month', label: 'This month' },
+            ]}
+            value=""
+            onChange={(id) => applyPreset(id as ReportDatePreset)}
+            ariaLabel="Date presets"
+          />
         </div>
 
-        <div className="oe-nc-reporthub-native-filters__dates">
-          <div className="form-group mb-0">
-            <label className="oe-nc-reporthub-native-filters__label" htmlFor={`nc-reporthub-from-${card.id}`}>
+        <div className="nc-reporthub-native-filters-dates">
+          <div className="nc-form-group mb-0">
+            <Label className="nc-reporthub-native-filters-label normal-case" htmlFor={`nc-reporthub-from-${card.id}`}>
               From
-            </label>
-            <input
+            </Label>
+            <Input
               id={`nc-reporthub-from-${card.id}`}
               type="date"
-              className="form-control form-control-sm"
+              className="h-8"
               value={dateFrom}
               onChange={(event) => {
                 setDateFrom(event.target.value);
@@ -120,14 +125,14 @@ export function ReportHubNativeCard({
               }}
             />
           </div>
-          <div className="form-group mb-0">
-            <label className="oe-nc-reporthub-native-filters__label" htmlFor={`nc-reporthub-to-${card.id}`}>
+          <div className="nc-form-group mb-0">
+            <Label className="nc-reporthub-native-filters-label normal-case" htmlFor={`nc-reporthub-to-${card.id}`}>
               To
-            </label>
-            <input
+            </Label>
+            <Input
               id={`nc-reporthub-to-${card.id}`}
               type="date"
-              className="form-control form-control-sm"
+              className="h-8"
               value={dateTo}
               onChange={(event) => {
                 setDateTo(event.target.value);
@@ -135,33 +140,34 @@ export function ReportHubNativeCard({
               }}
             />
           </div>
-          <div className="oe-nc-reporthub-native-filters__actions">
-            <button
+          <div className="nc-reporthub-native-filters-actions">
+            <Button
               type="button"
-              className="btn btn-outline-primary btn-sm"
+              variant="outline"
+              size="sm"
               disabled={loading || exporting}
               onClick={() => void runPreview(1)}
             >
               {loading ? 'Running…' : 'Run report'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn btn-primary btn-sm"
+              size="sm"
               disabled={loading || exporting}
               onClick={() => void handleExport()}
             >
               {exporting ? 'Exporting…' : 'Export CSV'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       {error ? (
-        <div className="alert alert-danger py-2 px-3 mb-2 oe-nc-reporthub-alert" role="alert">{error}</div>
+        <div className={deskCalloutClass('error', 'py-2 px-3 mb-2 nc-reporthub-alert')} role="alert">{error}</div>
       ) : null}
 
       {total !== null ? (
-        <p className="oe-nc-reporthub-native-meta small text-muted mb-2">
+        <p className="nc-reporthub-native-meta text-sm text-[var(--oe-nc-text-muted)] mb-2">
           {total === 0
             ? 'No rows match this date range.'
             : `Showing ${rows.length} of ${total} row${total === 1 ? '' : 's'}.`}
@@ -169,30 +175,14 @@ export function ReportHubNativeCard({
       ) : null}
 
       {columns.length > 0 ? (
-        <div className="oe-nc-reporthub-native-results">
-          <DataTable
+        <div className="nc-reporthub-native-results">
+          <MatrixDataTable
             compact
             hover
-            header={(
-              <tr>
-                {columns.map((column) => (
-                  <th key={column} scope="col">{column}</th>
-                ))}
-              </tr>
-            )}
-          >
-            {rows.length === 0 ? (
-              <DataTableStatusRow colSpan={columns.length}>No rows in preview.</DataTableStatusRow>
-            ) : (
-              rows.map((row, rowIndex) => (
-                <tr key={`${card.id}-row-${rowIndex}`}>
-                  {row.map((cell, cellIndex) => (
-                    <td key={`${card.id}-cell-${rowIndex}-${cellIndex}`}>{cell}</td>
-                  ))}
-                </tr>
-              ))
-            )}
-          </DataTable>
+            columns={columns}
+            rows={rows}
+            emptyMessage="No rows in preview."
+          />
           {total !== null && total > HUB_REPORT_PAGE_SIZE ? (
             <PaginationBar
               page={page}

@@ -13,7 +13,17 @@ namespace OpenEMR\Modules\NewClinic\Services;
 
 class PharmOpsSafetyService
 {
-    private const NKDA_LABELS = ['nkda', 'no known drug allergies'];
+    private const NKDA_LABELS = [
+        'nkda',
+        'nka',
+        'no known allergies',
+        'no known allergy',
+        'no known drug allergies',
+        'no known drug allergy',
+        'none known',
+        'no allergy',
+        'no allergies',
+    ];
 
     /**
      * @return list<string>
@@ -34,6 +44,14 @@ class PharmOpsSafetyService
         }
 
         return array_values(array_unique($tokens));
+    }
+
+    /**
+     * True when an allergy list title represents an explicit "none known" / NKDA entry rather than a real allergen.
+     */
+    public static function isNkdaTitle(string $title): bool
+    {
+        return in_array(strtolower(trim($title)), self::NKDA_LABELS, true);
     }
 
     /**

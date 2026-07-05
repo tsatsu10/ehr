@@ -1,52 +1,52 @@
 {% extends 'base.html.twig' %}
 
 {% block page_heading_actions %}
-<div class="d-flex flex-wrap align-items-center oe-nc-billops-toolbar" id="nc-billops-toolbar">
-    <div class="btn-group btn-group-sm mr-2 mb-1" role="group" aria-label="{{ 'Billing tabs'|xlt }}">
+<div class="nc-flex nc-flex-wrap nc-items-center nc-billops-toolbar" id="nc-billops-toolbar">
+    <div class="nc-btn-group nc-btn-group-sm nc-mr-2 nc-mb-1" role="group" aria-label="{{ 'Billing tabs'|xlt }}">
         {% if can_correct %}
-        <button type="button" class="btn btn-outline-primary{% if initial_tab == 'corrections' %} active{% endif %}" data-tab="corrections">
+        <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary{% if initial_tab == 'corrections' %} active{% endif %}" data-tab="corrections">
             {{ 'Corrections'|xlt }}
         </button>
         {% endif %}
         {% if can_payment %}
-        <button type="button" class="btn btn-outline-primary{% if initial_tab == 'payments' %} active{% endif %}" data-tab="payments">
+        <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary{% if initial_tab == 'payments' %} active{% endif %}" data-tab="payments">
             {{ 'Payments'|xlt }}
         </button>
         {% endif %}
         {% if can_close %}
-        <button type="button" class="btn btn-outline-primary{% if initial_tab == 'close' %} active{% endif %}" data-tab="close">
+        <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary{% if initial_tab == 'close' %} active{% endif %}" data-tab="close">
             {{ 'Close day'|xlt }}
         </button>
         {% endif %}
         {% if can_outstanding %}
-        <button type="button" class="btn btn-outline-primary{% if initial_tab == 'outstanding' %} active{% endif %}" data-tab="outstanding">
+        <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary{% if initial_tab == 'outstanding' %} active{% endif %}" data-tab="outstanding">
             {{ 'Outstanding'|xlt }}
         </button>
         {% endif %}
         {% if can_insurance %}
-        <button type="button" class="btn btn-outline-primary{% if initial_tab == 'insurance' %} active{% endif %}" data-tab="insurance">
+        <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary{% if initial_tab == 'insurance' %} active{% endif %}" data-tab="insurance">
             {{ 'Insurance'|xlt }}
         </button>
         {% endif %}
     </div>
-    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ cashier_url|attr }}">{{ 'Cashier'|xlt }}</a>
-    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ reports_url|attr }}">{{ 'Reports'|xlt }}</a>
+    <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1 nc-mr-1" href="{{ cashier_url|attr }}">{{ 'Cashier'|xlt }}</a>
+    <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1 nc-mr-1" href="{{ reports_url|attr }}">{{ 'Reports'|xlt }}</a>
     {% if can_show_advanced %}
-    <div class="dropdown d-inline-block mb-1 mr-1">
-        <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    <div class="nc-dropdown nc-inline-block nc-mb-1 nc-mr-1">
+        <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-dropdown-toggle" data-nc-dropdown-toggle aria-haspopup="true" aria-expanded="false">
             {{ 'Advanced'|xlt }}
         </button>
-        <div class="dropdown-menu dropdown-menu-right">
-            <a class="dropdown-item" href="{{ webroot }}/interface/billing/billing_report.php" target="_top">{{ 'Billing Manager (core)'|xlt }}</a>
-            <a class="dropdown-item" href="{{ webroot }}/interface/billing/search_payments.php" target="_top">{{ 'Search payments (core)'|xlt }}</a>
-            <a class="dropdown-item" href="{{ webroot }}/interface/reports/pat_ledger.php" target="_top">{{ 'Patient ledger (core)'|xlt }}</a>
+        <div class="nc-dropdown-menu nc-dropdown-menu-right">
+            <a class="nc-dropdown-item" href="{{ webroot }}/interface/billing/billing_report.php" target="_top">{{ 'Billing Manager (core)'|xlt }}</a>
+            <a class="nc-dropdown-item" href="{{ webroot }}/interface/billing/search_payments.php" target="_top">{{ 'Search payments (core)'|xlt }}</a>
+            <a class="nc-dropdown-item" href="{{ webroot }}/interface/reports/pat_ledger.php" target="_top">{{ 'Patient ledger (core)'|xlt }}</a>
         </div>
     </div>
     {% endif %}
-    <button type="button" class="btn btn-outline-secondary btn-sm mb-1" id="nc-billops-refresh" aria-label="{{ 'Refresh'|xlt }}">
+    <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1" id="nc-billops-refresh" aria-label="{{ 'Refresh'|xlt }}">
         <i class="fa fa-refresh" aria-hidden="true"></i>
     </button>
-    <span class="text-muted small mb-1" id="nc-billops-updated"></span>
+    <span class="nc-text-muted nc-text-sm nc-mb-1" id="nc-billops-updated"></span>
 </div>
 {% endblock %}
 

@@ -1,3 +1,4 @@
+import { Card, CardContent } from '@components/ui/card';
 import { COMPLETION_FIELDS } from '../adminFieldDefs';
 import { AdminConfigField } from '../AdminConfigField';
 import { CompletionWeightsEditor } from '../CompletionWeightsEditor';
@@ -22,8 +23,8 @@ export function CompletionTab({
 }: CompletionTabProps) {
   return (
     <>
-      <div className="card">
-        <div className="card-body">
+      <Card>
+        <CardContent>
           {COMPLETION_FIELDS.map((def) => (
             <AdminConfigField
               key={def.key}
@@ -32,8 +33,8 @@ export function CompletionTab({
               onChange={onFieldChange}
             />
           ))}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <CompletionWeightsEditor
         payload={completionFieldWeights}

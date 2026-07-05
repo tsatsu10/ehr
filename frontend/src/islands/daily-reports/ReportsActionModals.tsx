@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Label } from '@components/ui/label';
+import { Textarea } from '@components/ui/textarea';
 import { ConfirmModal, IdentityConfirmBanner } from '@components/ConfirmModal';
 import type { PendingVisitAction } from './reportsTypes';
 
@@ -51,17 +54,16 @@ function ReasonModal({
         <IdentityConfirmBanner displayName={displayName} pubpid={pubpid} />
       )}
     >
-      <div className="form-group mb-0">
-        <label htmlFor="nc-reports-action-reason">Reason (required)</label>
-        <textarea
+      <div className="space-y-1.5 mb-0">
+        <Label htmlFor="nc-reports-action-reason" className="normal-case">Reason (required)</Label>
+        <Textarea
           id="nc-reports-action-reason"
-          className="form-control"
           rows={2}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
         />
       </div>
-      {error && <div className="alert alert-danger mt-2 mb-0">{error}</div>}
+      {error && <div className={deskCalloutClass('error', 'mt-2 mb-0')}>{error}</div>}
     </ConfirmModal>
   );
 }

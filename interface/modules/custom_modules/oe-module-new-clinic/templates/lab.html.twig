@@ -1,17 +1,17 @@
 {% extends 'base.html.twig' %}
 
 {% block page_subtitle %}
-<div class="oe-nc-page-heading__subtitle" id="nc-lab-date"></div>
+<div class="nc-page-heading-subtitle" id="nc-lab-date"></div>
 {% endblock %}
 
 {% block page_heading_actions %}
-<button type="button" class="btn btn-outline-primary btn-sm" id="nc-lab-refresh" aria-label="{{ 'Refresh'|xlt }}">
+<button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary" id="nc-lab-refresh" aria-label="{{ 'Refresh'|xlt }}">
     <i class="fa fa-refresh" aria-hidden="true"></i>
 </button>
 {% if lab_ops_url %}
-<a class="btn btn-outline-secondary btn-sm" href="{{ lab_ops_url|attr }}" target="_top">{{ 'Lab Operations'|xlt }}</a>
+<a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary" href="{{ lab_ops_url|attr }}" target="_top">{{ 'Lab Operations'|xlt }}</a>
 {% endif %}
-<span class="text-muted small" id="nc-lab-updated"></span>
+<span class="nc-text-muted nc-text-sm" id="nc-lab-updated"></span>
 {% endblock %}
 
 {% block content %}

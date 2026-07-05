@@ -31,7 +31,7 @@ export function moveCardBetweenLanes(
 }
 
 export function isFlowBoardUnchanged(
-  payload: { unchanged?: boolean },
+  payload: { unchanged?: boolean; revision?: string; poll_interval_ms?: number },
 ): payload is { unchanged: true; revision: string; poll_interval_ms: number } {
   return payload.unchanged === true;
 }

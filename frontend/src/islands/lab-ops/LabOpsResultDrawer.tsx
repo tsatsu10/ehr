@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
+import { PatientContextBanner } from '@components/PatientContextBanner';
+import { identityFromLabels } from '@components/patientBannerUtils';
 import { SlideOver } from '@components/SlideOver';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { Input } from '@components/ui/input';
+import { NativeSelect } from '@components/ui/native-select';
 import { createLabResultValidator } from './labResultValidation';
 import type { ResultEntryForm, ResultLine, ResultLineValue } from './labOpsTypes';
 
@@ -28,11 +35,21 @@ interface LabOpsResultDrawerProps {
   onSaved: () => void;
 }
 
-function patientLine(order: ResultEntryForm['order']): string {
-  const parts = [order?.patient_name ?? ''];
-  if (order?.pubpid) parts.push(`MRN ${order.pubpid}`);
-  if (order?.queue_number) parts.push(`Q#${order.queue_number}`);
-  return parts.filter(Boolean).join(' · ');
+function LabOpsPatientBanner({ order }: { order: ResultEntryForm['order'] }) {
+  const patientIdentity = identityFromLabels(order?.patient_name, { pubpid: order?.pubpid });
+  if (!patientIdentity) {
+    return null;
+  }
+
+  return (
+    <PatientContextBanner
+      layout="compact"
+      identity={patientIdentity}
+      aside={order?.queue_number != null && order.queue_number !== '' ? (
+        <Badge variant="outline">Q#{order.queue_number}</Badge>
+      ) : undefined}
+    />
+  );
 }
 
 function linesToDrafts(lines: ResultLine[]): LineDraft[] {
@@ -131,7 +148,7 @@ export function LabOpsResultDrawer({
 
   useEffect(() => {
     if (viewMode !== 'form' || !bodyRef.current) return;
-    bodyRef.current.querySelectorAll<HTMLElement>('.oe-nc-labops-line').forEach((lineEl) => {
+    bodyRef.current.querySelectorAll<HTMLElement>('.nc-labops-line').forEach((lineEl) => {
       const seqInput = lineEl.querySelector<HTMLInputElement>('[data-field="procedure_order_seq"]');
       if (!seqInput) return;
       const seq = parseInt(seqInput.value, 10);
@@ -249,8 +266,8 @@ export function LabOpsResultDrawer({
   const renderQcWarnings = (warnings: string[]) => {
     if (!warnings.length) return null;
     return (
-      <div className="alert alert-warning py-2 px-3 mt-3 mb-0 border border-warning">
-        <strong className="d-block mb-1">Review before release</strong>
+      <div className={deskCalloutClass('warn', 'py-2 px-3 mt-3 mb-0')}>
+        <strong className="block mb-1">Review before release</strong>
         {warnings.map((w) => (
           <div key={w}>{w}</div>
         ))}
@@ -276,15 +293,15 @@ export function LabOpsResultDrawer({
 
     return (
       <>
-        <p className="small text-muted mb-3">{patientLine(order)}</p>
-        <div className="oe-nc-labops-saved" role="status" aria-live="polite">
-          <div className="d-flex align-items-start">
-            <span className="badge badge-success mr-2 mt-1">
+        <LabOpsPatientBanner order={order} />
+        <div className="nc-labops-saved" role="status" aria-live="polite">
+          <div className="flex items-start">
+            <Badge variant="success" className="mr-2 mt-1 shrink-0">
               {released || orderReleased ? 'Released' : 'Saved'}
-            </span>
-            <div className="flex-grow-1">
+            </Badge>
+            <div className="flex-grow min-w-0">
               <strong>{title} at {timeLabel}</strong>
-              <div className="oe-nc-labops-saved__summary mt-2">
+              <div className="nc-labops-saved-summary mt-2">
                 {savedSummary.length ? (
                   <ul className="mb-0 pl-3">
                     {savedSummary.map((row) => (
@@ -292,11 +309,11 @@ export function LabOpsResultDrawer({
                     ))}
                   </ul>
                 ) : (
-                  <p className="mb-0 text-muted">Result values recorded for this order.</p>
+                  <p className="mb-0 text-[var(--oe-nc-text-muted)]">Result values recorded for this order.</p>
                 )}
               </div>
               {renderQcWarnings(savedWarnings)}
-              <p className="text-muted small mb-0 mt-2">{hint}</p>
+              <p className="text-[var(--oe-nc-text-muted)] text-sm mb-0 mt-2">{hint}</p>
             </div>
           </div>
         </div>
@@ -322,58 +339,62 @@ export function LabOpsResultDrawer({
         <>
           {viewMode === 'saved' || viewMode === 'released' ? (
             <>
-              <button type="button" className="btn btn-primary btn-sm" onClick={onClose}>
+              <Button type="button" size="sm" onClick={onClose}>
                 Done
-              </button>
+              </Button>
               {viewMode !== 'released' ? (
-                <button
+                <Button
                   type="button"
-                  className="btn btn-outline-secondary btn-sm"
+                  variant="outline"
+                  size="sm"
                   onClick={() => {
                     if (orderId) void loadForm(orderId).then(() => setViewMode('form'));
                   }}
                 >
                   Edit results
-                </button>
+                </Button>
               ) : null}
               {canRelease && viewMode !== 'released' && !savedDraft && orderId ? (
-                <button
+                <Button
                   type="button"
-                  className="btn btn-success btn-sm"
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
                   disabled={saving}
                   onClick={() => void releaseOrder()}
                 >
                   Release to doctor
-                </button>
+                </Button>
               ) : null}
             </>
           ) : canEnter && lines.length ? (
             <>
-              <button
+              <Button
                 type="button"
-                className="btn btn-outline-secondary btn-sm"
+                variant="outline"
+                size="sm"
                 disabled={saving}
                 onClick={() => void saveEntry(true)}
               >
                 {saving ? 'Saving…' : 'Save draft'}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn btn-primary btn-sm"
+                size="sm"
                 disabled={saving}
                 onClick={() => void saveEntry(false)}
               >
                 {saving ? 'Saving…' : 'Save'}
-              </button>
+              </Button>
               {canRelease && !savedDraft && orderId ? (
-                <button
+                <Button
                   type="button"
-                  className="btn btn-success btn-sm"
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
                   disabled={saving}
                   onClick={() => void releaseOrder()}
                 >
                   Release to doctor
-                </button>
+                </Button>
               ) : null}
             </>
           ) : null}
@@ -382,12 +403,12 @@ export function LabOpsResultDrawer({
     >
       <div id="nc-labops-drawer-body" ref={bodyRef}>
           {loadError ? (
-            <div className="alert alert-danger">{loadError}</div>
+            <div className={deskCalloutClass('error')}>{loadError}</div>
           ) : viewMode === 'saved' || viewMode === 'released' ? (
             renderSavedPanel(viewMode === 'released')
           ) : (
             <>
-              <p className="small text-muted mb-3">{patientLine(order)}</p>
+              <LabOpsPatientBanner order={order} />
               {lineDrafts.map((draft, idx) => {
                 const line = lines[idx];
                 const qc = line?.qc ?? {};
@@ -395,27 +416,27 @@ export function LabOpsResultDrawer({
                 return (
                   <div
                     key={draft.procedure_order_seq}
-                    className="oe-nc-labops-line"
+                    className="nc-labops-line"
                     data-line-index={idx}
                   >
                     <input type="hidden" data-field="procedure_order_seq" value={draft.procedure_order_seq} readOnly />
                     <input type="hidden" data-field="procedure_report_id" value={draft.procedure_report_id ?? ''} readOnly />
                     <input type="hidden" data-field="procedure_result_id" value={draft.procedure_result_id ?? ''} readOnly />
-                    <div className="font-weight-bold mb-1">
+                    <div className="font-bold mb-1">
                       {line?.procedure_name ?? line?.procedure_code}
                     </div>
-                    {qc.hint ? <div className="small text-muted mb-1">{qc.hint}</div> : null}
-                    <div className="form-group">
+                    {qc.hint ? <div className="text-sm text-[var(--oe-nc-text-muted)] mb-1">{qc.hint}</div> : null}
+                    <div className="nc-form-group">
                       <label>
-                        Result value <span className="text-danger">*</span>
+                        Result value <span className="text-[var(--oe-nc-danger,#dc2626)]">*</span>
                       </label>
-                      <input
-                        className="form-control form-control-sm"
+                      <Input
+                        className="h-8"
                         data-field="result"
                         list={listId}
                         value={draft.result}
                         onChange={(e) => updateLine(idx, { result: e.target.value })}
-                        onBlur={(e) => handleResultBlur(idx, e.currentTarget.closest('.oe-nc-labops-line'))}
+                        onBlur={(e) => handleResultBlur(idx, e.currentTarget.closest('.nc-labops-line'))}
                       />
                       <div className="nc-labops-feedback" />
                     </div>
@@ -426,11 +447,11 @@ export function LabOpsResultDrawer({
                         ))}
                       </datalist>
                     ) : null}
-                    <div className="form-row">
+                    <div className="grid grid-cols-12 gap-3">
                       <div className="col">
                         <label>Units</label>
-                        <input
-                          className="form-control form-control-sm"
+                        <Input
+                          className="h-8"
                           data-field="units"
                           value={draft.units}
                           onChange={(e) => updateLine(idx, { units: e.target.value })}
@@ -438,18 +459,18 @@ export function LabOpsResultDrawer({
                       </div>
                       <div className="col">
                         <label>Range</label>
-                        <input
-                          className="form-control form-control-sm"
+                        <Input
+                          className="h-8"
                           data-field="range"
                           value={draft.range}
                           onChange={(e) => updateLine(idx, { range: e.target.value })}
                         />
                       </div>
                     </div>
-                    <div className="form-group mt-2">
+                    <div className="nc-form-group mt-2">
                       <label>Abnormal</label>
-                      <select
-                        className="form-control form-control-sm"
+                      <NativeSelect
+                        className="h-8"
                         data-field="abnormal"
                         value={draft.abnormal}
                         onChange={(e) => updateLine(idx, { abnormal: e.target.value })}
@@ -458,12 +479,12 @@ export function LabOpsResultDrawer({
                         <option value="yes">yes</option>
                         <option value="high">high</option>
                         <option value="low">low</option>
-                      </select>
+                      </NativeSelect>
                     </div>
-                    <div className="form-group">
+                    <div className="nc-form-group">
                       <label>Note</label>
-                      <input
-                        className="form-control form-control-sm"
+                      <Input
+                        className="h-8"
                         data-field="comments"
                         value={draft.comments}
                         onChange={(e) => updateLine(idx, { comments: e.target.value })}
@@ -474,13 +495,15 @@ export function LabOpsResultDrawer({
               })}
               {!lines.length ? (
                 <>
-                  <div className="alert alert-warning mb-0">
+                  <div className={deskCalloutClass('warn', 'mb-0')}>
                     This order has no tests yet. Add at least one test line before entering results.
                   </div>
                   {entryForm?.edit_order_url ? (
-                    <a className="btn btn-primary btn-sm mt-3" href={entryForm.edit_order_url} target="_top">
-                      Add tests to order
-                    </a>
+                    <Button variant="default" size="sm" className="mt-3" asChild>
+                      <a href={entryForm.edit_order_url} target="_top">
+                        Add tests to order
+                      </a>
+                    </Button>
                   ) : null}
                 </>
               ) : null}

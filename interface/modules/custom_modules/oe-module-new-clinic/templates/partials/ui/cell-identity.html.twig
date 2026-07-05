@@ -1,18 +1,18 @@
 {# cell-identity — avatar/initials + primary + secondary #}
-<div class="oe-nc-cell-identity">
-    <span class="oe-nc-cell-identity__avatar" aria-hidden="true">
+<div class="nc-cell-identity">
+    <span class="nc-cell-identity-avatar" aria-hidden="true">
         {% if photo_url is defined and photo_url %}
             <img src="{{ photo_url|attr }}" alt="">
         {% else %}
             {{ initials|default('?') }}
         {% endif %}
     </span>
-    <div class="oe-nc-cell-identity__body">
-        <div class="oe-nc-cell-identity__primary"{% if primary_title is defined %} title="{{ primary_title|attr }}"{% endif %}>
+    <div class="nc-cell-identity-body">
+        <div class="nc-cell-identity-primary"{% if primary_title is defined %} title="{{ primary_title|attr }}"{% endif %}>
             {{ primary|text }}
         </div>
         {% if secondary is defined %}
-            <div class="oe-nc-cell-identity__secondary"{% if secondary_title is defined %} title="{{ secondary_title|attr }}"{% endif %}>
+            <div class="nc-cell-identity-secondary"{% if secondary_title is defined %} title="{{ secondary_title|attr }}"{% endif %}>
                 {{ secondary|text }}
             </div>
         {% endif %}

@@ -1,8 +1,9 @@
-import { QUEUE_FIELD_SECTIONS } from '../adminFieldDefs';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { Card, CardContent } from '@components/ui/card';
 import { AdminConfigField } from '../AdminConfigField';
-
+import { QUEUE_FIELD_SECTIONS } from '../adminFieldDefs';
 import type { AncillaryLbfPackStatus, GhanaLbfPackStatus } from '../adminTypes';
-
 import { FlowBoardLaneMapPanel } from './FlowBoardLaneMapPanel';
 
 interface QueueRolesTabProps {
@@ -40,15 +41,15 @@ export function QueueRolesTab({
     || settings.enable_scheduling_redesign === 1;
 
   return (
-    <div className="card">
-      <div className="card-body">
-        <p className="text-muted">Enable optional desks and queue behavior.</p>
+    <Card>
+      <CardContent>
+        <p className="text-[var(--oe-nc-text-muted)]">Enable optional desks and queue behavior.</p>
         {QUEUE_FIELD_SECTIONS.map((section, idx) => (
           <div key={section.title ?? `section-${idx}`}>
             {section.title && (
               <>
                 {idx > 0 && <hr className="my-3" />}
-                <h6 className="text-muted text-uppercase small">{section.title}</h6>
+                <h6 className="text-[var(--oe-nc-text-muted)] uppercase text-sm">{section.title}</h6>
               </>
             )}
             {section.fields.map((def) => (
@@ -68,67 +69,71 @@ export function QueueRolesTab({
               />
             )}
             {section.title === 'Clinical Documentation Hub (M17)' && hubEnabled && (
-              <div className="border rounded p-3 mt-2 bg-light">
+              <div className="border rounded p-3 mt-2 bg-[var(--oe-nc-bg-tint)]">
                 <h6 className="mb-1">Ghana OPD consult template (LBF)</h6>
-                <p className="text-muted small mb-2">
+                <p className="text-[var(--oe-nc-text-muted)] text-sm mb-2">
                   Optional structured consult form for West Africa OPD. Imports layout
                   <code className="mx-1">{ghanaLbfPack.form_id ?? 'LBFghana_opd_consult'}</code>
                   into OpenEMR Layout-Based Forms.
                 </p>
-                <p className="small mb-2" id="nc-admin-ghana-lbf-status">
-                  <span className={`badge badge-${ghanaLbfPack.installed ? 'success' : 'secondary'} mr-2`}>
+                <p className="text-sm mb-2" id="nc-admin-ghana-lbf-status">
+                  <Badge variant={ghanaLbfPack.installed ? 'success' : 'neutral'} className="mr-2">
                     {ghanaLbfPack.installed ? 'Installed' : 'Not installed'}
-                  </span>
+                  </Badge>
                   {ghanaLbfPack.is_primary_consult_note
                     ? 'Set as primary consult note.'
                     : 'Stock SOAP remains primary unless you import with that option.'}
                 </p>
-                <div className="d-flex flex-wrap">
-                  <button
+                <div className="flex flex-wrap">
+                  <Button
                     type="button"
-                    className="btn btn-outline-primary btn-sm mr-2 mb-2"
+                    variant="outline"
+                    size="sm"
+                    className="mr-2 mb-2"
                     id="nc-admin-import-ghana-lbf"
                     disabled={ghanaLbfImporting || ghanaLbfPack.installed}
                     onClick={() => onImportGhanaLbfPack(false)}
                   >
                     {ghanaLbfImporting ? 'Importing…' : 'Import template'}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="btn btn-primary btn-sm mb-2"
+                    size="sm"
+                    className="mb-2"
                     id="nc-admin-import-ghana-lbf-primary"
                     disabled={ghanaLbfImporting || (ghanaLbfPack.installed && ghanaLbfPack.is_primary_consult_note)}
                     onClick={() => onImportGhanaLbfPack(true)}
                   >
                     {ghanaLbfImporting ? 'Importing…' : 'Import & set as consult note'}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
             {section.title === 'Clinical Documentation Hub (M17)' && hubEnabled && ancillaryLbfPacks.length > 0 && (
-              <div className="border rounded p-3 mt-2 bg-light">
+              <div className="border rounded p-3 mt-2 bg-[var(--oe-nc-bg-tint)]">
                 <h6 className="mb-1">Ancillary attestation forms (LBF)</h6>
-                <p className="text-muted small mb-2">
+                <p className="text-[var(--oe-nc-text-muted)] text-sm mb-2">
                   Lab-direct and pharmacy walk-in service profiles require these layout-based forms (PRD §17.3 step 8).
                 </p>
-                <ul className="list-unstyled mb-0">
+                <ul className="list-none m-0 p-0 mb-0">
                   {ancillaryLbfPacks.map((pack) => (
-                    <li key={pack.pack_key} className="d-flex flex-wrap align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                    <li key={pack.pack_key} className="flex flex-wrap items-center justify-between mb-2 pb-2 border-bottom">
                       <div>
                         <strong>{pack.title}</strong>
-                        <code className="mx-1 small">{pack.form_id}</code>
-                        <span className={`badge badge-${pack.installed ? 'success' : 'secondary'}`}>
+                        <code className="mx-1 text-sm">{pack.form_id}</code>
+                        <Badge variant={pack.installed ? 'success' : 'neutral'}>
                           {pack.installed ? 'Installed' : 'Not installed'}
-                        </span>
+                        </Badge>
                       </div>
-                      <button
+                      <Button
                         type="button"
-                        className="btn btn-outline-primary btn-sm"
+                        variant="outline"
+                        size="sm"
                         disabled={pack.installed || ancillaryLbfImporting === pack.pack_key}
                         onClick={() => onImportAncillaryLbfPack(pack.pack_key)}
                       >
                         {ancillaryLbfImporting === pack.pack_key ? 'Importing…' : 'Import'}
-                      </button>
+                      </Button>
                     </li>
                   ))}
                 </ul>
@@ -136,7 +141,7 @@ export function QueueRolesTab({
             )}
           </div>
         ))}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

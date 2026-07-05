@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useInterval } from '@core/useInterval';
+import { SegmentedControl } from '@components/SegmentedControl';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
 import {
   fetchCalendarRange,
   moveCalendarAppointment,
@@ -384,11 +388,11 @@ export function CalendarLens({
   }, [ajaxUrl, apiView, applyPayload, csrfToken, data, filters, labels.errorMoveAppointment, pendingChange]);
 
   if (loading && !data) {
-    return <p className="text-muted">{labels.loadingCalendar}</p>;
+    return <p className="text-[var(--oe-nc-text-muted)]">{labels.loadingCalendar}</p>;
   }
 
   if (error && !data) {
-    return <div className="alert alert-danger py-2">{error}</div>;
+    return <div className={deskCalloutClass('error', 'py-2')}>{error}</div>;
   }
 
   if (!data) {
@@ -396,12 +400,12 @@ export function CalendarLens({
   }
 
   return (
-    <div className="oe-nc-calendar">
+    <div className="nc-calendar">
       <div className="sr-only" aria-live="polite" aria-atomic="true">
         {moveError ?? ''}
       </div>
-      <div className="d-flex flex-wrap align-items-center justify-content-between mb-3">
-        <p className="text-muted small mb-2 mb-md-0">
+      <div className="flex flex-wrap items-center justify-between mb-3">
+        <p className="text-[var(--oe-nc-text-muted)] text-sm mb-2 md:mb-0">
           {data.events.length}
           {' '}
           {data.events.length === 1 ? labels.calendarAppointmentSingular : labels.calendarAppointments}
@@ -432,57 +436,56 @@ export function CalendarLens({
           {data.interval_minutes}
           -minute intervals.
         </p>
-        <div className="btn-group btn-group-sm mb-2" role="group" aria-label="Calendar layout">
-          {([
+        <SegmentedControl
+          className="mb-2"
+          segments={([
             ['agenda', labels.calendarAgenda],
             ['day', labels.calendarDayGrid],
             ['week', labels.calendarWeek],
             ['month', labels.calendarMonth],
-          ] as [CalendarLayout, string][]).map(([mode, label]) => (
-            <button
-              key={mode}
-              type="button"
-              className={`btn btn-outline-secondary${layout === mode ? ' active' : ''}`}
-              onClick={() => setLayout(mode)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+          ] as [CalendarLayout, string][]).map(([mode, label]) => ({
+            id: mode,
+            label,
+          }))}
+          value={layout}
+          onChange={(id) => setLayout(id as CalendarLayout)}
+          ariaLabel="Calendar layout"
+        />
       </div>
 
-      {moveError && <div className="alert alert-warning py-2">{moveError}</div>}
+      {moveError && <div className={deskCalloutClass('warn', 'py-2')}>{moveError}</div>}
 
       {layout === 'agenda' ? (
-        <div className="oe-nc-calendar-agenda" role="list">
+        <div className="nc-calendar-agenda" role="list">
           {data.events.length === 0 && (
-            <p className="text-muted small">{labels.calendarNoAppointments}</p>
+            <p className="text-[var(--oe-nc-text-muted)] text-sm">{labels.calendarNoAppointments}</p>
           )}
           {data.events
             .filter((event) => layout !== 'agenda' || event.event_date === data.date)
             .map((event) => (
-            <button
+            <Button
               key={event.pc_eid}
               type="button"
-              className="oe-nc-calendar-agenda__row btn btn-light btn-block text-left mb-2"
+              variant="secondary"
+              className="nc-calendar-agenda-row mb-2 h-auto w-full justify-start text-left font-normal"
               role="listitem"
               aria-label={`${formatSlotRange(event)} ${event.patient_name}, ${event.category_label}, ${event.status_label}`}
               onClick={() => setSelectedEvent(event)}
             >
-              <div className="d-flex justify-content-between align-items-start">
-                <strong className="small">
+              <div className="flex justify-between items-start w-full">
+                <strong className="text-sm">
                   {event.event_date !== data.date ? `${event.event_date} ` : ''}
                   {formatSlotRange(event)}
                 </strong>
-                <span className="badge badge-light border">{event.status_label}</span>
+                <Badge variant="outline">{event.status_label}</Badge>
               </div>
-              <div className="small">{event.patient_name}</div>
-              <div className="text-muted small">
+              <div className="text-sm">{event.patient_name}</div>
+              <div className="text-[var(--oe-nc-text-muted)] text-sm">
                 {event.category_label}
                 {' · '}
                 {event.provider_label}
               </div>
-            </button>
+            </Button>
           ))}
         </div>
       ) : layout === 'day' ? (
@@ -507,17 +510,18 @@ export function CalendarLens({
       ) : (
         <CalendarMonthGrid
           data={data}
+          canBook={data.can_book}
           onSelectEvent={setSelectedEvent}
           onMoveEvent={handleMoveEvent}
         />
       )}
 
       {selectedEvent && (
-        <div className="oe-nc-calendar-peek border rounded p-3 mt-3 bg-white">
-          <div className="d-flex justify-content-between align-items-start mb-2">
+        <div className="nc-calendar-peek border rounded p-3 mt-3 bg-white">
+          <div className="flex justify-between items-start mb-2">
             <div>
               <strong>{selectedEvent.patient_name}</strong>
-              <div className="text-muted small">
+              <div className="text-[var(--oe-nc-text-muted)] text-sm">
                 MRN
                 {' '}
                 {selectedEvent.pubpid}
@@ -525,38 +529,43 @@ export function CalendarLens({
                 {formatSlotRange(selectedEvent)}
               </div>
             </div>
-            <button
+            <Button
               type="button"
-              className="close"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0 text-[var(--oe-nc-text-muted)]"
               aria-label="Close"
               onClick={() => setSelectedEvent(null)}
             >
               <span aria-hidden="true">&times;</span>
-            </button>
+            </Button>
           </div>
-          <p className="small mb-2">
+          <p className="text-sm mb-2">
             {selectedEvent.category_label}
             {' · '}
             {selectedEvent.provider_label}
             {' · '}
-            <span className="badge badge-light border">{selectedEvent.status_label}</span>
+            <Badge variant="outline">{selectedEvent.status_label}</Badge>
           </p>
           {selectedEvent.comments && (
-            <p className="small text-muted mb-2">{selectedEvent.comments}</p>
+            <p className="text-sm text-[var(--oe-nc-text-muted)] mb-2">{selectedEvent.comments}</p>
           )}
           {selectedEvent.is_recurring && (
-            <p className="small text-muted mb-2">Recurring series</p>
+            <p className="text-sm text-[var(--oe-nc-text-muted)] mb-2">Recurring series</p>
           )}
-          <a className="btn btn-sm btn-outline-primary mr-2" href={frontDeskUrl}>
-            {labels.frontDesk}
-          </a>
-          <button
+          <Button variant="outline" size="sm" className="mr-2" asChild>
+            <a href={frontDeskUrl}>
+              {labels.frontDesk}
+            </a>
+          </Button>
+          <Button
             type="button"
-            className="btn btn-sm btn-link"
+            variant="link"
+            size="sm"
             onClick={() => setSelectedEvent(null)}
           >
             {labels.close}
-          </button>
+          </Button>
         </div>
       )}
 

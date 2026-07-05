@@ -1,3 +1,6 @@
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { Card, CardContent } from '@components/ui/card';
 import type { SystemHealthChip, SystemHealthChipStatus, SystemHealthPayload } from './adminTypes';
 
 interface SystemHealthBoardProps {
@@ -12,11 +15,11 @@ interface SystemHealthBoardProps {
   refreshing: boolean;
 }
 
-function chipBadgeClass(status: SystemHealthChipStatus): string {
-  if (status === 'ok') return 'badge-success';
-  if (status === 'warning') return 'badge-warning';
-  if (status === 'error') return 'badge-danger';
-  return 'badge-secondary';
+function chipBadgeVariant(status: SystemHealthChipStatus): 'success' | 'warning' | 'danger' | 'neutral' {
+  if (status === 'ok') return 'success';
+  if (status === 'warning') return 'warning';
+  if (status === 'error') return 'danger';
+  return 'neutral';
 }
 
 function overallLabel(status: SystemHealthPayload['overall_status']): string {
@@ -26,9 +29,9 @@ function overallLabel(status: SystemHealthPayload['overall_status']): string {
 }
 
 function overallClass(status: SystemHealthPayload['overall_status']): string {
-  if (status === 'ok') return 'text-success';
-  if (status === 'warning') return 'text-warning';
-  return 'text-danger';
+  if (status === 'ok') return 'text-green-600';
+  if (status === 'warning') return 'text-[var(--color-oe-warning,#ea580c)]';
+  return 'text-[var(--oe-nc-danger,#dc2626)]';
 }
 
 function formatCheckedAt(iso: string): string {
@@ -72,32 +75,36 @@ function HealthChipCard({
   }
 
   return (
-    <div className="card h-100">
-      <div className="card-body d-flex flex-column">
-        <div className="d-flex justify-content-between align-items-start mb-2">
-          <h6 className="card-title mb-0">{chip.label}</h6>
-          <span className={`badge ${chipBadgeClass(chip.status)}`}>{chip.summary}</span>
+    <div className="rounded-lg border border-[var(--oe-nc-border)] bg-white h-full">
+      <div className="p-4 flex flex-col">
+        <div className="flex justify-between items-start mb-2">
+          <h6 className="font-semibold text-base mb-0">{chip.label}</h6>
+          <Badge variant={chipBadgeVariant(chip.status)}>{chip.summary}</Badge>
         </div>
-        <p className="small text-muted mb-3 flex-grow-1">{chip.detail}</p>
+        <p className="text-sm text-[var(--oe-nc-text-muted)] mb-3 flex-grow">{chip.detail}</p>
         {showAction && onAction && (
-          <button
+          <Button
             type="button"
-            className="btn btn-outline-primary btn-sm align-self-start mb-2"
+            variant="outline"
+            size="sm"
+            className="self-start mb-2"
             disabled={actionDisabled}
             onClick={onAction}
           >
             {actionBusy ? 'Running…' : chip.action_label}
-          </button>
+          </Button>
         )}
         {chip.key === 'backup' && showCompleteBackup && (
-          <button
+          <Button
             type="button"
-            className="btn btn-outline-success btn-sm align-self-start"
+            variant="outline"
+            size="sm"
+            className="self-start border-emerald-300 text-emerald-800 hover:bg-emerald-50"
             disabled={backupCompleting}
             onClick={onCompleteBackup}
           >
             {backupCompleting ? 'Saving…' : 'Mark backup complete'}
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -117,29 +124,30 @@ export function SystemHealthBoard({
 }: SystemHealthBoardProps) {
   return (
     <div>
-      <div className="d-flex flex-wrap justify-content-between align-items-center mb-3">
+      <div className="flex flex-wrap justify-between items-center mb-3">
         <div>
           <h5 className="mb-1">System health</h5>
-          <p className={`mb-0 font-weight-bold ${overallClass(health.overall_status)}`}>
+          <p className={`mb-0 font-bold ${overallClass(health.overall_status)}`}>
             {overallLabel(health.overall_status)}
           </p>
-          <p className="small text-muted mb-0">
+          <p className="text-sm text-[var(--oe-nc-text-muted)] mb-0">
             Last checked: {formatCheckedAt(health.checked_at)}
           </p>
         </div>
-        <button
+        <Button
           type="button"
-          className="btn btn-outline-secondary btn-sm"
+          variant="outline"
+          size="sm"
           disabled={refreshing}
           onClick={onRefresh}
         >
           {refreshing ? 'Refreshing…' : 'Refresh'}
-        </button>
+        </Button>
       </div>
 
-      <div className="row mb-3">
+      <div className="grid grid-cols-12 gap-3 mb-3">
         {health.chips.map((chip) => (
-          <div key={chip.key} className="col-md-6 col-lg-3 mb-3">
+          <div key={chip.key} className="col-span-12 md:col-span-6 lg:col-span-3 mb-3">
             <HealthChipCard
               chip={chip}
               reconciliationRunning={reconciliationRunning}
@@ -154,9 +162,9 @@ export function SystemHealthBoard({
         ))}
       </div>
 
-      <div className="card mb-3">
-        <div className="card-body py-2">
-          <div className="d-flex flex-wrap small text-muted">
+      <Card className="mb-3">
+        <CardContent className="py-2">
+          <div className="flex flex-wrap text-sm text-[var(--oe-nc-text-muted)]">
             <span className="mr-4 mb-1">Recent errors (24h): {health.meta.errors_24h}</span>
             <span className="mr-4 mb-1">OpenEMR {health.meta.openemr_version}</span>
             <span className="mr-4 mb-1">Module {health.meta.module_version}</span>
@@ -164,24 +172,28 @@ export function SystemHealthBoard({
               <span className="mb-1">Backup retention: {health.meta.backup_retention_days} days</span>
             )}
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className="card mb-3">
-        <div className="card-body">
-          <h6 className="text-muted text-uppercase small">Backup &amp; logs</h6>
-          <p className="small text-muted">{health.xampp_backup_hint}</p>
+      <Card className="mb-3">
+        <CardContent>
+          <h6 className="text-[var(--oe-nc-text-muted)] uppercase text-sm">Backup &amp; logs</h6>
+          <p className="text-sm text-[var(--oe-nc-text-muted)]">{health.xampp_backup_hint}</p>
           {!health.can_run_backup && health.backup_blocked_reason && (
-            <p className="small text-warning">{health.backup_blocked_reason}</p>
+            <p className="text-sm text-[var(--color-oe-warning,#ea580c)]">{health.backup_blocked_reason}</p>
           )}
-          <a className="btn btn-outline-warning btn-sm mr-2 mb-1" href={health.logview_url} target="_top">
-            Open log viewer
-          </a>
-          <a className="btn btn-outline-warning btn-sm mb-1" href={health.backup_php_url} target="_top">
-            Stock backup (Advanced)
-          </a>
-        </div>
-      </div>
+          <Button variant="warning" size="sm" className="mr-2 mb-1" asChild>
+            <a href={health.logview_url} target="_top">
+              Open log viewer
+            </a>
+          </Button>
+          <Button variant="warning" size="sm" className="mb-1" asChild>
+            <a href={health.backup_php_url} target="_top">
+              Stock backup (Advanced)
+            </a>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

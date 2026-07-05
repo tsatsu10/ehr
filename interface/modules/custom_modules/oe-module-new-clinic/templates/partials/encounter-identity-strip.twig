@@ -1,7 +1,7 @@
 {# T1-F17 — server-injected encounter identity strip on core shortcut pages #}
 <link rel="stylesheet" href="{{ asset_css_url|attr }}">
 <div id="encounter-identity-strip" class="nc-encounter-identity-strip" role="region" aria-label="{{ 'Active visit'|xla }}">
-    <div class="nc-encounter-identity-strip__inner container-fluid py-2">
+    <div class="nc-encounter-identity-strip__inner nc-container-fluid nc-py-2">
         <div class="nc-encounter-identity-strip__identity">
             <strong>{{ patient_name|text }}</strong>
             <span class="nc-encounter-identity-strip__sep" aria-hidden="true">·</span>
@@ -11,7 +11,7 @@
             <span class="nc-encounter-identity-strip__sep" aria-hidden="true">·</span>
             <span>{{ 'Encounter'|xlt }} #{{ encounter|text }}</span>
         </div>
-        <a class="btn btn-sm btn-outline-primary nc-encounter-identity-strip__back" href="{{ back_url|attr }}">
+        <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary nc-encounter-identity-strip__back" href="{{ back_url|attr }}">
             {{ back_label|text }}
         </a>
     </div>

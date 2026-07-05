@@ -1,48 +1,48 @@
 {# T1-F18 — legacy patient context strip on stock chart pages #}
 <link rel="stylesheet" href="{{ asset_css_url|attr }}">
 <div id="legacy-patient-context-strip"
-     class="oe-nc-legacy-strip"
+     class="nc-legacy-strip"
      data-host="legacy_chart"
      role="region"
      aria-label="{{ 'Patient context'|xla }}">
-    <div class="oe-nc-legacy-strip__inner container-fluid py-2">
-        <div class="oe-nc-legacy-strip__row">
-            <div class="oe-nc-legacy-strip__avatar" aria-hidden="true">{{ initials|text }}</div>
-            <div class="oe-nc-legacy-strip__identity">
-                <strong class="oe-nc-legacy-strip__name">{{ display_name|text }}</strong>
-                <span class="oe-nc-legacy-strip__meta">
+    <div class="nc-legacy-strip-inner nc-container-fluid nc-py-2">
+        <div class="nc-legacy-strip-row">
+            <div class="nc-legacy-strip-avatar" aria-hidden="true">{{ initials|text }}</div>
+            <div class="nc-legacy-strip-identity">
+                <strong class="nc-legacy-strip-name">{{ display_name|text }}</strong>
+                <span class="nc-legacy-strip-meta">
                     {{ sex|text }} · {{ age_years|text }}y · {{ 'MRN'|xlt }} {{ mrn|text }}
                     {% if dob_label %}
                         · {{ 'DOB'|xlt }} {{ dob_label|text }}
                         {% if dob_estimated %}
-                            <span class="badge badge-warning ml-1">{{ 'Est.'|xlt }}</span>
+                            <span class="nc-badge nc-badge-warning nc-ml-1">{{ 'Est.'|xlt }}</span>
                         {% endif %}
                     {% endif %}
                 </span>
                 {% if visit_state_label and queue_number %}
-                    <div class="oe-nc-legacy-strip__visit mt-1">
-                        <span class="oe-nc-status-pill oe-nc-status-pill--info">
-                            <span class="oe-nc-status-pill__dot" aria-hidden="true"></span>
+                    <div class="nc-legacy-strip-visit nc-mt-1">
+                        <span class="nc-status-pill nc-status-pill-info">
+                            <span class="nc-status-pill-dot" aria-hidden="true"></span>
                             <span>{{ visit_state_label|text }} · {{ 'Queue'|xlt }} #{{ queue_number|text }}</span>
                         </span>
                     </div>
                 {% endif %}
                 {% if allergy_chips|length %}
-                    <div class="oe-nc-legacy-strip__allergies mt-1">
+                    <div class="nc-legacy-strip-allergies nc-mt-1">
                         {% for allergy in allergy_chips %}
-                            <span class="badge badge-danger mr-1">{{ allergy|text }}</span>
+                            <span class="nc-badge nc-badge-danger nc-mr-1">{{ allergy|text }}</span>
                         {% endfor %}
                     </div>
                 {% endif %}
             </div>
-            <div class="oe-nc-legacy-strip__actions text-right">
+            <div class="nc-legacy-strip-actions text-right">
                 {% if enable_chart_depth %}
-                    <a class="btn btn-sm btn-outline-primary" href="{{ module_chart_url|attr }}" target="_top">
+                    <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary" href="{{ module_chart_url|attr }}" target="_top">
                         {{ 'Open chart'|xlt }}
                     </a>
                 {% endif %}
                 {% if show_desk_return %}
-                    <a class="btn btn-sm btn-outline-secondary d-none oe-nc-legacy-strip__desk-return" href="#" target="_top"></a>
+                    <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-hidden nc-legacy-strip-desk-return" href="#" target="_top"></a>
                 {% endif %}
             </div>
         </div>
@@ -51,7 +51,7 @@
 {% if show_desk_return %}
 <script>
 (function () {
-    var link = document.querySelector('.oe-nc-legacy-strip__desk-return');
+    var link = document.querySelector('.nc-legacy-strip-desk-return');
     if (!link) {
         return;
     }
@@ -72,7 +72,7 @@
             if (stored.pid && pagePid && parseInt(String(stored.pid), 10) !== pagePid) {
                 link.href = desk.url;
                 link.textContent = desk.label;
-                link.classList.remove('d-none');
+                link.classList.remove('nc-hidden');
             }
         } catch (e) {
             return;

@@ -1,98 +1,99 @@
 @import '../../core/tokens.css';
 
-.oe-nc-scheduling__filters .form-control-sm {
+.nc-scheduling-filters input,
+.nc-scheduling-filters select {
   min-height: calc(1.5em + 0.5rem + 2px);
 }
 
-.oe-nc-scheduling__lens {
+.nc-scheduling-lens {
   min-height: 12rem;
 }
 
-.oe-nc-flowboard-board {
+.nc-flowboard-board {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
   gap: 1rem;
   align-items: start;
 }
 
-.oe-nc-flowboard-lane {
+.nc-flowboard-lane {
   min-width: 0;
 }
 
-.oe-nc-flowboard-lane__head {
+.nc-flowboard-lane-head {
   border-bottom: 1px solid var(--oe-nc-border, #e2e8f0);
   padding-bottom: 0.35rem;
 }
 
-.oe-nc-flowboard-card--alert-warn {
+.nc-flowboard-card--alert-warn {
   border-color: #f59e0b !important;
 }
 
-.oe-nc-flowboard-card--alert-over {
+.nc-flowboard-card--alert-over {
   border-color: #ef4444 !important;
   box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.15);
 }
 
-.oe-nc-flowboard-board--mobile {
+.nc-flowboard-board--mobile {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
-.oe-nc-flowboard-lane--accordion .oe-nc-flowboard-lane__toggle {
+.nc-flowboard-lane--accordion .nc-flowboard-lane-toggle {
   text-align: left;
   width: 100%;
 }
 
-.oe-nc-flowboard-lane[draggable="true"] {
+.nc-flowboard-lane[draggable="true"] {
   cursor: grab;
 }
 
-.oe-nc-flowboard-lane__reorder .btn {
+.nc-flowboard-lane-reorder .btn {
   min-width: 2rem;
 }
 
-.oe-nc-flowboard-lane--collapsed .oe-nc-flowboard-lane__head {
+.nc-flowboard-lane--collapsed .nc-flowboard-lane-head {
   margin-bottom: 0 !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .oe-nc-flowboard-card--alert-over,
-  .oe-nc-flowboard-card--alert-warn {
+  .nc-flowboard-card--alert-over,
+  .nc-flowboard-card--alert-warn {
     transition: none;
   }
 
-  .oe-nc-flowboard-lane__cards--drag-over {
+  .nc-flowboard-lane-cards--drag-over {
     outline-width: 2px;
   }
 }
 
-.oe-nc-calendar-day__event,
-.oe-nc-flowboard-lane__toggle,
-.oe-nc-calendar-agenda__row {
+.nc-calendar-day-event,
+.nc-flowboard-lane-toggle,
+.nc-calendar-agenda-row {
   min-height: 2.75rem;
 }
 
-.oe-nc-flowboard-room__input {
+.nc-flowboard-room-input {
   width: 4.5rem;
   display: inline-block;
 }
 
-.oe-nc-flowboard-card--draggable {
+.nc-flowboard-card--draggable {
   cursor: grab;
 }
 
-.oe-nc-flowboard-lane__cards--drag-over {
+.nc-flowboard-lane-cards--drag-over {
   outline: 2px dashed var(--oe-nc-primary, #3b82f6);
   outline-offset: 2px;
   border-radius: 0.25rem;
 }
 
-.oe-nc-calendar-day__event-wrap {
+.nc-calendar-day-event-wrap {
   position: relative;
 }
 
-.oe-nc-calendar-day__resize-handle {
+.nc-calendar-day-resize-handle {
   height: 0.35rem;
   margin-top: 0.15rem;
   border-radius: 0.125rem;
@@ -100,65 +101,65 @@
   cursor: ns-resize;
 }
 
-.oe-nc-calendar-month__grid {
+.nc-calendar-month-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 0.35rem;
 }
 
-.oe-nc-calendar-month__cell {
+.nc-calendar-month-cell {
   min-height: 5.5rem;
   border: 1px solid var(--oe-nc-border, #e2e8f0);
   border-radius: 0.25rem;
   padding: 0.25rem;
 }
 
-.oe-nc-calendar-month__cell--muted {
+.nc-calendar-month-cell--muted {
   opacity: 0.55;
 }
 
-.oe-nc-calendar-month__event {
+.nc-calendar-month-event {
   display: block;
   width: 100%;
   font-size: 0.75rem;
 }
 
-.oe-nc-calendar-agenda__row {
+.nc-calendar-agenda-row {
   border: 1px solid var(--oe-nc-border, #e2e8f0);
   border-radius: 0.375rem;
 }
 
-.oe-nc-calendar-day__table {
+.nc-calendar-day-table {
   table-layout: fixed;
 }
 
-.oe-nc-calendar-day__time-col {
+.nc-calendar-day-time-col {
   width: 4.5rem;
   white-space: nowrap;
 }
 
-.oe-nc-calendar-day__cell {
+.nc-calendar-day-cell {
   vertical-align: top;
   min-height: 2.5rem;
 }
 
-.oe-nc-calendar-day__event {
+.nc-calendar-day-event {
   background: rgba(59, 130, 246, 0.08);
   border: 1px solid rgba(59, 130, 246, 0.25);
   border-radius: 0.25rem;
   padding: 0.25rem 0.35rem;
 }
 
-.oe-nc-calendar-day__slot {
+.nc-calendar-day-slot {
   line-height: 1;
   min-height: 1.75rem;
 }
 
-.oe-nc-calendar-peek {
+.nc-calendar-peek {
   border-color: var(--oe-nc-border, #e2e8f0) !important;
 }
 
-.oe-nc-recalls .oe-nc-segmented-control {
+.nc-recalls .nc-segmented-control {
   flex: 1 1 auto;
   min-width: 0;
 }

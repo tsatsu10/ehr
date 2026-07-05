@@ -33,7 +33,9 @@
  * resulting utility classes (bg-oe-primary, text-oe-primary …) lose to
  * Bootstrap. We keep them so island styles can reference them cleanly.
  */
-@import 'tailwindcss';
+/* Theme + utilities only — skip preflight so Bootstrap T1 shell padding survives island load */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
 
 @theme {
   /* Core palette — clean neutral dashboard */
@@ -119,8 +121,16 @@
   --color-background: var(--oe-nc-bg-tint);
   --color-text:       var(--oe-nc-text);
 
+  /* Layout — keep in sync with module public/assets/css/tokens.css */
+  --oe-nc-content-gutter: 1.25rem;
+  --oe-nc-content-max:    90rem;
+  --oe-nc-sidebar-width: 260px;
+  --oe-nc-sidebar-width-collapsed: 72px;
+  --oe-nc-sidebar-z: 1040;
+  --oe-nc-sidebar-backdrop-z: 1035;
+
   /* Interaction tokens */
-  --oe-nc-radius:     0.25rem;
+  --oe-nc-radius:     0.5rem;
   --oe-nc-transition: 150ms ease;
   --oe-nc-focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.25);
 

@@ -44,8 +44,8 @@ export function usePageHeadingRefresh(buttonId: string, onRefresh: () => void): 
 
 export interface PageHeadingToolbarOptions {
   dateElementId?: string;
-  updatedElementId: string;
-  refreshButtonId: string;
+  updatedElementId?: string;
+  refreshButtonId?: string;
   visitDate?: string | null;
   lastUpdated: Date | null;
   onRefresh: () => void;
@@ -54,8 +54,8 @@ export interface PageHeadingToolbarOptions {
 /** Bundle page-heading date, updated time, and refresh for legacy Twig parity. */
 export function usePageHeadingToolbar({
   dateElementId,
-  updatedElementId,
-  refreshButtonId,
+  updatedElementId = '',
+  refreshButtonId = '',
   visitDate,
   lastUpdated,
   onRefresh,

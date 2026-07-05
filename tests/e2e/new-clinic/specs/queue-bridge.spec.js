@@ -39,7 +39,7 @@ test.describe('Queue Bridge Hub', () => {
     await listResp;
 
     await expect(page.locator('#nc-queue-bridge-root')).toBeVisible({ timeout: 20000 });
-    await expect(page.locator('.oe-nc-queuebridge')).toBeVisible();
+    await expect(page.locator('.nc-queuebridge')).toBeVisible();
 
     await page.goto(`${MODULE_BASE}/reports.php`);
     const schedulingResp = page.waitForResponse(

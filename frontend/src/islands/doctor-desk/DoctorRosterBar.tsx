@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@components/ui/card';
 import { oeFetch } from '@core/oeFetch';
 
@@ -90,8 +93,8 @@ export function DoctorRosterBar({
 
   if (loading && doctors.length === 0) {
     return (
-      <Card className="mb-3 oe-nc-doctor-roster">
-        <CardContent className="py-3 text-muted small">Loading on-duty roster…</CardContent>
+      <Card className="mb-3">
+        <CardContent className="py-3 text-[var(--oe-nc-text-muted)] text-sm">Loading on-duty roster…</CardContent>
       </Card>
     );
   }
@@ -101,45 +104,45 @@ export function DoctorRosterBar({
   }
 
   return (
-    <Card className="mb-3 oe-nc-doctor-roster" id="nc-doctor-roster">
+      <Card className="mb-3" id="nc-doctor-roster">
       <CardHeader className="py-3">
         <CardTitle className="text-base">On-duty doctors</CardTitle>
         <CardDescription>Taking patients toggle + queue load (V1.1-RTa)</CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
-        {error && <div className="alert alert-warning py-2 small mb-2">{error}</div>}
-        <ul className="list-unstyled mb-0">
+        {error && <div className={deskCalloutClass('warn', 'py-2 text-sm mb-2')}>{error}</div>}
+        <ul className="list-none m-0 p-0 mb-0">
           {doctors.map((row) => {
             const isSelf = row.user_id === myUserId;
             const canToggle = isSelf && savingUserId !== row.user_id;
             return (
               <li
                 key={row.user_id}
-                className="d-flex align-items-center justify-content-between py-1 border-bottom"
+                className="flex items-center justify-between py-1 border-b border-[var(--oe-nc-border)] last:border-b-0"
               >
                 <div>
                   <strong>{row.display_name}</strong>
-                  {isSelf && <span className="text-muted small ml-1">(you)</span>}
-                  <div className="text-muted small">
+                  {isSelf && <span className="text-[var(--oe-nc-text-muted)] text-sm ml-1">(you)</span>}
+                  <div className="text-[var(--oe-nc-text-muted)] text-sm">
                     Load: {row.queue_load}
                     {!row.taking_patients && ' · Not taking patients'}
                   </div>
                 </div>
                 {isSelf ? (
-                  <button
+                  <Button
                     type="button"
-                    className={`btn btn-sm ${row.taking_patients ? 'btn-success' : 'btn-outline-secondary'}`}
+                    size="sm"
+                    variant={row.taking_patients ? 'default' : 'outline'}
+                    className={row.taking_patients ? 'bg-emerald-600 hover:bg-emerald-700' : undefined}
                     disabled={!canToggle}
                     onClick={() => void toggleTaking(row.user_id, !row.taking_patients)}
                   >
                     {row.taking_patients ? 'Taking' : 'Paused'}
-                  </button>
+                  </Button>
                 ) : (
-                  <span
-                    className={`badge ${row.taking_patients ? 'badge-success' : 'badge-secondary'}`}
-                  >
+                  <Badge variant={row.taking_patients ? 'success' : 'neutral'}>
                     {row.taking_patients ? 'On' : 'Off'}
-                  </span>
+                  </Badge>
                 )}
               </li>
             );

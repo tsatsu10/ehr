@@ -1,4 +1,4 @@
-import { CalendarDays, ExternalLink } from 'lucide-react';
+import { CalendarDays, BellRing, ExternalLink } from 'lucide-react';
 import type { FrontDeskDeskStats } from '@core/types';
 import { Button } from '@components/ui/button';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
@@ -11,6 +11,7 @@ interface DeskStatusBarProps {
   schedulingEnabled?: boolean;
   appointmentsTodayCount?: number;
   calendarUrl?: string;
+  recallsUrl?: string;
 }
 
 export function DeskStatusBar({
@@ -21,6 +22,7 @@ export function DeskStatusBar({
   schedulingEnabled = false,
   appointmentsTodayCount = 0,
   calendarUrl,
+  recallsUrl,
 }: DeskStatusBarProps) {
   const waiting = stats?.waiting_count ?? 0;
   const started = stats?.visits_started_today ?? 0;
@@ -52,13 +54,25 @@ export function DeskStatusBar({
       loading={loading}
       onRefresh={onRefresh}
       trailing={
-        schedulingEnabled && calendarUrl ? (
-          <Button variant="ghost" size="sm" className="h-7 px-2" asChild>
-            <a href={calendarUrl} target="_top">
-              <ExternalLink className="h-3.5 w-3.5" />
-              <span>Calendar</span>
-            </a>
-          </Button>
+        schedulingEnabled && (calendarUrl || recallsUrl) ? (
+          <div className="flex items-center gap-1">
+            {calendarUrl ? (
+              <Button variant="ghost" size="sm" className="h-7 px-2" asChild>
+                <a href={calendarUrl} target="_top">
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  <span>Calendar</span>
+                </a>
+              </Button>
+            ) : null}
+            {recallsUrl ? (
+              <Button variant="ghost" size="sm" className="h-7 px-2" asChild>
+                <a href={recallsUrl} target="_top">
+                  <BellRing className="h-3.5 w-3.5" />
+                  <span>Recalls</span>
+                </a>
+              </Button>
+            ) : null}
+          </div>
         ) : undefined
       }
     />

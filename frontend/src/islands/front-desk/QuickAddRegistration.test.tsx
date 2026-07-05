@@ -46,6 +46,11 @@ describe('QuickAddRegistration', () => {
         expect(screen.getByRole('heading', { name: /Quick Add patient/i })).toBeInTheDocument();
     });
 
+    it('hides title when hideTitle is set', () => {
+        render(<QuickAddRegistration {...props} hideTitle />);
+        expect(screen.queryByRole('heading', { name: /Quick Add patient/i })).not.toBeInTheDocument();
+    });
+
     it('does not dup-check until meaningful input', async () => {
         render(<QuickAddRegistration {...props} />);
         expect(mockFetch).not.toHaveBeenCalledWith('patients.dup_check', expect.anything());

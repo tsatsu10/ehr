@@ -1,6 +1,8 @@
 # New Clinic V1 — Next Steps
 
-**Current status (July 4, 2026):** §21 **engineering gate PASS** — golden path 11/11 · hub smokes 57/57 · PHPUnit 62/62 · tests **43**/**44** green · asset `20260704sp81hubcomplete`
+**Current status (July 5, 2026):** §21 **engineering gate PASS** — golden path 11/11 · hub smokes 57/57 · PHPUnit 76/76 mandatory · Vitest **358/358** · asset `20260705sp170frontdeskfeatures`
+
+**UI polish:** React islands — **Front Desk 100%** (`sp168`: auto-focus, last visit, CC in search row, NHIS expired chip, NKDA alignment, spec sign-off) · `sp169` e-sign override modal fixes (stale reason state, obsolete Bootstrap CSS rule) · `sp170` front desk features: queue position hint, unpaid balance warning, appointment check-in strip · `sp167` audit fixes · `sp166` title dedup · Bootstrap retirement `sp150`–`sp158` · CODE_AUDIT addendum sp150–sp170
 
 **Product / clinic path:** [Pilot readiness pack](../../../../Documentation/NewClinic/worksheets/NEW_CLINIC_V1_PILOT_READINESS_PACK.md) → trainer [one-pager](../../../../Documentation/NewClinic/worksheets/NEW_CLINIC_V1_TRAINER_ONE_PAGER.md) → [pilot day checklist](../../../../Documentation/NewClinic/worksheets/NEW_CLINIC_V1_PILOT_DAY_CHECKLIST.md) → [Hub Product sign-off](../../../../Documentation/NewClinic/worksheets/NEW_CLINIC_V1_HUB_PRODUCT_SIGNOFF_WORKSHEET.md)
 

@@ -1,75 +1,75 @@
 {% extends 'base.html.twig' %}
 
 {% block page_heading_actions %}
-<div class="d-flex flex-wrap align-items-center oe-nc-pharmops-toolbar" id="nc-pharmops-toolbar">
-    <div class="btn-group btn-group-sm mr-2 mb-1" role="group" aria-label="{{ 'Worklist tabs'|xlt }}">
+<div class="nc-flex nc-flex-wrap nc-items-center nc-pharmops-toolbar" id="nc-pharmops-toolbar">
+    <div class="nc-btn-group nc-btn-group-sm nc-mr-2 nc-mb-1" role="group" aria-label="{{ 'Worklist tabs'|xlt }}">
         <button type="button"
-                class="btn btn-outline-primary{% if initial_tab == 'pending_dispense' %} active{% endif %}"
+                class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary{% if initial_tab == 'pending_dispense' %} active{% endif %}"
                 id="nc-pharmops-tab-pending">
-            {{ 'Pending dispense'|xlt }} <span class="badge badge-light" id="nc-pharmops-count-pending">0</span>
+            {{ 'Pending dispense'|xlt }} <span class="nc-badge nc-badge-neutral" id="nc-pharmops-count-pending">0</span>
         </button>
         <button type="button"
-                class="btn btn-outline-primary{% if initial_tab == 'low_stock' %} active{% endif %}"
+                class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary{% if initial_tab == 'low_stock' %} active{% endif %}"
                 id="nc-pharmops-tab-lowstock">
-            {{ 'Low stock'|xlt }} <span class="badge badge-light" id="nc-pharmops-count-lowstock">0</span>
+            {{ 'Low stock'|xlt }} <span class="nc-badge nc-badge-neutral" id="nc-pharmops-count-lowstock">0</span>
         </button>
         <button type="button"
-                class="btn btn-outline-primary{% if initial_tab == 'write_off' %} active{% endif %}"
+                class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary{% if initial_tab == 'write_off' %} active{% endif %}"
                 id="nc-pharmops-tab-writeoff">
-            {{ 'Write-off'|xlt }} <span class="badge badge-light" id="nc-pharmops-count-writeoff">0</span>
+            {{ 'Write-off'|xlt }} <span class="nc-badge nc-badge-neutral" id="nc-pharmops-count-writeoff">0</span>
         </button>
         <button type="button"
-                class="btn btn-outline-primary{% if initial_tab == 'reports' %} active{% endif %}"
+                class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary{% if initial_tab == 'reports' %} active{% endif %}"
                 id="nc-pharmops-tab-reports">
             {{ 'Reports'|xlt }}
         </button>
     </div>
     <input type="date"
-           class="form-control form-control-sm mr-2 mb-1"
+           class="nc-input nc-input-sm nc-mr-2 nc-mb-1"
            id="nc-pharmops-date"
            aria-label="{{ 'Worklist date'|xlt }}"
            style="width:auto;">
-    <div class="form-check form-check-inline mb-1 mr-2" id="nc-pharmops-urgent-wrap">
-        <input type="checkbox" class="form-check-input" id="nc-pharmops-urgent-first" checked>
-        <label class="form-check-label small" for="nc-pharmops-urgent-first">{{ 'Urgent first'|xlt }}</label>
+    <div class="nc-form-check nc-form-check-inline nc-mb-1 nc-mr-2" id="nc-pharmops-urgent-wrap">
+        <input type="checkbox" class="nc-form-check-input" id="nc-pharmops-urgent-first" checked>
+        <label class="nc-form-check-label nc-text-sm" for="nc-pharmops-urgent-first">{{ 'Urgent first'|xlt }}</label>
     </div>
-    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ pharmacy_desk_url|attr }}">{{ 'Pharmacy Desk'|xlt }}</a>
-    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ visit_board_url|attr }}">{{ 'Visit Board'|xlt }}</a>
+    <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1 nc-mr-1" href="{{ pharmacy_desk_url|attr }}">{{ 'Pharmacy Desk'|xlt }}</a>
+    <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1 nc-mr-1" href="{{ visit_board_url|attr }}">{{ 'Visit Board'|xlt }}</a>
     {% if can_dispense %}
-    <button type="button" class="btn btn-primary btn-sm mb-1 mr-1" id="nc-pharmops-sell-otc">
+    <button type="button" class="nc-btn nc-btn-sm nc-btn-primary nc-mb-1 nc-mr-1" id="nc-pharmops-sell-otc">
         {{ 'Sell OTC'|xlt }}
     </button>
     {% endif %}
     {% if can_receive %}
-    <button type="button" class="btn btn-outline-primary btn-sm mb-1 mr-1" id="nc-pharmops-receive">
+    <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary nc-mb-1 nc-mr-1" id="nc-pharmops-receive">
         {{ 'Receive stock'|xlt }}
     </button>
     {% endif %}
     {% if can_manage_catalog %}
-    <button type="button" class="btn btn-outline-secondary btn-sm mb-1 mr-1" id="nc-pharmops-setup" title="{{ 'Pharmacy setup'|xlt }}">
+    <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1 nc-mr-1" id="nc-pharmops-setup" title="{{ 'Pharmacy setup'|xlt }}">
         <i class="fa fa-cog" aria-hidden="true"></i>
-        <span class="sr-only">{{ 'Setup'|xlt }}</span>
+        <span class="nc-sr-only">{{ 'Setup'|xlt }}</span>
     </button>
     {% endif %}
     {% if can_show_advanced %}
-    <div class="dropdown d-inline-block mb-1 mr-1">
-        <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    <div class="nc-dropdown nc-inline-block nc-mb-1 nc-mr-1">
+        <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-dropdown-toggle" data-nc-dropdown-toggle aria-haspopup="true" aria-expanded="false">
             {{ 'Advanced'|xlt }}
         </button>
-        <div class="dropdown-menu dropdown-menu-right">
-            <a class="dropdown-item" href="{{ webroot }}/interface/drugs/drug_inventory.php" target="_top">{{ 'Inventory management (core)'|xlt }}</a>
-            <a class="dropdown-item" href="{{ webroot }}/interface/drugs/add_edit_drug.php" target="_top">{{ 'Add drug (core)'|xlt }}</a>
-            <a class="dropdown-item" href="{{ webroot }}/interface/reports/inventory_list.php" target="_top">{{ 'Reorder report (core)'|xlt }}</a>
-            <a class="dropdown-item" href="{{ webroot }}/interface/reports/inventory_activity.php" target="_top">{{ 'Inventory activity (core)'|xlt }}</a>
-            <a class="dropdown-item" href="{{ webroot }}/interface/reports/inventory_transactions.php" target="_top">{{ 'Inventory transactions (core)'|xlt }}</a>
-            <a class="dropdown-item" href="{{ webroot }}/interface/reports/destroyed_drugs_report.php" target="_top">{{ 'Destroyed drugs (core)'|xlt }}</a>
+        <div class="nc-dropdown-menu nc-dropdown-menu-right">
+            <a class="nc-dropdown-item" href="{{ webroot }}/interface/drugs/drug_inventory.php" target="_top">{{ 'Inventory management (core)'|xlt }}</a>
+            <a class="nc-dropdown-item" href="{{ webroot }}/interface/drugs/add_edit_drug.php" target="_top">{{ 'Add drug (core)'|xlt }}</a>
+            <a class="nc-dropdown-item" href="{{ webroot }}/interface/reports/inventory_list.php" target="_top">{{ 'Reorder report (core)'|xlt }}</a>
+            <a class="nc-dropdown-item" href="{{ webroot }}/interface/reports/inventory_activity.php" target="_top">{{ 'Inventory activity (core)'|xlt }}</a>
+            <a class="nc-dropdown-item" href="{{ webroot }}/interface/reports/inventory_transactions.php" target="_top">{{ 'Inventory transactions (core)'|xlt }}</a>
+            <a class="nc-dropdown-item" href="{{ webroot }}/interface/reports/destroyed_drugs_report.php" target="_top">{{ 'Destroyed drugs (core)'|xlt }}</a>
         </div>
     </div>
     {% endif %}
-    <button type="button" class="btn btn-outline-secondary btn-sm mb-1" id="nc-pharmops-refresh" aria-label="{{ 'Refresh'|xlt }}">
+    <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1" id="nc-pharmops-refresh" aria-label="{{ 'Refresh'|xlt }}">
         <i class="fa fa-refresh" aria-hidden="true"></i>
     </button>
-    <span class="text-muted small mb-1" id="nc-pharmops-updated"></span>
+    <span class="nc-text-muted nc-text-sm nc-mb-1" id="nc-pharmops-updated"></span>
 </div>
 {% endblock %}
 

@@ -225,14 +225,14 @@ test.describe('New Clinic Lab + Close Day Golden Path', () => {
       await login(page, creds.admin.username, creds.admin.password);
       await page.goto(`${MODULE_BASE}/bill-ops/index.php?tab=close`);
 
-      await expect(page.locator('.oe-nc-billops-hub')).toBeVisible({ timeout: 20000 });
+      await expect(page.locator('.nc-billops-hub')).toBeVisible({ timeout: 20000 });
 
       await page.waitForResponse(
         (resp) => resp.url().includes('bill_ops.daysheet') && resp.ok(),
         { timeout: 20000 },
       );
 
-      await expect(page.locator('.oe-nc-billops-daysheet-print')).toBeVisible({ timeout: 15000 });
+      await expect(page.locator('.nc-billops-daysheet-print')).toBeVisible({ timeout: 15000 });
       await expect(page.getByText('Receipts')).toBeVisible();
       await expect(page.getByText('Reconciliation:')).toBeVisible();
       closeDayLoaded = true;

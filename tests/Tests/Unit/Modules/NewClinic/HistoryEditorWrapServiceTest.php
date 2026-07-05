@@ -43,12 +43,24 @@ class HistoryEditorWrapServiceTest extends TestCase
 
         $html = '<html><body><div class="btn-group"><button type="submit">Save</button></div></body></html>';
         $service = new HistoryEditorWrapService();
-        $out = $service->injectIntoHtml($html, '<header id="oe-nc-history-editor-wrap"></header>');
+        $out = $service->injectIntoHtml($html, '<header id="nc-history-editor-wrap"></header>');
 
-        $this->assertStringContainsString('class="oe-nc-history-editor-wrap"', $out);
-        $this->assertStringContainsString('id="oe-nc-history-editor-wrap"', $out);
-        $this->assertStringContainsString('oe-nc-history-editor-wrap__back', $out);
+        $this->assertStringContainsString('class="nc-history-editor-wrap"', $out);
+        $this->assertStringContainsString('id="nc-history-editor-wrap"', $out);
+        $this->assertStringContainsString('nc-history-editor-wrap-back', $out);
         $this->assertStringContainsString('patient-chart.php?pid=7', $out);
+
+        unset($_SESSION['pid'], $_GET['return']);
+    }
+
+    public function testInjectIntoHtmlMergesExistingBodyClass(): void
+    {
+        $html = '<html><body class="body_top"><div class="btn-group"></div></body></html>';
+        $service = new HistoryEditorWrapService();
+        $out = $service->injectIntoHtml($html, '<header id="nc-history-editor-wrap"></header>');
+
+        $this->assertStringContainsString('class="body_top nc-history-editor-wrap"', $out);
+        $this->assertStringNotContainsString('class="body_top" class="nc-history-editor-wrap"', $out);
 
         unset($_SESSION['pid'], $_GET['return']);
     }

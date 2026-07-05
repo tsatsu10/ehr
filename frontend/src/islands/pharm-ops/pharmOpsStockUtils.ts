@@ -1,3 +1,5 @@
+import type { BadgeProps } from '@components/ui/badge';
+
 export function stockLabel(status?: string): string | null {
   if (!status || status === 'unknown') return null;
   if (status === 'in_stock') return 'In stock';
@@ -6,9 +8,9 @@ export function stockLabel(status?: string): string | null {
   return status.replace(/_/g, ' ');
 }
 
-export function stockBadgeClass(status?: string): string {
-  if (status === 'out_of_stock') return 'badge-danger';
-  if (status === 'low') return 'badge-warning';
-  if (status === 'in_stock') return 'badge-success';
-  return 'badge-secondary';
+export function stockBadgeVariant(status?: string): NonNullable<BadgeProps['variant']> {
+  if (status === 'out_of_stock') return 'danger';
+  if (status === 'low') return 'warning';
+  if (status === 'in_stock') return 'success';
+  return 'neutral';
 }

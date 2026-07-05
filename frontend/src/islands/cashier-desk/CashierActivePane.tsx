@@ -1,4 +1,14 @@
 import { useEffect, useState } from 'react';
+import { PatientContextBanner } from '@components/PatientContextBanner';
+import { bannerPropsFromPreview } from '@components/bannerPreviewProps';
+import { CompletionScorePill } from '@components/CompletionScorePill';
+import { SegmentedControl } from '@components/SegmentedControl';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { Card, CardContent } from '@components/ui/card';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
 import type {
   CashierPaymentMethod,
   CashierSelectData,
@@ -57,18 +67,20 @@ function CompletionBlock({
   if (!blocked) {
     return (
       <div className="mb-2">
-        <span className="badge badge-success">{completion.score}% complete</span>
+        <CompletionScorePill score={completion.score} threshold={completion.billing_threshold} />
       </div>
     );
   }
 
   return (
     <>
-      <div className="mb-2">
-        <span className="badge badge-warning">{completion.score}% complete</span>
-        {!canSkipCompletion && <span className="text-danger small ml-2">Payment blocked</span>}
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <CompletionScorePill score={completion.score} threshold={completion.billing_threshold} />
+        {!canSkipCompletion && (
+          <span className="text-sm text-red-600">Payment blocked</span>
+        )}
       </div>
-      <div className="alert alert-warning py-2 mb-2">
+      <div className={deskCalloutClass('warn', 'mb-2 text-sm')}>
         Profile {completion.score}% complete ({completion.billing_threshold}% required).
         {canSkipCompletion
           ? ' You may proceed with supervisor override.'
@@ -76,11 +88,13 @@ function CompletionBlock({
         {completion.chart_url && (
           <>
             {' '}
-            <a href={completion.chart_url}>Complete profile</a>
+            <a href={completion.chart_url} className="font-medium underline">
+              Complete profile
+            </a>
           </>
         )}
         {missing.length > 0 && (
-          <ul className="mb-0 pl-3 small mt-1">
+          <ul className="mb-0 mt-1 list-disc pl-5 text-sm">
             {missing.slice(0, 4).map((label) => (
               <li key={label}>{label}</li>
             ))}
@@ -126,11 +140,11 @@ export function CashierActivePane({
   if (mode === 'idle') {
     return (
       <div id="nc-cashier-active-pane">
-        <div className="card">
-          <div className="card-body text-muted text-center py-5">
+        <Card>
+          <CardContent className="text-[var(--oe-nc-text-muted)] text-center py-5">
             <em>Select a visit from the payment queue.</em>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -138,9 +152,9 @@ export function CashierActivePane({
   if (mode === 'loading') {
     return (
       <div id="nc-cashier-active-pane">
-        <div className="card">
-          <div className="card-body"><em>Loading visit…</em></div>
-        </div>
+        <Card>
+          <CardContent><em>Loading visit…</em></CardContent>
+        </Card>
       </div>
     );
   }
@@ -148,13 +162,14 @@ export function CashierActivePane({
   if (mode === 'error' || !data || !signMeta) {
     return (
       <div id="nc-cashier-active-pane">
-        <div className="alert alert-danger m-0">Failed to load visit.</div>
+        <div className={deskCalloutClass('error', 'm-0 text-sm')} role="alert">
+          Failed to load visit.
+        </div>
       </div>
     );
   }
 
   const { visit, preview, charges, charges_total: total } = data;
-  const identity = preview.identity;
   const unsigned = !signMeta.encounter_signed;
   const zeroCharge = total <= 0;
   const payBlockReason =
@@ -177,11 +192,20 @@ export function CashierActivePane({
 
   return (
     <div id="nc-cashier-active-pane">
-      <div className="card">
-        <div className="card-body">
-          <div className="nc-patient-context-banner mb-3 p-3 border rounded bg-light">
-            <strong>{identity.display_name}</strong> · MRN {identity.pubpid} · Queue #{visit.queue_number}
-          </div>
+      <Card>
+        <CardContent>
+          <PatientContextBanner
+            identity={preview.identity}
+            layout="compact"
+            completion={preview.completion}
+            safety={preview.safety}
+            {...bannerPropsFromPreview(preview)}
+            aside={<Badge variant="neutral">Queue #{visit.queue_number}</Badge>}
+          >
+            <div className="text-sm mt-1 text-[var(--oe-nc-text-muted)]">
+              {visit.visit_type_label || 'Payment checkout'}
+            </div>
+          </PatientContextBanner>
 
           <CompletionBlock
             preview={preview}
@@ -190,12 +214,12 @@ export function CashierActivePane({
           />
 
           {unsigned && (
-            <div className="alert alert-warning py-2 mb-2">
+            <div className={deskCalloutClass('warn', 'mb-2 text-sm')}>
               {signMeta.unsigned_message || 'Documentation not signed'}
               {signMeta.encounter_url && (
                 <>
                   {' '}
-                  <a href={signMeta.encounter_url} target="_blank" rel="noopener noreferrer">
+                  <a href={signMeta.encounter_url} target="_blank" rel="noopener noreferrer" className="font-medium underline">
                     Open encounter
                   </a>
                 </>
@@ -216,77 +240,73 @@ export function CashierActivePane({
           <h5>Posted charges</h5>
           <ChargesTable charges={charges} total={total} />
 
-          <div className="d-flex flex-wrap mt-2 mb-3">
+          <div className="mt-2 mb-3 flex flex-wrap gap-2">
             {(data.advanced_billing_url || data.fee_sheet_url) && (
-              <a
-                className="btn btn-outline-secondary btn-sm mr-2"
-                href={data.advanced_billing_url || data.fee_sheet_url}
-                target={data.advanced_billing_external === false ? '_top' : '_blank'}
-                rel={data.advanced_billing_external === false ? undefined : 'noopener noreferrer'}
-              >
-                {data.advanced_billing_label || 'Open fee sheet'}
-              </a>
+              <Button variant="outline" size="sm" asChild>
+                <a
+                  href={data.advanced_billing_url || data.fee_sheet_url}
+                  target={data.advanced_billing_external === false ? '_top' : '_blank'}
+                  rel={data.advanced_billing_external === false ? undefined : 'noopener noreferrer'}
+                >
+                  {data.advanced_billing_label || 'Open fee sheet'}
+                </a>
+              </Button>
             )}
             {data.front_payment_url && (
-              <a className="btn btn-outline-secondary btn-sm mr-2" href={data.front_payment_url} target="_blank" rel="noopener noreferrer">
-                Open payments (core)
-              </a>
+              <Button variant="outline" size="sm" asChild>
+                <a href={data.front_payment_url} target="_blank" rel="noopener noreferrer">
+                  Open payments (core)
+                </a>
+              </Button>
             )}
           </div>
 
           {zeroCharge ? (
-            <div className="alert alert-info py-2">No charges on this visit.</div>
+            <div className={deskCalloutClass('info', 'text-sm')}>No charges on this visit.</div>
           ) : (
             <>
               <h5>Take payment</h5>
               {momoEnabled && (
-                <div className="form-group">
-                  <span className="d-block small font-weight-bold mb-2">Payment method</span>
-                  <div className="btn-group btn-group-toggle" role="group" aria-label="Payment method">
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${paymentMethod === 'cash' ? 'btn-primary' : 'btn-outline-primary'}`}
-                      disabled={blocked}
-                      onClick={() => setPaymentMethod('cash')}
-                    >
-                      Cash
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${paymentMethod === 'momo' ? 'btn-primary' : 'btn-outline-primary'}`}
-                      disabled={blocked}
-                      onClick={() => setPaymentMethod('momo')}
-                    >
-                      MoMo
-                    </button>
+                <div className="mb-3">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[var(--oe-nc-text-muted)]">
+                    Payment method
+                  </span>
+                  <div className={blocked ? 'pointer-events-none opacity-50' : undefined}>
+                    <SegmentedControl
+                      ariaLabel="Payment method"
+                      value={paymentMethod}
+                      onChange={(id) => setPaymentMethod(id as CashierPaymentMethod)}
+                      segments={[
+                        { id: 'cash', label: 'Cash' },
+                        { id: 'momo', label: 'MoMo' },
+                      ]}
+                    />
                   </div>
                 </div>
               )}
-              <div className="form-row align-items-end">
-                <div className="form-group col-md-4">
-                  <label>Total due</label>
-                  <input type="text" className="form-control" readOnly value={formatMoney(total)} />
+              <div className="mb-3 grid grid-cols-1 items-end gap-4 md:grid-cols-12">
+                <div className="space-y-1.5 md:col-span-4">
+                  <Label className="normal-case font-normal">Total due</Label>
+                  <Input type="text" readOnly value={formatMoney(total)} />
                 </div>
                 {!isMomo ? (
                   <>
-                    <div className="form-group col-md-4">
-                      <label htmlFor="nc-cash-received">Cash received</label>
-                      <input
+                    <div className="space-y-1.5 md:col-span-4">
+                      <Label htmlFor="nc-cash-received" className="normal-case font-normal">Cash received</Label>
+                      <Input
                         type="number"
                         step={0.01}
                         min={0}
-                        className="form-control"
                         id="nc-cash-received"
                         value={cashReceived}
                         disabled={blocked}
                         onChange={(e) => setCashReceived(e.target.value)}
                       />
                     </div>
-                    <div className="form-group col-md-4">
-                      <label htmlFor="nc-cash-change">Change</label>
-                      <input
+                    <div className="space-y-1.5 md:col-span-4">
+                      <Label htmlFor="nc-cash-change" className="normal-case font-normal">Change</Label>
+                      <Input
                         type="text"
-                        className="form-control"
                         id="nc-cash-change"
                         readOnly
                         value={formatMoney(change)}
@@ -294,11 +314,10 @@ export function CashierActivePane({
                     </div>
                   </>
                 ) : (
-                  <div className="form-group col-md-8">
-                    <label htmlFor="nc-momo-reference">MoMo transaction reference</label>
-                    <input
+                  <div className="space-y-1.5 md:col-span-8">
+                    <Label htmlFor="nc-momo-reference" className="normal-case font-normal">MoMo transaction reference</Label>
+                    <Input
                       type="text"
-                      className="form-control"
                       id="nc-momo-reference"
                       maxLength={255}
                       value={momoReference}
@@ -310,11 +329,10 @@ export function CashierActivePane({
                 )}
               </div>
               {!isMomo && (
-                <div className="form-group">
-                  <label htmlFor="nc-receipt-note">Receipt note (optional)</label>
-                  <input
+                <div className="mb-3 space-y-1.5">
+                  <Label htmlFor="nc-receipt-note" className="normal-case font-normal">Receipt note (optional)</Label>
+                  <Input
                     type="text"
-                    className="form-control"
                     id="nc-receipt-note"
                     maxLength={255}
                     value={receiptNote}
@@ -327,26 +345,26 @@ export function CashierActivePane({
           )}
 
           {paneError && (
-            <div className="alert alert-danger" id="nc-cashier-error" role="alert">
+            <div className={deskCalloutClass('error', 'text-sm')} id="nc-cashier-error" role="alert">
               {paneError}
             </div>
           )}
 
-          <div className="d-flex flex-wrap">
+          <div className="flex flex-wrap gap-2">
             {zeroCharge && data.can_close_without_charge ? (
-              <button
+              <Button
                 type="button"
-                className="btn btn-success mr-2"
+                variant="cta"
                 id="nc-cashier-close-zero-btn"
                 disabled={blocked}
                 onClick={onCloseZero}
               >
                 Close without charge
-              </button>
+              </Button>
             ) : showEsignPay ? (
-              <button
+              <Button
                 type="button"
-                className="btn btn-warning mr-2"
+                variant="warning"
                 id="nc-cashier-esign-override-btn"
                 disabled={blocked}
                 onClick={() => onEsignOverride(
@@ -357,11 +375,11 @@ export function CashierActivePane({
                 )}
               >
                 Pay with E-Sign override
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
                 type="button"
-                className="btn btn-success mr-2"
+                variant="cta"
                 id="nc-cashier-pay-btn"
                 disabled={payDisabled}
                 title={payBlockReason ?? undefined}
@@ -374,27 +392,30 @@ export function CashierActivePane({
                 )}
               >
                 Take payment
-              </button>
+              </Button>
             )}
             {canMarkUnpaid && (
-              <button
+              <Button
                 type="button"
-                className="btn btn-outline-danger mr-2"
+                variant="outline"
+                className="border-red-300 text-red-700 hover:bg-red-50"
                 id="nc-cashier-unpaid-btn"
                 disabled={blocked}
                 onClick={onMarkUnpaid}
               >
                 Mark left unpaid
-              </button>
+              </Button>
             )}
             {visitBoardUrl && (
-              <a className="btn btn-outline-secondary btn-sm" href={visitBoardUrl} target="_top">
-                Visit Board
-              </a>
+              <Button variant="outline" size="sm" asChild>
+                <a href={visitBoardUrl} target="_top">
+                  Visit Board
+                </a>
+              </Button>
             )}
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

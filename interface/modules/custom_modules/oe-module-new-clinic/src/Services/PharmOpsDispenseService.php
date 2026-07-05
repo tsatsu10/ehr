@@ -279,7 +279,7 @@ class PharmOpsDispenseService
         $titles = [];
         foreach ($rows as $row) {
             $title = trim((string) ($row['title'] ?? ''));
-            if ($title !== '' && !in_array(strtolower($title), ['nkda', 'no known drug allergies'], true)) {
+            if ($title !== '' && !PharmOpsSafetyService::isNkdaTitle($title)) {
                 $titles[] = $title;
             }
         }

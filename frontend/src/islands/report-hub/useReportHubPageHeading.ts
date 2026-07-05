@@ -26,7 +26,7 @@ export function useReportHubPageHeading({
     const kpi = document.getElementById('nc-reporthub-kpis');
     if (kpi) {
       kpi.textContent = summaryError ? 'Summary unavailable' : summaryLabel;
-      kpi.classList.toggle('text-danger', Boolean(summaryError));
+      kpi.classList.toggle('text-[var(--oe-nc-danger,#dc2626)]', Boolean(summaryError));
     }
   }, [summaryError, summaryLabel]);
 

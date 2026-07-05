@@ -1,4 +1,8 @@
+import type { VariantProps } from 'class-variance-authority';
 import type { ReportHubCard, ReportHubLens } from './reportHubTypes';
+import { badgeVariants } from '@components/ui/badge';
+
+export type CardKindBadgeVariant = NonNullable<VariantProps<typeof badgeVariants>['variant']>;
 
 export interface ReportHubLensMeta {
   title: string;
@@ -56,16 +60,16 @@ export function cardKindLabel(kind: ReportHubCard['kind']): string {
   }
 }
 
-export function cardKindBadgeClass(kind: ReportHubCard['kind']): string {
+export function cardKindBadgeVariant(kind: ReportHubCard['kind']): CardKindBadgeVariant {
   switch (kind) {
     case 'native':
-      return 'badge-primary';
+      return 'default';
     case 'stock':
-      return 'badge-secondary';
+      return 'neutral';
     case 'module':
-      return 'badge-info';
+      return 'info';
     case 'placeholder':
-      return 'badge-light text-muted border';
+      return 'outline';
     default: {
       const never: never = kind;
       return never;

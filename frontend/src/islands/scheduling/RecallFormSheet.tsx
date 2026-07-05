@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { PatientSearchDropdown } from '@components/PatientSearchDropdown';
 import { SlideOver } from '@components/SlideOver';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Button } from '@components/ui/button';
+import { Input } from '@components/ui/input';
+import { NativeSelect } from '@components/ui/native-select';
 import type { RecallFormDraft, RecallBucket, SchedulingFilters, SchedulingLabels, SchedulingOption } from './schedulingTypes';
 import { saveRecall } from './schedulingApi';
 import { resolveSchedulingLabels } from './schedulingLabels';
@@ -113,22 +117,22 @@ export function RecallFormSheet({
       id="nc-scheduling-recall-sheet"
       width="md"
       footer={(
-        <div className="d-flex justify-content-end w-100">
-          <button type="button" className="btn btn-secondary btn-sm mr-2" onClick={onClose}>
+        <div className="flex justify-end w-full gap-2">
+          <Button type="button" variant="secondary" size="sm" onClick={onClose}>
             {labels.cancel}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="btn btn-primary btn-sm"
+            size="sm"
             disabled={!canSave || saving}
             onClick={() => { void handleSave(); }}
           >
             {saving ? labels.saving : labels.saveRecall}
-          </button>
+          </Button>
         </div>
       )}
     >
-      <p className="text-muted small">{labels.recallHint}</p>
+      <p className="text-[var(--oe-nc-text-muted)] text-sm">{labels.recallHint}</p>
       {!draft?.recallId && (
         <PatientSearchDropdown
           ajaxUrl={ajaxUrl}
@@ -143,74 +147,74 @@ export function RecallFormSheet({
         />
       )}
       {patientLabel && (
-        <p className="small text-muted mb-3">
+        <p className="text-sm text-[var(--oe-nc-text-muted)] mb-3">
           {labels.patient}
           :
           {' '}
           <strong>{patientLabel}</strong>
         </p>
       )}
-      <div className="form-group">
+      <div className="nc-form-group">
         <label htmlFor="nc-scheduling-recall-due">{labels.dueDate}</label>
-        <input
+        <Input
           id="nc-scheduling-recall-due"
           type="date"
-          className="form-control form-control-sm"
+          className="h-8"
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
         />
       </div>
-      <div className="form-group">
+      <div className="nc-form-group">
         <label htmlFor="nc-scheduling-recall-reason">{labels.reason}</label>
-        <input
+        <Input
           id="nc-scheduling-recall-reason"
           type="text"
-          className="form-control form-control-sm"
+          className="h-8"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder={labels.reasonPlaceholder}
         />
       </div>
-      <div className="form-group">
+      <div className="nc-form-group">
         <label htmlFor="nc-scheduling-recall-type">{labels.recallType}</label>
-        <select
+        <NativeSelect
           id="nc-scheduling-recall-type"
-          className="form-control form-control-sm"
+          className="h-8"
           value={recallType}
           onChange={(e) => setRecallType(e.target.value)}
         >
           {(recallTypes.length > 0 ? recallTypes : [{ id: 'general', label: 'General' }]).map((type) => (
             <option key={String(type.id)} value={String(type.id)}>{type.label}</option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
-      <div className="form-group">
+      <div className="nc-form-group">
         <label htmlFor="nc-scheduling-recall-provider">{labels.provider}</label>
-        <select
+        <NativeSelect
           id="nc-scheduling-recall-provider"
-          className="form-control form-control-sm"
+          className="h-8"
           value={providerId}
           onChange={(e) => setProviderId(Number.parseInt(e.target.value, 10))}
         >
           {providers.map((provider) => (
             <option key={provider.id} value={provider.id}>{provider.label}</option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
-      <div className="form-group mb-0">
+      <div className="nc-form-group mb-0">
         <label htmlFor="nc-scheduling-recall-facility">{labels.facility}</label>
-        <select
+        <NativeSelect
           id="nc-scheduling-recall-facility"
-          className="form-control form-control-sm"
+          className="h-8"
           value={facilityId}
           onChange={(e) => setFacilityId(Number.parseInt(e.target.value, 10))}
         >
           {facilities.map((facility) => (
             <option key={facility.id} value={facility.id}>{facility.label}</option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
-      {error && <div className="alert alert-danger mt-3 mb-0 py-2">{error}</div>}
+      {error && <div className={deskCalloutClass('error', 'mt-3 mb-0 py-2')}>{error}</div>}
     </SlideOver>
   );
 }

@@ -1,3 +1,6 @@
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
 import type { ChartMessageRow, ChartMessagesData } from './patientChartTypes';
 
 interface MessagesTabProps {
@@ -9,12 +12,12 @@ interface MessagesTabProps {
 }
 
 function MessageRow({ item }: { item: ChartMessageRow }) {
-  const variant = item.active === false ? 'secondary' : 'info';
+  const variant = item.active === false ? 'neutral' : 'info';
 
   return (
     <div className="border rounded p-2 mb-2">
-      <div className="d-flex flex-wrap justify-content-between align-items-start">
-        <div className="flex-grow-1">
+      <div className="flex flex-wrap justify-between items-start">
+        <div className="flex-grow">
           {item.detail_url ? (
             <a href={item.detail_url} target="_top">
               {item.title ?? 'Message'}
@@ -22,12 +25,12 @@ function MessageRow({ item }: { item: ChartMessageRow }) {
           ) : (
             <strong>{item.title ?? '—'}</strong>
           )}
-          {item.status && <span className={`badge badge-${variant} ml-2`}>{item.status}</span>}
+          {item.status && <Badge variant={variant} className="ml-2">{item.status}</Badge>}
           {item.assigned_to && (
-            <span className="text-muted small"> → {item.assigned_to}</span>
+            <span className="text-[var(--oe-nc-text-muted)] text-sm"> → {item.assigned_to}</span>
           )}
-          {item.preview && <div className="small text-muted mt-1">{item.preview}</div>}
-          <div className="small text-muted mt-1">
+          {item.preview && <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">{item.preview}</div>}
+          <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">
             {item.author ?? '—'}
             {item.date ? ` · ${item.date}` : ''}
           </div>
@@ -43,7 +46,7 @@ export function MessagesTab({ data, loading, loadingMore, error, onLoadMore }: M
   }
 
   if (error) {
-    return <div className="alert alert-danger">{error}</div>;
+    return <div className={deskCalloutClass('error')}>{error}</div>;
   }
 
   if (!data) return null;
@@ -54,34 +57,40 @@ export function MessagesTab({ data, loading, loadingMore, error, onLoadMore }: M
 
   return (
     <>
-      <p className="text-muted small">
+      <p className="text-[var(--oe-nc-text-muted)] text-sm">
         Chart-scoped messages and reminders for this patient. Use the clinic Communications hub for
         staff inbox across all patients.
       </p>
 
-      <div className="d-flex flex-wrap mb-3">
+      <div className="flex flex-wrap mb-3">
         {urls.add_message && (
-          <a className="btn btn-sm btn-primary mr-2 mb-2" href={urls.add_message} target="_top">
-            New message
-          </a>
+          <Button size="sm" className="mr-2 mb-2" asChild>
+            <a href={urls.add_message} target="_top">
+              New message
+            </a>
+          </Button>
         )}
         {urls.pnotes && (
-          <a className="btn btn-sm btn-outline-secondary mr-2 mb-2" href={urls.pnotes} target="_top">
-            Open all notes
-          </a>
+          <Button variant="outline" size="sm" className="mr-2 mb-2" asChild>
+            <a href={urls.pnotes} target="_top">
+              Open all notes
+            </a>
+          </Button>
         )}
         {urls.dated_reminders && (
-          <a className="btn btn-sm btn-outline-secondary mb-2" href={urls.dated_reminders} target="_top">
-            Dated reminders
-          </a>
+          <Button variant="outline" size="sm" className="mb-2" asChild>
+            <a href={urls.dated_reminders} target="_top">
+              Dated reminders
+            </a>
+          </Button>
         )}
       </div>
 
       <h5 className="mb-2">
-        Messages <span className="text-muted small">({data.message_total ?? 0})</span>
+        Messages <span className="text-[var(--oe-nc-text-muted)] text-sm">({data.message_total ?? 0})</span>
       </h5>
       {messages.length === 0 ? (
-        <p className="text-muted">No chart messages for this patient.</p>
+        <p className="text-[var(--oe-nc-text-muted)]">No chart messages for this patient.</p>
       ) : (
         <div id="nc-chart-messages-list">
           {messages.map((item, idx) => (
@@ -90,19 +99,21 @@ export function MessagesTab({ data, loading, loadingMore, error, onLoadMore }: M
         </div>
       )}
       {data.has_more && (
-        <button
+        <Button
           type="button"
-          className="btn btn-outline-secondary btn-sm mt-2"
+          variant="outline"
+          size="sm"
+          className="mt-2"
           disabled={loadingMore}
           onClick={onLoadMore}
         >
           Load more
-        </button>
+        </Button>
       )}
 
       <h5 className="mb-2 mt-4">Reminders</h5>
       {reminders.length === 0 ? (
-        <p className="text-muted mb-0">No reminders for this patient.</p>
+        <p className="text-[var(--oe-nc-text-muted)] mb-0">No reminders for this patient.</p>
       ) : (
         reminders.map((item, idx) => (
           <MessageRow key={`rem-${item.title ?? idx}-${item.date ?? ''}`} item={item} />

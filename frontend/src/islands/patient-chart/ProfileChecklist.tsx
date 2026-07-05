@@ -16,22 +16,22 @@ export function ProfileChecklist({ levels, completion }: ProfileChecklistProps) 
     <div className="nc-profile-checklist mb-3">
       <h5 className="mb-2">
         Profile completion{' '}
-        <span className="text-muted small">
+        <span className="text-[var(--oe-nc-text-muted)] text-sm">
           ({score}% · {threshold}% for billing)
         </span>
       </h5>
-      <div className="row">
+      <div className="grid grid-cols-12 gap-3">
         {levels.map((level) => (
-          <div key={level.label} className="col-md-6 col-lg-3 mb-2">
-            <div className={`border rounded p-2 h-100${level.complete ? ' bg-light' : ''}`}>
+          <div key={level.label} className="col-span-12 md:col-span-6 lg:col-span-3 mb-2">
+            <div className={`border rounded p-2 h-full${level.complete ? ' bg-[var(--oe-nc-bg-tint)]' : ''}`}>
               <strong>
                 {level.complete ? '✓' : '○'} {level.label}
               </strong>
-              <ul className="list-unstyled mb-0 mt-1 pl-2">
+              <ul className="list-none m-0 p-0 mb-0 mt-1 pl-2">
                 {(level.fields ?? []).map((field) => (
                   <li
                     key={field.label}
-                    className={`small ${field.complete ? 'text-success' : 'text-muted'}`}
+                    className={`text-sm ${field.complete ? 'text-green-600' : 'text-[var(--oe-nc-text-muted)]'}`}
                   >
                     {field.complete ? '✓' : '○'} {field.label}
                   </li>

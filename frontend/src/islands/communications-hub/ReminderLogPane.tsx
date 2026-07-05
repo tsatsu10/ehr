@@ -1,4 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Button } from '@components/ui/button';
+import { Checkbox } from '@components/ui/checkbox';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
+import { NativeSelect } from '@components/ui/native-select';
+import { ncShadcnTableClass } from '@components/ncTableStyles';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@components/ui/table';
 import { oeFetch } from '@core/oeFetch';
 import type {
   ReminderLogFilters,
@@ -108,21 +122,21 @@ export function ReminderLogPane({ ajaxUrl, csrfToken, onClose }: ReminderLogPane
   };
 
   return (
-    <div className="oe-nc-comm-reminder-log">
-      <header className="oe-nc-comm-detail__header mb-3 d-flex justify-content-between align-items-center">
-        <h2 className="h5 mb-0">Reminder log</h2>
-        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={onClose}>
+    <div className="nc-comm-reminder-log">
+      <header className="nc-comm-detail-header mb-3 flex justify-between items-center">
+        <h2 className="text-lg font-semibold mb-0">Reminder log</h2>
+        <Button type="button" variant="outline" size="sm" onClick={onClose}>
           Close
-        </button>
+        </Button>
       </header>
 
-      <div className="border rounded p-2 mb-3 bg-light">
-        <div className="form-row align-items-end">
-          <div className="form-group col-md-3 mb-2 mb-md-0">
-            <label className="small mb-0" htmlFor="nc-reminder-log-status">Status</label>
-            <select
+      <div className="border rounded p-2 mb-3 bg-[var(--oe-nc-bg-tint)]">
+        <div className="grid grid-cols-12 gap-3 items-end">
+          <div className="nc-form-group col-span-12 md:col-span-3 mb-2 md:mb-0">
+            <Label className="normal-case font-normal mb-1" htmlFor="nc-reminder-log-status">Status</Label>
+            <NativeSelect
               id="nc-reminder-log-status"
-              className="form-control form-control-sm"
+              className="h-8"
               value={filters.processed}
               onChange={(event) => setFilters((prev) => ({
                 ...prev,
@@ -132,74 +146,76 @@ export function ReminderLogPane({ ajaxUrl, csrfToken, onClose }: ReminderLogPane
               <option value="all">All</option>
               <option value="pending">Pending</option>
               <option value="processed">Processed</option>
-            </select>
+            </NativeSelect>
           </div>
-          <div className="form-group col-md-3 mb-2 mb-md-0">
-            <label className="small mb-0" htmlFor="nc-reminder-log-from">Sent from</label>
-            <input
+          <div className="nc-form-group col-span-12 md:col-span-3 mb-2 md:mb-0">
+            <Label className="normal-case font-normal mb-1" htmlFor="nc-reminder-log-from">Sent from</Label>
+            <Input
               type="date"
               id="nc-reminder-log-from"
-              className="form-control form-control-sm"
+              className="h-8"
               value={filters.date_from}
               onChange={(event) => setFilters((prev) => ({ ...prev, date_from: event.target.value }))}
             />
           </div>
-          <div className="form-group col-md-3 mb-2 mb-md-0">
-            <label className="small mb-0" htmlFor="nc-reminder-log-to">Sent to</label>
-            <input
+          <div className="nc-form-group col-span-12 md:col-span-3 mb-2 md:mb-0">
+            <Label className="normal-case font-normal mb-1" htmlFor="nc-reminder-log-to">Sent to</Label>
+            <Input
               type="date"
               id="nc-reminder-log-to"
-              className="form-control form-control-sm"
+              className="h-8"
               value={filters.date_to}
               onChange={(event) => setFilters((prev) => ({ ...prev, date_to: event.target.value }))}
             />
           </div>
-          <div className="form-group col-md-3 mb-0">
-            <button type="button" className="btn btn-primary btn-sm mr-1" onClick={applyFilters}>
+          <div className="nc-form-group col-span-12 md:col-span-3 mb-0">
+            <Button type="button" size="sm" className="mr-1" onClick={applyFilters}>
               Apply
-            </button>
-            <button type="button" className="btn btn-outline-secondary btn-sm" onClick={resetFilters}>
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={resetFilters}>
               Reset
-            </button>
+            </Button>
           </div>
         </div>
 
         {isAdmin && recipients.length > 0 && (
-          <div className="form-row mt-2">
-            <div className="form-group col-md-6 mb-0">
-              <label className="small mb-1">Sent by</label>
+          <div className="grid grid-cols-12 gap-3 mt-2">
+            <div className="nc-form-group col-span-12 md:col-span-6 mb-0">
+              <Label className="normal-case font-normal text-sm mb-1">Sent by</Label>
               <div className="border rounded p-2 bg-white" style={{ maxHeight: '6rem', overflowY: 'auto' }}>
                 {recipients.map((recipient) => (
-                  <div className="form-check" key={`by-${recipient.id}`}>
-                    <input
-                      type="checkbox"
-                      className="form-check-input"
+                  <div className="flex items-center gap-2 mb-1" key={`by-${recipient.id}`}>
+                    <Checkbox
                       id={`nc-log-sent-by-${recipient.id}`}
                       checked={filters.sent_by.includes(recipient.id)}
-                      onChange={() => toggleFilterRecipient('sent_by', recipient.id)}
+                      onCheckedChange={() => toggleFilterRecipient('sent_by', recipient.id)}
                     />
-                    <label className="form-check-label small" htmlFor={`nc-log-sent-by-${recipient.id}`}>
+                    <Label
+                      htmlFor={`nc-log-sent-by-${recipient.id}`}
+                      className="font-normal normal-case cursor-pointer mb-0 text-sm"
+                    >
                       {recipient.label}
-                    </label>
+                    </Label>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="form-group col-md-6 mb-0">
-              <label className="small mb-1">Sent to</label>
+            <div className="nc-form-group col-span-12 md:col-span-6 mb-0">
+              <Label className="normal-case font-normal text-sm mb-1">Sent to</Label>
               <div className="border rounded p-2 bg-white" style={{ maxHeight: '6rem', overflowY: 'auto' }}>
                 {recipients.map((recipient) => (
-                  <div className="form-check" key={`to-${recipient.id}`}>
-                    <input
-                      type="checkbox"
-                      className="form-check-input"
+                  <div className="flex items-center gap-2 mb-1" key={`to-${recipient.id}`}>
+                    <Checkbox
                       id={`nc-log-sent-to-${recipient.id}`}
                       checked={filters.sent_to.includes(recipient.id)}
-                      onChange={() => toggleFilterRecipient('sent_to', recipient.id)}
+                      onCheckedChange={() => toggleFilterRecipient('sent_to', recipient.id)}
                     />
-                    <label className="form-check-label small" htmlFor={`nc-log-sent-to-${recipient.id}`}>
+                    <Label
+                      htmlFor={`nc-log-sent-to-${recipient.id}`}
+                      className="font-normal normal-case cursor-pointer mb-0 text-sm"
+                    >
                       {recipient.label}
-                    </label>
+                    </Label>
                   </div>
                 ))}
               </div>
@@ -209,41 +225,41 @@ export function ReminderLogPane({ ajaxUrl, csrfToken, onClose }: ReminderLogPane
       </div>
 
       {loading ? (
-        <div className="text-muted"><em>Loading reminder log…</em></div>
+        <div className="text-[var(--oe-nc-text-muted)]"><em>Loading reminder log…</em></div>
       ) : error ? (
-        <div className="text-danger">{error}</div>
+        <div className="text-[var(--oe-nc-danger,#dc2626)]">{error}</div>
       ) : !rows.length ? (
-        <p className="text-muted mb-0">No reminders found for this filter.</p>
+        <p className="text-[var(--oe-nc-text-muted)] mb-0">No reminders found for this filter.</p>
       ) : (
-        <div className="table-responsive">
-          <table className="table table-sm mb-0">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Sent</th>
-                <th>From</th>
-                <th>To</th>
-                <th>Patient</th>
-                <th>Message</th>
-                <th>Due</th>
-                <th>Processed</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="overflow-x-auto">
+          <Table className={ncShadcnTableClass({ className: 'mb-0' })}>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>Sent</TableHead>
+                <TableHead>From</TableHead>
+                <TableHead>To</TableHead>
+                <TableHead>Patient</TableHead>
+                <TableHead>Message</TableHead>
+                <TableHead>Due</TableHead>
+                <TableHead>Processed</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {rows.map((row) => (
-                <tr key={row.id}>
-                  <td>{row.id}</td>
-                  <td>{row.sent_at_label ?? row.sent_at ?? '—'}</td>
-                  <td>{row.from_name}</td>
-                  <td>{row.to_name}</td>
-                  <td>{row.patient_name}</td>
-                  <td>{row.message}</td>
-                  <td>{row.due_date_label ?? row.due_date ?? '—'}</td>
-                  <td>{formatProcessedCell(row)}</td>
-                </tr>
+                <TableRow key={row.id}>
+                  <TableCell>{row.id}</TableCell>
+                  <TableCell>{row.sent_at_label ?? row.sent_at ?? '—'}</TableCell>
+                  <TableCell>{row.from_name}</TableCell>
+                  <TableCell>{row.to_name}</TableCell>
+                  <TableCell>{row.patient_name}</TableCell>
+                  <TableCell>{row.message}</TableCell>
+                  <TableCell>{row.due_date_label ?? row.due_date ?? '—'}</TableCell>
+                  <TableCell>{formatProcessedCell(row)}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

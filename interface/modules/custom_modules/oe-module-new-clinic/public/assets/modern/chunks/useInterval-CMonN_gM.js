@@ -1,2 +1,0 @@
-import{c as e,l as t}from"./oeFetch-Bh_9Pv0w.js";var n=t(e(),1);function r(e,t){let r=(0,n.useRef)(e);(0,n.useEffect)(()=>{r.current=e},[e]),(0,n.useEffect)(()=>{if(t===null)return;let e=window.setInterval(()=>{document.hidden||r.current()},t);return()=>window.clearInterval(e)},[t])}export{r as t};
-//# sourceMappingURL=useInterval-CMonN_gM.js.map

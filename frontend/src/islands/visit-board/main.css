@@ -1,29 +1,56 @@
 /*
  * visit-board island styles
  *
- * CASCADE RULE: All component styles are non-layered BEM CSS (beats Bootstrap).
- * Atom styles (oe-nc-status-pill, oe-nc-cell-identity, oe-nc-queue-card, etc.)
- * are already defined in the module's components.css — do NOT duplicate them here.
- * Only island-specific layout that doesn't exist in legacy CSS goes below.
+ * Layout hooks use nc-vb-* (React TSX). Atom styles (status-pill, queue-card, etc.)
+ * live in components.css — do NOT duplicate here.
  *
  * See: Documentation/FRONTEND_MODULE_GUIDE.md §5.2
  */
 
 @import '../../core/tokens.css';
+@import '../../components/ui/ui-primitives.css';
 
 /* ── Visit Board wrapper ──────────────────────────────────────────────── */
 
-.oe-nc-vb {
-  /* Outer wrapper; the host page provides .oe-nc-t1 background. */
+.nc-vb {
+  width: 100%;
+}
+
+/* ── Horizontal Kanban lanes (PAGE_DESIGNS §7.8.3) ─────────────────────── */
+
+.nc-vb-lanes {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 1rem;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding-bottom: 0.35rem;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+
+.nc-vb-lane {
+  flex: 0 0 min(17.5rem, 78vw);
+  min-width: 14rem;
+  max-width: 20rem;
+  scroll-snap-align: start;
+}
+
+.nc-vb--kiosk .nc-vb-lane {
+  flex-basis: min(20rem, 32vw);
+  max-width: 24rem;
 }
 
 /* ── Toolbar / filter bar ─────────────────────────────────────────────── */
 
-.oe-nc-vb__toolbar {
+.nc-vb-toolbar {
   gap: 0.5rem;
 }
 
-.oe-nc-vb__stats {
+.nc-vb-stats {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -31,41 +58,42 @@
 
 /* ── Kiosk chrome (wall profile + enable_visit_board_kiosk_chrome) ───── */
 
-.oe-nc-vb--kiosk {
+.nc-vb--kiosk {
   padding: 0.25rem 0;
 }
 
-.oe-nc-vb__kiosk-toolbar {
+.nc-vb-kiosk-toolbar {
   padding: 0.75rem 1rem;
   background: var(--oe-nc-surface, #fff);
   border: 1px solid var(--oe-nc-border, #e2e8f0);
   border-radius: var(--oe-nc-radius, 0.5rem);
 }
 
-.oe-nc-vb__kiosk-toolbar__title strong {
+.nc-vb-kiosk-toolbar-title strong {
   font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
   font-size: 1.1rem;
   color: var(--oe-nc-text, #164e63);
 }
 
-.oe-nc-vb--kiosk .oe-nc-queue-card {
+.nc-vb--kiosk .nc-queue-card {
   font-size: 1.05rem;
   padding: 0.85rem 1rem;
 }
 
-.oe-nc-vb--kiosk .oe-nc-vb-column__label {
+.nc-vb--kiosk .nc-vb-column-label {
   font-size: 1rem;
 }
 
 /* ── Column ───────────────────────────────────────────────────────────── */
 
-.oe-nc-vb-column {
+.nc-vb-column {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 12rem;
 }
 
-.oe-nc-vb-column__header {
+.nc-vb-column-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -74,51 +102,18 @@
   border-bottom: 2px solid var(--oe-nc-border, #e2e8f0);
 }
 
-.oe-nc-vb-column__label {
+.nc-vb-column-label {
   font-weight: 600;
   font-size: 0.875rem;
   color: var(--oe-nc-text, #164e63);
   font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
 }
 
-.oe-nc-vb-column__count {
+.nc-vb-column-count {
   font-size: 0.75rem;
   font-weight: 600;
 }
 
-.oe-nc-vb-column__body {
+.nc-vb-column-body {
   flex: 1;
-}
-
-/* ── Skeleton loader ──────────────────────────────────────────────────── */
-
-.oe-nc-vb-skeleton {
-  border-radius: var(--oe-nc-radius, 0.25rem);
-  background: linear-gradient(
-    90deg,
-    var(--oe-nc-border, #e2e8f0) 25%,
-    #f1f5f9 50%,
-    var(--oe-nc-border, #e2e8f0) 75%
-  );
-  background-size: 200% 100%;
-  animation: oe-nc-shimmer 1.4s infinite;
-  height: 1.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.oe-nc-vb-skeleton--card {
-  height: 4.5rem;
-  margin-bottom: 0.5rem;
-}
-
-@keyframes oe-nc-shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .oe-nc-vb-skeleton {
-    animation: none;
-    background: var(--oe-nc-border, #e2e8f0);
-  }
 }

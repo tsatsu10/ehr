@@ -9,6 +9,7 @@ import { Label } from '@components/ui/label';
 import { Textarea } from '@components/ui/textarea';
 import { Checkbox } from '@components/ui/checkbox';
 import { Button } from '@components/ui/button';
+import { Card, CardContent } from '@components/ui/card';
 import {
     Select,
     SelectContent,
@@ -224,7 +225,7 @@ export function RegistrationFormSections({
         <Accordion
             type="single"
             collapsible={!wizardMode}
-            className={`oe-nc-reg-accordion${wizardMode ? ' oe-nc-reg-wizard' : ''}`}
+            className={`nc-reg-accordion${wizardMode ? ' nc-reg-wizard' : ''}`}
             id="nc-reg-accordion"
             value={String(activeSection)}
             onValueChange={(value) => { if (value) onSectionToggle(Number(value)); }}
@@ -282,22 +283,29 @@ export function RegistrationFormSections({
                     </p>
 
                     {showReachContact && (
-                        <div id="nc-reg-reach-contact-wrap" className="rounded-xl border border-[var(--oe-nc-border)] bg-[var(--oe-nc-bg-tint)] p-4 space-y-4">
-                            <p className="text-xs font-semibold text-[var(--oe-nc-text-muted)] uppercase tracking-wide">Reach contact</p>
-                            <FieldRow cols={3}>
-                                <Field id="nc-reg-reach-name" label="Name">
-                                    <Input id="nc-reg-reach-name" placeholder="e.g. Kwame (neighbour)" value={form.reach_contact_name} onChange={(e) => onFieldChange('reach_contact_name', e.target.value)} />
-                                </Field>
-                                <Field id="nc-reg-reach-phone" label="Phone">
-                                    <Input id="nc-reg-reach-phone" value={form.reach_contact_phone} onChange={(e) => onFieldChange('reach_contact_phone', e.target.value)} />
-                                </Field>
-                                <SelectField id="nc-reg-reach-relationship" label="Relationship" value={form.reach_contact_relationship} onChange={(v) => onFieldChange('reach_contact_relationship', v)}>
-                                    {REACH_RELATIONSHIPS.map((item) => (
-                                        <SelectItem key={item.value || 'blank'} value={item.value || '_blank'}>{item.label}</SelectItem>
-                                    ))}
-                                </SelectField>
-                            </FieldRow>
-                        </div>
+                        <Card
+                            id="nc-reg-reach-contact-wrap"
+                            className="border-[var(--oe-nc-border)] bg-[var(--oe-nc-bg-tint)] shadow-none"
+                        >
+                            <CardContent className="space-y-4 p-4">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--oe-nc-text-muted)]">
+                                    Reach contact
+                                </p>
+                                <FieldRow cols={3}>
+                                    <Field id="nc-reg-reach-name" label="Name">
+                                        <Input id="nc-reg-reach-name" placeholder="e.g. Kwame (neighbour)" value={form.reach_contact_name} onChange={(e) => onFieldChange('reach_contact_name', e.target.value)} />
+                                    </Field>
+                                    <Field id="nc-reg-reach-phone" label="Phone">
+                                        <Input id="nc-reg-reach-phone" value={form.reach_contact_phone} onChange={(e) => onFieldChange('reach_contact_phone', e.target.value)} />
+                                    </Field>
+                                    <SelectField id="nc-reg-reach-relationship" label="Relationship" value={form.reach_contact_relationship} onChange={(v) => onFieldChange('reach_contact_relationship', v)}>
+                                        {REACH_RELATIONSHIPS.map((item) => (
+                                            <SelectItem key={item.value || 'blank'} value={item.value || '_blank'}>{item.label}</SelectItem>
+                                        ))}
+                                    </SelectField>
+                                </FieldRow>
+                            </CardContent>
+                        </Card>
                     )}
 
                     <Field id="nc-reg-national-id" label="National ID" hint="Ghana Card or national ID — used for duplicate check at registration.">
@@ -379,11 +387,11 @@ export function RegistrationFormSections({
                     </div>
 
                     <Field id="nc-reg-allergies" label="Allergies (comma-separated)">
-                        <Input className="nc-tag-input" id="nc-reg-allergies" disabled={form.allergies_none_known || form.allergies_unknown} value={form.allergies} onChange={(e) => onFieldChange('allergies', e.target.value)} />
+                        <Input className="min-h-[38px]" id="nc-reg-allergies" disabled={form.allergies_none_known || form.allergies_unknown} value={form.allergies} onChange={(e) => onFieldChange('allergies', e.target.value)} />
                     </Field>
 
                     <Field id="nc-reg-chronic" label="Chronic conditions (comma-separated)">
-                        <Input className="nc-tag-input" id="nc-reg-chronic" value={form.chronic_conditions} onChange={(e) => onFieldChange('chronic_conditions', e.target.value)} />
+                        <Input className="min-h-[38px]" id="nc-reg-chronic" value={form.chronic_conditions} onChange={(e) => onFieldChange('chronic_conditions', e.target.value)} />
                     </Field>
 
                     {showPregnancy && (

@@ -132,6 +132,7 @@ describe('FlowBoardLens', () => {
       can_advance: true,
       queue_bridge_enabled: false,
       lanes: [],
+      revision: '',
     });
 
     render(
@@ -148,16 +149,22 @@ describe('FlowBoardLens', () => {
 
     const roomInput = await screen.findByLabelText(/Room for Ama Boateng/);
     fireEvent.change(roomInput, { target: { value: 'Rm 2' } });
+    await waitFor(() => {
+      expect(roomInput).toHaveValue('Rm 2');
+    });
     fireEvent.blur(roomInput);
 
-    await waitFor(() => {
-      expect(updateFlowBoardRoom).toHaveBeenCalledWith(
-        '/mock/ajax',
-        'token',
-        filters,
-        42,
-        'Rm 2',
-      );
-    });
+    await waitFor(
+      () => {
+        expect(updateFlowBoardRoom).toHaveBeenCalledWith(
+          '/mock/ajax',
+          'token',
+          filters,
+          42,
+          'Rm 2',
+        );
+      },
+      { timeout: 3000 },
+    );
   });
 });

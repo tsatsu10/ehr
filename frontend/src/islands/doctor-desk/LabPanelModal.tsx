@@ -6,6 +6,20 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
+import { Button } from '@components/ui/button';
+import { Checkbox } from '@components/ui/checkbox';
+import {
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  dialogContentSizeClass,
+} from '@components/ui/dialog';
+import { Label } from '@components/ui/label';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
 import type {
   DoctorVisit,
   LabPanelCatalogData,
@@ -126,120 +140,116 @@ export function LabPanelModal({
     onPlaced(result.data);
   };
 
-  if (!open || !visit) return null;
+  if (!visit) return null;
 
   const hintParts: string[] = [];
   if (catalog?.provider_name) hintParts.push(`From ${catalog.provider_name}`);
   if (catalog?.auto_bill_on_order) hintParts.push('Mapped tests auto-add cashier charges');
 
   return (
-    <>
-      <div
-        className="modal fade show d-block"
+    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogContent
         id="nc-doctor-lab-panel-modal"
-        tabIndex={-1}
-        role="dialog"
+        className={dialogContentSizeClass.lg}
         aria-labelledby="nc-doctor-lab-panel-title"
-        aria-modal="true"
       >
-        <div className="modal-dialog modal-lg" role="document">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5 className="modal-title" id="nc-doctor-lab-panel-title">Quick lab order</h5>
-              <button type="button" className="close" aria-label="Close" onClick={onClose}>
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
-            <div className="modal-body">
-              {hintParts.length > 0 && (
-                <p className="text-muted small" id="nc-lab-panel-hint">
-                  {hintParts.join(' — ')}.
-                </p>
-              )}
+        <DialogHeader>
+          <DialogTitle id="nc-doctor-lab-panel-title">Quick lab order</DialogTitle>
+          <DialogClose aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </DialogClose>
+        </DialogHeader>
+        <DialogBody>
+          {hintParts.length > 0 && (
+            <p className="text-[var(--oe-nc-text-muted)] text-sm mb-3" id="nc-lab-panel-hint">
+              {hintParts.join(' — ')}.
+            </p>
+          )}
 
-              <div id="nc-lab-panel-tests">
-                {loading && <p className="text-muted small mb-0">Loading tests…</p>}
-                {!loading && catalog && !catalog.has_catalog && (
-                  <p className="text-warning mb-0">
-                    Lab catalog is not ready. Use Full lab form or complete Lab Operations setup.
-                  </p>
-                )}
-                {!loading && catalog?.has_catalog && catalog.tests.map((test: LabPanelCatalogTest) => (
-                  <div className="form-check" key={test.procedure_type_id}>
-                    <input
-                      className="form-check-input nc-lab-panel-test"
-                      type="checkbox"
-                      id={`nc-lab-panel-test-${test.procedure_type_id}`}
-                      checked={selected.has(test.procedure_type_id)}
-                      onChange={(e) => toggleTest(test.procedure_type_id, e.target.checked)}
-                    />
-                    <label
-                      className="form-check-label"
-                      htmlFor={`nc-lab-panel-test-${test.procedure_type_id}`}
-                    >
-                      {test.name}
-                      {test.code && (
-                        <span className="text-muted"> ({test.code})</span>
-                      )}
-                      {test.has_fee ? (
-                        <span className="text-muted">
-                          {' '}
-                          {formatDoctorMoney(test.fee_amount)}
-                        </span>
-                      ) : (
-                        <span className="text-muted"> (no fee mapped)</span>
-                      )}
-                    </label>
-                  </div>
-                ))}
+          <div id="nc-lab-panel-tests" className="nc-catalog-picker">
+            {loading && <p className="text-[var(--oe-nc-text-muted)] text-sm mb-0">Loading tests…</p>}
+            {!loading && catalog && !catalog.has_catalog && (
+              <p className={deskCalloutClass('warn', 'text-sm mb-0')}>
+                Lab catalog is not ready. Use Full lab form or complete Lab Operations setup.
+              </p>
+            )}
+            {!loading && catalog?.has_catalog && catalog.tests.map((test: LabPanelCatalogTest) => (
+              <div className="flex items-start gap-2 mb-2" key={test.procedure_type_id}>
+                <Checkbox
+                  className="nc-lab-panel-test mt-0.5"
+                  id={`nc-lab-panel-test-${test.procedure_type_id}`}
+                  checked={selected.has(test.procedure_type_id)}
+                  onCheckedChange={(checked) => toggleTest(test.procedure_type_id, checked === true)}
+                />
+                <Label
+                  htmlFor={`nc-lab-panel-test-${test.procedure_type_id}`}
+                  className="font-normal leading-snug cursor-pointer"
+                >
+                  {test.name}
+                  {test.code && (
+                    <span className="text-[var(--oe-nc-text-muted)]"> ({test.code})</span>
+                  )}
+                  {test.has_fee ? (
+                    <span className="text-[var(--oe-nc-text-muted)]">
+                      {' '}
+                      {formatDoctorMoney(test.fee_amount)}
+                    </span>
+                  ) : (
+                    <span className="text-[var(--oe-nc-text-muted)]"> (no fee mapped)</span>
+                  )}
+                </Label>
               </div>
-
-              {catalog?.has_catalog && (
-                <div className="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary btn-sm"
-                    id="nc-lab-panel-starter"
-                    onClick={applyStarterPanel}
-                  >
-                    Starter panel
-                  </button>
-                  <span className="text-muted small" id="nc-lab-panel-total">
-                    {estimatedTotal != null
-                      ? `Estimated: ${formatDoctorMoney(estimatedTotal)}`
-                      : ''}
-                  </span>
-                </div>
-              )}
-
-              {error && (
-                <div className="alert alert-danger mt-2 mb-0" id="nc-lab-panel-error" role="alert">
-                  {error}
-                </div>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button type="button" className="btn btn-outline-secondary nc-lab-panel-full-form" onClick={onFullLabForm}>
-                Full lab form
-              </button>
-              <button type="button" className="btn btn-secondary" onClick={onClose}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                id="nc-lab-panel-place"
-                disabled={submitting || blocked || !catalog?.has_catalog}
-                onClick={() => void handlePlace()}
-              >
-                {submitting ? 'Placing order…' : 'Place order'}
-              </button>
-            </div>
+            ))}
           </div>
-        </div>
-      </div>
-      <div className="modal-backdrop fade show" id="nc-doctor-modal-backdrop" />
-    </>
+
+          {catalog?.has_catalog && (
+            <div className="flex justify-between items-center mt-3 flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                id="nc-lab-panel-starter"
+                onClick={applyStarterPanel}
+              >
+                Starter panel
+              </Button>
+              <span className="text-[var(--oe-nc-text-muted)] text-sm" id="nc-lab-panel-total">
+                {estimatedTotal != null
+                  ? `Estimated: ${formatDoctorMoney(estimatedTotal)}`
+                  : ''}
+              </span>
+            </div>
+          )}
+
+          {error && (
+            <div className={deskCalloutClass('error', 'text-sm mt-3 mb-0')} id="nc-lab-panel-error" role="alert">
+              {error}
+            </div>
+          )}
+        </DialogBody>
+        <DialogFooter className="justify-between sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            className="nc-lab-panel-full-form mr-auto"
+            onClick={onFullLabForm}
+          >
+            Full lab form
+          </Button>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            id="nc-lab-panel-place"
+            disabled={submitting || blocked || !catalog?.has_catalog}
+            onClick={() => void handlePlace()}
+          >
+            {submitting ? 'Placing order…' : 'Place order'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

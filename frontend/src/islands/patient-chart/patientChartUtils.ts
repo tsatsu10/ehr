@@ -14,7 +14,7 @@ export function formatStateLabel(state?: string): string {
 
 export {
   initialsFromName,
-  completionBadgeClass,
+  completionBadgeVariant,
 } from '@components/patientBannerUtils';
 
 export function isValidChartTab(tab: string): tab is import('./patientChartTypes').ChartTabId {

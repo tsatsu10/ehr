@@ -2,6 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SegmentedControl } from '@components/SegmentedControl';
 import { DataTable, DataTableStatusRow } from '@components/DataTable';
 import { ConfirmModal } from '@components/ConfirmModal';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { Input } from '@components/ui/input';
+import { NativeSelect } from '@components/ui/native-select';
+import { Textarea } from '@components/ui/textarea';
 import { fetchCalendarDay } from './schedulingApi';
 import {
   deleteRecall,
@@ -239,24 +245,24 @@ export function RecallsLens({
   };
 
   if (loading && !data) {
-    return <p className="text-muted">{labels.loadingRecalls}</p>;
+    return <p className="text-[var(--oe-nc-text-muted)]">{labels.loadingRecalls}</p>;
   }
 
   return (
-    <div className="oe-nc-recalls">
-      <div className="d-flex flex-wrap align-items-end justify-content-between mb-3">
+    <div className="nc-recalls">
+      <div className="flex flex-wrap items-end justify-between mb-3">
         <SegmentedControl
           segments={segments}
           value={bucket}
           onChange={(id) => setBucket(id as RecallBucket)}
           ariaLabel="Recall buckets"
         />
-        <div className="form-group mb-0 mt-2 mt-md-0">
+        <div className="nc-form-group mb-0 mt-2 md:mt-0">
           <label className="sr-only" htmlFor="nc-recalls-search">Search recalls</label>
-          <input
+          <Input
             id="nc-recalls-search"
             type="search"
-            className="form-control form-control-sm"
+            className="h-8"
             placeholder={labels.recallSearchPlaceholder}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -264,10 +270,10 @@ export function RecallsLens({
         </div>
       </div>
 
-      {error && <div className="alert alert-danger py-2">{error}</div>}
+      {error && <div className={deskCalloutClass('error', 'py-2')}>{error}</div>}
 
       {filterPid != null && filterPid > 0 && (
-        <p className="text-muted small mb-2">
+        <p className="text-[var(--oe-nc-text-muted)] text-sm mb-2">
           {labels.filteredPatientPid}
           {' '}
           {filterPid}
@@ -296,45 +302,47 @@ export function RecallsLens({
         {data?.rows.map((row) => (
           <tr key={row.recall_id}>
             <td>
-              <strong className="small d-block">{row.patient_name}</strong>
-              <span className="text-muted small">
+              <strong className="text-sm block">{row.patient_name}</strong>
+              <span className="text-[var(--oe-nc-text-muted)] text-sm">
                 MRN
                 {' '}
                 {row.pubpid}
               </span>
             </td>
-            <td className={row.bucket === 'overdue' ? 'text-danger small' : 'small'}>
+            <td className={row.bucket === 'overdue' ? 'text-[var(--oe-nc-danger,#dc2626)] text-sm' : 'text-sm'}>
               {dueLabel(row)}
             </td>
-            <td className="small">{row.reason || '—'}</td>
-            <td className="small">
-              <span className="badge badge-light border">{row.status_label}</span>
+            <td className="text-sm">{row.reason || '—'}</td>
+            <td className="text-sm">
+              <Badge variant="outline">{row.status_label}</Badge>
             </td>
-            <td className="small text-muted">{row.contact}</td>
-            <td className="small">
+            <td className="text-sm text-[var(--oe-nc-text-muted)]">{row.contact}</td>
+            <td className="text-sm">
               {data.can_manage && (
-                <div className="d-flex flex-wrap">
+                <div className="flex flex-wrap">
                   {row.produced_eid != null && row.produced_eid > 0 && (
-                    <a
-                      className="btn btn-link btn-sm p-0 mr-2"
-                      href={calendarUrlForDate(
-                        moduleUrl,
-                        filters,
-                        row.produced_event_date || row.due_date,
-                      )}
-                    >
-                      {labels.crossLinkViewAppointment}
-                    </a>
+                    <Button variant="link" size="sm" className="h-auto p-0 mr-2" asChild>
+                      <a
+                        href={calendarUrlForDate(
+                          moduleUrl,
+                          filters,
+                          row.produced_event_date || row.due_date,
+                        )}
+                      >
+                        {labels.crossLinkViewAppointment}
+                      </a>
+                    </Button>
                   )}
-                  <a
-                    className="btn btn-link btn-sm p-0 mr-2"
-                    href={flowBoardUrlForDate(moduleUrl, filters, row.due_date)}
-                  >
-                    {labels.crossLinkFlowBoard}
-                  </a>
-                  <button
+                  <Button variant="link" size="sm" className="h-auto p-0 mr-2" asChild>
+                    <a href={flowBoardUrlForDate(moduleUrl, filters, row.due_date)}>
+                      {labels.crossLinkFlowBoard}
+                    </a>
+                  </Button>
+                  <Button
                     type="button"
-                    className="btn btn-link btn-sm p-0 mr-2"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 mr-2"
                     disabled={busy}
                     onClick={() => {
                       setOutcomeRow(row);
@@ -342,52 +350,64 @@ export function RecallsLens({
                     }}
                   >
                     {labels.recallLogOutcome}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="btn btn-link btn-sm p-0 mr-2"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 mr-2"
                     disabled={busy}
                     onClick={() => { void openBooking(row); }}
                   >
                     {labels.recallBookAppt}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="btn btn-link btn-sm p-0 mr-2"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 mr-2"
                     disabled={busy}
                     onClick={() => { void handleSnooze(row); }}
                   >
                     {labels.recallSnooze}
-                  </button>
+                  </Button>
                   {data.messaging_enabled && (
-                    <button
+                    <Button
                       type="button"
-                      className="btn btn-link btn-sm p-0 mr-2"
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 mr-2"
                       disabled={busy}
                       onClick={() => { void handleSendReminder(row); }}
                     >
                       {labels.recallSendReminder}
-                    </button>
+                    </Button>
                   )}
-                  <button
+                  <Button
                     type="button"
-                    className="btn btn-link btn-sm p-0 mr-2"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 mr-2"
                     disabled={busy}
                     onClick={() => openEdit(row)}
                   >
                     {labels.recallEdit}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="btn btn-link btn-sm p-0 text-danger"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-red-600 hover:text-red-700"
                     disabled={busy}
                     onClick={() => { void handleDelete(row); }}
                   >
                     {labels.recallDelete}
-                  </button>
+                  </Button>
                 </div>
               )}
-              <a className="btn btn-link btn-sm p-0" href={frontDeskUrl}>{labels.frontDesk}</a>
+              <Button variant="link" size="sm" className="h-auto p-0" asChild>
+                <a href={frontDeskUrl}>{labels.frontDesk}</a>
+              </Button>
             </td>
           </tr>
         ))}
@@ -435,16 +455,16 @@ export function RecallsLens({
         submitting={busy}
         onConfirm={() => { void submitOutcome(); }}
       >
-        <p className="small text-muted mb-2">
+        <p className="text-sm text-[var(--oe-nc-text-muted)] mb-2">
           {outcomeRow?.patient_name}
           {' · '}
           {outcomeRow?.reason}
         </p>
-        <div className="form-group">
+        <div className="nc-form-group">
           <label htmlFor="nc-recall-outcome-status">{labels.outcomeModalStatus}</label>
-          <select
+          <NativeSelect
             id="nc-recall-outcome-status"
-            className="form-control form-control-sm"
+            className="h-8"
             value={outcomeStatus}
             onChange={(e) => setOutcomeStatus(e.target.value)}
           >
@@ -453,13 +473,13 @@ export function RecallsLens({
             <option value="unreachable">Unreachable</option>
             <option value="completed">Completed</option>
             <option value="snoozed">Snoozed</option>
-          </select>
+          </NativeSelect>
         </div>
-        <div className="form-group mb-0">
+        <div className="nc-form-group mb-0">
           <label htmlFor="nc-recall-outcome-note">{labels.outcomeModalNote}</label>
-          <textarea
+          <Textarea
             id="nc-recall-outcome-note"
-            className="form-control form-control-sm"
+            className="min-h-[4.5rem]"
             rows={2}
             value={outcomeNote}
             onChange={(e) => setOutcomeNote(e.target.value)}

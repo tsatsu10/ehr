@@ -1,4 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { ncShadcnTableClass } from '@components/ncTableStyles';
+import { Button } from '@components/ui/button';
+import { Input } from '@components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@components/ui/table';
 import { oeFetch } from '@core/oeFetch';
 import type { PharmControlledCatalogData, PharmControlledCatalogDrug } from './pharmOpsTypes';
 
@@ -79,26 +91,26 @@ export function PharmOpsControlledCatalog({
 
   return (
     <div className="mt-3 border-top pt-3" id="nc-pharmops-controlled-catalog">
-      <h3 className="h6 mb-1">Controlled substances (O-PHARM-5)</h3>
-      <p className="small text-muted mb-2">
+      <h3 className="text-sm font-semibold mb-1">Controlled substances (O-PHARM-5)</h3>
+      <p className="text-sm text-[var(--oe-nc-text-muted)] mb-2">
         Flag products that belong on the controlled register. Schedule codes are clinic-defined placeholders
         until national alignment is configured. View the register under Reports → Controlled substances register.
       </p>
 
       {error ? (
-        <div className="alert alert-warning py-2 mb-2" role="alert">{error}</div>
+        <div className={deskCalloutClass('warn', 'py-2 mb-2')} role="alert">{error}</div>
       ) : null}
       {success ? (
-        <div className="alert alert-success py-2 mb-2" role="status">{success}</div>
+        <div className={deskCalloutClass('success', 'py-2 mb-2')} role="status">{success}</div>
       ) : null}
 
       {loading ? (
-        <p className="small text-muted mb-0">Loading catalog…</p>
+        <p className="text-sm text-[var(--oe-nc-text-muted)] mb-0">Loading catalog…</p>
       ) : drugs.length === 0 ? (
-        <p className="small text-muted mb-0">Import the starter formulary to mark controlled products.</p>
+        <p className="text-sm text-[var(--oe-nc-text-muted)] mb-0">Import the starter formulary to mark controlled products.</p>
       ) : (
         <>
-          <p className="small mb-2">
+          <p className="text-sm mb-2">
             {controlledCount}
             {' '}
             of
@@ -107,20 +119,20 @@ export function PharmOpsControlledCatalog({
             {' '}
             active product(s) flagged.
           </p>
-          <div className="table-responsive mb-2" style={{ maxHeight: '14rem', overflowY: 'auto' }}>
-            <table className="table table-sm table-bordered mb-0">
-              <thead>
-                <tr>
-                  <th scope="col">Drug</th>
-                  <th scope="col" className="text-center">Controlled</th>
-                  <th scope="col">Schedule code</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="overflow-x-auto mb-2" style={{ maxHeight: '14rem', overflowY: 'auto' }}>
+            <Table className={ncShadcnTableClass({ bordered: true, className: 'mb-0' })}>
+              <TableHeader>
+                <TableRow>
+                  <TableHead scope="col">Drug</TableHead>
+                  <TableHead scope="col" className="text-center">Controlled</TableHead>
+                  <TableHead scope="col">Schedule code</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {drugs.map((drug) => (
-                  <tr key={drug.drug_id}>
-                    <td>{drug.drug_name}</td>
-                    <td className="text-center">
+                  <TableRow key={drug.drug_id}>
+                    <TableCell>{drug.drug_name}</TableCell>
+                    <TableCell className="text-center">
                       <input
                         type="checkbox"
                         aria-label={`Mark ${drug.drug_name} as controlled`}
@@ -129,11 +141,11 @@ export function PharmOpsControlledCatalog({
                           updateDrug(drug.drug_id, { is_controlled: event.target.checked });
                         }}
                       />
-                    </td>
-                    <td>
-                      <input
+                    </TableCell>
+                    <TableCell>
+                      <Input
                         type="text"
-                        className="form-control form-control-sm"
+                        className="h-8"
                         maxLength={32}
                         placeholder="e.g. B"
                         disabled={!drug.is_controlled}
@@ -144,21 +156,22 @@ export function PharmOpsControlledCatalog({
                           });
                         }}
                       />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
-          <button
+          <Button
             type="button"
-            className="btn btn-outline-primary btn-sm"
+            variant="outline"
+            size="sm"
             id="nc-pharmops-controlled-save"
             disabled={saving}
             onClick={() => { void saveFlags(); }}
           >
             {saving ? 'Saving…' : 'Save controlled flags'}
-          </button>
+          </Button>
         </>
       )}
     </div>

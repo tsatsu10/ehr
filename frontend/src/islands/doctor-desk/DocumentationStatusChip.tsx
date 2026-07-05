@@ -2,6 +2,7 @@
  * M4-F40 — documentation status chip listing unsigned required forms.
  */
 
+import { Badge } from '@components/ui/badge';
 import type { DocumentationStatus } from '@core/types';
 
 interface DocumentationStatusChipProps {
@@ -16,23 +17,30 @@ export function DocumentationStatusChip({
   encounterSigned,
 }: DocumentationStatusChipProps) {
   if (encounterSigned) {
-    return <span className="badge badge-success ml-2">Signed</span>;
+    return <Badge variant="success" className="ml-2">Signed</Badge>;
   }
 
   const unsigned = documentationStatus?.unsigned_required ?? [];
   if (unsigned.length > 0) {
     const labels = unsigned.map((item) => item.title).join(', ');
-    const variant = requireSign ? 'danger' : 'warning';
     return (
-      <span className={`badge badge-${variant} ml-2`} title={labels}>
+      <Badge variant={requireSign ? 'danger' : 'warning'} className="ml-2" title={labels}>
         Unsigned: {labels}
-      </span>
+      </Badge>
     );
   }
 
   if (requireSign) {
-    return <span className="badge badge-danger ml-2">Unsigned — sign before complete</span>;
+    return (
+      <Badge variant="danger" className="ml-2">
+        Unsigned — sign before complete
+      </Badge>
+    );
   }
 
-  return <span className="badge badge-warning ml-2">Unsigned — payment blocked</span>;
+  return (
+    <Badge variant="warning" className="ml-2">
+      Unsigned — payment blocked
+    </Badge>
+  );
 }

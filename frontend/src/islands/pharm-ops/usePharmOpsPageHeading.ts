@@ -64,23 +64,23 @@ export function usePharmOpsPageHeading({
     const writeOffBtn = document.getElementById('nc-pharmops-tab-writeoff');
     if (writeOffBtn) {
       writeOffBtn.classList.toggle('active', tab === 'write_off');
-      writeOffBtn.classList.toggle('d-none', !canDestroy);
+      writeOffBtn.classList.toggle('nc-hidden', !canDestroy);
     }
 
     const reportsBtn = document.getElementById('nc-pharmops-tab-reports');
     if (reportsBtn) {
       reportsBtn.classList.toggle('active', tab === 'reports');
-      reportsBtn.classList.toggle('d-none', !canViewReports);
+      reportsBtn.classList.toggle('nc-hidden', !canViewReports);
     }
 
     const dateEl = document.getElementById('nc-pharmops-date');
     if (dateEl) {
-      dateEl.classList.toggle('d-none', tab === 'reports' || tab === 'write_off');
+      dateEl.classList.toggle('nc-hidden', tab === 'reports' || tab === 'write_off');
     }
 
     const urgentWrap = document.getElementById('nc-pharmops-urgent-wrap');
     if (urgentWrap) {
-      urgentWrap.classList.toggle('d-none', tab === 'reports' || tab === 'write_off');
+      urgentWrap.classList.toggle('nc-hidden', tab === 'reports' || tab === 'write_off');
     }
 
     const pendingCount = document.getElementById('nc-pharmops-count-pending');
@@ -130,7 +130,7 @@ export function usePharmOpsPageHeading({
   useEffect(() => {
     const sellOtcBtn = document.getElementById('nc-pharmops-sell-otc');
     if (sellOtcBtn) {
-      sellOtcBtn.classList.toggle('d-none', !canDispense);
+      sellOtcBtn.classList.toggle('nc-hidden', !canDispense);
       sellOtcBtn.toggleAttribute('disabled', !canDispense);
     }
   }, [canDispense]);
@@ -144,7 +144,7 @@ export function usePharmOpsPageHeading({
   useEffect(() => {
     const receiveBtn = document.getElementById('nc-pharmops-receive');
     if (receiveBtn) {
-      receiveBtn.classList.toggle('d-none', !canReceive);
+      receiveBtn.classList.toggle('nc-hidden', !canReceive);
       receiveBtn.toggleAttribute('disabled', !canReceive);
     }
   }, [canReceive]);
@@ -158,7 +158,7 @@ export function usePharmOpsPageHeading({
   useEffect(() => {
     const setupBtn = document.getElementById('nc-pharmops-setup');
     if (setupBtn) {
-      setupBtn.classList.toggle('d-none', !canManageCatalog);
+      setupBtn.classList.toggle('nc-hidden', !canManageCatalog);
       setupBtn.toggleAttribute('disabled', !canManageCatalog);
     }
   }, [canManageCatalog]);

@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { Card, CardContent } from './ui/card';
-import { cn } from '@/lib/utils';
 import { TrendPill } from './TrendPill';
 
 interface StatCardProps {
@@ -14,7 +13,7 @@ interface StatCardProps {
 
 export function StatCard({ label, value, icon, trend, className }: StatCardProps) {
   return (
-    <Card className={cn('oe-nc-stat-card', className)}>
+    <Card className={className}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

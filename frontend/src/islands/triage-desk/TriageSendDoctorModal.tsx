@@ -35,10 +35,10 @@ export function TriageSendDoctorModal({
         onConfirm(parsed > 0 ? parsed : null);
       }}
     >
-      <p className="mb-2 text-muted small">
+      <p className="mb-2 text-[var(--oe-nc-text-muted)] text-sm">
         Optionally assign a specific doctor before the visit enters the consult queue.
       </p>
-      <div className="form-group mb-0">
+      <div className="nc-form-group mb-0">
         <label htmlFor="nc-triage-hard-assign-doctor">Assign doctor (optional)</label>
         <HardAssignDoctorSelect
           id="nc-triage-hard-assign-doctor"

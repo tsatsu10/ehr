@@ -1,9 +1,4 @@
-/* Admin Hub island — uses Bootstrap 4 from OpenEMR shell; minimal overrides only. */
+@import '../../core/tokens.css';
+@import '../../components/ui/ui-primitives.css';
 
-#nc-admin-desk .nav-tabs .nav-link {
-  cursor: pointer;
-}
-
-#nc-admin-desk .modal.show.d-block {
-  background: rgba(0, 0, 0, 0.5);
-}
+/* Admin Hub island — shadcn forms + SegmentedControl tabs (no Bootstrap shell deps). */

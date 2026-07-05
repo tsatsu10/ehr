@@ -1,4 +1,13 @@
-import { useId } from 'react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLinkItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+import { Button } from './ui/button';
+import { MoreVertical } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export interface RowActionItem {
   id: string;
@@ -17,54 +26,47 @@ interface RowActionsMenuProps {
 }
 
 export function RowActionsMenu({ label, items, align = 'right' }: RowActionsMenuProps) {
-  const menuId = useId();
-
   if (!items.length) return null;
 
   return (
-    <div className={`dropdown oe-nc-row-actions${align === 'right' ? ' text-right' : ''}`}>
-      <button
-        type="button"
-        className="btn btn-link btn-sm p-0 oe-nc-row-actions__trigger"
-        id={menuId}
-        data-toggle="dropdown"
-        aria-haspopup="true"
-        aria-expanded="false"
-        aria-label={label}
-      >
-        <i className="fa fa-ellipsis-v" aria-hidden="true" />
-      </button>
-      <div className="dropdown-menu dropdown-menu-right" aria-labelledby={menuId}>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className={cn('h-11 w-11 shrink-0', align === 'right' && 'ml-auto')}
+          aria-label={label}
+        >
+          <MoreVertical className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align={align === 'right' ? 'end' : 'start'}>
         {items.map((item) => {
-          const className = item.destructive ? 'dropdown-item text-danger' : 'dropdown-item';
-
           if (item.href) {
             return (
-              <a
+              <DropdownMenuLinkItem
                 key={item.id}
-                className={className}
                 href={item.href}
-                target="_top"
                 onClick={item.onClick}
               >
                 {item.label}
-              </a>
+              </DropdownMenuLinkItem>
             );
           }
 
           return (
-            <button
+            <DropdownMenuItem
               key={item.id}
-              type="button"
-              className={className}
+              destructive={item.destructive}
               disabled={item.disabled}
-              onClick={item.onClick}
+              onSelect={() => item.onClick?.()}
             >
               {item.label}
-            </button>
+            </DropdownMenuItem>
           );
         })}
-      </div>
-    </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

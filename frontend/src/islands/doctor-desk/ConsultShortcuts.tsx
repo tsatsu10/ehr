@@ -2,6 +2,7 @@
  * ConsultShortcuts — clinical shortcut buttons (encounter, lab, Rx, chart).
  */
 
+import { Button } from '@components/ui/button';
 import type { ShortcutKind } from './doctorShortcutNav';
 
 export type { ShortcutKind };
@@ -37,43 +38,46 @@ export function ConsultShortcuts({
   return (
     <div className="nc-doctor-shortcuts mb-3">
       <h5 className="mb-2">Consult shortcuts</h5>
-      <div className="d-flex flex-wrap">
-        <button
+      <div className="flex flex-wrap gap-2">
+        <Button
           type="button"
-          className="btn btn-outline-primary mr-2 mb-2 nc-shortcut-btn"
+          variant="outline"
+          className="nc-shortcut-btn"
           data-shortcut="encounter"
           disabled={blocked}
           onClick={() => handleShortcut('encounter')}
         >
           Open encounter
-        </button>
+        </Button>
         {clinicalDocHubEnabled && (
           <>
-            <button
+            <Button
               type="button"
-              className="btn btn-primary mr-2 mb-2 nc-shortcut-btn"
+              className="nc-shortcut-btn"
               data-shortcut="encounter_hub"
               disabled={blocked}
               onClick={() => handleShortcut('encounter_hub')}
             >
               Open documentation
-            </button>
+            </Button>
             {onOpenDocFavorites && (
-              <button
+              <Button
                 type="button"
-                className="btn btn-outline-primary mr-2 mb-2 nc-shortcut-btn"
+                variant="outline"
+                className="nc-shortcut-btn"
                 data-shortcut="doc-favorites"
                 disabled={blocked}
                 onClick={onOpenDocFavorites}
               >
                 Quick forms
-              </button>
+              </Button>
             )}
           </>
         )}
-        <button
+        <Button
           type="button"
-          className="btn btn-outline-primary mr-2 mb-2 nc-shortcut-btn"
+          variant="outline"
+          className="nc-shortcut-btn"
           data-shortcut="lab"
           disabled={blocked}
           onClick={() => {
@@ -85,21 +89,23 @@ export function ConsultShortcuts({
           }}
         >
           {labPanelOrderEnabled ? 'Quick lab order' : 'Order lab'}
-        </button>
+        </Button>
         {labPanelOrderEnabled && (
-          <button
+          <Button
             type="button"
-            className="btn btn-outline-secondary mr-2 mb-2 nc-shortcut-btn"
+            variant="secondary"
+            className="nc-shortcut-btn"
             data-shortcut="lab-full"
             disabled={blocked}
             onClick={() => handleShortcut('lab')}
           >
             Full lab form
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           type="button"
-          className="btn btn-outline-primary mr-2 mb-2 nc-shortcut-btn"
+          variant="outline"
+          className="nc-shortcut-btn"
           data-shortcut="rx"
           disabled={blocked}
           onClick={() => {
@@ -111,27 +117,29 @@ export function ConsultShortcuts({
           }}
         >
           {formularyRxEnabled ? 'Quick prescribe' : 'Prescribe'}
-        </button>
+        </Button>
         {formularyRxEnabled && (
-          <button
+          <Button
             type="button"
-            className="btn btn-outline-secondary mr-2 mb-2 nc-shortcut-btn"
+            variant="secondary"
+            className="nc-shortcut-btn"
             data-shortcut="rx-full"
             disabled={blocked}
             onClick={() => handleShortcut('rx')}
           >
             Full Rx form
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           type="button"
-          className="btn btn-outline-secondary mr-2 mb-2 nc-shortcut-btn"
+          variant="secondary"
+          className="nc-shortcut-btn"
           data-shortcut="chart"
           disabled={blocked}
           onClick={() => handleShortcut('chart')}
         >
           Open full chart ↗
-        </button>
+        </Button>
       </div>
     </div>
   );

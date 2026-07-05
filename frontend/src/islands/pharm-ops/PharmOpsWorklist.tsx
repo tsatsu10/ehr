@@ -1,3 +1,4 @@
+import { Button } from '@components/ui/button';
 import type { PharmOpsTab, PharmOpsWorklistRow } from './pharmOpsTypes';
 import { isDispenseRow, isLowStockRow, isWriteOffRow } from './pharmOpsTypes';
 import { stockLabel } from './pharmOpsStockUtils';
@@ -47,8 +48,8 @@ export function PharmOpsWorklist({
 }: PharmOpsWorklistProps) {
   if (loading) {
     return (
-      <div id="nc-pharmops-list" className="oe-nc-pharmops-list" role="status" aria-live="polite">
-        <div className="oe-nc-pharmops-empty oe-nc-pharmops-empty--loading">Loading worklist…</div>
+      <div id="nc-pharmops-list" className="nc-pharmops-list" role="status" aria-live="polite">
+        <div className="nc-pharmops-empty nc-pharmops-empty--loading">Loading worklist…</div>
       </div>
     );
   }
@@ -60,10 +61,10 @@ export function PharmOpsWorklist({
         ? 'No lots to write off'
         : 'Nothing to dispense';
     return (
-      <div id="nc-pharmops-list" className="oe-nc-pharmops-list" role="list" aria-label="Pharmacy worklist">
-        <div className="oe-nc-pharmops-empty-card">
-          <p className="oe-nc-pharmops-empty-card__title">{title}</p>
-          <p className="oe-nc-pharmops-empty-card__body mb-0">{emptyMessage(tab, worklistDate, expiryWarnDays)}</p>
+      <div id="nc-pharmops-list" className="nc-pharmops-list" role="list" aria-label="Pharmacy worklist">
+        <div className="nc-pharmops-empty-card">
+          <p className="nc-pharmops-empty-card-title">{title}</p>
+          <p className="nc-pharmops-empty-card-body mb-0">{emptyMessage(tab, worklistDate, expiryWarnDays)}</p>
         </div>
       </div>
     );
@@ -71,34 +72,36 @@ export function PharmOpsWorklist({
 
   if (tab === 'write_off') {
     return (
-      <div id="nc-pharmops-list" className="oe-nc-pharmops-list" role="list" aria-label="Write-off lots">
+      <div id="nc-pharmops-list" className="nc-pharmops-list" role="list" aria-label="Write-off lots">
         {rows.filter(isWriteOffRow).map((row) => {
           const urgent = row.lot_status === 'expired';
 
           return (
             <article
               key={row.inventory_id}
-              className={`oe-nc-pharmops-row${urgent ? ' oe-nc-pharmops-row--urgent' : ''}`}
+              className={`nc-pharmops-row${urgent ? ' nc-pharmops-row--urgent' : ''}`}
               role="listitem"
             >
-              <div className="oe-nc-pharmops-row__title">{row.drug_name}</div>
-              <div className="oe-nc-pharmops-row__meta">
+              <div className="nc-pharmops-row-title">{row.drug_name}</div>
+              <div className="nc-pharmops-row-meta">
                 Lot {row.lot_number || '—'}
                 {row.warehouse ? ` · ${row.warehouse}` : ''}
               </div>
-              <div className="oe-nc-pharmops-row__meta">
+              <div className="nc-pharmops-row-meta">
                 {row.status_label}
                 {row.qoh_display ? ` · ${row.qoh_display}` : ''}
               </div>
-              <div className="oe-nc-pharmops-row__actions">
+              <div className="nc-pharmops-row-actions">
                 {canDestroy && onDestroy ? (
-                  <button
+                  <Button
                     type="button"
-                    className="btn btn-outline-danger btn-sm"
+                    variant="outline"
+                    size="sm"
+                    className="border-red-300 text-red-700 hover:bg-red-50"
                     onClick={() => onDestroy(row.drug_id, row.inventory_id, row.drug_name, row.lot_number)}
                   >
                     Write off lot
-                  </button>
+                  </Button>
                 ) : null}
               </div>
             </article>
@@ -110,7 +113,7 @@ export function PharmOpsWorklist({
 
   if (tab === 'low_stock') {
     return (
-      <div id="nc-pharmops-list" className="oe-nc-pharmops-list" role="list" aria-label="Low stock worklist">
+      <div id="nc-pharmops-list" className="nc-pharmops-list" role="list" aria-label="Low stock worklist">
         {rows.filter(isLowStockRow).map((row) => {
           const stock = stockLabel(row.stock_status);
           const urgent = row.stock_status === 'out_of_stock';
@@ -118,32 +121,31 @@ export function PharmOpsWorklist({
           return (
             <article
               key={row.drug_id}
-              className={`oe-nc-pharmops-row${urgent ? ' oe-nc-pharmops-row--urgent' : ''}`}
+              className={`nc-pharmops-row${urgent ? ' nc-pharmops-row--urgent' : ''}`}
               role="listitem"
             >
-              <div className="oe-nc-pharmops-row__title">{row.drug_name}</div>
-              <div className="oe-nc-pharmops-row__meta">
+              <div className="nc-pharmops-row-title">{row.drug_name}</div>
+              <div className="nc-pharmops-row-meta">
                 {row.status_label}
                 {stock ? ` · ${stock}` : ''}
                 {row.qoh_display ? ` · ${row.qoh_display}` : ''}
               </div>
-              <div className="oe-nc-pharmops-row__actions">
+              <div className="nc-pharmops-row-actions">
                 {canReceive && onReceive ? (
-                  <button
+                  <Button
                     type="button"
-                    className="btn btn-outline-primary btn-sm"
+                    variant="outline"
+                    size="sm"
                     onClick={() => onReceive(row.drug_id, row.drug_name)}
                   >
                     Receive stock
-                  </button>
+                  </Button>
                 ) : row.receive_stock_url ? (
-                  <a
-                    className="btn btn-outline-secondary btn-sm"
-                    href={row.receive_stock_url}
-                    target="_top"
-                  >
-                    Receive stock
-                  </a>
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={row.receive_stock_url} target="_top">
+                      Receive stock
+                    </a>
+                  </Button>
                 ) : null}
               </div>
             </article>
@@ -154,7 +156,7 @@ export function PharmOpsWorklist({
   }
 
   return (
-    <div id="nc-pharmops-list" className="oe-nc-pharmops-list" role="list" aria-label="Pharmacy worklist">
+    <div id="nc-pharmops-list" className="nc-pharmops-list" role="list" aria-label="Pharmacy worklist">
       {rows.filter(isDispenseRow).map((row) => {
         const qLabel = row.queue_number ? `Q#${row.queue_number} ` : '';
         const stock = stockLabel(row.stock_status);
@@ -162,54 +164,54 @@ export function PharmOpsWorklist({
         return (
           <article
             key={row.prescription_id}
-            className={`oe-nc-pharmops-row${row.is_urgent ? ' oe-nc-pharmops-row--urgent' : ''}`}
+            className={`nc-pharmops-row${row.is_urgent ? ' nc-pharmops-row--urgent' : ''}`}
             role="listitem"
           >
-            <div className="oe-nc-pharmops-row__title">
+            <div className="nc-pharmops-row-title">
               {qLabel}{row.patient_label}
               {row.mrn ? (
-                <span className="text-muted font-weight-normal"> · {row.mrn}</span>
+                <span className="text-[var(--oe-nc-text-muted)] font-normal"> · {row.mrn}</span>
               ) : null}
             </div>
-            <div className="oe-nc-pharmops-row__meta">{row.drug_name}</div>
-            <div className="oe-nc-pharmops-row__meta">
+            <div className="nc-pharmops-row-meta">{row.drug_name}</div>
+            <div className="nc-pharmops-row-meta">
               {row.status_label}
               {row.ordered_display ? ` · ${row.ordered_display}` : ''}
               {stock ? ` · ${stock}` : ''}
             </div>
-            <div className="oe-nc-pharmops-row__actions">
+            <div className="nc-pharmops-row-actions">
               {row.can_open_pharmacy_desk && row.pharmacy_desk_url ? (
-                <a className="btn btn-outline-secondary btn-sm" href={row.pharmacy_desk_url} target="_top">
-                  Open in Pharmacy Desk
-                </a>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={row.pharmacy_desk_url} target="_top">
+                    Open in Pharmacy Desk
+                  </a>
+                </Button>
               ) : null}
               {row.patient_chart_url ? (
-                <a
-                  className="btn btn-outline-secondary btn-sm"
-                  href={row.patient_chart_url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open chart
-                </a>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={row.patient_chart_url} target="_blank" rel="noreferrer">
+                    Open chart
+                  </a>
+                </Button>
               ) : null}
               {canPrintRx && onPrintRx ? (
-                <button
+                <Button
                   type="button"
-                  className="btn btn-outline-secondary btn-sm"
+                  variant="outline"
+                  size="sm"
                   onClick={() => onPrintRx(row.prescription_id)}
                 >
                   Print Rx
-                </button>
+                </Button>
               ) : null}
               {canDispense ? (
-                <button
+                <Button
                   type="button"
-                  className="btn btn-primary btn-sm"
+                  size="sm"
                   onClick={() => onDispense(row.prescription_id)}
                 >
                   Dispense
-                </button>
+                </Button>
               ) : null}
             </div>
           </article>

@@ -1,17 +1,17 @@
 {% extends 'base.html.twig' %}
 
 {% block page_heading_actions %}
-<div class="d-flex flex-wrap align-items-center oe-nc-queuebridge-toolbar" id="nc-queuebridge-toolbar">
-    <span class="text-muted small mb-1 mr-2" id="nc-queuebridge-summary"></span>
-    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ visit_board_url|attr }}">{{ 'Visit Board'|xlt }}</a>
-    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ flow_board_url|attr }}" target="_top">{{ 'Flow Board'|xlt }}</a>
-    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ scheduling_url|attr }}" target="_top">{{ 'Scheduling'|xlt }}</a>
-    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ reports_url|attr }}">{{ 'Daily Reports'|xlt }}</a>
-    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ eod_export_url|attr }}">{{ 'Export EOD'|xlt }}</a>
-    <button type="button" class="btn btn-outline-secondary btn-sm mb-1" id="nc-queuebridge-refresh" aria-label="{{ 'Refresh'|xlt }}">
+<div class="nc-flex nc-flex-wrap nc-items-center nc-queuebridge-toolbar" id="nc-queuebridge-toolbar">
+    <span class="nc-text-muted nc-text-sm nc-mb-1 nc-mr-2" id="nc-queuebridge-summary"></span>
+    <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1 nc-mr-1" href="{{ visit_board_url|attr }}">{{ 'Visit Board'|xlt }}</a>
+    <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1 nc-mr-1" href="{{ flow_board_url|attr }}" target="_top">{{ 'Flow Board'|xlt }}</a>
+    <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1 nc-mr-1" href="{{ scheduling_url|attr }}" target="_top">{{ 'Scheduling'|xlt }}</a>
+    <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1 nc-mr-1" href="{{ reports_url|attr }}">{{ 'Daily Reports'|xlt }}</a>
+    <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1 nc-mr-1" href="{{ eod_export_url|attr }}">{{ 'Export EOD'|xlt }}</a>
+    <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1" id="nc-queuebridge-refresh" aria-label="{{ 'Refresh'|xlt }}">
         <i class="fa fa-refresh" aria-hidden="true"></i>
     </button>
-    <span class="text-muted small mb-1" id="nc-queuebridge-updated"></span>
+    <span class="nc-text-muted nc-text-sm nc-mb-1" id="nc-queuebridge-updated"></span>
 </div>
 {% endblock %}
 

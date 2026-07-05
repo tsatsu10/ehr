@@ -15,6 +15,10 @@ import type { BoardData, ColumnKey, VisitCard, VisitBoardProps, VisitDetailData 
 import { VisitBoardColumn } from './VisitBoardColumn';
 import { SegmentedControl } from '@components/SegmentedControl';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Button } from '@components/ui/button';
+import { Input } from '@components/ui/input';
+import { AlertTriangle, Clock, X } from 'lucide-react';
 import { VisitDetailModal } from './VisitDetailModal';
 import { VisitDetailDrawer } from './VisitDetailDrawer';
 import { CancelledTodaySection } from './CancelledTodaySection';
@@ -22,6 +26,16 @@ import { LeftUnpaidTodaySection } from './LeftUnpaidTodaySection';
 import { computeNowServing } from './visitBoardUtils';
 import { useVisitBoardKiosk } from './useVisitBoardKiosk';
 import { VisitBoardKioskToolbar } from './VisitBoardKioskToolbar';
+import {
+  visitBoardRootClass,
+  visitBoardLanesClass,
+  visitBoardLaneClass,
+  visitBoardColumnClass,
+  visitBoardColumnHeaderClass,
+  visitBoardSkeletonClass,
+  visitBoardSkeletonCardClass,
+  visitBoardToolbarClass,
+} from '@components/visitBoardStyles';
 
 export const COLUMN_ORDER: ColumnKey[] = [
   'waiting', 'triage', 'doctor', 'lab', 'pharmacy', 'payment', 'done',
@@ -183,17 +197,17 @@ export function VisitBoard({
   if (initialLoading) {
     return (
       <div
-        className={`oe-nc-vb${isKiosk ? ' oe-nc-vb--kiosk' : ''}`}
+        className={visitBoardRootClass(isKiosk)}
         data-profile={profile}
         aria-busy="true"
       >
-        <div className="row">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="col-sm-6 col-md-4 col-lg-3 mb-3">
-              <div className="oe-nc-vb-column">
-                <div className="oe-nc-vb-column__header oe-nc-vb-skeleton" aria-hidden="true" />
-                <div className="oe-nc-vb-skeleton oe-nc-vb-skeleton--card" aria-hidden="true" />
-                <div className="oe-nc-vb-skeleton oe-nc-vb-skeleton--card" aria-hidden="true" />
+        <div className={visitBoardLanesClass} aria-busy="true">
+          {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+            <div key={i} className={visitBoardLaneClass}>
+              <div className={visitBoardColumnClass}>
+                <div className={`${visitBoardColumnHeaderClass} ${visitBoardSkeletonClass}`} aria-hidden="true" />
+                <div className={visitBoardSkeletonCardClass} aria-hidden="true" />
+                <div className={visitBoardSkeletonCardClass} aria-hidden="true" />
               </div>
             </div>
           ))}
@@ -206,17 +220,13 @@ export function VisitBoard({
 
   if (!data && fetchError) {
     return (
-      <div className={`oe-nc-vb${isKiosk ? ' oe-nc-vb--kiosk' : ''}`} data-profile={profile}>
-        <div className="alert alert-danger d-flex align-items-center" role="alert">
-          <i className="fa fa-exclamation-triangle mr-2 shrink-0" aria-hidden="true" />
+      <div className={visitBoardRootClass(isKiosk)} data-profile={profile}>
+        <div className={deskCalloutClass('error', 'flex items-center gap-3')} role="alert">
+          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="grow">{fetchError}</span>
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-danger ml-3"
-            onClick={() => void fetchBoard()}
-          >
+          <Button type="button" variant="outline" size="sm" onClick={() => void fetchBoard()}>
             Retry
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -243,7 +253,7 @@ export function VisitBoard({
   }));
 
   return (
-    <div className={`oe-nc-vb${isKiosk ? ' oe-nc-vb--kiosk' : ''}`} data-profile={profile}>
+    <div className={visitBoardRootClass(isKiosk)} data-profile={profile}>
 
       {isKiosk && (
         <VisitBoardKioskToolbar
@@ -259,8 +269,8 @@ export function VisitBoard({
 
       {/* Stale-visits banner */}
       {data.stale_count > 0 && (
-        <div className="alert alert-warning d-flex align-items-center mb-3" role="status" aria-live="polite">
-          <i className="fa fa-clock-o mr-2 shrink-0" aria-hidden="true" />
+        <div className={deskCalloutClass('warn', 'mb-3 flex items-center gap-2')} role="status" aria-live="polite">
+          <Clock className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span>
             <strong>{data.stale_count}</strong>{' '}
             {data.stale_count === 1 ? 'patient' : 'patients'} in the queue arrived before today
@@ -268,28 +278,25 @@ export function VisitBoard({
         </div>
       )}
 
-      {/* Background-poll error banner (board data preserved beneath) */}
       {fetchError && !errorDismissed && (
-        <div className="alert alert-warning d-flex align-items-center mb-3" role="alert" aria-live="polite">
-          <i className="fa fa-exclamation-triangle mr-2 shrink-0" aria-hidden="true" />
-          <span className="grow small">
+        <div className={deskCalloutClass('warn', 'mb-3 flex items-center gap-2')} role="alert" aria-live="polite">
+          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="grow text-sm">
             Could not refresh — showing last known data.{' '}
-            <button
-              type="button"
-              className="btn btn-sm btn-link p-0 align-baseline"
-              onClick={() => void fetchBoard()}
-            >
+            <Button type="button" variant="link" size="sm" className="h-auto p-0 align-baseline" onClick={() => void fetchBoard()}>
               Retry now
-            </button>
+            </Button>
           </span>
-          <button
+          <Button
             type="button"
-            className="close ml-2"
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 shrink-0 p-0"
             aria-label="Dismiss"
             onClick={() => setErrorDismissed(true)}
           >
-            <span aria-hidden="true">×</span>
-          </button>
+            <X className="h-4 w-4" aria-hidden="true" />
+          </Button>
         </div>
       )}
 
@@ -305,13 +312,13 @@ export function VisitBoard({
             compact
           />
 
-          <div className="oe-nc-vb__toolbar mb-3 d-flex flex-wrap align-items-center justify-content-end">
+          <div className={`${visitBoardToolbarClass} mb-3 flex flex-wrap items-center justify-end`}>
           {/* Search */}
-          <div className="oe-nc-search-input__wrap mr-2" style={{ maxWidth: 220 }}>
-            <i className="fa fa-search oe-nc-search-input__icon" aria-hidden="true" />
-            <input
+          <div className="relative mr-2" style={{ maxWidth: 220 }}>
+            <i className="fa fa-search pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--oe-nc-text-muted)]" aria-hidden="true" />
+            <Input
               type="search"
-              className="form-control form-control-sm oe-nc-search-input__field"
+              className="h-8 pl-8 pr-8"
               placeholder="Search name, MRN, queue #"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -320,7 +327,7 @@ export function VisitBoard({
             {search && (
               <button
                 type="button"
-                className="oe-nc-search-input__clear"
+                className="absolute right-1 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded border-0 bg-transparent text-lg leading-none text-[var(--oe-nc-text-muted)] hover:bg-[var(--oe-nc-bg-tint)] hover:text-[var(--oe-nc-text)]"
                 aria-label="Clear search"
                 onClick={() => setSearch('')}
               >
@@ -346,13 +353,16 @@ export function VisitBoard({
 
       {/* No results message */}
       {(searchText || urgentOnly) && totalVisible === 0 && (
-        <div className="alert alert-light text-muted mb-3" role="status">
+        <div
+          className="mb-3 rounded-lg border border-[var(--oe-nc-border)] bg-[var(--oe-nc-bg-tint)] px-4 py-3 text-sm text-[var(--oe-nc-text-muted)]"
+          role="status"
+        >
           No patients match the current filter.
         </div>
       )}
 
       {/* Columns */}
-      <div className="row" id="nc-board-columns" role="region" aria-label="Visit board">
+      <div className={visitBoardLanesClass} id="nc-board-columns" role="region" aria-label="Visit board">
         {filteredColumns.map(({ key, cards }) => (
           <VisitBoardColumn
             key={key}

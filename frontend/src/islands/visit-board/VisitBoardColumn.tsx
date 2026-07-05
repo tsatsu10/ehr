@@ -1,11 +1,18 @@
 /**
  * VisitBoardColumn — one column of the visit board Kanban.
- *
- * Renders a header with count + card list. Uses existing oe-nc-* CSS classes.
  */
 
 import type { ColumnKey, VisitCard } from '@core/types';
 import { QueueCard } from '@components/QueueCard';
+import { Badge } from '@components/ui/badge';
+import {
+  visitBoardLaneClass,
+  visitBoardColumnClass,
+  visitBoardColumnHeaderClass,
+  visitBoardColumnLabelClass,
+  visitBoardColumnCountClass,
+  visitBoardColumnBodyClass,
+} from '@components/visitBoardStyles';
 import { COLUMN_LABELS } from './VisitBoard';
 
 export interface VisitBoardColumnProps {
@@ -28,21 +35,19 @@ export function VisitBoardColumn({
   const label = COLUMN_LABELS[columnKey];
 
   return (
-    <div className="col-sm-6 col-md-4 col-lg-3 mb-3">
-      <div className="oe-nc-vb-column">
-        {/* Column header */}
-        <div className="oe-nc-vb-column__header">
-          <span className="oe-nc-vb-column__label">{label}</span>
-          <span className="oe-nc-vb-column__count badge badge-light border">
+    <div className={visitBoardLaneClass}>
+      <div className={visitBoardColumnClass}>
+        <div className={visitBoardColumnHeaderClass}>
+          <span className={visitBoardColumnLabelClass}>{label}</span>
+          <Badge variant="outline" className={visitBoardColumnCountClass}>
             {cards.length}
-          </span>
+          </Badge>
         </div>
 
-        {/* Card list */}
-        <div className="oe-nc-vb-column__body" role="list" aria-label={`${label} queue`}>
+        <div className={visitBoardColumnBodyClass} role="list" aria-label={`${label} queue`}>
           {cards.length === 0 ? (
-            <div className="oe-nc-empty-state py-3" role="listitem">
-              <p className="mb-0 small text-muted text-center">No patients</p>
+            <div className="py-3" role="listitem">
+              <p className="mb-0 text-sm text-[var(--oe-nc-text-muted)] text-center">No patients</p>
             </div>
           ) : (
             cards.map((card) => {

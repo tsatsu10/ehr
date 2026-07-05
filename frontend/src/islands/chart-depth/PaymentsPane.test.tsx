@@ -87,7 +87,7 @@ describe('PaymentsPane', () => {
     expect(await screen.findByText('MoMo · Ref: ABC')).toBeInTheDocument();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Date range' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Date range' }));
       await Promise.resolve();
     });
 
@@ -134,6 +134,6 @@ describe('PaymentsPane', () => {
         }),
       }),
     );
-    expect(screen.getByRole('button', { name: 'This visit' })).toHaveClass('active');
+    expect(screen.getByRole('tab', { name: 'This visit' })).toHaveAttribute('aria-selected', 'true');
   });
 });

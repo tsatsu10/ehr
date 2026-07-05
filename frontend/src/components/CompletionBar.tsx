@@ -25,7 +25,7 @@ export function CompletionBar({ score, threshold, className = 'mb-2' }: Completi
     <Progress
       value={score}
       max={100}
-      className={cn('oe-nc-completion-bar', className)}
+      className={cn('h-1', className)}
       indicatorClassName={indicatorClassName}
       aria-label="Profile completion"
     />

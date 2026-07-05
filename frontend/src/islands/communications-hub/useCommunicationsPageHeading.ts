@@ -52,18 +52,18 @@ export function useCommunicationsPageHeading({
     if (btnReminders) btnReminders.classList.toggle('active', lens === 'reminders');
 
     const activity = document.getElementById('nc-comm-activity');
-    if (activity) activity.classList.toggle('d-none', lens !== 'messages');
+    if (activity) activity.classList.toggle('nc-hidden', lens !== 'messages');
 
     const scopeWrap = document.getElementById('nc-comm-scope-wrap');
-    if (scopeWrap) scopeWrap.classList.toggle('d-none', lens !== 'messages' || !canViewAllUsers);
+    if (scopeWrap) scopeWrap.classList.toggle('nc-hidden', lens !== 'messages' || !canViewAllUsers);
 
     const compose = document.getElementById('nc-comm-compose-link');
-    if (compose) compose.classList.toggle('d-none', lens !== 'messages');
+    if (compose) compose.classList.toggle('nc-hidden', lens !== 'messages');
 
     const sortBy = document.getElementById('nc-comm-sort-by');
     const sortOrder = document.getElementById('nc-comm-sort-order');
-    if (sortBy) sortBy.classList.toggle('d-none', lens !== 'messages');
-    if (sortOrder) sortOrder.classList.toggle('d-none', lens !== 'messages');
+    if (sortBy) sortBy.classList.toggle('nc-hidden', lens !== 'messages');
+    if (sortOrder) sortOrder.classList.toggle('nc-hidden', lens !== 'messages');
   }, [canViewAllUsers, lens]);
 
   useEffect(() => {

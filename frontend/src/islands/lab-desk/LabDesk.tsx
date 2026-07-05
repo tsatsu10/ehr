@@ -407,7 +407,7 @@ export function LabDesk({
   }, [runShortcut]);
 
   return (
-    <div id="nc-lab-desk" className="oe-nc-lab-react-active">
+    <div id="nc-lab-desk" className="nc-lab-react-active">
       <DeskInterruptBanner
         interrupt={interrupt}
         onDismiss={() => {
@@ -444,8 +444,8 @@ export function LabDesk({
         onRefresh={() => { void fetchQueue(); }}
       />
 
-      <div className="row">
-        <div className="col-lg-4 mb-3">
+      <div className="grid grid-cols-12 gap-3">
+        <div className="col-span-12 lg:col-span-4 mb-3">
           <LabQueue
             cards={cards}
             hasActiveWork={hasActiveWork}
@@ -456,7 +456,7 @@ export function LabDesk({
           />
         </div>
 
-        <div className="col-lg-8 mb-3">
+        <div className="col-span-12 lg:col-span-8 mb-3">
           <LabActivePane
             mode={mode}
             data={selectData}

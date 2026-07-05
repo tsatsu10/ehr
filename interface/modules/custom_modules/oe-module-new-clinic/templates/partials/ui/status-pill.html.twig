@@ -1,7 +1,7 @@
 {# status-pill — shape + label + color (never color-only) #}
-<span class="oe-nc-status-pill oe-nc-status-pill--{{ variant|default('neutral') }}">
+<span class="nc-status-pill nc-status-pill-{{ variant|default('neutral') }}">
     {% if show_dot|default(true) %}
-        <span class="oe-nc-status-pill__dot" aria-hidden="true"></span>
+        <span class="nc-status-pill-dot" aria-hidden="true"></span>
     {% endif %}
     <span>{{ label|xlt }}</span>
 </span>

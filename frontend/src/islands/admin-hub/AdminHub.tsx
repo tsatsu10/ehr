@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Label } from '@components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@components/ui/select';
 import { oeFetch } from '@core/oeFetch';
 import { ConfirmModal } from '@components/ConfirmModal';
+import { SegmentedControl } from '@components/SegmentedControl';
 import { collectAdminSettings } from './adminFieldDefs';
 import { applyAdminSettingCoupling } from './adminSettingCoupling';
 import type {
@@ -882,48 +892,43 @@ export function AdminHub({
   return (
     <div id="nc-admin-desk">
       {successMessage && (
-        <div className="alert alert-success" id="nc-admin-success">{successMessage}</div>
+        <div className={deskCalloutClass('success')} id="nc-admin-success">{successMessage}</div>
       )}
       {errorMessage && (
-        <div className="alert alert-danger" id="nc-admin-error">{errorMessage}</div>
+        <div className={deskCalloutClass('error')} id="nc-admin-error">{errorMessage}</div>
       )}
       {loadError && !errorMessage && (
-        <div className="alert alert-danger">{loadError}</div>
+        <div className={deskCalloutClass('error')}>{loadError}</div>
       )}
 
-      <div className="d-flex flex-wrap align-items-center mb-3">
-        <label className="mb-0 mr-2" htmlFor="nc-admin-scope">Settings for:</label>
-        <select
-          className="form-control form-control-sm w-auto mr-2"
-          id="nc-admin-scope"
+      <div className="flex flex-wrap items-center mb-3">
+        <Label className="mb-0 mr-2 normal-case" htmlFor="nc-admin-scope">Settings for:</Label>
+        <Select
           value={scope}
-          onChange={(e) => handleScopeChange(e.target.value === 'global' ? 'global' : 'facility')}
+          onValueChange={(val) => handleScopeChange(val === 'global' ? 'global' : 'facility')}
         >
-          <option value="facility">This clinic</option>
-          <option value="global">All facilities (global default)</option>
-        </select>
-        <span className="text-muted small" id="nc-admin-scope-hint">{scopeHint}</span>
+          <SelectTrigger id="nc-admin-scope" className="h-8 w-auto mr-2">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="facility">This clinic</SelectItem>
+            <SelectItem value="global">All facilities (global default)</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-[var(--oe-nc-text-muted)] text-sm" id="nc-admin-scope-hint">{scopeHint}</span>
       </div>
 
-      <ul className="nav nav-tabs mb-3" role="tablist">
-        {visibleTabs.map((tab) => (
-          <li className="nav-item" key={tab.id}>
-            <button
-              type="button"
-              className={`nav-link${activeTab === tab.id ? ' active' : ''}`}
-              role="tab"
-              aria-selected={activeTab === tab.id}
-              onClick={() => handleTabChange(tab.id)}
-            >
-              {tab.label}
-            </button>
-          </li>
-        ))}
-      </ul>
+      <SegmentedControl
+        segments={visibleTabs.map((tab) => ({ id: tab.id, label: tab.label }))}
+        value={activeTab}
+        onChange={(id) => handleTabChange(id as AdminTabId)}
+        ariaLabel="Admin configuration sections"
+        className="mb-3"
+      />
 
-      <div className="tab-content">
+      <div className="nc-tab-content">
         {loading ? (
-          <div className="text-muted"><em>Loading settings…</em></div>
+          <div className="text-[var(--oe-nc-text-muted)]"><em>Loading settings…</em></div>
         ) : (
           <>
             {activeTab === 'queue' && (
@@ -989,7 +994,7 @@ export function AdminHub({
               />
             )}
             {activeTab === 'forms' && (!formBundleBoard || !formsCatalog) && (
-              <div className="text-muted"><em>Forms configuration unavailable.</em></div>
+              <div className="text-[var(--oe-nc-text-muted)]"><em>Forms configuration unavailable.</em></div>
             )}
             {activeTab === 'system' && systemHealth && runbooks && setupProgress && (
               <SystemTab
@@ -1021,7 +1026,7 @@ export function AdminHub({
               />
             )}
             {activeTab === 'system' && (!systemHealth || !runbooks || !setupProgress) && (
-              <div className="text-muted"><em>System configuration unavailable.</em></div>
+              <div className="text-[var(--oe-nc-text-muted)]"><em>System configuration unavailable.</em></div>
             )}
             {activeTab === 'types' && (
               <VisitTypesTab

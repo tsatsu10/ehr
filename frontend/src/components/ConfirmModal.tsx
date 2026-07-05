@@ -1,15 +1,36 @@
 import type { ReactNode } from 'react';
+import { Button, type ButtonProps } from './ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  dialogContentSizeClass,
 } from './ui/dialog';
-import './ui/ui-primitives.css';
 
-export type ConfirmModalVariant = 'primary' | 'success' | 'warning' | 'danger';
+export type ConfirmModalVariant = 'primary' | 'success' | 'warning' | 'danger' | 'secondary';
+
+function confirmButtonVariant(variant: ConfirmModalVariant): NonNullable<ButtonProps['variant']> {
+  switch (variant) {
+    case 'success':
+      return 'cta';
+    case 'warning':
+      return 'warning';
+    case 'danger':
+      return 'danger';
+    case 'secondary':
+      return 'secondary';
+    case 'primary':
+      return 'default';
+    default: {
+      const _exhaustive: never = variant;
+      return _exhaustive;
+    }
+  }
+}
 
 interface ConfirmModalProps {
   open: boolean;
@@ -44,44 +65,35 @@ export function ConfirmModal({
   onConfirm,
   confirmDisabled = false,
 }: ConfirmModalProps) {
-  const confirmClass =
-    confirmVariant === 'success'
-      ? 'btn-success'
-      : confirmVariant === 'warning'
-        ? 'btn-warning'
-        : confirmVariant === 'danger'
-          ? 'btn-danger'
-          : 'btn-primary';
-
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent
         id={modalId}
-        className="oe-nc-confirm-modal"
+        className={dialogContentSizeClass.confirm}
         aria-labelledby={titleId}
       >
         <DialogHeader>
           <DialogTitle id={titleId}>{title}</DialogTitle>
-          <DialogClose className="oe-nc-dialog__close" aria-label="Close">
+          <DialogClose aria-label="Close">
             <span aria-hidden="true">&times;</span>
           </DialogClose>
         </DialogHeader>
-        <div className="oe-nc-dialog__body">
+        <DialogBody>
           {identityBanner}
           {children}
-        </div>
+        </DialogBody>
         <DialogFooter>
-          <button type="button" className="btn btn-secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onClose}>
             {cancelLabel}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className={`btn ${confirmClass}`}
+            variant={confirmButtonVariant(confirmVariant)}
             disabled={confirmDisabled || submitting}
             onClick={onConfirm}
           >
             {submitting ? (submittingLabel ?? 'Saving…') : confirmLabel}
-          </button>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -112,8 +124,8 @@ export function IdentityConfirmBanner({
   ].filter(Boolean);
 
   return (
-    <div className="oe-nc-confirm-identity nc-patient-context-banner p-3 border rounded bg-light mb-3">
-      <strong>{parts.join(' · ')}</strong>
+    <div className="mb-3 rounded-xl border border-[var(--oe-nc-border,#e2e8f0)] bg-[var(--oe-nc-bg-tint,#f8fafc)] px-4 py-3">
+      <strong className="text-sm text-[var(--oe-nc-text)]">{parts.join(' · ')}</strong>
       {children}
     </div>
   );

@@ -1,5 +1,17 @@
 import type { PharmacyPrescriptionLine } from '@core/types';
-import { stockBadgeClass, stockLabel } from '../pharm-ops/pharmOpsStockUtils';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { ncShadcnTableClass } from '@components/ncTableStyles';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@components/ui/table';
+import { stockBadgeVariant, stockLabel } from '../pharm-ops/pharmOpsStockUtils';
 
 interface PharmacyPrescriptionsTableProps {
   prescriptions: PharmacyPrescriptionLine[];
@@ -11,8 +23,8 @@ interface PharmacyPrescriptionsTableProps {
   onPrintRx?: (prescriptionId: number) => void;
 }
 
-function statusBadgeClass(status: string): string {
-  return status === 'dispensed' ? 'badge-success' : 'badge-warning';
+function rxStatusBadgeVariant(status: string): 'success' | 'warning' {
+  return status === 'dispensed' ? 'success' : 'warning';
 }
 
 function statusLabel(status: string): string {
@@ -30,25 +42,25 @@ export function PharmacyPrescriptionsTable({
 }: PharmacyPrescriptionsTableProps) {
   if (!prescriptions.length) {
     return (
-      <div className="alert alert-info py-2 mb-0">
+      <div className={deskCalloutClass('info', 'py-2 mb-0')}>
         No prescriptions on this encounter yet. Doctor creates Rx in core.
       </div>
     );
   }
 
   return (
-    <table className="table table-sm table-bordered mb-0">
-      <thead>
-        <tr>
-          <th>Medication</th>
-          <th>Sig</th>
-          <th>Qty</th>
-          {showStockBadges ? <th>Stock</th> : null}
-          <th>Status</th>
-          {canDispense || canPrintRx ? <th aria-label="Actions" /> : null}
-        </tr>
-      </thead>
-      <tbody>
+    <Table className={ncShadcnTableClass({ bordered: true, className: 'mb-0' })}>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Medication</TableHead>
+          <TableHead>Sig</TableHead>
+          <TableHead>Qty</TableHead>
+          {showStockBadges ? <TableHead>Stock</TableHead> : null}
+          <TableHead>Status</TableHead>
+          {canDispense || canPrintRx ? <TableHead aria-label="Actions" /> : null}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
         {prescriptions.map((line) => {
           const stock = stockLabel(line.stock_status);
           const canDispenseLine = canDispense
@@ -56,57 +68,59 @@ export function PharmacyPrescriptionsTable({
             && !dispenseBlocked;
 
           return (
-            <tr key={line.id}>
-              <td>{line.drug}</td>
-              <td>{line.sig}</td>
-              <td>{line.quantity}</td>
+            <TableRow key={line.id}>
+              <TableCell>{line.drug}</TableCell>
+              <TableCell>{line.sig}</TableCell>
+              <TableCell>{line.quantity}</TableCell>
               {showStockBadges ? (
-                <td>
+                <TableCell>
                   {stock ? (
-                    <span className={`badge ${stockBadgeClass(line.stock_status)}`}>
+                    <Badge variant={stockBadgeVariant(line.stock_status)}>
                       {stock}
-                    </span>
+                    </Badge>
                   ) : (
-                    <span className="text-muted small">—</span>
+                    <span className="text-[var(--oe-nc-text-muted)] text-sm">—</span>
                   )}
                   {line.qoh_display ? (
-                    <div className="small text-muted">{line.qoh_display}</div>
+                    <div className="text-sm text-[var(--oe-nc-text-muted)]">{line.qoh_display}</div>
                   ) : null}
-                </td>
+                </TableCell>
               ) : null}
-              <td>
-                <span className={`badge ${statusBadgeClass(line.status)}`}>
+              <TableCell>
+                <Badge variant={rxStatusBadgeVariant(line.status)}>
                   {statusLabel(line.status)}
-                </span>
-              </td>
+                </Badge>
+              </TableCell>
               {canDispense || canPrintRx ? (
-                <td className="text-nowrap">
+                <TableCell className="text-nowrap">
                   {canPrintRx && onPrintRx ? (
-                    <button
+                    <Button
                       type="button"
-                      className="btn btn-outline-secondary btn-sm mr-1"
+                      variant="outline"
+                      size="sm"
+                      className="mr-1"
                       aria-label={`Print Rx for ${line.drug}`}
                       onClick={() => onPrintRx(line.id)}
                     >
                       Print Rx
-                    </button>
+                    </Button>
                   ) : null}
                   {canDispenseLine && onDispense ? (
-                    <button
+                    <Button
                       type="button"
-                      className="btn btn-primary btn-sm"
+                      size="sm"
                       aria-label={`Dispense ${line.drug}`}
                       onClick={() => onDispense(line.id)}
                     >
                       Dispense
-                    </button>
+                    </Button>
                   ) : null}
-                </td>
+                </TableCell>
               ) : null}
-            </tr>
+            </TableRow>
           );
         })}
-      </tbody>
-    </table>
+      </TableBody>
+    </Table>
   );
 }

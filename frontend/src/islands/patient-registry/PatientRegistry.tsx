@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { oeFetch } from '@core/oeFetch';
 import { ConfirmModal } from '@components/ConfirmModal';
+import { Checkbox } from '@components/ui/checkbox';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
 import { usePageHeadingRefresh } from '@core/usePageHeadingToolbar';
 import { emptyRegistryFilters } from './registryDefaults';
 import {
@@ -32,9 +36,9 @@ function usePageHeadingButton(
     if (!button) return undefined;
 
     if (visible) {
-      button.classList.remove('d-none');
+      button.classList.remove('nc-hidden');
     } else {
-      button.classList.add('d-none');
+      button.classList.add('nc-hidden');
     }
 
     const handler = () => onClick();
@@ -278,10 +282,10 @@ export function PatientRegistry({
   usePageHeadingButton('nc-registry-delete-filter', handleDeleteFilter, showDeleteSaved);
 
   return (
-    <div className="oe-nc-registry row">
+    <div className="nc-registry grid grid-cols-12 gap-3">
       {actionError && (
-        <div className="col-12">
-          <div className="alert alert-danger py-2" role="alert">{actionError}</div>
+        <div className="col-span-12">
+          <div className={deskCalloutClass('error', 'py-2')} role="alert">{actionError}</div>
         </div>
       )}
       <RegistryFilterPanel
@@ -348,28 +352,25 @@ export function PatientRegistry({
         confirmDisabled={filterName.trim() === ''}
         onConfirm={() => { void submitSaveFilter(); }}
       >
-        <div className="form-group mb-2">
-          <label htmlFor="nc-registry-filter-name">Filter name</label>
-          <input
+        <div className="space-y-1.5 mb-2">
+          <Label htmlFor="nc-registry-filter-name" className="normal-case">Filter name</Label>
+          <Input
             id="nc-registry-filter-name"
-            className="form-control"
             value={filterName}
             onChange={(e) => setFilterName(e.target.value)}
             autoFocus
           />
         </div>
         {canShareFilter && (
-          <div className="form-check">
-            <input
+          <div className="flex items-center gap-2">
+            <Checkbox
               id="nc-registry-filter-share"
-              type="checkbox"
-              className="form-check-input"
               checked={shareFilter}
-              onChange={(e) => setShareFilter(e.target.checked)}
+              onCheckedChange={(checked) => setShareFilter(checked === true)}
             />
-            <label className="form-check-label" htmlFor="nc-registry-filter-share">
+            <Label htmlFor="nc-registry-filter-share" className="font-normal normal-case cursor-pointer mb-0">
               Share with the whole clinic
-            </label>
+            </Label>
           </div>
         )}
       </ConfirmModal>

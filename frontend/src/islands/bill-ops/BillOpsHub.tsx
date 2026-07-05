@@ -32,7 +32,7 @@ export function BillOpsHub(props: BillOpsHubProps) {
   });
 
   return (
-    <div className="oe-nc-billops-hub">
+    <div className="nc-billops-hub">
       {tab === 'corrections' && props.canCorrect && <CorrectionsPaneWrapper {...props} />}
       {tab === 'payments' && props.canPayment && <PaymentsPaneWrapper {...props} />}
       {tab === 'close' && props.canClose && <CloseDayPaneWrapper {...props} />}

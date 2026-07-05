@@ -51,15 +51,15 @@ test.describe('Scheduling recurring move', () => {
     await rangeResp;
 
     await page.getByRole('button', { name: 'Day grid' }).click();
-    await expect(page.locator('.oe-nc-calendar-day')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.nc-calendar-day')).toBeVisible({ timeout: 15000 });
 
-    const sourceEvent = page.locator('.oe-nc-calendar-day__event').filter({ hasText: fixturePatientName });
+    const sourceEvent = page.locator('.nc-calendar-day-event').filter({ hasText: fixturePatientName });
     await expect(sourceEvent).toBeVisible({ timeout: 20000 });
 
     const targetRow = page.locator('tr').filter({
       has: page.getByRole('rowheader', { name: '10:30' }),
     });
-    const targetCell = targetRow.locator('.oe-nc-calendar-day__cell').first();
+    const targetCell = targetRow.locator('.nc-calendar-day-cell').first();
     await expect(targetCell).toBeVisible();
 
     const moveResp = page.waitForResponse(

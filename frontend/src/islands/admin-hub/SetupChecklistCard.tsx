@@ -1,3 +1,5 @@
+import { Button } from '@components/ui/button';
+import { Card, CardContent } from '@components/ui/card';
 import type { SetupProgressItem, SetupProgressPayload } from './adminTypes';
 
 interface SetupChecklistCardProps {
@@ -17,35 +19,36 @@ export function SetupChecklistCard({
 }: SetupChecklistCardProps) {
   if (progress.setup_complete) {
     return (
-      <div className="card mb-3 border-success">
-        <div className="card-body py-3">
-          <p className="mb-0 text-success font-weight-bold">
+      <Card className="mb-3 border-green-500">
+        <CardContent className="py-3">
+          <p className="mb-0 text-green-600 font-bold">
             Setup complete ({progress.score_percent}%)
           </p>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="card mb-3" id="nc-admin-setup-checklist">
-      <div className="card-body">
-        <div className="d-flex flex-wrap justify-content-between align-items-center mb-2">
+    <Card className="mb-3" id="nc-admin-setup-checklist">
+      <CardContent>
+        <div className="flex flex-wrap justify-between items-center mb-2">
           <div>
-            <h5 className="card-title mb-1">Setup checklist</h5>
-            <p className="text-muted small mb-0">
+            <h5 className="text-base font-semibold mb-1">Setup checklist</h5>
+            <p className="text-[var(--oe-nc-text-muted)] text-sm mb-0">
               First-run wizard progress (M15-F11) — {progress.score_percent}% complete
             </p>
           </div>
           {progress.can_mark_complete && (
-            <button
+            <Button
               type="button"
-              className="btn btn-success btn-sm"
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
               disabled={completing}
               onClick={onMarkComplete}
             >
               {completing ? 'Saving…' : 'Mark setup complete'}
-            </button>
+            </Button>
           )}
         </div>
 
@@ -60,7 +63,7 @@ export function SetupChecklistCard({
           />
         </div>
 
-        <ul className="list-unstyled mb-0">
+        <ul className="list-none m-0 p-0 mb-0">
           {progress.items.map((item) => (
             <SetupChecklistRow
               key={item.key}
@@ -70,8 +73,8 @@ export function SetupChecklistCard({
             />
           ))}
         </ul>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -85,25 +88,27 @@ function SetupChecklistRow({
   onMark: () => void;
 }) {
   return (
-    <li className="d-flex align-items-start py-2 border-bottom">
-      <span className={`mr-2 ${item.completed ? 'text-success' : 'text-muted'}`} aria-hidden>
+    <li className="flex items-start py-2 border-bottom">
+      <span className={`mr-2 ${item.completed ? 'text-green-600' : 'text-[var(--oe-nc-text-muted)]'}`} aria-hidden>
         {item.completed ? '✓' : '○'}
       </span>
-      <div className="flex-grow-1">
-        <div className="small font-weight-bold">{item.label}</div>
+      <div className="flex-grow">
+        <div className="text-sm font-bold">{item.label}</div>
         {!item.completed && item.hint && (
-          <div className="small text-muted">{item.hint}</div>
+          <div className="text-sm text-[var(--oe-nc-text-muted)]">{item.hint}</div>
         )}
       </div>
       {item.manual && !item.completed && (
-        <button
+        <Button
           type="button"
-          className="btn btn-outline-secondary btn-sm ml-2"
+          variant="outline"
+          size="sm"
+          className="ml-2"
           disabled={marking}
           onClick={onMark}
         >
           {marking ? '…' : 'Mark done'}
-        </button>
+        </Button>
       )}
     </li>
   );

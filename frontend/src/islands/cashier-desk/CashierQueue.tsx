@@ -2,6 +2,14 @@ import { useState } from 'react';
 import type { CashierPaidTodayRow, CashierQueueCard } from '@core/types';
 import { WaitTimeSpan } from '@components/WaitTimeSpan';
 import { AncillaryVisitBadges } from '@components/AncillaryVisitBadges';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import {
+  queueCardHeaderClass,
+  queueCardMetaClass,
+  queueCardShellClass,
+} from '@components/queueCardStyles';
 import { formatMoney } from './cashierUtils';
 import { PatientSearchPanel, type PatientSearchHint } from './PatientSearchPanel';
 
@@ -42,18 +50,22 @@ export function CashierQueue({
         onSelectPatient={onSelectPatient}
       />
 
-      <div className="d-flex justify-content-between align-items-center mb-2">
+      <div className="mb-2 flex items-center justify-between">
         <strong>Payment queue</strong>
       </div>
 
-      {error && <div className="alert alert-danger py-2 small">{error}</div>}
+      {error && (
+        <div className={deskCalloutClass('error', 'mb-2 text-sm')} role="alert">
+          {error}
+        </div>
+      )}
 
       {loading && cards.length === 0 && (
-        <div className="text-muted py-2"><em>Loading payment queue…</em></div>
+        <div className="text-[var(--oe-nc-text-muted)] py-2"><em>Loading payment queue…</em></div>
       )}
 
       {!loading && !error && cards.length === 0 && (
-        <div className="text-muted py-3"><em>No patients waiting for payment.</em></div>
+        <div className="text-[var(--oe-nc-text-muted)] py-3"><em>No patients waiting for payment.</em></div>
       )}
 
       <div id="nc-cashier-queue-list">
@@ -61,23 +73,21 @@ export function CashierQueue({
           <button
             key={card.id}
             type="button"
-            className={`oe-nc-queue-card btn btn-light text-left w-100 mb-2 nc-queue-card${
-              card.is_urgent ? ' oe-nc-queue-card--urgent' : ''
-            }`}
+            className={queueCardShellClass({ urgent: Boolean(card.is_urgent) })}
             data-visit-id={card.id}
             onClick={() => onSelectVisit(card)}
           >
-            <div className="oe-nc-queue-card__header">
+            <div className={queueCardHeaderClass}>
               <strong>#{card.queue_number} {card.display_name}</strong>
-              {card.is_urgent === 1 && <span className="badge badge-warning ml-1">URGENT</span>}
+              {card.is_urgent === 1 && <Badge variant="warning" className="ml-1">URGENT</Badge>}
               <AncillaryVisitBadges badges={card.ancillary_badges} />
               {card.charges_total > 0 ? (
-                <span className="badge badge-light border ml-1">{formatMoney(card.charges_total)}</span>
+                <Badge variant="outline" className="ml-1">{formatMoney(card.charges_total)}</Badge>
               ) : (
-                <span className="badge badge-warning ml-1">No charges</span>
+                <Badge variant="warning" className="ml-1">No charges</Badge>
               )}
             </div>
-            <div className="oe-nc-queue-card__meta small text-muted">
+            <div className={queueCardMetaClass}>
               <WaitTimeSpan card={card} suffix="" /> · {card.visit_type_label}
             </div>
           </button>
@@ -85,32 +95,32 @@ export function CashierQueue({
       </div>
 
       <div className="mt-3">
-        <button
+        <Button
           type="button"
-          className="btn btn-link btn-sm p-0"
+          variant="link"
+          size="sm"
+          className="h-auto p-0"
           id="nc-cashier-done-toggle"
           onClick={() => setPaidOpen((v) => !v)}
         >
           Paid today ({paidToday.length})
-        </button>
+        </Button>
         {paidOpen && (
           <div id="nc-cashier-paid-list" className="mt-2">
             {paidToday.length === 0 ? (
-              <div className="small text-muted">None yet today</div>
+              <div className="text-sm text-[var(--oe-nc-text-muted)]">None yet today</div>
             ) : (
               paidToday.map((row) => (
-                <div key={row.id} className="small text-muted py-1 d-flex flex-wrap align-items-center">
+                <div key={row.id} className="flex flex-wrap items-center py-1 text-sm text-[var(--oe-nc-text-muted)]">
                   <span>
                     #{row.queue_number} {row.display_name}
                   </span>
                   {row.charge_correction_url && (
-                    <a
-                      className="btn btn-link btn-sm p-0 ml-2"
-                      href={row.charge_correction_url}
-                      target="_top"
-                    >
-                      {row.charge_correction_label || 'Add correction'}
-                    </a>
+                    <Button variant="link" size="sm" className="ml-2 h-auto p-0" asChild>
+                      <a href={row.charge_correction_url} target="_top">
+                        {row.charge_correction_label || 'Add correction'}
+                      </a>
+                    </Button>
                   )}
                 </div>
               ))

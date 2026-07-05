@@ -1,3 +1,16 @@
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { ncShadcnTableClass } from '@components/ncTableStyles';
+import { Button } from '@components/ui/button';
+import { Card, CardContent } from '@components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@components/ui/table';
+import { Textarea } from '@components/ui/textarea';
 import type { FeeScheduleRow } from '../adminTypes';
 import { formatPrice } from '../adminUtils';
 
@@ -28,117 +41,123 @@ export function FeesTab({
 }: FeesTabProps) {
   return (
     <>
-      <div className="alert alert-info" id="nc-admin-fee-guidelines">
+      <div className={deskCalloutClass('info', 'mb-3')} id="nc-admin-fee-guidelines">
         <strong>How fee lines work</strong>
-        <ul className="mb-2 pl-3 small">
+        <ul className="mb-2 pl-3 text-sm">
           <li>Each line is a shortcut the cashier can post to the patient fee sheet.</li>
           <li>Billing code must already exist in OpenEMR (Administration → Codes) for the selected code type.</li>
           <li>Category groups charges on daily cash reports — pick the closest match.</li>
           <li>Use a starter template when adding common items, then adjust price and codes.</li>
         </ul>
-        <a
-          className="btn btn-outline-primary btn-sm"
-          href={`${webroot}/interface/super/layout_service_codes.php`}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Open OpenEMR Codes admin
-        </a>
+        <Button variant="outline" size="sm" asChild>
+          <a
+            href={`${webroot}/interface/super/layout_service_codes.php`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open OpenEMR Codes admin
+          </a>
+        </Button>
       </div>
-      <div className="card">
-        <div className="card-body">
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <p className="text-muted mb-0">Cash fee schedule for cashier charges and billing codes.</p>
-            <button
+      <Card>
+        <CardContent>
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-[var(--oe-nc-text-muted)] mb-0">Cash fee schedule for cashier charges and billing codes.</p>
+            <Button
               type="button"
-              className="btn btn-primary btn-sm"
+              size="sm"
               id="nc-admin-add-fee"
               onClick={onAdd}
             >
               Add fee line
-            </button>
+            </Button>
           </div>
           <div id="nc-admin-fee-schedule">
             {!feeSchedule.length ? (
-              <div className="text-muted"><em>No fee lines configured.</em></div>
+              <div className="text-[var(--oe-nc-text-muted)]"><em>No fee lines configured.</em></div>
             ) : (
-              <table className="table table-sm table-bordered mb-0">
-                <thead>
-                  <tr>
-                    <th>Code</th>
-                    <th>Description</th>
-                    <th>Category</th>
-                    <th>Price</th>
-                    <th>Billing</th>
-                    <th>Scope</th>
-                    <th>Status</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
+              <Table className={ncShadcnTableClass({ bordered: true, className: 'mb-0' })}>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Billing</TableHead>
+                    <TableHead>Scope</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {feeSchedule.map((row) => (
-                    <tr key={row.id} className={row.is_active ? '' : 'text-muted'}>
-                      <td><code>{row.code}</code></td>
-                      <td>{row.name}</td>
-                      <td>{row.category_label || row.category || '—'}</td>
-                      <td>{formatPrice(row.price_amount, settings)}</td>
-                      <td className="small">{row.code_type} · {row.billing_code}</td>
-                      <td className="small">{row.scope_label ?? ''}</td>
-                      <td>
+                    <TableRow key={row.id} className={row.is_active ? '' : 'text-[var(--oe-nc-text-muted)]'}>
+                      <TableCell><code>{row.code}</code></TableCell>
+                      <TableCell>{row.name}</TableCell>
+                      <TableCell>{row.category_label || row.category || '—'}</TableCell>
+                      <TableCell>{formatPrice(row.price_amount, settings)}</TableCell>
+                      <TableCell className="text-sm">{row.code_type} · {row.billing_code}</TableCell>
+                      <TableCell className="text-sm">{row.scope_label ?? ''}</TableCell>
+                      <TableCell>
                         {row.is_active
                           ? 'Active'
-                          : <span className="text-muted">Archived</span>}
-                      </td>
-                      <td className="text-nowrap">
+                          : <span className="text-[var(--oe-nc-text-muted)]">Archived</span>}
+                      </TableCell>
+                      <TableCell className="text-nowrap">
                         {row.is_active && (
                           <>
-                            <button
+                            <Button
                               type="button"
-                              className="btn btn-link btn-sm p-0 mr-2 nc-admin-edit-fee"
+                              variant="link"
+                              size="sm"
+                              className="h-auto p-0 mr-2 nc-admin-edit-fee"
                               onClick={() => onEdit(row)}
                             >
                               Edit
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                               type="button"
-                              className="btn btn-link btn-sm p-0 text-danger nc-admin-archive-fee"
+                              variant="link"
+                              size="sm"
+                              className="h-auto p-0 text-destructive nc-admin-archive-fee"
                               onClick={() => onArchive(row)}
                             >
                               Archive
-                            </button>
+                            </Button>
                           </>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             )}
           </div>
           <hr />
           <h6>Import from CSV</h6>
-          <p className="small text-muted mb-2">
+          <p className="text-sm text-[var(--oe-nc-text-muted)] mb-2">
             Columns: code, name, category, price_amount, code_type, billing_code, sort_order (optional).
           </p>
-          <textarea
-            className="form-control form-control-sm mb-2"
+          <Textarea
+            className="mb-2 text-sm"
             id="nc-admin-fee-csv"
             rows={4}
             placeholder="OPD_CONSULT,OPD consultation,consult,50,CPT4,OPD_CONSULT,10"
             value={csv}
             onChange={(e) => onCsvChange(e.target.value)}
           />
-          <button
+          <Button
             type="button"
-            className="btn btn-outline-secondary btn-sm"
+            variant="outline"
+            size="sm"
             id="nc-admin-fee-import"
             disabled={importing}
             onClick={onImport}
           >
             {importing ? 'Importing…' : 'Import CSV'}
-          </button>
-        </div>
-      </div>
+          </Button>
+        </CardContent>
+      </Card>
     </>
   );
 }

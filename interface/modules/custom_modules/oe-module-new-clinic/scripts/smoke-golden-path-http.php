@@ -53,7 +53,7 @@ foreach ($deskPages as $user => $url) {
     @unlink($cookieFile);
     smokeLoginSession($baseUrl, $cookieFile, $user, $pass);
     $resp = smokeHttpRequest($url, $cookieFile);
-    $hasShell = str_contains($resp['body'], 'oe-nc-t1') || str_contains($resp['body'], 'id="oe-nc-t1"');
+    $hasShell = str_contains($resp['body'], 'nc-t1') || str_contains($resp['body'], 'id="nc-t1"');
     $ok = $resp['code'] === 200 && $hasShell;
     echo "{$user} HTTP {$resp['code']} shell=" . ($hasShell ? 'yes' : 'no') . PHP_EOL;
     if (!$ok) {

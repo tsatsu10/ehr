@@ -2,13 +2,13 @@
  * Communications Hub split-pane layout (COM Phase 1)
  */
 
-.oe-nc-comm-hub {
+.nc-comm-hub {
     display: flex;
     flex-direction: column;
     min-height: 28rem;
 }
 
-.oe-nc-comm-split {
+.nc-comm-split {
     display: flex;
     flex: 1 1 auto;
     gap: 0;
@@ -19,7 +19,7 @@
     overflow: hidden;
 }
 
-.oe-nc-comm-list-pane {
+.nc-comm-list-pane {
     flex: 0 0 40%;
     max-width: 40%;
     border-right: 1px solid var(--oe-nc-border, #dee2e6);
@@ -28,7 +28,7 @@
     min-width: 0;
 }
 
-.oe-nc-comm-detail-pane {
+.nc-comm-detail-pane {
     flex: 1 1 60%;
     min-width: 0;
     display: flex;
@@ -36,13 +36,13 @@
     overflow: hidden;
 }
 
-.oe-nc-comm-list {
+.nc-comm-list {
     flex: 1 1 auto;
     overflow-y: auto;
     max-height: calc(100vh - 18rem);
 }
 
-.oe-nc-comm-row {
+.nc-comm-row {
     display: block;
     width: 100%;
     text-align: left;
@@ -54,61 +54,61 @@
     transition: background 0.12s ease;
 }
 
-.oe-nc-comm-row:hover,
-.oe-nc-comm-row:focus {
+.nc-comm-row:hover,
+.nc-comm-row:focus {
     background: var(--oe-nc-surface-muted, #f8f9fa);
     outline: none;
 }
 
-.oe-nc-comm-row.is-selected {
+.nc-comm-row.is-selected {
     background: var(--oe-nc-accent-soft, #e8f0fe);
     box-shadow: inset 3px 0 0 var(--oe-nc-accent, #0d6efd);
 }
 
-.oe-nc-comm-row__title {
+.nc-comm-row-title {
     font-weight: 600;
     font-size: 0.9rem;
     margin-bottom: 0.15rem;
 }
 
-.oe-nc-comm-row__meta {
+.nc-comm-row-meta {
     font-size: 0.78rem;
     color: #6c757d;
 }
 
-.oe-nc-comm-row__badge {
+.nc-comm-row-badge {
     font-size: 0.7rem;
     vertical-align: middle;
 }
 
-.oe-nc-comm-pagination {
+.nc-comm-pagination {
     padding: 0.4rem 0.75rem;
     border-top: 1px solid var(--oe-nc-border, #dee2e6);
     font-size: 0.8rem;
 }
 
-.oe-nc-comm-detail {
+.nc-comm-detail {
     flex: 1 1 auto;
     overflow-y: auto;
     padding: 1rem 1.25rem;
 }
 
-.oe-nc-comm-detail__header {
+.nc-comm-detail-header {
     margin-bottom: 1rem;
     padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--oe-nc-border, #eee);
 }
 
-.oe-nc-comm-detail__banner {
+.nc-comm-detail-banner {
     margin-bottom: 0.75rem;
 }
 
-.oe-nc-comm-thread {
+.nc-comm-thread {
     font-size: 0.92rem;
     line-height: 1.5;
 }
 
-.oe-nc-comm-footer {
+.nc-comm-footer {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
@@ -117,36 +117,36 @@
     border-top: 1px solid var(--oe-nc-border, #dee2e6);
 }
 
-.oe-nc-comm-back {
+.nc-comm-back {
     padding: 0.5rem 0.75rem;
 }
 
-.oe-nc-comm-urgency--overdue {
+.nc-comm-urgency--overdue {
     color: #b02a37;
     font-weight: 600;
 }
 
-.oe-nc-comm-urgency--today {
+.nc-comm-urgency--today {
     color: #b8860b;
     font-weight: 600;
 }
 
-.oe-nc-comm-urgency--upcoming {
+.nc-comm-urgency--upcoming {
     color: #495057;
 }
 
 @media (max-width: 767.98px) {
-    .oe-nc-comm-split {
+    .nc-comm-split {
         position: relative;
     }
 
-    .oe-nc-comm-list-pane,
-    .oe-nc-comm-detail-pane {
+    .nc-comm-list-pane,
+    .nc-comm-detail-pane {
         flex: 1 1 100%;
         max-width: 100%;
     }
 
-    .oe-nc-comm-detail-pane {
+    .nc-comm-detail-pane {
         position: absolute;
         inset: 0;
         background: #fff;
@@ -155,7 +155,7 @@
         transition: transform 0.2s ease;
     }
 
-    .oe-nc-comm-hub.is-detail-open .oe-nc-comm-detail-pane {
+    .nc-comm-hub.is-detail-open .nc-comm-detail-pane {
         transform: translateX(0);
     }
 }

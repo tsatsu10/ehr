@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ConfirmModal, IdentityConfirmBanner } from '@components/ConfirmModal';
+import { DeskAlert } from '@components/DeskAlert';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
 
 const SKIP_REASON_PRESETS = [
   { id: 'returning_followup', label: 'Returning follow-up' },
@@ -61,26 +64,25 @@ export function SkipTriageModal({
       )}
     >
       <p className="mb-3">Sends visit straight to the doctor queue.</p>
-      <div className="form-group mb-2">
-        <div className="small font-weight-bold mb-1">Reason (optional)</div>
+      <fieldset className="mb-2 space-y-1 border-0 p-0">
+        <legend className="mb-1 text-sm font-semibold">Reason (optional)</legend>
         {SKIP_REASON_PRESETS.map((item) => (
-          <label key={item.id} className="d-block mb-1">
+          <label key={item.id} className="flex cursor-pointer items-center gap-2 text-sm mb-1">
             <input
               type="radio"
               name="nc-skip-triage-reason"
-              className="mr-1"
+              className="h-4 w-4 accent-[var(--oe-nc-primary)]"
               checked={preset === item.id}
               onChange={() => setPreset(item.id)}
             />
             {item.label}
           </label>
         ))}
-      </div>
+      </fieldset>
       {preset === 'other' && (
-        <div className="form-group mb-0">
-          <input
-            type="text"
-            className="form-control"
+        <div className="space-y-2">
+          <Label htmlFor="nc-skip-triage-other">Describe reason</Label>
+          <Input
             id="nc-skip-triage-other"
             value={otherReason}
             onChange={(e) => setOtherReason(e.target.value)}
@@ -88,7 +90,11 @@ export function SkipTriageModal({
           />
         </div>
       )}
-      {error && <div className="alert alert-danger mt-2 mb-0">{error}</div>}
+      {error && (
+        <DeskAlert tone="error" className="mt-2 text-sm" role="alert">
+          {error}
+        </DeskAlert>
+      )}
     </ConfirmModal>
   );
 }

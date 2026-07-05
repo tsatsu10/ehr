@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import { WidgetCard } from '@components/WidgetCard';
+import { Button } from '@components/ui/button';
 import { ChargeCorrectionForm } from './ChargeCorrectionForm';
 import { setBillOpsCurrencyFormat } from './billOpsFormatters';
 
@@ -33,27 +35,33 @@ export function CorrectionPage({
     }
   }, [currencyFormat]);
   return (
-    <div className="oe-nc-billops-correction-page">
-      <div className="oe-nc-widget-card mb-3">
-        <div className="oe-nc-widget-card__header d-flex justify-content-between align-items-center flex-wrap">
-          <h2 className="oe-nc-widget-card__title mb-0">Charge correction</h2>
-          <div className="btn-group btn-group-sm mt-2 mt-md-0">
-            <a href={billOpsUrl} className="btn btn-outline-primary" target="_top">
-              Billing back office
-            </a>
-            <a href={visitBoardUrl} className="btn btn-outline-secondary" target="_top">
-              Visit Board
-            </a>
+    <div className="nc-billops-correction-page">
+      <WidgetCard
+        className="mb-3"
+        bodyPad="pad"
+        title="Charge correction"
+        headerClassName="nc-flex nc-justify-between nc-items-center nc-flex-wrap"
+        actions={(
+          <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
+            <Button variant="outline" size="sm" asChild>
+              <a href={billOpsUrl} target="_top">
+                Billing back office
+              </a>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <a href={visitBoardUrl} target="_top">
+                Visit Board
+              </a>
+            </Button>
           </div>
-        </div>
-        <div className="oe-nc-widget-card__body oe-nc-widget-card__body--pad">
-          <ChargeCorrectionForm
-            fetchOptions={{ ajaxUrl, csrfToken }}
-            visitId={visitId}
-            autoLoad
-          />
-        </div>
-      </div>
+        )}
+      >
+        <ChargeCorrectionForm
+          fetchOptions={{ ajaxUrl, csrfToken }}
+          visitId={visitId}
+          autoLoad
+        />
+      </WidgetCard>
     </div>
   );
 }

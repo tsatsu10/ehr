@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { oeFetch } from '@core/oeFetch';
 import { useInterval } from '@core/useInterval';
 import { localDateString } from '@islands/daily-reports/reportsFormatters';
@@ -154,7 +155,7 @@ export function LabOpsHub({
   }, [fetchOptions, loadWorklist]);
 
   return (
-    <div id="nc-lab-ops-hub" className="oe-nc-labops">
+    <div id="nc-lab-ops-hub" className="nc-labops">
       {canManageCatalog ? (
         <div id="nc-labops-setup">
           <LabOpsSetupPanel
@@ -167,7 +168,7 @@ export function LabOpsHub({
       ) : null}
 
       {loadError ? (
-        <div className="alert alert-warning py-2 small mb-2" role="status">{loadError}</div>
+        <div className={deskCalloutClass('warn', 'py-2 text-sm mb-2')} role="status">{loadError}</div>
       ) : null}
 
       <LabOpsWorklist

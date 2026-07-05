@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Label } from '@components/ui/label';
+import { Textarea } from '@components/ui/textarea';
 import { ConfirmModal } from '@components/ConfirmModal';
 import type { DoctorQueueCard } from '@core/types';
 
@@ -36,11 +38,10 @@ export function HardAssignOverrideModal({
       <p className="mb-2">
         This visit is hard-assigned to <strong>{assigned}</strong>. Taking it requires an override reason.
       </p>
-      <div className="form-group mb-0">
-        <label htmlFor="nc-hard-assign-override-reason">Reason (required)</label>
-        <textarea
+      <div className="space-y-1.5 mb-0">
+        <Label htmlFor="nc-hard-assign-override-reason" className="normal-case">Reason (required)</Label>
+        <Textarea
           id="nc-hard-assign-override-reason"
-          className="form-control"
           rows={3}
           maxLength={200}
           value={reason}

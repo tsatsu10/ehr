@@ -1,4 +1,17 @@
 import { useRef } from 'react';
+import { PatientContextBanner } from '@components/PatientContextBanner';
+import { identityFromLabels } from '@components/patientBannerUtils';
+import { Button } from '@components/ui/button';
+import {
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  dialogContentSizeClass,
+} from '@components/ui/dialog';
 import type { ReceiptReprintPayload } from './chartDepthTypes';
 import { formatChartMoney } from './chartDepthUtils';
 
@@ -15,9 +28,10 @@ export function ReprintReceiptModal({
 }: ReprintReceiptModalProps) {
   const printRef = useRef<HTMLDivElement>(null);
 
-  if (!open || !payload?.receipt) return null;
+  if (!payload?.receipt) return null;
 
   const { receipt, patient } = payload;
+  const patientIdentity = identityFromLabels(patient?.display_name, { pubpid: patient?.pubpid });
 
   const handlePrint = () => {
     const html = printRef.current?.innerHTML ?? '';
@@ -29,52 +43,48 @@ export function ReprintReceiptModal({
   };
 
   return (
-    <>
-      <div className="modal fade show d-block" tabIndex={-1} role="dialog" aria-modal="true">
-        <div className="modal-dialog" role="document">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5 className="modal-title">Reprint receipt</h5>
-              <button type="button" className="close" aria-label="Close" onClick={onClose}>
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
-            <div className="modal-body">
-              <p className="mb-3">
-                Reprint receipt #{receipt.receipt_number}?
-                <br />
-                Patient: {patient?.display_name ?? '—'} · MRN {patient?.pubpid ?? '—'}
-                <br />
-                Amount: {formatChartMoney(receipt.amount_paid)} · {receipt.paid_at_label ?? '—'}
-              </p>
-              <div className="nc-receipt-print border rounded p-3" ref={printRef}>
-                <p className="mb-0">
-                  <strong>{patient?.display_name ?? ''}</strong>
-                  <br />
-                  Receipt #{receipt.receipt_number}
-                  <br />
-                  Queue #{receipt.queue_number ?? '—'}
-                  <br />
-                  Paid: {formatChartMoney(receipt.amount_paid)}
-                  <br />
-                  Change: {formatChartMoney(receipt.change_due)}
-                  <br />
-                  {receipt.paid_at_label ?? ''}
-                </p>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button type="button" className="btn btn-primary" onClick={handlePrint}>
-                Print
-              </button>
-              <button type="button" className="btn btn-secondary" onClick={onClose}>
-                Close
-              </button>
-            </div>
+    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogContent className={dialogContentSizeClass.confirm} aria-labelledby="nc-reprint-receipt-title">
+        <DialogHeader>
+          <DialogTitle id="nc-reprint-receipt-title">Reprint receipt</DialogTitle>
+          <DialogClose aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </DialogClose>
+        </DialogHeader>
+        <DialogBody>
+          {patientIdentity ? (
+            <PatientContextBanner layout="compact" identity={patientIdentity} className="mb-3" />
+          ) : null}
+          <p className="mb-3">
+            Reprint receipt #{receipt.receipt_number}?
+            <br />
+            Amount: {formatChartMoney(receipt.amount_paid)} · {receipt.paid_at_label ?? '—'}
+          </p>
+          <div className="nc-receipt-print border rounded p-3" ref={printRef}>
+            <p className="mb-0">
+              <strong>{patient?.display_name ?? ''}</strong>
+              <br />
+              Receipt #{receipt.receipt_number}
+              <br />
+              Queue #{receipt.queue_number ?? '—'}
+              <br />
+              Paid: {formatChartMoney(receipt.amount_paid)}
+              <br />
+              Change: {formatChartMoney(receipt.change_due)}
+              <br />
+              {receipt.paid_at_label ?? ''}
+            </p>
           </div>
-        </div>
-      </div>
-      <div className="modal-backdrop fade show" />
-    </>
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="cta" onClick={handlePrint}>
+            Print
+          </Button>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

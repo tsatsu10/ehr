@@ -33,7 +33,7 @@ export function PatientSearchPanel({
       />
       {hint && (
         <div
-          className={`small mt-2 ${hint.variant === 'warning' ? 'text-warning' : 'text-muted'}`}
+          className={`text-sm mt-2 ${hint.variant === 'warning' ? 'text-[var(--color-oe-warning,#ea580c)]' : 'text-[var(--oe-nc-text-muted)]'}`}
           id="nc-cashier-search-hint"
         >
           {hint.text}

@@ -1,15 +1,15 @@
 {# T1-F19 — shared device session mismatch banner (module desks) #}
-<div id="{{ prefix }}-session-banner" class="alert alert-danger d-none mb-3 nc-shared-device-banner" role="alert">
-    <div class="d-flex justify-content-between align-items-start flex-wrap">
+<div id="{{ prefix }}-session-banner" class="nc-callout nc-callout-error nc-hidden nc-mb-3 nc-shared-device-banner" role="alert">
+    <div class="nc-flex nc-justify-between nc-items-start nc-flex-wrap">
         <div id="{{ prefix }}-session-banner-text">
             <strong>{{ 'Browser session is on another patient.'|xlt }}</strong>
-            <div class="small mt-1">{{ 'Restore encounter session or return to the queue before saving.'|xlt }}</div>
+            <div class="nc-text-sm nc-mt-1">{{ 'Restore encounter session or return to the queue before saving.'|xlt }}</div>
         </div>
-        <div class="mt-2 mt-md-0 text-nowrap">
-            <button type="button" class="btn btn-sm btn-outline-light mr-2" id="{{ prefix }}-restore-session">
+        <div class="nc-mt-2 nc-mt-md-0 nc-whitespace-nowrap">
+            <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-light nc-mr-2" id="{{ prefix }}-restore-session">
                 {{ 'Restore encounter session'|xlt }}
             </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="{{ prefix }}-return-queue">
+            <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary" id="{{ prefix }}-return-queue">
                 {{ 'Return to queue'|xlt }}
             </button>
         </div>

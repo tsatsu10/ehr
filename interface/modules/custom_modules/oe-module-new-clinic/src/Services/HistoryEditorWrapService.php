@@ -61,7 +61,7 @@ class HistoryEditorWrapService
             return false;
         }
 
-        if (stripos($html, 'id="oe-nc-history-editor-wrap"') !== false) {
+        if (stripos($html, 'id="nc-history-editor-wrap"') !== false) {
             return false;
         }
 
@@ -103,7 +103,7 @@ class HistoryEditorWrapService
 
         $backUrl = $this->resolveBackToChartUrl($this->resolveActivePid());
         if ($backUrl !== null) {
-            $backButton = '<a class="btn btn-secondary oe-nc-history-editor-wrap__back"'
+            $backButton = '<a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-history-editor-wrap-back"'
                 . ' href="' . htmlspecialchars($backUrl, ENT_QUOTES, 'UTF-8') . '"'
                 . ' target="_top">'
                 . htmlspecialchars(xl('Back to chart'), ENT_QUOTES, 'UTF-8')
@@ -116,12 +116,7 @@ class HistoryEditorWrapService
             ) ?? $html;
         }
 
-        $html = preg_replace(
-            '/<body([^>]*)>/i',
-            '<body$1 class="oe-nc-history-editor-wrap">',
-            $html,
-            1
-        ) ?? $html;
+        $html = self::appendHistoryEditorWrapBodyClass($html);
 
         if (preg_match('/<body([^>]*)>/i', $html, $matches, PREG_OFFSET_CAPTURE)) {
             $insertAt = $matches[0][1] + strlen($matches[0][0]);
@@ -274,6 +269,38 @@ class HistoryEditorWrapService
     private function legacyStrip(): LegacyChartContextService
     {
         return $this->legacyStrip ?? new LegacyChartContextService($this->twig);
+    }
+
+    private static function appendHistoryEditorWrapBodyClass(string $html): string
+    {
+        $wrapClass = 'nc-history-editor-wrap';
+
+        return preg_replace_callback(
+            '/<body([^>]*)>/i',
+            static function (array $matches) use ($wrapClass): string {
+                $attrs = $matches[1];
+                if (preg_match('/\bclass=(["\'])(.*?)\1/i', $attrs, $classMatch)) {
+                    $quote = $classMatch[1];
+                    $classes = preg_split('/\s+/', trim($classMatch[2])) ?: [];
+                    if (!in_array($wrapClass, $classes, true)) {
+                        $classes[] = $wrapClass;
+                    }
+                    $merged = trim(implode(' ', array_filter($classes, static fn ($c) => $c !== '')));
+                    $newAttrs = preg_replace(
+                        '/\bclass=(["\']).*?\1/i',
+                        'class=' . $quote . $merged . $quote,
+                        $attrs,
+                        1
+                    );
+
+                    return '<body' . ($newAttrs ?? $attrs) . '>';
+                }
+
+                return '<body' . $attrs . ' class="' . $wrapClass . '">';
+            },
+            $html,
+            1
+        ) ?? $html;
     }
 
     private function twig(): Environment

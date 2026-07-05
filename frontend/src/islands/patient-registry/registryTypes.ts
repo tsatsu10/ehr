@@ -99,6 +99,8 @@ export interface RegistryPreset {
   filters: Partial<ApiRegistryFilters>;
   saved_id?: number;
   can_delete?: boolean;
+  owned_by_user?: boolean;
+  is_shared?: boolean;
 }
 
 export interface RegistryPresetsData {

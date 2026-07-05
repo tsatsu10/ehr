@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { Button } from '@components/ui/button';
+import { Badge } from '@components/ui/badge';
 import { Label } from '@components/ui/label';
 import { AlertCircle, CheckCircle2, FileUp, Loader2, X } from 'lucide-react';
 
@@ -37,7 +38,7 @@ export function ReferralUploadField({
           </p>
         </div>
         {documentId != null && (
-          <span className="badge badge-info text-xs shrink-0">On file</span>
+          <Badge variant="info" className="shrink-0">On file</Badge>
         )}
       </div>
 

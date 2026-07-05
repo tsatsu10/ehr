@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Button } from '@components/ui/button';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
 import { oeFetch } from '@core/oeFetch';
 import type { BillOpsHubProps, DaysheetData } from './billOpsTypes';
 import { daysheetToCsv, downloadCsv } from './billOpsDaysheetExport';
@@ -80,70 +84,74 @@ export function CloseDayPane({ fetchOptions, facilityId, reportsUrl }: Props) {
   };
 
   return (
-    <div className="oe-nc-billops-pane">
-      <div className="form-inline mb-3 flex-wrap">
-        <input
+    <div className="nc-billops-pane">
+      <div className="flex flex-wrap items-center gap-2 mb-3 flex-wrap">
+        <Input
           type="date"
-          className="form-control form-control-sm mr-2"
+          className="h-8 w-auto mr-2"
           value={date}
           onChange={(e) => setDate(e.target.value)}
         />
-        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => void load()} disabled={loading}>
+        <Button type="button" variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
           Refresh
-        </button>
-        <a href={reportsUrl} className="btn btn-link btn-sm ml-2 mb-1" target="_top">
-          Run reconciliation (Reports)
-        </a>
+        </Button>
+        <Button variant="link" size="sm" className="ml-2 mb-1 h-auto p-0" asChild>
+          <a href={reportsUrl} target="_top">
+            Run reconciliation (Reports)
+          </a>
+        </Button>
         {data && (
           <>
-            <button
+            <Button
               type="button"
-              className="btn btn-outline-primary btn-sm ml-1 mb-1"
+              variant="outline"
+              size="sm"
+              className="ml-1 mb-1"
               onClick={() => void exportCsv()}
               disabled={exporting}
             >
               {exporting ? 'Exporting…' : 'Export CSV'}
-            </button>
-            <button type="button" className="btn btn-outline-secondary btn-sm ml-1 mb-1" onClick={printDaysheet}>
+            </Button>
+            <Button type="button" variant="outline" size="sm" className="ml-1 mb-1" onClick={printDaysheet}>
               Print
-            </button>
+            </Button>
           </>
         )}
       </div>
 
-      {error && <div className="alert alert-warning py-2">{error}</div>}
+      {error && <div className={deskCalloutClass('warn', 'py-2')}>{error}</div>}
 
       {data && (
-        <div ref={printRef} className="oe-nc-billops-daysheet-print">
-          <div className="row mb-3">
-            <div className="col-md-3 col-6 mb-2">
-              <div className="small text-muted">Receipts</div>
-              <div className="h5 mb-0">{data.receipt_count}</div>
+        <div ref={printRef} className="nc-billops-daysheet-print">
+          <div className="grid grid-cols-12 gap-3 mb-3">
+            <div className="col-span-6 md:col-span-3 mb-2">
+              <div className="text-sm text-[var(--oe-nc-text-muted)]">Receipts</div>
+              <div className="text-lg font-semibold mb-0">{data.receipt_count}</div>
             </div>
-            <div className="col-md-3 col-6 mb-2">
-              <div className="small text-muted">Voided</div>
-              <div className="h5 mb-0">{data.void_count}</div>
+            <div className="col-span-6 md:col-span-3 mb-2">
+              <div className="text-sm text-[var(--oe-nc-text-muted)]">Voided</div>
+              <div className="text-lg font-semibold mb-0">{data.void_count}</div>
             </div>
-            <div className="col-md-3 col-6 mb-2">
-              <div className="small text-muted">No-charge closes</div>
-              <div className="h5 mb-0">{data.no_charge_closes}</div>
+            <div className="col-span-6 md:col-span-3 mb-2">
+              <div className="text-sm text-[var(--oe-nc-text-muted)]">No-charge closes</div>
+              <div className="text-lg font-semibold mb-0">{data.no_charge_closes}</div>
             </div>
-            <div className="col-md-3 col-6 mb-2">
-              <div className="small text-muted">Cash collected</div>
-              <div className="h5 mb-0">{formatBillMoney(data.cash_collected)}</div>
+            <div className="col-span-6 md:col-span-3 mb-2">
+              <div className="text-sm text-[var(--oe-nc-text-muted)]">Cash collected</div>
+              <div className="text-lg font-semibold mb-0">{formatBillMoney(data.cash_collected)}</div>
             </div>
           </div>
 
-          <div className="form-group mb-3" style={{ maxWidth: '16rem' }}>
-            <label htmlFor="nc-billops-momo-tally" className="small text-muted mb-1">
+          <div className="space-y-1.5 mb-3" style={{ maxWidth: '16rem' }}>
+            <Label htmlFor="nc-billops-momo-tally" className="normal-case font-normal text-[var(--oe-nc-text-muted)]">
               MoMo tally (label only, manual)
-            </label>
-            <input
+            </Label>
+            <Input
               id="nc-billops-momo-tally"
               type="number"
+              className="h-8"
               min={0}
               step="0.01"
-              className="form-control form-control-sm"
               value={momoTally}
               onChange={(e) => handleMomoTallyChange(e.target.value)}
               placeholder="0.00"
@@ -152,20 +160,20 @@ export function CloseDayPane({ fetchOptions, facilityId, reportsUrl }: Props) {
 
           <p className="mb-3">
             Reconciliation:{' '}
-            <span className={reconOk ? 'text-success' : 'text-warning'}>
+            <span className={reconOk ? 'text-green-600' : 'text-[var(--color-oe-warning,#ea580c)]'}>
               {reconOk ? 'OK' : 'Warning'} (Δ {formatBillMoney(data.reconciliation.delta_amount)})
             </span>
             {data.reconciliation.latest_run?.completed_at && (
-              <span className="text-muted small ml-2">
+              <span className="text-[var(--oe-nc-text-muted)] text-sm ml-2">
                 last run {data.reconciliation.latest_run.completed_at}
               </span>
             )}
           </p>
 
-          <div className="row">
-            <div className="col-md-6">
-              <h3 className="h6">By cashier</h3>
-              <ul className="list-unstyled small">
+          <div className="grid grid-cols-12 gap-3">
+            <div className="col-span-12 md:col-span-6">
+              <h3 className="text-sm font-semibold">By cashier</h3>
+              <ul className="list-none m-0 p-0 text-sm">
                 {data.by_cashier.map((row) => (
                   <li key={row.cashier}>
                     {row.cashier}: {formatBillMoney(row.total)}
@@ -173,9 +181,9 @@ export function CloseDayPane({ fetchOptions, facilityId, reportsUrl }: Props) {
                 ))}
               </ul>
             </div>
-            <div className="col-md-6">
-              <h3 className="h6">By visit type</h3>
-              <ul className="list-unstyled small">
+            <div className="col-span-12 md:col-span-6">
+              <h3 className="text-sm font-semibold">By visit type</h3>
+              <ul className="list-none m-0 p-0 text-sm">
                 {data.by_visit_type.map((row) => (
                   <li key={row.visit_type_label}>
                     {row.visit_type_label}: {formatBillMoney(row.total)}

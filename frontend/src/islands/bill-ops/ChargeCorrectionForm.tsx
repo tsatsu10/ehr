@@ -1,7 +1,25 @@
 import { useCallback, useEffect, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { PatientContextBanner } from '@components/PatientContextBanner';
+import { identityFromLabels } from '@components/patientBannerUtils';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { Checkbox } from '@components/ui/checkbox';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
+import { NativeSelect } from '@components/ui/native-select';
 import { oeFetch } from '@core/oeFetch';
 import type { ChargeLine, FeeScheduleItem, VisitChargesData } from './billOpsTypes';
 import { formatBillMoney } from './billOpsFormatters';
+import { ncShadcnTableClass } from '@components/ncTableStyles';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@components/ui/table';
 
 interface FetchOptions {
   ajaxUrl: string;
@@ -14,6 +32,48 @@ interface Props {
   autoLoad?: boolean;
   showVisitLookup?: boolean;
   onSaved?: () => void;
+}
+
+function BillOpsVisitBanner({
+  visit,
+  balanceDue,
+  paidTotal,
+}: {
+  visit: VisitChargesData['visit'];
+  balanceDue: number;
+  paidTotal: number;
+}) {
+  const patientIdentity = identityFromLabels(visit.patient_name, { pubpid: visit.pubpid });
+  const balanceLine = (
+    <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">
+      Due {formatBillMoney(balanceDue)} (paid {formatBillMoney(paidTotal)})
+    </div>
+  );
+
+  if (!patientIdentity) {
+    return (
+      <div className="mb-3 text-sm text-[var(--oe-nc-text-muted)]">
+        Visit #{visit.queue_number} · {visit.state}
+        {' · '}
+        Due {formatBillMoney(balanceDue)} (paid {formatBillMoney(paidTotal)})
+      </div>
+    );
+  }
+
+  return (
+    <PatientContextBanner
+      layout="compact"
+      identity={patientIdentity}
+      aside={(
+        <>
+          <Badge variant="outline">Q#{visit.queue_number}</Badge>
+          <Badge variant="neutral">{visit.state}</Badge>
+        </>
+      )}
+    >
+      {balanceLine}
+    </PatientContextBanner>
+  );
 }
 
 export function ChargeCorrectionForm({
@@ -108,77 +168,77 @@ export function ChargeCorrectionForm({
   };
 
   return (
-    <div className="oe-nc-billops-correction-form">
+    <div className="nc-billops-correction-form">
       {showVisitLookup && (
-        <div className="form-inline mb-3 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2 mb-3 flex-wrap">
           <label className="sr-only" htmlFor="nc-billops-visit-id">Visit id</label>
-          <input
+          <Input
             id="nc-billops-visit-id"
             type="number"
-            className="form-control form-control-sm mr-2 mb-1"
+            className="h-8 w-auto mr-2 mb-1"
             placeholder="Visit id"
             value={visitIdInput}
             onChange={(e) => setVisitIdInput(e.target.value)}
           />
-          <button
+          <Button
             type="button"
-            className="btn btn-primary btn-sm mb-1"
+            size="sm"
+            className="mb-1"
             onClick={() => void loadVisit(Number(visitIdInput))}
             disabled={loading}
           >
             {loading ? 'Loading…' : 'Load visit'}
-          </button>
+          </Button>
         </div>
       )}
 
-      {error && <div className="alert alert-warning py-2">{error}</div>}
+      {error && <div className={deskCalloutClass('warn', 'py-2')}>{error}</div>}
 
       {data && (
         <>
-          <div className="mb-3 small text-muted">
-            Visit #{data.visit.queue_number} · {data.visit.patient_name ?? ''} · {data.visit.state}
-            {' · '}
-            Due {formatBillMoney(data.balance_due)} (paid {formatBillMoney(data.paid_total)})
-          </div>
+          <BillOpsVisitBanner
+            visit={data.visit}
+            balanceDue={data.balance_due}
+            paidTotal={data.paid_total}
+          />
 
           {data.reopen_on_underpaid && (
-            <p className="alert alert-info py-2 small mb-3">
+            <p className={deskCalloutClass('info', 'py-2 text-sm mb-3')}>
               When a correction leaves the visit underpaid, it may return to the payment queue automatically.
             </p>
           )}
 
-          <h3 className="h6">Existing charges</h3>
-          <table className="table table-sm table-hover mb-3">
-            <thead>
-              <tr>
-                <th scope="col">Remove</th>
-                <th scope="col">Description</th>
-                <th scope="col" className="text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
+          <h3 className="text-sm font-semibold">Existing charges</h3>
+          <Table className={ncShadcnTableClass({ hover: true, className: 'mb-3' })}>
+            <TableHeader>
+              <TableRow>
+                <TableHead scope="col">Remove</TableHead>
+                <TableHead scope="col">Description</TableHead>
+                <TableHead scope="col" className="text-right">Amount</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {data.charges.map((line: ChargeLine) => (
-                <tr key={line.id}>
-                  <td>
-                    <input
-                      type="checkbox"
+                <TableRow key={line.id}>
+                  <TableCell>
+                    <Checkbox
                       checked={removeIds.includes(line.id)}
-                      onChange={() => toggleRemove(line.id)}
+                      onCheckedChange={() => toggleRemove(line.id)}
                       aria-label={`Remove ${line.description}`}
                     />
-                  </td>
-                  <td>{line.description}</td>
-                  <td className="text-right">{formatBillMoney(line.amount)}</td>
-                </tr>
+                  </TableCell>
+                  <TableCell>{line.description}</TableCell>
+                  <TableCell className="text-right">{formatBillMoney(line.amount)}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
 
-          <h3 className="h6">Add line</h3>
-          <div className="form-row mb-3">
-            <div className="col-md-6 mb-2">
-              <select
-                className="form-control form-control-sm"
+          <h3 className="text-sm font-semibold">Add line</h3>
+          <div className="grid grid-cols-12 gap-3 mb-3">
+            <div className="col-span-12 md:col-span-6 mb-2">
+              <NativeSelect
+                className="h-8"
                 value={selectedFeeId}
                 onChange={(e) => setSelectedFeeId(e.target.value)}
               >
@@ -188,13 +248,13 @@ export function ChargeCorrectionForm({
                     {fee.name} — {formatBillMoney(fee.price_amount)}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
-            <div className="col-md-2 mb-2">
-              <input
+            <div className="col-span-12 md:col-span-2 mb-2">
+              <Input
                 type="number"
+                className="h-8"
                 min={1}
-                className="form-control form-control-sm"
                 value={units}
                 onChange={(e) => setUnits(e.target.value)}
                 aria-label="Quantity"
@@ -202,25 +262,25 @@ export function ChargeCorrectionForm({
             </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="nc-billops-correction-reason">Reason (required)</label>
-            <input
+          <div className="space-y-1.5 mb-3">
+            <Label htmlFor="nc-billops-correction-reason">Reason (required)</Label>
+            <Input
               id="nc-billops-correction-reason"
               type="text"
-              className="form-control form-control-sm"
+              className="h-8"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />
           </div>
 
-          <button
+          <Button
             type="button"
-            className="btn btn-primary btn-sm"
+            size="sm"
             onClick={() => void saveCorrection()}
             disabled={saving}
           >
             {saving ? 'Saving…' : 'Save correction'}
-          </button>
+          </Button>
         </>
       )}
     </div>

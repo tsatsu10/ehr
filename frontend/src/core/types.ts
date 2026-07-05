@@ -6,15 +6,18 @@
 
 export type IslandProps = Record<string, unknown>;
 
-export interface OeNcPageContext {
+export interface NcPageContext {
   ajaxUrl: string;
   csrfToken: string;
   facilityId: string | null;
   queuePollMs: number;
 }
 
-export function readPageContext(root: HTMLElement = document.body): OeNcPageContext | null {
-  const shell = root.querySelector<HTMLElement>('#oe-nc-t1');
+/** @deprecated Use {@link NcPageContext} */
+export type OeNcPageContext = NcPageContext;
+
+export function readPageContext(root: HTMLElement = document.body): NcPageContext | null {
+  const shell = root.querySelector<HTMLElement>('#nc-t1');
   if (shell === null) return null;
   return {
     ajaxUrl: shell.dataset.ajaxUrl ?? '',
@@ -726,11 +729,14 @@ export interface PatientSearchRow {
   pubpid: string;
   sex?: string;
   age_years?: string | number;
+  dob_estimated?: boolean;
   phone_masked?: string;
   completion_score?: number;
+  last_visit_label?: string | null;
   active_visit?: {
     state: VisitState;
     queue_number: number | string;
+    chief_complaint?: string | null;
   };
   chips?: {
     appointment_today?: AppointmentTodayChip | null;
@@ -1077,6 +1083,12 @@ export interface FrontDeskPreviewData {
   };
   visits_today?: TodayVisitRow[];
   revisit_gate?: RevisitGate;
+  /** Insurance type that is effective today (expired NHIS → 'cash'). Only present in front-desk context. */
+  insurance_effective?: 'cash' | 'nhis' | 'private';
+  /** Display label e.g. 'Cash (NHIS expired)'. Only present in front-desk context. */
+  insurance_label?: string;
+  /** Count of closed_unpaid visits for this patient. Only present in front-desk context. */
+  unpaid_visits_count?: number;
   queue_bridge?: {
     enabled?: boolean;
     hub_url?: string;
@@ -1137,6 +1149,17 @@ export interface DeskVisitType {
   allows_referral_upload?: boolean;
 }
 
+/** Priority flags set at registration — drives fast-track sorting */
+export type VisitPriorityFlag = 'standard' | 'elderly' | 'pregnant' | 'under_5' | 'urgent';
+
+/** Today's flow chart data for the front desk collapsible strip */
+export interface FrontDeskFlowChartsData {
+  hourly_visits: { hour: number; count: number }[];
+  adherence: { scheduled: number; arrived: number; no_show: number; pending: number };
+  wait_avg_today_mins: number;
+  wait_avg_yesterday_mins: number;
+}
+
 /** Response from visit.start / visit.start_from_appointment */
 export interface VisitStartData {
   visit: {
@@ -1144,6 +1167,7 @@ export interface VisitStartData {
     queue_number: string | number;
     state?: VisitState;
     row_version?: number;
+    priority_flag?: VisitPriorityFlag;
   };
   queue_slip_enabled?: boolean;
   queue_slip_url?: string;

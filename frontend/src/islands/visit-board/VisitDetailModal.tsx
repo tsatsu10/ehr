@@ -1,8 +1,23 @@
 import { useEffect, useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
+import { PatientContextBanner } from '@components/PatientContextBanner';
 import { StatusPill } from '@components/StatusPill';
 import { WaitTimeSpan } from '@components/WaitTimeSpan';
 import { AncillaryVisitBadges, isAncillaryVisitBadgeKey } from '@components/AncillaryVisitBadges';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import {
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  dialogContentSizeClass,
+} from '@components/ui/dialog';
+import { cn } from '@/lib/utils';
 import { useModalDismiss } from '@components/useModalDismiss';
 import { resolveQueueBridgeException } from '@islands/queue-bridge/queueBridgeApi';
 import type { VisitDetailData } from '@core/types';
@@ -30,10 +45,10 @@ function SummaryBadges({ badges }: { badges: string[] }) {
   return (
     <div className="nc-visit-summary__badges mt-2">
       {badges.includes('urgent') && (
-        <span className="badge badge-warning mr-1">URGENT</span>
+        <Badge variant="warning" className="mr-1">URGENT</Badge>
       )}
       {badges.includes('skipped_triage') && (
-        <span className="badge badge-secondary mr-1">Skipped triage</span>
+        <Badge variant="neutral" className="mr-1">Skipped triage</Badge>
       )}
       <AncillaryVisitBadges badges={ancillaryBadges} className="mr-1" />
     </div>
@@ -155,7 +170,7 @@ export function VisitDetailModal({
     }
   };
 
-  if (!open || !visitId) return null;
+  if (!visitId) return null;
 
   const summary = data?.visit_summary;
   const visit = data?.visit;
@@ -170,154 +185,138 @@ export function VisitDetailModal({
     : `Visit #${visitId} — …`;
 
   return (
-    <>
-      <div
-        className="modal fade show d-block nc-visit-detail-modal"
+    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogContent
         id="nc-visit-modal"
-        tabIndex={-1}
-        role="dialog"
+        className={cn(dialogContentSizeClass.sm, 'nc-visit-detail-modal')}
         aria-labelledby="nc-visit-modal-title"
-        aria-modal="true"
       >
-        <div className="modal-dialog modal-sm" role="document">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5 className="modal-title" id="nc-visit-modal-title">{title}</h5>
-              <button type="button" className="close" aria-label="Close" onClick={onClose}>
-                <span aria-hidden="true">&times;</span>
-              </button>
+        <DialogHeader>
+          <DialogTitle id="nc-visit-modal-title">{title}</DialogTitle>
+          <DialogClose aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </DialogClose>
+        </DialogHeader>
+        <DialogBody id="nc-visit-modal-body">
+          {loading && <em>Loading…</em>}
+          {error && (
+            <div className={deskCalloutClass('error', 'text-sm mb-0')} role="alert">
+              {error}
             </div>
-            <div className="modal-body" id="nc-visit-modal-body">
-              {loading && <em>Loading…</em>}
-              {error && <div className="alert alert-danger mb-0">{error}</div>}
-              {!loading && !error && data && preview && summary && visit && identity && (
-                <>
-                  {completion
-                    && completion.score < (completion.billing_threshold || 70) && (
-                    <div className="alert alert-warning py-2 mb-2">
-                      Profile incomplete for billing — {completion.score}% of{' '}
-                      {completion.billing_threshold || 70}% required.
-                    </div>
+          )}
+          {!loading && !error && data && preview && summary && visit && identity && (
+            <>
+              {bridgeAction && (
+                <div className={deskCalloutClass('info', 'text-sm mb-3')}>
+                  {bridgeAction.summary}
+                  {bridgeAction.appt_time_label ? ` · Appt ${bridgeAction.appt_time_label}` : ''}
+                  {bridgeAction.hub_url && (
+                    <>
+                      {' '}
+                      <a href={bridgeAction.hub_url}>Open Queue Bridge</a>
+                    </>
                   )}
-                  {bridgeAction && (
-                    <div className="alert alert-info py-2 mb-2">
-                      {bridgeAction.summary}
-                      {bridgeAction.appt_time_label ? ` · Appt ${bridgeAction.appt_time_label}` : ''}
-                      {bridgeAction.hub_url && (
-                        <>
-                          {' '}
-                          <a href={bridgeAction.hub_url}>Open Queue Bridge</a>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  <div className="nc-patient-context-banner mb-2">
-                    <strong>{identity.display_name}</strong>
-                    <div className="small text-muted">
-                      {identity.sex || '—'} · {identity.age_years ?? '—'} · MRN {identity.pubpid}
-                    </div>
-                    <div className="mt-2">
-                      <StatusPill
-                        state={visit.state}
-                        queueNumber={String(visit.queue_number)}
-                      />
-                    </div>
-                  </div>
-                  <div className="nc-visit-summary mt-2 mb-2">
-                    <div className="text-muted">
-                      {summary.visit_type_label}
-                      {summary.started_at_label ? ` · Started ${summary.started_at_label}` : ''}
-                      {' · Wait '}
-                      <WaitTimeSpan
-                        card={{
-                          wait_minutes: summary.wait_minutes,
-                          wait_label: summary.wait_label,
-                          visit_date: summary.visit_date,
-                        }}
-                      />
-                      {` · Dr hint: ${summary.provider_hint || 'Unassigned'}`}
-                    </div>
-                    <SummaryBadges badges={summary.badges ?? []} />
-                  </div>
-                </>
+                </div>
               )}
-              {actionError && (
-                <div className="alert alert-danger mt-2 mb-0">{actionError}</div>
-              )}
-            </div>
-            {!loading && !error && data && visit && (
-              <div
-                className="modal-footer flex-wrap justify-content-start"
-                id="nc-visit-modal-footer"
-              >
-                {bridgeAction?.can_resolve && (
-                  <button
-                    type="button"
-                    className="btn btn-primary mb-1 mr-1"
-                    id="nc-modal-link-appointment"
-                    disabled={linking}
-                    onClick={() => void handleLinkAppointment()}
-                  >
-                    {linking ? 'Linking…' : bridgeAction.label}
-                  </button>
+              <PatientContextBanner
+                layout="compact"
+                identity={identity}
+                completion={completion}
+                safety={preview.safety}
+                bannerMrdDeepLinks={preview.banner_mrd_deep_links}
+                showAllergyCountChip={preview.allergy_count_chip}
+                chiefComplaint={summary.chief_complaint ?? visit.chief_complaint}
+                chiefComplaintId="nc-visit-modal-cc"
+                aside={(
+                  <StatusPill
+                    state={visit.state}
+                    queueNumber={String(visit.queue_number)}
+                  />
                 )}
-                {deskAction && (
-                  <a
-                    className="btn btn-primary mb-1 mr-1"
-                    href={deskAction.url}
-                    target="_top"
-                  >
-                    {deskAction.label}
-                  </a>
-                )}
-                {chartUrl && (
-                  <a
-                    className="btn btn-outline-secondary mb-1 mr-1"
-                    href={chartUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Open full chart
-                  </a>
-                )}
-                {canCancel && visit.state !== 'cancelled' && visit.state !== 'completed' && (
-                  <button
-                    type="button"
-                    className="btn btn-outline-danger mb-1 mr-1"
-                    id="nc-modal-cancel"
-                    disabled={cancelling}
-                    onClick={() => void handleCancel()}
-                  >
-                    Cancel visit
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="btn btn-link mb-1 mr-1"
-                  id="nc-modal-more-details"
-                  onClick={() => onOpenDrawer(data)}
-                >
-                  More details…
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary mb-1"
-                  id="nc-modal-close"
-                  onClick={onClose}
-                >
-                  Close
-                </button>
+                className="mb-2"
+                id="nc-visit-modal-banner"
+              />
+              <div className="nc-visit-summary mt-2 mb-2">
+                <div className="text-[var(--oe-nc-text-muted)]">
+                  {summary.visit_type_label}
+                  {summary.started_at_label ? ` · Started ${summary.started_at_label}` : ''}
+                  {' · Wait '}
+                  <WaitTimeSpan
+                    card={{
+                      wait_minutes: summary.wait_minutes,
+                      wait_label: summary.wait_label,
+                      visit_date: summary.visit_date,
+                    }}
+                  />
+                  {` · Dr hint: ${summary.provider_hint || 'Unassigned'}`}
+                </div>
+                <SummaryBadges badges={summary.badges ?? []} />
               </div>
+            </>
+          )}
+          {actionError && (
+            <div className={deskCalloutClass('error', 'text-sm mt-2 mb-0')} role="alert">
+              {actionError}
+            </div>
+          )}
+        </DialogBody>
+        {!loading && !error && data && visit && (
+          <DialogFooter className="justify-start flex-wrap" id="nc-visit-modal-footer">
+            {bridgeAction?.can_resolve && (
+              <Button
+                type="button"
+                id="nc-modal-link-appointment"
+                disabled={linking}
+                onClick={() => void handleLinkAppointment()}
+              >
+                {linking ? 'Linking…' : bridgeAction.label}
+              </Button>
             )}
-          </div>
-        </div>
-      </div>
-      <div
-        className="modal-backdrop fade show"
-        id="nc-visit-modal-backdrop"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-    </>
+            {deskAction && (
+              <Button asChild>
+                <a href={deskAction.url} target="_top">
+                  {deskAction.label}
+                </a>
+              </Button>
+            )}
+            {chartUrl && (
+              <Button asChild variant="outline">
+                <a href={chartUrl} target="_blank" rel="noopener noreferrer">
+                  Open full chart
+                </a>
+              </Button>
+            )}
+            {canCancel && visit.state !== 'cancelled' && visit.state !== 'completed' && (
+              <Button
+                type="button"
+                variant="outline"
+                className="text-[var(--oe-nc-danger,#dc2626)] border-[var(--oe-nc-danger,#dc2626)] hover:bg-red-50"
+                id="nc-modal-cancel"
+                disabled={cancelling}
+                onClick={() => void handleCancel()}
+              >
+                Cancel visit
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="link"
+              id="nc-modal-more-details"
+              onClick={() => onOpenDrawer(data)}
+            >
+              More details…
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              id="nc-modal-close"
+              onClick={onClose}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

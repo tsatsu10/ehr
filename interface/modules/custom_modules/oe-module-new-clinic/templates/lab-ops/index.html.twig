@@ -1,30 +1,30 @@
 {% extends 'base.html.twig' %}
 
 {% block page_heading_actions %}
-<div class="d-flex flex-wrap align-items-center oe-nc-labops-toolbar" id="nc-labops-toolbar">
-    <div class="btn-group btn-group-sm mr-2 mb-1" role="group" aria-label="{{ 'Worklist tabs'|xlt }}">
+<div class="nc-flex nc-flex-wrap nc-items-center nc-labops-toolbar" id="nc-labops-toolbar">
+    <div class="nc-btn-group nc-btn-group-sm nc-mr-2 nc-mb-1" role="group" aria-label="{{ 'Worklist tabs'|xlt }}">
         <button type="button"
-                class="btn btn-outline-primary{% if initial_tab == 'pending' %} active{% endif %}"
+                class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary{% if initial_tab == 'pending' %} active{% endif %}"
                 id="nc-labops-tab-pending">
-            {{ 'Pending'|xlt }} <span class="badge badge-light" id="nc-labops-count-pending">0</span>
+            {{ 'Pending'|xlt }} <span class="nc-badge nc-badge-neutral" id="nc-labops-count-pending">0</span>
         </button>
         <button type="button"
-                class="btn btn-outline-primary{% if initial_tab == 'in_progress' %} active{% endif %}"
+                class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary{% if initial_tab == 'in_progress' %} active{% endif %}"
                 id="nc-labops-tab-progress">
-            {{ 'In progress'|xlt }} <span class="badge badge-light" id="nc-labops-count-progress">0</span>
+            {{ 'In progress'|xlt }} <span class="nc-badge nc-badge-neutral" id="nc-labops-count-progress">0</span>
         </button>
         <button type="button"
-                class="btn btn-outline-primary{% if initial_tab == 'send_out' %} active{% endif %}"
+                class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary{% if initial_tab == 'send_out' %} active{% endif %}"
                 id="nc-labops-tab-sendout">
-            {{ 'Send-out'|xlt }} <span class="badge badge-light" id="nc-labops-count-sendout">0</span>
+            {{ 'Send-out'|xlt }} <span class="nc-badge nc-badge-neutral" id="nc-labops-count-sendout">0</span>
         </button>
     </div>
     <input type="date"
-           class="form-control form-control-sm mr-2 mb-1"
+           class="nc-input nc-input-sm nc-mr-2 nc-mb-1"
            id="nc-labops-date"
            aria-label="{{ 'Worklist date'|xlt }}"
            style="width:auto;">
-    <select class="form-control form-control-sm mr-2 mb-1"
+    <select class="nc-select nc-select-sm nc-mr-2 nc-mb-1"
             id="nc-labops-fulfillment"
             aria-label="{{ 'Fulfillment filter'|xlt }}"
             style="width:auto;">
@@ -32,16 +32,16 @@
         <option value="in_house">{{ 'In-house'|xlt }}</option>
         <option value="send_out">{{ 'Send-out'|xlt }}</option>
     </select>
-    <div class="form-check form-check-inline mb-1 mr-2">
-        <input type="checkbox" class="form-check-input" id="nc-labops-urgent-first" checked>
-        <label class="form-check-label small" for="nc-labops-urgent-first">{{ 'Urgent first'|xlt }}</label>
+    <div class="nc-form-check nc-form-check-inline nc-mb-1 nc-mr-2">
+        <input type="checkbox" class="nc-form-check-input" id="nc-labops-urgent-first" checked>
+        <label class="nc-form-check-label nc-text-sm" for="nc-labops-urgent-first">{{ 'Urgent first'|xlt }}</label>
     </div>
-    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ lab_desk_url|attr }}">{{ 'Lab Desk'|xlt }}</a>
-    <a class="btn btn-outline-secondary btn-sm mb-1 mr-1" href="{{ visit_board_url|attr }}">{{ 'Visit Board'|xlt }}</a>
-    <button type="button" class="btn btn-outline-secondary btn-sm mb-1" id="nc-labops-refresh" aria-label="{{ 'Refresh'|xlt }}">
+    <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1 nc-mr-1" href="{{ lab_desk_url|attr }}">{{ 'Lab Desk'|xlt }}</a>
+    <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1 nc-mr-1" href="{{ visit_board_url|attr }}">{{ 'Visit Board'|xlt }}</a>
+    <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1" id="nc-labops-refresh" aria-label="{{ 'Refresh'|xlt }}">
         <i class="fa fa-refresh" aria-hidden="true"></i>
     </button>
-    <span class="text-muted small mb-1" id="nc-labops-updated"></span>
+    <span class="nc-text-muted nc-text-sm nc-mb-1" id="nc-labops-updated"></span>
 </div>
 {% endblock %}
 

@@ -2,6 +2,8 @@ import { DailyReports } from '@islands/daily-reports/DailyReports';
 import { BillOpsHub } from '@islands/bill-ops/BillOpsHub';
 import { PharmOpsReportsPane } from '@islands/pharm-ops/PharmOpsReportsPane';
 import { PatientRegistry } from '@islands/patient-registry/PatientRegistry';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Button } from '@components/ui/button';
 import type { ReportHubEmbedContext } from './reportHubTypes';
 import type { ReportHubEmbedTarget } from './reportHubEmbed';
 
@@ -33,31 +35,27 @@ export function ReportHubEmbedView({
   const resolvedNote = note ?? embedNote(target);
 
   return (
-    <div className="oe-nc-reporthub-embed-panel mb-3">
-      <div className="oe-nc-reporthub-embed-panel__head">
+    <div className="nc-reporthub-embed-panel mb-3">
+      <div className="nc-reporthub-embed-panel-head">
         <div>
-          <h3 className="oe-nc-reporthub-embed-panel__title h6 mb-1">{title}</h3>
+          <h3 className="nc-reporthub-embed-panel-title text-base font-semibold mb-1">{title}</h3>
           {resolvedNote ? (
-            <p className="oe-nc-reporthub-embed-panel__note small mb-0">{resolvedNote}</p>
+            <p className="nc-reporthub-embed-panel-note text-sm mb-0">{resolvedNote}</p>
           ) : null}
         </div>
-        <button
-          type="button"
-          className="btn btn-outline-secondary btn-sm"
-          onClick={onClose}
-        >
+        <Button type="button" variant="outline" size="sm" onClick={onClose}>
           <i className="fa fa-times mr-1" aria-hidden="true" />
           Close
-        </button>
+        </Button>
       </div>
 
       {target.kind === 'stock_iframe' ? (
-        <div className="alert alert-warning py-2 small mb-2" role="status">
+        <div className={deskCalloutClass('warn', 'py-2 text-sm mb-2')} role="status">
           You are viewing a stock report inside the hub. Scheduling and encounter totals are orthogonal to visit queue counts.
         </div>
       ) : null}
 
-      <div className="oe-nc-reporthub-embed-panel__body">
+      <div className="nc-reporthub-embed-panel-body">
         {target.kind === 'daily_reports' ? (
           <DailyReports
             ajaxUrl={context.ajaxUrl}
@@ -113,11 +111,19 @@ export function ReportHubEmbedView({
         ) : null}
 
         {target.kind === 'stock_iframe' ? (
-          <iframe
-            title={title}
-            className="oe-nc-reporthub-embed oe-nc-reporthub-embed--stock"
-            src={target.url}
-          />
+          <div className="nc-reporthub-stock-external">
+            <i className="fa fa-file-text nc-reporthub-stock-external-icon" aria-hidden="true" />
+            <p className="nc-reporthub-stock-external-msg">
+              This is a legacy OpenEMR report and cannot be embedded here.
+              It will open in a new browser tab.
+            </p>
+            <Button asChild>
+              <a href={target.url} target="_blank" rel="noopener noreferrer">
+                <i className="fa fa-external-link mr-1" aria-hidden="true" />
+                Open report
+              </a>
+            </Button>
+          </div>
         ) : null}
       </div>
     </div>

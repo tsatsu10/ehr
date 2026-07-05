@@ -153,7 +153,7 @@ test.describe('V1.2-BILL smoke', () => {
     );
 
     if (billFixture.receipt_date) {
-      await page.locator('.oe-nc-billops-pane input[type="date"]').fill(billFixture.receipt_date);
+      await page.locator('.nc-billops-pane input[type="date"]').fill(billFixture.receipt_date);
     }
 
     const searchQuery = String(billFixture.receipt_id);

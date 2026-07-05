@@ -1,3 +1,16 @@
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { ncShadcnTableClass } from '@components/ncTableStyles';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { Card, CardContent } from '@components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@components/ui/table';
 import type { AclInventoryRow, RoleGroup, SensitivePermission } from '../adminTypes';
 
 interface RolesTabProps {
@@ -11,92 +24,92 @@ interface RolesTabProps {
 
 function RoleGroupsTable({ groups }: { groups: RoleGroup[] }) {
   if (!groups.length) {
-    return <div className="text-muted"><em>No New Clinic role groups found.</em></div>;
+    return <div className="text-[var(--oe-nc-text-muted)]"><em>No New Clinic role groups found.</em></div>;
   }
 
   return groups.map((group) => {
     const activeMembers = (group.members ?? []).filter((m) => m.active);
     return (
-      <div className="card mb-2" key={group.group_title}>
-        <div className="card-body py-2">
-          <div className="d-flex justify-content-between flex-wrap">
+      <Card className="mb-2" key={group.group_title}>
+        <CardContent className="py-2">
+          <div className="flex justify-between flex-wrap">
             <strong>{group.group_title}</strong>
-            <span className="badge badge-secondary">{group.member_count} members</span>
+            <Badge variant="neutral">{group.member_count} members</Badge>
           </div>
-          <div className="small mt-1">
+          <div className="text-sm mt-1">
             {!activeMembers.length ? (
-              <span className="text-muted"><em>No active members</em></span>
+              <span className="text-[var(--oe-nc-text-muted)]"><em>No active members</em></span>
             ) : (
               activeMembers.map((member, i) => (
                 <span key={member.username}>
                   {i > 0 ? ', ' : ''}
                   {member.display_name || member.username}
-                  <span className="text-muted"> ({member.username})</span>
+                  <span className="text-[var(--oe-nc-text-muted)]"> ({member.username})</span>
                 </span>
               ))
             )}
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   });
 }
 
 function SensitiveTable({ items }: { items: SensitivePermission[] }) {
   if (!items.length) {
-    return <div className="text-muted"><em>No sensitive permissions configured.</em></div>;
+    return <div className="text-[var(--oe-nc-text-muted)]"><em>No sensitive permissions configured.</em></div>;
   }
 
   return (
-    <table className="table table-sm table-bordered">
-      <thead>
-        <tr>
-          <th>Permission</th>
-          <th>Granted to groups</th>
-          <th>Notes</th>
-        </tr>
-      </thead>
-      <tbody>
+    <Table className={ncShadcnTableClass({ bordered: true })}>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Permission</TableHead>
+          <TableHead>Granted to groups</TableHead>
+          <TableHead>Notes</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
         {items.map((row) => (
-          <tr key={row.aco_key}>
-            <td>
+          <TableRow key={row.aco_key}>
+            <TableCell>
               <code>{row.aco_key}</code>
               <br />
-              <span className="small text-muted">{row.aco_title}</span>
-            </td>
-            <td>{(row.granted_groups ?? []).join(', ') || '—'}</td>
-            <td className="small">{row.note ?? ''}</td>
-          </tr>
+              <span className="text-sm text-[var(--oe-nc-text-muted)]">{row.aco_title}</span>
+            </TableCell>
+            <TableCell>{(row.granted_groups ?? []).join(', ') || '—'}</TableCell>
+            <TableCell className="text-sm">{row.note ?? ''}</TableCell>
+          </TableRow>
         ))}
-      </tbody>
-    </table>
+      </TableBody>
+    </Table>
   );
 }
 
 function AclInventoryTable({ rows }: { rows: AclInventoryRow[] }) {
   if (!rows.length) {
-    return <div className="text-muted"><em>No ACL keys found.</em></div>;
+    return <div className="text-[var(--oe-nc-text-muted)]"><em>No ACL keys found.</em></div>;
   }
 
   return (
-    <table className="table table-sm table-bordered">
-      <thead>
-        <tr>
-          <th>ACL key</th>
-          <th>Title</th>
-          <th>Groups</th>
-        </tr>
-      </thead>
-      <tbody>
+    <Table className={ncShadcnTableClass({ bordered: true })}>
+      <TableHeader>
+        <TableRow>
+          <TableHead>ACL key</TableHead>
+          <TableHead>Title</TableHead>
+          <TableHead>Groups</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
         {rows.map((row) => (
-          <tr key={row.aco_key}>
-            <td><code>{row.aco_key}</code></td>
-            <td>{row.aco_title}</td>
-            <td className="small">{(row.granted_groups ?? []).join(', ') || '—'}</td>
-          </tr>
+          <TableRow key={row.aco_key}>
+            <TableCell><code>{row.aco_key}</code></TableCell>
+            <TableCell>{row.aco_title}</TableCell>
+            <TableCell className="text-sm">{(row.granted_groups ?? []).join(', ') || '—'}</TableCell>
+          </TableRow>
         ))}
-      </tbody>
-    </table>
+      </TableBody>
+    </Table>
   );
 }
 
@@ -110,43 +123,46 @@ export function RolesTab({
 }: RolesTabProps) {
   return (
     <>
-      <div className="card mb-3">
-        <div className="card-body">
-          <p className="text-muted mb-2">Manage staff accounts and ACL assignments in core OpenEMR admin.</p>
-          <p className="alert alert-info py-2 small">
+      <Card className="mb-3">
+        <CardContent>
+          <p className="text-[var(--oe-nc-text-muted)] mb-2">Manage staff accounts and ACL assignments in core OpenEMR admin.</p>
+          <p className={deskCalloutClass('info', 'py-2 text-sm mb-2')}>
             To turn on Lab or Pharmacy desks, use the Queue & roles tab and check Enable lab desk /
             Enable pharmacy desk, then Save changes.
           </p>
-          <a
-            className="btn btn-outline-primary btn-sm mr-2"
-            href={`${webroot}/interface/usergroup/usergroup_admin.php`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Manage users
-          </a>
-          <a
-            className="btn btn-outline-secondary btn-sm mr-2"
-            href={`${webroot}/interface/usergroup/adminacl.php`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            ACL editor
-          </a>
-          <button
+          <Button variant="outline" size="sm" className="mr-2" asChild>
+            <a
+              href={`${webroot}/interface/usergroup/usergroup_admin.php`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Manage users
+            </a>
+          </Button>
+          <Button variant="outline" size="sm" className="mr-2" asChild>
+            <a
+              href={`${webroot}/interface/usergroup/adminacl.php`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              ACL editor
+            </a>
+          </Button>
+          <Button
             type="button"
-            className="btn btn-warning btn-sm"
+            variant="warning"
+            size="sm"
             id="nc-admin-grant-self-roles"
             disabled={granting}
             onClick={onGrantSelf}
           >
             {granting ? 'Granting…' : 'Grant New Clinic roles to my account'}
-          </button>
-          <small className="form-text text-muted mt-2">
+          </Button>
+          <small className="form-text text-[var(--oe-nc-text-muted)] mt-2">
             Grants desk groups for pilot testing. Log out and back in afterward.
           </small>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
       <div id="nc-admin-roles">
         <RoleGroupsTable groups={roleGroups} />
       </div>

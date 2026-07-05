@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { PatientSearchDropdown } from '@components/PatientSearchDropdown';
 import { SlideOver } from '@components/SlideOver';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Button } from '@components/ui/button';
+import { Input } from '@components/ui/input';
+import { NativeSelect } from '@components/ui/native-select';
+import { Textarea } from '@components/ui/textarea';
 import type { CalendarBookingDraft, CalendarDayPayload, SchedulingFilters, SchedulingLabels } from './schedulingTypes';
 import { ALL_PROVIDERS_ID } from './schedulingTypes';
 import { bookCalendarAppointment } from './schedulingApi';
@@ -118,22 +123,22 @@ export function CalendarBookingSheet({
       id="nc-scheduling-book-sheet"
       width="md"
       footer={(
-        <div className="d-flex justify-content-end w-100">
-          <button type="button" className="btn btn-secondary btn-sm mr-2" onClick={onClose}>
+        <div className="flex justify-end w-full gap-2">
+          <Button type="button" variant="secondary" size="sm" onClick={onClose}>
             {labels.cancel}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="btn btn-primary btn-sm"
+            size="sm"
             disabled={!canSave || saving}
             onClick={() => { void handleSave(); }}
           >
             {saving ? labels.saving : labels.saveAppointment}
-          </button>
+          </Button>
         </div>
       )}
     >
-      <p className="text-muted small">{labels.bookingHint}</p>
+      <p className="text-[var(--oe-nc-text-muted)] text-sm">{labels.bookingHint}</p>
       <PatientSearchDropdown
         ajaxUrl={ajaxUrl}
         csrfToken={csrfToken}
@@ -146,74 +151,74 @@ export function CalendarBookingSheet({
         }}
       />
       {patientLabel && (
-        <p className="small text-muted mb-3">
+        <p className="text-sm text-[var(--oe-nc-text-muted)] mb-3">
           {labels.selectedPatient}
           :
           {' '}
           <strong>{patientLabel}</strong>
         </p>
       )}
-      <div className="form-group">
+      <div className="nc-form-group">
         <label htmlFor="nc-scheduling-book-provider">{labels.provider}</label>
-        <select
+        <NativeSelect
           id="nc-scheduling-book-provider"
-          className="form-control form-control-sm"
+          className="h-8"
           value={providerId}
           onChange={(e) => setProviderId(Number.parseInt(e.target.value, 10))}
         >
           {providers.map((provider) => (
             <option key={provider.id} value={provider.id}>{provider.label}</option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
-      <div className="form-group">
+      <div className="nc-form-group">
         <label htmlFor="nc-scheduling-book-category">{labels.category}</label>
-        <select
+        <NativeSelect
           id="nc-scheduling-book-category"
-          className="form-control form-control-sm"
+          className="h-8"
           value={categoryId}
           onChange={(e) => setCategoryId(Number.parseInt(e.target.value, 10))}
         >
           {categories.map((category) => (
             <option key={category.id} value={category.id}>{category.label}</option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
-      <div className="form-row">
-        <div className="form-group col-6">
+      <div className="grid grid-cols-12 gap-3">
+        <div className="nc-form-group col-span-6">
           <label htmlFor="nc-scheduling-book-time">{labels.time}</label>
-          <input
+          <Input
             id="nc-scheduling-book-time"
             type="time"
-            className="form-control form-control-sm"
+            className="h-8"
             value={time}
             onChange={(e) => setTime(e.target.value.slice(0, 5))}
           />
         </div>
-        <div className="form-group col-6">
+        <div className="nc-form-group col-span-6">
           <label htmlFor="nc-scheduling-book-duration">{labels.durationMin}</label>
-          <input
+          <Input
             id="nc-scheduling-book-duration"
             type="number"
             min={interval}
             step={interval}
-            className="form-control form-control-sm"
+            className="h-8"
             value={durationMinutes}
             onChange={(e) => setDurationMinutes(Number.parseInt(e.target.value, 10) || interval)}
           />
         </div>
       </div>
-      <div className="form-group mb-0">
+      <div className="nc-form-group mb-0">
         <label htmlFor="nc-scheduling-book-comments">{labels.comments}</label>
-        <textarea
+        <Textarea
           id="nc-scheduling-book-comments"
-          className="form-control form-control-sm"
+          className="min-h-[4.5rem]"
           rows={2}
           value={comments}
           onChange={(e) => setComments(e.target.value)}
         />
       </div>
-      {error && <div className="alert alert-danger mt-3 mb-0 py-2">{error}</div>}
+      {error && <div className={deskCalloutClass('error', 'mt-3 mb-0 py-2')}>{error}</div>}
     </SlideOver>
   );
 }

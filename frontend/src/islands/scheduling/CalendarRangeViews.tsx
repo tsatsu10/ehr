@@ -1,4 +1,14 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { ncShadcnTableClass } from '@components/ncTableStyles';
+import { Button } from '@components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@components/ui/table';
 import type { CalendarDayPayload, CalendarEvent, SchedulingOption } from './schedulingTypes';
 import {
   buildTimeSlots,
@@ -80,25 +90,25 @@ export function CalendarDayGrid({
   }, [focusCells]);
 
   return (
-    <div className="oe-nc-calendar-day table-responsive">
-      <table
+    <div className="nc-calendar-day overflow-x-auto">
+      <Table
         ref={tableRef}
-        className="table table-sm table-bordered oe-nc-calendar-day__table mb-0"
+        className={ncShadcnTableClass({ bordered: true, className: 'nc-calendar-day-table mb-0' })}
         role="grid"
         onKeyDown={handleGridKeyDown}
       >
-        <thead>
-          <tr>
-            <th scope="col" className="oe-nc-calendar-day__time-col">Time</th>
+        <TableHeader>
+          <TableRow>
+            <TableHead scope="col" className="nc-calendar-day-time-col">Time</TableHead>
             {visibleProviders.map((provider) => (
-              <th key={provider.id} scope="col">{provider.label}</th>
+              <TableHead key={provider.id} scope="col">{provider.label}</TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {slots.map((slot, slotIndex) => (
-            <tr key={slot}>
-              <th scope="row" className="text-muted small oe-nc-calendar-day__time-col">{slot}</th>
+            <TableRow key={slot}>
+              <TableHead scope="row" className="text-[var(--oe-nc-text-muted)] text-sm nc-calendar-day-time-col">{slot}</TableHead>
               {visibleProviders.map((provider, providerIndex) => {
                 const skip = coveredByProvider.get(provider.id) ?? 0;
                 if (skip > 0) {
@@ -131,10 +141,10 @@ export function CalendarDayGrid({
                   />
                 );
               })}
-            </tr>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
@@ -170,31 +180,31 @@ export function CalendarWeekGrid({
   });
 
   return (
-    <div className="oe-nc-calendar-week table-responsive">
-      <table className="table table-sm table-bordered mb-0">
-        <thead>
-          <tr>
-            <th className="oe-nc-calendar-day__time-col" rowSpan={2}>Time</th>
+    <div className="nc-calendar-week overflow-x-auto">
+      <Table className={ncShadcnTableClass({ bordered: true, className: 'mb-0' })}>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="nc-calendar-day-time-col" rowSpan={2}>Time</TableHead>
             {dates.map((date) => (
-              <th key={date} scope="colgroup" colSpan={Math.max(providers.length, 1)}>
+              <TableHead key={date} scope="colgroup" colSpan={Math.max(providers.length, 1)}>
                 {date.slice(5)}
-              </th>
+              </TableHead>
             ))}
-          </tr>
-          <tr>
+          </TableRow>
+          <TableRow>
             {dates.flatMap((date) => (
               providers.map((provider) => (
-                <th key={`${date}-${provider.id}`} scope="col" className="small">
+                <TableHead key={`${date}-${provider.id}`} scope="col" className="text-sm">
                   {provider.label}
-                </th>
+                </TableHead>
               ))
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {slots.map((slot) => (
-            <tr key={slot}>
-              <th scope="row" className="text-muted small oe-nc-calendar-day__time-col">{slot}</th>
+            <TableRow key={slot}>
+              <TableHead scope="row" className="text-[var(--oe-nc-text-muted)] text-sm nc-calendar-day-time-col">{slot}</TableHead>
               {weekColumns.map(({ date, provider }) => {
                 const cellKey = `${date}|${provider.id}`;
                 const skip = coveredCells.get(cellKey) ?? 0;
@@ -227,19 +237,20 @@ export function CalendarWeekGrid({
                   />
                 );
               })}
-            </tr>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
 
 export function CalendarMonthGrid({
   data,
+  canBook,
   onSelectEvent,
   onMoveEvent,
-}: Pick<GridProps, 'data' | 'onSelectEvent' | 'onMoveEvent'>) {
+}: Pick<GridProps, 'data' | 'canBook' | 'onSelectEvent' | 'onMoveEvent'>) {
   const dates = useMemo(() => monthGridDates(data.anchor_date ?? data.date), [data.anchor_date, data.date]);
   const monthPrefix = (data.anchor_date ?? data.date).slice(0, 7);
   const eventsByDate = useMemo(() => {
@@ -253,10 +264,10 @@ export function CalendarMonthGrid({
   }, [data.events]);
 
   return (
-    <div className="oe-nc-calendar-month">
-      <div className="oe-nc-calendar-month__grid">
+    <div className="nc-calendar-month">
+      <div className="nc-calendar-month-grid">
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((label) => (
-          <div key={label} className="oe-nc-calendar-month__dow text-muted small">{label}</div>
+          <div key={label} className="nc-calendar-month-dow text-[var(--oe-nc-text-muted)] text-sm">{label}</div>
         ))}
         {dates.map((date) => {
           const inMonth = date.startsWith(monthPrefix);
@@ -264,7 +275,7 @@ export function CalendarMonthGrid({
           return (
             <div
               key={date}
-              className={`oe-nc-calendar-month__cell${inMonth ? '' : ' oe-nc-calendar-month__cell--muted'}`}
+              className={`nc-calendar-month-cell${inMonth ? '' : ' nc-calendar-month-cell--muted'}`}
               onDragOver={(event) => event.preventDefault()}
               onDrop={(dropEvent) => {
                 dropEvent.preventDefault();
@@ -274,12 +285,14 @@ export function CalendarMonthGrid({
                 }
               }}
             >
-              <div className="oe-nc-calendar-month__date small">{Number(date.slice(8))}</div>
+              <div className="nc-calendar-month-date text-sm">{Number(date.slice(8))}</div>
               {dayEvents.slice(0, 3).map((event) => (
-                <button
+                <Button
                   key={event.pc_eid}
                   type="button"
-                  className="oe-nc-calendar-month__event btn btn-link btn-sm p-0 text-left"
+                  variant="link"
+                  size="sm"
+                  className="nc-calendar-month-event h-auto p-0 text-left"
                   draggable={canBook}
                   onDragStart={(e) => {
                     e.dataTransfer.setData('text/plain', String(event.pc_eid));
@@ -289,10 +302,10 @@ export function CalendarMonthGrid({
                   {event.start_time}
                   {' '}
                   {event.patient_name}
-                </button>
+                </Button>
               ))}
               {dayEvents.length > 3 && (
-                <span className="text-muted small">
+                <span className="text-[var(--oe-nc-text-muted)] text-sm">
                   +
                   {dayEvents.length - 3}
                   {' '}
@@ -373,8 +386,8 @@ function CalendarGridCell({
   }, [event, intervalMinutes, onResizeEvent]);
 
   return (
-    <td
-      className={`oe-nc-calendar-day__cell p-1${resizing ? ' oe-nc-calendar-day__cell--resizing' : ''}`}
+    <TableCell
+      className={`nc-calendar-day-cell p-1${resizing ? ' nc-calendar-day-cell--resizing' : ''}`}
       rowSpan={rowSpan > 1 ? rowSpan : undefined}
       style={!compact && rowSpan > 1 ? { height: `${rowSpan * 2.5}rem` } : undefined}
       onDragOver={(e) => e.preventDefault()}
@@ -387,10 +400,12 @@ function CalendarGridCell({
       }}
     >
       {event ? (
-        <div className="oe-nc-calendar-day__event-wrap">
-          <button
+        <div className="nc-calendar-day-event-wrap">
+          <Button
             type="button"
-            className="oe-nc-calendar-day__event btn btn-sm btn-block text-left"
+            variant="secondary"
+            size="sm"
+            className="nc-calendar-day-event h-auto w-full justify-start text-left font-normal"
             draggable={canBook}
             {...gridFocusProps}
             onDragStart={(e) => {
@@ -398,14 +413,14 @@ function CalendarGridCell({
             }}
             onClick={() => onSelectEvent(event)}
           >
-            <strong className="d-block small">{event.patient_name}</strong>
+            <strong className="block text-sm">{event.patient_name}</strong>
             {!compact && (
-              <span className="text-muted small">{event.category_label}</span>
+              <span className="text-[var(--oe-nc-text-muted)] text-sm">{event.category_label}</span>
             )}
-          </button>
+          </Button>
           {!compact && (
             <div
-              className="oe-nc-calendar-day__resize-handle"
+              className="nc-calendar-day-resize-handle"
               role="separator"
               aria-label={`Resize ${event.patient_name} appointment`}
               onMouseDown={handleResizeStart}
@@ -413,24 +428,28 @@ function CalendarGridCell({
           )}
         </div>
       ) : canBook && providerId > 0 ? (
-        <button
+        <Button
           type="button"
-          className="btn btn-link btn-sm btn-block text-muted oe-nc-calendar-day__slot"
+          variant="link"
+          size="sm"
+          className="nc-calendar-day-slot h-auto w-full text-[var(--oe-nc-text-muted)]"
           {...gridFocusProps}
           onClick={() => onBookSlot({ date, time: slot, providerId })}
         >
           +
-        </button>
+        </Button>
       ) : canBook ? (
-        <button
+        <Button
           type="button"
-          className="btn btn-link btn-sm btn-block text-muted oe-nc-calendar-day__slot"
+          variant="link"
+          size="sm"
+          className="nc-calendar-day-slot h-auto w-full text-[var(--oe-nc-text-muted)]"
           {...gridFocusProps}
           onClick={() => onBookSlot({ date, time: slot, providerId: 0 })}
         >
           +
-        </button>
+        </Button>
       ) : null}
-    </td>
+    </TableCell>
   );
 }

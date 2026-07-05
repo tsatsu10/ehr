@@ -1,5 +1,11 @@
 import type { LabSelectData } from '@core/types';
 import { AncillaryVisitBadges } from '@components/AncillaryVisitBadges';
+import { PatientContextBanner } from '@components/PatientContextBanner';
+import { bannerPropsFromPreview } from '@components/bannerPreviewProps';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { Card, CardContent } from '@components/ui/card';
 import { LabOrdersTable } from './LabOrdersTable';
 import { LabDirectPanel } from './LabDirectPanel';
 
@@ -25,30 +31,29 @@ interface LabActivePaneProps {
 }
 
 function PatientBanner({ data }: { data: LabSelectData }) {
-  const identity = data.preview.identity;
-  const allergies = data.preview.safety?.allergies_severe ?? [];
+  const { preview, visit } = data;
 
   return (
-    <div className="nc-patient-context-banner mb-3 p-3 border rounded bg-light">
-      <div className="d-flex justify-content-between flex-wrap">
-        <div>
-          <strong>{identity.display_name}</strong> · MRN {identity.pubpid}
+    <>
+      <PatientContextBanner
+        identity={preview.identity}
+        layout="compact"
+        completion={preview.completion}
+        safety={preview.safety}
+        {...bannerPropsFromPreview(preview)}
+        aside={<Badge variant="neutral">{visit.state}</Badge>}
+      >
+        <div className="text-sm mt-1 text-[var(--oe-nc-text-muted)]">
+          Visit #{visit.queue_number} · {visit.visit_type_label || 'Visit'}
+          <AncillaryVisitBadges badges={visit.ancillary_badges} className="ml-1" />
         </div>
-        <span className="badge badge-info">{data.visit.state}</span>
-      </div>
-      {allergies.length > 0 && (
-        <div className="text-danger small">Allergy: {allergies.join(', ')}</div>
-      )}
+      </PatientContextBanner>
       {data.critical_unreleased && (
-        <div className="alert alert-danger py-2 px-3 mt-2 mb-0 small">
+        <div className={deskCalloutClass('error', 'mb-3 text-sm')} role="alert">
           Critical result saved but not released to doctor. Release from Enter results.
         </div>
       )}
-      <div className="small mt-1">
-        Visit #{data.visit.queue_number} · {data.visit.visit_type_label || 'Visit'}
-        <AncillaryVisitBadges badges={data.visit.ancillary_badges} className="ml-1" />
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -73,11 +78,11 @@ export function LabActivePane({
   if (mode === 'idle') {
     return (
       <div id="nc-lab-active-pane">
-        <div className="card">
-          <div className="card-body text-muted text-center py-5">
+        <Card>
+          <CardContent className="text-[var(--oe-nc-text-muted)] text-center py-5">
             <em>Select a patient from the lab queue.</em>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -85,9 +90,9 @@ export function LabActivePane({
   if (mode === 'loading') {
     return (
       <div id="nc-lab-active-pane">
-        <div className="card">
-          <div className="card-body"><em>Loading…</em></div>
-        </div>
+        <Card>
+          <CardContent><em>Loading…</em></CardContent>
+        </Card>
       </div>
     );
   }
@@ -95,7 +100,9 @@ export function LabActivePane({
   if (mode === 'error' || !data) {
     return (
       <div id="nc-lab-active-pane">
-        <div className="alert alert-danger m-0">Failed to load visit.</div>
+        <div className={deskCalloutClass('error', 'm-0 text-sm')} role="alert">
+          Failed to load visit.
+        </div>
       </div>
     );
   }
@@ -109,8 +116,8 @@ export function LabActivePane({
 
   return (
     <div id="nc-lab-active-pane">
-      <div className="card">
-        <div className="card-body">
+      <Card>
+        <CardContent>
           <PatientBanner data={data} />
 
           {labDirectIntake?.enabled && onOpenLabIntake && onCreateLabOrder && (
@@ -131,77 +138,81 @@ export function LabActivePane({
             onEnterResults={(orderId) => onOpenResults(orderId)}
           />
 
-          <div className="d-flex flex-wrap mt-3 mb-3">
+          <div className="mb-3 mt-3 flex flex-wrap gap-2">
             {showCoreOrdersButton && (
-              <button
+              <Button
                 type="button"
-                className="btn btn-outline-primary btn-sm mr-2"
+                variant="outline"
+                size="sm"
                 id="nc-lab-open-orders"
                 disabled={blocked || !inLab}
                 onClick={onOpenOrders}
               >
                 Open orders (core)
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               type="button"
-              className="btn btn-outline-secondary btn-sm mr-2"
+              variant="outline"
+              size="sm"
               id={labOpsEnabled ? 'nc-lab-enter-results-primary' : 'nc-lab-open-results'}
               disabled={blocked || !inLab}
               onClick={() => onOpenResults(data.lab_orders[0]?.id)}
             >
               {resultsLabel}
-            </button>
+            </Button>
           </div>
 
           {actionError && (
-            <div className="alert alert-danger" id="nc-lab-action-error" role="alert">
+            <div className={deskCalloutClass('error', 'text-sm')} id="nc-lab-action-error" role="alert">
               {actionError}
             </div>
           )}
 
-          <div className="d-flex flex-wrap">
+          <div className="flex flex-wrap gap-2">
             {canTake && (
-              <button
+              <Button
                 type="button"
-                className="btn btn-primary mr-2"
                 id="nc-lab-take-btn"
                 disabled={blocked || submitting}
                 onClick={onTakePatient}
               >
                 Take patient
-              </button>
+              </Button>
             )}
             {inLab && (
-              <button
+              <Button
                 type="button"
-                className="btn btn-success mr-2"
+                variant="cta"
                 id="nc-lab-complete-btn"
                 disabled={blocked || submitting}
                 onClick={onComplete}
               >
                 {submitting ? 'Completing…' : 'Lab complete'}
-              </button>
+              </Button>
             )}
             {canSkip && (
-              <button
+              <Button
                 type="button"
-                className="btn btn-outline-warning mr-2"
+                variant="outline"
+                className="border-amber-400 text-amber-800 hover:bg-amber-50"
                 id="nc-lab-skip-btn"
                 disabled={blocked || submitting}
                 onClick={onSkip}
               >
                 Skip to payment
-              </button>
+              </Button>
             )}
             {visitBoardUrl && (
-              <a className="btn btn-outline-secondary btn-sm" href={visitBoardUrl} target="_top">
-                Visit Board
-              </a>
+              <Button variant="outline" size="sm" asChild>
+                <a href={visitBoardUrl} target="_top">
+                  Visit Board
+                </a>
+              </Button>
             )}
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

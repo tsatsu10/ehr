@@ -101,7 +101,7 @@ describe('TriageDesk', () => {
     mockFetch.mockReturnValue(new Promise(() => {})); // never resolves
     render(<TriageDesk {...props} />);
     // Shows skeleton loaders in queue panel
-    expect(document.querySelectorAll('.oe-nc-vb-skeleton').length).toBeGreaterThan(0);
+    expect(document.querySelectorAll('.nc-vb-skeleton').length).toBeGreaterThan(0);
     // Shows idle pane
     expect(screen.getByText(/select a patient/i)).toBeInTheDocument();
   });
@@ -153,6 +153,26 @@ describe('TriageDesk', () => {
     expect(screen.getByLabelText(/BP sys/i)).toBeInTheDocument();
     // Start triage button (visit is in 'waiting' state)
     expect(screen.getByRole('button', { name: /start triage/i })).toBeInTheDocument();
+  });
+
+  it('shows chief complaint on banner when reception captured CC', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ...emptyQueue, visits: [waitingPatient], counts: { waiting: 1, in_triage: 0 } })
+      .mockResolvedValueOnce({
+        ...selectResponse,
+        visit: { ...selectResponse.visit, chief_complaint: 'Persistent cough' },
+      })
+      .mockResolvedValue(emptyQueue);
+
+    render(<TriageDesk {...props} />);
+    await waitFor(() => screen.getByText(/Amara Osei/));
+    fireEvent.click(screen.getByRole('button', { name: /Amara Osei/ }));
+
+    await waitFor(() => {
+      const banner = document.getElementById('nc-banner-chief-complaint');
+      expect(banner).toHaveTextContent('Persistent cough');
+      expect(screen.getByText(/Reason for visit:/)).toBeInTheDocument();
+    });
   });
 
   it('shows Save vitals button when patient is in_triage', async () => {

@@ -1,4 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { ncShadcnTableClass } from '@components/ncTableStyles';
+import { SegmentedControl } from '@components/SegmentedControl';
+import { Button } from '@components/ui/button';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@components/ui/table';
 import { oeFetch } from '@core/oeFetch';
 import type {
   PaymentHistoryFilter,
@@ -31,23 +45,23 @@ function SummaryCard({
   const last = summary.last_receipt;
 
   return (
-    <div className="border rounded p-3 mb-3 bg-light" id="nc-payments-summary">
-      <div className="row small">
-        <div className="col-sm-4">
+    <div className="border rounded p-3 mb-3 bg-[var(--oe-nc-bg-tint)]" id="nc-payments-summary">
+      <div className="grid grid-cols-12 gap-3 text-sm">
+        <div className="col-span-12 sm:col-span-4">
           <strong>Charges</strong>
           <div>{formatChartMoney(summary.charges_amount)}</div>
         </div>
-        <div className="col-sm-4">
+        <div className="col-span-12 sm:col-span-4">
           <strong>Paid</strong>
           <div>{formatChartMoney(summary.paid_amount)}</div>
         </div>
-        <div className="col-sm-4">
+        <div className="col-span-12 sm:col-span-4">
           <strong>Balance</strong>
           <div>{formatChartMoney(summary.balance_amount)}</div>
         </div>
       </div>
       {last?.receipt_number && (
-        <div className="small text-muted mt-2">
+        <div className="text-sm text-[var(--oe-nc-text-muted)] mt-2">
           Receipt #{last.receipt_number}
           {last.at_label ? ` · ${last.at_label}` : ''}
           {last.cashier ? ` · ${last.cashier}` : ''}
@@ -79,6 +93,16 @@ export function PaymentsPane({ ajaxUrl, csrfToken, pid, visitId }: PaymentsPaneP
 
   const fetchOptions = useMemo(() => ({ ajaxUrl, csrfToken }), [ajaxUrl, csrfToken]);
   const showFilter = !!(visitId && visitId > 0);
+
+  const filterSegments = useMemo(() => {
+    const segments = [];
+    if (showFilter) {
+      segments.push({ id: 'this_visit', label: 'This visit' });
+      segments.push({ id: 'all_visits', label: 'All visits' });
+    }
+    segments.push({ id: 'date_range', label: 'Date range' });
+    return segments;
+  }, [showFilter]);
 
   const buildParams = useCallback(
     (pageOffset: number): Record<string, string | number> => {
@@ -171,56 +195,36 @@ export function PaymentsPane({ ajaxUrl, csrfToken, pid, visitId }: PaymentsPaneP
   }
 
   if (error) {
-    return <div className="alert alert-danger">{error}</div>;
+    return <div className={deskCalloutClass('error')}>{error}</div>;
   }
 
   return (
     <>
-      <div className="btn-group btn-group-sm mb-3" role="group" aria-label="Payment filter">
-        {showFilter && (
-          <>
-            <button
-              type="button"
-              className={`btn btn-outline-secondary${filter === 'this_visit' ? ' active' : ''}`}
-              onClick={() => setFilter('this_visit')}
-            >
-              This visit
-            </button>
-            <button
-              type="button"
-              className={`btn btn-outline-secondary${filter === 'all_visits' ? ' active' : ''}`}
-              onClick={() => setFilter('all_visits')}
-            >
-              All visits
-            </button>
-          </>
-        )}
-        <button
-          type="button"
-          className={`btn btn-outline-secondary${filter === 'date_range' ? ' active' : ''}`}
-          onClick={() => setFilter('date_range')}
-        >
-          Date range
-        </button>
-      </div>
+      <SegmentedControl
+        segments={filterSegments}
+        value={filter}
+        onChange={(id) => setFilter(id as PaymentHistoryFilter)}
+        ariaLabel="Payment filter"
+        className="mb-3"
+      />
 
       {filter === 'date_range' && (
-        <div className="form-row align-items-end mb-3">
+        <div className="grid grid-cols-12 gap-3 items-end mb-3">
           <div className="col-auto">
-            <label className="small mb-0" htmlFor="nc-payments-date-from">From</label>
-            <input
+            <Label className="normal-case font-normal mb-1" htmlFor="nc-payments-date-from">From</Label>
+            <Input
               type="date"
-              className="form-control form-control-sm"
+              className="h-8"
               id="nc-payments-date-from"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
             />
           </div>
           <div className="col-auto">
-            <label className="small mb-0" htmlFor="nc-payments-date-to">To</label>
-            <input
+            <Label className="normal-case font-normal mb-1" htmlFor="nc-payments-date-to">To</Label>
+            <Input
               type="date"
-              className="form-control form-control-sm"
+              className="h-8"
               id="nc-payments-date-to"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
@@ -235,74 +239,79 @@ export function PaymentsPane({ ajaxUrl, csrfToken, pid, visitId }: PaymentsPaneP
 
       {addCorrectionUrl && (
         <div className="mb-3">
-          <a className="btn btn-outline-secondary btn-sm" href={addCorrectionUrl} target="_top">
-            {addCorrectionLabel}
-          </a>
+          <Button variant="outline" size="sm" asChild>
+            <a href={addCorrectionUrl} target="_top">
+              {addCorrectionLabel}
+            </a>
+          </Button>
         </div>
       )}
 
       {!rows.length ? (
-        <p className="text-muted mb-0">No payment or charge history for this view.</p>
+        <p className="text-[var(--oe-nc-text-muted)] mb-0">No payment or charge history for this view.</p>
       ) : (
-        <div className="table-responsive">
-          <table className="table table-sm mb-0">
-            <thead>
-              <tr>
-                <th>When</th>
-                <th>Type</th>
-                <th>Description</th>
-                <th>Amount</th>
-                <th>Visit</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody id="nc-payments-rows">
+        <div className="overflow-x-auto">
+          <Table className={ncShadcnTableClass({ className: 'mb-0' })}>
+            <TableHeader>
+              <TableRow>
+                <TableHead>When</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Visit</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody id="nc-payments-rows">
               {rows.map((row, idx) => {
                 const visitLabel = row.queue_number
                   ? `#${row.queue_number}${row.visit_date ? ` · ${row.visit_date}` : ''}`
                   : '—';
 
                 return (
-                  <tr key={`${row.type ?? 'row'}-${row.receipt_id ?? row.occurred_at ?? idx}`}>
-                    <td>{row.occurred_at_label ?? row.paid_at_label ?? '—'}</td>
-                    <td>{typeLabel(row.type)}</td>
-                    <td>
+                  <TableRow key={`${row.type ?? 'row'}-${row.receipt_id ?? row.occurred_at ?? idx}`}>
+                    <TableCell>{row.occurred_at_label ?? row.paid_at_label ?? '—'}</TableCell>
+                    <TableCell>{typeLabel(row.type)}</TableCell>
+                    <TableCell>
                       <strong>{row.label ?? row.receipt_number ?? '—'}</strong>
                       {row.cashier && (
-                        <div className="text-muted small">{row.cashier}</div>
+                        <div className="text-[var(--oe-nc-text-muted)] text-sm">{row.cashier}</div>
                       )}
-                    </td>
-                    <td>{formatChartMoney(row.amount ?? row.amount_paid)}</td>
-                    <td>{visitLabel}</td>
-                    <td className="text-right">
+                    </TableCell>
+                    <TableCell>{formatChartMoney(row.amount ?? row.amount_paid)}</TableCell>
+                    <TableCell>{visitLabel}</TableCell>
+                    <TableCell className="text-right">
                       {row.can_reprint && (
-                        <button
+                        <Button
                           type="button"
-                          className="btn btn-outline-secondary btn-sm"
+                          variant="outline"
+                          size="sm"
                           disabled={reprintSubmitting}
                           onClick={() => { void handleReprint(row); }}
                         >
                           Reprint
-                        </button>
+                        </Button>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 
       {hasMore && (
-        <button
+        <Button
           type="button"
-          className="btn btn-outline-secondary btn-sm mt-2"
+          variant="outline"
+          size="sm"
+          className="mt-2"
           disabled={loadingMore}
           onClick={() => { void loadMore(); }}
         >
           Load more
-        </button>
+        </Button>
       )}
 
       <ReprintReceiptModal

@@ -47,7 +47,7 @@ $respB = smokeHttpRequest(
 
 function checkWrap(array $resp, string $label): bool
 {
-    $hasWrap = str_contains($resp['body'], 'id="oe-nc-history-editor-wrap"');
+    $hasWrap = str_contains($resp['body'], 'id="nc-history-editor-wrap"');
     $hasBack = str_contains($resp['body'], 'Back to chart') || str_contains($resp['body'], 'Back To Chart');
 
     echo $label . ' HTTP ' . $resp['code'] . PHP_EOL;

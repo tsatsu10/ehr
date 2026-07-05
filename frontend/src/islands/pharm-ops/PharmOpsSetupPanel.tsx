@@ -1,4 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { Card, CardContent } from '@components/ui/card';
 import { oeFetch } from '@core/oeFetch';
 import type { PharmSetupStatus } from './pharmOpsTypes';
 import { PharmOpsControlledCatalog } from './PharmOpsControlledCatalog';
@@ -69,12 +73,12 @@ export function PharmOpsSetupPanel({
   const needsFormulary = !setup.has_starter_formulary;
 
   return (
-    <div className="oe-nc-pharmops-setup card mb-3" id="nc-pharmops-setup">
-      <div className="card-body">
-        <div className="d-flex flex-wrap justify-content-between align-items-start mb-2">
+    <Card className="nc-pharmops-setup mb-3" id="nc-pharmops-setup">
+      <CardContent>
+        <div className="flex flex-wrap justify-between items-start mb-2">
           <div>
-            <h2 className="h6 mb-1">Pharmacy setup</h2>
-            <p className="small text-muted mb-0">
+            <h2 className="text-sm font-semibold mb-1">Pharmacy setup</h2>
+            <p className="text-sm text-[var(--oe-nc-text-muted)] mb-0">
               In-house level:
               {' '}
               {setup.inhouse_pharmacy_label ?? 'Unknown'}
@@ -84,32 +88,33 @@ export function PharmOpsSetupPanel({
             </p>
           </div>
           {setup.can_manage_catalog ? (
-            <span className="badge badge-light">Catalog admin</span>
+            <Badge variant="outline">Catalog admin</Badge>
           ) : null}
         </div>
 
         {actionError ? (
-          <div className="alert alert-warning py-2 mb-2" role="alert">{actionError}</div>
+          <div className={deskCalloutClass('warn', 'py-2 mb-2')} role="alert">{actionError}</div>
         ) : null}
         {actionSuccess ? (
-          <div className="alert alert-success py-2 mb-2" role="status">{actionSuccess}</div>
+          <div className={deskCalloutClass('success', 'py-2 mb-2')} role="status">{actionSuccess}</div>
         ) : null}
 
         {needsWarehouse ? (
           <div className="mb-3">
-            <p className="small mb-2">Step 1 — Create a default warehouse for receiving stock.</p>
-            <button
+            <p className="text-sm mb-2">Step 1 — Create a default warehouse for receiving stock.</p>
+            <Button
               type="button"
-              className="btn btn-outline-primary btn-sm"
+              variant="outline"
+              size="sm"
               id="nc-pharmops-setup-warehouse"
               disabled={!setup.can_manage_catalog}
               onClick={() => { void createWarehouse(); }}
             >
               Create warehouse
-            </button>
+            </Button>
           </div>
         ) : (
-          <div className="small text-muted mb-3">
+          <div className="text-sm text-[var(--oe-nc-text-muted)] mb-3">
             Warehouse ready
             {setup.default_warehouse_id ? ` (${setup.default_warehouse_id})` : ''}.
           </div>
@@ -117,26 +122,27 @@ export function PharmOpsSetupPanel({
 
         {needsFormulary ? (
           <div className="mb-3">
-            <p className="small mb-2">
+            <p className="text-sm mb-2">
               Step 2 — Import the OPD starter formulary (10 essential products with templates and prices).
             </p>
-            <button
+            <Button
               type="button"
-              className="btn btn-primary btn-sm mr-2"
+              size="sm"
+              className="mr-2"
               id="nc-pharmops-setup-import"
               disabled={!setup.can_manage_catalog || !setup.starter_csv_available}
               onClick={() => { void importStarter(); }}
             >
               Import starter formulary
-            </button>
+            </Button>
           </div>
         ) : (
-          <div className="alert alert-success py-2 px-3 small mb-3">
+          <div className={deskCalloutClass('success', 'py-2 px-3 text-sm mb-3')}>
             Starter formulary imported ({setup.drug_count} active products).
           </div>
         )}
 
-        <div className="small text-muted">
+        <div className="text-sm text-[var(--oe-nc-text-muted)]">
           Step 3 — Map fees in
           {' '}
           {setup.admin_hub_url ? (
@@ -152,7 +158,7 @@ export function PharmOpsSetupPanel({
           csrfToken={csrfToken}
           enabled={!!setup.can_manage_catalog && !needsFormulary}
         />
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

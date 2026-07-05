@@ -65,7 +65,7 @@ test.describe('§21 golden path rollout smoke', () => {
       expect(response?.status(), await page.content()).toBe(200);
       const html = await page.content();
       expect(
-        html.includes('oe-nc-t1') || html.includes('id="oe-nc-t1"'),
+        html.includes('nc-t1') || html.includes('id="nc-t1"'),
         `${label} should render T1 shell`,
       ).toBe(true);
     });

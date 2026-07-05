@@ -1,6 +1,8 @@
 import { oeFetch } from '@core/oeFetch';
 import { ChartBanner } from '@islands/patient-chart/ChartBanner';
 import { WidgetCard } from '@components/WidgetCard';
+import { Button } from '@components/ui/button';
+import type { ReactNode } from 'react';
 import type { ChartDepthMode, ChartPreview } from './chartDepthTypes';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -17,7 +19,7 @@ interface ChartDepthShellProps {
   pid: number;
   chartUrl: string;
   visitBoardUrl: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export function ChartDepthShell({
@@ -45,20 +47,24 @@ export function ChartDepthShell({
   }, [fetchOptions, pid]);
 
   return (
-    <div className={`oe-nc-chart-depth-${mode}`}>
+    <div className={`nc-chart-depth-${mode}`}>
       <WidgetCard
         className="mb-3"
         bodyPad="pad"
-        title={<h2 className="oe-nc-widget-card__title mb-0">{TITLES[mode]}</h2>}
-        headerClassName="d-flex justify-content-between align-items-center flex-wrap"
+        title={TITLES[mode]}
+        headerClassName="flex justify-between items-center flex-wrap"
         actions={(
-          <div className="btn-group btn-group-sm mt-2 mt-md-0">
-            <a href={chartUrl} className="btn btn-outline-primary" target="_top">
-              Back to chart
-            </a>
-            <a href={visitBoardUrl} className="btn btn-outline-secondary" target="_top">
-              Visit Board
-            </a>
+          <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
+            <Button variant="outline" size="sm" asChild>
+              <a href={chartUrl} target="_top">
+                Back to chart
+              </a>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <a href={visitBoardUrl} target="_top">
+                Visit Board
+              </a>
+            </Button>
           </div>
         )}
       >

@@ -1,3 +1,5 @@
+import { Button } from '@components/ui/button';
+import { Card, CardContent } from '@components/ui/card';
 import type { ConfigExportMeta } from './adminTypes';
 
 interface ConfigExportCardProps {
@@ -14,30 +16,32 @@ export function ConfigExportCard({
   onExport,
 }: ConfigExportCardProps) {
   return (
-    <div className="card mb-3" id="nc-admin-config-export">
-      <div className="card-body">
-        <h5 className="card-title mb-1">Site template export (M15-F13)</h5>
-        <p className="text-muted small mb-3">
+    <Card className="mb-3" id="nc-admin-config-export">
+      <CardContent>
+        <h5 className="text-base font-semibold mb-1">Site template export (M15-F13)</h5>
+        <p className="text-[var(--oe-nc-text-muted)] text-sm mb-3">
           Download facility-scoped M6 settings, visit types, and fee schedule as JSON for a second
           branch or NG7 prep — not a full SQL site dump.
         </p>
-        <div className="d-flex flex-wrap align-items-center">
-          <button
+        <div className="flex flex-wrap items-center">
+          <Button
             type="button"
-            className="btn btn-outline-primary btn-sm mr-2"
+            variant="outline"
+            size="sm"
+            className="mr-2"
             disabled={!meta.can_export || exporting}
             onClick={onExport}
           >
             {exporting ? 'Preparing…' : 'Download M6 config JSON'}
-          </button>
-          <span className="small text-muted">
+          </Button>
+          <span className="text-sm text-[var(--oe-nc-text-muted)]">
             Scope: {scopeLabel || 'current clinic'}
           </span>
         </div>
         {!meta.can_export && meta.blocked_reason && (
-          <p className="small text-muted mb-0 mt-2">{meta.blocked_reason}</p>
+          <p className="text-sm text-[var(--oe-nc-text-muted)] mb-0 mt-2">{meta.blocked_reason}</p>
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

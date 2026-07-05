@@ -2,9 +2,23 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useSt
 import { oeFetch } from '@core/oeFetch';
 import type { RegistrationDupResult } from '@core/types';
 import { ConfirmModal } from '@components/ConfirmModal';
+import { showDeskToast } from '@components/deskToast';
+import { DeskAlert } from '@components/DeskAlert';
+import { Button } from '@components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@components/ui/card';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@components/ui/select';
 import { RegistrationDupPanel } from './RegistrationDupPanel';
 import type { RegistrationFormHandle } from './RegistrationForm';
 import { parseSearchQuery } from './registrationFormUtils';
+import { Play, Save } from 'lucide-react';
 
 interface QuickAddRegistrationProps {
     ajaxUrl: string;
@@ -14,6 +28,8 @@ interface QuickAddRegistrationProps {
     onUseExisting: (pid: number) => void;
     onCancel: () => void;
     onDiscardConfirm?: (onProceed: () => void) => void;
+    /** Front Desk preview pane already renders the section title — omit duplicate heading. */
+    hideTitle?: boolean;
 }
 
 function shouldRunDupCheck(payload: {
@@ -28,7 +44,7 @@ function shouldRunDupCheck(payload: {
 
 export const QuickAddRegistration = forwardRef<RegistrationFormHandle, QuickAddRegistrationProps>(
     function QuickAddRegistration(
-        { ajaxUrl, csrfToken, prefill, onSaved, onUseExisting, onCancel, onDiscardConfirm },
+        { ajaxUrl, csrfToken, prefill, onSaved, onUseExisting, onCancel, onDiscardConfirm, hideTitle = false },
         ref,
     ) {
         const parsedPrefill = useMemo(() => parseSearchQuery(prefill ?? ''), [prefill]);
@@ -149,9 +165,17 @@ export const QuickAddRegistration = forwardRef<RegistrationFormHandle, QuickAddR
                     },
                 });
                 setDirty(false);
+                showDeskToast(
+                    startAfter ? 'Patient saved — starting visit.' : 'Patient saved.',
+                    'success',
+                );
                 onSaved(result.pid, startAfter);
             } catch (saveError) {
-                setError(saveError instanceof Error ? saveError.message : 'Save failed — network or server error.');
+                const message = saveError instanceof Error
+                    ? saveError.message
+                    : 'Save failed — network or server error.';
+                setError(message);
+                showDeskToast(message, 'danger');
             } finally {
                 setBusy(false);
             }
@@ -163,10 +187,17 @@ export const QuickAddRegistration = forwardRef<RegistrationFormHandle, QuickAddR
         };
 
         return (
-            <div className="nc-quick-add" id="nc-quick-add-form">
-                <h4>Quick Add patient</h4>
-                <p className="text-muted small">Level 1 identity — save then start visit.</p>
+            <Card className="nc-quick-add border-0 bg-transparent shadow-none" id="nc-quick-add-form">
+                {!hideTitle && (
+                    <CardHeader className="mb-3 flex-col items-start gap-1 border-0 px-0 py-0">
+                        <CardTitle className="text-lg">Quick Add patient</CardTitle>
+                        <CardDescription className="m-0">
+                            Level 1 identity — save then start visit.
+                        </CardDescription>
+                    </CardHeader>
+                )}
 
+                <CardContent className="p-0">
                 <div id="nc-dup-panel">
                     <RegistrationDupPanel
                         dup={dup}
@@ -180,77 +211,70 @@ export const QuickAddRegistration = forwardRef<RegistrationFormHandle, QuickAddR
                     />
                 </div>
 
-                <div className="form-row">
-                    <div className="form-group col-md-6">
-                        <label htmlFor="nc-qa-fname">First name</label>
-                        <input
-                            className="form-control"
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                        <Label htmlFor="nc-qa-fname">First name</Label>
+                        <Input
                             id="nc-qa-fname"
                             value={fname}
                             onChange={(e) => { setFname(e.target.value); markDirty(); }}
                         />
                     </div>
-                    <div className="form-group col-md-6">
-                        <label htmlFor="nc-qa-lname">Last name</label>
-                        <input
-                            className="form-control"
+                    <div className="space-y-1">
+                        <Label htmlFor="nc-qa-lname">Last name</Label>
+                        <Input
                             id="nc-qa-lname"
                             value={lname}
                             onChange={(e) => { setLname(e.target.value); markDirty(); }}
                         />
                     </div>
                 </div>
-                <div className="form-row">
-                    <div className="form-group col-md-4">
-                        <label htmlFor="nc-qa-sex">Sex</label>
-                        <select
-                            className="form-control"
-                            id="nc-qa-sex"
-                            value={sex}
-                            onChange={(e) => { setSex(e.target.value); markDirty(); }}
-                        >
-                            <option value="">Select</option>
-                            <option value="Female">Female</option>
-                            <option value="Male">Male</option>
-                            <option value="UNK">Other / Unknown</option>
-                        </select>
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div className="space-y-1">
+                        <Label htmlFor="nc-qa-sex">Sex</Label>
+                        <Select value={sex || undefined} onValueChange={(value) => { setSex(value); markDirty(); }}>
+                            <SelectTrigger id="nc-qa-sex">
+                                <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Female">Female</SelectItem>
+                                <SelectItem value="Male">Male</SelectItem>
+                                <SelectItem value="UNK">Other / Unknown</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
-                    <div className="form-group col-md-4">
-                        <label htmlFor="nc-qa-dob">Date of birth</label>
-                        <input
+                    <div className="space-y-1">
+                        <Label htmlFor="nc-qa-dob">Date of birth</Label>
+                        <Input
                             type="date"
-                            className="form-control"
                             id="nc-qa-dob"
                             value={dob}
                             onChange={(e) => { setDob(e.target.value); markDirty(); }}
                         />
                     </div>
-                    <div className="form-group col-md-4">
-                        <label htmlFor="nc-qa-age">Or age (years)</label>
-                        <input
+                    <div className="space-y-1">
+                        <Label htmlFor="nc-qa-age">Or age (years)</Label>
+                        <Input
                             type="number"
                             min={0}
                             max={130}
-                            className="form-control"
                             id="nc-qa-age"
                             value={ageYears}
                             onChange={(e) => { setAgeYears(e.target.value); markDirty(); }}
                         />
                     </div>
                 </div>
-                <div className="form-group">
-                    <label htmlFor="nc-qa-phone">Phone</label>
-                    <input
-                        className="form-control"
+                <div className="mt-3 space-y-1">
+                    <Label htmlFor="nc-qa-phone">Phone</Label>
+                    <Input
                         id="nc-qa-phone"
                         value={phone}
                         onChange={(e) => { setPhone(e.target.value); markDirty(); }}
                     />
                 </div>
-                <div className="form-group">
-                    <label htmlFor="nc-qa-no-phone-reason">No-phone reason (if blank phone)</label>
-                    <input
-                        className="form-control"
+                <div className="mt-3 space-y-1">
+                    <Label htmlFor="nc-qa-no-phone-reason">No-phone reason (if blank phone)</Label>
+                    <Input
                         id="nc-qa-no-phone-reason"
                         placeholder="child, elder, relative-contact"
                         value={noPhoneReason}
@@ -259,35 +283,33 @@ export const QuickAddRegistration = forwardRef<RegistrationFormHandle, QuickAddR
                 </div>
 
                 {error && (
-                    <div className="alert alert-danger" id="nc-qa-error">
+                    <DeskAlert tone="error" className="mt-3 flex items-start gap-3 text-sm" id="nc-qa-error" role="alert">
                         {error}
-                    </div>
+                    </DeskAlert>
                 )}
 
-                <div className="d-flex flex-wrap gap-2">
-                    <button
+                <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
                         type="button"
-                        className="oe-nc-btn-primary-lg mr-2 mb-2"
                         id="nc-qa-save"
                         disabled={busy}
                         onClick={() => void savePatient(false)}
                     >
-                        <i className="fa fa-save" aria-hidden="true" />
-                        <span>Save</span>
-                    </button>
-                    <button
+                        <Save className="h-4 w-4" aria-hidden="true" />
+                        Save
+                    </Button>
+                    <Button
                         type="button"
-                        className="oe-nc-btn-primary-lg mr-2 mb-2"
                         id="nc-qa-save-start"
                         disabled={busy}
                         onClick={() => void savePatient(true)}
                     >
-                        <i className="fa fa-play" aria-hidden="true" />
-                        <span>Save and Start visit</span>
-                    </button>
-                    <button
+                        <Play className="h-4 w-4" aria-hidden="true" />
+                        Save and Start visit
+                    </Button>
+                    <Button
                         type="button"
-                        className="btn btn-outline-secondary mb-2"
+                        variant="outline"
                         id="nc-qa-cancel"
                         disabled={busy}
                         onClick={() => {
@@ -298,8 +320,9 @@ export const QuickAddRegistration = forwardRef<RegistrationFormHandle, QuickAddR
                         }}
                     >
                         Cancel
-                    </button>
+                    </Button>
                 </div>
+                </CardContent>
 
                 <ConfirmModal
                     open={discardOpen}
@@ -320,7 +343,7 @@ export const QuickAddRegistration = forwardRef<RegistrationFormHandle, QuickAddR
                 >
                     <p className="mb-0">Discard unsaved registration changes?</p>
                 </ConfirmModal>
-            </div>
+            </Card>
         );
     },
 );

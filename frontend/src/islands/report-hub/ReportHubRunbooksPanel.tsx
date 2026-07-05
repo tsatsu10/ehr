@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@components/ui/card';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { Input } from '@components/ui/input';
 import type { ReportHubRunbookCard } from './reportHubTypes';
 
 interface Props {
@@ -18,46 +21,46 @@ export function ReportHubRunbooksPanel({ cards }: Props) {
   }, [cards, query]);
 
   return (
-    <Card className="oe-nc-reporthub-runbooks mt-4" id="nc-report-hub-runbooks">
+    <Card className="nc-reporthub-runbooks mt-4" id="nc-report-hub-runbooks">
       <CardHeader>
         <CardTitle>Day-2 reporting runbooks</CardTitle>
         <CardDescription>Operational tasks RR-01–RR-12 (M16). Search by task, screen, or ID.</CardDescription>
       </CardHeader>
       <CardContent>
-        <input
+        <Input
           type="search"
-          className="form-control form-control-sm mb-3"
+          className="h-8 mb-3"
           style={{ maxWidth: '20rem' }}
           placeholder="Search runbooks…"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           aria-label="Search reporting runbooks"
         />
-        <div className="row">
+        <div className="grid grid-cols-12 gap-3">
           {filtered.map((card) => (
-            <div className="col-md-6 col-lg-4 mb-3" key={card.id}>
+            <div className="col-span-12 md:col-span-6 lg:col-span-4 mb-3" key={card.id}>
               <Card className="h-100 border">
-                <CardContent className="d-flex flex-column h-100 pt-4">
-                  <div className="d-flex justify-content-between align-items-start mb-2">
-                    <span className="badge badge-light">{card.id}</span>
-                    <span className="text-muted small">{card.cadence}</span>
+                <CardContent className="flex flex-col h-full pt-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <Badge variant="neutral">{card.id}</Badge>
+                    <span className="text-[var(--oe-nc-text-muted)] text-sm">{card.cadence}</span>
                   </div>
                   <h6 className="mb-1">{card.title}</h6>
-                  <p className="text-muted small mb-2">{card.screen}</p>
-                  <p className="small grow mb-3">{card.detail}</p>
+                  <p className="text-[var(--oe-nc-text-muted)] text-sm mb-2">{card.screen}</p>
+                  <p className="text-sm grow mb-3">{card.detail}</p>
                   {card.url ? (
-                    <a className="btn btn-sm btn-outline-primary align-self-start" href={card.url}>
-                      Open
-                    </a>
+                    <Button variant="outline" size="sm" className="align-self-start" asChild>
+                      <a href={card.url}>Open</a>
+                    </Button>
                   ) : (
-                    <span className="text-muted small">Manual / offline</span>
+                    <span className="text-[var(--oe-nc-text-muted)] text-sm">Manual / offline</span>
                   )}
                 </CardContent>
               </Card>
             </div>
           ))}
           {filtered.length === 0 && (
-            <div className="col-12 text-muted small">No runbooks match your search.</div>
+            <div className="col-span-12 text-[var(--oe-nc-text-muted)] text-sm">No runbooks match your search.</div>
           )}
         </div>
       </CardContent>

@@ -1,31 +1,31 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { oeFetch } from '@core/oeFetch';
-import { hardAssignVisit } from '@core/hardAssignVisit';
-import type {
-  AppointmentTodayChip,
-  DeskVisitType,
-  FrontDeskPreviewData,
-  VisitStartData,
-} from '@core/types';
+/**
+ * StartVisitForm — renders visit-start fields and delegates all logic to useStartVisit.
+ */
+
+import { DeskAlert } from '@components/DeskAlert';
 import { Button } from '@components/ui/button';
 import { Label } from '@components/ui/label';
 import { Textarea } from '@components/ui/textarea';
-import { Checkbox } from '@components/ui/checkbox';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@components/ui/select';
-import { Play, CalendarCheck, Printer, CheckCircle2, AlertCircle, SkipForward, Loader2 } from 'lucide-react';
-import { RevisitGatePanel, type RevisitPath } from './RevisitGatePanel';
-import { SkipTriageModal } from './SkipTriageModal';
+import { Play, CalendarCheck, AlertCircle, Loader2, Clock, User, Flag } from 'lucide-react';
+import type { FrontDeskPreviewData } from '@core/types';
+import { RevisitGatePanel } from './RevisitGatePanel';
 import { ReferralUploadField } from './ReferralUploadField';
-import { uploadReferralDocument } from './referralUploadApi';
 import { HardAssignDoctorSelect } from '@components/HardAssignDoctorSelect';
+import { StartVisitSuccessView } from './StartVisitSuccessView';
+import { useStartVisit, type PriorityFlag } from './useStartVisit';
 
-interface StartVisitFormProps {
+const PRIORITY_OPTIONS: { value: PriorityFlag; label: string; title: string }[] = [
+  { value: 'standard', label: 'Standard',  title: 'Normal priority' },
+  { value: 'elderly',  label: 'Elderly',   title: 'Patient is elderly — fast-track' },
+  { value: 'pregnant', label: 'Pregnant',  title: 'Patient is pregnant — fast-track' },
+  { value: 'under_5',  label: 'Under 5',   title: 'Child under 5 years — fast-track' },
+  { value: 'urgent',   label: 'Urgent',    title: 'Urgent clinical need' },
+];
+
+export interface StartVisitFormProps {
   ajaxUrl: string;
   csrfToken: string;
   facilityId: number;
@@ -42,358 +42,78 @@ interface StartVisitFormProps {
   onStarted: () => void;
   onCompleteNow: () => void;
   onDirtyChange?: (dirty: boolean) => void;
+  onChiefComplaintChange?: (value: string) => void;
+  deskWaitingCount?: number;
+  arrivedAtMs?: number;
 }
 
-export function StartVisitForm({
-  ajaxUrl,
-  csrfToken,
-  facilityId,
-  pid,
-  preview,
-  moduleUrl,
-  printQueueSlip,
-  visitBoardUrl: _visitBoardUrl,
-  canSkipTriage = false,
-  canRevisitOverride = false,
-  enforceCompletionOnRevisit = true,
-  autoStart = false,
-  onAutoStartConsumed,
-  onStarted,
-  onCompleteNow,
-  onDirtyChange,
-}: StartVisitFormProps) {
-  const [types, setTypes] = useState<DeskVisitType[]>([]);
-  const [visitTypeId, setVisitTypeId] = useState('');
-  const [chiefComplaint, setChiefComplaint] = useState('');
-  const [isUrgent, setIsUrgent] = useState(false);
-  const [loadingTypes, setLoadingTypes] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<VisitStartData | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [revisitPath, setRevisitPath] = useState<RevisitPath | null>(null);
-  const [overrideReason, setOverrideReason] = useState('');
-  const [awaitingNote, setAwaitingNote] = useState<string | null>(null);
-  const [skipModalOpen, setSkipModalOpen] = useState(false);
-  const [skipSubmitting, setSkipSubmitting] = useState(false);
-  const [skipError, setSkipError] = useState<string | null>(null);
-  const [referralDocumentId, setReferralDocumentId] = useState<number | null>(null);
-  const [referralFilename, setReferralFilename] = useState<string | null>(null);
-  const [referralUploading, setReferralUploading] = useState(false);
-  const [hardAssignDoctorId, setHardAssignDoctorId] = useState('');
-  const [referralUploadError, setReferralUploadError] = useState<string | null>(null);
-  const autoStartAttemptedRef = useRef(false);
+export function StartVisitForm(props: StartVisitFormProps) {
+  const {
+    types, visitTypeId, setVisitTypeId, loadingTypes, selectedVisitType, showReferralUpload,
+    chiefComplaint, setChiefComplaint, priorityFlag, setPriorityFlag,
+    hardAssignDoctorId, setHardAssignDoctorId,
+    revisitPath, setRevisitPath, overrideReason, setOverrideReason,
+    submitting, error, success, successMsg, awaitingNote,
+    referralDocumentId, referralFilename, referralUploading, referralUploadError,
+    skipModalOpen, setSkipModalOpen, skipSubmitting, skipError,
+    fromAppointment, appointment, blockPlainStart, showArrivalAdvisor,
+    gateBlocked, canShowVisitFields, showHardAssign,
+    startLabel, gateActionLabel,
+    markDirty, startVisit, handleSkipTriage, handleReferralFile, clearReferralUpload,
+  } = useStartVisit({
+    ajaxUrl: props.ajaxUrl,
+    csrfToken: props.csrfToken,
+    facilityId: props.facilityId,
+    pid: props.pid,
+    preview: props.preview,
+    enforceCompletionOnRevisit: props.enforceCompletionOnRevisit,
+    autoStart: props.autoStart,
+    onAutoStartConsumed: props.onAutoStartConsumed,
+    onStarted: props.onStarted,
+    onCompleteNow: props.onCompleteNow,
+    onDirtyChange: props.onDirtyChange,
+    onChiefComplaintChange: props.onChiefComplaintChange,
+    deskWaitingCount: props.deskWaitingCount,
+    arrivedAtMs: props.arrivedAtMs,
+  });
 
-  const selectedVisitType = types.find((type) => String(type.id) === visitTypeId) ?? null;
-  const showReferralUpload = !!selectedVisitType?.allows_referral_upload;
-
-  const appointment: AppointmentTodayChip | null =
-    preview.appointment_today ?? preview.chips?.appointment_today ?? null;
-  const fromAppointment = !!(appointment?.pc_eid);
-  const queueBridge = preview.queue_bridge;
-  const blockPlainStart = !!(queueBridge?.enabled && queueBridge.block_plain_start && !fromAppointment);
-  const showArrivalAdvisor = !!(queueBridge?.enabled && queueBridge.show_arrival_advisor && fromAppointment);
+  const {
+    preview, canSkipTriage = false, canRevisitOverride = false,
+    moduleUrl, printQueueSlip, arrivedAtMs, deskWaitingCount,
+    onStarted,
+  } = props;
   const activeVisit = preview.active_visit;
-  const gate = preview.revisit_gate;
-  const gateBlocked = !!(
-    enforceCompletionOnRevisit
-    && gate?.applies
-    && gate.blocked
-  );
-  const showHardAssign = !!(
-    preview.hard_provider_assignment_enabled
-    && preview.can_hard_assign_provider
-    && (preview.assignable_doctors?.length ?? 0) > 0
-  );
-
-  useEffect(() => {
-    onDirtyChange?.(false);
-    setRevisitPath(null);
-    setOverrideReason('');
-    setAwaitingNote(null);
-    setReferralDocumentId(null);
-    setReferralFilename(null);
-    setReferralUploadError(null);
-    setHardAssignDoctorId('');
-  }, [activeVisit, fromAppointment, onDirtyChange, pid]);
-
-  useEffect(() => {
-    if (activeVisit) return;
-
-    let cancelled = false;
-
-    async function loadTypes() {
-      setLoadingTypes(true);
-      try {
-        const data = await oeFetch<{ visit_types: DeskVisitType[] }>('visit.types', {
-          ajaxUrl,
-          csrfToken,
-          params: facilityId > 0 ? { facility_id: facilityId } : undefined,
-        });
-        if (cancelled) return;
-
-        let list = data.visit_types ?? [];
-        if (fromAppointment) {
-          list = list.filter((t) => t.service_profile === 'full_opd');
-        }
-        setTypes(list);
-
-        const defaultId = fromAppointment && appointment?.default_visit_type_id
-          ? String(appointment.default_visit_type_id)
-          : String(list.find((t) => t.is_default)?.id ?? list[0]?.id ?? '');
-        setVisitTypeId(defaultId);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load visit types');
-        }
-      } finally {
-        if (!cancelled) setLoadingTypes(false);
-      }
-    }
-
-    void loadTypes();
-    return () => { cancelled = true; };
-  }, [
-    activeVisit,
-    ajaxUrl,
-    appointment?.default_visit_type_id,
-    csrfToken,
-    facilityId,
-    fromAppointment,
-  ]);
-
-  const markDirty = useCallback(() => { onDirtyChange?.(true); }, [onDirtyChange]);
-
-  const handleReferralFile = useCallback(async (file: File) => {
-    setReferralUploading(true);
-    setReferralUploadError(null);
-    markDirty();
-    try {
-      const result = await uploadReferralDocument(ajaxUrl, csrfToken, pid, file, facilityId);
-      setReferralDocumentId(result.document_id);
-      setReferralFilename(result.filename);
-    } catch (err) {
-      setReferralDocumentId(null);
-      setReferralFilename(null);
-      setReferralUploadError(err instanceof Error ? err.message : 'Referral upload failed');
-    } finally {
-      setReferralUploading(false);
-    }
-  }, [ajaxUrl, csrfToken, facilityId, markDirty, pid]);
-
-  const clearReferralUpload = useCallback(() => {
-    setReferralDocumentId(null);
-    setReferralFilename(null);
-    setReferralUploadError(null);
-    markDirty();
-  }, [markDirty]);
-
-  const canShowVisitFields = !gateBlocked || revisitPath === 'manager_override';
-
-  const startVisit = useCallback(async () => {
-    if (gateBlocked && revisitPath === 'complete_now') {
-      onCompleteNow();
-      return;
-    }
-
-    if (gateBlocked && revisitPath === 'awaiting_documents') {
-      setSubmitting(true);
-      setError(null);
-      try {
-        await oeFetch('front_desk.revisit_awaiting_documents', {
-          ajaxUrl,
-          csrfToken,
-          method: 'POST',
-          json: { pid },
-        });
-        setAwaitingNote('Patient noted as fetching documents. Start visit when the profile is complete.');
-        onDirtyChange?.(false);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to save note');
-      } finally {
-        setSubmitting(false);
-      }
-      return;
-    }
-
-    if (gateBlocked && revisitPath === 'manager_override' && overrideReason.trim() === '') {
-      setError('Manager override reason is required');
-      return;
-    }
-
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      const action = fromAppointment ? 'visit.start_from_appointment' : 'visit.start';
-      const body: Record<string, unknown> = {
-        pid,
-        visit_type_id: parseInt(visitTypeId, 10),
-        chief_complaint: chiefComplaint.trim(),
-        is_urgent: isUrgent,
-      };
-      if (facilityId > 0) body.facility_id = facilityId;
-      if (fromAppointment && appointment) {
-        body.pc_eid = appointment.pc_eid;
-        body.appt_date = appointment.appt_date;
-      }
-      if (gateBlocked && revisitPath === 'manager_override') {
-        body.revisit_override_reason = overrideReason.trim();
-      }
-      if (referralDocumentId != null && referralDocumentId > 0) {
-        body.referral_document_id = referralDocumentId;
-      }
-
-      const data = await oeFetch<VisitStartData>(action, {
-        ajaxUrl,
-        csrfToken,
-        method: 'POST',
-        json: body,
-      });
-
-      const parsedDoctorId = hardAssignDoctorId
-        ? Number.parseInt(hardAssignDoctorId, 10)
-        : 0;
-      if (parsedDoctorId > 0 && data.visit.id) {
-        await hardAssignVisit({
-          ajaxUrl,
-          csrfToken,
-          facilityId,
-          visitId: data.visit.id,
-          rowVersion: data.visit.row_version ?? 0,
-          hardAssignedProviderId: parsedDoctorId,
-        });
-      }
-
-      const queueNumber = data.visit.queue_number ?? '?';
-      let msg = `Visit #${queueNumber} started — patient is now on the Triage queue.`;
-      if (fromAppointment && data.recurring_guard_fired) {
-        msg = `Visit #${queueNumber} started. Recurring appointment — update Flow Board if needed.`;
-      } else if (fromAppointment && data.appointment_status_updated) {
-        msg = `Visit #${queueNumber} started and appointment marked arrived.`;
-      }
-
-      setSuccess(data);
-      setSuccessMsg(msg);
-      onDirtyChange?.(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start visit');
-    } finally {
-      setSubmitting(false);
-    }
-  }, [
-    ajaxUrl, appointment, chiefComplaint, csrfToken, facilityId, fromAppointment,
-    gateBlocked, hardAssignDoctorId, isUrgent, onCompleteNow, onDirtyChange, overrideReason, pid,
-    referralDocumentId, revisitPath, visitTypeId,
-  ]);
-
-  const handleSkipTriage = useCallback(async (reason: string) => {
-    if (!success?.visit.id) return;
-    setSkipSubmitting(true);
-    setSkipError(null);
-    try {
-      const data = await oeFetch<{ visit: { state?: string } }>('visit.skip_triage', {
-        ajaxUrl,
-        csrfToken,
-        method: 'POST',
-        json: {
-          visit_id: success.visit.id,
-          row_version: success.visit.row_version ?? 0,
-          reason,
-        },
-        params: facilityId > 0 ? { facility_id: facilityId } : undefined,
-      });
-      setSuccessMsg(`Visit #${success.visit.queue_number ?? '?'} sent to doctor queue (skipped triage).`);
-      setSuccess((prev) =>
-        prev
-          ? { ...prev, visit: { ...prev.visit, state: (data.visit.state ?? 'ready_for_doctor') as import('@core/types').VisitState } }
-          : prev
-      );
-      setSkipModalOpen(false);
-    } catch (err) {
-      setSkipError(err instanceof Error ? err.message : 'Skip triage failed');
-    } finally {
-      setSkipSubmitting(false);
-    }
-  }, [ajaxUrl, csrfToken, facilityId, success]);
-
-  useEffect(() => {
-    if (!autoStart || autoStartAttemptedRef.current || activeVisit || loadingTypes || !types.length || success) return;
-    if (gateBlocked) return;
-    autoStartAttemptedRef.current = true;
-    onAutoStartConsumed?.();
-    void startVisit();
-  }, [activeVisit, autoStart, gateBlocked, loadingTypes, onAutoStartConsumed, startVisit, success, types.length]);
+  const StartIcon = fromAppointment ? CalendarCheck : Play;
 
   if (activeVisit) return null;
 
   if (awaitingNote) {
     return (
-      <div className="oe-nc-info-callout mt-3 rounded-lg px-4 py-3 flex items-start gap-3" id="nc-awaiting-documents-note">
-        <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-sky-600" />
+      <DeskAlert tone="info" className="mt-3 flex items-start gap-3" id="nc-awaiting-documents-note">
         <span className="text-sm">{awaitingNote}</span>
-      </div>
+      </DeskAlert>
     );
   }
 
   if (success && successMsg) {
-    const visitId = success.visit.id;
-    const visitState = success.visit.state;
-    const showSkip = canSkipTriage && visitState === 'waiting';
-    const slipUrl = success.queue_slip_url
-      ?? (printQueueSlip && visitId
-        ? `${moduleUrl}/queue-slip.php?visit_id=${encodeURIComponent(String(visitId))}&print=1`
-        : '');
-    const showPrint = printQueueSlip && success.queue_slip_enabled !== false && !!slipUrl;
-
     return (
-      <div className="mt-3 border-t border-(--oe-nc-border) pt-4" id="nc-start-visit-mount">
-        <div
-          className="oe-nc-success-callout mb-4 rounded-xl px-4 py-3 flex items-start gap-3"
-          id="nc-start-visit-success"
-        >
-          <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 mt-0.5" />
-          <span className="text-sm font-medium text-emerald-800">{successMsg}</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {showPrint && (
-            <Button variant="default" size="sm" asChild>
-              <a href={slipUrl} target="_blank" rel="noopener noreferrer">
-                <Printer className="h-4 w-4" />
-                Print queue slip
-              </a>
-            </Button>
-          )}
-          {showSkip && (
-            <Button
-              variant="warning"
-              size="sm"
-              id="nc-skip-to-doctor-btn"
-              onClick={() => setSkipModalOpen(true)}
-            >
-              <SkipForward className="h-4 w-4" />
-              Skip to doctor
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            id="nc-start-visit-done"
-            onClick={onStarted}
-          >
-            Done
-          </Button>
-        </div>
-        <SkipTriageModal
-          open={skipModalOpen}
-          displayName={preview.identity.display_name}
-          pubpid={preview.identity.pubpid}
-          submitting={skipSubmitting}
-          error={skipError}
-          onClose={() => setSkipModalOpen(false)}
-          onConfirm={(reason) => void handleSkipTriage(reason)}
-        />
-      </div>
+      <StartVisitSuccessView
+        success={success}
+        successMsg={successMsg}
+        chiefComplaint={chiefComplaint}
+        moduleUrl={moduleUrl}
+        printQueueSlip={printQueueSlip}
+        canSkipTriage={canSkipTriage}
+        skipModalOpen={skipModalOpen}
+        skipSubmitting={skipSubmitting}
+        skipError={skipError}
+        displayName={preview.identity.display_name}
+        pubpid={preview.identity.pubpid}
+        onStarted={onStarted}
+        onSkipOpen={() => setSkipModalOpen(true)}
+        onSkipClose={() => setSkipModalOpen(false)}
+        onSkipConfirm={(reason) => void handleSkipTriage(reason)}
+      />
     );
   }
 
@@ -408,66 +128,69 @@ export function StartVisitForm({
 
   if (!types.length) {
     return (
-      <div className="oe-nc-error-callout mt-3 rounded-lg px-4 py-3 flex items-start gap-3">
+      <DeskAlert tone="error" className="mt-3 flex items-start gap-3">
         <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-red-600" />
         <span className="text-sm">
-          {fromAppointment
-            ? 'No OPD visit type available for appointment check-in.'
-            : 'No visit types configured.'}
+          {fromAppointment ? 'No OPD visit type available for appointment check-in.' : 'No visit types configured.'}
         </span>
-      </div>
+      </DeskAlert>
     );
   }
 
-  const startLabel = fromAppointment ? 'Start visit & check in' : 'Start visit';
-  const StartIcon = fromAppointment ? CalendarCheck : Play;
-  const gateActionLabel = revisitPath === 'complete_now'
-    ? 'Complete profile now'
-    : revisitPath === 'awaiting_documents'
-      ? 'Note awaiting documents'
-      : startLabel;
-
   return (
-    <div className="oe-nc-start-visit-panel mt-4 pt-4 border-t border-(--oe-nc-border)" id="nc-start-visit-mount">
+    <div className="nc-start-visit-panel mt-4 pt-4 border-t border-(--oe-nc-border)" id="nc-start-visit-mount">
       <h6 className="text-sm font-semibold text-(--oe-nc-text) mb-3 m-0">{startLabel}</h6>
 
-      {showArrivalAdvisor && (
-        <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-          This patient has an appointment today. Use <strong>Start visit &amp; check in</strong> so the
-          calendar and visit queue stay aligned.
-        </div>
+      {fromAppointment && (
+        <DeskAlert tone="info" className="mb-3 text-sm">
+          <div className="flex items-center gap-2 flex-wrap">
+            <CalendarCheck className="h-4 w-4 shrink-0 text-sky-600" />
+            <span className="font-medium">Appointment today</span>
+            {appointment?.start_time_label && (
+              <span className="flex items-center gap-1 text-(--oe-nc-text-muted)">
+                <Clock className="h-3 w-3" />{appointment.start_time_label}
+              </span>
+            )}
+            {appointment?.provider_name && (
+              <span className="flex items-center gap-1 text-(--oe-nc-text-muted)">
+                <User className="h-3 w-3" />{appointment.provider_name}
+              </span>
+            )}
+          </div>
+          {showArrivalAdvisor && (
+            <p className="text-xs mt-1.5 mb-0 text-(--oe-nc-text-muted)">
+              Use <strong>Start visit &amp; check in</strong> so the calendar and visit queue stay aligned.
+            </p>
+          )}
+        </DeskAlert>
       )}
 
       {blockPlainStart && (
-        <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        <DeskAlert tone="warn" className="mb-3 text-sm">
           Patient is marked arrived on the schedule but has no clinical visit yet. Open{' '}
-          {queueBridge?.hub_url ? (
-            <a href={queueBridge.hub_url} className="font-semibold underline">Queue Bridge</a>
-          ) : (
-            'Queue Bridge'
-          )}{' '}
+          {preview.queue_bridge?.hub_url
+            ? <a href={preview.queue_bridge.hub_url} className="font-semibold underline">Queue Bridge</a>
+            : 'Queue Bridge'
+          }{' '}
           to start visit &amp; check in — plain Start visit is blocked until resolved.
-        </div>
+        </DeskAlert>
       )}
 
-      {gateBlocked && gate && (
+      {gateBlocked && preview.revisit_gate && (
         <RevisitGatePanel
-          score={gate.score}
-          threshold={gate.threshold}
-          pediatricDobBlock={gate.pediatric_dob_block}
-          missingLabels={gate.missing_labels ?? preview.completion.missing_labels ?? []}
-          canManagerOverride={canRevisitOverride && gate.can_manager_override}
+          score={preview.revisit_gate.score}
+          threshold={preview.revisit_gate.threshold}
+          pediatricDobBlock={preview.revisit_gate.pediatric_dob_block}
+          missingLabels={preview.revisit_gate.missing_labels ?? preview.completion.missing_labels ?? []}
+          canManagerOverride={canRevisitOverride && preview.revisit_gate.can_manager_override}
           selectedPath={revisitPath}
           overrideReason={overrideReason}
           onSelectPath={(path) => {
             setRevisitPath(path);
             markDirty();
-            if (path === 'complete_now') onCompleteNow();
+            if (path === 'complete_now') props.onCompleteNow();
           }}
-          onOverrideReasonChange={(value) => {
-            setOverrideReason(value);
-            markDirty();
-          }}
+          onOverrideReasonChange={(value) => { setOverrideReason(value); markDirty(); }}
         />
       )}
 
@@ -475,31 +198,22 @@ export function StartVisitForm({
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="nc-visit-type">Visit type</Label>
-            <Select
-              value={visitTypeId}
-              onValueChange={(val) => {
-                setVisitTypeId(val);
-                setReferralDocumentId(null);
-                setReferralFilename(null);
-                setReferralUploadError(null);
-                markDirty();
-              }}
-            >
+            <Select value={visitTypeId} onValueChange={(val) => {
+              setVisitTypeId(val);
+              clearReferralUpload();
+              markDirty();
+            }}>
               <SelectTrigger id="nc-visit-type">
                 <SelectValue placeholder="Select visit type" />
               </SelectTrigger>
               <SelectContent>
                 {types.map((type) => (
-                  <SelectItem key={type.id} value={String(type.id)}>
-                    {type.label}
-                  </SelectItem>
+                  <SelectItem key={type.id} value={String(type.id)}>{type.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {selectedVisitType?.service_profile_hint && (
-              <p className="text-xs text-(--oe-nc-text-muted)">
-                {selectedVisitType.service_profile_hint}
-              </p>
+              <p className="text-xs text-(--oe-nc-text-muted)">{selectedVisitType.service_profile_hint}</p>
             )}
           </div>
 
@@ -517,32 +231,55 @@ export function StartVisitForm({
           )}
 
           <div className="space-y-1.5">
-            <Label htmlFor="nc-chief-complaint">Reason for visit</Label>
+            <div className="flex items-baseline justify-between gap-2">
+              <Label htmlFor="nc-chief-complaint">Reason for visit</Label>
+              <span className="text-xs tabular-nums text-(--oe-nc-text-muted)" aria-live="polite">
+                {chiefComplaint.length}/500
+              </span>
+            </div>
             <Textarea
               id="nc-chief-complaint"
               rows={2}
               maxLength={500}
-              placeholder="Chief complaint…"
+              placeholder="Why the patient came today…"
               value={chiefComplaint}
               onChange={(e) => {
                 setChiefComplaint(e.target.value);
+                props.onChiefComplaintChange?.(e.target.value);
                 markDirty();
               }}
             />
+            <p className="text-xs text-(--oe-nc-text-muted) m-0">
+              Optional — saved on the visit and shown on the banner for triage and doctor.
+            </p>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <Checkbox
-              id="nc-is-urgent"
-              checked={isUrgent}
-              onCheckedChange={(checked) => {
-                setIsUrgent(checked === true);
-                markDirty();
-              }}
-            />
-            <Label htmlFor="nc-is-urgent" className="normal-case tracking-normal text-sm font-medium cursor-pointer">
-              Urgent
-            </Label>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Priority</Label>
+            <div className="nc-priority-chips" role="group" aria-label="Visit priority">
+              {PRIORITY_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  title={opt.title}
+                  aria-pressed={priorityFlag === opt.value}
+                  className={[
+                    'nc-priority-chip',
+                    priorityFlag === opt.value ? 'nc-priority-chip--active' : '',
+                    opt.value !== 'standard' ? 'nc-priority-chip--flag' : '',
+                  ].filter(Boolean).join(' ')}
+                  onClick={() => { setPriorityFlag(opt.value); markDirty(); }}
+                >
+                  {opt.value !== 'standard' && <Flag className="h-3 w-3 shrink-0" aria-hidden="true" />}
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            {priorityFlag !== 'standard' && (
+              <p className="text-xs text-(--oe-nc-text-muted) m-0">
+                Fast-track patient will be sorted above standard queue entries.
+              </p>
+            )}
           </div>
 
           {showHardAssign && (
@@ -554,39 +291,51 @@ export function StartVisitForm({
                 value={hardAssignDoctorId}
                 disabled={submitting}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                onChange={(value) => {
-                  setHardAssignDoctorId(value);
-                  markDirty();
-                }}
+                onChange={(value) => { setHardAssignDoctorId(value); markDirty(); }}
               />
             </div>
           )}
         </div>
       )}
 
-      <div className="oe-nc-start-visit__footer mt-4 flex flex-wrap gap-2">
-        {!blockPlainStart && (
-        <Button
-          size="lg"
-          variant={fromAppointment ? 'cta' : 'default'}
-          id="nc-start-visit-btn"
-          disabled={submitting || (gateBlocked && !revisitPath)}
-          onClick={() => void startVisit()}
-        >
-          {submitting
-            ? <Loader2 className="h-4 w-4 animate-spin" />
-            : <StartIcon className="h-4 w-4" />
-          }
-          {submitting ? 'Starting…' : gateActionLabel}
-        </Button>
+      <div className="nc-start-visit-footer mt-4 flex flex-col gap-2">
+        {typeof arrivedAtMs === 'number' && (
+          <p className="nc-arrival-pill text-xs m-0" id="nc-arrival-time">
+            <Clock className="h-3 w-3 inline mr-1" aria-hidden="true" />
+            Arrived{' '}
+            {Math.max(0, Math.round((Date.now() - arrivedAtMs) / 60_000)) === 0
+              ? 'just now'
+              : `${Math.max(0, Math.round((Date.now() - arrivedAtMs) / 60_000))} min ago`}
+          </p>
         )}
+        {typeof deskWaitingCount === 'number' && (
+          <p className="text-xs text-(--oe-nc-text-muted) m-0" id="nc-queue-hint">
+            {deskWaitingCount === 0
+              ? 'Queue is empty — patient will be first in line.'
+              : `${deskWaitingCount} ${deskWaitingCount === 1 ? 'patient' : 'patients'} currently waiting.`}
+          </p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          {!blockPlainStart && (
+            <Button
+              size="lg"
+              variant={fromAppointment ? 'cta' : 'default'}
+              id="nc-start-visit-btn"
+              disabled={submitting || (gateBlocked && !revisitPath)}
+              onClick={() => void startVisit()}
+            >
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <StartIcon className="h-4 w-4" />}
+              {submitting ? 'Starting…' : gateActionLabel}
+            </Button>
+          )}
+        </div>
       </div>
 
       {error && (
-        <div className="oe-nc-error-callout mt-3 rounded-lg px-4 py-3 flex items-start gap-3" id="nc-start-visit-error" role="alert">
+        <DeskAlert tone="error" className="mt-3 flex items-start gap-3" id="nc-start-visit-error" role="alert">
           <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-red-600" />
           <span className="text-sm text-red-800">{error}</span>
-        </div>
+        </DeskAlert>
       )}
     </div>
   );

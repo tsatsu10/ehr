@@ -1,5 +1,26 @@
 import { useEffect, useState } from 'react';
 import { useModalDismiss } from '@components/useModalDismiss';
+import { Button } from '@components/ui/button';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@components/ui/select';
+import {
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  dialogContentSizeClass,
+} from '@components/ui/dialog';
 import type {
   BillingCode,
   BillingCodeType,
@@ -116,217 +137,210 @@ export function FeeModal({
   if (!open) return null;
 
   return (
-    <>
-      <div
-        className="modal fade show d-block"
+    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogContent
         id="nc-admin-fee-modal"
-        tabIndex={-1}
-        role="dialog"
+        className={dialogContentSizeClass.lg}
         aria-labelledby="nc-admin-fee-title"
-        aria-modal="true"
       >
-        <div className="modal-dialog modal-lg" role="document">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5 className="modal-title" id="nc-admin-fee-title">
-                {row ? 'Edit fee line' : 'Add fee line'}
-              </h5>
-              <button
-                type="button"
-                className="btn btn-link close"
-                id="nc-admin-fee-close"
-                aria-label="Close"
-                onClick={onClose}
-              >
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
-            <div className="modal-body">
+        <DialogHeader>
+          <DialogTitle id="nc-admin-fee-title">
+            {row ? 'Edit fee line' : 'Add fee line'}
+          </DialogTitle>
+          <DialogClose
+            id="nc-admin-fee-close"
+            aria-label="Close"
+          >
+            <span aria-hidden="true">&times;</span>
+          </DialogClose>
+        </DialogHeader>
+        <DialogBody>
               <input type="hidden" id="nc-admin-fee-id" value={row?.id ?? ''} />
-              <div className="form-group" id="nc-admin-fee-template-wrap">
-                <label htmlFor="nc-admin-fee-template">Start from template (optional)</label>
-                <select
-                  className="form-control"
-                  id="nc-admin-fee-template"
-                  value={templateId}
-                  onChange={(e) => applyTemplate(e.target.value)}
-                >
-                  <option value="">Blank fee line</option>
-                  {templates.map((t) => (
-                    <option key={t.id} value={t.id}>{t.label}</option>
-                  ))}
-                </select>
-                <small className="form-text text-muted" id="nc-admin-fee-template-hint">
+              <div className="space-y-1.5 mb-3" id="nc-admin-fee-template-wrap">
+                <Label htmlFor="nc-admin-fee-template">Start from template (optional)</Label>
+                <Select value={templateId || '_blank'} onValueChange={(val) => applyTemplate(val === '_blank' ? '' : val)}>
+                  <SelectTrigger id="nc-admin-fee-template">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_blank">Blank fee line</SelectItem>
+                    {templates.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-[var(--oe-nc-text-muted)] m-0" id="nc-admin-fee-template-hint">
                   {templateHint}
-                </small>
+                </p>
               </div>
-              <div className="form-row">
-                <div className="form-group col-md-4">
-                  <label htmlFor="nc-admin-fee-code">Schedule code</label>
-                  <input
+              <div className="grid grid-cols-12 gap-3">
+                <div className="nc-form-group col-span-12 md:col-span-4 space-y-1.5">
+                  <Label htmlFor="nc-admin-fee-code">Schedule code</Label>
+                  <Input
                     type="text"
-                    className="form-control"
                     id="nc-admin-fee-code"
                     maxLength={32}
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                   />
-                  <small className="form-text text-muted">
+                  <p className="text-xs text-[var(--oe-nc-text-muted)] m-0">
                     Short ID used in this clinic module (e.g. OPD_CONSULT).
-                  </small>
+                  </p>
                 </div>
-                <div className="form-group col-md-8">
-                  <label htmlFor="nc-admin-fee-name">Description</label>
-                  <input
+                <div className="nc-form-group col-span-12 md:col-span-8 space-y-1.5">
+                  <Label htmlFor="nc-admin-fee-name">Description</Label>
+                  <Input
                     type="text"
-                    className="form-control"
                     id="nc-admin-fee-name"
                     maxLength={128}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                   />
-                  <small className="form-text text-muted">Shown to cashier when picking charges.</small>
+                  <p className="text-xs text-[var(--oe-nc-text-muted)] m-0">Shown to cashier when picking charges.</p>
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group col-md-4">
-                  <label htmlFor="nc-admin-fee-category">Category</label>
-                  <select
-                    className="form-control"
-                    id="nc-admin-fee-category"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                  >
-                    {categories.map((c) => (
-                      <option key={c.value} value={c.value}>{c.label}</option>
-                    ))}
-                  </select>
+              <div className="grid grid-cols-12 gap-3">
+                <div className="nc-form-group col-span-12 md:col-span-4 space-y-1.5">
+                  <Label htmlFor="nc-admin-fee-category">Category</Label>
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger id="nc-admin-fee-category">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="form-group col-md-4">
-                  <label htmlFor="nc-admin-fee-price">Default price</label>
-                  <input
+                <div className="nc-form-group col-span-12 md:col-span-4 space-y-1.5">
+                  <Label htmlFor="nc-admin-fee-price">Default price</Label>
+                  <Input
                     type="number"
                     min={0}
                     step={0.01}
-                    className="form-control"
                     id="nc-admin-fee-price"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
                   />
-                  <small className="form-text text-muted" id="nc-admin-fee-price-hint">{priceHint}</small>
+                  <p className="text-xs text-[var(--oe-nc-text-muted)] m-0" id="nc-admin-fee-price-hint">{priceHint}</p>
                 </div>
-                <div className="form-group col-md-4">
-                  <label htmlFor="nc-admin-fee-sort">Sort order</label>
-                  <input
+                <div className="nc-form-group col-span-12 md:col-span-4 space-y-1.5">
+                  <Label htmlFor="nc-admin-fee-sort">Sort order</Label>
+                  <Input
                     type="number"
                     min={0}
                     step={1}
-                    className="form-control"
                     id="nc-admin-fee-sort"
                     value={sortOrder}
                     onChange={(e) => setSortOrder(e.target.value)}
                   />
-                  <small className="form-text text-muted">Lower numbers appear first in lists.</small>
+                  <p className="text-xs text-[var(--oe-nc-text-muted)] m-0">Lower numbers appear first in lists.</p>
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group col-md-4">
-                  <label htmlFor="nc-admin-fee-code-type">OpenEMR code type</label>
-                  <select
-                    className="form-control"
-                    id="nc-admin-fee-code-type"
-                    value={codeType}
-                    onChange={(e) => {
-                      setCodeType(e.target.value);
+              <div className="grid grid-cols-12 gap-3">
+                <div className="nc-form-group col-span-12 md:col-span-4 space-y-1.5">
+                  <Label htmlFor="nc-admin-fee-code-type">OpenEMR code type</Label>
+                  <Select
+                    value={codeType || '_empty'}
+                    onValueChange={(val) => {
+                      const next = val === '_empty' ? '' : val;
+                      setCodeType(next);
                       setBillingCode('');
-                      onCodeTypeChange(e.target.value);
+                      onCodeTypeChange(next);
                     }}
                   >
-                    {!billingCodeTypes.length ? (
-                      <option value="">No billable code types</option>
-                    ) : (
-                      billingCodeTypes.map((t) => (
-                        <option key={t.ct_key} value={t.ct_key}>
-                          {t.label} ({t.ct_key})
-                        </option>
-                      ))
-                    )}
-                  </select>
-                  <small className="form-text text-muted" id="nc-admin-fee-code-type-hint">
+                    <SelectTrigger id="nc-admin-fee-code-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {!billingCodeTypes.length ? (
+                        <SelectItem value="_empty">No billable code types</SelectItem>
+                      ) : (
+                        billingCodeTypes.map((t) => (
+                          <SelectItem key={t.ct_key} value={t.ct_key}>
+                            {t.label} ({t.ct_key})
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-[var(--oe-nc-text-muted)] m-0" id="nc-admin-fee-code-type-hint">
                     {billingCodeTypes.length
                       ? 'CPT4/HCPCS for standard codes; use the type where your clinic codes live.'
                       : 'Enable fee types under Administration → Codes in OpenEMR.'}
-                  </small>
+                  </p>
                 </div>
-                <div className="form-group col-md-8">
-                  <label htmlFor="nc-admin-fee-billing-code">Billing code</label>
-                  <select
-                    className="form-control"
-                    id="nc-admin-fee-billing-code"
-                    value={billingCode}
+                <div className="nc-form-group col-span-12 md:col-span-8 space-y-1.5">
+                  <Label htmlFor="nc-admin-fee-billing-code">Billing code</Label>
+                  <Select
+                    value={billingCode || '_empty'}
                     disabled={billingCodesLoading}
-                    onChange={(e) => onBillingCodePicked(e.target.value)}
+                    onValueChange={(val) => onBillingCodePicked(val === '_empty' ? '' : val)}
                   >
-                    {!billingCodes.length ? (
-                      <option value="">No codes found — add in OpenEMR first</option>
-                    ) : (
-                      <>
-                        <option value="">Select billing code…</option>
-                        {billingCodes.map((b) => {
-                          let label = `${b.code} — ${b.name || 'No description'}`;
-                          if (b.fee) label += ` (${formatPrice(b.fee, settings)})`;
-                          return (
-                            <option key={b.code} value={b.code}>{label}</option>
-                          );
-                        })}
-                      </>
-                    )}
-                  </select>
-                  <small className="form-text text-muted" id="nc-admin-fee-billing-hint">
+                    <SelectTrigger id="nc-admin-fee-billing-code">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {!billingCodes.length ? (
+                        <SelectItem value="_empty">No codes found — add in OpenEMR first</SelectItem>
+                      ) : (
+                        <>
+                          <SelectItem value="_empty">Select billing code…</SelectItem>
+                          {billingCodes.map((b) => {
+                            let optionLabel = `${b.code} — ${b.name || 'No description'}`;
+                            if (b.fee) optionLabel += ` (${formatPrice(b.fee, settings)})`;
+                            return (
+                              <SelectItem key={b.code} value={b.code}>{optionLabel}</SelectItem>
+                            );
+                          })}
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-[var(--oe-nc-text-muted)] m-0" id="nc-admin-fee-billing-hint">
                     {billingCodesLoading
                       ? 'Loading codes…'
                       : billingCodes.length
                         ? `${billingCodes.length} active code(s) for this type.`
                         : 'Open Codes admin, add the billing code, then refresh this dialog.'}
-                  </small>
+                  </p>
                 </div>
               </div>
               {error && (
-                <div className="alert alert-danger" id="nc-admin-fee-error">{error}</div>
+                <div className={deskCalloutClass('error', 'text-sm')} id="nc-admin-fee-error" role="alert">
+                  {error}
+                </div>
               )}
-            </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                id="nc-admin-fee-cancel"
-                onClick={onClose}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                id="nc-admin-fee-save"
-                disabled={saving}
-                onClick={() => onSave({
-                  id: row?.id ?? 0,
-                  code: code.trim(),
-                  name: name.trim(),
-                  category,
-                  price_amount: Number.parseFloat(price) || 0,
-                  sort_order: Number.parseInt(sortOrder, 10) || 0,
-                  code_type: codeType,
-                  billing_code: billingCode,
-                })}
-              >
-                {saving ? 'Saving…' : 'Save fee line'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="modal-backdrop fade show" />
-    </>
+            </DialogBody>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="secondary"
+            id="nc-admin-fee-cancel"
+            onClick={onClose}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            id="nc-admin-fee-save"
+            disabled={saving}
+            onClick={() => onSave({
+              id: row?.id ?? 0,
+              code: code.trim(),
+              name: name.trim(),
+              category,
+              price_amount: Number.parseFloat(price) || 0,
+              sort_order: Number.parseInt(sortOrder, 10) || 0,
+              code_type: codeType,
+              billing_code: billingCode,
+            })}
+          >
+            {saving ? 'Saving…' : 'Save fee line'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

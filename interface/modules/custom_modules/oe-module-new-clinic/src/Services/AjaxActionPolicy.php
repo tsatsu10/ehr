@@ -586,6 +586,7 @@ class AjaxActionPolicy
             'queue.list', 'visit.board', 'visit.detail', 'queue.counts',
             'triage.queue', 'doctor.queue', 'doctor.roster', 'cashier.queue', 'lab.queue', 'pharmacy.queue',
             'desk.shared_session_probe', 'front_desk.desk_stats', 'front_desk.todays_appointments',
+            'front_desk.flow_charts',
             'front_desk.recently_viewed', 'front_desk.recently_viewed.remember', 'front_desk.recently_viewed.clear',
             'reports.scheduling',
             'reports.ancillary',

@@ -1,44 +1,44 @@
 {% extends 'base.html.twig' %}
 
 {% block page_heading_actions %}
-<div class="d-flex flex-wrap align-items-center oe-nc-comm-toolbar" id="nc-comm-toolbar">
-    <div class="btn-group btn-group-sm mr-2 mb-1" role="group" aria-label="{{ 'Lens'|xlt }}">
-        <button type="button" class="btn btn-outline-primary active" id="nc-comm-lens-messages" data-lens="messages">
-            {{ 'Messages'|xlt }} <span class="badge badge-light" id="nc-comm-count-messages">0</span>
+<div class="nc-flex nc-flex-wrap nc-items-center nc-comm-toolbar" id="nc-comm-toolbar">
+    <div class="nc-btn-group nc-btn-group-sm nc-mr-2 nc-mb-1" role="group" aria-label="{{ 'Lens'|xlt }}">
+        <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary active" id="nc-comm-lens-messages" data-lens="messages">
+            {{ 'Messages'|xlt }} <span class="nc-badge nc-badge-neutral" id="nc-comm-count-messages">0</span>
         </button>
-        <button type="button" class="btn btn-outline-primary" id="nc-comm-lens-reminders" data-lens="reminders">
-            {{ 'Reminders'|xlt }} <span class="badge badge-light" id="nc-comm-count-reminders">0</span>
+        <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary" id="nc-comm-lens-reminders" data-lens="reminders">
+            {{ 'Reminders'|xlt }} <span class="nc-badge nc-badge-neutral" id="nc-comm-count-reminders">0</span>
         </button>
     </div>
     <input type="search"
-           class="form-control form-control-sm mr-2 mb-1"
+           class="nc-input nc-input-sm nc-mr-2 nc-mb-1"
            id="nc-comm-search"
            placeholder="{{ 'Search…'|xlt }}"
            style="width:12rem;max-width:40vw;"
            aria-label="{{ 'Search'|xlt }}">
-    <select class="form-control form-control-sm mr-2 mb-1 d-none" id="nc-comm-activity" aria-label="{{ 'Message activity'|xlt }}" style="width:auto;">
+    <select class="nc-select nc-select-sm nc-mr-2 nc-mb-1 nc-hidden" id="nc-comm-activity" aria-label="{{ 'Message activity'|xlt }}" style="width:auto;">
         <option value="1">{{ 'Active'|xlt }}</option>
         <option value="0">{{ 'Inactive'|xlt }}</option>
         <option value="all">{{ 'All'|xlt }}</option>
     </select>
     {% if can_view_all_users %}
-    <div class="form-check form-check-inline mb-1 mr-2 d-none" id="nc-comm-scope-wrap">
-        <input type="checkbox" class="form-check-input" id="nc-comm-show-all">
-        <label class="form-check-label small" for="nc-comm-show-all">{{ 'All users'|xlt }}</label>
+    <div class="nc-form-check nc-form-check-inline nc-mb-1 nc-mr-2 nc-hidden" id="nc-comm-scope-wrap">
+        <input type="checkbox" class="nc-form-check-input" id="nc-comm-show-all">
+        <label class="nc-form-check-label nc-text-sm" for="nc-comm-show-all">{{ 'All users'|xlt }}</label>
     </div>
     {% endif %}
-    <select class="form-control form-control-sm mr-2 mb-1 d-none" id="nc-comm-sort-by" aria-label="{{ 'Sort by'|xlt }}" style="width:auto;">
+    <select class="nc-select nc-select-sm nc-mr-2 nc-mb-1 nc-hidden" id="nc-comm-sort-by" aria-label="{{ 'Sort by'|xlt }}" style="width:auto;">
         <option value="pnotes.date">{{ 'Date'|xlt }}</option>
         <option value="users.lname">{{ 'From'|xlt }}</option>
         <option value="patient_data.lname">{{ 'Patient'|xlt }}</option>
         <option value="pnotes.title">{{ 'Type'|xlt }}</option>
         <option value="pnotes.message_status">{{ 'Status'|xlt }}</option>
     </select>
-    <select class="form-control form-control-sm mr-2 mb-1 d-none" id="nc-comm-sort-order" aria-label="{{ 'Sort order'|xlt }}" style="width:auto;">
+    <select class="nc-select nc-select-sm nc-mr-2 nc-mb-1 nc-hidden" id="nc-comm-sort-order" aria-label="{{ 'Sort order'|xlt }}" style="width:auto;">
         <option value="desc">{{ 'Newest first'|xlt }}</option>
         <option value="asc">{{ 'Oldest first'|xlt }}</option>
     </select>
-    <button type="button" class="btn btn-outline-secondary btn-sm mb-1" id="nc-comm-refresh" aria-label="{{ 'Refresh'|xlt }}">
+    <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1" id="nc-comm-refresh" aria-label="{{ 'Refresh'|xlt }}">
         <i class="fa fa-refresh" aria-hidden="true"></i>
     </button>
 </div>

@@ -56,7 +56,7 @@ function expectQueueCard(queueNumber: string, displayName: string) {
 }
 
 function columnLabels(): string[] {
-  return Array.from(document.querySelectorAll('.oe-nc-vb-column__label'))
+  return Array.from(document.querySelectorAll('.nc-vb-column-label'))
     .map((el) => el.textContent ?? '');
 }
 
@@ -83,7 +83,7 @@ describe('VisitBoard', () => {
   it('shows skeleton loaders while fetching', () => {
     mockFetch.mockReturnValue(new Promise(() => {}));
     const { container } = render(<VisitBoard {...props} />);
-    expect(container.querySelectorAll('.oe-nc-vb-skeleton').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('.nc-vb-skeleton').length).toBeGreaterThan(0);
   });
 
   // ── Successful fetch ──────────────────────────────────────────────────────
@@ -92,6 +92,14 @@ describe('VisitBoard', () => {
     render(<VisitBoard {...props} />);
     await waitForBoardLoaded();
     expect(columnLabels()).toEqual(expect.arrayContaining(['Waiting', 'Doctor', 'Payment']));
+  });
+
+  it('renders all lanes in one horizontal strip', async () => {
+    render(<VisitBoard {...props} />);
+    await waitForBoardLoaded();
+    const lanes = document.getElementById('nc-board-columns');
+    expect(lanes).toHaveClass('nc-vb-lanes');
+    expect(lanes?.querySelectorAll('.nc-vb-lane').length).toBe(7);
   });
 
   it('shows empty-state in each column', async () => {

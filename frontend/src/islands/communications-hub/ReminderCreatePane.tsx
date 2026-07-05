@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { PatientContextBanner } from '@components/PatientContextBanner';
 import { PatientSearchDropdown } from '@components/PatientSearchDropdown';
+import { identityFromLabels } from '@components/patientBannerUtils';
+import { Button } from '@components/ui/button';
+import { Checkbox } from '@components/ui/checkbox';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
+import { NativeSelect } from '@components/ui/native-select';
+import { Textarea } from '@components/ui/textarea';
 import { oeFetch } from '@core/oeFetch';
 import type { ReminderCreateOptions } from './communicationsTypes';
 import { dueDateFromPreset, todayIsoDate } from './reminderDateUtils';
@@ -146,35 +155,39 @@ export function ReminderCreatePane({
   };
 
   if (loading) {
-    return <div className="text-muted"><em>Loading reminder form…</em></div>;
+    return <div className="text-[var(--oe-nc-text-muted)]"><em>Loading reminder form…</em></div>;
   }
 
   if (error) {
-    return <div className="text-danger">{error}</div>;
+    return <div className="text-[var(--oe-nc-danger,#dc2626)]">{error}</div>;
   }
 
+  const patientIdentity = identityFromLabels(patientName, { pid: pid ?? undefined });
+
   return (
-    <form className="oe-nc-comm-reminder-create" onSubmit={(event) => { void handleSubmit(event); }}>
-      <header className="oe-nc-comm-detail__header mb-3">
-        <h2 className="h5 mb-0">{isForward ? 'Forward reminder' : 'Create reminder'}</h2>
+    <form className="nc-comm-reminder-create" onSubmit={(event) => { void handleSubmit(event); }}>
+      <header className="nc-comm-detail-header mb-3">
+        <h2 className="text-lg font-semibold mb-0">{isForward ? 'Forward reminder' : 'Create reminder'}</h2>
       </header>
 
-      <div className="form-group">
-        <label className="d-block">Link to patient</label>
-        {pid && patientName ? (
-          <div className="d-flex align-items-center flex-wrap">
-            <span className="badge badge-light border text-dark mr-2 mb-1 py-2 px-2">{patientName}</span>
-            <button
+      <div className="nc-form-group">
+        <label className="block">Link to patient</label>
+        {patientIdentity ? (
+          <>
+            <PatientContextBanner layout="compact" identity={patientIdentity} />
+            <Button
               type="button"
-              className="btn btn-link btn-sm p-0 mb-1"
+              variant="link"
+              size="sm"
+              className="h-auto p-0 mt-1"
               onClick={() => {
                 setPid(null);
                 setPatientName('');
               }}
             >
-              Clear
-            </button>
-          </div>
+              Clear patient
+            </Button>
+          </>
         ) : (
           <PatientSearchDropdown
             ajaxUrl={ajaxUrl}
@@ -182,7 +195,6 @@ export function ReminderCreatePane({
             inputId="nc-reminder-patient"
             resultsId="nc-reminder-patient-results"
             placeholder="Search by name, phone, NHIS, National ID, MRN"
-            inputClassName="form-control form-control-sm"
             onSelectPatient={(selectedPid, row) => {
               setPid(selectedPid);
               setPatientName(row?.display_name ?? '');
@@ -191,52 +203,46 @@ export function ReminderCreatePane({
         )}
       </div>
 
-      <div className="form-group">
-        <div className="d-flex justify-content-between align-items-center mb-1">
+      <div className="nc-form-group">
+        <div className="flex justify-between items-center mb-1">
           <label className="mb-0">Send to</label>
-          <button type="button" className="btn btn-link btn-sm p-0" onClick={selectAllRecipients}>
+          <Button type="button" variant="link" size="sm" className="h-auto p-0" onClick={selectAllRecipients}>
             Select all
-          </button>
+          </Button>
         </div>
         <div className="border rounded p-2" style={{ maxHeight: '10rem', overflowY: 'auto' }}>
           {(options?.recipients ?? []).map((recipient) => (
-            <div className="form-check" key={recipient.id}>
-              <input
-                type="checkbox"
-                className="form-check-input"
+            <div className="flex items-center gap-2 mb-1" key={recipient.id}>
+              <Checkbox
                 id={`nc-reminder-to-${recipient.id}`}
                 checked={sendTo.includes(recipient.id)}
-                onChange={() => toggleRecipient(recipient.id)}
+                onCheckedChange={() => toggleRecipient(recipient.id)}
               />
-              <label className="form-check-label small" htmlFor={`nc-reminder-to-${recipient.id}`}>
+              <Label htmlFor={`nc-reminder-to-${recipient.id}`} className="font-normal normal-case cursor-pointer mb-0">
                 {recipient.label}
-              </label>
+              </Label>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="form-group">
-        <div className="custom-control custom-checkbox">
-          <input
-            type="checkbox"
-            className="custom-control-input"
-            id="nc-reminder-send-separately"
-            checked={sendSeparately}
-            onChange={(event) => setSendSeparately(event.target.checked)}
-          />
-          <label className="custom-control-label small" htmlFor="nc-reminder-send-separately">
-            Each recipient must mark their own copy completed
-          </label>
-        </div>
+      <div className="flex items-center gap-2 mb-3">
+        <Checkbox
+          id="nc-reminder-send-separately"
+          checked={sendSeparately}
+          onCheckedChange={(checked) => setSendSeparately(checked === true)}
+        />
+        <Label htmlFor="nc-reminder-send-separately" className="font-normal normal-case cursor-pointer mb-0">
+          Each recipient must mark their own copy completed
+        </Label>
       </div>
 
-      <div className="form-row">
-        <div className="form-group col-md-6">
-          <label htmlFor="nc-reminder-due-date">Due date</label>
-          <input
+      <div className="grid grid-cols-12 gap-3">
+        <div className="nc-form-group col-span-12 md:col-span-6 space-y-1.5">
+          <Label htmlFor="nc-reminder-due-date" className="normal-case">Due date</Label>
+          <Input
             type="date"
-            className="form-control form-control-sm"
+            className="h-8"
             id="nc-reminder-due-date"
             value={dueDate}
             onChange={(event) => {
@@ -246,10 +252,10 @@ export function ReminderCreatePane({
             required
           />
         </div>
-        <div className="form-group col-md-6">
-          <label htmlFor="nc-reminder-preset">Or select a time span</label>
-          <select
-            className="form-control form-control-sm"
+        <div className="nc-form-group col-span-12 md:col-span-6 space-y-1.5">
+          <Label htmlFor="nc-reminder-preset" className="normal-case">Or select a time span</Label>
+          <NativeSelect
+            className="h-8"
             id="nc-reminder-preset"
             value={presetKey}
             onChange={(event) => handlePresetChange(event.target.value)}
@@ -258,12 +264,12 @@ export function ReminderCreatePane({
             {(options?.date_presets ?? []).map((preset) => (
               <option key={preset.key} value={preset.key}>{preset.label}</option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       </div>
 
-      <fieldset className="form-group">
-        <legend className="small font-weight-bold">Priority</legend>
+      <fieldset className="nc-form-group">
+        <legend className="text-sm font-bold">Priority</legend>
         {(options?.priorities ?? []).map((item) => (
           <div className="custom-control custom-radio custom-control-inline" key={item.id}>
             <input
@@ -282,10 +288,9 @@ export function ReminderCreatePane({
         ))}
       </fieldset>
 
-      <div className="form-group">
-        <label htmlFor="nc-reminder-message">Message</label>
-        <textarea
-          className="form-control"
+      <div className="space-y-1.5 mb-3">
+        <Label htmlFor="nc-reminder-message" className="normal-case">Message</Label>
+        <Textarea
           id="nc-reminder-message"
           rows={4}
           maxLength={maxLength}
@@ -293,18 +298,18 @@ export function ReminderCreatePane({
           onChange={(event) => setMessage(event.target.value)}
           required
         />
-        <small className="text-muted">{message.length}/{maxLength}</small>
+        <p className="text-xs text-[var(--oe-nc-text-muted)] m-0">{message.length}/{maxLength}</p>
       </div>
 
-      {submitError && <div className="alert alert-danger py-2">{submitError}</div>}
+      {submitError && <div className={deskCalloutClass('error', 'py-2 mb-3')}>{submitError}</div>}
 
-      <div className="d-flex flex-wrap">
-        <button type="submit" className="btn btn-primary btn-sm mr-2" disabled={submitting}>
+      <div className="flex flex-wrap">
+        <Button type="submit" size="sm" className="mr-2" disabled={submitting}>
           {submitting ? 'Sending…' : 'Send reminder'}
-        </button>
-        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={onCancel}>
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );

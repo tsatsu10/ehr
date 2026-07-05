@@ -1,4 +1,5 @@
 import type { PillVariant } from '@core/types';
+import type { BadgeProps } from '@components/ui/badge';
 import { buildMrdClinicalDeepLink, MRD_CLINICAL_ANCHORS } from '@core/mrdBannerLinks';
 import type { ChipItem } from './ChipCloud';
 
@@ -11,18 +12,22 @@ export interface PatientIdentityLine {
   phone_masked?: string;
 }
 
-/** Map completion score to status-pill / Bootstrap badge variant. */
+/** Map completion score to status-pill / Badge variant. */
 export function completionVariant(score: number, threshold = 70): PillVariant {
   if (score >= threshold) return 'success';
   if (score >= threshold - 15) return 'warning';
   return 'danger';
 }
 
-export function completionBadgeClass(score: number, threshold = 70): string {
+/** Map completion score to shadcn Badge variant. */
+export function completionBadgeVariant(
+  score: number,
+  threshold = 70,
+): NonNullable<BadgeProps['variant']> {
   const variant = completionVariant(score, threshold);
-  if (variant === 'success') return 'badge-success';
-  if (variant === 'warning') return 'badge-warning';
-  return 'badge-danger';
+  if (variant === 'success') return 'success';
+  if (variant === 'warning') return 'warning';
+  return 'danger';
 }
 
 export function initialsFromName(name?: string): string {
@@ -130,4 +135,20 @@ export function buildAllergyChips(
   }
 
   return chips;
+}
+
+/** Build a minimal identity line when only name/pid are available (comms, lab-ops drawers). */
+export function identityFromLabels(
+  displayName?: string | null,
+  options?: { pid?: number; pubpid?: string },
+): PatientIdentityLine | null {
+  const name = displayName?.trim();
+  if (!name && !options?.pid) {
+    return null;
+  }
+  return {
+    pid: options?.pid,
+    display_name: name || `PID ${options?.pid}`,
+    pubpid: options?.pubpid,
+  };
 }

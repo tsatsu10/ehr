@@ -10,21 +10,21 @@ const VAULT_LINKS = [
 
 export function InsurancePane({ webroot }: { webroot: string }) {
   return (
-    <div className="oe-nc-billops-pane">
-      <p className="text-muted small mb-3">
+    <div className="nc-billops-pane">
+      <p className="text-[var(--oe-nc-text-muted)] text-sm mb-3">
         Legacy US billing tools — not used for daily cash workflow.
       </p>
-      <div className="row">
+      <div className="grid grid-cols-12 gap-3">
         {VAULT_LINKS.map((link) => (
-          <div className="col-md-4 col-sm-6 mb-3" key={link.path}>
+          <div className="col-span-12 sm:col-span-6 md:col-span-4 mb-3" key={link.path}>
             <a
               href={`${webroot}${link.path}`}
-              className="card card-body h-100 text-decoration-none"
+              className="block h-full rounded-lg border border-[var(--oe-nc-border)] bg-white p-4 no-underline hover:bg-[var(--oe-nc-bg-tint)]"
               target="_blank"
               rel="noopener noreferrer"
             >
               <strong>{link.label}</strong>
-              <span className="small text-muted d-block mt-1">Open in new tab</span>
+              <span className="text-sm text-[var(--oe-nc-text-muted)] block mt-1">Open in new tab</span>
             </a>
           </div>
         ))}

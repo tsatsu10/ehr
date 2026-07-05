@@ -1,41 +1,41 @@
 {# patient-context-banner — Tier 1–3 (static shell; JS fills dynamic fields) #}
-<div class="oe-nc-patient-banner nc-patient-context-banner"
+<div class="nc-patient-banner nc-patient-context-banner"
      id="nc-patient-context-banner"
      data-tier="{{ tier|default(1) }}"
      data-host="{{ host|default('front-desk') }}">
-    <div class="oe-nc-patient-banner__header">
-        <div class="oe-nc-patient-banner__avatar" id="nc-banner-avatar" aria-hidden="true">—</div>
-        <div class="oe-nc-patient-banner__identity">
-            <h3 class="oe-nc-patient-banner__name" id="nc-banner-name">—</h3>
-            <div class="oe-nc-patient-banner__meta" id="nc-banner-meta"></div>
+    <div class="nc-patient-banner-header">
+        <div class="nc-patient-banner-avatar" id="nc-banner-avatar" aria-hidden="true">—</div>
+        <div class="nc-patient-banner-identity">
+            <h3 class="nc-patient-banner-name" id="nc-banner-name">—</h3>
+            <div class="nc-patient-banner-meta" id="nc-banner-meta"></div>
         </div>
-        <div class="oe-nc-patient-banner__aside text-right">
+        <div class="nc-patient-banner-aside text-right">
             <div id="nc-banner-completion-wrap">
-                <span class="oe-nc-status-pill oe-nc-status-pill--neutral" id="nc-banner-completion">
-                    <span class="oe-nc-status-pill__dot" aria-hidden="true"></span>
+                <span class="nc-status-pill nc-status-pill-neutral" id="nc-banner-completion">
+                    <span class="nc-status-pill-dot" aria-hidden="true"></span>
                     <span>—</span>
                 </span>
             </div>
         </div>
     </div>
 
-    <div class="oe-nc-patient-banner__section" id="nc-banner-safety" aria-label="{{ 'Safety'|xlt }}"></div>
-    <div class="oe-nc-patient-banner__section" id="nc-banner-visit"></div>
+    <div class="nc-patient-banner-section" id="nc-banner-safety" aria-label="{{ 'Safety'|xlt }}"></div>
+    <div class="nc-patient-banner-section" id="nc-banner-visit"></div>
 
     {% if show_start_visit|default(false) %}
-    <div class="border-top pt-3 mt-2" id="nc-start-visit-panel">
-        <h6 class="font-weight-bold">{{ 'Start visit'|xlt }}</h6>
-        <div class="form-group">
+    <div class="nc-border-t nc-pt-3 nc-mt-2" id="nc-start-visit-panel">
+        <h6 class="nc-font-bold">{{ 'Start visit'|xlt }}</h6>
+        <div class="nc-form-group">
             <label for="nc-visit-type">{{ 'Visit type'|xlt }}</label>
-            <select class="form-control" id="nc-visit-type"></select>
+            <select class="nc-select" id="nc-visit-type"></select>
         </div>
-        <div class="form-group">
+        <div class="nc-form-group">
             <label for="nc-chief-complaint">{{ 'Chief complaint'|xlt }}</label>
-            <input type="text" class="form-control" id="nc-chief-complaint" maxlength="500" placeholder="{{ 'Optional'|xlt }}">
+            <input type="text" class="nc-input" id="nc-chief-complaint" maxlength="500" placeholder="{{ 'Optional'|xlt }}">
         </div>
-        <div class="form-check mb-3">
-            <input type="checkbox" class="form-check-input" id="nc-is-urgent">
-            <label class="form-check-label" for="nc-is-urgent">{{ 'Urgent'|xlt }}</label>
+        <div class="nc-form-check nc-mb-3">
+            <input type="checkbox" class="nc-form-check-input" id="nc-is-urgent">
+            <label class="nc-form-check-label" for="nc-is-urgent">{{ 'Urgent'|xlt }}</label>
         </div>
         {% include 'partials/ui/btn-primary-lg.html.twig' with {
             id: 'nc-start-visit-btn',
@@ -43,8 +43,8 @@
             icon: 'fa-play',
             disabled: true
         } %}
-        <div class="alert alert-success mt-2 d-none" id="nc-start-visit-success" role="alert"></div>
-        <div class="alert alert-danger mt-2 d-none" id="nc-start-visit-error" role="alert"></div>
+        <div class="nc-callout nc-callout-success nc-mt-2 nc-hidden" id="nc-start-visit-success" role="alert"></div>
+        <div class="nc-callout nc-callout-error nc-mt-2 nc-hidden" id="nc-start-visit-error" role="alert"></div>
     </div>
     {% endif %}
 </div>

@@ -10,6 +10,7 @@ import { useQueueVisibilityRefresh } from '@core/useQueueVisibilityRefresh';
 import { usePageHeadingToolbar } from '@core/usePageHeadingToolbar';
 import { setDeskActiveVisitId, clearDeskActiveVisitId } from '@core/deskSessionStorage';
 import { useSharedDeviceSession } from '@core/useSharedDeviceSession';
+import { Button } from '@components/ui/button';
 import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
@@ -574,7 +575,7 @@ export function PharmacyDesk({
   }, [handleOpenPharmacyService]);
 
   return (
-    <div id="nc-pharmacy-desk" className="oe-nc-pharmacy-react-active">
+    <div id="nc-pharmacy-desk" className="nc-pharmacy-react-active">
       <DeskInterruptBanner
         interrupt={interrupt}
         onDismiss={() => {
@@ -613,19 +614,19 @@ export function PharmacyDesk({
 
       {canSellOtc ? (
         <div className="mb-3">
-          <button
+          <Button
             type="button"
-            className="btn btn-primary btn-sm"
+            size="sm"
             id="nc-pharmacy-sell-otc"
             onClick={() => setOtcOpen(true)}
           >
             Sell OTC
-          </button>
+          </Button>
         </div>
       ) : null}
 
-      <div className="row">
-        <div className="col-lg-4 mb-3">
+      <div className="grid grid-cols-12 gap-3">
+        <div className="col-span-12 lg:col-span-4 mb-3">
           <PharmacyQueue
             cards={cards}
             hasActiveWork={hasActiveWork}
@@ -635,7 +636,7 @@ export function PharmacyDesk({
           />
         </div>
 
-        <div className="col-lg-8 mb-3">
+        <div className="col-span-12 lg:col-span-8 mb-3">
           <PharmacyActivePane
             mode={mode}
             data={selectData}

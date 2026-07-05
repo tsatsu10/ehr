@@ -1,3 +1,5 @@
+import { NativeSelect } from '@components/ui/native-select';
+import { cn } from '@/lib/utils';
 import type { AssignableDoctor } from '@core/types';
 
 interface HardAssignDoctorSelectProps {
@@ -15,12 +17,12 @@ export function HardAssignDoctorSelect({
   value,
   onChange,
   disabled = false,
-  className = 'form-control form-control-sm',
+  className,
 }: HardAssignDoctorSelectProps) {
   return (
-    <select
+    <NativeSelect
       id={id}
-      className={className}
+      className={cn('h-8', className)}
       value={value}
       disabled={disabled}
       onChange={(event) => onChange(event.target.value)}
@@ -32,6 +34,6 @@ export function HardAssignDoctorSelect({
           {!doctor.taking_patients ? ' (not taking patients)' : ''}
         </option>
       ))}
-    </select>
+    </NativeSelect>
   );
 }

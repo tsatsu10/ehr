@@ -3,6 +3,9 @@
  */
 
 import type { DoctorConsultPayload, DoctorSupervisorMeta } from '@core/types';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Button } from '@components/ui/button';
+import { Card, CardContent } from '@components/ui/card';
 import { DoctorPatientBanner, type DoctorSignMeta } from './DoctorPatientBanner';
 import { ConsultShortcuts, type ShortcutKind } from './ConsultShortcuts';
 import { SupervisorCombobox } from './SupervisorCombobox';
@@ -56,11 +59,11 @@ export function DoctorActivePane({
   if (mode === 'idle') {
     return (
       <div id="nc-doctor-active-pane">
-        <div className="card">
-          <div className="card-body text-muted text-center py-5">
+        <Card>
+          <CardContent className="text-[var(--oe-nc-text-muted)] text-center py-5">
             <em>Pick a patient from the queue to start a consult.</em>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -68,11 +71,9 @@ export function DoctorActivePane({
   if (mode === 'loading') {
     return (
       <div id="nc-doctor-active-pane">
-        <div className="card">
-          <div className="card-body">
-            <em>Loading consult…</em>
-          </div>
-        </div>
+        <Card>
+          <CardContent><em>Loading consult…</em></CardContent>
+        </Card>
       </div>
     );
   }
@@ -80,7 +81,9 @@ export function DoctorActivePane({
   if (mode === 'error' || !payload || !signMeta) {
     return (
       <div id="nc-doctor-active-pane">
-        <div className="alert alert-danger m-0">Failed to load consult.</div>
+        <div className={deskCalloutClass('error', 'm-0 text-sm')} role="alert">
+          Failed to load consult.
+        </div>
       </div>
     );
   }
@@ -91,8 +94,8 @@ export function DoctorActivePane({
 
   return (
     <div id="nc-doctor-active-pane">
-      <div className="card">
-        <div className="card-body">
+      <Card>
+        <CardContent>
           <DoctorPatientBanner preview={preview} visit={visit} signMeta={signMeta} />
           <SupervisorCombobox
             visit={visit}
@@ -120,23 +123,20 @@ export function DoctorActivePane({
           />
           {(payload.pharm_ops_enabled || payload.rx_print_enabled) ? (
             <div className="mb-3" id="nc-doctor-rx-stock-panel">
-              <div className="d-flex justify-content-between align-items-center mb-2">
+              <div className="mb-2 flex items-center justify-between gap-2">
                 <h5 className="mb-0">
                   {payload.pharm_ops_enabled ? 'Prescriptions (stock)' : 'Prescriptions'}
                 </h5>
                 {payload.rx_list_url ? (
-                  <a
-                    className="btn btn-outline-secondary btn-sm"
-                    href={payload.rx_list_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Open Rx list
-                  </a>
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={payload.rx_list_url} target="_blank" rel="noopener noreferrer">
+                      Open Rx list
+                    </a>
+                  </Button>
                 ) : null}
               </div>
               {payload.pharm_ops_enabled ? (
-                <p className="small text-muted mb-2">
+                <p className="text-sm text-[var(--oe-nc-text-muted)] mb-2">
                   Read-only quantity on hand when Pharmacy Operations is enabled.
                 </p>
               ) : null}
@@ -148,11 +148,11 @@ export function DoctorActivePane({
               />
             </div>
           ) : null}
-          <div className="d-flex flex-wrap align-items-center">
-            <button
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
               type="button"
               id="nc-doctor-complete-btn"
-              className="btn btn-success mr-2"
+              variant="cta"
               disabled={completeDisabled}
               title={
                 completeDisabled && signMeta.require_esign_before_complete_consult && !signMeta.encounter_signed
@@ -162,15 +162,17 @@ export function DoctorActivePane({
               onClick={onComplete}
             >
               Complete consult
-            </button>
+            </Button>
             {visitBoardUrl && (
-              <a className="btn btn-outline-secondary btn-sm" href={visitBoardUrl} target="_top">
-                View on Visit Board
-              </a>
+              <Button variant="outline" size="sm" asChild>
+                <a href={visitBoardUrl} target="_top">
+                  View on Visit Board
+                </a>
+              </Button>
             )}
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

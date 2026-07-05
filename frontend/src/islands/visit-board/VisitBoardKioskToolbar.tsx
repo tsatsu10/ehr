@@ -1,3 +1,9 @@
+import { Button } from '@components/ui/button';
+import {
+  visitBoardKioskToolbarClass,
+  visitBoardKioskTitleClass,
+} from '@components/visitBoardStyles';
+
 interface VisitBoardKioskToolbarProps {
   clinicName: string;
   lastUpdated: Date | null;
@@ -22,39 +28,36 @@ export function VisitBoardKioskToolbar({
   onRefresh,
 }: VisitBoardKioskToolbarProps) {
   return (
-    <div className="oe-nc-vb__kiosk-toolbar d-flex flex-wrap align-items-center gap-2 mb-3">
-      <div className="oe-nc-vb__kiosk-toolbar__title">
+    <div className={`${visitBoardKioskToolbarClass} flex flex-wrap items-center gap-2 mb-3`}>
+      <div className={visitBoardKioskTitleClass}>
         <strong>{clinicName}</strong>
-        <span className="text-muted small ms-2">Wall display</span>
+        <span className="text-[var(--oe-nc-text-muted)] text-sm ms-2">Wall display</span>
       </div>
-      <div className="ms-auto d-flex flex-wrap align-items-center gap-2">
+      <div className="ms-auto flex flex-wrap items-center gap-2">
         {lastUpdated && (
-          <span className="small text-muted">
+          <span className="text-sm text-[var(--oe-nc-text-muted)]">
             Updated {formatClockTime(lastUpdated)}
           </span>
         )}
-        <button
-          type="button"
-          className="btn btn-outline-secondary btn-sm"
-          onClick={onRefresh}
-        >
+        <Button type="button" variant="outline" size="sm" onClick={onRefresh}>
           Refresh
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className={`btn btn-sm ${privacyMode ? 'btn-secondary' : 'btn-outline-secondary'}`}
+          size="sm"
+          variant={privacyMode ? 'secondary' : 'outline'}
           aria-pressed={privacyMode}
           onClick={() => onPrivacyModeChange(!privacyMode)}
         >
           {privacyMode ? 'Privacy on' : 'Privacy off'}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn btn-primary btn-sm"
+          size="sm"
           onClick={() => { void onToggleFullscreen(); }}
         >
           {isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-        </button>
+        </Button>
       </div>
     </div>
   );

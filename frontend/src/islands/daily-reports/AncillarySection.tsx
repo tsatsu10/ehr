@@ -8,6 +8,9 @@ import {
   Ban,
 } from 'lucide-react';
 import { StatCard } from '@components/StatCard';
+import { Button } from '@components/ui/button';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
 import { SectionBlock, SectionHeading, StatGrid } from './ReportsSections';
 import type { AncillaryReportData } from './reportsTypes';
 
@@ -60,7 +63,7 @@ export function AncillarySection({
 
   if (!data.enabled) {
     return (
-      <p className="text-muted mb-0">Ancillary walk-in services are off for this clinic.</p>
+      <p className="text-[var(--oe-nc-text-muted)] mb-0">Ancillary walk-in services are off for this clinic.</p>
     );
   }
 
@@ -70,29 +73,31 @@ export function AncillarySection({
   return (
     <>
       <SectionBlock>
-        <div className="d-flex flex-wrap align-items-end gap-3 mb-3">
+        <div className="flex flex-wrap items-end gap-3 mb-3">
           <div>
-            <label className="form-label small mb-1" htmlFor="nc-ancillary-end-date">
+            <Label className="normal-case font-normal mb-1" htmlFor="nc-ancillary-end-date">
               End date
-            </label>
-            <input
+            </Label>
+            <Input
               id="nc-ancillary-end-date"
               type="date"
-              className="form-control form-control-sm"
+              className="h-8"
               value={endDate}
               min={startDate}
               onChange={(event) => onEndDateChange(event.target.value)}
             />
           </div>
-          <p className="small text-muted mb-0">
+          <p className="text-sm text-[var(--oe-nc-text-muted)] mb-0">
             Range: {data.start_date} – {data.end_date}
             {data.refer_window_hours != null && (
               <> · Pharmacy→OPD link window: {data.refer_window_hours}h</>
             )}
           </p>
-          <a className="btn btn-outline-secondary btn-sm ms-auto" href={exportUrl}>
-            Export CSV
-          </a>
+          <Button variant="outline" size="sm" className="ms-auto" asChild>
+            <a href={exportUrl}>
+              Export CSV
+            </a>
+          </Button>
         </div>
       </SectionBlock>
 

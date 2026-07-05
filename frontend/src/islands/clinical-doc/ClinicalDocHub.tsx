@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { PatientContextBanner } from '@components/PatientContextBanner';
+import { Badge } from '@components/ui/badge';
 import type { DoctorVisit, LabPanelPlaceResult } from '@core/types';
 import { LabPanelModal } from '../doctor-desk/LabPanelModal';
 import { ClinicalDocLensPane, fetchVisitSummary } from './ClinicalDocLensPane';
@@ -137,7 +139,7 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
   );
 
   return (
-    <div className="oe-nc-clinicaldoc" id="nc-clinical-doc-root">
+    <div className="nc-clinicaldoc" id="nc-clinical-doc-root">
       {visitId && patientName ? (
         <PatientContextBanner
           identity={{
@@ -145,14 +147,14 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
             pubpid,
           }}
           aside={encounterSigned ? (
-            <span className="badge badge-success">Encounter signed</span>
+            <Badge variant="success">Encounter signed</Badge>
           ) : (
-            <span className="badge badge-warning">Unsigned documentation</span>
+            <Badge variant="warning">Unsigned documentation</Badge>
           )}
           className="mb-3"
         />
       ) : null}
-      {openError ? <div className="alert alert-danger">{openError}</div> : null}
+      {openError ? <div className={deskCalloutClass('error')}>{openError}</div> : null}
       <ClinicalDocLensPane
         lens={tab}
         cards={cards}

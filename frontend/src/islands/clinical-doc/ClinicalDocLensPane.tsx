@@ -1,4 +1,6 @@
 import { oeFetch } from '@core/oeFetch';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Button } from '@components/ui/button';
 import type {
   ClinicalDocCard,
   ClinicalDocLens,
@@ -69,19 +71,21 @@ export function ClinicalDocLensPane({
 }: ClinicalDocLensPaneProps) {
   if (!visitId) {
     return (
-      <div className="oe-nc-clinicaldoc-empty">
-        <p className="mb-2 text-muted">Open documentation from Doctor Desk with an active visit, or add <code>?visit_id=</code> to the URL.</p>
-        <a className="btn btn-outline-primary btn-sm" href="../doctor.php">Go to Doctor Desk</a>
+      <div className="nc-clinicaldoc-empty">
+        <p className="mb-2 text-[var(--oe-nc-text-muted)]">Open documentation from Doctor Desk with an active visit, or add <code>?visit_id=</code> to the URL.</p>
+        <Button variant="outline" size="sm" asChild>
+          <a href="../doctor.php">Go to Doctor Desk</a>
+        </Button>
       </div>
     );
   }
 
   if (loading) {
-    return <p className="text-muted mb-0">Loading documentation…</p>;
+    return <p className="text-[var(--oe-nc-text-muted)] mb-0">Loading documentation…</p>;
   }
 
   if (error) {
-    return <div className="alert alert-danger mb-0">{error}</div>;
+    return <div className={deskCalloutClass('error', 'mb-0')}>{error}</div>;
   }
 
   const lensCards = cards.filter((card) => card.lens === lens || (lens === 'visit' && card.lens === 'visit'));
@@ -90,23 +94,24 @@ export function ClinicalDocLensPane({
 
   if (!lensCards.length && lens !== 'visit') {
     return (
-      <div className="oe-nc-clinicaldoc-empty">
-        <p className="mb-0 text-muted">No forms are available for this lens with your role and clinic configuration.</p>
+      <div className="nc-clinicaldoc-empty">
+        <p className="mb-0 text-[var(--oe-nc-text-muted)]">No forms are available for this lens with your role and clinic configuration.</p>
       </div>
     );
   }
 
   const renderCard = (card: ClinicalDocCard) => (
-    <article key={card.id} className="oe-nc-clinicaldoc-card" role="listitem">
-      <h3 className="oe-nc-clinicaldoc-card__title h6">{card.title}</h3>
-      <p className="oe-nc-clinicaldoc-card__blurb small text-muted mb-1">{card.description}</p>
-      <p className="oe-nc-clinicaldoc-card__status small mb-2">{statusLine(card)}</p>
+    <article key={card.id} className="nc-clinicaldoc-card" role="listitem">
+      <h3 className="nc-clinicaldoc-card-title text-base font-semibold">{card.title}</h3>
+      <p className="nc-clinicaldoc-card-blurb text-sm text-[var(--oe-nc-text-muted)] mb-1">{card.description}</p>
+      <p className="nc-clinicaldoc-card-status text-sm mb-2">{statusLine(card)}</p>
       {card.bundle_health && !card.bundle_health.esign_ok ? (
-        <p className="small text-warning mb-2">{card.bundle_health.status_label}</p>
+        <p className="text-sm text-[var(--color-oe-warning,#ea580c)] mb-2">{card.bundle_health.status_label}</p>
       ) : null}
-      <button
+      <Button
         type="button"
-        className="btn btn-sm btn-outline-primary"
+        variant="outline"
+        size="sm"
         onClick={() => {
           void openForm(ajaxUrl, csrfToken, visitId, card, lens).catch((err: unknown) => {
             onOpenError(err instanceof Error ? err.message : 'Could not open form');
@@ -114,7 +119,7 @@ export function ClinicalDocLensPane({
         }}
       >
         {card.started ? 'Continue editing' : 'Open form'}
-      </button>
+      </Button>
     </article>
   );
 
@@ -132,24 +137,24 @@ export function ClinicalDocLensPane({
         />
       ) : null}
       {lens === 'orders' && labPanelOrderEnabled && onOpenLabPanel ? (
-        <div className="oe-nc-clinicaldoc-lab-panel mb-3">
-          <p className="small text-muted mb-2">Quick order common lab tests without opening the full lab form.</p>
-          <button type="button" className="btn btn-outline-primary btn-sm" onClick={onOpenLabPanel}>
+        <div className="nc-clinicaldoc-lab-panel mb-3">
+          <p className="text-sm text-[var(--oe-nc-text-muted)] mb-2">Quick order common lab tests without opening the full lab form.</p>
+          <Button type="button" variant="outline" size="sm" onClick={onOpenLabPanel}>
             Quick lab panel
-          </button>
+          </Button>
         </div>
       ) : null}
       {!lensCards.length ? (
-        <div className="oe-nc-clinicaldoc-empty">
-          <p className="mb-0 text-muted">No started or required forms on this visit yet. Use Add form to begin documentation.</p>
+        <div className="nc-clinicaldoc-empty">
+          <p className="mb-0 text-[var(--oe-nc-text-muted)]">No started or required forms on this visit yet. Use Add form to begin documentation.</p>
         </div>
       ) : (
-        <div className="oe-nc-clinicaldoc-cards" role="list">
+        <div className="nc-clinicaldoc-cards" role="list">
           {primaryCards.map(renderCard)}
           {moreCards.length > 0 && (
-            <details className="oe-nc-clinicaldoc-more mt-2">
-              <summary className="small text-muted">More note types</summary>
-              <div className="oe-nc-clinicaldoc-cards mt-2" role="list">
+            <details className="nc-clinicaldoc-more mt-2">
+              <summary className="text-sm text-[var(--oe-nc-text-muted)]">More note types</summary>
+              <div className="nc-clinicaldoc-cards mt-2" role="list">
                 {moreCards.map(renderCard)}
               </div>
             </details>

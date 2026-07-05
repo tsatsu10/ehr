@@ -94,19 +94,6 @@ class PatientSearchService
         $filter = $this->facilityScope->getPatientFilterClause('pd');
         $bind = [];
         $conditions = [];
-        $like = '%' . $query . '%';
-
-        if ($this->phoneNormalizer->isMostlyDigits($query)) {
-            $normalized = $this->phoneNormalizer->normalize($query);
-            if ($normalized !== '') {
-                $conditions[] = 'pd.phone_normalized = ?';
-                $bind[] = $normalized;
-                $conditions[] = "REPLACE(REPLACE(REPLACE(REPLACE(pd.phone_cell, '-', ''), ' ', ''), '+', ''), '(', '') LIKE ?";
-                $bind[] = '%' . preg_replace('/\D/', '', $query) . '%';
-            }
-            $conditions[] = 'LOWER(pd.pubpid) = LOWER(?)';
-            $bind[] = $query;
-        }
 
         $tokens = array_values(array_filter(
             explode(' ', $query),
@@ -121,10 +108,9 @@ class PatientSearchService
                 $conditions[] = 'SOUNDEX(pd.lname) = SOUNDEX(?)';
                 $bind[] = $token;
             }
-            $conditions[] = 'LOWER(pd.pubpid) LIKE LOWER(?)';
-            $bind[] = $tokens[0] . '%';
         } else {
-            $conditions[] = '(pd.lname LIKE ? OR pd.fname LIKE ? OR LOWER(pd.pubpid) LIKE LOWER(?))';
+            $like = '%' . $query . '%';
+            $conditions[] = '(pd.lname LIKE ? OR pd.fname LIKE ? OR pd.mname LIKE ?)';
             array_push($bind, $like, $like, $like);
         }
 
@@ -147,23 +133,6 @@ class PatientSearchService
     private function scoreRow(array $row, string $query): int
     {
         $score = 0;
-        $queryLower = strtolower($query);
-        $normalizedQuery = $this->phoneNormalizer->normalize($query);
-        $rowPhone = (string) ($row['phone_normalized'] ?? '');
-        if ($rowPhone === '' && !empty($row['phone_cell'])) {
-            $rowPhone = $this->phoneNormalizer->normalize((string) $row['phone_cell']);
-        }
-
-        if ($normalizedQuery !== '' && $rowPhone === $normalizedQuery) {
-            $score += 100;
-        }
-
-        $pubpid = strtolower((string) ($row['pubpid'] ?? ''));
-        if ($pubpid !== '' && $pubpid === $queryLower) {
-            $score += 90;
-        } elseif ($pubpid !== '' && str_starts_with($pubpid, $queryLower)) {
-            $score += 60;
-        }
 
         $tokens = array_values(array_filter(explode(' ', $this->normalizeQuery($query)), fn ($t) => strlen($t) >= 2));
         $fname = strtolower((string) ($row['fname'] ?? ''));
@@ -230,7 +199,8 @@ class PatientSearchService
 
         $completionScore = (int) ($row['completion_score'] ?? 0);
         $activeVisit = QueryUtils::querySingleRow(
-            "SELECT v.id AS visit_id, v.state, v.queue_number, vt.label AS visit_type_label
+            "SELECT v.id AS visit_id, v.state, v.queue_number, v.chief_complaint,
+                    vt.label AS visit_type_label
              FROM new_visit v
              LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
              WHERE v.pid = ?
@@ -264,6 +234,9 @@ class PatientSearchService
                 'state' => $activeVisit['state'],
                 'queue_number' => (int) $activeVisit['queue_number'],
                 'visit_type_label' => $activeVisit['visit_type_label'] ?? '',
+                'chief_complaint' => $activeVisit['chief_complaint'] !== ''
+                    ? ($activeVisit['chief_complaint'] ?? null)
+                    : null,
             ],
             'chips' => [
                 'appointment_today' => $appointmentChip,

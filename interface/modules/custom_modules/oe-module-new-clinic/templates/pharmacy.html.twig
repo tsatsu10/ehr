@@ -1,14 +1,14 @@
 {% extends 'base.html.twig' %}
 
 {% block page_subtitle %}
-<div class="oe-nc-page-heading__subtitle" id="nc-pharmacy-date"></div>
+<div class="nc-page-heading-subtitle" id="nc-pharmacy-date"></div>
 {% endblock %}
 
 {% block page_heading_actions %}
-<button type="button" class="btn btn-outline-primary btn-sm" id="nc-pharmacy-refresh">
+<button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary" id="nc-pharmacy-refresh">
     {{ 'Refresh'|xlt }}
 </button>
-<span class="text-muted small" id="nc-pharmacy-updated"></span>
+<span class="nc-text-muted nc-text-sm" id="nc-pharmacy-updated"></span>
 {% endblock %}
 
 {% block content %}

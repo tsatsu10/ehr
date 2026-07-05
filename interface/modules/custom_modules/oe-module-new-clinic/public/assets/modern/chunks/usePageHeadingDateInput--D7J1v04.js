@@ -1,2 +1,0 @@
-import{c as e,l as t}from"./oeFetch-Bh_9Pv0w.js";var n=t(e(),1);function r(e,t,r){(0,n.useEffect)(()=>{let n=document.getElementById(e);!n||n.value===t||(n.value=t)},[e,t]),(0,n.useEffect)(()=>{let t=document.getElementById(e);if(!t)return;let n=()=>r(t.value);return t.addEventListener(`change`,n),()=>t.removeEventListener(`change`,n)},[e,r])}export{r as t};
-//# sourceMappingURL=usePageHeadingDateInput--D7J1v04.js.map

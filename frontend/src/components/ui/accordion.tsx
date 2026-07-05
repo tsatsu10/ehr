@@ -1,6 +1,7 @@
 /**
  * Radix Accordion primitives — shadcn target for RegistrationForm sections.
  */
+import { ChevronDown } from 'lucide-react';
 import * as AccordionPrimitive from '@radix-ui/react-accordion';
 import type { ComponentPropsWithoutRef, ElementRef } from 'react';
 import { forwardRef } from 'react';
@@ -14,7 +15,11 @@ export const AccordionItem = forwardRef<
 >(({ className, ...props }, ref) => (
   <AccordionPrimitive.Item
     ref={ref}
-    className={cn('oe-nc-accordion__item', className)}
+    className={cn(
+      'mb-2 overflow-hidden rounded-[0.625rem] border border-[var(--oe-nc-border,#e2e8f0)] bg-white',
+      'data-[state=open]:border-[var(--oe-nc-primary,#2563eb)] data-[state=open]:shadow-[0_0_0_3px_rgba(37,99,235,0.08)]',
+      className,
+    )}
     {...props}
   />
 ));
@@ -24,14 +29,22 @@ export const AccordionTrigger = forwardRef<
   ElementRef<typeof AccordionPrimitive.Trigger>,
   ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>
 >(({ className, children, ...props }, ref) => (
-  <AccordionPrimitive.Header className="oe-nc-accordion__header">
+  <AccordionPrimitive.Header className="m-0">
     <AccordionPrimitive.Trigger
       ref={ref}
-      className={cn('oe-nc-accordion__trigger', className)}
+      className={cn(
+        'flex w-full cursor-pointer items-center justify-between gap-2 border-0 bg-[var(--oe-nc-bg-tint,#f8fafc)] px-4 py-3.5 text-left font-display text-[0.9375rem] font-semibold text-[var(--oe-nc-text,#111827)]',
+        'hover:bg-[var(--oe-nc-bg,#eff6ff)] focus-visible:outline-none focus-visible:shadow-[inset_var(--oe-nc-focus-ring)]',
+        'data-[state=open]:border-b data-[state=open]:border-[var(--oe-nc-border,#e2e8f0)] data-[state=open]:bg-[var(--oe-nc-bg,#eff6ff)] group',
+        className,
+      )}
       {...props}
     >
       {children}
-      <i className="fa fa-chevron-down oe-nc-accordion__chevron" aria-hidden="true" />
+      <ChevronDown
+        className="h-3.5 w-3.5 shrink-0 text-[var(--oe-nc-text-muted)] transition-transform duration-150 group-data-[state=open]:rotate-180"
+        aria-hidden="true"
+      />
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>
 ));
@@ -43,10 +56,10 @@ export const AccordionContent = forwardRef<
 >(({ className, children, ...props }, ref) => (
   <AccordionPrimitive.Content
     ref={ref}
-    className={cn('oe-nc-accordion__content', className)}
+    className={cn('overflow-hidden p-4 text-sm', className)}
     {...props}
   >
-    <div className="oe-nc-accordion__content-inner">{children}</div>
+    {children}
   </AccordionPrimitive.Content>
 ));
 AccordionContent.displayName = AccordionPrimitive.Content.displayName;

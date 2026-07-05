@@ -1,4 +1,5 @@
 import { completionVariant } from './patientBannerUtils';
+import { cn } from '@/lib/utils';
 
 interface CompletionRingProps {
   score: number;
@@ -38,7 +39,10 @@ export function CompletionRing({
 
   return (
     <div
-      className={`oe-nc-completion-ring ${className}`.trim()}
+      className={cn(
+        'relative inline-flex shrink-0 items-center justify-center',
+        className,
+      )}
       style={{ width: size, height: size }}
       role="progressbar"
       aria-valuenow={clamped}
@@ -47,22 +51,22 @@ export function CompletionRing({
       aria-label={`Profile ${clamped}% complete`}
     >
       <svg
-        className="oe-nc-completion-ring__svg"
+        className="block"
         width={size}
         height={size}
         viewBox={`0 0 ${size} ${size}`}
         aria-hidden="true"
       >
         <circle
-          className="oe-nc-completion-ring__track"
           cx={center}
           cy={center}
           r={radius}
           fill="none"
+          stroke="var(--oe-nc-border, #e2e8f0)"
           strokeWidth={strokeWidth}
         />
         <circle
-          className="oe-nc-completion-ring__fill"
+          className="transition-[stroke-dashoffset] duration-600 ease-out motion-reduce:transition-none"
           cx={center}
           cy={center}
           r={radius}
@@ -75,9 +79,15 @@ export function CompletionRing({
           transform={`rotate(-90 ${center} ${center})`}
         />
       </svg>
-      <div className="oe-nc-completion-ring__center">
-        <span className="oe-nc-completion-ring__value">{clamped}%</span>
-        {caption && <span className="oe-nc-completion-ring__caption">{caption}</span>}
+      <div className="absolute inset-0 flex flex-col items-center justify-center leading-tight">
+        <span className="font-display text-sm font-bold tabular-nums text-[var(--oe-nc-text,#111827)]">
+          {clamped}%
+        </span>
+        {caption && (
+          <span className="mt-0.5 text-center text-[0.6rem] text-[var(--oe-nc-text-muted)]">
+            {caption}
+          </span>
+        )}
       </div>
     </div>
   );

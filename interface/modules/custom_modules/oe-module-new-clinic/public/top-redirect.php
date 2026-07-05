@@ -17,32 +17,41 @@ if (empty($_SESSION['authUserID'])) {
     exit;
 }
 
-$allowed = [
-    'front-desk.php',
-    'triage.php',
-    'doctor.php',
-    'lab.php',
-    'pharmacy.php',
-    'cashier.php',
-    'visit-board.php',
-    'reports.php',
-    'admin.php',
-    'patient-chart.php',
+// Desk pages that have clean /clinic/{slug} URLs.
+$phpToSlug = [
+    'front-desk.php'       => 'front-desk',
+    'triage.php'           => 'triage',
+    'doctor.php'           => 'doctor',
+    'lab.php'              => 'lab',
+    'pharmacy.php'         => 'pharmacy',
+    'cashier.php'          => 'cashier',
+    'visit-board.php'      => 'visit-board',
+    'admin.php'            => 'admin',
+    'reports.php'          => 'reports',
+    'communications.php'   => 'communications',
+    'patient-registry.php' => 'patient-registry',
 ];
 
+// Pages that are NOT desks (deep links) — keep their direct module path.
+$directAllowed = ['patient-chart.php'];
+
 $dest = basename((string) ($_GET['dest'] ?? 'front-desk.php'));
-if (!in_array($dest, $allowed, true)) {
-    $dest = 'front-desk.php';
-}
 
 $query = [];
 parse_str((string) ($_SERVER['QUERY_STRING'] ?? ''), $query);
 unset($query['dest']);
 $extra = http_build_query($query);
-$target = ($GLOBALS['webroot'] ?? '')
-    . '/interface/modules/custom_modules/oe-module-new-clinic/public/'
-    . $dest
-    . ($extra !== '' ? '?' . $extra : '');
+$webroot = $GLOBALS['webroot'] ?? '';
+
+if (in_array($dest, $directAllowed, true)) {
+    $target = $webroot
+        . '/interface/modules/custom_modules/oe-module-new-clinic/public/'
+        . $dest
+        . ($extra !== '' ? '?' . $extra : '');
+} else {
+    $slug = $phpToSlug[$dest] ?? 'front-desk';
+    $target = $webroot . '/clinic/' . $slug . ($extra !== '' ? '?' . $extra : '');
+}
 
 header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate');
