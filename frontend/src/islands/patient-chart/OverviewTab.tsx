@@ -97,6 +97,27 @@ function renderExpandDetail(item: ActivityFeedItem): React.ReactNode {
     return <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">{expand.drug_name}</div>;
   }
 
+  if (item.event_type === 'encounter_document_saved') {
+    return (
+      <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">
+        {expand.form_title ?? 'Clinical form'}
+        {expand.author ? ` · ${expand.author}` : ''}
+        {expand.saved_at ? ` · ${expand.saved_at}` : ''}
+      </div>
+    );
+  }
+
+  if (item.event_type === 'completion_override' || item.event_type === 'esign_override') {
+    return (
+      <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">
+        {expand.chokepoint ? `Chokepoint: ${expand.chokepoint.replace(/_/g, ' ')}` : null}
+        {expand.score ? ` · Score ${expand.score}%` : null}
+        {expand.reason ? ` · ${expand.reason}` : ' · Reason not recorded'}
+        {expand.actor ? ` · ${expand.actor}` : ''}
+      </div>
+    );
+  }
+
   return null;
 }
 

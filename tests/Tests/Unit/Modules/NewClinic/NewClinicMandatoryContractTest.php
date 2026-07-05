@@ -641,6 +641,9 @@ class NewClinicMandatoryContractTest extends TestCase
         $this->assertStringContainsString('rx_prescribed', $source);
         $this->assertStringContainsString('payment_posted', $source);
         $this->assertStringContainsString('encounter_signed', $source);
+        $this->assertStringContainsString('encounter_document_saved', $source);
+        $this->assertStringContainsString('completion_override', $source);
+        $this->assertStringContainsString('esign_override', $source);
         $this->assertStringContainsString('routing_confirmed', $source);
         $this->assertStringContainsString('primary_action', $source);
         $this->assertStringContainsString('event_type', $source);

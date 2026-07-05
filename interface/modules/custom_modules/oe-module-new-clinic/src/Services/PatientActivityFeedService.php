@@ -80,6 +80,9 @@ class PatientActivityFeedService
             $this->fetchPharmacyDispensedItems($pid, $since, $facilityFilter, $visitId),
             $this->fetchPaymentPostedItems($pid, $since, $facilityFilter, $visitId),
             $this->fetchEncounterSignedItems($pid, $since, $facilityFilter, $visitId),
+            $this->fetchEncounterDocumentSavedItems($pid, $since, $facilityFilter, $visitId),
+            $this->fetchCompletionOverrideItems($pid, $since, $visitId),
+            $this->fetchEsignOverrideItems($pid, $since, $facilityFilter, $visitId),
             $this->fetchHardAssignedItems($pid, $since, $facilityFilter, $visitId),
         );
 
@@ -452,6 +455,135 @@ class PatientActivityFeedService
         ) ?: [];
 
         return array_map(fn (array $row): array => $this->mapEncounterSignedItem($pid, $row), $rows);
+    }
+
+    /** @var array<int, string> */
+    private const DOCUMENT_FEED_EXCLUDED_FORMDIRS = [
+        'vitals',
+        'newpatient',
+        'fee_sheet',
+        'procedure_order',
+    ];
+
+    /**
+     * @param array{sql: string, bind: array<int, mixed>} $facilityFilter
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchEncounterDocumentSavedItems(
+        int $pid,
+        string $since,
+        array $facilityFilter,
+        ?int $visitId,
+    ): array {
+        $excluded = implode("','", self::DOCUMENT_FEED_EXCLUDED_FORMDIRS);
+        $visitSql = $visitId !== null && $visitId > 0 ? ' AND nv.id = ?' : '';
+        $bind = array_merge([$pid, $since], $facilityFilter['bind']);
+        if ($visitSql !== '') {
+            $bind[] = $visitId;
+        }
+
+        $rows = QueryUtils::fetchRecords(
+            "SELECT f.id AS forms_row_id, f.form_id, f.form_name, f.formdir, f.date AS occurred_at,
+                    f.user, f.encounter AS encounter_id,
+                    nv.id AS visit_id, nv.queue_number
+             FROM forms f
+             LEFT JOIN new_visit v ON v.pid = f.pid AND v.encounter = f.encounter
+             LEFT JOIN new_visit nv ON nv.pid = f.pid AND nv.encounter = f.encounter
+             WHERE f.pid = ? AND f.deleted = 0 AND f.encounter > 0
+               AND LOWER(f.formdir) NOT IN ('{$excluded}')
+               AND f.date >= ?{$facilityFilter['sql']}{$visitSql}
+             ORDER BY f.date DESC, f.id DESC
+             LIMIT 500",
+            $bind
+        ) ?: [];
+
+        return array_map(fn (array $row): array => $this->mapEncounterDocumentSavedItem($pid, $row), $rows);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchCompletionOverrideItems(int $pid, string $since, ?int $visitId): array
+    {
+        $rows = QueryUtils::fetchRecords(
+            "SELECT l.id, l.date AS occurred_at, l.user, l.comments
+             FROM log l
+             WHERE l.category = 'new_clinic'
+               AND l.success = 'completion_override'
+               AND l.comments LIKE ?
+               AND l.date >= ?
+             ORDER BY l.date DESC, l.id DESC
+             LIMIT 200",
+            ['pid=' . $pid . ';%', $since]
+        ) ?: [];
+
+        $items = [];
+        foreach ($rows as $row) {
+            $payload = $this->parseJsonPayloadFromLogComments((string) ($row['comments'] ?? ''));
+            $payloadVisitId = (int) ($payload['visit_id'] ?? 0);
+            $chokepoint = (string) ($payload['chokepoint'] ?? '');
+
+            if ($visitId !== null && $visitId > 0) {
+                if ($payloadVisitId > 0 && $payloadVisitId !== $visitId) {
+                    continue;
+                }
+                if ($payloadVisitId <= 0 && $chokepoint !== 'billing') {
+                    continue;
+                }
+            }
+
+            $items[] = $this->mapCompletionOverrideItem($row, $payload);
+        }
+
+        return $items;
+    }
+
+    /**
+     * @param array{sql: string, bind: array<int, mixed>} $facilityFilter
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchEsignOverrideItems(
+        int $pid,
+        string $since,
+        array $facilityFilter,
+        ?int $visitId,
+    ): array {
+        $rows = QueryUtils::fetchRecords(
+            "SELECT l.id, l.date AS occurred_at, l.user, l.groupname, l.success, l.comments
+             FROM log l
+             WHERE ((l.category = 'new_visit' AND l.success = 'esign_override')
+                    OR l.category = 'esign_override')
+               AND l.comments LIKE ?
+               AND l.date >= ?
+             ORDER BY l.date DESC, l.id DESC
+             LIMIT 200",
+            ['pid=' . $pid . ';%', $since]
+        ) ?: [];
+
+        $items = [];
+        foreach ($rows as $row) {
+            $parsedVisitId = $this->parseVisitIdFromLogComments((string) ($row['comments'] ?? ''));
+            if ($visitId !== null && $visitId > 0 && $parsedVisitId !== $visitId) {
+                continue;
+            }
+
+            if ($parsedVisitId > 0) {
+                $visitRow = QueryUtils::querySingleRow(
+                    "SELECT v.id, v.queue_number FROM new_visit v
+                     WHERE v.id = ? AND v.pid = ?{$facilityFilter['sql']}",
+                    array_merge([$parsedVisitId, $pid], $facilityFilter['bind'])
+                );
+                if (!is_array($visitRow)) {
+                    continue;
+                }
+            } else {
+                $visitRow = [];
+            }
+
+            $items[] = $this->mapEsignOverrideItem($row, $parsedVisitId, is_array($visitRow) ? $visitRow : []);
+        }
+
+        return $items;
     }
 
     /**
@@ -963,6 +1095,138 @@ class PatientActivityFeedService
 
     /**
      * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private function mapEncounterDocumentSavedItem(int $pid, array $row): array
+    {
+        $visitId = (int) ($row['visit_id'] ?? 0);
+        $formsRowId = (int) ($row['forms_row_id'] ?? 0);
+        $encounterId = (int) ($row['encounter_id'] ?? 0);
+        $formdir = trim((string) ($row['formdir'] ?? ''));
+        $formTitle = trim((string) ($row['form_name'] ?? ''));
+        if ($formTitle === '') {
+            $formTitle = $formdir !== '' ? $formdir : 'Clinical form';
+        }
+        $author = trim((string) ($row['user'] ?? ''));
+        if ($author === '') {
+            $author = 'Staff';
+        }
+        $createdAt = (string) ($row['occurred_at'] ?? '');
+        $webroot = $GLOBALS['webroot'] ?? '';
+
+        return [
+            'event_type' => 'encounter_document_saved',
+            'event_id' => 'encounter_document_saved:' . $visitId . ':' . $formsRowId,
+            'title' => 'Clinical note saved',
+            'subtitle' => $formTitle . ' · ' . $author . ' · ' . $this->relativeTime($createdAt),
+            'occurred_at' => $createdAt,
+            'visit_id' => $visitId,
+            'encounter_id' => $encounterId,
+            'queue_number' => (int) ($row['queue_number'] ?? 0),
+            'expand' => [
+                'form_title' => $formTitle,
+                'formdir' => $formdir,
+                'author' => $author,
+                'saved_at' => $createdAt,
+            ],
+            'primary_action' => [
+                'label' => 'Details',
+                'kind' => 'expand',
+            ],
+            'secondary_action' => $encounterId > 0 ? [
+                'label' => 'View documentation',
+                'kind' => 'core',
+                'target' => EncounterSignService::buildEncounterUrl($webroot, $pid, $encounterId),
+            ] : null,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private function mapCompletionOverrideItem(array $row, array $payload): array
+    {
+        $logId = (int) ($row['id'] ?? 0);
+        $createdAt = (string) ($row['occurred_at'] ?? '');
+        $chokepoint = (string) ($payload['chokepoint'] ?? '');
+        $reason = trim((string) ($payload['reason'] ?? ''));
+        $score = (int) ($payload['score'] ?? 0);
+        $actorUserId = (int) ($payload['actor'] ?? 0);
+        $visitId = (int) ($payload['visit_id'] ?? 0);
+        $actor = $this->resolveUserDisplayName($actorUserId, (string) ($row['user'] ?? ''));
+
+        $title = match ($chokepoint) {
+            'start_visit' => 'Profile override at start visit',
+            'billing' => 'Profile override at billing',
+            'revisit' => 'Profile override at revisit',
+            'rx' => 'Profile override at Rx',
+            default => 'Profile override',
+        };
+
+        return [
+            'event_type' => 'completion_override',
+            'event_id' => 'completion_override:' . $visitId . ':' . $logId,
+            'title' => $title,
+            'subtitle' => ($score > 0 ? $score . '% · ' : '')
+                . ($actor !== '' ? $actor . ' · ' : '')
+                . $this->relativeTime($createdAt),
+            'occurred_at' => $createdAt,
+            'visit_id' => $visitId > 0 ? $visitId : null,
+            'expand' => [
+                'chokepoint' => $chokepoint !== '' ? $chokepoint : null,
+                'score' => $score > 0 ? $score : null,
+                'reason' => $reason !== '' ? $reason : null,
+                'actor' => $actor !== '' ? $actor : null,
+            ],
+            'primary_action' => [
+                'label' => 'Details',
+                'kind' => 'expand',
+            ],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @param array<string, mixed> $visitRow
+     * @return array<string, mixed>
+     */
+    private function mapEsignOverrideItem(array $row, int $visitId, array $visitRow): array
+    {
+        $logId = (int) ($row['id'] ?? 0);
+        $createdAt = (string) ($row['occurred_at'] ?? '');
+        $payload = $this->parseJsonPayloadFromLogComments((string) ($row['comments'] ?? ''));
+        $reason = trim((string) ($payload['reason'] ?? ''));
+        $encounterId = (int) ($payload['encounter_id'] ?? 0);
+        $chokepoint = (string) ($payload['chokepoint'] ?? '');
+        $actor = $this->resolveEsignOverrideActor($row);
+
+        return [
+            'event_type' => 'esign_override',
+            'event_id' => 'esign_override:' . $visitId . ':' . $logId,
+            'title' => 'Unsigned handoff override',
+            'subtitle' => ($actor !== '' ? $actor . ' · ' : '')
+                . $this->relativeTime($createdAt),
+            'occurred_at' => $createdAt,
+            'visit_id' => $visitId > 0 ? $visitId : null,
+            'encounter_id' => $encounterId > 0 ? $encounterId : null,
+            'queue_number' => (int) ($visitRow['queue_number'] ?? 0),
+            'expand' => [
+                'chokepoint' => $chokepoint !== '' ? $chokepoint : null,
+                'reason' => $reason !== '' ? $reason : null,
+                'actor' => $actor !== '' ? $actor : null,
+                'encounter_id' => $encounterId > 0 ? $encounterId : null,
+            ],
+            'primary_action' => [
+                'label' => 'Details',
+                'kind' => 'expand',
+            ],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $row
      * @param array<string, mixed> $visitRow
      * @return array<string, mixed>
      */
@@ -1016,6 +1280,63 @@ class PatientActivityFeedService
     private function formatStateLabel(string $state): string
     {
         return ucwords(str_replace('_', ' ', $state));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function parseJsonPayloadFromLogComments(string $comments): array
+    {
+        if (preg_match('/;\s*(\{.*\})\s*$/', $comments, $matches) === 1) {
+            $payload = json_decode($matches[1], true);
+            return is_array($payload) ? $payload : [];
+        }
+
+        $payload = json_decode($comments, true);
+        return is_array($payload) ? $payload : [];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function resolveEsignOverrideActor(array $row): string
+    {
+        $user = (string) ($row['user'] ?? '');
+        $success = (string) ($row['success'] ?? '');
+
+        if ($user === 'esign_override' && $success !== '' && $success !== 'new_visit') {
+            return $success;
+        }
+        if ($user === 'esign_override') {
+            $actor = trim((string) ($row['groupname'] ?? ''));
+
+            return $actor !== '' ? $actor : 'system';
+        }
+
+        return $user !== '' ? $user : 'system';
+    }
+
+    private function resolveUserDisplayName(int $userId, string $fallbackUsername): string
+    {
+        if ($userId > 0) {
+            $user = QueryUtils::querySingleRow(
+                'SELECT fname, lname, username FROM users WHERE id = ?',
+                [$userId]
+            );
+            if (is_array($user)) {
+                $name = trim(((string) ($user['fname'] ?? '')) . ' ' . ((string) ($user['lname'] ?? '')));
+                if ($name !== '') {
+                    return $name;
+                }
+
+                $username = trim((string) ($user['username'] ?? ''));
+                if ($username !== '') {
+                    return $username;
+                }
+            }
+        }
+
+        return trim($fallbackUsername);
     }
 
     private function relativeTime(string $datetime): string

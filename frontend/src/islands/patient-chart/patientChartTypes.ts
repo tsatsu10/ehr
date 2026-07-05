@@ -84,6 +84,14 @@ export interface ActivityFeedItem {
     from_state?: string;
     to_state?: string;
     reason?: string;
+    form_title?: string;
+    formdir?: string;
+    author?: string;
+    saved_at?: string;
+    chokepoint?: string;
+    score?: number;
+    actor?: string;
+    encounter_id?: number;
   };
   primary_action?: ActivityFeedAction;
   secondary_action?: ActivityFeedAction;

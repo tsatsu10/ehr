@@ -57,6 +57,9 @@ class PatientActivityFeedServiceTest extends TestCase
         $this->assertStringContainsString('routing_confirmed', $source);
         $this->assertStringContainsString('visit_cancelled', $source);
         $this->assertStringContainsString('hard_assigned', $source);
+        $this->assertStringContainsString('encounter_document_saved', $source);
+        $this->assertStringContainsString('completion_override', $source);
+        $this->assertStringContainsString('esign_override', $source);
         $this->assertStringContainsString('buildFeedSuppressKeys', $source);
         $this->assertStringContainsString('can_extend_lookback', $source);
     }
