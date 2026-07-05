@@ -77,13 +77,13 @@ export function TodaysAppointmentsList({
         {onBulkCheckIn && (
           <button
             type="button"
-            className="shrink-0 flex items-center justify-center h-4 w-4 text-[var(--oe-nc-text-muted)] hover:text-[var(--oe-nc-primary)] transition-colors"
+            className="shrink-0 flex items-center justify-center h-9 w-9 rounded text-[var(--oe-nc-text-muted)] hover:text-[var(--oe-nc-primary)] hover:bg-white/50 transition-colors"
             aria-label={allSelected ? 'Deselect all' : 'Select all appointments'}
             onClick={toggleAll}
           >
             {allSelected
-              ? <CheckSquare className="h-4 w-4 text-[var(--oe-nc-primary)]" />
-              : <Square className="h-4 w-4" />
+              ? <CheckSquare className="h-5 w-5 text-[var(--oe-nc-primary)]" />
+              : <Square className="h-5 w-5" />
             }
           </button>
         )}
@@ -100,13 +100,13 @@ export function TodaysAppointmentsList({
             {onBulkCheckIn && (
               <button
                 type="button"
-                className="nc-bulk-select-col shrink-0 flex items-center justify-center w-9 border-b border-[var(--oe-nc-border)] hover:bg-[var(--oe-nc-bg-tint)] transition-colors"
+                className="nc-bulk-select-col shrink-0 flex items-center justify-center w-11 border-b border-[var(--oe-nc-border)] hover:bg-[var(--oe-nc-bg-tint)] transition-colors"
                 aria-label={selectedPids.has(row.pid) ? `Deselect ${row.display_name}` : `Select ${row.display_name}`}
                 onClick={() => toggleSelect(row.pid)}
               >
                 {selectedPids.has(row.pid)
-                  ? <CheckSquare className="h-4 w-4 text-[var(--oe-nc-primary)]" />
-                  : <Square className="h-4 w-4 text-[var(--oe-nc-text-muted)]" />
+                  ? <CheckSquare className="h-5 w-5 text-[var(--oe-nc-primary)]" />
+                  : <Square className="h-5 w-5 text-[var(--oe-nc-text-muted)]" />
                 }
               </button>
             )}

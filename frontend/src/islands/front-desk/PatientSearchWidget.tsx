@@ -270,7 +270,7 @@ export function PatientSearchWidget({
             {query && !searching && (
               <button
                 type="button"
-                className="nc-search-input-clear absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center h-6 w-6 rounded-full hover:bg-[var(--oe-nc-bg-tint)] transition-colors"
+                className="nc-search-input-clear absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center h-9 w-9 rounded-full hover:bg-[var(--oe-nc-bg-tint)] transition-colors"
                 id="nc-search-input-clear"
                 aria-label="Clear search"
                 onClick={() => {
@@ -278,7 +278,7 @@ export function PatientSearchWidget({
                   inputRef.current?.focus();
                 }}
               >
-                <X className="h-3.5 w-3.5 text-[var(--oe-nc-text-muted)]" />
+                <X className="h-4 w-4 text-[var(--oe-nc-text-muted)]" />
               </button>
             )}
           </div>
@@ -292,10 +292,10 @@ export function PatientSearchWidget({
                 variant="outline"
                 size="sm"
                 id="nc-add-patient"
-                className="h-7 text-xs"
+                className="h-9 text-xs px-3"
                 onClick={() => onRegisterPatient(query.trim())}
               >
-                <UserPlus className="h-3.5 w-3.5" />
+                <UserPlus className="h-4 w-4" />
                 Register
               </Button>
             )}

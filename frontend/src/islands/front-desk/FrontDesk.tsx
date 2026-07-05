@@ -6,6 +6,7 @@
 import type { FrontDeskProps } from '@core/types';
 import { ConfirmModal, IdentityConfirmBanner } from '@components/ConfirmModal';
 import { SlideOver } from '@components/SlideOver';
+import { KeyboardShortcutsHelp } from '@components/KeyboardShortcutsHelp';
 import { PatientSearchWidget } from './PatientSearchWidget';
 import { PatientPreviewPane } from './PatientPreviewPane';
 import { DeskStatusBar } from './DeskStatusBar';
@@ -201,6 +202,8 @@ export function FrontDesk({
             <p className="mb-0">{pendingConfirm.message}</p>
           )}
         </ConfirmModal>
+
+        <KeyboardShortcutsHelp />
       </div>
     </>
   );

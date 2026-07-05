@@ -124,8 +124,8 @@
       "_usePatientSearch-DNldz5n3.js"
     ]
   },
-  "_PatientSearchWidget-Dff01Hd5.js": {
-    "file": "chunks/PatientSearchWidget-Dff01Hd5.js",
+  "_PatientSearchWidget-BD-LKZY3.js": {
+    "file": "chunks/PatientSearchWidget-BD-LKZY3.js",
     "name": "PatientSearchWidget",
     "imports": [
       "_deskCalloutStyles-sccuUACN.js",
@@ -395,20 +395,9 @@
       "assets/main-Dq-TCZzP.css"
     ]
   },
-  "_main-D4YSm7pb.css": {
-    "file": "assets/main-D4YSm7pb.css",
-    "src": "_main-D4YSm7pb.css"
-  },
-  "_main-DPByaS45.js": {
-    "file": "chunks/main-DPByaS45.js",
-    "name": "main",
-    "imports": [
-      "_deskCalloutStyles-sccuUACN.js",
-      "_native-select-Wo_V403k.js"
-    ],
-    "css": [
-      "assets/main-D4YSm7pb.css"
-    ]
+  "_main-DE7kmLaF.css": {
+    "file": "assets/main-DE7kmLaF.css",
+    "src": "_main-DE7kmLaF.css"
   },
   "_main-Dq-TCZzP.css": {
     "file": "assets/main-Dq-TCZzP.css",
@@ -442,6 +431,17 @@
     ],
     "css": [
       "assets/main-B3uNSZHP.css"
+    ]
+  },
+  "_main-lRmvWztO.js": {
+    "file": "chunks/main-lRmvWztO.js",
+    "name": "main",
+    "imports": [
+      "_deskCalloutStyles-sccuUACN.js",
+      "_native-select-Wo_V403k.js"
+    ],
+    "css": [
+      "assets/main-DE7kmLaF.css"
     ]
   },
   "_native-select-Wo_V403k.js": {
@@ -805,7 +805,7 @@
       "_circle-check-OdSinwkY.js",
       "_user-plus-D2OXiq6r.js",
       "_circle-x-ClDyifmx.js",
-      "_PatientSearchWidget-Dff01Hd5.js",
+      "_PatientSearchWidget-BD-LKZY3.js",
       "_triangle-alert-BL1DEnCk.js",
       "_select-C_GxGt4L.js",
       "_clock-J1hZ8jZc.js",
@@ -813,6 +813,7 @@
       "_x-Dk6qJqtI.js",
       "_input-BwaDVzge.js",
       "_PatientContextBanner-DJF13AFX.js",
+      "_dialog-B9wqMDjl.js",
       "_SlideOver-BG0ji5_a.js",
       "_bannerPreviewProps-D7kf4PzH.js",
       "_label-BGgch6PT.js",
@@ -979,7 +980,7 @@
       "_preload-helper-DYl5dUZ5.js",
       "_usePageHeadingDateInput-CcQvdkCm.js",
       "_reportsFormatters-Cl5Kncev.js",
-      "_main-DPByaS45.js"
+      "_main-lRmvWztO.js"
     ],
     "dynamicImports": [
       "src/islands/pharm-ops/PharmOpsDispenseDrawer.tsx",
@@ -1062,7 +1063,7 @@
       "_DataTable-lLFa30sc.js",
       "_PaginationBar-DOl-ijIG.js",
       "_reportsFormatters-Cl5Kncev.js",
-      "_main-DPByaS45.js",
+      "_main-lRmvWztO.js",
       "_main-BPoRS12J.js",
       "_BillOpsHub-xJOdZSKO.js"
     ],
@@ -1112,7 +1113,7 @@
       "_StatusPill-uYqiBn4x.js",
       "_AncillaryVisitBadges-BiQPWWHZ.js",
       "_card-BqZ3_I52.js",
-      "_PatientSearchWidget-Dff01Hd5.js",
+      "_PatientSearchWidget-BD-LKZY3.js",
       "_checkbox-CPswd-of.js",
       "_DeskQueueStatusBar-B-Gt7IEH.js",
       "_input-BwaDVzge.js",

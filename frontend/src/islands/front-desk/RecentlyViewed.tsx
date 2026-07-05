@@ -33,12 +33,12 @@ export function RecentlyViewed({ patients, onSelect, onClear }: RecentlyViewedPr
       </ul>
       <button
         type="button"
-        className="nc-recently-viewed-clear shrink-0 inline-flex items-center justify-center h-5 w-5 rounded-full text-[var(--oe-nc-text-muted)] hover:bg-white hover:text-[var(--oe-nc-text)] transition-colors"
+        className="nc-recently-viewed-clear shrink-0 inline-flex items-center justify-center h-9 w-9 rounded-full text-[var(--oe-nc-text-muted)] hover:bg-white hover:text-[var(--oe-nc-text)] transition-colors"
         onClick={onClear}
         aria-label="Clear recently viewed"
         title="Clear recently viewed"
       >
-        <X className="h-3 w-3" />
+        <X className="h-4 w-4" />
       </button>
     </div>
   );
