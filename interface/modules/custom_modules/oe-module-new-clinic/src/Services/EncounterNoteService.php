@@ -19,9 +19,9 @@ use OpenEMR\Services\FormService;
 
 class EncounterNoteService
 {
-    public const NATIVE_FORMDIR = 'nc_encounter_consult';
-    public const ENGINE_LEGACY = 'legacy';
-    public const ENGINE_NATIVE = 'native';
+    public const NATIVE_FORMDIR = EncounterNoteEnginePolicy::NATIVE_FORMDIR;
+    public const ENGINE_LEGACY = EncounterNoteEnginePolicy::ENGINE_LEGACY;
+    public const ENGINE_NATIVE = EncounterNoteEnginePolicy::ENGINE_NATIVE;
     public const DEFAULT_VARIANT = 'general_opd';
 
     /** @var list<string> */
@@ -34,60 +34,41 @@ class EncounterNoteService
 
     private static bool $schemaEnsured = false;
 
+    private readonly EncounterNoteEnginePolicy $enginePolicy;
+
     public function __construct(
         private readonly ClinicalDocAccessService $access = new ClinicalDocAccessService(),
         private readonly VisitQueueService $queueService = new VisitQueueService(),
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
+        ?EncounterNoteEnginePolicy $enginePolicy = null,
         private readonly VitalsPreviewBuilder $vitalsPreview = new VitalsPreviewBuilder(),
         private readonly EncounterSessionService $encounterSession = new EncounterSessionService(),
         private readonly PatientCompletionService $completionService = new PatientCompletionService(),
         private readonly DoctorService $doctorService = new DoctorService(),
         private readonly EncounterNoteLbfExportService $lbfExport = new EncounterNoteLbfExportService(),
     ) {
+        $this->enginePolicy = $enginePolicy ?? new EncounterNoteEnginePolicy($this->config, $this->visitScope);
     }
 
     public function isNativeEngineEnabled(?int $facilityId = null): bool
     {
-        if ($facilityId === null || $facilityId <= 0) {
-            $facilityId = $this->visitScope->resolveDeskFacilityId();
-        }
-
-        $engine = strtolower(trim((string) ($this->config->get(
-            'encounter_note_engine',
-            self::ENGINE_LEGACY,
-            $facilityId
-        ) ?? self::ENGINE_LEGACY)));
-
-        return $engine === self::ENGINE_NATIVE;
+        return $this->enginePolicy->isNativeEngineEnabled($facilityId);
     }
 
     public function effectiveConsultFormdir(?int $facilityId = null): string
     {
-        if ($this->isNativeEngineEnabled($facilityId)) {
-            return self::NATIVE_FORMDIR;
-        }
-
-        $formdir = strtolower(trim((string) ($this->config->get('consult_note_formdir', 'soap', $facilityId) ?? 'soap')));
-
-        return $formdir !== '' ? $formdir : 'soap';
+        return $this->enginePolicy->effectiveConsultFormdir($facilityId);
     }
 
     public function isNativeFormdir(string $formdir): bool
     {
-        return strcasecmp(trim($formdir), self::NATIVE_FORMDIR) === 0;
+        return $this->enginePolicy->isNativeFormdir($formdir);
     }
 
     public function shouldOpenNativeForm(string $formdir, ?int $facilityId = null): bool
     {
-        if (!$this->isNativeEngineEnabled($facilityId)) {
-            return false;
-        }
-
-        $formdir = strtolower(trim($formdir));
-
-        return $formdir === self::NATIVE_FORMDIR
-            || $formdir === strtolower(trim((string) ($this->config->get('consult_note_formdir', 'soap', $facilityId) ?? 'soap')));
+        return $this->enginePolicy->shouldOpenNativeForm($formdir, $facilityId);
     }
 
     /**
