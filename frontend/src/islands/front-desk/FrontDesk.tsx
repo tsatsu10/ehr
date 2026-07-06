@@ -15,6 +15,7 @@ import { PatientSearchWidget } from './PatientSearchWidget';
 import { PatientPreviewPane } from './PatientPreviewPane';
 import { DeskStatusBar } from './DeskStatusBar';
 import { FrontDeskFlowCharts } from './FrontDeskFlowCharts';
+import { FrontDeskLayout, FrontDeskSearchPanel } from './frontDeskUi';
 import { useFrontDesk } from './useFrontDesk';
 
 export function FrontDesk({
@@ -158,9 +159,35 @@ export function FrontDesk({
         <FrontDeskFlowCharts ajaxUrl={ajaxUrl} csrfToken={csrfToken} facilityId={facilityId} />
 
         <div className="nc-front-desk-workspace">
-          <div className="nc-front-desk-grid">
-            {showSearchInGrid && (
-              <div className="nc-front-desk-grid-search" role="search" aria-label="Patient search">
+          {showPreviewColumn ? (
+            <FrontDeskLayout
+              search={
+                showSearchInGrid ? (
+                  <FrontDeskSearchPanel>
+                    <PatientSearchWidget
+                      ajaxUrl={ajaxUrl}
+                      csrfToken={csrfToken}
+                      selectedPid={selectedPid}
+                      initialQuery={initialQuery}
+                      autoSelectFirst={!isMobile && mode !== 'registration' && mode !== 'registration-pinned'}
+                      recentPatients={recent}
+                      onClearRecent={clearRecent}
+                      schedulingEnabled={scheduledIntegrationEnabled}
+                      todaysAppointments={todaysAppointments}
+                      appointmentsLoading={appointmentsLoading}
+                      onSelectPatient={handleSelectPatient}
+                      onRegisterPatient={(prefill) => openRegistration({ prefill })}
+                      onBulkCheckIn={handleBulkCheckIn}
+                      onResultsChange={(results) => { searchResultsRef.current = results; }}
+                    />
+                  </FrontDeskSearchPanel>
+                ) : null
+              }
+              preview={previewPane}
+            />
+          ) : (
+            showSearchInGrid && (
+              <FrontDeskSearchPanel>
                 <PatientSearchWidget
                   ajaxUrl={ajaxUrl}
                   csrfToken={csrfToken}
@@ -177,14 +204,9 @@ export function FrontDesk({
                   onBulkCheckIn={handleBulkCheckIn}
                   onResultsChange={(results) => { searchResultsRef.current = results; }}
                 />
-              </div>
-            )}
-            {showPreviewColumn && (
-              <div className="nc-front-desk-grid-preview" role="region" aria-label="Patient preview and registration" id="nc-preview-pane">
-                {previewPane}
-              </div>
-            )}
-          </div>
+              </FrontDeskSearchPanel>
+            )
+          )}
         </div>
 
         {isMobile && (

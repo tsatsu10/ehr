@@ -13,5 +13,5 @@ namespace OpenEMR\Modules\NewClinic;
 
 class ModuleAssetVersion
 {
-    public const VERSION = '20260706sp349adminhubmerge1';
+    public const VERSION = '20260706sp350frontdeskredesign1';
 }

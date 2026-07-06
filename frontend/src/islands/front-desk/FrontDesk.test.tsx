@@ -109,7 +109,7 @@ describe('FrontDesk', () => {
 
   it('renders the desk status bar', () => {
     render(<FrontDesk {...props} />);
-    expect(screen.getByLabelText(/Front desk status/i)).toBeInTheDocument();
+    expect(document.getElementById('nc-desk-status-bar')).toBeInTheDocument();
     expect(screen.getByText(/Waiting now/i)).toBeInTheDocument();
     expect(screen.getByText(/Visits started today/i)).toBeInTheDocument();
   });
@@ -235,7 +235,7 @@ describe('FrontDesk', () => {
   it('shows search idle hint before typing', async () => {
     render(<FrontDesk {...props} />);
     expect(await screen.findByText(/Search to find a patient/i)).toBeInTheDocument();
-    expect(screen.getByText(/Type name, phone, NHIS/i)).toBeInTheDocument();
+    expect(screen.getByText(/Type first name, last name, or both/i)).toBeInTheDocument();
   });
 
   it('surfaces scheduling info on the status bar when enabled', () => {
@@ -247,7 +247,8 @@ describe('FrontDesk', () => {
         calendarUrl="/calendar"
       />
     );
-    const bar = screen.getByLabelText(/Front desk status/i);
+    const bar = document.getElementById('nc-desk-status-bar');
+    expect(bar).toBeInTheDocument();
     expect(bar).toHaveTextContent(/Scheduled today/i);
     expect(bar).toHaveTextContent('3');
     expect(screen.getByRole('link', { name: /Calendar/i })).toHaveAttribute('href', '/calendar');

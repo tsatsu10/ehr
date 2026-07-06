@@ -1,6 +1,7 @@
 @import '../../core/tokens.css';
 @import '../../core/clinical-tokens.css';
 @import '../../components/ui/ui-primitives.css';
+@import '../../core/desk-layout.css';
 @import './clinical-workspace.css';
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -123,6 +124,7 @@
 
 /* ── Search-first split grid ───────────────────────────────────────────── */
 
+.nc-front-desk-react-active .nc-front-desk-layout,
 .nc-front-desk-react-active .nc-front-desk-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -131,12 +133,21 @@
   width: 100%;
 }
 
+.nc-front-desk-react-active .nc-front-desk-layout__search,
+.nc-front-desk-react-active .nc-front-desk-layout__preview,
+.nc-front-desk-react-active .nc-front-desk-grid-search,
+.nc-front-desk-react-active .nc-front-desk-grid-preview {
+  min-width: 0;
+}
+
 @media (min-width: 992px) {
+  .nc-front-desk-split .nc-front-desk-layout,
   .nc-front-desk-split .nc-front-desk-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
     gap: 1rem;
   }
 
+  .nc-front-desk-split .nc-front-desk-layout__search,
   .nc-front-desk-split .nc-front-desk-grid-search {
     position: sticky;
     top: 0.5rem;
@@ -144,17 +155,162 @@
   }
 }
 
-.nc-front-desk-react-active .nc-front-desk-grid-search,
-.nc-front-desk-react-active .nc-front-desk-grid-preview {
-  min-width: 0;
+/* ── Search panel chrome ───────────────────────────────────────────────── */
+
+.nc-front-desk-react-active .nc-front-desk-search-panel {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--oe-nc-border, #cbd5e1);
+  border-radius: 1rem;
+  background: var(--oe-nc-surface, #fff);
+  box-shadow: var(--oe-nc-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  overflow: hidden;
+}
+
+.nc-front-desk-react-active .nc-front-desk-search-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--oe-nc-border, #cbd5e1);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-oe-primary, #1e40af) 6%, white),
+    var(--oe-nc-surface, #fff)
+  );
+}
+
+.nc-front-desk-react-active .nc-front-desk-search-panel__title {
+  margin: 0;
+  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--oe-nc-text, #1e293b);
+}
+
+.nc-front-desk-react-active .nc-front-desk-search-panel__sub {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-front-desk-react-active .nc-front-desk-search-panel__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.625rem;
+  flex-shrink: 0;
+  color: var(--color-oe-primary, #1e40af);
+  background: color-mix(in srgb, var(--color-oe-primary, #1e40af) 10%, white);
+}
+
+.nc-front-desk-react-active .nc-front-desk-search-panel__body .nc-search-panel {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* ── Preview shell ─────────────────────────────────────────────────────── */
+
+.nc-front-desk-react-active .nc-front-desk-preview-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid var(--oe-nc-border, #cbd5e1);
+  border-radius: 1rem;
+  background: var(--oe-nc-surface, #fff);
+  box-shadow: var(--oe-nc-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  overflow: hidden;
+}
+
+.nc-front-desk-react-active .nc-front-desk-preview-shell__header {
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--oe-nc-border, #cbd5e1);
+  background: var(--oe-nc-bg-tint, #f8fafc);
+}
+
+.nc-front-desk-react-active .nc-front-desk-preview-shell__title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--oe-nc-text, #1e293b);
+}
+
+.nc-front-desk-react-active .nc-front-desk-preview-shell__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.nc-front-desk-react-active .nc-front-desk-preview-shell__empty,
+.nc-front-desk-react-active .nc-front-desk-preview-shell__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 14rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.nc-front-desk-react-active .nc-front-desk-preview-shell__empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1rem;
+  color: var(--color-oe-primary, #1e40af);
+  background: color-mix(in srgb, var(--color-oe-primary, #1e40af) 10%, white);
+}
+
+.nc-front-desk-react-active .nc-front-desk-preview-shell__empty-title {
+  margin: 0;
+  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.nc-front-desk-react-active .nc-front-desk-preview-shell__empty-message {
+  margin: 0;
+  max-width: 22rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-front-desk-react-active .nc-front-desk-preview-shell__empty-meta {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-front-desk-react-active .nc-front-desk-preview-shell__loading {
+  flex-direction: row;
+  font-size: 0.875rem;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-front-desk-react-active .nc-front-desk-preview-shell--patient .nc-front-desk-preview-shell__scroll {
+  padding: 0;
+}
+
+.nc-front-desk-react-active .nc-front-desk-preview-shell--patient .oe-nc-preview-pane__scroll > * {
+  padding: 1rem 1.25rem 1.25rem;
 }
 
 @media (min-width: 768px) {
+  .nc-front-desk-registration .nc-front-desk-layout,
   .nc-front-desk-registration .nc-front-desk-grid {
     grid-template-columns: 1fr;
   }
 
-  .nc-front-desk-registration .nc-front-desk-grid-preview {
+  .nc-front-desk-registration .nc-front-desk-grid-preview,
+  .nc-front-desk-registration .nc-front-desk-layout__preview {
     width: 100%;
   }
 
@@ -187,12 +343,14 @@
 /* ── Preview pane: scroll body + sticky Start Visit footer (desktop) ─────── */
 
 @media (min-width: 992px) {
+  .nc-front-desk-has-selection .nc-front-desk-preview-shell.nc-preview-pane,
   .nc-front-desk-has-selection .nc-preview-pane {
     display: flex;
     flex-direction: column;
     max-height: calc(100vh - 6rem);
   }
 
+  .nc-front-desk-has-selection .nc-front-desk-preview-shell__scroll.nc-preview-pane-scroll,
   .nc-front-desk-has-selection .nc-preview-pane-scroll {
     flex: 1 1 auto;
     overflow-y: auto;
