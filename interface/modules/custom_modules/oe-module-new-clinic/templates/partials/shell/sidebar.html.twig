@@ -1,0 +1,80 @@
+{# T1 clinic shell — primary side navigation (ShellService → shell.nav_groups) #}
+<div class="nc-sidebar-backdrop" id="nc-sidebar-backdrop" hidden aria-hidden="true"></div>
+
+<aside class="nc-sidebar" id="nc-sidebar" aria-label="{{ 'Clinic navigation'|xlt }}">
+    <div class="nc-sidebar-brand">
+        <div class="nc-brand">
+            {% if shell.brand.logo_url %}
+                <img src="{{ shell.brand.logo_url|attr }}" alt="" class="nc-brand-logo">
+            {% else %}
+                <span class="nc-brand-initials" aria-hidden="true">{{ shell.brand.initials }}</span>
+            {% endif %}
+            <div class="nc-brand-text nc-sidebar-expand-only">
+                <p class="nc-brand-name nc-mb-0">{{ shell.brand.clinic_name|text }}</p>
+                {% if shell.brand.show_facility %}
+                    <div class="nc-brand-facility">{{ shell.brand.facility_name|text }}</div>
+                {% endif %}
+            </div>
+        </div>
+        <button type="button"
+                class="nc-btn nc-btn-sm nc-btn-link nc-sidebar-close nc-hidden-lg"
+                id="nc-sidebar-close"
+                aria-label="{{ 'Close menu'|xlt }}">
+            <i class="fa fa-times" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <div class="nc-brand-date nc-sidebar-expand-only nc-px-3 nc-pb-2" id="nc-today-label">{{ shell.today_label|text }}</div>
+
+    <nav class="nc-sidebar-nav" aria-label="{{ 'Module pages'|xlt }}">
+        {% for group in shell.nav_groups %}
+            {% if not loop.first %}
+                <div class="nc-sidebar-group-divider" role="presentation" aria-hidden="true"></div>
+            {% endif %}
+            <section class="nc-sidebar-group" data-nav-group="{{ group.key }}" aria-labelledby="nc-nav-group-{{ group.key }}">
+                <h2 class="nc-sidebar-group-label nc-sidebar-expand-only" id="nc-nav-group-{{ group.key }}">
+                    {{ group.label }}
+                </h2>
+                <ul class="nc-sidebar-list">
+                    {% for item in group.items %}
+                        <li>
+                            <a href="{{ item.url|attr }}"
+                               class="nc-sidebar-link{% if item.active %} is-active{% endif %}"
+                               target="_top"
+                               data-nav-id="{{ item.id }}"
+                               {% if item.badge_key %}data-badge-key="{{ item.badge_key }}"{% endif %}
+                               {% if item.active %}aria-current="page"{% endif %}
+                               title="{{ item.label }}">
+                                <span class="nc-sidebar-link-icon-wrap" aria-hidden="true">
+                                    <i class="fa {{ item.icon }} nc-sidebar-link-icon"></i>
+                                </span>
+                                <span class="nc-sidebar-link-label nc-sidebar-expand-only">{{ item.label }}</span>
+                                {% if item.badge_key %}
+                                    <span class="nc-sidebar-badge nc-sidebar-expand-only{% if item.badge_count == 0 %} is-zero{% endif %}"
+                                          data-badge-count>{{ item.badge_count }}</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </section>
+        {% endfor %}
+    </nav>
+
+    <div class="nc-sidebar-footer">
+        {% include 'partials/shell/sidebar-queue-kpi.html.twig' %}
+        {% include 'partials/shell/sidebar-profile.html.twig' %}
+
+        <button type="button"
+                class="nc-sidebar-collapse nc-hidden nc-flex-lg"
+                id="nc-sidebar-collapse"
+                aria-expanded="true"
+                aria-controls="nc-sidebar"
+                aria-label="{{ 'Collapse sidebar'|xlt }}">
+            <span class="nc-sidebar-collapse-icon" aria-hidden="true">
+                <i class="fa fa-angle-double-left"></i>
+            </span>
+            <span class="nc-sidebar-expand-only">{{ 'Collapse'|xlt }}</span>
+        </button>
+    </div>
+</aside>

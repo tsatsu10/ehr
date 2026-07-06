@@ -128,6 +128,12 @@
   --oe-nc-sidebar-width-collapsed: 72px;
   --oe-nc-sidebar-z: 1040;
   --oe-nc-sidebar-backdrop-z: 1035;
+  --nc-sidebar-width: var(--oe-nc-sidebar-width);
+  --nc-sidebar-width-collapsed: var(--oe-nc-sidebar-width-collapsed);
+  --nc-sidebar-z: var(--oe-nc-sidebar-z);
+  --nc-sidebar-backdrop-z: var(--oe-nc-sidebar-backdrop-z);
+  --nc-content-gutter: var(--oe-nc-content-gutter);
+  --nc-content-max: var(--oe-nc-content-max);
 
   /* Interaction tokens */
   --oe-nc-radius:     0.5rem;

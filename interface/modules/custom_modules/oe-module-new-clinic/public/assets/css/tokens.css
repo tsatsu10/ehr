@@ -32,6 +32,15 @@
     --oe-nc-sidebar-width-collapsed: 72px;
     --oe-nc-sidebar-z: 1040;
     --oe-nc-sidebar-backdrop-z: 1035;
+
+    /* Legacy shell.css aliases — prefer --oe-nc-* in new code */
+    --nc-sidebar-width: var(--oe-nc-sidebar-width);
+    --nc-sidebar-width-collapsed: var(--oe-nc-sidebar-width-collapsed);
+    --nc-sidebar-z: var(--oe-nc-sidebar-z);
+    --nc-sidebar-backdrop-z: var(--oe-nc-sidebar-backdrop-z);
+    --nc-content-gutter: var(--oe-nc-content-gutter);
+    --nc-content-max: var(--oe-nc-content-max);
+
     --shadow-md: 0 1px 2px rgba(15, 23, 42, 0.04);
     --shadow-lg: 0 4px 12px rgba(15, 23, 42, 0.06);
 }

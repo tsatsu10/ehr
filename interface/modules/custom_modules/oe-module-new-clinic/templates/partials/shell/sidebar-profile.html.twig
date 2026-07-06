@@ -1,0 +1,63 @@
+<div class="nc-dropdown nc-sidebar-role nc-profile-card">
+    <button type="button"
+            class="nc-profile-card-trigger nc-dropdown-toggle nc-w-full"
+            id="nc-role-pill"
+            data-nc-dropdown-toggle
+            aria-haspopup="true"
+            aria-expanded="false"
+            aria-label="{{ 'Active role menu'|xlt }}">
+        <span class="nc-profile-card-avatar-wrap" aria-hidden="true">
+            <span class="nc-profile-card-avatar">{{ shell.user.initials }}</span>
+        </span>
+        <span class="nc-profile-card-body nc-sidebar-expand-only">
+            <span class="nc-profile-card-name">
+                {{ shell.user.first_name|text }}{% if shell.user.last_name %} {{ shell.user.last_name|text }}{% endif %}
+            </span>
+            <span class="nc-profile-card-role">{{ shell.role.label }}</span>
+        </span>
+        <span class="nc-profile-card-caret nc-sidebar-expand-only" aria-hidden="true">
+            <i class="fa fa-chevron-down"></i>
+        </span>
+    </button>
+    <div class="nc-dropdown-menu nc-role-menu nc-profile-card-menu" aria-labelledby="nc-role-pill">
+        <div class="nc-profile-card-menu-header">
+            <span class="nc-profile-card-menu-name">
+                {{ shell.user.first_name|text }}{% if shell.user.last_name %} {{ shell.user.last_name|text }}{% endif %}
+            </span>
+            <span class="nc-profile-card-menu-role">{{ shell.role.label }}</span>
+        </div>
+        {% if shell.role.available|length > 1 %}
+            <div class="nc-dropdown-header nc-role-switch-heading">{{ 'Switch role'|xlt }}</div>
+            <p class="nc-role-switch-hint">{{ 'Shared device — pick who you are at this station.'|xlt }}</p>
+            {% for role in shell.role.available %}
+                <button type="button"
+                        class="nc-dropdown-item nc-role-switch-item{% if role.is_active %} is-active{% endif %}"
+                        data-role-aco="{{ role.aco }}"
+                        {% if role.is_active %}aria-current="true" disabled{% endif %}>
+                    <span class="nc-role-switch-item-icon-wrap nc-role-switch-item-icon-wrap--{{ role.accent }}" aria-hidden="true">
+                        <i class="fa {{ role.icon }}"></i>
+                    </span>
+                    <span class="nc-role-switch-item-body">
+                        <span class="nc-role-switch-item-label">{{ role.label }}</span>
+                        <span class="nc-role-switch-item-hint">{{ role.desk_label }}</span>
+                    </span>
+                    {% if role.is_active %}
+                        <i class="fa fa-check nc-role-switch-item-check" aria-hidden="true"></i>
+                    {% endif %}
+                </button>
+            {% endfor %}
+            <div class="nc-role-switch-error nc-callout nc-callout-error nc-hidden nc-m-2 nc-py-2 nc-text-sm"
+                 id="nc-role-switch-error"
+                 role="alert"></div>
+            <div class="nc-dropdown-divider"></div>
+        {% endif %}
+        <a class="nc-dropdown-item" href="{{ shell.profile_url|attr }}" target="_top">
+            <i class="fa fa-user nc-mr-2 nc-text-muted" aria-hidden="true"></i>
+            {{ 'My profile'|xlt }}
+        </a>
+        <a class="nc-dropdown-item nc-text-danger" href="{{ shell.logout_url|attr }}" target="_top">
+            <i class="fa fa-sign-out nc-mr-2" aria-hidden="true"></i>
+            {{ 'Logout'|xlt }}
+        </a>
+    </div>
+</div>

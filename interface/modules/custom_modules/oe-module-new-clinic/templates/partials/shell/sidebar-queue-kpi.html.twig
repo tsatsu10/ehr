@@ -1,0 +1,29 @@
+<details class="nc-queue-kpi nc-sidebar-expand-only"
+          id="nc-queue-stats"
+          aria-label="{{ 'Today\'s queue counts'|xlt }}">
+    <summary class="nc-queue-kpi-summary">
+        <span class="nc-queue-kpi-summary-label">{{ 'Queue'|xlt }}</span>
+        <span class="nc-queue-kpi-summary-active">
+            <span data-queue-active-total>{{ shell.queue_active_total }}</span>
+            {{ 'active'|xlt }}
+        </span>
+    </summary>
+    <div class="nc-queue-kpi-chips" aria-live="polite">
+        {% for stat in shell.queue_stats %}
+            <span class="nc-queue-kpi-chip{% if stat.key == 'done' %} nc-queue-kpi-chip-muted{% endif %}"
+                  data-stat-key="{{ stat.key }}"
+                  title="{{ stat.label }}">
+                <span class="nc-queue-kpi-chip-count" data-stat-count>{{ stat.count }}</span>
+                <span class="nc-queue-kpi-chip-label">{{ stat.short_label }}</span>
+            </span>
+        {% endfor %}
+    </div>
+</details>
+
+<div class="nc-queue-kpi-mini nc-sidebar-collapse-only"
+     id="nc-queue-stats-mini"
+     aria-live="polite"
+     title="{{ 'Patients still in workflow'|xlt }}">
+    <span class="nc-queue-kpi-mini-label">{{ 'Active'|xlt }}</span>
+    <span class="nc-queue-kpi-mini-count" data-queue-active-total>{{ shell.queue_active_total }}</span>
+</div>
