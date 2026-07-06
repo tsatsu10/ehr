@@ -1,4 +1,5 @@
 import type { PlanItemType, ProblemStatus } from './encounterVariants';
+import type { RosFindingStatus, RosSystemName } from './encounterRosSystems';
 import { newProblemId } from './encounterVariants';
 
 export type EncounterConsultSectionId =
@@ -6,8 +7,11 @@ export type EncounterConsultSectionId =
   | 'source'
   | 'cc'
   | 'hpi'
+  | 'ros'
+  | 'background'
   | 'vitals'
   | 'pe'
+  | 'data_reviewed'
   | 'problems'
   | 'attestation';
 
@@ -30,6 +34,57 @@ export interface EncounterNoteReferralSection {
 export interface EncounterNoteSourceSection {
   sources: string[];
   narrative: string;
+}
+
+export interface EncounterNoteRosSystemRow {
+  system: RosSystemName | string;
+  status: RosFindingStatus;
+  notes: string;
+}
+
+export interface EncounterNoteRosSection {
+  systems: EncounterNoteRosSystemRow[];
+  narrative: string;
+}
+
+export interface EncounterBackgroundLine {
+  label: string;
+  value: string;
+}
+
+export interface EncounterBackgroundPrefill {
+  problems: EncounterBackgroundLine[];
+  social: EncounterBackgroundLine[];
+  edit_urls: {
+    problems?: string | null;
+    allergies?: string | null;
+    medications?: string | null;
+    history?: string | null;
+  };
+}
+
+export interface EncounterLabResultPrefillItem {
+  id: string;
+  label: string;
+  date: string | null;
+  abnormal?: boolean;
+}
+
+export interface EncounterNoteDataReviewedSection {
+  lab_ids: string[];
+  imaging_narrative: string;
+  outside_records: string;
+  narrative: string;
+}
+
+export interface EncounterSpecialtyPeOverlay {
+  id: string;
+  label: string;
+}
+
+export interface EncounterNotePeSection {
+  general: string;
+  specialty: Record<string, string>;
 }
 
 export interface EncounterPlanItem {
@@ -67,7 +122,9 @@ export interface EncounterNoteSections {
   source: EncounterNoteSourceSection;
   cc: { chief_complaint: string };
   hpi: EncounterNoteHpiSection;
-  pe: { general: string };
+  ros: EncounterNoteRosSection;
+  data_reviewed: EncounterNoteDataReviewedSection;
+  pe: EncounterNotePeSection;
   problems: EncounterNoteProblemsSection;
   assessment: { narrative: string };
   plan: { narrative: string };
@@ -102,6 +159,8 @@ export interface EncounterNotePrefill {
   vitals: EncounterVitalsPrefill;
   allergies: EncounterAllergiesPrefill;
   medications: EncounterMedicationsPrefill;
+  background: EncounterBackgroundPrefill;
+  recent_labs: EncounterLabResultPrefillItem[];
   patient: {
     display_name: string;
     queue_number: number;
@@ -117,6 +176,7 @@ export interface EncounterSupervisorMeta {
 export interface EncounterNoteConfig {
   require_icd: boolean;
   supervisor_required: boolean;
+  specialty_pe_overlays?: EncounterSpecialtyPeOverlay[];
 }
 
 export interface EncounterNotePayload {
@@ -165,8 +225,11 @@ export const ENCOUNTER_SECTIONS: Array<{
   { id: 'source', label: 'Source of information', description: 'Who provided the history for this visit' },
   { id: 'cc', label: 'Chief complaint', description: 'One-line reason for visit' },
   { id: 'hpi', label: 'History of present illness', description: 'OLDCARTS prompts + narrative' },
+  { id: 'ros', label: 'Review of systems', description: 'Pertinent systems checklist and negatives' },
+  { id: 'background', label: 'Background', description: 'PMH, meds, allergies, and social history from chart' },
   { id: 'vitals', label: 'Vitals', description: 'Prefilled from triage — read only' },
-  { id: 'pe', label: 'Physical examination', description: 'Exam findings' },
+  { id: 'pe', label: 'Physical examination', description: 'General exam and specialty overlays' },
+  { id: 'data_reviewed', label: 'Data reviewed', description: 'Recent labs, imaging, and outside records' },
   { id: 'problems', label: 'Assessment & plan', description: 'Problem-oriented diagnoses and linked actions' },
   { id: 'attestation', label: 'Attestation', description: 'Supervisor review before sign' },
 ];
@@ -181,6 +244,31 @@ export function emptyProblemRow(): EncounterProblemRow {
     assessment_narrative: '',
     differential: '',
     plan_items: [],
+  };
+}
+
+export function emptyRosSection(): EncounterNoteRosSection {
+  return { systems: [], narrative: '' };
+}
+
+export function emptyDataReviewedSection(): EncounterNoteDataReviewedSection {
+  return {
+    lab_ids: [],
+    imaging_narrative: '',
+    outside_records: '',
+    narrative: '',
+  };
+}
+
+export function emptyPeSection(): EncounterNotePeSection {
+  return { general: '', specialty: {} };
+}
+
+export function emptyBackgroundPrefill(): EncounterBackgroundPrefill {
+  return {
+    problems: [],
+    social: [],
+    edit_urls: {},
   };
 }
 
@@ -205,7 +293,9 @@ export function emptySections(): EncounterNoteSections {
       aggravating: '',
       relieving: '',
     },
-    pe: { general: '' },
+    ros: emptyRosSection(),
+    data_reviewed: emptyDataReviewedSection(),
+    pe: emptyPeSection(),
     problems: { items: [] },
     assessment: { narrative: '' },
     plan: { narrative: '' },
@@ -287,7 +377,20 @@ export function mergeSections(
       aggravating: saved?.hpi?.aggravating ?? '',
       relieving: saved?.hpi?.relieving ?? '',
     },
-    pe: { general: saved?.pe?.general ?? '' },
+    ros: {
+      systems: Array.isArray(saved?.ros?.systems) ? saved.ros.systems : [],
+      narrative: saved?.ros?.narrative ?? '',
+    },
+    data_reviewed: {
+      lab_ids: Array.isArray(saved?.data_reviewed?.lab_ids) ? saved.data_reviewed.lab_ids : [],
+      imaging_narrative: saved?.data_reviewed?.imaging_narrative ?? '',
+      outside_records: saved?.data_reviewed?.outside_records ?? '',
+      narrative: saved?.data_reviewed?.narrative ?? '',
+    },
+    pe: {
+      general: saved?.pe?.general ?? '',
+      specialty: saved?.pe?.specialty ?? {},
+    },
     problems: { items: problems },
     assessment: { narrative: saved?.assessment?.narrative ?? '' },
     plan: { narrative: saved?.plan?.narrative ?? '' },

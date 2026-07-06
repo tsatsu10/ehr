@@ -23,6 +23,12 @@ const basePrefill = {
     summary: null,
     edit_url: null,
   },
+  background: {
+    problems: [],
+    social: [],
+    edit_urls: {},
+  },
+  recent_labs: [],
   patient: { display_name: 'Jane Doe', queue_number: 12 },
 };
 
@@ -31,6 +37,7 @@ const completeProblemSections = () => {
   sections.cc.chief_complaint = 'Headache';
   sections.hpi.narrative = 'Started yesterday';
   sections.pe.general = 'Normal exam';
+  sections.ros.systems = [{ system: 'Constitutional', status: 'negative', notes: '' }];
   sections.problems.items = [{
     id: 'p1',
     problem_label: 'Tension headache',
@@ -90,9 +97,9 @@ describe('encounterNoteValidation', () => {
     expect(result.valid).toBe(true);
   });
 
-  it('requires plan item per active problem', () => {
+  it('requires ROS review when variant includes ros section', () => {
     const sections = completeProblemSections();
-    sections.problems.items[0].plan_items = [];
+    sections.ros = { systems: [], narrative: '' };
 
     const result = validateEncounterNote(sections, {
       variant: 'general_opd',
@@ -100,6 +107,6 @@ describe('encounterNoteValidation', () => {
       prefill: basePrefill,
     });
     expect(result.valid).toBe(false);
-    expect(result.errors.some((error) => error.field.includes('plan_items'))).toBe(true);
+    expect(result.errors.some((error) => error.section === 'ros')).toBe(true);
   });
 });

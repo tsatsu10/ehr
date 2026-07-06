@@ -15,7 +15,11 @@ import { Label } from '@components/ui/label';
 import { Textarea } from '@components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@components/ui/select';
 import { EncounterAttestationSection } from './EncounterAttestationSection';
+import { EncounterBackgroundSection } from './EncounterBackgroundSection';
+import { EncounterDataReviewedSection } from './EncounterDataReviewedSection';
+import { EncounterPeSection } from './EncounterPeSection';
 import { EncounterProblemsSection } from './EncounterProblemsSection';
+import { EncounterRosSection } from './EncounterRosSection';
 import {
   fetchEncounterNote,
   saveEncounterNote,
@@ -52,6 +56,7 @@ import {
   SOURCE_OF_INFORMATION_OPTIONS,
   URGENCY_OPTIONS,
   isEncounterNoteVariant,
+  rosSystemsForVariant,
   variantLabel,
   visibleSectionIds,
   type EncounterNoteVariant,
@@ -62,6 +67,7 @@ const AUTOSAVE_MS = 30_000;
 const DEFAULT_NOTE_CONFIG: EncounterNoteConfig = {
   require_icd: false,
   supervisor_required: false,
+  specialty_pe_overlays: [],
 };
 
 function sectionComplete(
@@ -80,8 +86,18 @@ function sectionComplete(
       return sections.cc.chief_complaint.trim().length > 0;
     case 'hpi':
       return sections.hpi.narrative.trim().length > 0;
+    case 'ros':
+      return sections.ros.systems.some((row) => row.status !== 'not_reviewed')
+        || sections.ros.narrative.trim().length > 0;
+    case 'background':
+      return true;
     case 'vitals':
       return true;
+    case 'data_reviewed':
+      return sections.data_reviewed.lab_ids.length > 0
+        || sections.data_reviewed.imaging_narrative.trim().length > 0
+        || sections.data_reviewed.outside_records.trim().length > 0
+        || sections.data_reviewed.narrative.trim().length > 0;
     case 'pe':
       return sections.pe.general.trim().length > 0;
     case 'problems':
@@ -224,10 +240,13 @@ export function EncounterConsultForm({
       vitals: { latest: {}, summary: null, warnings: [], abnormal: false, missing: true },
       allergies: { items: [], undocumented: false, nkda: false, summary: null, edit_url: null },
       medications: { items: [], summary: null, edit_url: null },
+      background: { problems: [], social: [], edit_urls: {} },
+      recent_labs: [],
       patient: { display_name: '', queue_number: 0 },
     },
     supervisor,
   }), [noteConfig, prefill, supervisor, variant]);
+  const rosSystems = useMemo(() => rosSystemsForVariant(variant), [variant]);
 
   const loadNote = useCallback(async () => {
     setLoading(true);
@@ -635,19 +654,36 @@ export function EncounterConsultForm({
                     </div>
                   </div>
                 )}
+                {meta.id === 'ros' && (
+                  <EncounterRosSection
+                    section={sections.ros}
+                    systems={rosSystems}
+                    readOnly={readOnly}
+                    onChange={(ros) => updateSection('ros', ros)}
+                    onFocus={() => setActiveSection('ros')}
+                  />
+                )}
+                {meta.id === 'background' && prefill ? (
+                  <EncounterBackgroundSection prefill={prefill} />
+                ) : null}
                 {meta.id === 'vitals' && <VitalsSection prefill={prefill} />}
                 {meta.id === 'pe' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="encounter-pe">Physical examination</Label>
-                    <Textarea
-                      id="encounter-pe"
-                      rows={8}
-                      value={sections.pe.general}
-                      disabled={readOnly}
-                      onChange={(event) => updateSection('pe', { general: event.target.value })}
-                      onFocus={() => setActiveSection('pe')}
-                    />
-                  </div>
+                  <EncounterPeSection
+                    section={sections.pe}
+                    overlays={noteConfig.specialty_pe_overlays ?? []}
+                    readOnly={readOnly}
+                    onChange={(pe) => updateSection('pe', pe)}
+                    onFocus={() => setActiveSection('pe')}
+                  />
+                )}
+                {meta.id === 'data_reviewed' && (
+                  <EncounterDataReviewedSection
+                    section={sections.data_reviewed}
+                    recentLabs={prefill.recent_labs ?? []}
+                    readOnly={readOnly}
+                    onChange={(dataReviewed) => updateSection('data_reviewed', dataReviewed)}
+                    onFocus={() => setActiveSection('data_reviewed')}
+                  />
                 )}
                 {meta.id === 'problems' && (
                   <EncounterProblemsSection

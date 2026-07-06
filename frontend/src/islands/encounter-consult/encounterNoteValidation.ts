@@ -152,6 +152,19 @@ export function validateEncounterNote(
     });
   }
 
+  if (visible.has('ros')) {
+    const reviewed = sections.ros.systems.some((row) => row.status !== 'not_reviewed');
+    if (!reviewed && !sections.ros.narrative.trim()) {
+      errors.push({
+        section: 'ros',
+        field: 'systems',
+        message: variant === 'referral_consult'
+          ? 'Review at least one system or add a ROS narrative for referral consults'
+          : 'Review at least one system or add a ROS narrative',
+      });
+    }
+  }
+
   if (visible.has('referral')) {
     if (!sections.referral.requesting_clinician.trim()) {
       errors.push({

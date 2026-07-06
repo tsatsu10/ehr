@@ -504,6 +504,7 @@ class EncounterNoteService
         $preview = $this->vitalsPreview->mergeIntoPreview([], $vitalsRows, $warnings, true);
         $allergies = $this->loadAllergiesPrefill($pid);
         $medications = $this->loadMedicationsPrefill($pid, $encounter);
+        $facilityId = (int) ($visit['facility_id'] ?? 0);
 
         return [
             'chief_complaint' => trim((string) ($visit['chief_complaint'] ?? '')),
@@ -516,11 +517,130 @@ class EncounterNoteService
             ],
             'allergies' => $allergies,
             'medications' => $medications,
+            'background' => $this->loadBackgroundPrefill($pid),
+            'recent_labs' => $this->loadRecentLabsPrefill($pid),
             'patient' => [
                 'display_name' => trim((string) ($visit['patient_name'] ?? '')),
                 'queue_number' => (int) ($visit['queue_number'] ?? 0),
             ],
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function loadBackgroundPrefill(int $pid): array
+    {
+        $webroot = $GLOBALS['webroot'] ?? '';
+        $problemRows = QueryUtils::fetchRecords(
+            "SELECT title, diagnosis, comments
+             FROM lists WHERE pid = ? AND type = 'medical_problem' AND activity = 1
+             ORDER BY begdate DESC, id DESC LIMIT 8",
+            [$pid]
+        ) ?: [];
+        $problems = [];
+        foreach ($problemRows as $row) {
+            $title = trim((string) ($row['title'] ?? ''));
+            if ($title === '') {
+                continue;
+            }
+            $detail = trim((string) ($row['diagnosis'] ?? ''));
+            if ($detail === '') {
+                $detail = trim((string) ($row['comments'] ?? ''));
+            }
+            $problems[] = [
+                'label' => $title,
+                'value' => $detail !== '' ? $detail : $title,
+            ];
+        }
+
+        $historyRow = QueryUtils::querySingleRow(
+            "SELECT tobacco, alcohol, recreational_drugs, exercise_patterns,
+                    history_mother, history_father, history_siblings,
+                    relatives_diabetes, relatives_high_blood_pressure,
+                    additional_history
+             FROM history_data WHERE pid = ? ORDER BY id DESC LIMIT 1",
+            [$pid]
+        ) ?: [];
+        $social = [];
+        if (is_array($historyRow)) {
+            $fieldLabels = [
+                'history_mother' => xl('Mother'),
+                'history_father' => xl('Father'),
+                'history_siblings' => xl('Siblings'),
+                'tobacco' => xl('Tobacco'),
+                'alcohol' => xl('Alcohol'),
+                'recreational_drugs' => xl('Substance use'),
+                'exercise_patterns' => xl('Exercise'),
+                'relatives_diabetes' => xl('Family — diabetes'),
+                'relatives_high_blood_pressure' => xl('Family — hypertension'),
+                'additional_history' => xl('General history'),
+            ];
+            foreach ($fieldLabels as $field => $label) {
+                $value = trim((string) ($historyRow[$field] ?? ''));
+                if ($value !== '') {
+                    $social[] = ['label' => $label, 'value' => $value];
+                }
+            }
+        }
+
+        return [
+            'problems' => $problems,
+            'social' => $social,
+            'edit_urls' => [
+                'problems' => $webroot . '/interface/patient_file/summary/stats_full.php?active=problem&set_pid='
+                    . urlencode((string) $pid),
+                'allergies' => $webroot . '/interface/patient_file/summary/stats_full.php?active=all&set_pid='
+                    . urlencode((string) $pid),
+                'medications' => $webroot . '/interface/patient_file/summary/stats_full.php?active=med&set_pid='
+                    . urlencode((string) $pid),
+                'history' => $webroot . '/interface/patient_file/history/history_full.php?set_pid='
+                    . urlencode((string) $pid),
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function loadRecentLabsPrefill(int $pid): array
+    {
+        $since = (new \DateTimeImmutable('today'))
+            ->modify('-90 days')
+            ->format('Y-m-d 00:00:00');
+        $rows = QueryUtils::fetchRecords(
+            "SELECT pr.procedure_report_id, pr.date_report, pc.procedure_name,
+                    MAX(pres.abnormal) AS abnormal_flag
+             FROM procedure_report pr
+             INNER JOIN procedure_order po ON po.procedure_order_id = pr.procedure_order_id
+             INNER JOIN procedure_order_code pc
+                ON pc.procedure_order_id = pr.procedure_order_id
+                AND pc.procedure_order_seq = pr.procedure_order_seq
+             LEFT JOIN procedure_result pres ON pres.procedure_report_id = pr.procedure_report_id
+             WHERE po.patient_id = ? AND pr.review_status = 'reviewed'
+               AND pr.date_report >= ?
+             GROUP BY pr.procedure_report_id, pr.date_report, pc.procedure_name
+             ORDER BY pr.date_report DESC, pr.procedure_report_id DESC
+             LIMIT 20",
+            [$pid, $since]
+        ) ?: [];
+
+        $items = [];
+        foreach ($rows as $row) {
+            $label = trim((string) ($row['procedure_name'] ?? ''));
+            if ($label === '') {
+                $label = xl('Lab result');
+            }
+            $date = $row['date_report'] ?? null;
+            $items[] = [
+                'id' => (string) ((int) ($row['procedure_report_id'] ?? 0)),
+                'label' => $label,
+                'date' => $date ? date('Y-m-d H:i', strtotime((string) $date)) : null,
+                'abnormal' => in_array(strtolower((string) ($row['abnormal_flag'] ?? '')), ['yes', 'high', 'low', 'abnormal'], true),
+            ];
+        }
+
+        return $items;
     }
 
     /**
@@ -657,6 +777,30 @@ class EncounterNoteService
             $sourceNarrative = trim((string) ($sections['source']['narrative'] ?? ''));
             if ((!is_array($sources) || $sources === []) && $sourceNarrative === '') {
                 $errors[] = ['section' => 'source', 'field' => 'sources', 'message' => xl('Select at least one source of information or add a narrative')];
+            }
+        }
+
+        if (in_array('ros', $visible, true)) {
+            $rosSystems = is_array($sections['ros']['systems'] ?? null) ? $sections['ros']['systems'] : [];
+            $reviewed = false;
+            foreach ($rosSystems as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                if (strtolower(trim((string) ($row['status'] ?? ''))) !== 'not_reviewed') {
+                    $reviewed = true;
+                    break;
+                }
+            }
+            $rosNarrative = trim((string) ($sections['ros']['narrative'] ?? ''));
+            if (!$reviewed && $rosNarrative === '') {
+                $errors[] = [
+                    'section' => 'ros',
+                    'field' => 'systems',
+                    'message' => $variant === 'referral_consult'
+                        ? xl('Review at least one system or add a ROS narrative for referral consults')
+                        : xl('Review at least one system or add a ROS narrative'),
+                ];
             }
         }
 
@@ -800,14 +944,48 @@ class EncounterNoteService
     }
 
     /**
-     * @return array{require_icd: bool, supervisor_required: bool}
+     * @return array{require_icd: bool, supervisor_required: bool, specialty_pe_overlays: list<array{id: string, label: string}>}
      */
     private function getNoteConfig(int $facilityId): array
     {
         return [
             'require_icd' => $this->config->getInt('encounter_note_require_icd', 0, $facilityId) === 1,
             'supervisor_required' => $this->config->getInt('encounter_note_supervisor_required', 0, $facilityId) === 1,
+            'specialty_pe_overlays' => $this->loadSpecialtyPeOverlays($facilityId),
         ];
+    }
+
+    /**
+     * @return list<array{id: string, label: string}>
+     */
+    private function loadSpecialtyPeOverlays(int $facilityId): array
+    {
+        $labels = [
+            'eye_mag' => xl('Ophthalmology exam'),
+            'ankleinjury' => xl('Musculoskeletal exam'),
+            'bronchitis' => xl('Respiratory exam'),
+            'painmap' => xl('Pain assessment'),
+            'CAMOS' => xl('CAMOS specialty exam'),
+        ];
+        $raw = trim((string) ($this->config->get('clinical_doc_specialty_pack', '[]', $facilityId) ?? '[]'));
+        $enabled = json_decode($raw, true);
+        if (!is_array($enabled) || $enabled === []) {
+            return [];
+        }
+
+        $overlays = [];
+        foreach ($enabled as $formdir) {
+            $key = strtolower(trim((string) $formdir));
+            if ($key === '' || !isset($labels[$key])) {
+                continue;
+            }
+            $overlays[] = [
+                'id' => $key,
+                'label' => $labels[$key],
+            ];
+        }
+
+        return $overlays;
     }
 
     /**
@@ -818,10 +996,14 @@ class EncounterNoteService
         $variant = $this->normalizeVariant($variant);
 
         return match ($variant) {
-            'referral_consult' => ['referral', 'source', 'cc', 'hpi', 'vitals', 'pe', 'problems', 'attestation'],
-            'follow_up' => ['cc', 'hpi', 'vitals', 'pe', 'problems'],
-            'pre_procedure' => ['source', 'cc', 'hpi', 'vitals', 'pe', 'problems', 'attestation'],
-            default => ['cc', 'hpi', 'vitals', 'pe', 'problems'],
+            'referral_consult' => [
+                'referral', 'source', 'cc', 'hpi', 'ros', 'background', 'vitals', 'pe', 'data_reviewed', 'problems', 'attestation',
+            ],
+            'follow_up' => ['cc', 'hpi', 'background', 'vitals', 'pe', 'problems'],
+            'pre_procedure' => [
+                'source', 'cc', 'hpi', 'ros', 'background', 'vitals', 'pe', 'data_reviewed', 'problems', 'attestation',
+            ],
+            default => ['cc', 'hpi', 'ros', 'background', 'vitals', 'pe', 'problems'],
         };
     }
 
@@ -1167,9 +1349,15 @@ class EncounterNoteService
         }
 
         $merged = array_merge($this->emptySections(), $sections);
-        foreach (['hpi', 'referral', 'source', 'context', 'attestation'] as $nestedKey) {
+        foreach (['hpi', 'referral', 'source', 'context', 'attestation', 'ros', 'data_reviewed'] as $nestedKey) {
             if (isset($sections[$nestedKey]) && is_array($sections[$nestedKey])) {
                 $merged[$nestedKey] = array_merge($this->emptySections()[$nestedKey], $sections[$nestedKey]);
+            }
+        }
+        if (isset($sections['pe']) && is_array($sections['pe'])) {
+            $merged['pe'] = array_merge($this->emptySections()['pe'], $sections['pe']);
+            if (isset($sections['pe']['specialty']) && is_array($sections['pe']['specialty'])) {
+                $merged['pe']['specialty'] = $sections['pe']['specialty'];
             }
         }
         if (isset($sections['problems']) && is_array($sections['problems'])) {
@@ -1206,7 +1394,20 @@ class EncounterNoteService
                 'aggravating' => '',
                 'relieving' => '',
             ],
-            'pe' => ['general' => ''],
+            'ros' => [
+                'systems' => [],
+                'narrative' => '',
+            ],
+            'data_reviewed' => [
+                'lab_ids' => [],
+                'imaging_narrative' => '',
+                'outside_records' => '',
+                'narrative' => '',
+            ],
+            'pe' => [
+                'general' => '',
+                'specialty' => [],
+            ],
             'problems' => ['items' => []],
             'assessment' => ['narrative' => ''],
             'plan' => ['narrative' => ''],

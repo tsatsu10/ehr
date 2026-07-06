@@ -1,4 +1,5 @@
 import type { EncounterConsultSectionId } from './encounterConsultTypes';
+import { ROS_BRIEF_SYSTEMS, ROS_SYSTEMS, type RosSystemName } from './encounterRosSystems';
 
 export const ENCOUNTER_NOTE_VARIANTS = [
   'general_opd',
@@ -53,17 +54,54 @@ export function variantLabel(variant: EncounterNoteVariant): string {
 }
 
 export function visibleSectionIds(variant: EncounterNoteVariant): EncounterConsultSectionId[] {
-  const base: EncounterConsultSectionId[] = ['cc', 'hpi', 'vitals', 'pe', 'problems'];
-
   switch (variant) {
     case 'general_opd':
-      return base;
+      return ['cc', 'hpi', 'ros', 'background', 'vitals', 'pe', 'problems'];
     case 'referral_consult':
-      return ['referral', 'source', ...base, 'attestation'];
+      return [
+        'referral',
+        'source',
+        'cc',
+        'hpi',
+        'ros',
+        'background',
+        'vitals',
+        'pe',
+        'data_reviewed',
+        'problems',
+        'attestation',
+      ];
     case 'follow_up':
-      return base;
+      return ['cc', 'hpi', 'background', 'vitals', 'pe', 'problems'];
     case 'pre_procedure':
-      return ['source', ...base, 'attestation'];
+      return [
+        'source',
+        'cc',
+        'hpi',
+        'ros',
+        'background',
+        'vitals',
+        'pe',
+        'data_reviewed',
+        'problems',
+        'attestation',
+      ];
+    default: {
+      const never: never = variant;
+      return never;
+    }
+  }
+}
+
+export function rosSystemsForVariant(variant: EncounterNoteVariant): readonly RosSystemName[] {
+  switch (variant) {
+    case 'general_opd':
+    case 'pre_procedure':
+      return ROS_BRIEF_SYSTEMS;
+    case 'referral_consult':
+      return ROS_SYSTEMS;
+    case 'follow_up':
+      return [];
     default: {
       const never: never = variant;
       return never;

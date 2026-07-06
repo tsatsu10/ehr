@@ -390,7 +390,7 @@ Align with New Clinic tokens (`--oe-nc-*`, Figtree + Noto Sans) and admin/chart 
 | **V1.2-DOC-HLF-2** | M17 + new island | `frontend/src/islands/encounter-consult/` — native form core sections (CC, HPI, vitals prefill, A&P) |
 | **V1.2-DOC-HLF-3** | M17 | Referral header + problem-plan linkage + validate/sign |
 | **V1.2-DOC-HLF-4** | M4 + MRD | Hub card preview + Clinical tab summary — **shipped** |
-| **V2-DOC-HLF-5** | M17 specialty | Specialty PE overlays (`clinical_doc_specialty_pack` integration) |
+| **V2-DOC-HLF-5** | M17 specialty | Specialty PE overlays + ROS/background/data reviewed sections — **shipped** |
 | **V2-DOC-HLF-6** | M11 | Referral prefill + export packet includes consult note |
 
 **NG5 evolution:** Native form **does not** replace LBF runtime for all forms — only **primary consult**. Lab, Rx, screening remain stock.
@@ -472,7 +472,8 @@ Align with New Clinic tokens (`--oe-nc-*`, Figtree + Noto Sans) and admin/chart 
 | 0.1.1 | 2026-07-06 | V1.2-DOC-HLF-2 implemented — native `encounter-consult` island, `nc_encounter_note` storage, vitals prefill API |
 | 0.1.2 | 2026-07-06 | V1.2-DOC-HLF-1 implemented — `referral_hospital_v1` bundle, `LBFreferral_opd_consult` LBF wizard + admin import |
 | 0.1.3 | 2026-07-06 | V1.2-DOC-HLF-3 implemented — referral/source sections, problem-plan model, variant validation, supervisor attestation, admin config keys |
+| 0.1.4 | 2026-07-06 | V1.2-DOC-HLF-4/5 implemented — hub/MRD integration; ROS, background, data reviewed, specialty PE overlays |
 
 ---
 
-**Next engineering step:** ~~Implement **V1.2-DOC-HLF-2**~~ — **V1.2-DOC-HLF-2 shipped** (`encounter-consult` island + `encounter_note.*` APIs behind `encounter_note_engine=native`). ~~**V1.2-DOC-HLF-1**~~ — **V1.2-DOC-HLF-1 shipped** (`referral_hospital_v1` bundle + `LBFreferral_opd_consult` admin import). ~~**V1.2-DOC-HLF-3**~~ — **V1.2-DOC-HLF-3 shipped** (referral header, problem-plan linkage, variant-aware validate/sign, supervisor attestation). ~~**V1.2-DOC-HLF-4**~~ — **V1.2-DOC-HLF-4 shipped** (hub card preview with CC/problem counts, MRD Clinical tab summary, Doctor Desk native shortcut, `encounter_note_signed` activity feed). Next: **V1.2-DOC-HLF-5** (ROS, background, data reviewed, specialty PE overlays).
+**Next engineering step:** ~~Implement **V1.2-DOC-HLF-2**~~ — **V1.2-DOC-HLF-2 shipped** (`encounter-consult` island + `encounter_note.*` APIs behind `encounter_note_engine=native`). ~~**V1.2-DOC-HLF-1**~~ — **V1.2-DOC-HLF-1 shipped** (`referral_hospital_v1` bundle + `LBFreferral_opd_consult` admin import). ~~**V1.2-DOC-HLF-3**~~ — **V1.2-DOC-HLF-3 shipped** (referral header, problem-plan linkage, variant-aware validate/sign, supervisor attestation). ~~**V1.2-DOC-HLF-4**~~ — **V1.2-DOC-HLF-4 shipped** (hub card preview with CC/problem counts, MRD Clinical tab summary, Doctor Desk native shortcut, `encounter_note_signed` activity feed). ~~**V1.2-DOC-HLF-5**~~ — **V1.2-DOC-HLF-5 shipped** (ROS checklist, background read-only strip, data reviewed multi-select, specialty PE overlays via `clinical_doc_specialty_pack`). Next: **V1.2-DOC-HLF-6** (referral prefill + export packet).

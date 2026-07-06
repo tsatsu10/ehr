@@ -96,6 +96,9 @@ class EncounterNoteServiceTest extends TestCase
         $sections = $method->invoke($service, 'referral_consult');
         $this->assertContains('referral', $sections);
         $this->assertContains('problems', $sections);
+        $this->assertContains('ros', $sections);
+        $this->assertContains('data_reviewed', $sections);
+        $this->assertContains('background', $sections);
     }
 
     public function testBuildNotePreviewReturnsDisabledPayloadWhenNativeEngineOff(): void
