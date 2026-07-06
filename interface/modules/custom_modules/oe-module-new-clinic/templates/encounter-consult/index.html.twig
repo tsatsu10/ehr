@@ -1,0 +1,32 @@
+{% extends 'base.html.twig' %}
+
+{% block page_heading_actions %}
+<div class="nc-flex nc-flex-wrap nc-items-center nc-gap-2">
+    <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary" href="{{ return_url|attr }}">
+        {{ 'Back to documentation'|xlt }}
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div
+    id="nc-encounter-consult"
+    data-island="encounter-consult"
+    data-props="{{ {
+        ajaxUrl: ajax_url,
+        csrfToken: csrf_token,
+        moduleUrl: module_url,
+        visitId: visit_id,
+        facilityId: facility_id,
+        returnUrl: return_url,
+        returnTo: return_to,
+        returnTab: return_tab,
+        initialFocus: initial_focus|default(''),
+        webroot: webroot
+    }|json_encode|e('html_attr') }}"
+></div>
+{% endblock %}
+
+{% block scripts %}
+{% include 'partials/island-assets.html.twig' %}
+{% endblock %}

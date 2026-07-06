@@ -56,6 +56,7 @@ const islands: Record<string, string> = {
   'queue-bridge':        resolve(here, 'src/islands/queue-bridge/index.tsx'),
   'scheduling':          resolve(here, 'src/islands/scheduling/index.tsx'),
   'clinical-doc':        resolve(here, 'src/islands/clinical-doc/index.tsx'),
+  'encounter-consult':   resolve(here, 'src/islands/encounter-consult/index.tsx'),
 };
 
 export default defineConfig({

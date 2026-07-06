@@ -2,7 +2,7 @@ import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { ncShadcnTableClass } from '@components/ncTableStyles';
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
-import { Card, CardContent } from '@components/ui/card';
+import { FileStack } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -12,6 +12,7 @@ import {
   TableRow,
 } from '@components/ui/table';
 import type { AncillaryLbfPackStatus, FormBundleBoardPayload } from './adminTypes';
+import { AdminInsetPanel, AdminSection } from './adminUi';
 
 interface FormBundleBoardProps {
   board: FormBundleBoardPayload;
@@ -44,35 +45,32 @@ export function FormBundleBoard({
   const showInstallAll = missingImportable.length > 1;
 
   return (
-    <Card className="mb-3" id="nc-admin-form-bundle-board">
-      <CardContent>
-        <div className="flex flex-wrap items-start justify-between mb-2">
-          <div>
-            <h5 className="text-base font-semibold mb-1">Clinic form bundle</h5>
-            <p className="text-[var(--oe-nc-text-muted)] text-sm mb-0">
-              Required New Clinic forms — install and E-Sign readiness (M15-F06).
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {showInstallAll && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={installingAll || importingPackKey !== null}
-                onClick={onInstallAllMissing}
-              >
-                {installingAll ? 'Installing…' : 'Install missing ancillary forms'}
-              </Button>
-            )}
-            <Button variant="outline" size="sm" asChild>
-              <a href={board.forms_admin_url} target="_top">
-                Forms Administration
-              </a>
+    <AdminSection
+      id="nc-admin-form-bundle-board"
+      title="Clinic form bundle"
+      description="Required New Clinic forms — install and E-Sign readiness (M15-F06)."
+      icon={<FileStack className="h-4 w-4" aria-hidden />}
+      action={
+        <div className="flex flex-wrap gap-2">
+          {showInstallAll && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={installingAll || importingPackKey !== null}
+              onClick={onInstallAllMissing}
+            >
+              {installingAll ? 'Installing…' : 'Install missing ancillary forms'}
             </Button>
-          </div>
+          )}
+          <Button variant="outline" size="sm" asChild>
+            <a href={board.forms_admin_url} target="_top">
+              Forms Administration
+            </a>
+          </Button>
         </div>
-
+      }
+    >
         {!board.esign_globally_enabled && (
           <div className={deskCalloutClass('warn', 'py-2 text-sm mb-3')}>
             E-Sign globals are off. Enable <code>esign_individual</code> (Cash clinic profile applies this) before go-live.
@@ -125,7 +123,7 @@ export function FormBundleBoard({
           </Table>
         </div>
 
-        <div className="border rounded p-3 bg-[var(--oe-nc-bg-tint)] text-sm">
+        <AdminInsetPanel className="text-sm">
           <strong>Test E-Sign on a staging encounter</strong>
           <p className="mb-2 mt-1 text-[var(--oe-nc-text-muted)]">{board.test_esign_help}</p>
           <div className="flex flex-wrap gap-2">
@@ -147,16 +145,15 @@ export function FormBundleBoard({
               </a>
             </Button>
           </div>
-        </div>
+        </AdminInsetPanel>
 
         {ancillaryLbfPacks.length > 0 && (
-          <p className="text-sm text-[var(--oe-nc-text-muted)] mb-0 mt-2">
+          <p className="mb-0 mt-2 text-sm text-[var(--oe-nc-text-muted)]">
             Ancillary packs:
             {' '}
             {ancillaryLbfPacks.map((pack) => `${pack.title} (${pack.installed ? 'installed' : 'pending'})`).join(' · ')}
           </p>
         )}
-      </CardContent>
-    </Card>
+    </AdminSection>
   );
 }

@@ -1,7 +1,7 @@
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { ncShadcnTableClass } from '@components/ncTableStyles';
 import { Button } from '@components/ui/button';
-import { Card, CardContent } from '@components/ui/card';
+import { Receipt } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -13,6 +13,7 @@ import {
 import { Textarea } from '@components/ui/textarea';
 import type { FeeScheduleRow } from '../adminTypes';
 import { formatPrice } from '../adminUtils';
+import { AdminEmptyState, AdminSection, AdminStack } from '../adminUi';
 
 interface FeesTabProps {
   feeSchedule: FeeScheduleRow[];
@@ -40,8 +41,8 @@ export function FeesTab({
   onImport,
 }: FeesTabProps) {
   return (
-    <>
-      <div className={deskCalloutClass('info', 'mb-3')} id="nc-admin-fee-guidelines">
+    <AdminStack>
+      <div className={deskCalloutClass('info')} id="nc-admin-fee-guidelines">
         <strong>How fee lines work</strong>
         <ul className="mb-2 pl-3 text-sm">
           <li>Each line is a shortcut the cashier can post to the patient fee sheet.</li>
@@ -59,23 +60,25 @@ export function FeesTab({
           </a>
         </Button>
       </div>
-      <Card>
-        <CardContent>
-          <div className="flex justify-between items-center mb-3">
-            <p className="text-[var(--oe-nc-text-muted)] mb-0">Cash fee schedule for cashier charges and billing codes.</p>
-            <Button
-              type="button"
-              size="sm"
-              id="nc-admin-add-fee"
-              onClick={onAdd}
-            >
-              Add fee line
-            </Button>
-          </div>
-          <div id="nc-admin-fee-schedule">
-            {!feeSchedule.length ? (
-              <div className="text-[var(--oe-nc-text-muted)]"><em>No fee lines configured.</em></div>
-            ) : (
+      <AdminSection
+        title="Fee schedule"
+        description="Cash fee schedule for cashier charges and billing codes."
+        icon={<Receipt className="h-4 w-4" aria-hidden />}
+        action={
+          <Button
+            type="button"
+            size="sm"
+            id="nc-admin-add-fee"
+            onClick={onAdd}
+          >
+            Add fee line
+          </Button>
+        }
+      >
+        <div id="nc-admin-fee-schedule">
+          {!feeSchedule.length ? (
+            <AdminEmptyState title="No fee lines configured" />
+          ) : (
               <Table className={ncShadcnTableClass({ bordered: true, className: 'mb-0' })}>
                 <TableHeader>
                   <TableRow>
@@ -133,9 +136,9 @@ export function FeesTab({
               </Table>
             )}
           </div>
-          <hr />
-          <h6>Import from CSV</h6>
-          <p className="text-sm text-[var(--oe-nc-text-muted)] mb-2">
+          <hr className="my-4 border-[var(--oe-nc-border)]" />
+          <h6 className="mb-2 text-sm font-semibold">Import from CSV</h6>
+          <p className="mb-2 text-sm text-[var(--oe-nc-text-muted)]">
             Columns: code, name, category, price_amount, code_type, billing_code, sort_order (optional).
           </p>
           <Textarea
@@ -156,8 +159,7 @@ export function FeesTab({
           >
             {importing ? 'Importing…' : 'Import CSV'}
           </Button>
-        </CardContent>
-      </Card>
-    </>
+      </AdminSection>
+    </AdminStack>
   );
 }

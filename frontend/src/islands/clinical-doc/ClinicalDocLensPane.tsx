@@ -1,5 +1,6 @@
 import { oeFetch } from '@core/oeFetch';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
 import type {
   ClinicalDocCard,
@@ -10,6 +11,10 @@ import type {
 import { AddFormPicker } from './AddFormPicker';
 import { VisitSignOverview } from './VisitSignOverview';
 import { openClinicalDocForm } from './clinicalDocApi';
+import {
+  consultCardPreviewLine,
+  consultCardStatusChip,
+} from './clinicalDocCardPreview';
 
 interface ClinicalDocLensPaneProps {
   lens: ClinicalDocLens;
@@ -37,6 +42,11 @@ async function openForm(
 }
 
 function statusLine(card: ClinicalDocCard): string {
+  const previewLine = consultCardPreviewLine(card.note_preview);
+  if (previewLine) {
+    return previewLine;
+  }
+
   if (!card.started) {
     return card.primary ? 'Required · Not started' : 'Not started';
   }
@@ -100,28 +110,98 @@ export function ClinicalDocLensPane({
     );
   }
 
-  const renderCard = (card: ClinicalDocCard) => (
+  const renderCard = (card: ClinicalDocCard) => {
+    const statusChip = consultCardStatusChip(card);
+    const preview = card.note_preview;
+    const canReviewAndSign = Boolean(
+      !card.signed
+      && !preview?.signed
+      && (card.started || preview?.started)
+      && preview?.validate_ready,
+    );
+
+    return (
     <article key={card.id} className="nc-clinicaldoc-card" role="listitem">
-      <h3 className="nc-clinicaldoc-card-title text-base font-semibold">{card.title}</h3>
+      <div className="flex flex-wrap items-center gap-2 mb-1">
+        <h3 className="nc-clinicaldoc-card-title text-base font-semibold mb-0">{card.title}</h3>
+        <Badge variant={statusChip.variant}>{statusChip.label}</Badge>
+      </div>
       <p className="nc-clinicaldoc-card-blurb text-sm text-[var(--oe-nc-text-muted)] mb-1">{card.description}</p>
       <p className="nc-clinicaldoc-card-status text-sm mb-2">{statusLine(card)}</p>
+      {preview?.problem_labels && preview.problem_labels.length > 0 ? (
+        <ul className="text-sm text-[var(--oe-nc-text-muted)] mb-2 pl-4 list-disc">
+          {preview.problem_labels.map((label) => (
+            <li key={label}>{label}</li>
+          ))}
+        </ul>
+      ) : null}
       {card.bundle_health && !card.bundle_health.esign_ok ? (
         <p className="text-sm text-[var(--color-oe-warning,#ea580c)] mb-2">{card.bundle_health.status_label}</p>
       ) : null}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => {
-          void openForm(ajaxUrl, csrfToken, visitId, card, lens).catch((err: unknown) => {
-            onOpenError(err instanceof Error ? err.message : 'Could not open form');
-          });
-        }}
-      >
-        {card.started ? 'Continue editing' : 'Open form'}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        {card.signed || preview?.signed ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              void openForm(ajaxUrl, csrfToken, visitId, card, lens).catch((err: unknown) => {
+                onOpenError(err instanceof Error ? err.message : 'Could not open form');
+              });
+            }}
+          >
+            View note
+          </Button>
+        ) : card.started || preview?.started ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                void openForm(ajaxUrl, csrfToken, visitId, card, lens).catch((err: unknown) => {
+                  onOpenError(err instanceof Error ? err.message : 'Could not open form');
+                });
+              }}
+            >
+              Continue
+            </Button>
+            {canReviewAndSign ? (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  void openClinicalDocForm(ajaxUrl, csrfToken, visitId, card, {
+                    lens,
+                    returnTo: 'hub',
+                    focus: 'sign',
+                  }).catch((err: unknown) => {
+                    onOpenError(err instanceof Error ? err.message : 'Could not open form');
+                  });
+                }}
+              >
+                Review & sign
+              </Button>
+            ) : null}
+          </>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              void openForm(ajaxUrl, csrfToken, visitId, card, lens).catch((err: unknown) => {
+                onOpenError(err instanceof Error ? err.message : 'Could not open form');
+              });
+            }}
+          >
+            Open form
+          </Button>
+        )}
+      </div>
     </article>
-  );
+    );
+  };
 
   return (
     <div>

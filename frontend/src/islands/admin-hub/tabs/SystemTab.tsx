@@ -9,6 +9,7 @@ import { SystemHealthBoard } from '../SystemHealthBoard';
 import { ConfigExportCard } from '../ConfigExportCard';
 import { ConfigImportCard } from '../ConfigImportCard';
 import type { ConfigExportMeta, ConfigImportResult } from '../adminTypes';
+import { AdminStack } from '../adminUi';
 
 interface SystemTabProps {
   health: SystemHealthPayload;
@@ -66,7 +67,7 @@ export function SystemTab({
   backupCompleting,
 }: SystemTabProps) {
   return (
-    <div>
+    <AdminStack>
       {!setupProgress.setup_complete && (
         <SetupChecklistCard
           progress={setupProgress}
@@ -108,6 +109,6 @@ export function SystemTab({
           />
         </>
       )}
-    </div>
+    </AdminStack>
   );
 }

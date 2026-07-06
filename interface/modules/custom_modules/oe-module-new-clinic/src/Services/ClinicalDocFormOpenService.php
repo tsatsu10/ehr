@@ -28,6 +28,7 @@ class ClinicalDocFormOpenService
         private readonly ProcedureOrderDeepLinkService $procedureOrderLinks = new ProcedureOrderDeepLinkService(),
         private readonly EncounterIdentityStripService $identityStrip = new EncounterIdentityStripService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
+        private readonly EncounterNoteService $encounterNote = new EncounterNoteService(),
     ) {
     }
 
@@ -88,6 +89,40 @@ class ClinicalDocFormOpenService
 
         if ($action === 'edit' && $formId > 0) {
             $this->assertFormInstanceOnEncounter($formId, $encounter, $pid, $canonicalFormdir);
+        }
+
+        if ($this->encounterNote->shouldOpenNativeForm($canonicalFormdir, $facilityId)) {
+            $webroot = $GLOBALS['webroot'] ?? '';
+            $modulePublic = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
+            $returnTo = strtolower(trim((string) ($body['return_to'] ?? 'hub')));
+            $returnTab = $lens !== '' ? $lens : 'visit';
+            $focus = strtolower(trim((string) ($body['focus'] ?? '')));
+            $returnUrl = $returnTo === 'doctor'
+                ? $modulePublic . 'doctor.php'
+                : $modulePublic . 'clinical-doc/index.php?visit_id=' . urlencode((string) $visitId)
+                    . '&tab=' . urlencode($returnTab);
+            $redirectUrl = $this->encounterNote->buildPageUrl($visitId, array_filter([
+                'return_to' => $returnTo,
+                'tab' => $returnTab,
+                'form_id' => ($action === 'edit' && $formId > 0) ? (string) $formId : null,
+                'focus' => $focus === 'sign' ? 'sign' : null,
+            ]));
+            $this->markIdentityStripForNativeOpen($visitId, $returnTo, $sourceLens, $returnUrl);
+            $this->recordFormOpen(
+                $facilityId,
+                $visitId,
+                $encounter,
+                EncounterNoteService::NATIVE_FORMDIR,
+                $formId > 0 ? $formId : null,
+                $actorUserId,
+                'open'
+            );
+
+            return [
+                'redirect_url' => $redirectUrl,
+                'formdir' => EncounterNoteService::NATIVE_FORMDIR,
+                'action' => $action,
+            ];
         }
 
         $webroot = $GLOBALS['webroot'] ?? '';
@@ -185,6 +220,21 @@ class ClinicalDocFormOpenService
             'specialty' => xl('Specialty'),
             default => xl('Documentation'),
         };
+    }
+
+    private function markIdentityStripForNativeOpen(
+        int $visitId,
+        string $returnTo,
+        string $sourceLens,
+        string $returnUrl,
+    ): void {
+        $this->identityStrip->markFromShortcut($visitId, 'doctor', 'form:' . EncounterNoteService::NATIVE_FORMDIR);
+        if (isset($_SESSION[EncounterIdentityStripService::SESSION_KEY]) && is_array($_SESSION[EncounterIdentityStripService::SESSION_KEY])) {
+            $_SESSION[EncounterIdentityStripService::SESSION_KEY]['back_url'] = $returnUrl;
+            $_SESSION[EncounterIdentityStripService::SESSION_KEY]['desk_label'] = $returnTo === 'doctor'
+                ? xl('Doctor Desk')
+                : $this->deskLabelForLens($sourceLens);
+        }
     }
 
     private function recordFormOpen(

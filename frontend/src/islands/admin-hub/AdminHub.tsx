@@ -22,6 +22,7 @@ import type {
   BillingCodeType,
   CashProfileStatus,
   GhanaLbfPackStatus,
+  ReferralHospitalLbfPackStatus,
   AncillaryLbfPackStatus,
   FormBundleBoardPayload,
   FormsCatalogItem,
@@ -53,6 +54,15 @@ import { QueueRolesTab } from './tabs/QueueRolesTab';
 import { RolesTab } from './tabs/RolesTab';
 import { VisitTypesTab } from './tabs/VisitTypesTab';
 import { useAdminPageHeading } from './useAdminPageHeading';
+import {
+  AdminEmptyState,
+  AdminLoadingState,
+  AdminMetricChip,
+  AdminScopeBar,
+  AdminShell,
+  AdminStickyTabs,
+  AdminTabPanel,
+} from './adminUi';
 
 function isAdminTabId(value: string): value is AdminTabId {
   return ADMIN_TABS.some((tab) => tab.id === value);
@@ -101,6 +111,8 @@ export function AdminHub({
   const [cashProfileApplying, setCashProfileApplying] = useState(false);
   const [ghanaLbfPack, setGhanaLbfPack] = useState<GhanaLbfPackStatus>({ installed: false });
   const [ghanaLbfImporting, setGhanaLbfImporting] = useState(false);
+  const [referralHospitalLbfPack, setReferralHospitalLbfPack] = useState<ReferralHospitalLbfPackStatus>({ installed: false });
+  const [referralHospitalLbfImporting, setReferralHospitalLbfImporting] = useState(false);
   const [ancillaryLbfPacks, setAncillaryLbfPacks] = useState<AncillaryLbfPackStatus[]>([]);
   const [ancillaryLbfImporting, setAncillaryLbfImporting] = useState<string | null>(null);
   const [formBundleBoard, setFormBundleBoard] = useState<FormBundleBoardPayload | null>(null);
@@ -149,12 +161,17 @@ export function AdminHub({
 
   const adminHubEnabled = settings.enable_admin_hub === true;
   const visibleTabs = useMemo(
-    () => ADMIN_TABS.filter((tab) => tab.id !== 'system' || adminHubEnabled),
+    () => ADMIN_TABS.filter((tab) => {
+      if (tab.id === 'system' || tab.id === 'forms') {
+        return adminHubEnabled;
+      }
+      return true;
+    }),
     [adminHubEnabled]
   );
 
   useEffect(() => {
-    if (!adminHubEnabled && activeTab === 'system') {
+    if (!adminHubEnabled && (activeTab === 'system' || activeTab === 'forms')) {
       setActiveTab('queue');
     }
   }, [adminHubEnabled, activeTab]);
@@ -181,6 +198,7 @@ export function AdminHub({
     setRoleGroups(data.roles ?? {});
     setCashProfile(data.cash_profile ?? { applied: false });
     setGhanaLbfPack(data.ghana_lbf_pack ?? { installed: false });
+    setReferralHospitalLbfPack(data.referral_hospital_lbf_pack ?? { installed: false });
     setAncillaryLbfPacks(data.ancillary_lbf_packs ?? []);
     setFormBundleBoard(data.form_bundle_board ?? null);
     setFormsCatalog(data.forms_catalog ?? null);
@@ -769,6 +787,31 @@ export function AdminHub({
     }
   }, [applyPayload, facilityId, fetchOptions, scope]);
 
+  const importReferralHospitalLbfPack = useCallback(async (setAsConsultNote: boolean) => {
+    setReferralHospitalLbfImporting(true);
+    setErrorMessage(null);
+    try {
+      const data = await oeFetch<AdminConfigPayload>('clinical_doc.import_referral_hospital_pack', {
+        ...fetchOptions,
+        json: {
+          scope,
+          facility_id: facilityId,
+          set_as_consult_note: setAsConsultNote,
+        },
+      });
+      applyPayload(data);
+      setSuccessMessage(
+        setAsConsultNote
+          ? 'Referral hospital LBF pack imported and set as primary consult note.'
+          : 'Referral hospital LBF pack imported.'
+      );
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Referral hospital LBF import failed');
+    } finally {
+      setReferralHospitalLbfImporting(false);
+    }
+  }, [applyPayload, facilityId, fetchOptions, scope]);
+
   const importAncillaryLbfPack = useCallback(async (packKey: string) => {
     setAncillaryLbfImporting(packKey);
     setErrorMessage(null);
@@ -889,8 +932,16 @@ export function AdminHub({
 
   const roles = roleGroups ?? {};
 
+  const healthTone = systemHealth?.overall_status === 'ok'
+    ? 'success'
+    : systemHealth?.overall_status === 'warn'
+      ? 'warning'
+      : systemHealth?.overall_status === 'critical'
+        ? 'danger'
+        : 'default';
+
   return (
-    <div id="nc-admin-desk">
+    <AdminShell id="nc-admin-desk">
       {successMessage && (
         <div className={deskCalloutClass('success')} id="nc-admin-success">{successMessage}</div>
       )}
@@ -901,86 +952,118 @@ export function AdminHub({
         <div className={deskCalloutClass('error')}>{loadError}</div>
       )}
 
-      <div className="flex flex-wrap items-center mb-3">
-        <Label className="mb-0 mr-2 normal-case" htmlFor="nc-admin-scope">Settings for:</Label>
-        <Select
-          value={scope}
-          onValueChange={(val) => handleScopeChange(val === 'global' ? 'global' : 'facility')}
-        >
-          <SelectTrigger id="nc-admin-scope" className="h-8 w-auto mr-2">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="facility">This clinic</SelectItem>
-            <SelectItem value="global">All facilities (global default)</SelectItem>
-          </SelectContent>
-        </Select>
-        <span className="text-[var(--oe-nc-text-muted)] text-sm" id="nc-admin-scope-hint">{scopeHint}</span>
-      </div>
-
-      <SegmentedControl
-        segments={visibleTabs.map((tab) => ({ id: tab.id, label: tab.label }))}
-        value={activeTab}
-        onChange={(id) => handleTabChange(id as AdminTabId)}
-        ariaLabel="Admin configuration sections"
-        className="mb-3"
+      <AdminScopeBar
+        scopeControl={
+          <>
+            <Label className="mb-0 mr-1 normal-case" htmlFor="nc-admin-scope">Settings for:</Label>
+            <Select
+              value={scope}
+              onValueChange={(val) => handleScopeChange(val === 'global' ? 'global' : 'facility')}
+            >
+              <SelectTrigger id="nc-admin-scope" className="h-8 w-auto">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="facility">This clinic</SelectItem>
+                <SelectItem value="global">All facilities (global default)</SelectItem>
+              </SelectContent>
+            </Select>
+          </>
+        }
+        hint={scopeHint}
+        metrics={
+          adminHubEnabled ? (
+            <>
+              {setupProgress && (
+                <AdminMetricChip
+                  label="Setup"
+                  value={`${setupProgress.score_percent}%`}
+                  tone={setupProgress.setup_complete ? 'success' : 'default'}
+                />
+              )}
+              {systemHealth && (
+                <AdminMetricChip
+                  label="System"
+                  value={systemHealth.overall_status === 'ok' ? 'Healthy' : systemHealth.overall_status ?? 'Unknown'}
+                  tone={healthTone}
+                />
+              )}
+            </>
+          ) : undefined
+        }
       />
 
-      <div className="nc-tab-content">
-        {loading ? (
-          <div className="text-[var(--oe-nc-text-muted)]"><em>Loading settings…</em></div>
-        ) : (
-          <>
-            {activeTab === 'queue' && (
-              <QueueRolesTab
+      <AdminStickyTabs>
+        <SegmentedControl
+          segments={visibleTabs.map((tab) => ({ id: tab.id, label: tab.label }))}
+          value={activeTab}
+          onChange={(id) => handleTabChange(id as AdminTabId)}
+          ariaLabel="Admin configuration sections"
+        />
+      </AdminStickyTabs>
+
+      {loading ? (
+        <AdminLoadingState />
+      ) : (
+        <>
+          <AdminTabPanel tabId="queue" active={activeTab === 'queue'}>
+            <QueueRolesTab
                 ajaxUrl={ajaxUrl}
                 csrfToken={csrfToken}
                 facilityId={facilityId}
                 settings={settings}
                 ghanaLbfPack={ghanaLbfPack}
                 ghanaLbfImporting={ghanaLbfImporting}
+                referralHospitalLbfPack={referralHospitalLbfPack}
+                referralHospitalLbfImporting={referralHospitalLbfImporting}
                 ancillaryLbfPacks={ancillaryLbfPacks}
                 ancillaryLbfImporting={ancillaryLbfImporting}
                 onFieldChange={handleFieldChange}
                 onImportGhanaLbfPack={(setAsConsultNote) => { void importGhanaLbfPack(setAsConsultNote); }}
+                onImportReferralHospitalLbfPack={(setAsConsultNote) => { void importReferralHospitalLbfPack(setAsConsultNote); }}
                 onImportAncillaryLbfPack={(packKey) => { void importAncillaryLbfPack(packKey); }}
-              />
-            )}
-            {activeTab === 'roles' && (
-              <RolesTab
-                webroot={webroot}
-                roleGroups={roles.role_groups ?? []}
-                sensitivePermissions={roles.sensitive_permissions ?? []}
-                aclInventory={roles.acl_inventory ?? []}
-                onGrantSelf={() => setPendingConfirm({ type: 'grant_roles' })}
-                granting={grantingRoles}
-              />
-            )}
-            {activeTab === 'completion' && (
-              <CompletionTab
-                settings={settings}
-                completionFieldWeights={completionFieldWeights}
-                weightsSaving={weightsSaving}
-                weightsError={weightsError}
-                onFieldChange={handleFieldChange}
-                onSaveWeights={(items) => {
-                  void saveCompletionWeights(items);
-                }}
-              />
-            )}
-            {activeTab === 'clinic' && (
-              <ClinicTab
-                settings={settings}
-                cashProfile={cashProfile}
-                cashProfileApplying={cashProfileApplying}
-                reconciliationStatus={reconciliationStatus}
-                reconciliationRunning={reconciliationRunning}
-                onFieldChange={handleFieldChange}
-                onApplyCashProfile={() => setPendingConfirm({ type: 'cash_profile' })}
-                onRunReconciliation={() => { void runReconciliation(); }}
-              />
-            )}
-            {activeTab === 'forms' && formBundleBoard && formsCatalog && (
+            />
+          </AdminTabPanel>
+
+          <AdminTabPanel tabId="roles" active={activeTab === 'roles'}>
+            <RolesTab
+              webroot={webroot}
+              roleGroups={roles.role_groups ?? []}
+              sensitivePermissions={roles.sensitive_permissions ?? []}
+              aclInventory={roles.acl_inventory ?? []}
+              onGrantSelf={() => setPendingConfirm({ type: 'grant_roles' })}
+              granting={grantingRoles}
+            />
+          </AdminTabPanel>
+
+          <AdminTabPanel tabId="completion" active={activeTab === 'completion'}>
+            <CompletionTab
+              settings={settings}
+              completionFieldWeights={completionFieldWeights}
+              weightsSaving={weightsSaving}
+              weightsError={weightsError}
+              onFieldChange={handleFieldChange}
+              onSaveWeights={(items) => {
+                void saveCompletionWeights(items);
+              }}
+            />
+          </AdminTabPanel>
+
+          <AdminTabPanel tabId="clinic" active={activeTab === 'clinic'}>
+            <ClinicTab
+              settings={settings}
+              cashProfile={cashProfile}
+              cashProfileApplying={cashProfileApplying}
+              reconciliationStatus={reconciliationStatus}
+              reconciliationRunning={reconciliationRunning}
+              onFieldChange={handleFieldChange}
+              onApplyCashProfile={() => setPendingConfirm({ type: 'cash_profile' })}
+              onRunReconciliation={() => { void runReconciliation(); }}
+            />
+          </AdminTabPanel>
+
+          <AdminTabPanel tabId="forms" active={activeTab === 'forms'}>
+            {formBundleBoard && formsCatalog ? (
               <FormsTab
                 board={formBundleBoard}
                 catalog={formsCatalog}
@@ -992,11 +1075,16 @@ export function AdminHub({
                 onInstallAllMissing={() => { void installAllMissingAncillary(); }}
                 onToggleCatalogForm={(item, enabled) => { void toggleCatalogForm(item, enabled); }}
               />
+            ) : (
+              <AdminEmptyState
+                title="Forms configuration unavailable"
+                description="Enable the Admin Operations Hub or reload settings to manage form bundles."
+              />
             )}
-            {activeTab === 'forms' && (!formBundleBoard || !formsCatalog) && (
-              <div className="text-[var(--oe-nc-text-muted)]"><em>Forms configuration unavailable.</em></div>
-            )}
-            {activeTab === 'system' && systemHealth && runbooks && setupProgress && (
+          </AdminTabPanel>
+
+          <AdminTabPanel tabId="system" active={activeTab === 'system'}>
+            {systemHealth && runbooks && setupProgress ? (
               <SystemTab
                 health={systemHealth}
                 runbooks={runbooks}
@@ -1024,36 +1112,40 @@ export function AdminHub({
                 onMarkSetupItem={(key) => { void markSetupItem(key); }}
                 onMarkSetupComplete={() => { void markSetupComplete(); }}
               />
-            )}
-            {activeTab === 'system' && (!systemHealth || !runbooks || !setupProgress) && (
-              <div className="text-[var(--oe-nc-text-muted)]"><em>System configuration unavailable.</em></div>
-            )}
-            {activeTab === 'types' && (
-              <VisitTypesTab
-                visitTypes={visitTypes}
-                calendarCategories={calendarCategories ?? []}
-                onAdd={() => openVisitTypeModal(null)}
-                onEdit={(row) => openVisitTypeModal(row)}
-                onArchive={(row) => setPendingConfirm({ type: 'archive_visit_type', row })}
+            ) : (
+              <AdminEmptyState
+                title="System configuration unavailable"
+                description="Reload the page or confirm Admin Operations Hub is enabled for this clinic."
               />
             )}
-            {activeTab === 'fees' && (
-              <FeesTab
-                feeSchedule={feeSchedule}
-                settings={settings}
-                webroot={webroot}
-                csv={feeCsv}
-                importing={feeImporting}
-                onCsvChange={setFeeCsv}
-                onAdd={() => { void openFeeModal(null); }}
-                onEdit={(row) => { void openFeeModal(row); }}
-                onArchive={(row) => setPendingConfirm({ type: 'archive_fee', row })}
-                onImport={() => { void importFees(); }}
-              />
-            )}
-          </>
-        )}
-      </div>
+          </AdminTabPanel>
+
+          <AdminTabPanel tabId="types" active={activeTab === 'types'}>
+            <VisitTypesTab
+              visitTypes={visitTypes}
+              calendarCategories={calendarCategories ?? []}
+              onAdd={() => openVisitTypeModal(null)}
+              onEdit={(row) => openVisitTypeModal(row)}
+              onArchive={(row) => setPendingConfirm({ type: 'archive_visit_type', row })}
+            />
+          </AdminTabPanel>
+
+          <AdminTabPanel tabId="fees" active={activeTab === 'fees'}>
+            <FeesTab
+              feeSchedule={feeSchedule}
+              settings={settings}
+              webroot={webroot}
+              csv={feeCsv}
+              importing={feeImporting}
+              onCsvChange={setFeeCsv}
+              onAdd={() => { void openFeeModal(null); }}
+              onEdit={(row) => { void openFeeModal(row); }}
+              onArchive={(row) => setPendingConfirm({ type: 'archive_fee', row })}
+              onImport={() => { void importFees(); }}
+            />
+          </AdminTabPanel>
+        </>
+      )}
 
       <VisitTypeModal
         open={visitTypeModalOpen}
@@ -1153,6 +1245,6 @@ export function AdminHub({
           <p className="mb-0">{pendingConfirm.item.enable_warning}</p>
         )}
       </ConfirmModal>
-    </div>
+    </AdminShell>
   );
 }

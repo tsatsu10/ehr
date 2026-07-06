@@ -71,6 +71,8 @@ export interface ActivityFeedItem {
     procedure_name?: string;
     to_state?: string;
     reason?: string;
+    problem_count?: number;
+    variant?: string | null;
   };
 }
 
@@ -181,11 +183,29 @@ export interface ClinicalFormRow {
   form_url?: string;
 }
 
+export interface ClinicalEncounterNotePreview {
+  native_enabled?: boolean;
+  started?: boolean;
+  signed?: boolean;
+  variant?: string;
+  variant_label?: string;
+  cc_preview?: string | null;
+  problem_count?: number;
+  incomplete_problem_count?: number;
+  problem_labels?: string[];
+  validate_ready?: boolean;
+  updated_at?: string | null;
+  open_url?: string | null;
+}
+
 export interface ClinicalThisVisitSection {
   anchor?: string;
   hidden?: boolean;
+  visit_id?: number | null;
   open_encounter_url?: string;
+  encounter_note?: ClinicalEncounterNotePreview | null;
   forms?: ClinicalFormRow[];
+  empty?: boolean;
 }
 
 export interface ClinicalData {

@@ -1,5 +1,5 @@
 import { Button } from '@components/ui/button';
-import { Card, CardContent } from '@components/ui/card';
+import { Settings2 } from 'lucide-react';
 import type {
   AncillaryLbfPackStatus,
   FormBundleBoardPayload,
@@ -8,6 +8,7 @@ import type {
 } from '../adminTypes';
 import { FormBundleBoard } from '../FormBundleBoard';
 import { FormsCatalog } from '../FormsCatalog';
+import { AdminSection, AdminStack } from '../adminUi';
 
 interface FormsTabProps {
   board: FormBundleBoardPayload;
@@ -29,36 +30,37 @@ export function FormsTab({
   ...bundleProps
 }: FormsTabProps) {
   return (
-    <div>
+    <AdminStack>
       <FormBundleBoard board={board} {...bundleProps} />
       <FormsCatalog
         catalog={catalog}
         togglingId={catalogTogglingId}
         onToggle={onToggleCatalogForm}
       />
-      <Card>
-        <CardContent>
-          <h6 className="text-[var(--oe-nc-text-muted)] uppercase text-sm">Advanced</h6>
-          <p className="text-sm text-[var(--oe-nc-text-muted)] mb-2">
-            Full OpenEMR layout and list editors. Changes here can affect M1a search and M3–M9 gates.
-          </p>
-          <Button variant="warning" size="sm" className="mr-2 mb-1" asChild>
+      <AdminSection
+        title="Advanced form editors"
+        description="Full OpenEMR layout and list editors. Changes here can affect M1a search and M3–M9 gates."
+        icon={<Settings2 className="h-4 w-4" aria-hidden />}
+        variant="muted"
+      >
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" asChild>
             <a href={catalog.forms_admin_url} target="_top">
               Registered forms (stock)
             </a>
           </Button>
-          <Button variant="warning" size="sm" className="mr-2 mb-1" asChild>
+          <Button variant="outline" size="sm" asChild>
             <a href={catalog.layout_editor_url} target="_top">
               Layout-Based Forms editor
             </a>
           </Button>
-          <Button variant="warning" size="sm" className="mb-1" asChild>
+          <Button variant="outline" size="sm" asChild>
             <a href={catalog.list_editor_url} target="_top">
               List options editor
             </a>
           </Button>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </AdminSection>
+    </AdminStack>
   );
 }
