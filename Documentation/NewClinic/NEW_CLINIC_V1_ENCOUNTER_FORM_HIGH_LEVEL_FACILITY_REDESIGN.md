@@ -506,4 +506,4 @@ Use after enabling `encounter_note_engine=native` on a test facility:
 
 ---
 
-**Next engineering step:** ~~HLF-1 through HLF-6 shipped~~. UX polish shipped. ~~ENC-HLF-7 gate regression shipped~~. ~~Optional on-save LBF export shipped~~ (`EncounterNoteLbfExportService`, default OFF). Next: broader test coverage (PHPUnit/Vitest/E2E), docs acceptance checklist.
+**Next engineering step:** ~~HLF-1 through HLF-6 shipped~~. UX polish shipped. ~~ENC-HLF-7 gate regression shipped~~. ~~Optional on-save LBF export shipped~~. ~~E2E: `encounter-consult-native.spec.js`~~ (hub → native form → save → validate → sign → sign overview). Remaining: CI verification on XAMPP/Docker with native engine prep script.
