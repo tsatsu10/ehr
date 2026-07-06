@@ -16,6 +16,7 @@ use OpenEMR\Modules\NewClinic\Services\ClinicalDocAccessService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocCatalogService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocFormOpenService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
+use OpenEMR\Modules\NewClinic\Services\EncounterNoteService;
 use OpenEMR\Modules\NewClinic\Services\EncounterSessionService;
 use OpenEMR\Modules\NewClinic\Services\VisitQueueService;
 use PHPUnit\Framework\TestCase;
@@ -185,5 +186,93 @@ class ClinicalDocFormOpenServiceTest extends TestCase
             'lens' => 'visit',
             'action' => 'new',
         ], 2);
+    }
+
+    public function testNativeEngineRoutesConsultOpenToEncounterConsultPage(): void
+    {
+        $visit = $this->triageVisit(55);
+        $queueStub = new class ($visit) extends VisitQueueService {
+            /** @param array<string, mixed> $visit */
+            public function __construct(private readonly array $visit)
+            {
+            }
+
+            public function getVisitForActor(int $visitId): array
+            {
+                return $this->visit;
+            }
+        };
+
+        $session = new class extends EncounterSessionService {
+            public function bindForVisit(int $visitId, int $actorUserId): EncounterSessionDto
+            {
+                return new EncounterSessionDto($visitId, 1, 99999, 'in_triage');
+            }
+
+            public function assertBound(int $visitId): void
+            {
+            }
+        };
+
+        $access = $this->hubEnabledDoctorAccess();
+        $config = $this->hubEnabledConfig();
+        $encounterNote = new class ($config) extends EncounterNoteService {
+            public function __construct(ClinicConfigService $config)
+            {
+                parent::__construct(config: $config);
+            }
+
+            public function shouldOpenNativeForm(string $formdir, ?int $facilityId = null): bool
+            {
+                return true;
+            }
+
+            public function buildPageUrl(int $visitId, array $query = []): string
+            {
+                return '/openemr/interface/modules/custom_modules/oe-module-new-clinic/public/encounter-consult.php?visit_id='
+                    . $visitId;
+            }
+        };
+
+        $catalog = new class ($access, $config) extends ClinicalDocCatalogService {
+            public function __construct(ClinicalDocAccessService $access, ClinicConfigService $config)
+            {
+                parent::__construct(access: $access, config: $config);
+            }
+
+            public function resolveSourceLensForFormdir(string $formdir, ?int $facilityId = null): ?string
+            {
+                return 'consult';
+            }
+
+            public function isAllowedFormdir(string $formdir, ?int $facilityId = null): bool
+            {
+                return true;
+            }
+
+            public function resolveRegistryDirectory(string $formdir): string
+            {
+                return EncounterNoteService::NATIVE_FORMDIR;
+            }
+        };
+
+        $service = new ClinicalDocFormOpenService(
+            access: $access,
+            catalog: $catalog,
+            queueService: $queueStub,
+            encounterSession: $session,
+            encounterNote: $encounterNote,
+        );
+
+        $result = $service->openForm([
+            'visit_id' => 55,
+            'formdir' => EncounterNoteService::NATIVE_FORMDIR,
+            'lens' => 'consult',
+            'action' => 'new',
+        ], 1);
+
+        $this->assertSame(EncounterNoteService::NATIVE_FORMDIR, $result['formdir']);
+        $this->assertStringContainsString('encounter-consult.php', $result['redirect_url']);
+        $this->assertSame('new', $result['action']);
     }
 }

@@ -414,6 +414,32 @@ Align with New Clinic tokens (`--oe-nc-*`, Figtree + Noto Sans) and admin/chart 
 | ENC-HLF-9 | Mobile 375px: all sections reachable; sticky Save visible |
 | ENC-HLF-10 | Auto-save recovers draft after browser refresh |
 
+### 12.1 Variant map (native engine)
+
+| Variant id | Typical visit type | Visible sections (summary) |
+|------------|-------------------|----------------------------|
+| `general_opd` | Default OPD | CC, HPI, ROS, background, vitals, PE, problems, follow-up |
+| `follow_up` | Return visit | CC, HPI, background, vitals, PE, problems, follow-up |
+| `referral_consult` | Referral hospital | Referral header, source, CC, HPI, ROS, background, vitals, PE, data reviewed, problems, follow-up, attestation |
+
+Visit type → variant mapping is configured via `encounter_note_variant_map` (JSON object keyed by `visit_type_id`).
+
+### 12.2 Manual acceptance checklist (pilot)
+
+Use after enabling `encounter_note_engine=native` on a test facility:
+
+1. Hub Consult card opens full-width React form (not iframe) — ENC-HLF-1
+2. Vitals prefill from triage; abnormal values flagged; vitals not editable in note — ENC-HLF-2
+3. Chief complaint prefills from visit — ENC-HLF-3
+4. Referral variant blocks sign when clinical question empty — ENC-HLF-4
+5. Validate requires ≥1 problem with ≥1 plan item — ENC-HLF-5
+6. Sign creates E-Sign lock; hub sign overview updates on poll — ENC-HLF-6
+7. Unsigned native note blocks payment and complete consult (signed vitals alone does not pass) — ENC-HLF-7
+8. Ghana OPD bundle sites with `encounter_note_engine=legacy` unchanged — ENC-HLF-8
+9. Mobile 375px: section stepper + sticky Save/Sign bar — ENC-HLF-9
+10. Refresh restores draft from `nc_encounter_note` — ENC-HLF-10
+11. *(Optional)* With `encounter_note_lbf_export_on_save=1`, save mirrors fields into installed LBF layout for stock reports
+
 ---
 
 ## Appendix A — Field dictionary
@@ -475,8 +501,8 @@ Align with New Clinic tokens (`--oe-nc-*`, Figtree + Noto Sans) and admin/chart 
 | 0.1.2 | 2026-07-06 | V1.2-DOC-HLF-1 implemented — `referral_hospital_v1` bundle, `LBFreferral_opd_consult` LBF wizard + admin import |
 | 0.1.3 | 2026-07-06 | V1.2-DOC-HLF-3 implemented — referral/source sections, problem-plan model, variant validation, supervisor attestation, admin config keys |
 | 0.1.4 | 2026-07-06 | V1.2-DOC-HLF-4/5 implemented — hub/MRD integration; ROS, background, data reviewed, specialty PE overlays |
-| 0.1.6 | 2026-07-06 | ENC-HLF-7 — profile-aware documentation gates; optional on-save LBF export (`encounter_note_lbf_export_on_save`); `formdir_keys` for `nc_encounter_consult` |
-| 0.1.6 | 2026-07-06 | UX polish — mobile stepper + sticky Save/Sign bar, follow-up section, signed attestation banner with author/timestamp |
+| 0.1.6 | 2026-07-06 | ENC-HLF-7 — profile-aware documentation gates; UX polish (mobile stepper, follow-up section, signed attestation banner) |
+| 0.1.7 | 2026-07-06 | Optional on-save LBF export (`EncounterNoteLbfExportService`, default OFF); `formdir_keys` for `nc_encounter_consult`; acceptance checklist appendix |
 
 ---
 
