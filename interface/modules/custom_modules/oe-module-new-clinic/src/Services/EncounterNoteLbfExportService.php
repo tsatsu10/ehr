@@ -63,8 +63,16 @@ class EncounterNoteLbfExportService
         array $sections,
         string $variant,
         array $prefill,
-        int $actorUserId
+        int $actorUserId,
+        int $nativeFormsRowId = 0
     ): ?array {
+        if ($nativeFormsRowId > 0 && $this->isFormsRowSigned($nativeFormsRowId)) {
+            return [
+                'skipped' => true,
+                'reason' => 'note_signed',
+            ];
+        }
+
         $facilityId = (int) ($visit['facility_id'] ?? 0);
         if (!$this->isExportEnabled($facilityId)) {
             return null;
@@ -93,6 +101,12 @@ class EncounterNoteLbfExportService
         }
 
         $result = $this->upsertLbfForm($encounter, $pid, $lbfFormId, $fieldMap, $actorUserId);
+        if (!empty($result['skipped_signed'])) {
+            return [
+                'skipped' => true,
+                'reason' => 'lbf_signed',
+            ];
+        }
 
         return [
             'exported' => true,
@@ -529,6 +543,15 @@ class EncounterNoteLbfExportService
         );
 
         if (is_array($existing)) {
+            $existingFormsRowId = (int) ($existing['id'] ?? 0);
+            if ($this->isFormsRowSigned($existingFormsRowId)) {
+                return [
+                    'forms_row_id' => $existingFormsRowId,
+                    'created' => false,
+                    'skipped_signed' => true,
+                ];
+            }
+
             $lbfDataFormId = (int) ($existing['form_id'] ?? 0);
             $this->writeLbfData($lbfDataFormId, $fieldValues);
             QueryUtils::sqlStatementThrowException(
@@ -640,6 +663,22 @@ class EncounterNoteLbfExportService
             "SELECT grp_form_id FROM layout_group_properties
              WHERE grp_form_id = ? AND grp_group_id = '' AND grp_activity = 1 LIMIT 1",
             [$lbfFormId]
+        );
+
+        return is_array($row);
+    }
+
+    private function isFormsRowSigned(int $formsRowId): bool
+    {
+        if ($formsRowId <= 0) {
+            return false;
+        }
+
+        $row = QueryUtils::querySingleRow(
+            "SELECT id FROM esign_signatures
+             WHERE tid = ? AND `table` = 'forms' AND is_lock = 1
+             LIMIT 1",
+            [$formsRowId]
         );
 
         return is_array($row);

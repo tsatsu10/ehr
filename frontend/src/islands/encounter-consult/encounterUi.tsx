@@ -6,12 +6,17 @@ import type { EncounterNoteContextSection, EncounterNotePrefill, EncounterSignMe
 export function EncounterShell({
   children,
   className,
+  id,
 }: {
   children: ReactNode;
   className?: string;
+  id?: string;
 }) {
   return (
-    <div className={cn('nc-encounter-consult nc-encounter-shell space-y-4', className)}>
+    <div
+      id={id}
+      className={cn('nc-encounter-consult nc-encounter-shell space-y-4', className)}
+    >
       {children}
     </div>
   );
@@ -231,7 +236,7 @@ export function EncounterStickyFooter({
       className={cn(
         'nc-encounter-footer sticky bottom-0 z-10 border-t border-[var(--oe-nc-border)] bg-[color-mix(in_srgb,var(--oe-nc-surface,#fff)_92%,transparent)] py-3 backdrop-blur-sm',
         mobileFixed
-          ? 'fixed inset-x-0 bottom-0 z-20 mx-0 border-x-0 px-4 shadow-[0_-4px_16px_rgba(15,23,42,0.08)]'
+          ? 'sticky bottom-0 z-20 border-x-0 px-1 shadow-[0_-4px_16px_rgba(15,23,42,0.08)]'
           : '-mx-1 px-1',
         className,
       )}

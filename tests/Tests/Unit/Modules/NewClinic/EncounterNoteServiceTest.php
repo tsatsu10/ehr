@@ -160,4 +160,71 @@ class EncounterNoteServiceTest extends TestCase
         $this->assertSame('Headache', $sections['cc']['chief_complaint']);
         $this->assertSame('Dr A', $sections['referral']['requesting_clinician']);
     }
+
+    public function testSaveGuardsSignedNotes(): void
+    {
+        $source = (string) file_get_contents(
+            __DIR__ . '/../../../../../interface/modules/custom_modules/oe-module-new-clinic/src/Services/EncounterNoteService.php'
+        );
+
+        $this->assertStringContainsString('assertNoteWritable($existing)', $source);
+        $this->assertStringContainsString('Consult note is signed and cannot be modified', $source);
+    }
+
+    public function testSignChecksLockBeforeOptionalSave(): void
+    {
+        $source = (string) file_get_contents(
+            __DIR__ . '/../../../../../interface/modules/custom_modules/oe-module-new-clinic/src/Services/EncounterNoteService.php'
+        );
+
+        $signStart = strpos($source, 'public function sign(');
+        $this->assertNotFalse($signStart);
+        $signBody = substr($source, $signStart, 3500);
+        $lockPos = strpos($signBody, 'already_signed');
+        $savePos = strpos($signBody, '$this->save([');
+        $this->assertNotFalse($lockPos);
+        $this->assertNotFalse($savePos);
+        $this->assertLessThan($savePos, $lockPos, 'sign() must detect an existing lock before optional save()');
+    }
+
+    public function testBuildNotePreviewUsesSupervisorMeta(): void
+    {
+        $source = (string) file_get_contents(
+            __DIR__ . '/../../../../../interface/modules/custom_modules/oe-module-new-clinic/src/Services/EncounterNoteService.php'
+        );
+
+        $previewStart = strpos($source, 'public function buildNotePreview(');
+        $this->assertNotFalse($previewStart);
+        $previewBody = substr($source, $previewStart, 2200);
+        $this->assertStringContainsString('getSupervisorMeta', $previewBody);
+        $this->assertStringNotContainsString(
+            '$facilityId,
+                []',
+            $previewBody
+        );
+    }
+
+    public function testEncounterNoteEndpointsRequireNativeEngineAndConsultLens(): void
+    {
+        $source = (string) file_get_contents(
+            __DIR__ . '/../../../../../interface/modules/custom_modules/oe-module-new-clinic/src/Services/EncounterNoteService.php'
+        );
+
+        $this->assertStringContainsString("assertLensAccess('consult')", $source);
+        $this->assertStringContainsString('assertEncounterNoteAccess($facilityId)', $source);
+    }
+
+    public function testFirstSaveUsesDatabaseTransaction(): void
+    {
+        $source = (string) file_get_contents(
+            __DIR__ . '/../../../../../interface/modules/custom_modules/oe-module-new-clinic/src/Services/EncounterNoteService.php'
+        );
+
+        $saveStart = strpos($source, 'public function save(');
+        $this->assertNotFalse($saveStart);
+        $saveBody = substr($source, $saveStart, 4500);
+        $this->assertStringContainsString('sqlBeginTrans()', $saveBody);
+        $this->assertStringContainsString('sqlCommitTrans()', $saveBody);
+        $this->assertStringContainsString('sqlRollbackTrans()', $saveBody);
+    }
 }

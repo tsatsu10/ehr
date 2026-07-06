@@ -94,9 +94,9 @@ class EncounterNoteService
      */
     public function get(int $visitId, int $actorUserId): array
     {
-        $this->access->assertWriteAccess();
         $visit = $this->loadClinicalVisit($visitId, $actorUserId);
         $facilityId = (int) ($visit['facility_id'] ?? $this->visitScope->resolveDeskFacilityId());
+        $this->assertEncounterNoteAccess($facilityId);
         $row = $this->loadNoteRow($visitId);
         $formsRowId = isset($row['forms_row_id']) ? (int) $row['forms_row_id'] : 0;
         $storedVariant = (string) ($row['variant'] ?? '');
@@ -135,7 +135,6 @@ class EncounterNoteService
      */
     public function validate(array $body, int $actorUserId): array
     {
-        $this->access->assertWriteAccess();
         $visitId = (int) ($body['visit_id'] ?? 0);
         if ($visitId <= 0) {
             throw new \InvalidArgumentException('visit_id is required');
@@ -143,6 +142,7 @@ class EncounterNoteService
 
         $visit = $this->loadClinicalVisit($visitId, $actorUserId);
         $facilityId = (int) ($visit['facility_id'] ?? $this->visitScope->resolveDeskFacilityId());
+        $this->assertEncounterNoteAccess($facilityId);
         $sections = $body['sections'] ?? null;
         if (!is_array($sections)) {
             $row = $this->loadNoteRow($visitId);
@@ -166,7 +166,6 @@ class EncounterNoteService
      */
     public function sign(array $body, int $actorUserId): array
     {
-        $this->access->assertWriteAccess();
         $visitId = (int) ($body['visit_id'] ?? 0);
         if ($visitId <= 0) {
             throw new \InvalidArgumentException('visit_id is required');
@@ -182,26 +181,12 @@ class EncounterNoteService
         }
 
         $visit = $this->loadClinicalVisit($visitId, $actorUserId);
-        $sections = $body['sections'] ?? null;
-        if (is_array($sections)) {
-            $this->save([
-                'visit_id' => $visitId,
-                'variant' => $body['variant'] ?? self::DEFAULT_VARIANT,
-                'sections' => $sections,
-            ], $actorUserId);
-        }
+        $facilityId = (int) ($visit['facility_id'] ?? $this->visitScope->resolveDeskFacilityId());
+        $this->assertEncounterNoteAccess($facilityId);
 
         $row = $this->loadNoteRow($visitId);
-        if ($row === null) {
-            throw new \RuntimeException('Save the consult note before signing', 409);
-        }
-
-        $formsRowId = (int) ($row['forms_row_id'] ?? 0);
-        if ($formsRowId <= 0) {
-            throw new \RuntimeException('Consult note is missing a forms row', 409);
-        }
-
-        if ($this->isFormSigned($formsRowId)) {
+        $formsRowId = $row !== null ? (int) ($row['forms_row_id'] ?? 0) : 0;
+        if ($formsRowId > 0 && $this->isFormSigned($formsRowId)) {
             return [
                 'visit_id' => $visitId,
                 'forms_row_id' => $formsRowId,
@@ -211,8 +196,26 @@ class EncounterNoteService
             ];
         }
 
+        $sections = $body['sections'] ?? null;
+        if (is_array($sections)) {
+            $this->save([
+                'visit_id' => $visitId,
+                'variant' => $body['variant'] ?? self::DEFAULT_VARIANT,
+                'sections' => $sections,
+            ], $actorUserId);
+            $row = $this->loadNoteRow($visitId);
+        }
+
+        if ($row === null) {
+            throw new \RuntimeException('Save the consult note before signing', 409);
+        }
+
+        $formsRowId = (int) ($row['forms_row_id'] ?? 0);
+        if ($formsRowId <= 0) {
+            throw new \RuntimeException('Consult note is missing a forms row', 409);
+        }
+
         $decodedSections = $this->decodeSections($row['payload'] ?? null);
-        $facilityId = (int) ($visit['facility_id'] ?? $this->visitScope->resolveDeskFacilityId());
         $variant = $this->resolveVariantFromBody($body, $visit, $facilityId, (string) ($row['variant'] ?? ''));
         $validation = $this->buildValidationResult(
             $decodedSections,
@@ -294,7 +297,6 @@ class EncounterNoteService
      */
     public function save(array $body, int $actorUserId): array
     {
-        $this->access->assertWriteAccess();
         $visitId = (int) ($body['visit_id'] ?? 0);
         if ($visitId <= 0) {
             throw new \InvalidArgumentException('visit_id is required');
@@ -302,9 +304,7 @@ class EncounterNoteService
 
         $visit = $this->loadClinicalVisit($visitId, $actorUserId);
         $facilityId = (int) ($visit['facility_id'] ?? $this->visitScope->resolveDeskFacilityId());
-        if (!$this->isNativeEngineEnabled($facilityId)) {
-            throw new \RuntimeException('Native encounter note engine is not enabled', 403);
-        }
+        $this->assertEncounterNoteAccess($facilityId);
 
         $encounter = (int) ($visit['encounter'] ?? 0);
         $pid = (int) ($visit['pid'] ?? 0);
@@ -325,26 +325,34 @@ class EncounterNoteService
         $payload = json_encode(['sections' => $sections], JSON_THROW_ON_ERROR);
         $existing = $this->loadNoteRow($visitId);
         $this->ensureTableExists();
+        $this->assertNoteWritable($existing);
 
         if ($existing === null) {
-            $noteId = QueryUtils::sqlInsert(
-                'INSERT INTO nc_encounter_note
-                    (facility_id, visit_id, encounter, pid, forms_row_id, variant, payload, author_user_id, updated_by, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, NOW(), NOW())',
-                [$facilityId, $visitId, $encounter, $pid, $variant, $payload, $actorUserId, $actorUserId]
-            );
-            $formsRowId = (new FormService())->addForm(
-                $encounter,
-                xl('Consultation note'),
-                (int) $noteId,
-                self::NATIVE_FORMDIR,
-                $pid,
-                '1'
-            );
-            QueryUtils::sqlStatementThrowException(
-                'UPDATE nc_encounter_note SET forms_row_id = ? WHERE id = ?',
-                [(int) $formsRowId, (int) $noteId]
-            );
+            sqlBeginTrans();
+            try {
+                $noteId = QueryUtils::sqlInsert(
+                    'INSERT INTO nc_encounter_note
+                        (facility_id, visit_id, encounter, pid, forms_row_id, variant, payload, author_user_id, updated_by, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, NOW(), NOW())',
+                    [$facilityId, $visitId, $encounter, $pid, $variant, $payload, $actorUserId, $actorUserId]
+                );
+                $formsRowId = (new FormService())->addForm(
+                    $encounter,
+                    xl('Consultation note'),
+                    (int) $noteId,
+                    self::NATIVE_FORMDIR,
+                    $pid,
+                    '1'
+                );
+                QueryUtils::sqlStatementThrowException(
+                    'UPDATE nc_encounter_note SET forms_row_id = ? WHERE id = ?',
+                    [(int) $formsRowId, (int) $noteId]
+                );
+                sqlCommitTrans();
+            } catch (\Throwable $e) {
+                sqlRollbackTrans();
+                throw $e;
+            }
             $formsRowId = (int) $formsRowId;
         } else {
             $noteId = (int) ($existing['id'] ?? 0);
@@ -382,7 +390,8 @@ class EncounterNoteService
             $sections,
             $variant,
             $this->buildPrefill($visit),
-            $actorUserId
+            $actorUserId,
+            $formsRowId
         );
 
         return [
@@ -400,8 +409,9 @@ class EncounterNoteService
      */
     public function prefill(int $visitId, int $actorUserId): array
     {
-        $this->access->assertWriteAccess();
         $visit = $this->loadClinicalVisit($visitId, $actorUserId);
+        $facilityId = (int) ($visit['facility_id'] ?? $this->visitScope->resolveDeskFacilityId());
+        $this->assertEncounterNoteAccess($facilityId);
 
         return $this->buildPrefill($visit);
     }
@@ -466,12 +476,16 @@ class EncounterNoteService
         $validateReady = false;
         if (!$signed && $row !== null) {
             $prefill = $this->buildPrefill($visit);
+            $previewActorUserId = (int) ($_SESSION['authUserID'] ?? 0);
             $validation = $this->buildValidationResult(
                 $sections,
                 $prefill,
                 $variant,
                 $facilityId,
-                []
+                $this->doctorService->getSupervisorMeta(
+                    (int) ($visit['encounter'] ?? 0),
+                    $previewActorUserId
+                )
             );
             $validateReady = !empty($validation['valid']);
         }
@@ -1458,6 +1472,30 @@ class EncounterNoteService
         return $count;
     }
 
+    private function assertEncounterNoteAccess(int $facilityId): void
+    {
+        $this->access->assertWriteAccess();
+        $this->access->assertLensAccess('consult');
+        if (!$this->isNativeEngineEnabled($facilityId)) {
+            throw new \RuntimeException('Native encounter note engine is not enabled', 403);
+        }
+    }
+
+    /**
+     * @param array<string, mixed>|null $existing
+     */
+    private function assertNoteWritable(?array $existing): void
+    {
+        if ($existing === null) {
+            return;
+        }
+
+        $formsRowId = (int) ($existing['forms_row_id'] ?? 0);
+        if ($formsRowId > 0 && $this->isFormSigned($formsRowId)) {
+            throw new \RuntimeException('Consult note is signed and cannot be modified', 409);
+        }
+    }
+
     private function isFormSigned(int $formsRowId): bool
     {
         $row = QueryUtils::querySingleRow(
@@ -1734,7 +1772,8 @@ class EncounterNoteService
                 PRIMARY KEY (`id`),
                 UNIQUE KEY `uk_visit_note` (`visit_id`),
                 KEY `idx_encounter_note` (`encounter`),
-                KEY `idx_facility_updated` (`facility_id`, `updated_at`)
+                KEY `idx_facility_updated` (`facility_id`, `updated_at`),
+                KEY `idx_forms_row_id` (`forms_row_id`)
             ) ENGINE=InnoDB COMMENT=\'V1.2-DOC-HLF-2 native encounter consult note\''
         );
 

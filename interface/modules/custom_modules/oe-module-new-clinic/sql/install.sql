@@ -1058,6 +1058,7 @@ INSERT INTO `registry` (`name`, `state`, `directory`, `sql_run`, `unpackaged`, `
 VALUES ('Consultation note', 1, 'nc_encounter_consult', 0, 1, NOW(), 0, 'Clinical', '', 1, 0, 'encounters|notes');
 #EndIf
 
+#IfNotTable nc_encounter_note
 CREATE TABLE IF NOT EXISTS `nc_encounter_note` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
     `facility_id` INT NOT NULL,
@@ -1074,8 +1075,13 @@ CREATE TABLE IF NOT EXISTS `nc_encounter_note` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_visit_note` (`visit_id`),
     KEY `idx_encounter_note` (`encounter`),
-    KEY `idx_facility_updated` (`facility_id`, `updated_at`)
+    KEY `idx_facility_updated` (`facility_id`, `updated_at`),
+    KEY `idx_forms_row_id` (`forms_row_id`)
 ) ENGINE=InnoDB COMMENT='V1.2-DOC-HLF-2 native encounter consult note';
+#EndIf
+
+#IfNotIndex nc_encounter_note idx_forms_row_id
+ALTER TABLE `nc_encounter_note` ADD KEY `idx_forms_row_id` (`forms_row_id`);
 #EndIf
 
 #IfNotRow2D new_clinic_config facility_id 0 config_key encounter_note_engine
@@ -1097,6 +1103,7 @@ INSERT INTO list_options (list_id, option_id, title, seq, notes, activity) VALUE
 ('formdir_keys', 'nc_encounter_consult', '"tbl":"nc_encounter_note","id":"id"', 40, 'Native New Clinic consult note JSON storage', 1);
 #EndIf
 
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_ancillary_services
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_ancillary_services', '0'),
 (0, 'ancillary_refer_window_hours', '4'),

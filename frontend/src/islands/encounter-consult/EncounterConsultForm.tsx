@@ -15,6 +15,7 @@ import { Label } from '@components/ui/label';
 import { Textarea } from '@components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@components/ui/select';
 import { useDeskViewport } from '@/core/useDeskViewport';
+import { PatientContextBanner } from '@components/PatientContextBanner';
 import { EncounterAttestationSection } from './EncounterAttestationSection';
 import { EncounterBackgroundSection } from './EncounterBackgroundSection';
 import { EncounterDataReviewedSection } from './EncounterDataReviewedSection';
@@ -196,6 +197,7 @@ export function EncounterConsultForm({
   const [prefill, setPrefill] = useState<EncounterNotePrefill | null>(null);
   const [variant, setVariant] = useState<EncounterNoteVariant>('general_opd');
   const [encounterId, setEncounterId] = useState(0);
+  const [patientPid, setPatientPid] = useState(0);
   const [noteConfig, setNoteConfig] = useState<EncounterNoteConfig>(DEFAULT_NOTE_CONFIG);
   const [supervisor, setSupervisor] = useState<EncounterSupervisorMeta>({
     supervisor_id: null,
@@ -276,6 +278,7 @@ export function EncounterConsultForm({
       const payload = await fetchEncounterNote(ajaxUrl, csrfToken, visitId);
       setPrefill(payload.prefill);
       setEncounterId(payload.encounter);
+      setPatientPid(payload.pid);
       const resolvedVariant = isEncounterNoteVariant(payload.variant)
         ? payload.variant
         : 'general_opd';
@@ -510,6 +513,18 @@ export function EncounterConsultForm({
         tone={statusTone}
         saving={saving || validating || signing}
       />
+
+      {prefill.patient.display_name && (
+        <PatientContextBanner
+          layout="compact"
+          identity={{
+            pid: patientPid > 0 ? patientPid : undefined,
+            display_name: prefill.patient.display_name,
+          }}
+          chiefComplaint={prefill.chief_complaint || null}
+          className="mb-1"
+        />
+      )}
 
       <EncounterContextStrip
         prefill={prefill}
@@ -787,25 +802,20 @@ export function EncounterConsultForm({
                   <Button type="button" variant="outline" onClick={() => void persist(true)} disabled={saving}>
                     Save draft
                   </Button>
-                  {!mobileStepper && (
-                    <Button type="button" variant="secondary" onClick={() => void runValidate()} disabled={validating || saving}>
-                      Validate
-                    </Button>
-                  )}
+                  <Button type="button" variant="secondary" onClick={() => void runValidate()} disabled={validating || saving}>
+                    Validate
+                  </Button>
                   <Button
                     type="button"
                     onClick={() => {
-                      const local = validateEncounterNoteLocal(sections, validationContext);
-                      if (!local.valid) {
-                        setValidationErrors(local.errors);
-                        setStatusMessage(`${local.errors.length} item${local.errors.length === 1 ? '' : 's'} need attention before signing`);
-                        setStatusTone('danger');
-                        return;
-                      }
-                      setSignError(null);
-                      setSignOpen(true);
+                      void runValidate().then((valid) => {
+                        if (valid) {
+                          setSignError(null);
+                          setSignOpen(true);
+                        }
+                      });
                     }}
-                    disabled={saving}
+                    disabled={validating || saving}
                   >
                     Sign
                   </Button>

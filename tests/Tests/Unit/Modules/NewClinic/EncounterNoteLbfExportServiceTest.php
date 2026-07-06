@@ -143,4 +143,15 @@ class EncounterNoteLbfExportServiceTest extends TestCase
         $this->assertStringContainsString('ACT', $fields['plan']);
         $this->assertStringContainsString('48 hours', $fields['follow_up']);
     }
+
+    public function testSyncFromSaveSkipsWhenNativeNoteSigned(): void
+    {
+        $source = (string) file_get_contents(
+            __DIR__ . '/../../../../../interface/modules/custom_modules/oe-module-new-clinic/src/Services/EncounterNoteLbfExportService.php'
+        );
+
+        $this->assertStringContainsString('note_signed', $source);
+        $this->assertStringContainsString('isFormsRowSigned', $source);
+        $this->assertStringContainsString('lbf_signed', $source);
+    }
 }
