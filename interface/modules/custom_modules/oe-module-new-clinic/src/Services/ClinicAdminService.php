@@ -150,6 +150,7 @@ class ClinicAdminService
         private readonly CashClinicProfileService $cashProfile = new CashClinicProfileService(),
         private readonly MoneyFormatService $moneyFormat = new MoneyFormatService(),
         private readonly ClinicalDocLbfWizardService $clinicalDocLbfWizard = new ClinicalDocLbfWizardService(),
+        private readonly ClinicalDocReferralHospitalLbfWizardService $referralHospitalLbfWizard = new ClinicalDocReferralHospitalLbfWizardService(),
         private readonly ClinicalDocAncillaryLbfService $ancillaryLbf = new ClinicalDocAncillaryLbfService(),
         private readonly AdminFormBundleService $formBundle = new AdminFormBundleService(),
         private readonly AdminFormsCatalogService $formsCatalog = new AdminFormsCatalogService(),
@@ -217,6 +218,7 @@ class ClinicAdminService
             'roles' => $this->rolesService->getRolesPayload(),
             'cash_profile' => $this->cashProfile->getProfileStatus($facilityId),
             'ghana_lbf_pack' => $this->clinicalDocLbfWizard->getPackStatus($facilityId),
+            'referral_hospital_lbf_pack' => $this->referralHospitalLbfWizard->getPackStatus($facilityId),
             'ancillary_lbf_packs' => $this->ancillaryLbf->getAllPackStatus($facilityId),
             'form_bundle_board' => $this->formBundle->getBoard($facilityId),
             'forms_catalog' => $this->formsCatalog->getCatalog($facilityId),
@@ -295,6 +297,20 @@ class ClinicAdminService
         return array_merge(
             $this->getSettingsPayload($scope, $requestedFacilityId),
             ['ghana_lbf_pack_result' => $result]
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function importReferralHospitalLbfPack(string $scope, int $actorUserId, bool $setAsConsultNote, ?int $requestedFacilityId = null): array
+    {
+        $facilityId = $this->resolveSettingsFacilityId($scope, $requestedFacilityId);
+        $result = $this->referralHospitalLbfWizard->importPack($facilityId, $actorUserId, $setAsConsultNote);
+
+        return array_merge(
+            $this->getSettingsPayload($scope, $requestedFacilityId),
+            ['referral_hospital_lbf_pack_result' => $result]
         );
     }
 

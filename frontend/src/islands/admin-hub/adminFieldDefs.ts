@@ -123,6 +123,7 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'currency_decimals',
   'currency_symbol_position',
   'enable_clinical_doc_hub',
+  'clinical_doc_bundle',
   'clinical_doc_show_screening',
   'clinical_doc_show_specialty',
   'consult_note_formdir',
@@ -557,6 +558,17 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         label: 'Primary consult note form directory',
         hint: 'Registry formdir for the main consult card when encounter_note_engine=legacy (default soap).',
         indent: 1,
+      },
+      {
+        key: 'clinical_doc_bundle',
+        type: 'select',
+        label: 'Clinical documentation bundle',
+        hint: 'Curated form card pack for the Clinical Documentation Hub.',
+        indent: 1,
+        choices: [
+          { value: 'ghana_opd_v1', label: 'Ghana OPD (private clinic pilot)' },
+          { value: 'referral_hospital_v1', label: 'Referral hospital (multi-specialty)' },
+        ],
       },
       {
         key: 'encounter_note_engine',

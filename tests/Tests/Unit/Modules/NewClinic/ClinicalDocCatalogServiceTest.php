@@ -69,4 +69,34 @@ class ClinicalDocCatalogServiceTest extends TestCase
             $config->set('clinical_doc_bundle', (string) $previous, 0);
         }
     }
+
+    public function testReferralHospitalBundleResolvesReferralOpdConsultLens(): void
+    {
+        $config = new ClinicConfigService();
+        $previous = $config->get('clinical_doc_bundle', ClinicalDocCatalogService::DEFAULT_BUNDLE_KEY, 0);
+        try {
+            $config->set('clinical_doc_bundle', ClinicalDocCatalogService::REFERRAL_HOSPITAL_BUNDLE_KEY, 0);
+
+            $access = new ClinicalDocAccessService(
+                aclChecker: static fn (string $section, string $aco): bool =>
+                    $section === 'new_clinic' && $aco === 'new_doctor',
+            );
+            $catalog = new ClinicalDocCatalogService(access: $access, config: $config);
+
+            $this->assertSame(
+                ClinicalDocCatalogService::REFERRAL_HOSPITAL_BUNDLE_KEY,
+                $catalog->resolveBundleKey(0)
+            );
+            $this->assertSame(
+                'consult',
+                $catalog->resolveSourceLensForFormdir('referral_opd_consult', 0)
+            );
+            $this->assertSame(
+                ClinicalDocCatalogService::REFERRAL_HOSPITAL_BUNDLE_KEY,
+                $catalog->getCatalog(null, 0)['bundle_key']
+            );
+        } finally {
+            $config->set('clinical_doc_bundle', (string) $previous, 0);
+        }
+    }
 }

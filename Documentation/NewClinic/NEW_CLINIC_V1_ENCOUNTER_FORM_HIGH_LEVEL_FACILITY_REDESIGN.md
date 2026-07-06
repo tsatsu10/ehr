@@ -98,7 +98,8 @@ flowchart LR
 | Hub launcher | `frontend/src/islands/clinical-doc/` |
 | Form bridge | `oe-module-new-clinic/public/clinical-form-bridge.php` |
 | Ghana LBF pack | `ClinicalDocLbfWizardService.php` — 9 fields, 4 groups |
-| Catalog / bundles | `ClinicalDocCatalogService.php` — `ghana_opd_v1` only |
+| Catalog / bundles | `ClinicalDocCatalogService.php` — `ghana_opd_v1`, `referral_hospital_v1` |
+| Referral hospital LBF pack | `ClinicalDocReferralHospitalLbfWizardService.php` — 19 fields, 8 groups |
 | Stock SOAP | `interface/forms/soap/` |
 | MRD read-back | `PatientChartClinicalService.php` → `ClinicalTab.tsx` **This visit** |
 
@@ -469,7 +470,8 @@ Align with New Clinic tokens (`--oe-nc-*`, Figtree + Noto Sans) and admin/chart 
 |---------|------|---------|
 | 0.1.0 | 2026-07-06 | Initial draft — current-state analysis, external research, high-level facility target model, UX/data phasing |
 | 0.1.1 | 2026-07-06 | V1.2-DOC-HLF-2 implemented — native `encounter-consult` island, `nc_encounter_note` storage, vitals prefill API |
+| 0.1.2 | 2026-07-06 | V1.2-DOC-HLF-1 implemented — `referral_hospital_v1` bundle, `LBFreferral_opd_consult` LBF wizard + admin import |
 
 ---
 
-**Next engineering step:** ~~Implement **V1.2-DOC-HLF-2**~~ — **V1.2-DOC-HLF-2 shipped** (`encounter-consult` island + `encounter_note.*` APIs behind `encounter_note_engine=native`). Next: **V1.2-DOC-HLF-3** (referral header, problem-plan linkage, validate/sign).
+**Next engineering step:** ~~Implement **V1.2-DOC-HLF-2**~~ — **V1.2-DOC-HLF-2 shipped** (`encounter-consult` island + `encounter_note.*` APIs behind `encounter_note_engine=native`). ~~**V1.2-DOC-HLF-1**~~ — **V1.2-DOC-HLF-1 shipped** (`referral_hospital_v1` bundle + `LBFreferral_opd_consult` admin import). Next: **V1.2-DOC-HLF-3** (referral header, problem-plan linkage, validate/sign).
