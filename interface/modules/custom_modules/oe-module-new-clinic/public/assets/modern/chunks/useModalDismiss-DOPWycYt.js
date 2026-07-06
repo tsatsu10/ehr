@@ -1,2 +1,0 @@
-import{g as e,h as t}from"./button-Ajb20jbY.js";var n=e(t(),1);function r(e,t){(0,n.useEffect)(()=>{if(!e)return;let n=e=>{e.key===`Escape`&&(e.preventDefault(),t())};return document.addEventListener(`keydown`,n),()=>document.removeEventListener(`keydown`,n)},[e,t])}export{r as t};
-//# sourceMappingURL=useModalDismiss-DOPWycYt.js.map

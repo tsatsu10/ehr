@@ -26,6 +26,7 @@ import {
     REACH_RELATIONSHIPS,
     RELIGIONS,
 } from './registrationFormConstants';
+import { REGISTRATION_SECTION_META, REGISTRATION_SECTION_TITLES } from './registrationUi';
 import { sectionComplete } from './registrationFormUtils';
 import type { GeoOption } from './useRegistrationGeo';
 import type { ValidationErrors } from './registrationFormValidation';
@@ -83,14 +84,13 @@ interface RegistrationFormSectionsProps {
     wizardMode?: boolean;
     validationErrors?: ValidationErrors;
     onSectionToggle: (section: number) => void;
-    onSaveSection: (section: number) => void;
     onFieldChange: (name: keyof RegistrationFormValues, value: string) => void;
     onCheckboxChange: (name: keyof RegistrationFormValues, checked: boolean) => void;
     onRegionChange: (code: string) => void;
     onFieldBlur?: (name: keyof RegistrationFormValues) => void;
 }
 
-const SECTION_TITLES = ['Basic info', 'Contact & identity', 'Clinical & demographics', 'Admin & insurance'] as const;
+const SECTION_TITLES = REGISTRATION_SECTION_TITLES;
 
 /** Shared grid wrappers */
 function FieldRow({ children, cols = 3 }: { children: React.ReactNode; cols?: 2 | 3 }) {
@@ -198,39 +198,37 @@ function WizardStepBar({
 interface SectionCardProps {
     section: number;
     title: string;
+    subtitle?: string;
+    optional?: boolean;
     complete: boolean;
-    onSaveSection: (section: number) => void;
     children: React.ReactNode;
 }
 
-function SectionCard({ section, title, complete, onSaveSection, children }: SectionCardProps) {
+function SectionCard({ section, title, subtitle, optional, complete, children }: SectionCardProps) {
     return (
-        <AccordionItem value={String(section)} className="nc-reg-section border-[var(--oe-nc-border)]">
-            <AccordionTrigger id={`nc-reg-heading-${section}`} className="hover:no-underline">
-                <span className="flex items-center gap-2">
-                    <span className="flex items-center justify-center h-5 w-5 rounded-full bg-[var(--oe-nc-primary)]/10 text-[var(--oe-nc-primary)] text-xs font-bold">
-                        {section}
+        <AccordionItem value={String(section)} className="nc-reg-section">
+            <AccordionTrigger id={`nc-reg-heading-${section}`} className="nc-reg-section__trigger hover:no-underline">
+                <span className="nc-reg-section__heading">
+                    <span className="nc-reg-section__index" aria-hidden="true">
+                        {complete ? <CheckCircle2 className="h-3.5 w-3.5" /> : section}
                     </span>
-                    <span className="font-semibold text-sm">{title}</span>
-                    {complete && (
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" aria-label="Section complete" />
-                    )}
+                    <span className="nc-reg-section__titles">
+                        <span className="nc-reg-section__title-row">
+                            <span className="nc-reg-section__title">{title}</span>
+                            {optional ? (
+                                <span className="nc-reg-section__optional-badge">Optional</span>
+                            ) : (
+                                <span className="nc-reg-section__required-badge">Required</span>
+                            )}
+                        </span>
+                        {subtitle ? (
+                            <span className="nc-reg-section__subtitle">{subtitle}</span>
+                        ) : null}
+                    </span>
                 </span>
             </AccordionTrigger>
-            <AccordionContent id={`nc-reg-section-${section}`} className="px-1">
-                <div className="space-y-4 pt-1 pb-2">
-                    {children}
-                    <div className="pt-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="nc-reg-save-section"
-                            onClick={() => onSaveSection(section)}
-                        >
-                            Save section {section}
-                        </Button>
-                    </div>
-                </div>
+            <AccordionContent id={`nc-reg-section-${section}`} className="nc-reg-section__content">
+            <div className="nc-reg-section__fields space-y-4">{children}</div>
             </AccordionContent>
         </AccordionItem>
     );
@@ -246,7 +244,6 @@ export function RegistrationFormSections({
     wizardMode = false,
     validationErrors = {},
     onSectionToggle,
-    onSaveSection,
     onFieldChange,
     onCheckboxChange,
     onRegionChange,
@@ -278,7 +275,12 @@ export function RegistrationFormSections({
 
             {/* ──────────────── SECTION 1: Basic info ──────────────── */}
             {showSection(1) && (
-                <SectionCard section={1} title="Basic info" complete={sectionComplete(1, missingKeys)} onSaveSection={onSaveSection}>
+                <SectionCard
+                    section={1}
+                    title={REGISTRATION_SECTION_META[0].title}
+                    subtitle={REGISTRATION_SECTION_META[0].subtitle}
+                    complete={sectionComplete(1, missingKeys)}
+                >
                     <FieldRow cols={3}>
                         <Field id="nc-reg-fname" label="First name" error={validationErrors.fname}>
                             <Input
@@ -435,7 +437,12 @@ export function RegistrationFormSections({
 
             {/* ──────────────── SECTION 2: Contact & identity ──────────────── */}
             {showSection(2) && (
-                <SectionCard section={2} title="Contact & identity" complete={sectionComplete(2, missingKeys)} onSaveSection={onSaveSection}>
+                <SectionCard
+                    section={2}
+                    title={REGISTRATION_SECTION_META[1].title}
+                    subtitle={REGISTRATION_SECTION_META[1].subtitle}
+                    complete={sectionComplete(2, missingKeys)}
+                >
                     <Field id="nc-reg-street" label="Address">
                         <Textarea id="nc-reg-street" rows={2} value={form.street} onChange={(e) => onFieldChange('street', e.target.value)} />
                     </Field>
@@ -508,7 +515,13 @@ export function RegistrationFormSections({
 
             {/* ──────────────── SECTION 3: Clinical & demographics ──────────────── */}
             {showSection(3) && (
-                <SectionCard section={3} title="Clinical & demographics" complete={sectionComplete(3, missingKeys)} onSaveSection={onSaveSection}>
+                <SectionCard
+                    section={3}
+                    title={REGISTRATION_SECTION_META[2].title}
+                    subtitle={REGISTRATION_SECTION_META[2].subtitle}
+                    optional
+                    complete={sectionComplete(3, missingKeys)}
+                >
                     <SelectField id="nc-reg-blood" label="Blood group" value={form.blood_group} placeholder="—" onChange={(v) => onFieldChange('blood_group', v)}>
                         {BLOOD_GROUPS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
                     </SelectField>
@@ -569,7 +582,13 @@ export function RegistrationFormSections({
 
             {/* ──────────────── SECTION 4: Admin & insurance ──────────────── */}
             {showSection(4) && (
-                <SectionCard section={4} title="Admin & insurance" complete={sectionComplete(4, missingKeys)} onSaveSection={onSaveSection}>
+                <SectionCard
+                    section={4}
+                    title={REGISTRATION_SECTION_META[3].title}
+                    subtitle={REGISTRATION_SECTION_META[3].subtitle}
+                    optional
+                    complete={sectionComplete(4, missingKeys)}
+                >
                     <SelectField id="nc-reg-insurance-type" label="Insurance type" value={form.insurance_type} onChange={(v) => onFieldChange('insurance_type', v)}>
                         <SelectItem value="cash">Cash</SelectItem>
                         <SelectItem value="nhis">NHIS</SelectItem>

@@ -2,15 +2,17 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import { oeFetch } from '@core/oeFetch';
 import type { RegistrationDupResult, RegistrationFormData, RegistrationSaveResult } from '@core/types';
 import { ConfirmModal } from '@components/ConfirmModal';
-import { DeskAlert } from '@components/DeskAlert';
 import { showDeskToast } from '@components/deskToast';
-import { Badge } from '@components/ui/badge';
-import { Button } from '@components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@components/ui/card';
-import { cn } from '@/lib/utils';
-import { AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import { RegistrationDupPanel } from './RegistrationDupPanel';
 import { RegistrationFormSections, type RegistrationFormValues } from './RegistrationFormSections';
+import {
+    RegistrationFooterBar,
+    RegistrationHeader,
+    RegistrationProgressRail,
+    RegistrationShell,
+    REGISTRATION_SECTION_META,
+} from './registrationUi';
+import { sectionComplete } from './registrationFormUtils';
 import { parseSearchQuery } from './registrationFormUtils';
 import {
     collectRegistrationSection,
@@ -43,6 +45,8 @@ interface RegistrationFormProps {
     chartMode?: boolean;
     /** Front Desk preview pane already renders the section title — omit duplicate heading. */
     hideTitle?: boolean;
+    /** Show back-to-search affordance (front desk registration-only layout). */
+    showBackToSearch?: boolean;
     onSaved: (pid: number, startAfter?: boolean) => void;
     onUseExisting: (pid: number) => void;
     onCancel: () => void;
@@ -61,6 +65,7 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
         wizardMode = false,
         chartMode = false,
         hideTitle = false,
+        showBackToSearch = false,
         onSaved,
         onUseExisting,
         onCancel,
@@ -423,25 +428,64 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
         setDraftRestoreOpen(false);
     };
 
-    return (
-        <Card className="nc-registration-form border-0 bg-transparent shadow-none" id="nc-registration-form">
-            <CardHeader className={cn('mb-2 border-0 px-0 py-0', hideTitle ? 'justify-end' : 'gap-3')}>
-                {!hideTitle && <CardTitle className="text-lg">{formTitle}</CardTitle>}
-                <div className="flex items-center gap-2">
-                    <Badge variant="neutral" id="nc-reg-completion">
-                        {completionScore == null ? '—' : `${completionScore}% complete`}
-                    </Badge>
-                    {autoSaveLabel && dirty && !currentPid && (
-                        <Badge variant="ghost" className="text-xs gap-1.5" id="nc-reg-autosave">
-                            <Clock className="h-3 w-3" aria-hidden />
-                            {autoSaveLabel}
-                        </Badge>
-                    )}
-                </div>
-            </CardHeader>
+    const activeSectionMeta = REGISTRATION_SECTION_META[activeSection - 1];
+    const showSaveAndStart = registrationMode === 'desk_full_form' && !chartMode && activeSection === 1;
 
-            <CardContent className="space-y-0 p-0">
-            <div id="nc-dup-panel">
+    return (
+        <RegistrationShell
+            footer={
+                <RegistrationFooterBar
+                    busy={busy}
+                    activeSection={activeSection}
+                    sectionTitle={activeSectionMeta.title}
+                    chartMode={chartMode}
+                    showSaveAndStart={showSaveAndStart}
+                    error={error}
+                    success={success}
+                    cancelLabel={showBackToSearch ? 'Back to search' : 'Cancel'}
+                    onSave={() => {
+                        void saveSection(activeSection, false);
+                    }}
+                    onSaveAndStart={
+                        showSaveAndStart
+                            ? () => {
+                                  void saveSection(1, true);
+                              }
+                            : undefined
+                    }
+                    onCancel={() => {
+                        requestDiscard(() => {
+                            setDirty(false);
+                            onCancel();
+                        });
+                    }}
+                />
+            }
+        >
+            <RegistrationHeader
+                title={formTitle}
+                hideTitle={hideTitle}
+                completionScore={completionScore}
+                autoSaveLabel={autoSaveLabel}
+                showAutoSave={dirty && !currentPid}
+                onBack={showBackToSearch ? () => {
+                    requestDiscard(() => {
+                        setDirty(false);
+                        onCancel();
+                    });
+                } : undefined}
+            />
+
+            {!wizardMode ? (
+                <RegistrationProgressRail
+                    activeSection={activeSection}
+                    missingKeys={completionMissing}
+                    onSectionSelect={setActiveSection}
+                    sectionComplete={sectionComplete}
+                />
+            ) : null}
+
+            <div id="nc-dup-panel" className="nc-registration-dup-wrap">
                 <RegistrationDupPanel
                     dup={dup}
                     dupConfirm={dupConfirm}
@@ -465,69 +509,11 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
                 wizardMode={wizardMode}
                 validationErrors={validationErrors}
                 onSectionToggle={setActiveSection}
-                onSaveSection={(section) => {
-                    setActiveSection(section);
-                    void saveSection(section, false);
-                }}
                 onFieldChange={handleFieldChange}
                 onCheckboxChange={handleCheckboxChange}
                 onRegionChange={handleRegionChange}
                 onFieldBlur={handleFieldBlur}
             />
-
-            {error && (
-                <DeskAlert tone="error" className="mt-3 flex items-start gap-3" id="nc-reg-error" role="alert">
-                    <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-red-600" aria-hidden />
-                    <span className="text-sm">{error}</span>
-                </DeskAlert>
-            )}
-            {success && (
-                <DeskAlert tone="success" className="mt-3 flex items-start gap-3" id="nc-reg-success" role="status">
-                    <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-600" aria-hidden />
-                    <span className="text-sm font-medium">{success}</span>
-                </DeskAlert>
-            )}
-
-            <div className="flex flex-wrap gap-2 mt-3">
-                <Button
-                    type="button"
-                    id="nc-reg-save"
-                    disabled={busy}
-                    onClick={() => {
-                        void saveSection(activeSection, false);
-                    }}
-                >
-                    Save
-                </Button>
-                {registrationMode === 'desk_full_form' && !chartMode && (
-                    <Button
-                        type="button"
-                        variant="cta"
-                        id="nc-reg-save-start"
-                        disabled={busy}
-                        onClick={() => {
-                            void saveSection(1, true);
-                        }}
-                    >
-                        Save &amp; Start visit
-                    </Button>
-                )}
-                <Button
-                    type="button"
-                    variant="outline"
-                    id="nc-reg-cancel"
-                    disabled={busy}
-                    onClick={() => {
-                        requestDiscard(() => {
-                            setDirty(false);
-                            onCancel();
-                        });
-                    }}
-                >
-                    Cancel
-                </Button>
-            </div>
-            </CardContent>
 
             <ConfirmModal
                 open={discardOpen}
@@ -582,6 +568,6 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
                     You have unsaved registration data from a previous session. Would you like to resume where you left off?
                 </p>
             </ConfirmModal>
-        </Card>
+        </RegistrationShell>
     );
 });

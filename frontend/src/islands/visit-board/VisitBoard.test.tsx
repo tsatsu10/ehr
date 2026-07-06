@@ -228,7 +228,7 @@ describe('VisitBoard', () => {
     const searchInput = screen.getByPlaceholderText(/search name/i);
     fireEvent.change(searchInput, { target: { value: 'nobody' } });
     expect(screen.queryByText('Kwame Mensah')).not.toBeInTheDocument();
-    expect(screen.getByText(/no patients match/i)).toBeInTheDocument();
+    expect(screen.getByText(/no patients match the current search/i)).toBeInTheDocument();
   });
 
   it('shows all cards again after clearing search', async () => {

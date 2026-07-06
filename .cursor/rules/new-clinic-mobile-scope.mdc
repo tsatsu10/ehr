@@ -1,0 +1,57 @@
+---
+description: Safe scope and end-of-session gates when coding New Clinic from Cursor iOS
+alwaysApply: true
+---
+
+# New Clinic — Cursor iOS / Mobile Scope
+
+Use this with `new-clinic-big-picture-first.mdc` and `new-clinic-mobile-backend-gate.mdc`.
+
+## Assume the device cannot
+
+- Run XAMPP, Apache, or MySQL locally
+- Watch `C:\xampp\apache\logs\error.log`
+- Run long interactive terminal sessions reliably
+- Hard-refresh and click through desks in the browser
+
+Code on mobile; **verify on desktop or CI**.
+
+## Safe on iOS (prefer these)
+
+- React islands under `frontend/src/islands/`
+- Shared UI under `frontend/src/components/`
+- Island CSS (`main.css`, `desk-layout.css`)
+- Docs under `Documentation/NewClinic/`
+- Single-file PHP bugfixes with a clear, grep-able blast radius
+- Config toggles and copy changes
+
+## Avoid on iOS (defer to desktop)
+
+- New service classes with deep dependency trees
+- `AjaxController` constructor or import-list changes
+- Multi-file PHP refactors in one session
+- Constructor refactors across services (Windows stack-overflow risk)
+- Deleting/renaming services while leaving `.broken` / `.bak` copies
+- Merging large uncommitted batches across desks (registry + board + registration)
+
+## End every mobile session with
+
+1. **Push the branch** — do not leave hours of work only on the phone.
+2. **Check CI** — workflow `New Clinic Verify` on the PR (PHP static + frontend test/build).
+3. **Desktop gate (backend PHP touched)** — `composer verify:new-clinic` (includes AjaxController bootstrap).
+4. **Desktop smoke (UI touched)** — hard-refresh, open one desk, confirm `ajax.php` actions return **200**.
+5. **Asset version** — if frontend islands changed, bump `ModuleAssetVersion.php` once per batch.
+
+Full checklist: `Documentation/NewClinic/MOBILE_IOS_CURSOR_CHECKLIST.md`
+
+## When CI is red
+
+Fix on desktop or in a follow-up mobile session scoped to the failure only.
+Do not stack unrelated changes on top of a failing branch.
+
+## Agent behavior on mobile
+
+- Grep all call sites before editing (big-picture-first).
+- List affected files when touching more than three files.
+- State explicitly when verification could not run on this device.
+- Never claim “done” for backend PHP without `composer verify:new-clinic` on desktop.

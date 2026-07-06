@@ -64,3 +64,12 @@ Safe on iOS: single-file fixes, frontend islands, docs, config toggles.
 
 When a change touches rendering, formatting, or data paths, still follow
 `new-clinic-big-picture-first.mdc` — grep every call site before shipping.
+
+## CI safety net
+
+PRs that touch module PHP or `frontend/` run **New Clinic Verify**
+(`.github/workflows/new-clinic-verify.yml`): static PHP checks + frontend
+typecheck, tests, and build. Full bootstrap still requires desktop:
+`composer verify:new-clinic`.
+
+See `Documentation/NewClinic/MOBILE_IOS_CURSOR_CHECKLIST.md`.

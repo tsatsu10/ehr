@@ -1,11 +1,16 @@
+/* Patient Registry island shell — layout lives in React main.css bundle. */
+
 .nc-registry-summary {
-    min-height: 1.25rem;
+  min-height: 1.25rem;
 }
 
-.nc-registry .nc-registry-visit-filters summary {
-    cursor: pointer;
+.nc-registry .nc-registry-visit-filters summary,
+.nc-registry .nc-registry-clinical-filters summary,
+.nc-registry .nc-registry-comms-filters summary,
+.nc-registry .nc-registry-scheduling-filters summary {
+  cursor: pointer;
 }
 
 .nc-registry .nc-registry-visit-filters select[multiple] {
-    min-height: 6.5rem;
+  min-height: 6.5rem;
 }

@@ -120,6 +120,10 @@ export interface RegistryRow {
   sex: string;
   mrn: string;
   completion_pct: number;
+  phone_masked?: string;
+  last_visit_date?: string | null;
+  has_active_visit_today?: boolean;
+  dob_estimated?: boolean;
   condition_summary?: string;
   age_at_diagnosis?: number | null;
   index_diagnosis_date?: string;

@@ -19,6 +19,15 @@ import { oeFetch } from '@core/oeFetch';
 
 const mockFetch = oeFetch as ReturnType<typeof vi.fn>;
 
+async function fillRequiredSection1() {
+    fireEvent.change(screen.getByLabelText(/^First name$/i), { target: { value: 'Kwame' } });
+    fireEvent.change(screen.getByLabelText(/^Last name$/i), { target: { value: 'Boateng' } });
+    fireEvent.change(screen.getByLabelText(/Or estimated age/i), { target: { value: '30' } });
+    fireEvent.change(document.getElementById('nc-reg-phone')!, { target: { value: '0244123456' } });
+    fireEvent.click(screen.getByRole('combobox', { name: /^Sex$/i }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Male' }));
+}
+
 describe('RegistrationForm', () => {
     const props = {
         ajaxUrl: '/mock/ajax',
@@ -62,7 +71,7 @@ describe('RegistrationForm', () => {
         expect(document.getElementById('nc-reg-section-1')).toHaveAttribute('data-state', 'open');
         expect(document.getElementById('nc-reg-section-2')).toHaveAttribute('data-state', 'closed');
 
-        fireEvent.click(screen.getByText(/Contact & identity/i));
+        fireEvent.click(document.getElementById('nc-reg-heading-2')!);
         expect(document.getElementById('nc-reg-section-2')).toHaveAttribute('data-state', 'open');
         expect(document.getElementById('nc-reg-section-1')).toHaveAttribute('data-state', 'closed');
     });
@@ -85,7 +94,7 @@ describe('RegistrationForm', () => {
         });
         expect(document.getElementById('nc-reg-section-2')).toHaveAttribute('data-state', 'closed');
 
-        fireEvent.click(screen.getByText(/Contact & identity/i));
+        fireEvent.click(document.getElementById('nc-reg-heading-2')!);
         expect(document.getElementById('nc-reg-section-2')).toHaveAttribute('data-state', 'open');
         expect(document.getElementById('nc-reg-section-1')).toHaveAttribute('data-state', 'closed');
     });
@@ -118,13 +127,13 @@ describe('RegistrationForm', () => {
         });
 
         render(<RegistrationForm {...props} wizardMode />);
-        fireEvent.change(screen.getByLabelText(/First name/i), { target: { value: 'Kwame' } });
+        await fillRequiredSection1();
 
         await waitFor(() => {
             expect(screen.getByText(/Possible duplicate/i)).toBeInTheDocument();
         });
 
-        fireEvent.click(screen.getByRole('button', { name: /^Save$/i }));
+        fireEvent.click(screen.getByRole('button', { name: /Save section 1/i }));
         expect(await screen.findByText(/Confirm this is a different patient/i)).toBeInTheDocument();
     });
 
@@ -145,8 +154,7 @@ describe('RegistrationForm', () => {
         });
 
         render(<RegistrationForm {...props} registrationMode="desk_full_form" wizardMode />);
-        fireEvent.change(screen.getByLabelText(/First name/i), { target: { value: 'Kwame' } });
-        fireEvent.change(screen.getByLabelText(/Last name/i), { target: { value: 'Boateng' } });
+        await fillRequiredSection1();
 
         fireEvent.click(screen.getByRole('button', { name: /Save & Start visit/i }));
 

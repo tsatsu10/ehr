@@ -59,6 +59,7 @@ function RegistrationContent({
   registrationPrefill,
   registrationFormRef,
   wizardMode,
+  showBackToSearch,
   ajaxUrl,
   csrfToken,
   mergeToolBaseUrl,
@@ -72,6 +73,7 @@ function RegistrationContent({
   registrationPrefill?: string;
   registrationFormRef?: RefObject<RegistrationFormHandle | null>;
   wizardMode?: boolean;
+  showBackToSearch?: boolean;
   ajaxUrl: string;
   csrfToken: string;
   mergeToolBaseUrl?: string;
@@ -104,13 +106,13 @@ function RegistrationContent({
     <RegistrationForm
       key={formKey}
       ref={registrationFormRef}
-      hideTitle
       ajaxUrl={ajaxUrl}
       csrfToken={csrfToken}
       pid={registrationPid}
       prefill={registrationPrefill}
       registrationMode={registrationMode}
       wizardMode={wizardMode}
+      showBackToSearch={showBackToSearch}
       onSaved={onRegistrationSaved}
       onUseExisting={onRegistrationUseExisting}
       onCancel={onRegistrationCancel}
@@ -185,6 +187,7 @@ export function PatientPreviewPane(props: PatientPreviewPaneProps) {
       registrationPrefill={registrationPrefill}
       registrationFormRef={registrationFormRef}
       wizardMode={wizardMode}
+      showBackToSearch={mode === 'registration'}
       ajaxUrl={ajaxUrl}
       csrfToken={csrfToken}
       mergeToolBaseUrl={mergeToolBaseUrl}
@@ -194,6 +197,12 @@ export function PatientPreviewPane(props: PatientPreviewPaneProps) {
       onRegistrationDiscardConfirm={onRegistrationDiscardConfirm}
     />
   );
+
+  const registrationShellProps = {
+    embedded,
+    className: 'nc-front-desk-preview-shell--registration',
+    scrollClassName: 'nc-front-desk-preview-shell__scroll--registration',
+  } as const;
 
   if (mode === 'empty') {
     return <FrontDeskPreviewEmpty />;
@@ -215,9 +224,8 @@ export function PatientPreviewPane(props: PatientPreviewPaneProps) {
   }
 
   if (mode === 'registration') {
-    const title = registrationPid ? 'Edit profile' : 'Register patient';
     return (
-      <FrontDeskPreviewShell title={embedded ? undefined : title} embedded={embedded}>
+      <FrontDeskPreviewShell {...registrationShellProps}>
         {registrationContent}
       </FrontDeskPreviewShell>
     );
@@ -225,10 +233,7 @@ export function PatientPreviewPane(props: PatientPreviewPaneProps) {
 
   if (mode === 'registration-pinned' && preview && pid) {
     return (
-      <FrontDeskPreviewShell
-        title={embedded ? undefined : (registrationPid ? 'Edit profile' : 'Register patient')}
-        embedded={embedded}
-      >
+      <FrontDeskPreviewShell {...registrationShellProps}>
         {previewBanner(props, registrationContent)}
       </FrontDeskPreviewShell>
     );

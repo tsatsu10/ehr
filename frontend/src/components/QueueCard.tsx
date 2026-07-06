@@ -36,6 +36,7 @@ export interface QueueCardProps {
   privacyMode?: boolean;
   onClick?: (card: VisitCard) => void;
   selected?: boolean;
+  muted?: boolean;
 }
 
 function privacyDisplayName(name: string): string {
@@ -66,7 +67,7 @@ function formatStaleDate(visitDate: string): string {
   return `${mon} ${parseInt(parts[2], 10)}`;
 }
 
-export function QueueCard({ card, privacyMode = false, onClick, selected = false }: QueueCardProps) {
+export function QueueCard({ card, privacyMode = false, onClick, selected = false, muted = false }: QueueCardProps) {
   const displayName = privacyMode ? privacyDisplayName(card.display_name) : card.display_name;
   const isStale = card.visit_date && card.visit_date.slice(0, 10) < todayIso();
   const isUrgent = Boolean(card.is_urgent);
@@ -80,7 +81,7 @@ export function QueueCard({ card, privacyMode = false, onClick, selected = false
   return (
     <Card
       className={cn(
-        queueCardShellClass({ urgent: isUrgent, active: selected, claimLost: isClaimLost }),
+        queueCardShellClass({ urgent: isUrgent, active: selected, claimLost: isClaimLost, muted }),
         'overflow-hidden p-0 shadow-none',
         // Clinical styling
         'border-[var(--oe-clinical-border)]',

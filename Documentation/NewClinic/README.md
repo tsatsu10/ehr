@@ -47,6 +47,7 @@ Read in this order for a full picture:
 | [NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) | UI/UX master — §0 TL;DR · §1 architectural model · §2 design principles · §3 visual system · §4 component reference · §5 interaction states · §6 IA + module map · §9 shadcn migration plan · §10 governance (v2.0.0) |
 | [FRONTEND_2026_MODERNIZATION_PLAN.md](./FRONTEND_2026_MODERNIZATION_PLAN.md) | OpenEMR-wide modernization strategy; **New Clinic React islands shipped** |
 | [FRONTEND_MODULE_GUIDE.md](../FRONTEND_MODULE_GUIDE.md) | How to build and wire React islands (Vite, `oeFetch`, tokens) |
+| [MOBILE_IOS_CURSOR_CHECKLIST.md](./MOBILE_IOS_CURSOR_CHECKLIST.md) | Post-session verify checklist when coding from **Cursor iOS** (CI + desktop gates) |
 
 ## Relationship map
 

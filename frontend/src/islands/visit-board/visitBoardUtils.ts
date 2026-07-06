@@ -1,5 +1,19 @@
 import type { VisitState, ColumnKey, VisitCard } from '@core/types';
 
+export const COLUMN_ORDER: ColumnKey[] = [
+  'waiting', 'triage', 'doctor', 'lab', 'pharmacy', 'payment', 'done',
+];
+
+export const COLUMN_LABELS: Record<ColumnKey, string> = {
+  waiting:  'Waiting',
+  triage:   'Triage',
+  doctor:   'Doctor',
+  lab:      'Lab',
+  pharmacy: 'Pharmacy',
+  payment:  'Payment',
+  done:     'Done',
+};
+
 export interface DeskAction {
   label: string;
   url: string;

@@ -15,6 +15,8 @@ import {
 import { exportRegistryCsv } from './registryExport';
 import { RegistryFilterPanel } from './RegistryFilterPanel';
 import { RegistryResultsTable } from './RegistryResultsTable';
+import { RegistryLayout, RegistryOutputPanel, RegistryVarsPanel } from './registryUi';
+import { NativeSelect } from '@components/ui/native-select';
 import type {
   PatientRegistryProps,
   RegistryFilters,
@@ -51,6 +53,7 @@ export function PatientRegistry({
   ajaxUrl,
   csrfToken,
   chartUrlBase,
+  billingThreshold = 70,
 }: PatientRegistryProps) {
   const [filters, setFilters] = useState<RegistryFilters>(emptyRegistryFilters);
   const [presets, setPresets] = useState<RegistryPreset[]>([]);
@@ -281,36 +284,73 @@ export function PatientRegistry({
   usePageHeadingButton('nc-registry-save-filter', handleSaveFilter);
   usePageHeadingButton('nc-registry-delete-filter', handleDeleteFilter, showDeleteSaved);
 
+  const builtins = presets.filter((p) => !p.saved_id);
+  const saved = presets.filter((p) => p.saved_id);
+
+  const presetControl = (
+    <NativeSelect
+      className="nc-registry-preset-select h-8"
+      aria-label="Presets"
+      value={selectedPresetId}
+      onChange={(e) => handlePresetChange(e.target.value)}
+    >
+      <option value="">Presets…</option>
+      {builtins.map((preset) => (
+        <option key={preset.id} value={preset.id}>
+          {preset.label}
+        </option>
+      ))}
+      {saved.length > 0 && (
+        <optgroup label="Saved filters">
+          {saved.map((preset) => (
+            <option key={preset.id} value={preset.id}>
+              {preset.label}
+            </option>
+          ))}
+        </optgroup>
+      )}
+    </NativeSelect>
+  );
+
   return (
-    <div className="nc-registry grid grid-cols-12 gap-3">
+    <div className="nc-registry">
       {actionError && (
-        <div className="col-span-12">
+        <div className="nc-registry-alert">
           <div className={deskCalloutClass('error', 'py-2')} role="alert">{actionError}</div>
         </div>
       )}
-      <RegistryFilterPanel
-        filters={filters}
-        presets={presets}
-        selectedPresetId={selectedPresetId}
-        visitStates={visitStates}
-        visitTypes={visitTypes}
-        confirmationSources={confirmationSources}
-        conditionMap={conditionMap}
-        onFiltersChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
-        onPresetChange={handlePresetChange}
-        onApply={handleApply}
-        onClear={handleClear}
-      />
-      <RegistryResultsTable
-        rows={rows}
-        chartUrlBase={chartUrlBase}
-        status={status}
-        errorMessage={errorMessage}
-        summaryText={summaryText}
-        page={page}
-        pageSize={PAGE_SIZE}
-        total={total}
-        onPageChange={handlePageChange}
+      <RegistryLayout
+        variables={(
+          <RegistryVarsPanel
+            presetControl={presetControl}
+            onApply={handleApply}
+            onClear={handleClear}
+          >
+            <RegistryFilterPanel
+              filters={filters}
+              visitStates={visitStates}
+              visitTypes={visitTypes}
+              confirmationSources={confirmationSources}
+              conditionMap={conditionMap}
+              onFiltersChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
+            />
+          </RegistryVarsPanel>
+        )}
+        output={(
+          <RegistryOutputPanel summaryText={summaryText} status={status}>
+            <RegistryResultsTable
+              rows={rows}
+              chartUrlBase={chartUrlBase}
+              status={status}
+              errorMessage={errorMessage}
+              page={page}
+              pageSize={PAGE_SIZE}
+              total={total}
+              billingThreshold={billingThreshold}
+              onPageChange={handlePageChange}
+            />
+          </RegistryOutputPanel>
+        )}
       />
 
       <ConfirmModal

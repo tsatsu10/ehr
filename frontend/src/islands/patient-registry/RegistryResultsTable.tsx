@@ -1,37 +1,36 @@
 import type { RegistryRow, RegistrySearchStatus } from './registryTypes';
+import { formatRegistryDate } from './registryFormat';
 import { DataTable, DataTableStatusRow } from '@components/DataTable';
 import { PaginationBar } from '@components/PaginationBar';
 import { RowActionsMenu } from '@components/RowActionsMenu';
+import { Badge } from '@components/ui/badge';
+import { CompletionScorePill } from '@components/CompletionScorePill';
 
 interface RegistryResultsTableProps {
   rows: RegistryRow[];
   chartUrlBase: string;
   status: RegistrySearchStatus;
   errorMessage: string | null;
-  summaryText: string;
   page: number;
   pageSize: number;
   total: number;
+  billingThreshold?: number;
   onPageChange: (page: number) => void;
 }
 
-const COL_SPAN = 7;
+const COL_SPAN = 11;
 
 export function RegistryResultsTable({
   rows,
   chartUrlBase,
   status,
   errorMessage,
-  summaryText,
   page,
   pageSize,
   total,
+  billingThreshold = 70,
   onPageChange,
 }: RegistryResultsTableProps) {
-  const hasClinical = rows.some(
-    (row) => row.condition_summary || row.index_diagnosis_date
-  );
-
   function renderBody() {
     if (status === 'loading') {
       return (
@@ -50,7 +49,7 @@ export function RegistryResultsTable({
     if (status === 'idle') {
       return (
         <DataTableStatusRow colSpan={COL_SPAN}>
-          <em>No search yet.</em>
+          <em>No search yet — set criteria above and click Apply.</em>
         </DataTableStatusRow>
       );
     }
@@ -64,26 +63,40 @@ export function RegistryResultsTable({
 
     return rows.map((row) => {
       const chartUrl = row.chart_url ?? `${chartUrlBase}?pid=${encodeURIComponent(String(row.pid))}`;
+      const ageLabel = row.age_today != null
+        ? `${row.age_today}${row.dob_estimated ? '*' : ''}`
+        : '—';
+
       return (
         <tr key={row.pid}>
-          <td>{row.name}</td>
-          <td>{row.age_today ?? '—'}</td>
+          <td className="nc-registry-col-name">
+            <span className="nc-registry-col-name__text">{row.name}</span>
+          </td>
+          <td className="nc-registry-col-age">{ageLabel}</td>
           <td>{row.sex || '—'}</td>
-          <td>{row.mrn || '—'}</td>
-          <td>
-            {hasClinical ? (
-              <>
-                {row.condition_summary || '—'}
-                {row.age_at_diagnosis != null && (
-                  <span className="text-[var(--oe-nc-text-muted)]"> ({row.age_at_diagnosis}y)</span>
-                )}
-              </>
+          <td className="nc-registry-col-mrn">{row.mrn || '—'}</td>
+          <td className="nc-registry-col-phone">{row.phone_masked || '—'}</td>
+          <td className="nc-registry-col-condition">{row.condition_summary || '—'}</td>
+          <td className="nc-registry-col-dx-date">
+            {formatRegistryDate(row.index_diagnosis_date)}
+          </td>
+          <td className="nc-registry-col-profile">
+            <CompletionScorePill
+              score={row.completion_pct}
+              threshold={billingThreshold}
+            />
+          </td>
+          <td className="nc-registry-col-last-visit">
+            {formatRegistryDate(row.last_visit_date)}
+          </td>
+          <td className="nc-registry-col-in-clinic">
+            {row.has_active_visit_today ? (
+              <Badge variant="info">In clinic</Badge>
             ) : (
               '—'
             )}
           </td>
-          <td>{row.completion_pct}%</td>
-          <td className="text-right">
+          <td className="text-right nc-registry-col-actions">
             <RowActionsMenu
               label={`Actions for ${row.name}`}
               items={[{ id: 'chart', label: 'Open chart', href: chartUrl }]}
@@ -95,41 +108,39 @@ export function RegistryResultsTable({
   }
 
   return (
-    <section className="col-span-12 lg:col-span-8">
-      <div className="nc-registry-summary text-[var(--oe-nc-text-muted)] text-sm mb-2">{summaryText}</div>
+    <div className="nc-registry-table-wrap">
       <DataTable
         id="nc-registry-table"
         hover
-        header={(
-          <tr>
-            <th>Name</th>
-            <th>Age</th>
-            <th>Sex</th>
-            <th>MRN</th>
-            <th
-              className="nc-registry-col-condition"
-              style={{ display: hasClinical ? undefined : 'none' }}
-            >
-              Condition
-            </th>
-            <th>Completion</th>
-            <th aria-label="Actions" />
-          </tr>
-        )}
-        footer={
-          total > pageSize ? (
-            <PaginationBar
-              id="nc-registry-pagination"
-              page={page}
-              pageSize={pageSize}
-              total={total}
-              onPageChange={onPageChange}
-            />
-          ) : undefined
-        }
-      >
-        {renderBody()}
-      </DataTable>
-    </section>
+      header={(
+        <tr>
+          <th>Name</th>
+          <th>Age</th>
+          <th>Sex</th>
+          <th>MRN</th>
+          <th>Phone</th>
+          <th>Condition</th>
+          <th>Dx date</th>
+          <th>Profile</th>
+          <th>Last visit</th>
+          <th>In clinic</th>
+          <th aria-label="Actions" />
+        </tr>
+      )}
+      footer={
+        total > pageSize ? (
+          <PaginationBar
+            id="nc-registry-pagination"
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={onPageChange}
+          />
+        ) : undefined
+      }
+    >
+      {renderBody()}
+    </DataTable>
+    </div>
   );
 }

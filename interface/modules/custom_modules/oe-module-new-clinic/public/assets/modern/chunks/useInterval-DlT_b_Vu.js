@@ -1,2 +1,0 @@
-import{g as e,h as t}from"./button-Ajb20jbY.js";var n=e(t(),1);function r(e,t){let r=(0,n.useRef)(e);(0,n.useEffect)(()=>{r.current=e},[e]),(0,n.useEffect)(()=>{if(t===null)return;let e=window.setInterval(()=>{document.hidden||r.current()},t);return()=>window.clearInterval(e)},[t])}export{r as t};
-//# sourceMappingURL=useInterval-DlT_b_Vu.js.map

@@ -49,7 +49,7 @@ describe('PatientRegistry', () => {
       await Promise.resolve();
     });
     expect(screen.getByText(/Apply filters to search the registry/i)).toBeInTheDocument();
-    expect(screen.getByText(/No search yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/No search yet — set criteria above and click Apply/i)).toBeInTheDocument();
   });
 
   it('runs search when Apply is clicked', async () => {
@@ -101,6 +101,6 @@ describe('PatientRegistry', () => {
       fireEvent.click(screen.getByRole('button', { name: /Clear/i }));
     });
 
-    expect(screen.getByText(/No search yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/No search yet — set criteria above and click Apply/i)).toBeInTheDocument();
   });
 });

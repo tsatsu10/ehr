@@ -11,48 +11,33 @@ import { oeFetch } from '@core/oeFetch';
 import { useInterval } from '@core/useInterval';
 import { useQueueVisibilityRefresh } from '@core/useQueueVisibilityRefresh';
 import { usePageHeadingToolbar } from '@core/usePageHeadingToolbar';
+import { useDeskViewport } from '@core/useDeskViewport';
 import type { BoardData, ColumnKey, VisitCard, VisitBoardProps, VisitDetailData } from '@core/types';
 import { VisitBoardColumn } from './VisitBoardColumn';
 import { SegmentedControl } from '@components/SegmentedControl';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Button } from '@components/ui/button';
-import { Input } from '@components/ui/input';
 import { AlertTriangle, Clock, X } from 'lucide-react';
 import { VisitDetailModal } from './VisitDetailModal';
 import { VisitDetailDrawer } from './VisitDetailDrawer';
 import { CancelledTodaySection } from './CancelledTodaySection';
 import { LeftUnpaidTodaySection } from './LeftUnpaidTodaySection';
-import { computeNowServing } from './visitBoardUtils';
+import { COLUMN_ORDER, COLUMN_LABELS, computeNowServing } from './visitBoardUtils';
 import { useVisitBoardKiosk } from './useVisitBoardKiosk';
 import { VisitBoardKioskToolbar } from './VisitBoardKioskToolbar';
 import {
-  visitBoardRootClass,
-  visitBoardLanesClass,
-  visitBoardLaneClass,
-  visitBoardColumnClass,
-  visitBoardColumnHeaderClass,
-  visitBoardSkeletonClass,
-  visitBoardSkeletonCardClass,
-  visitBoardToolbarClass,
-} from '@components/visitBoardStyles';
+  VisitBoardControlsPanel,
+  VisitBoardLayout,
+  VisitBoardMobileAccordion,
+  VisitBoardSearchField,
+  VisitBoardSkeleton,
+} from './visitBoardUi';
+import { visitBoardLanesClass, visitBoardRootClass } from '@components/visitBoardStyles';
 
-export const COLUMN_ORDER: ColumnKey[] = [
-  'waiting', 'triage', 'doctor', 'lab', 'pharmacy', 'payment', 'done',
-];
+export { COLUMN_ORDER, COLUMN_LABELS } from './visitBoardUtils';
 
-export const COLUMN_LABELS: Record<ColumnKey, string> = {
-  waiting:  'Waiting',
-  triage:   'Triage',
-  doctor:   'Doctor',
-  lab:      'Lab',
-  pharmacy: 'Pharmacy',
-  payment:  'Payment',
-  done:     'Done',
-};
-
-function matchesFilter(card: VisitCard, searchText: string, urgentOnly: boolean): boolean {
-  if (urgentOnly && !card.is_urgent) return false;
+function matchesSearch(card: VisitCard, searchText: string): boolean {
   if (!searchText) return true;
   const hay = [card.display_name, card.pubpid, card.queue_number, card.chief_complaint]
     .join(' ')
@@ -84,24 +69,24 @@ export function VisitBoard({
 }: VisitBoardProps) {
   const isWall = profile === 'wall';
   const isKiosk = isWall && kioskChrome;
+  const viewport = useDeskViewport();
+  const isMobile = viewport === 'mobile';
   const [privacyOverride, setPrivacyOverride] = useState<boolean | null>(null);
   const privacyMode = privacyOverride ?? privacyModeProp ?? isWall;
   const { isFullscreen, toggleFullscreen } = useVisitBoardKiosk(isKiosk);
 
-  // Board data from last successful fetch — preserved across re-fetch errors
   const [data, setData] = useState<BoardData | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
-  // fetchError is set on background-poll errors; board data is kept visible
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [errorDismissed, setErrorDismissed] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [search, setSearch] = useState('');
   const [urgentOnly, setUrgentOnly] = useState(false);
+  const [doneExpanded, setDoneExpanded] = useState(false);
   const [selectedVisitId, setSelectedVisitId] = useState<number | null>(null);
   const [detailVisitId, setDetailVisitId] = useState<number | null>(null);
   const [drawerData, setDrawerData] = useState<VisitDetailData | null>(null);
 
-  // Guard against stale responses (race between rapid refreshes or slow polls)
   const seqRef = useRef(0);
 
   const fetchBoard = useCallback(async () => {
@@ -114,7 +99,7 @@ export function VisitBoard({
 
       const result = await oeFetch<BoardData>('visit.board', { ajaxUrl, csrfToken, params });
 
-      if (token !== seqRef.current) return; // stale response
+      if (token !== seqRef.current) return;
       setData(result);
       setFetchError(null);
       setErrorDismissed(false);
@@ -127,7 +112,6 @@ export function VisitBoard({
     }
   }, [ajaxUrl, csrfToken, facilityId]);
 
-  // Initial load
   useEffect(() => {
     void fetchBoard();
   }, [fetchBoard]);
@@ -136,7 +120,6 @@ export function VisitBoard({
     void fetchBoard();
   });
 
-  // Auto-poll every pollMs ms
   useInterval(fetchBoard, pollMs);
 
   useEffect(() => {
@@ -183,40 +166,18 @@ export function VisitBoard({
     const banner = document.getElementById('nc-wall-now-serving');
     if (!banner) return undefined;
 
-    const clinicName = banner.dataset.clinicName || banner.textContent || '';
+    const clinicBannerName = banner.dataset.clinicName || banner.textContent || '';
     const serving = computeNowServing(data.columns);
     banner.textContent = serving
       ? `Now serving #${serving.queue_number || '?'}`
-      : clinicName;
+      : clinicBannerName;
 
     return undefined;
   }, [data, isWall]);
 
-  // ── Initial skeleton ─────────────────────────────────────────────────────
-
   if (initialLoading) {
-    return (
-      <div
-        className={visitBoardRootClass(isKiosk)}
-        data-profile={profile}
-        aria-busy="true"
-      >
-        <div className={visitBoardLanesClass} aria-busy="true">
-          {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-            <div key={i} className={visitBoardLaneClass}>
-              <div className={visitBoardColumnClass}>
-                <div className={`${visitBoardColumnHeaderClass} ${visitBoardSkeletonClass}`} aria-hidden="true" />
-                <div className={visitBoardSkeletonCardClass} aria-hidden="true" />
-                <div className={visitBoardSkeletonCardClass} aria-hidden="true" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
+    return <VisitBoardSkeleton isKiosk={isKiosk} profile={profile} />;
   }
-
-  // ── Full error (never loaded any data yet) ───────────────────────────────
 
   if (!data && fetchError) {
     return (
@@ -243,33 +204,21 @@ export function VisitBoard({
 
   const filteredColumns = columnKeys.map((key) => ({
     key,
-    cards: (data.columns[key] ?? []).filter((c) => matchesFilter(c, searchText, urgentOnly)),
+    cards: (data.columns[key] ?? []).filter((c) => matchesSearch(c, searchText)),
   }));
 
   const totalVisible = filteredColumns.reduce((sum, col) => sum + col.cards.length, 0);
+
   const statusItems = columnKeys.map((key) => ({
     label: COLUMN_LABELS[key],
     value: (data.columns[key] ?? []).length,
+    href: `#nc-vb-col-${key}`,
   }));
 
-  return (
-    <div className={visitBoardRootClass(isKiosk)} data-profile={profile}>
-
-      {isKiosk && (
-        <VisitBoardKioskToolbar
-          clinicName={clinicName || 'Clinic'}
-          lastUpdated={lastUpdated}
-          isFullscreen={isFullscreen}
-          privacyMode={privacyMode}
-          onToggleFullscreen={toggleFullscreen}
-          onPrivacyModeChange={setPrivacyOverride}
-          onRefresh={() => { void fetchBoard(); }}
-        />
-      )}
-
-      {/* Stale-visits banner */}
+  const alerts = (
+    <>
       {data.stale_count > 0 && (
-        <div className={deskCalloutClass('warn', 'mb-3 flex items-center gap-2')} role="status" aria-live="polite">
+        <div className={deskCalloutClass('warn', 'flex items-center gap-2')} role="status" aria-live="polite">
           <Clock className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span>
             <strong>{data.stale_count}</strong>{' '}
@@ -279,7 +228,7 @@ export function VisitBoard({
       )}
 
       {fetchError && !errorDismissed && (
-        <div className={deskCalloutClass('warn', 'mb-3 flex items-center gap-2')} role="alert" aria-live="polite">
+        <div className={deskCalloutClass('warn', 'flex items-center gap-2')} role="alert" aria-live="polite">
           <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="grow text-sm">
             Could not refresh — showing last known data.{' '}
@@ -300,44 +249,35 @@ export function VisitBoard({
         </div>
       )}
 
-      {/* Stats + filter bar (desktop only, not wall) */}
-      {!isWall && (
+      {searchText && totalVisible === 0 && (
+        <div className="nc-vb-filter-empty" role="status">
+          No patients match the current search.
+        </div>
+      )}
+    </>
+  );
+
+  const controls = !isWall ? (
+    <VisitBoardControlsPanel
+      statusBar={(
+        <DeskQueueStatusBar
+          id="nc-board-status-bar"
+          ariaLabel="Visit board status"
+          items={statusItems}
+          loading={initialLoading}
+          onRefresh={() => { void fetchBoard(); }}
+          compact
+        />
+      )}
+      toolbar={(
         <>
-          <DeskQueueStatusBar
-            id="nc-board-status-bar"
-            ariaLabel="Visit board status"
-            items={statusItems}
-            loading={initialLoading}
-            compact
+          <VisitBoardSearchField
+            value={search}
+            onChange={setSearch}
+            onClear={() => setSearch('')}
           />
-
-          <div className={`${visitBoardToolbarClass} mb-3 flex flex-wrap items-center justify-end`}>
-          {/* Search */}
-          <div className="relative mr-2" style={{ maxWidth: 220 }}>
-            <i className="fa fa-search pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--oe-nc-text-muted)]" aria-hidden="true" />
-            <Input
-              type="search"
-              className="h-8 pl-8 pr-8"
-              placeholder="Search name, MRN, queue #"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              aria-label="Search patients"
-            />
-            {search && (
-              <button
-                type="button"
-                className="absolute right-1 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded border-0 bg-transparent text-lg leading-none text-[var(--oe-nc-text-muted)] hover:bg-[var(--oe-nc-bg-tint)] hover:text-[var(--oe-nc-text)]"
-                aria-label="Clear search"
-                onClick={() => setSearch('')}
-              >
-                ×
-              </button>
-            )}
-          </div>
-
-          {/* Filter: all vs urgent */}
           <SegmentedControl
-            className="mr-2 mb-1"
+            className="nc-vb-filter-segments"
             ariaLabel="Visit board filter"
             value={filterMode}
             onChange={(id) => setUrgentOnly(id === 'urgent')}
@@ -346,41 +286,70 @@ export function VisitBoard({
               { id: 'urgent', label: 'Urgent', count: urgentCards.length },
             ]}
           />
+        </>
+      )}
+    />
+  ) : undefined;
+
+  const floor = isMobile && !isWall ? (
+    <VisitBoardMobileAccordion
+      columns={filteredColumns}
+      privacyMode={privacyMode}
+      urgentOnly={urgentOnly}
+      onCardClick={handleCardClick}
+      selectedVisitId={selectedVisitId}
+      queueBridgeBadges={data.queue_bridge_badges ?? {}}
+    />
+  ) : (
+    <div className={visitBoardLanesClass} id="nc-board-columns" role="region" aria-label="Visit board">
+      {filteredColumns.map(({ key, cards }) => (
+        <VisitBoardColumn
+          key={key}
+          columnKey={key}
+          cards={cards}
+          privacyMode={privacyMode}
+          urgentOnly={urgentOnly}
+          collapsed={key === 'done' && !doneExpanded}
+          onToggleCollapse={key === 'done' ? () => setDoneExpanded((prev) => !prev) : undefined}
+          onCardClick={handleCardClick}
+          selectedVisitId={selectedVisitId}
+          queueBridgeBadges={data.queue_bridge_badges ?? {}}
+        />
+      ))}
+    </div>
+  );
+
+  const footer = !isWall ? (
+    <>
+      <CancelledTodaySection visits={data.cancelled ?? []} />
+      <LeftUnpaidTodaySection visits={data.closed_unpaid ?? []} />
+    </>
+  ) : undefined;
+
+  return (
+    <div className={visitBoardRootClass(isKiosk)} data-profile={profile}>
+      {isKiosk && (
+        <VisitBoardKioskToolbar
+          clinicName={clinicName || 'Clinic'}
+          lastUpdated={lastUpdated}
+          isFullscreen={isFullscreen}
+          privacyMode={privacyMode}
+          onToggleFullscreen={toggleFullscreen}
+          onPrivacyModeChange={setPrivacyOverride}
+          onRefresh={() => { void fetchBoard(); }}
+        />
+      )}
+
+      <VisitBoardLayout
+        alerts={alerts}
+        controls={controls}
+        floor={(
+          <div className="nc-vb-floor-panel">
+            {floor}
           </div>
-        </>
-      )}
-
-      {/* No results message */}
-      {(searchText || urgentOnly) && totalVisible === 0 && (
-        <div
-          className="mb-3 rounded-lg border border-[var(--oe-nc-border)] bg-[var(--oe-nc-bg-tint)] px-4 py-3 text-sm text-[var(--oe-nc-text-muted)]"
-          role="status"
-        >
-          No patients match the current filter.
-        </div>
-      )}
-
-      {/* Columns */}
-      <div className={visitBoardLanesClass} id="nc-board-columns" role="region" aria-label="Visit board">
-        {filteredColumns.map(({ key, cards }) => (
-          <VisitBoardColumn
-            key={key}
-            columnKey={key}
-            cards={cards}
-            privacyMode={privacyMode}
-            onCardClick={handleCardClick}
-            selectedVisitId={selectedVisitId}
-            queueBridgeBadges={data.queue_bridge_badges ?? {}}
-          />
-        ))}
-      </div>
-
-      {!isWall && (
-        <>
-          <CancelledTodaySection visits={data.cancelled ?? []} />
-          <LeftUnpaidTodaySection visits={data.closed_unpaid ?? []} />
-        </>
-      )}
+        )}
+        footer={footer}
+      />
 
       <VisitDetailModal
         visitId={detailVisitId}
