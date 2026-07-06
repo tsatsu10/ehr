@@ -478,4 +478,4 @@ Align with New Clinic tokens (`--oe-nc-*`, Figtree + Noto Sans) and admin/chart 
 
 ---
 
-**Next engineering step:** ~~HLF-1 through HLF-6 shipped~~. UX polish shipped (mobile stepper, follow-up section, signed attestation banner). Next: gate regression tests (ENC-HLF-7), optional LBF export on save, broader test coverage, docs checklist.
+**Next engineering step:** ~~HLF-1 through HLF-6 shipped~~. UX polish shipped. ~~ENC-HLF-7 gate regression shipped~~ (`EncounterSignService::isVisitDocumentationSigned` — profile-aware required formdir checks for payment, complete consult, hub unsigned state, and unsigned-doc reports). Next: optional LBF export on save, broader test coverage, docs checklist.

@@ -19,7 +19,6 @@ class ClinicalDocDocumentationStatusService
         private readonly ClinicalDocHubLinkService $hubLinks = new ClinicalDocHubLinkService(),
         private readonly ClinicalDocCatalogService $catalog = new ClinicalDocCatalogService(),
         private readonly EncounterSignService $signService = new EncounterSignService(),
-        private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly EncounterNoteService $encounterNote = new EncounterNoteService(),
     ) {
     }
@@ -40,9 +39,9 @@ class ClinicalDocDocumentationStatusService
         $hubEnabled = $this->hubLinks->isHubEnabled($facilityId);
         $unsignedRequired = [];
         if ($encounterId > 0) {
-            foreach ($this->requiredFormSpecs($visit, $facilityId) as $spec) {
+            foreach ($this->signService->getRequiredDocumentationSpecs($visit, $facilityId) as $spec) {
                 $formdir = $this->catalog->resolveRegistryDirectory($spec['formdir']);
-                if ($this->isFormdirSignedOnEncounter($encounterId, $pid, $formdir)) {
+                if ($this->signService->isFormdirSignedOnEncounter($encounterId, $pid, $formdir)) {
                     continue;
                 }
                 $unsignedRequired[] = [
@@ -55,9 +54,7 @@ class ClinicalDocDocumentationStatusService
 
         return [
             'hub_enabled' => $hubEnabled,
-            'encounter_signed' => $encounterId > 0
-                ? $this->signService->isEncounterDocumentationSigned($encounterId)
-                : false,
+            'encounter_signed' => empty($unsignedRequired),
             'unsigned_required' => $unsignedRequired,
             'documentation_hub_url' => $hubEnabled && $visitId > 0
                 ? ClinicalDocHubLinkService::buildHubUrl($visitId)
@@ -66,30 +63,6 @@ class ClinicalDocDocumentationStatusService
                 ? $this->encounterNote->buildNotePreview($visitId, $facilityId)
                 : null,
         ];
-    }
-
-    /**
-     * @param array<string, mixed> $visit
-     * @return list<array{formdir: string, title: string}>
-     */
-    private function requiredFormSpecs(array $visit, int $facilityId): array
-    {
-        $profile = (string) ($visit['service_profile'] ?? 'full_opd');
-
-        return match ($profile) {
-            'lab_direct' => [[
-                'formdir' => (string) ($this->config->get('lab_intake_formdir', 'lab_intake', $facilityId) ?? 'lab_intake'),
-                'title' => 'Lab intake',
-            ]],
-            'pharmacy_walkin' => [[
-                'formdir' => (string) ($this->config->get('pharmacy_service_formdir', 'pharmacy_service', $facilityId) ?? 'pharmacy_service'),
-                'title' => 'Pharmacy service note',
-            ]],
-            default => [[
-                'formdir' => $this->catalog->getCatalog(null, $facilityId)['consult_note_formdir'] ?? 'soap',
-                'title' => 'Consult note',
-            ]],
-        };
     }
 
     private function resolveFormTitle(string $formdir, string $fallback): string
@@ -134,31 +107,5 @@ class ClinicalDocDocumentationStatusService
         );
 
         return is_array($row);
-    }
-
-    private function isFormdirSignedOnEncounter(int $encounterId, int $pid, string $formdir): bool
-    {
-        $row = QueryUtils::querySingleRow(
-            'SELECT id FROM forms
-             WHERE encounter = ? AND pid = ? AND deleted = 0 AND LOWER(formdir) = ?
-             ORDER BY date DESC LIMIT 1',
-            [$encounterId, $pid, strtolower($formdir)]
-        );
-        if (!is_array($row)) {
-            return false;
-        }
-
-        $formsRowId = (int) ($row['id'] ?? 0);
-        if ($formsRowId <= 0) {
-            return false;
-        }
-
-        $signed = QueryUtils::querySingleRow(
-            "SELECT tid FROM esign_signatures
-             WHERE tid = ? AND `table` = 'forms' AND is_lock = 1 LIMIT 1",
-            [$formsRowId]
-        );
-
-        return is_array($signed);
     }
 }

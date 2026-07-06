@@ -300,7 +300,7 @@ class PatientActivityFeedService
             return [];
         }
 
-        if ($this->signService->isEncounterDocumentationSigned($encounterId)) {
+        if ($this->signService->isVisitDocumentationSigned($visit)) {
             return [];
         }
 

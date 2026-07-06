@@ -222,7 +222,7 @@ class DoctorService
             $pid = (int) ($visit['pid'] ?? 0);
             $encounterId = (int) ($visit['encounter'] ?? 0);
             if (!$this->canOverrideEsign($esignOverrideReason)) {
-                $this->signService->assertConsultSigned($encounterId, $pid);
+                $this->signService->assertConsultSigned($encounterId, $pid, $visit);
             } else {
                 $this->signService->assertProfileSigned($visitId, $esignOverrideReason);
             }
@@ -520,7 +520,7 @@ class DoctorService
             'routing_chips' => $routingChips,
             'routing_preview' => $this->getRoutingPreview($visitId, $actorUserId),
             'session_bound' => true,
-            'encounter_signed' => $this->signService->isConsultSigned((int) $visit['encounter']),
+            'encounter_signed' => $this->signService->isVisitDocumentationSigned($visit),
             'require_esign_before_complete_consult' => $this->config->getInt(
                 'require_esign_before_complete_consult',
                 0,

@@ -63,7 +63,7 @@ class ClinicalDocVisitSummaryService
             $facilityId
         );
 
-        $encounterSigned = $this->signService->isEncounterDocumentationSigned($encounterId);
+        $encounterSigned = $this->signService->isVisitDocumentationSigned($visit, $facilityId);
         $webroot = $GLOBALS['webroot'] ?? '';
         $modulePublic = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
 
@@ -120,7 +120,7 @@ class ClinicalDocVisitSummaryService
         }
 
         return [
-            'encounter_signed' => $this->signService->isEncounterDocumentationSigned($encounterId),
+            'encounter_signed' => $this->signService->isVisitDocumentationSigned($visit),
             'visit_id' => $visitId,
             'encounter' => $encounterId,
         ];
