@@ -31,6 +31,17 @@ export interface EncounterNoteReferralSection {
   urgency: '' | 'routine' | 'urgent' | 'emergent';
 }
 
+export interface EncounterReferralPrefill {
+  requesting_clinician: string;
+  requesting_service: string;
+  clinical_question: string;
+  urgency: '' | 'routine' | 'urgent' | 'emergent';
+  has_referral_record?: boolean;
+  referral_document_id?: number | null;
+  referral_document_url?: string | null;
+  source?: string | null;
+}
+
 export interface EncounterNoteSourceSection {
   sources: string[];
   narrative: string;
@@ -161,6 +172,7 @@ export interface EncounterNotePrefill {
   medications: EncounterMedicationsPrefill;
   background: EncounterBackgroundPrefill;
   recent_labs: EncounterLabResultPrefillItem[];
+  referral: EncounterReferralPrefill;
   patient: {
     display_name: string;
     queue_number: number;
@@ -359,10 +371,18 @@ export function mergeSections(
 
   return {
     referral: {
-      requesting_clinician: saved?.referral?.requesting_clinician ?? '',
-      requesting_service: saved?.referral?.requesting_service ?? '',
-      clinical_question: saved?.referral?.clinical_question ?? '',
-      urgency: saved?.referral?.urgency ?? '',
+      requesting_clinician: saved?.referral?.requesting_clinician
+        ?? prefill.referral?.requesting_clinician
+        ?? '',
+      requesting_service: saved?.referral?.requesting_service
+        ?? prefill.referral?.requesting_service
+        ?? '',
+      clinical_question: saved?.referral?.clinical_question
+        ?? prefill.referral?.clinical_question
+        ?? '',
+      urgency: saved?.referral?.urgency
+        ?? prefill.referral?.urgency
+        ?? '',
     },
     source: {
       sources: saved?.source?.sources ?? [],

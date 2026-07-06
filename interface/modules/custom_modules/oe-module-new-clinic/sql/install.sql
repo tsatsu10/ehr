@@ -1053,7 +1053,11 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_react_clinical_doc_hub', '1');
 #EndIf
 
-#IfNotTable nc_encounter_note
+#IfNotRow2D registry directory nc_encounter_consult
+INSERT INTO `registry` (`name`, `state`, `directory`, `sql_run`, `unpackaged`, `date`, `priority`, `category`, `nickname`, `patient_encounter`, `therapy_group_encounter`, `aco_spec`)
+VALUES ('Consultation note', 1, 'nc_encounter_consult', 0, 1, NOW(), 0, 'Clinical', '', 1, 0, 'encounters|notes');
+#EndIf
+
 CREATE TABLE IF NOT EXISTS `nc_encounter_note` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
     `facility_id` INT NOT NULL,

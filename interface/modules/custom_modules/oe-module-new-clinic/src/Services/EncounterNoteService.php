@@ -489,6 +489,22 @@ class EncounterNoteService
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    public function decodeSectionsForExport(mixed $payload): array
+    {
+        return $this->decodeSections($payload);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function visibleSectionsForExport(string $variant): array
+    {
+        return $this->visibleSectionsForVariant($variant);
+    }
+
+    /**
      * @param array<string, mixed> $visit
      * @return array<string, mixed>
      */
@@ -519,11 +535,205 @@ class EncounterNoteService
             'medications' => $medications,
             'background' => $this->loadBackgroundPrefill($pid),
             'recent_labs' => $this->loadRecentLabsPrefill($pid),
+            'referral' => $this->loadReferralPrefill($visit),
             'patient' => [
                 'display_name' => trim((string) ($visit['patient_name'] ?? '')),
                 'queue_number' => (int) ($visit['queue_number'] ?? 0),
             ],
         ];
+    }
+
+    /**
+     * V1.2-DOC-HLF-6 — referral header prefill from encounter, LBTref, or inbound document.
+     *
+     * @param array<string, mixed> $visit
+     * @return array<string, mixed>
+     */
+    private function loadReferralPrefill(array $visit): array
+    {
+        $pid = (int) ($visit['pid'] ?? 0);
+        $encounter = (int) ($visit['encounter'] ?? 0);
+        $result = [
+            'requesting_clinician' => '',
+            'requesting_service' => '',
+            'clinical_question' => '',
+            'urgency' => '',
+            'has_referral_record' => false,
+            'referral_document_id' => null,
+            'referral_document_url' => null,
+            'source' => null,
+        ];
+
+        if ($pid <= 0 || $encounter <= 0) {
+            return $result;
+        }
+
+        $sources = [];
+        $encRow = QueryUtils::querySingleRow(
+            'SELECT reason, referral_source, referring_provider_id, facility
+             FROM form_encounter
+             WHERE pid = ? AND encounter = ?
+             ORDER BY id DESC
+             LIMIT 1',
+            [$pid, $encounter]
+        );
+        if (is_array($encRow)) {
+            $result['clinical_question'] = trim((string) ($encRow['reason'] ?? ''));
+            $service = trim((string) ($encRow['referral_source'] ?? ''));
+            if ($service === '') {
+                $service = trim((string) ($encRow['facility'] ?? ''));
+            }
+            $result['requesting_service'] = $service;
+            $providerId = (int) ($encRow['referring_provider_id'] ?? 0);
+            if ($providerId > 0) {
+                $result['requesting_clinician'] = $this->resolveProviderDisplayName($providerId);
+            }
+            if ($result['clinical_question'] !== '' || $result['requesting_service'] !== '' || $result['requesting_clinician'] !== '') {
+                $sources[] = 'encounter';
+            }
+        }
+
+        $visitDate = (string) ($visit['visit_date'] ?? '');
+        if ($visitDate !== '' && $visitDate !== '0000-00-00') {
+            $transactionPrefill = $this->loadReferralTransactionPrefill($pid, $visitDate);
+            if ($transactionPrefill !== null) {
+                foreach (['requesting_clinician', 'requesting_service', 'clinical_question', 'urgency'] as $field) {
+                    if ($result[$field] === '' && ($transactionPrefill[$field] ?? '') !== '') {
+                        $result[$field] = (string) $transactionPrefill[$field];
+                    }
+                }
+                $sources[] = 'referral_transaction';
+            }
+        }
+
+        $documentId = (int) ($visit['referral_document_id'] ?? 0);
+        if ($documentId > 0) {
+            $result['referral_document_id'] = $documentId;
+            $result['referral_document_url'] = (new ReferralDocumentService())->buildViewUrl($pid, $documentId);
+            $sources[] = 'referral_document';
+        }
+
+        if ($result['clinical_question'] === '') {
+            $chiefComplaint = trim((string) ($visit['chief_complaint'] ?? ''));
+            if ($chiefComplaint !== '') {
+                $result['clinical_question'] = $chiefComplaint;
+                $sources[] = 'chief_complaint';
+            }
+        }
+
+        $result['has_referral_record'] = $result['requesting_clinician'] !== ''
+            || $result['requesting_service'] !== ''
+            || $result['clinical_question'] !== ''
+            || $documentId > 0;
+        $result['source'] = $sources !== [] ? implode(',', $sources) : null;
+
+        return $result;
+    }
+
+    /**
+     * @return array<string, string>|null
+     */
+    private function loadReferralTransactionPrefill(int $pid, string $visitDate): ?array
+    {
+        $bind = [$pid, $visitDate, $visitDate];
+        $row = QueryUtils::querySingleRow(
+            "SELECT t.id,
+                    MAX(CASE WHEN ld.field_id = 'refer_from' THEN ld.field_value END) AS refer_from,
+                    MAX(CASE WHEN ld.field_id = 'refer_to' THEN ld.field_value END) AS refer_to,
+                    MAX(CASE WHEN ld.field_id = 'body' THEN ld.field_value END) AS body,
+                    MAX(CASE WHEN ld.field_id = 'refer_diag' THEN ld.field_value END) AS refer_diag,
+                    MAX(CASE WHEN ld.field_id = 'refer_risk_level' THEN ld.field_value END) AS refer_risk_level
+             FROM transactions t
+             LEFT JOIN lbt_data ld ON ld.form_id = t.id
+             WHERE t.pid = ? AND t.title = 'LBTref'
+               AND (
+                    EXISTS (
+                        SELECT 1 FROM lbt_data ld2
+                        WHERE ld2.form_id = t.id AND ld2.field_id = 'refer_date' AND ld2.field_value = ?
+                    )
+                    OR DATE(t.date) = ?
+               )
+             GROUP BY t.id
+             ORDER BY COALESCE(MAX(CASE WHEN ld.field_id = 'refer_date' THEN ld.field_value END), t.date) DESC,
+                      t.id DESC
+             LIMIT 1",
+            $bind
+        );
+
+        if (!is_array($row)) {
+            return null;
+        }
+
+        $referFrom = trim((string) ($row['refer_from'] ?? ''));
+        $referTo = trim((string) ($row['refer_to'] ?? ''));
+        $body = trim((string) ($row['body'] ?? ''));
+        $diagnosis = trim((string) ($row['refer_diag'] ?? ''));
+        if ($referFrom === '' && $referTo === '' && $body === '' && $diagnosis === '') {
+            return null;
+        }
+
+        $clinicalQuestion = $body;
+        if ($diagnosis !== '') {
+            $clinicalQuestion = $clinicalQuestion !== ''
+                ? $clinicalQuestion . "\n" . xl('Referrer diagnosis') . ': ' . $diagnosis
+                : $diagnosis;
+        }
+
+        return [
+            'requesting_clinician' => $this->resolveReferFromLabel($referFrom),
+            'requesting_service' => $referTo,
+            'clinical_question' => $clinicalQuestion,
+            'urgency' => $this->mapReferralRiskToUrgency((string) ($row['refer_risk_level'] ?? '')),
+        ];
+    }
+
+    private function resolveReferFromLabel(string $referFrom): string
+    {
+        if ($referFrom === '') {
+            return '';
+        }
+
+        if (ctype_digit($referFrom)) {
+            return $this->resolveProviderDisplayName((int) $referFrom);
+        }
+
+        return $referFrom;
+    }
+
+    private function resolveProviderDisplayName(int $providerId): string
+    {
+        if ($providerId <= 0) {
+            return '';
+        }
+
+        $row = QueryUtils::querySingleRow(
+            'SELECT fname, lname, mname FROM users WHERE id = ? LIMIT 1',
+            [$providerId]
+        );
+        if (!is_array($row)) {
+            return '';
+        }
+
+        $name = trim(trim((string) ($row['fname'] ?? '')) . ' ' . trim((string) ($row['mname'] ?? '')) . ' ' . trim((string) ($row['lname'] ?? '')));
+
+        return $name;
+    }
+
+    private function mapReferralRiskToUrgency(string $riskLevel): string
+    {
+        $normalized = strtolower(trim($riskLevel));
+        if ($normalized === '') {
+            return '';
+        }
+
+        if (in_array($normalized, ['high', 'urgent', '2', '3'], true)) {
+            return 'urgent';
+        }
+        if (in_array($normalized, ['critical', 'emergency', 'emergent', '4'], true)) {
+            return 'emergent';
+        }
+
+        return 'routine';
     }
 
     /**

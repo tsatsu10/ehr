@@ -242,6 +242,12 @@ export function EncounterConsultForm({
       medications: { items: [], summary: null, edit_url: null },
       background: { problems: [], social: [], edit_urls: {} },
       recent_labs: [],
+      referral: {
+        requesting_clinician: '',
+        requesting_service: '',
+        clinical_question: '',
+        urgency: '',
+      },
       patient: { display_name: '', queue_number: 0 },
     },
     supervisor,

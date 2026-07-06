@@ -29,6 +29,12 @@ const basePrefill = {
     edit_urls: {},
   },
   recent_labs: [],
+  referral: {
+    requesting_clinician: '',
+    requesting_service: '',
+    clinical_question: '',
+    urgency: '',
+  },
   patient: { display_name: 'Jane Doe', queue_number: 12 },
 };
 

@@ -13,5 +13,5 @@ namespace OpenEMR\Modules\NewClinic;
 
 class ModuleAssetVersion
 {
-    public const VERSION = '20260706sp315encounterhlf5';
+    public const VERSION = '20260706sp330encounterhlf6';
 }

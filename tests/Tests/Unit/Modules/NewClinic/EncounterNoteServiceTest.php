@@ -126,4 +126,37 @@ class EncounterNoteServiceTest extends TestCase
 
         $this->assertSame('Referral consult', $service->variantDisplayLabel('referral_consult'));
     }
+
+    public function testMapReferralRiskToUrgency(): void
+    {
+        $service = new EncounterNoteService();
+        $method = (new ReflectionClass($service))->getMethod('mapReferralRiskToUrgency');
+        $method->setAccessible(true);
+
+        $this->assertSame('urgent', $method->invoke($service, 'high'));
+        $this->assertSame('emergent', $method->invoke($service, 'critical'));
+        $this->assertSame('routine', $method->invoke($service, 'low'));
+        $this->assertSame('', $method->invoke($service, ''));
+    }
+
+    public function testDecodeSectionsForExportUsesStoredPayload(): void
+    {
+        $service = new EncounterNoteService();
+        $payload = json_encode([
+            'sections' => [
+                'cc' => ['chief_complaint' => 'Headache'],
+                'referral' => [
+                    'requesting_clinician' => 'Dr A',
+                    'requesting_service' => 'Medicine',
+                    'clinical_question' => 'Second opinion',
+                    'urgency' => 'routine',
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        $sections = $service->decodeSectionsForExport($payload);
+
+        $this->assertSame('Headache', $sections['cc']['chief_complaint']);
+        $this->assertSame('Dr A', $sections['referral']['requesting_clinician']);
+    }
 }
