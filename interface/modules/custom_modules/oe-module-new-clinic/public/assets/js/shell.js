@@ -1,12 +1,10 @@
 /**
- * T1 shell — sidebar collapse, mobile drawer, nav badge refresh, role switch
+ * T1 shell — nav badge refresh, role switch, dropdowns
  */
 (function (window) {
     'use strict';
 
     var REFRESH_MS = 30000;
-    var SIDEBAR_COLLAPSED_KEY = 'nc-sidebar-collapsed';
-    var SIDEBAR_COLLAPSED_KEY_LEGACY = 'oe-nc-sidebar-collapsed';
 
     function init(root) {
         if (!root) {
@@ -14,7 +12,9 @@
         }
 
         var ajaxUrl = root.getAttribute('data-ajax-url');
-        bindSidebar(root);
+        if (window.NewClinicShellSidebar && window.NewClinicShellSidebar.bind) {
+            window.NewClinicShellSidebar.bind(root);
+        }
         bindDropdowns(root);
         bindModals();
         bindRoleSwitch(root, ajaxUrl);
@@ -25,110 +25,6 @@
         window.setInterval(function () {
             refreshQueueCounts(root, ajaxUrl);
         }, REFRESH_MS);
-    }
-
-    function bindSidebar(root) {
-        var sidebar = root.querySelector('.nc-sidebar');
-        if (!sidebar) {
-            return;
-        }
-
-        var backdrop = document.getElementById('nc-sidebar-backdrop');
-        var openBtn = document.getElementById('nc-sidebar-open');
-        var closeBtn = document.getElementById('nc-sidebar-close');
-        var collapseBtn = document.getElementById('nc-sidebar-collapse');
-
-        applyCollapsedState(root);
-
-        function openMobile() {
-            sidebar.classList.add('is-open');
-            if (backdrop) {
-                backdrop.hidden = false;
-                backdrop.setAttribute('aria-hidden', 'false');
-            }
-            if (openBtn) {
-                openBtn.setAttribute('aria-expanded', 'true');
-            }
-            document.body.classList.add('nc-sidebar-mobile-open');
-        }
-
-        function closeMobile() {
-            sidebar.classList.remove('is-open');
-            if (backdrop) {
-                backdrop.hidden = true;
-                backdrop.setAttribute('aria-hidden', 'true');
-            }
-            if (openBtn) {
-                openBtn.setAttribute('aria-expanded', 'false');
-            }
-            document.body.classList.remove('nc-sidebar-mobile-open');
-        }
-
-        if (openBtn) {
-            openBtn.addEventListener('click', openMobile);
-        }
-
-        if (closeBtn) {
-            closeBtn.addEventListener('click', closeMobile);
-        }
-
-        if (backdrop) {
-            backdrop.addEventListener('click', closeMobile);
-        }
-
-        sidebar.querySelectorAll('.nc-sidebar-link').forEach(function (link) {
-            link.addEventListener('click', function () {
-                if (window.matchMedia('(max-width: 991.98px)').matches) {
-                    closeMobile();
-                }
-            });
-        });
-
-        if (collapseBtn) {
-            collapseBtn.addEventListener('click', function () {
-                var collapsed = root.classList.toggle('nc-t1-sidebar-collapsed');
-                collapseBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-                collapseBtn.setAttribute(
-                    'aria-label',
-                    collapsed ? 'Expand sidebar' : 'Collapse sidebar'
-                );
-                try {
-                    window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? '1' : '0');
-                } catch (e) {
-                    /* ignore */
-                }
-            });
-        }
-
-        window.addEventListener('resize', function () {
-            if (window.matchMedia('(min-width: 992px)').matches) {
-                closeMobile();
-            }
-        });
-    }
-
-    function applyCollapsedState(root) {
-        var collapseBtn = document.getElementById('nc-sidebar-collapse');
-        var collapsed = false;
-
-        try {
-            collapsed = window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
-                || window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY_LEGACY) === '1';
-        } catch (e) {
-            collapsed = false;
-        }
-
-        if (collapsed) {
-            root.classList.add('nc-t1-sidebar-collapsed');
-        }
-
-        if (collapseBtn) {
-            collapseBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-            collapseBtn.setAttribute(
-                'aria-label',
-                collapsed ? 'Expand sidebar' : 'Collapse sidebar'
-            );
-        }
     }
 
     function closeDropdown(dropdown) {
