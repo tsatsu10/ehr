@@ -4,7 +4,7 @@ import { ncShadcnTableClass } from '@components/ncTableStyles';
 import { Button } from '@components/ui/button';
 import { Checkbox } from '@components/ui/checkbox';
 import { Input } from '@components/ui/input';
-import { Card, CardContent } from '@components/ui/card';
+import { SlidersHorizontal } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -14,6 +14,7 @@ import {
   TableRow,
 } from '@components/ui/table';
 import type { CompletionFieldWeightPayload, CompletionFieldWeightRow } from './adminTypes';
+import { AdminSection } from './adminUi';
 
 interface CompletionWeightsEditorProps {
   payload: CompletionFieldWeightPayload | null;
@@ -60,16 +61,13 @@ export function CompletionWeightsEditor({
   }
 
   return (
-    <Card className="mt-3">
-      <CardContent>
-        <h3 className="text-sm font-semibold mb-2">Field weights</h3>
-        <p className="text-sm text-[var(--oe-nc-text-muted)]">
-          Active weights must total {targetTotal}. Disable optional fields instead of setting weight to 0
-          when you do not want them in the score.
-        </p>
-
-        <div className="overflow-x-auto">
-          <Table className={ncShadcnTableClass({ bordered: true, className: 'mb-3' })}>
+    <AdminSection
+      title="Field weights"
+      description={`Active weights must total ${targetTotal}. Disable optional fields instead of setting weight to 0 when you do not want them in the score.`}
+      icon={<SlidersHorizontal className="h-4 w-4" aria-hidden />}
+    >
+      <div className="overflow-x-auto">
+        <Table className={ncShadcnTableClass({ bordered: true, className: 'mb-3' })}>
             <TableHeader>
               <TableRow>
                 <TableHead scope="col">Level</TableHead>
@@ -129,7 +127,6 @@ export function CompletionWeightsEditor({
         </div>
 
         {error && <div className={deskCalloutClass('error', 'mt-3 mb-0 py-2')}>{error}</div>}
-      </CardContent>
-    </Card>
+    </AdminSection>
   );
 }

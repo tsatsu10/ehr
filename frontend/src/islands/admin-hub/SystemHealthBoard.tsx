@@ -1,7 +1,8 @@
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
-import { Card, CardContent } from '@components/ui/card';
+import { Activity, RefreshCw } from 'lucide-react';
 import type { SystemHealthChip, SystemHealthChipStatus, SystemHealthPayload } from './adminTypes';
+import { AdminSection } from './adminUi';
 
 interface SystemHealthBoardProps {
   health: SystemHealthPayload;
@@ -75,8 +76,8 @@ function HealthChipCard({
   }
 
   return (
-    <div className="rounded-lg border border-[var(--oe-nc-border)] bg-white h-full">
-      <div className="p-4 flex flex-col">
+    <div className="nc-admin-health-chip h-full">
+      <div className="flex h-full flex-col p-4">
         <div className="flex justify-between items-start mb-2">
           <h6 className="font-semibold text-base mb-0">{chip.label}</h6>
           <Badge variant={chipBadgeVariant(chip.status)}>{chip.summary}</Badge>
@@ -123,17 +124,11 @@ export function SystemHealthBoard({
   refreshing,
 }: SystemHealthBoardProps) {
   return (
-    <div>
-      <div className="flex flex-wrap justify-between items-center mb-3">
-        <div>
-          <h5 className="mb-1">System health</h5>
-          <p className={`mb-0 font-bold ${overallClass(health.overall_status)}`}>
-            {overallLabel(health.overall_status)}
-          </p>
-          <p className="text-sm text-[var(--oe-nc-text-muted)] mb-0">
-            Last checked: {formatCheckedAt(health.checked_at)}
-          </p>
-        </div>
+    <AdminSection
+      title="System health"
+      description={`Last checked: ${formatCheckedAt(health.checked_at)}`}
+      icon={<Activity className="h-4 w-4" aria-hidden />}
+      action={
         <Button
           type="button"
           variant="outline"
@@ -141,13 +136,18 @@ export function SystemHealthBoard({
           disabled={refreshing}
           onClick={onRefresh}
         >
+          <RefreshCw className={`mr-1 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} aria-hidden />
           {refreshing ? 'Refreshing…' : 'Refresh'}
         </Button>
-      </div>
+      }
+    >
+      <p className={`mb-3 font-semibold ${overallClass(health.overall_status)}`}>
+        {overallLabel(health.overall_status)}
+      </p>
 
-      <div className="grid grid-cols-12 gap-3 mb-3">
+      <div className="mb-3 grid grid-cols-12 gap-3">
         {health.chips.map((chip) => (
-          <div key={chip.key} className="col-span-12 md:col-span-6 lg:col-span-3 mb-3">
+          <div key={chip.key} className="col-span-12 md:col-span-6 lg:col-span-3">
             <HealthChipCard
               chip={chip}
               reconciliationRunning={reconciliationRunning}
@@ -162,38 +162,36 @@ export function SystemHealthBoard({
         ))}
       </div>
 
-      <Card className="mb-3">
-        <CardContent className="py-2">
-          <div className="flex flex-wrap text-sm text-[var(--oe-nc-text-muted)]">
-            <span className="mr-4 mb-1">Recent errors (24h): {health.meta.errors_24h}</span>
-            <span className="mr-4 mb-1">OpenEMR {health.meta.openemr_version}</span>
-            <span className="mr-4 mb-1">Module {health.meta.module_version}</span>
-            {health.meta.backup_retention_days != null && (
-              <span className="mb-1">Backup retention: {health.meta.backup_retention_days} days</span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="mb-3 flex flex-wrap rounded-lg border border-[var(--oe-nc-border)] bg-[var(--oe-nc-bg-tint)] px-3 py-2 text-sm text-[var(--oe-nc-text-muted)]">
+        <span className="mr-4 mb-1">Recent errors (24h): {health.meta.errors_24h}</span>
+        <span className="mr-4 mb-1">OpenEMR {health.meta.openemr_version}</span>
+        <span className="mr-4 mb-1">Module {health.meta.module_version}</span>
+        {health.meta.backup_retention_days != null && (
+          <span className="mb-1">Backup retention: {health.meta.backup_retention_days} days</span>
+        )}
+      </div>
 
-      <Card className="mb-3">
-        <CardContent>
-          <h6 className="text-[var(--oe-nc-text-muted)] uppercase text-sm">Backup &amp; logs</h6>
-          <p className="text-sm text-[var(--oe-nc-text-muted)]">{health.xampp_backup_hint}</p>
-          {!health.can_run_backup && health.backup_blocked_reason && (
-            <p className="text-sm text-[var(--color-oe-warning,#ea580c)]">{health.backup_blocked_reason}</p>
-          )}
-          <Button variant="warning" size="sm" className="mr-2 mb-1" asChild>
+      <div>
+        <h6 className="mb-1 text-xs font-semibold uppercase tracking-wide text-[var(--oe-nc-text-muted)]">
+          Backup &amp; logs
+        </h6>
+        <p className="text-sm text-[var(--oe-nc-text-muted)]">{health.xampp_backup_hint}</p>
+        {!health.can_run_backup && health.backup_blocked_reason && (
+          <p className="text-sm text-[var(--color-oe-warning,#ea580c)]">{health.backup_blocked_reason}</p>
+        )}
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" asChild>
             <a href={health.logview_url} target="_top">
               Open log viewer
             </a>
           </Button>
-          <Button variant="warning" size="sm" className="mb-1" asChild>
+          <Button variant="outline" size="sm" asChild>
             <a href={health.backup_php_url} target="_top">
               Stock backup (Advanced)
             </a>
           </Button>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </div>
+    </AdminSection>
   );
 }

@@ -1,9 +1,10 @@
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
-import { Card, CardContent } from '@components/ui/card';
+import { LayoutGrid } from 'lucide-react';
 import { AdminConfigField } from '../AdminConfigField';
 import { QUEUE_FIELD_SECTIONS } from '../adminFieldDefs';
 import type { AncillaryLbfPackStatus, GhanaLbfPackStatus } from '../adminTypes';
+import { AdminInsetPanel, AdminSection } from '../adminUi';
 import { FlowBoardLaneMapPanel } from './FlowBoardLaneMapPanel';
 
 interface QueueRolesTabProps {
@@ -41,10 +42,12 @@ export function QueueRolesTab({
     || settings.enable_scheduling_redesign === 1;
 
   return (
-    <Card>
-      <CardContent>
-        <p className="text-[var(--oe-nc-text-muted)]">Enable optional desks and queue behavior.</p>
-        {QUEUE_FIELD_SECTIONS.map((section, idx) => (
+    <AdminSection
+      title="Queue & roles"
+      description="Enable optional desks and queue behavior for this clinic."
+      icon={<LayoutGrid className="h-4 w-4" aria-hidden />}
+    >
+      {QUEUE_FIELD_SECTIONS.map((section, idx) => (
           <div key={section.title ?? `section-${idx}`}>
             {section.title && (
               <>
@@ -69,7 +72,7 @@ export function QueueRolesTab({
               />
             )}
             {section.title === 'Clinical Documentation Hub (M17)' && hubEnabled && (
-              <div className="border rounded p-3 mt-2 bg-[var(--oe-nc-bg-tint)]">
+              <AdminInsetPanel className="mt-2">
                 <h6 className="mb-1">Ghana OPD consult template (LBF)</h6>
                 <p className="text-[var(--oe-nc-text-muted)] text-sm mb-2">
                   Optional structured consult form for West Africa OPD. Imports layout
@@ -107,10 +110,10 @@ export function QueueRolesTab({
                     {ghanaLbfImporting ? 'Importing…' : 'Import & set as consult note'}
                   </Button>
                 </div>
-              </div>
+              </AdminInsetPanel>
             )}
             {section.title === 'Clinical Documentation Hub (M17)' && hubEnabled && ancillaryLbfPacks.length > 0 && (
-              <div className="border rounded p-3 mt-2 bg-[var(--oe-nc-bg-tint)]">
+              <AdminInsetPanel className="mt-2">
                 <h6 className="mb-1">Ancillary attestation forms (LBF)</h6>
                 <p className="text-[var(--oe-nc-text-muted)] text-sm mb-2">
                   Lab-direct and pharmacy walk-in service profiles require these layout-based forms (PRD §17.3 step 8).
@@ -137,11 +140,10 @@ export function QueueRolesTab({
                     </li>
                   ))}
                 </ul>
-              </div>
+              </AdminInsetPanel>
             )}
           </div>
         ))}
-      </CardContent>
-    </Card>
+    </AdminSection>
   );
 }

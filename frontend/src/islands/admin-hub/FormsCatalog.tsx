@@ -4,9 +4,9 @@ import { ncShadcnTableClass } from '@components/ncTableStyles';
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
 import { Checkbox } from '@components/ui/checkbox';
-import { Card, CardContent } from '@components/ui/card';
 import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
+import { Files } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -16,6 +16,7 @@ import {
   TableRow,
 } from '@components/ui/table';
 import type { FormsCatalogItem, FormsCatalogPayload } from './adminTypes';
+import { AdminSection } from './adminUi';
 
 interface FormsCatalogProps {
   catalog: FormsCatalogPayload;
@@ -43,22 +44,19 @@ export function FormsCatalog({ catalog, togglingId, onToggle }: FormsCatalogProp
   }, [bundleOnly, catalog.items, query]);
 
   return (
-    <Card className="mb-3" id="nc-admin-forms-catalog">
-      <CardContent>
-        <div className="flex flex-wrap items-start justify-between mb-2">
-          <div>
-            <h5 className="text-base font-semibold mb-1">Registered forms</h5>
-            <p className="text-[var(--oe-nc-text-muted)] text-sm mb-0">
-              Enable or disable encounter forms. Bundle-required forms are listed first (M15-F07).
-            </p>
-          </div>
-          <Button variant="outline" size="sm" asChild>
-            <a href={catalog.forms_admin_url} target="_top">
-              Full Forms Administration
-            </a>
-          </Button>
-        </div>
-
+    <AdminSection
+      id="nc-admin-forms-catalog"
+      title="Registered forms"
+      description="Enable or disable encounter forms. Bundle-required forms are listed first (M15-F07)."
+      icon={<Files className="h-4 w-4" aria-hidden />}
+      action={
+        <Button variant="outline" size="sm" asChild>
+          <a href={catalog.forms_admin_url} target="_top">
+            Full Forms Administration
+          </a>
+        </Button>
+      }
+    >
         {!catalog.can_edit && (
           <div className={deskCalloutClass('info', 'py-2 text-sm mb-3')}>
             Read-only — enabling or disabling forms requires core <code>admin/forms</code> ACL.
@@ -147,7 +145,6 @@ export function FormsCatalog({ catalog, togglingId, onToggle }: FormsCatalogProp
             </TableBody>
           </Table>
         </div>
-      </CardContent>
-    </Card>
+    </AdminSection>
   );
 }
