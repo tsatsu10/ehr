@@ -17,6 +17,7 @@ use OpenEMR\Common\Database\QueryUtils;
 class ClinicalDocCatalogService
 {
     public const DEFAULT_BUNDLE_KEY = 'ghana_opd_v1';
+    public const REFERRAL_HOSPITAL_BUNDLE_KEY = 'referral_hospital_v1';
 
     /** @var array<int, string> */
     private const BILLING_EXCLUDED = [
@@ -64,9 +65,46 @@ class ClinicalDocCatalogService
         ],
     ];
 
+    /** @var array<string, list<array{formdir: string, title: string, description: string, kind: string, primary?: bool}>> */
+    private const BUNDLE_REFERRAL_HOSPITAL = [
+        'consult' => [
+            ['formdir' => 'referral_opd_consult', 'title' => 'Referral hospital consult', 'description' => 'Extended structured consult for referral centers (LBF pack).', 'kind' => 'form', 'primary' => true],
+            ['formdir' => 'soap', 'title' => 'SOAP note', 'description' => 'Legacy four-section note.', 'kind' => 'form'],
+            ['formdir' => 'clinical_notes', 'title' => 'Clinical Notes', 'description' => 'Multi-section structured note.', 'kind' => 'form'],
+            ['formdir' => 'clinic_note', 'title' => 'Clinic Note', 'description' => 'Short free-text note.', 'kind' => 'form'],
+            ['formdir' => 'dictation', 'title' => 'Dictation', 'description' => 'Audio/transcription workflow.', 'kind' => 'form'],
+            ['formdir' => 'transfer_summary', 'title' => 'Transfer summary', 'description' => 'Referral narrative.', 'kind' => 'form'],
+        ],
+        'screening' => [
+            ['formdir' => 'phq9', 'title' => 'PHQ-9', 'description' => 'Depression screen.', 'kind' => 'form'],
+            ['formdir' => 'gad7', 'title' => 'GAD-7', 'description' => 'Anxiety screen.', 'kind' => 'form'],
+            ['formdir' => 'questionnaire_assessments', 'title' => 'Questionnaires', 'description' => 'LForms / FHIR questionnaires.', 'kind' => 'form'],
+        ],
+        'nursing' => [
+            ['formdir' => 'vitals', 'title' => 'Vitals', 'description' => 'BP, temperature, SpO₂, etc.', 'kind' => 'form'],
+            ['formdir' => 'clinical_instructions', 'title' => 'Clinical instructions', 'description' => 'Patient education notes.', 'kind' => 'form'],
+            ['formdir' => 'lab_intake', 'title' => 'Lab intake', 'description' => 'Lab-direct visit intake and attestation.', 'kind' => 'form'],
+            ['formdir' => 'pharmacy_service', 'title' => 'Pharmacy service note', 'description' => 'Pharmacy walk-in service attestation.', 'kind' => 'form'],
+        ],
+        'orders' => [
+            ['formdir' => 'procedure_order', 'title' => 'Lab orders', 'description' => 'Order labs and imaging.', 'kind' => 'form'],
+            ['formdir' => 'rx', 'title' => 'Prescriptions', 'description' => 'Core Rx editor.', 'kind' => 'rx'],
+            ['formdir' => 'requisition', 'title' => 'Lab requisition', 'description' => 'Send-out paper requisition.', 'kind' => 'form'],
+            ['formdir' => 'note', 'title' => 'Work/school note', 'description' => 'Excuse letter.', 'kind' => 'form'],
+        ],
+        'specialty' => [
+            ['formdir' => 'eye_mag', 'title' => 'Eye exam', 'description' => 'Ophthalmology exam.', 'kind' => 'form'],
+            ['formdir' => 'bronchitis', 'title' => 'Bronchitis form', 'description' => 'Acute illness template.', 'kind' => 'form'],
+            ['formdir' => 'ankleinjury', 'title' => 'Ankle evaluation', 'description' => 'Orthopedic injury template.', 'kind' => 'form'],
+            ['formdir' => 'painmap', 'title' => 'Pain map', 'description' => 'Graphic pain diagram.', 'kind' => 'form'],
+            ['formdir' => 'CAMOS', 'title' => 'CAMOS', 'description' => 'Legacy structured note.', 'kind' => 'form'],
+        ],
+    ];
+
     /** @var array<string, array<string, list<array{formdir: string, title: string, description: string, kind: string, primary?: bool}>>> */
     private const BUNDLES = [
         'ghana_opd_v1' => self::BUNDLE_GHANA_OPD,
+        self::REFERRAL_HOSPITAL_BUNDLE_KEY => self::BUNDLE_REFERRAL_HOSPITAL,
     ];
 
     /** @var array<string, list<string>>|null */
@@ -98,6 +136,7 @@ class ClinicalDocCatalogService
         private readonly ClinicalDocAccessService $access = new ClinicalDocAccessService(),
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
+        private readonly EncounterNoteService $encounterNote = new EncounterNoteService(),
     ) {
     }
 
@@ -233,6 +272,10 @@ class ClinicalDocCatalogService
             return false;
         }
 
+        if ($this->encounterNote->isNativeFormdir($formdir) && $this->encounterNote->isNativeEngineEnabled($facilityId)) {
+            return true;
+        }
+
         foreach ($this->allowedFormdirs($facilityId) as $allowed) {
             if (strcasecmp($allowed, $formdir) === 0) {
                 return true;
@@ -253,6 +296,10 @@ class ClinicalDocCatalogService
             return $formdir === 'rx' ? 'orders' : null;
         }
 
+        if ($this->encounterNote->isNativeFormdir($formdir) && $this->encounterNote->isNativeEngineEnabled($facilityId)) {
+            return 'consult';
+        }
+
         foreach ($this->bundleLensIds($facilityId) as $lensId) {
             foreach ($this->lensDefinitions($lensId, $facilityId) as $def) {
                 if (strcasecmp($def['formdir'], $formdir) === 0) {
@@ -269,6 +316,10 @@ class ClinicalDocCatalogService
         $formdir = strtolower(trim($formdir));
         if ($formdir === '') {
             return '';
+        }
+
+        if ($this->encounterNote->isNativeFormdir($formdir)) {
+            return EncounterNoteService::NATIVE_FORMDIR;
         }
 
         $row = QueryUtils::querySingleRow(
@@ -354,6 +405,7 @@ class ClinicalDocCatalogService
             $defs = $this->filterSpecialtyPack($defs, $facilityId);
         }
         if ($lens === 'consult') {
+            $defs = $this->applyNativeConsultLens($defs, $facilityId);
             $defs = $this->applyConsultPrimary($defs, $facilityId);
         }
 
@@ -457,10 +509,11 @@ class ClinicalDocCatalogService
         $formdir = strtolower(trim($canonical));
         $kind = $def['kind'];
         if ($kind === 'form') {
-            if (!$this->isRegistryFormActive($formdir)) {
+            if ($this->encounterNote->isNativeFormdir($formdir) && $this->encounterNote->isNativeEngineEnabled($facilityId)) {
+                // Virtual native consult card — not in OpenEMR registry.
+            } elseif (!$this->isRegistryFormActive($formdir)) {
                 return null;
-            }
-            if (!$this->canViewRegistryForm($canonical)) {
+            } elseif (!$this->canViewRegistryForm($canonical)) {
                 return null;
             }
         }
@@ -480,9 +533,35 @@ class ClinicalDocCatalogService
 
     private function consultNoteFormdir(int $facilityId): string
     {
-        $formdir = strtolower(trim((string) ($this->config->get('consult_note_formdir', 'soap', $facilityId) ?? 'soap')));
+        return $this->encounterNote->effectiveConsultFormdir($facilityId);
+    }
 
-        return $formdir !== '' ? $formdir : 'soap';
+    /**
+     * @param list<array{formdir: string, title: string, description: string, kind: string, primary?: bool}> $defs
+     * @return list<array{formdir: string, title: string, description: string, kind: string, primary?: bool}>
+     */
+    private function applyNativeConsultLens(array $defs, int $facilityId): array
+    {
+        if (!$this->encounterNote->isNativeEngineEnabled($facilityId)) {
+            return $defs;
+        }
+
+        $legacyPrimary = strtolower(trim((string) ($this->config->get('consult_note_formdir', 'soap', $facilityId) ?? 'soap')));
+        $filtered = array_values(array_filter(
+            $defs,
+            static fn (array $def): bool => strcasecmp($def['formdir'], EncounterNoteService::NATIVE_FORMDIR) !== 0
+                && strcasecmp($def['formdir'], $legacyPrimary) !== 0
+        ));
+
+        array_unshift($filtered, [
+            'formdir' => EncounterNoteService::NATIVE_FORMDIR,
+            'title' => 'Consultation note',
+            'description' => 'Structured consult — CC, HPI, vitals, exam, assessment & plan.',
+            'kind' => 'form',
+            'primary' => true,
+        ]);
+
+        return $filtered;
     }
 
     private function canViewRegistryForm(string $canonical): bool

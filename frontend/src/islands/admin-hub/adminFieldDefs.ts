@@ -122,6 +122,15 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'currency_symbol',
   'currency_decimals',
   'currency_symbol_position',
+  'enable_clinical_doc_hub',
+  'clinical_doc_bundle',
+  'clinical_doc_show_screening',
+  'clinical_doc_show_specialty',
+  'consult_note_formdir',
+  'encounter_note_engine',
+  'encounter_note_variant_map',
+  'encounter_note_require_icd',
+  'encounter_note_supervisor_required',
 ];
 
 export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
@@ -550,7 +559,50 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         key: 'consult_note_formdir',
         type: 'string',
         label: 'Primary consult note form directory',
-        hint: 'Registry formdir for the main consult card (default soap).',
+        hint: 'Registry formdir for the main consult card when encounter_note_engine=legacy (default soap).',
+        indent: 1,
+      },
+      {
+        key: 'clinical_doc_bundle',
+        type: 'select',
+        label: 'Clinical documentation bundle',
+        hint: 'Curated form card pack for the Clinical Documentation Hub.',
+        indent: 1,
+        choices: [
+          { value: 'ghana_opd_v1', label: 'Ghana OPD (private clinic pilot)' },
+          { value: 'referral_hospital_v1', label: 'Referral hospital (multi-specialty)' },
+        ],
+      },
+      {
+        key: 'encounter_note_engine',
+        type: 'select',
+        label: 'Encounter consult note engine',
+        hint: 'native opens the React consultation form (V1.2-DOC-HLF-2). legacy keeps stock/LBF iframe forms.',
+        indent: 1,
+        choices: [
+          { value: 'legacy', label: 'Legacy (iframe SOAP/LBF)' },
+          { value: 'native', label: 'Native React consult form' },
+        ],
+      },
+      {
+        key: 'encounter_note_variant_map',
+        type: 'string',
+        label: 'Visit type → consult variant map (JSON)',
+        hint: 'Maps visit type label to variant id, e.g. {"Referral consult":"referral_consult","Follow-up":"follow_up"}.',
+        indent: 1,
+      },
+      {
+        key: 'encounter_note_require_icd',
+        type: 'bool',
+        label: 'Require ICD-10 on problem rows',
+        hint: 'When native consult form is enabled.',
+        indent: 1,
+      },
+      {
+        key: 'encounter_note_supervisor_required',
+        type: 'bool',
+        label: 'Require supervisor attestation before sign',
+        hint: 'Trainee consult notes must select supervisor and attest.',
         indent: 1,
       },
       {

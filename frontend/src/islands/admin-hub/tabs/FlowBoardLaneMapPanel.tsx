@@ -14,6 +14,7 @@ import {
   TableRow,
 } from '@components/ui/table';
 import { oeFetch } from '@core/oeFetch';
+import { AdminInsetPanel } from '../adminUi';
 
 export interface FlowBoardLaneMapRow {
   apptstat_code: string;
@@ -107,7 +108,7 @@ export function FlowBoardLaneMapPanel({
   }
 
   return (
-    <div className="border rounded p-3 mt-2 bg-[var(--oe-nc-bg-tint)]" id="nc-admin-flowboard-lane-map">
+    <AdminInsetPanel className="mt-2" id="nc-admin-flowboard-lane-map">
       <h6 className="mb-1">Flow Board lane mapping (§10.3)</h6>
       <p className="text-[var(--oe-nc-text-muted)] text-sm mb-2">
         Map each appointment status to an ordered flow lane. Check-in/out statuses should stay on
@@ -208,6 +209,6 @@ export function FlowBoardLaneMapPanel({
           </Button>
         </>
       )}
-    </div>
+    </AdminInsetPanel>
   );
 }

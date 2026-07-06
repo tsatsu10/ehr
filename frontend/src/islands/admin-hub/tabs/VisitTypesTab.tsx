@@ -1,7 +1,7 @@
 import { ncShadcnTableClass } from '@components/ncTableStyles';
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
-import { Card, CardContent } from '@components/ui/card';
+import { CalendarDays } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -12,6 +12,7 @@ import {
 } from '@components/ui/table';
 import type { CalendarCategory, VisitTypeRow } from '../adminTypes';
 import { categoryLabel, profileLabel } from '../adminUtils';
+import { AdminEmptyState, AdminSection } from '../adminUi';
 
 interface VisitTypesTabProps {
   visitTypes: VisitTypeRow[];
@@ -29,23 +30,25 @@ export function VisitTypesTab({
   onArchive,
 }: VisitTypesTabProps) {
   return (
-    <Card>
-      <CardContent>
-        <div className="flex justify-between items-center mb-3">
-          <p className="text-[var(--oe-nc-text-muted)] mb-0">Visit types map to calendar categories for encounters.</p>
-          <Button
-            type="button"
-            size="sm"
-            id="nc-admin-add-visit-type"
-            onClick={onAdd}
-          >
-            Add visit type
-          </Button>
-        </div>
-        <div id="nc-admin-visit-types">
-          {!visitTypes.length ? (
-            <div className="text-[var(--oe-nc-text-muted)]"><em>No visit types configured.</em></div>
-          ) : (
+    <AdminSection
+      title="Visit types"
+      description="Visit types map to calendar categories for encounters."
+      icon={<CalendarDays className="h-4 w-4" aria-hidden />}
+      action={
+        <Button
+          type="button"
+          size="sm"
+          id="nc-admin-add-visit-type"
+          onClick={onAdd}
+        >
+          Add visit type
+        </Button>
+      }
+    >
+      <div id="nc-admin-visit-types">
+        {!visitTypes.length ? (
+          <AdminEmptyState title="No visit types configured" />
+        ) : (
             <Table className={ncShadcnTableClass({ bordered: true, className: 'mb-0' })}>
               <TableHeader>
                 <TableRow>
@@ -102,7 +105,6 @@ export function VisitTypesTab({
             </Table>
           )}
         </div>
-      </CardContent>
-    </Card>
+    </AdminSection>
   );
 }

@@ -1,2 +1,0 @@
-import{p as e}from"./deskCalloutStyles-sccuUACN.js";var t=e();function n({enabled:e,href:n,className:r,children:i}){return e&&n?(0,t.jsx)(`a`,{href:n,target:`_blank`,rel:`noopener noreferrer`,className:r,children:i}):(0,t.jsx)(`span`,{className:r,children:i})}export{n as t};
-//# sourceMappingURL=BannerClinicalLink-CF9DLeKw.js.map

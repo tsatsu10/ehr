@@ -142,7 +142,7 @@ class PatientContextService
                 'chief_complaint' => $visit['chief_complaint'] ?? null,
                 'encounter_id' => $encounterId > 0 ? $encounterId : null,
                 'encounter_signed' => $encounterId > 0
-                    ? $this->signService->isEncounterDocumentationSigned($encounterId)
+                    ? $this->signService->isVisitDocumentationSigned($visit, $facilityId)
                     : true,
                 'require_esign_before_complete_consult' => $this->config->getInt(
                     'require_esign_before_complete_consult',

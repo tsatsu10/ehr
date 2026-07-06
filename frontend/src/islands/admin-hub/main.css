@@ -1,4 +1,125 @@
+/*
+ * admin-hub island — Clinic Setup / M6 + M15
+ */
+
 @import '../../core/tokens.css';
 @import '../../components/ui/ui-primitives.css';
 
-/* Admin Hub island — shadcn forms + SegmentedControl tabs (no Bootstrap shell deps). */
+.nc-admin-hub {
+  width: 100%;
+  font-family: var(--font-sans, 'Noto Sans', system-ui, sans-serif);
+  color: var(--oe-nc-text, #1e293b);
+}
+
+.nc-admin-shell {
+  animation: nc-admin-shell-enter 280ms ease both;
+}
+
+.nc-admin-tabs-sticky {
+  background: color-mix(in srgb, var(--oe-nc-bg, #fafaf9) 88%, transparent);
+}
+
+.nc-admin-tab-enter {
+  animation: nc-admin-tab-enter 220ms ease both;
+}
+
+.nc-admin-section:hover {
+  box-shadow: var(--oe-nc-shadow-md, 0 4px 6px rgba(0, 0, 0, 0.08));
+}
+
+.nc-admin-section--accent {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--oe-nc-primary) 6%, white) 0%,
+    var(--oe-nc-surface, #fff) 100%
+  );
+}
+
+.nc-admin-section--success {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-oe-cta, #047857) 8%, white) 0%,
+    var(--oe-nc-surface, #fff) 100%
+  );
+}
+
+.nc-admin-progress {
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--oe-nc-border) 40%, white);
+}
+
+.nc-admin-progress__bar {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    var(--oe-nc-primary, #0f766e),
+    color-mix(in srgb, var(--oe-nc-secondary, #0e7490) 80%, var(--oe-nc-primary))
+  );
+  transition: width 280ms ease;
+}
+
+.nc-admin-runbook-card {
+  border: 1px solid var(--oe-nc-border, #cbd5e1);
+  border-radius: 0.75rem;
+  background: var(--oe-nc-surface, #fff);
+  transition:
+    border-color var(--oe-nc-transition, 150ms ease),
+    box-shadow var(--oe-nc-transition, 150ms ease),
+    transform var(--oe-nc-transition, 150ms ease);
+}
+
+.nc-admin-runbook-card:hover {
+  border-color: color-mix(in srgb, var(--oe-nc-primary) 28%, var(--oe-nc-border));
+  box-shadow: var(--oe-nc-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+}
+
+.nc-admin-health-chip {
+  border: 1px solid var(--oe-nc-border, #cbd5e1);
+  border-radius: 0.75rem;
+  background: var(--oe-nc-surface, #fff);
+  transition:
+    border-color var(--oe-nc-transition, 150ms ease),
+    box-shadow var(--oe-nc-transition, 150ms ease);
+}
+
+.nc-admin-health-chip:hover {
+  border-color: color-mix(in srgb, var(--oe-nc-secondary, #0e7490) 30%, var(--oe-nc-border));
+  box-shadow: var(--oe-nc-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+}
+
+@keyframes nc-admin-shell-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes nc-admin-tab-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nc-admin-shell,
+  .nc-admin-tab-enter,
+  .nc-admin-section,
+  .nc-admin-runbook-card,
+  .nc-admin-health-chip,
+  .nc-admin-progress__bar {
+    animation: none !important;
+    transition: none !important;
+  }
+}

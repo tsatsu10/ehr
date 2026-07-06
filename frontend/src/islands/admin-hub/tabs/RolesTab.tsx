@@ -2,7 +2,7 @@ import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { ncShadcnTableClass } from '@components/ncTableStyles';
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
-import { Card, CardContent } from '@components/ui/card';
+import { Shield, Users } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -12,6 +12,7 @@ import {
   TableRow,
 } from '@components/ui/table';
 import type { AclInventoryRow, RoleGroup, SensitivePermission } from '../adminTypes';
+import { AdminEmptyState, AdminSection, AdminStack } from '../adminUi';
 
 interface RolesTabProps {
   webroot: string;
@@ -24,40 +25,40 @@ interface RolesTabProps {
 
 function RoleGroupsTable({ groups }: { groups: RoleGroup[] }) {
   if (!groups.length) {
-    return <div className="text-[var(--oe-nc-text-muted)]"><em>No New Clinic role groups found.</em></div>;
+    return <AdminEmptyState title="No New Clinic role groups found" />;
   }
 
   return groups.map((group) => {
     const activeMembers = (group.members ?? []).filter((m) => m.active);
     return (
-      <Card className="mb-2" key={group.group_title}>
-        <CardContent className="py-2">
-          <div className="flex justify-between flex-wrap">
-            <strong>{group.group_title}</strong>
-            <Badge variant="neutral">{group.member_count} members</Badge>
-          </div>
-          <div className="text-sm mt-1">
-            {!activeMembers.length ? (
-              <span className="text-[var(--oe-nc-text-muted)]"><em>No active members</em></span>
-            ) : (
-              activeMembers.map((member, i) => (
-                <span key={member.username}>
-                  {i > 0 ? ', ' : ''}
-                  {member.display_name || member.username}
-                  <span className="text-[var(--oe-nc-text-muted)]"> ({member.username})</span>
-                </span>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <AdminSection
+        key={group.group_title}
+        title={group.group_title}
+        variant="muted"
+        action={<Badge variant="neutral">{group.member_count} members</Badge>}
+        bodyClassName="py-2"
+      >
+        <div className="text-sm">
+          {!activeMembers.length ? (
+            <span className="text-[var(--oe-nc-text-muted)]">No active members</span>
+          ) : (
+            activeMembers.map((member, i) => (
+              <span key={member.username}>
+                {i > 0 ? ', ' : ''}
+                {member.display_name || member.username}
+                <span className="text-[var(--oe-nc-text-muted)]"> ({member.username})</span>
+              </span>
+            ))
+          )}
+        </div>
+      </AdminSection>
     );
   });
 }
 
 function SensitiveTable({ items }: { items: SensitivePermission[] }) {
   if (!items.length) {
-    return <div className="text-[var(--oe-nc-text-muted)]"><em>No sensitive permissions configured.</em></div>;
+    return <AdminEmptyState title="No sensitive permissions configured" />;
   }
 
   return (
@@ -88,7 +89,7 @@ function SensitiveTable({ items }: { items: SensitivePermission[] }) {
 
 function AclInventoryTable({ rows }: { rows: AclInventoryRow[] }) {
   if (!rows.length) {
-    return <div className="text-[var(--oe-nc-text-muted)]"><em>No ACL keys found.</em></div>;
+    return <AdminEmptyState title="No ACL keys found" />;
   }
 
   return (
@@ -122,15 +123,18 @@ export function RolesTab({
   granting,
 }: RolesTabProps) {
   return (
-    <>
-      <Card className="mb-3">
-        <CardContent>
-          <p className="text-[var(--oe-nc-text-muted)] mb-2">Manage staff accounts and ACL assignments in core OpenEMR admin.</p>
-          <p className={deskCalloutClass('info', 'py-2 text-sm mb-2')}>
-            To turn on Lab or Pharmacy desks, use the Queue & roles tab and check Enable lab desk /
-            Enable pharmacy desk, then Save changes.
-          </p>
-          <Button variant="outline" size="sm" className="mr-2" asChild>
+    <AdminStack>
+      <AdminSection
+        title="People & access"
+        description="Manage staff accounts and ACL assignments in core OpenEMR admin."
+        icon={<Users className="h-4 w-4" aria-hidden />}
+      >
+        <p className={deskCalloutClass('info', 'py-2 text-sm mb-3')}>
+          To turn on Lab or Pharmacy desks, use the Queue & roles tab and check Enable lab desk /
+          Enable pharmacy desk, then Save changes.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" asChild>
             <a
               href={`${webroot}/interface/usergroup/usergroup_admin.php`}
               target="_blank"
@@ -139,7 +143,7 @@ export function RolesTab({
               Manage users
             </a>
           </Button>
-          <Button variant="outline" size="sm" className="mr-2" asChild>
+          <Button variant="outline" size="sm" asChild>
             <a
               href={`${webroot}/interface/usergroup/adminacl.php`}
               target="_blank"
@@ -158,22 +162,27 @@ export function RolesTab({
           >
             {granting ? 'Granting…' : 'Grant New Clinic roles to my account'}
           </Button>
-          <small className="form-text text-[var(--oe-nc-text-muted)] mt-2">
-            Grants desk groups for pilot testing. Log out and back in afterward.
-          </small>
-        </CardContent>
-      </Card>
+        </div>
+        <p className="mb-0 mt-2 text-sm text-[var(--oe-nc-text-muted)]">
+          Grants desk groups for pilot testing. Log out and back in afterward.
+        </p>
+      </AdminSection>
+
       <div id="nc-admin-roles">
         <RoleGroupsTable groups={roleGroups} />
       </div>
-      <h5 className="mt-4">Sensitive permissions</h5>
-      <div id="nc-admin-sensitive">
+
+      <AdminSection
+        title="Sensitive permissions"
+        icon={<Shield className="h-4 w-4" aria-hidden />}
+        id="nc-admin-sensitive"
+      >
         <SensitiveTable items={sensitivePermissions} />
-      </div>
-      <h5 className="mt-4">ACL inventory</h5>
-      <div id="nc-admin-acl-inventory">
+      </AdminSection>
+
+      <AdminSection title="ACL inventory" id="nc-admin-acl-inventory">
         <AclInventoryTable rows={aclInventory} />
-      </div>
-    </>
+      </AdminSection>
+    </AdminStack>
   );
 }

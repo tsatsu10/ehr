@@ -1,8 +1,9 @@
-import { Card, CardContent } from '@components/ui/card';
+import { ClipboardCheck } from 'lucide-react';
 import { COMPLETION_FIELDS } from '../adminFieldDefs';
 import { AdminConfigField } from '../AdminConfigField';
 import { CompletionWeightsEditor } from '../CompletionWeightsEditor';
 import type { CompletionFieldWeightPayload, CompletionFieldWeightRow } from '../adminTypes';
+import { AdminSection, AdminStack } from '../adminUi';
 
 interface CompletionTabProps {
   settings: Record<string, unknown>;
@@ -22,19 +23,21 @@ export function CompletionTab({
   onSaveWeights,
 }: CompletionTabProps) {
   return (
-    <>
-      <Card>
-        <CardContent>
-          {COMPLETION_FIELDS.map((def) => (
-            <AdminConfigField
-              key={def.key}
-              def={def}
-              value={settings[def.key]}
-              onChange={onFieldChange}
-            />
-          ))}
-        </CardContent>
-      </Card>
+    <AdminStack>
+      <AdminSection
+        title="Completion gates"
+        description="Registration completeness thresholds and billing enforcement"
+        icon={<ClipboardCheck className="h-4 w-4" aria-hidden />}
+      >
+        {COMPLETION_FIELDS.map((def) => (
+          <AdminConfigField
+            key={def.key}
+            def={def}
+            value={settings[def.key]}
+            onChange={onFieldChange}
+          />
+        ))}
+      </AdminSection>
 
       <CompletionWeightsEditor
         payload={completionFieldWeights}
@@ -42,6 +45,6 @@ export function CompletionTab({
         error={weightsError}
         onSave={onSaveWeights}
       />
-    </>
+    </AdminStack>
   );
 }

@@ -1,7 +1,8 @@
 import { useRef, type ChangeEvent } from 'react';
 import { Button } from '@components/ui/button';
-import { Card, CardContent } from '@components/ui/card';
+import { Upload } from 'lucide-react';
 import type { ConfigExportMeta, ConfigImportResult } from './adminTypes';
+import { AdminInsetPanel, AdminSection } from './adminUi';
 
 interface ConfigImportCardProps {
   meta: ConfigExportMeta;
@@ -45,13 +46,12 @@ export function ConfigImportCard({
   const canConfirm = !!preview?.dry_run && !previewing && !importing;
 
   return (
-    <Card className="mb-3" id="nc-admin-config-import">
-      <CardContent>
-        <h5 className="text-base font-semibold mb-1">Site template import (M6)</h5>
-        <p className="text-[var(--oe-nc-text-muted)] text-sm mb-3">
-          Upload M6 config JSON from export (M15-F13) to apply settings, visit types, and fee
-          schedule to {scopeLabel || 'this clinic'}. Preview runs first; confirm to apply.
-        </p>
+    <AdminSection
+      id="nc-admin-config-import"
+      title="Site template import"
+      description={`Upload M6 config JSON from export to apply settings, visit types, and fee schedule to ${scopeLabel || 'this clinic'}. Preview runs first; confirm to apply.`}
+      icon={<Upload className="h-4 w-4" aria-hidden />}
+    >
         <div className="flex flex-wrap items-center mb-2">
           <input
             ref={fileInputRef}
@@ -88,7 +88,7 @@ export function ConfigImportCard({
           <p className="text-sm text-[var(--oe-nc-text-muted)] mb-0">{meta.import_blocked_reason}</p>
         )}
         {preview && summary && (
-          <div className="border rounded p-3 mt-2 bg-[var(--oe-nc-bg-tint)]">
+          <AdminInsetPanel className="mt-2">
             <p className="text-sm font-bold mb-2">Import preview</p>
             <ul className="text-sm mb-2 pl-3">
               <li>{summary.settings_planned ?? 0} clinic settings</li>
@@ -118,9 +118,8 @@ export function ConfigImportCard({
             >
               {importing ? 'Importing…' : 'Apply import to this site'}
             </Button>
-          </div>
+          </AdminInsetPanel>
         )}
-      </CardContent>
-    </Card>
+    </AdminSection>
   );
 }

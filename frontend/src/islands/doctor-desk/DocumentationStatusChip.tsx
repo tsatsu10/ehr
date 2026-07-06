@@ -21,11 +21,26 @@ export function DocumentationStatusChip({
   }
 
   const unsigned = documentationStatus?.unsigned_required ?? [];
+  const preview = documentationStatus?.encounter_note_preview;
   if (unsigned.length > 0) {
     const labels = unsigned.map((item) => item.title).join(', ');
+    const previewHint = preview?.cc_preview
+      ? ` · ${preview.cc_preview}`
+      : (preview?.problem_count ?? 0) > 0
+        ? ` · ${preview?.problem_count} problems`
+        : '';
     return (
-      <Badge variant={requireSign ? 'danger' : 'warning'} className="ml-2" title={labels}>
+      <Badge variant={requireSign ? 'danger' : 'warning'} className="ml-2" title={labels + previewHint}>
         Unsigned: {labels}
+        {previewHint}
+      </Badge>
+    );
+  }
+
+  if (preview?.cc_preview && !preview.signed) {
+    return (
+      <Badge variant="neutral" className="ml-2" title={preview.cc_preview}>
+        Draft · {preview.cc_preview}
       </Badge>
     );
   }

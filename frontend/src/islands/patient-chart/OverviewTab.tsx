@@ -96,6 +96,17 @@ function renderExpandDetail(item: ActivityFeedItem): React.ReactNode {
     );
   }
 
+  if (item.event_type === 'encounter_note_signed') {
+    return (
+      <div className="text-sm text-[var(--oe-nc-text-muted)]">
+        {(expand.problem_count ?? 0) > 0
+          ? `${expand.problem_count} problem${expand.problem_count === 1 ? '' : 's'} documented`
+          : 'Consult note signed'}
+        {expand.variant ? ` · ${expand.variant.replace(/_/g, ' ')}` : ''}
+      </div>
+    );
+  }
+
   if (item.event_type === 'pharmacy_dispensed' && expand.drug_name) {
     return (
       <div className="text-sm text-[var(--oe-nc-text-muted)]">
