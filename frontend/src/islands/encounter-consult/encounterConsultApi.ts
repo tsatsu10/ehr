@@ -64,6 +64,7 @@ export async function signEncounterNote(
   variant: string,
   sections: EncounterNoteSections,
   password: string,
+  amendment = '',
 ): Promise<{ signed: boolean; already_signed?: boolean; sign_meta?: EncounterSignMeta | null }> {
   return oeFetch<{ signed: boolean; already_signed?: boolean; sign_meta?: EncounterSignMeta | null }>('encounter_note.sign', {
     ajaxUrl,
@@ -73,6 +74,26 @@ export async function signEncounterNote(
       visit_id: visitId,
       variant,
       sections,
+      password,
+      amendment: amendment.trim() !== '' ? amendment.trim() : undefined,
+    },
+  });
+}
+
+export async function unlockEncounterNote(
+  ajaxUrl: string,
+  csrfToken: string,
+  visitId: number,
+  reason: string,
+  password: string,
+): Promise<{ unlocked: boolean; already_unlocked?: boolean; signed: boolean }> {
+  return oeFetch<{ unlocked: boolean; already_unlocked?: boolean; signed: boolean }>('encounter_note.unlock', {
+    ajaxUrl,
+    csrfToken,
+    method: 'POST',
+    json: {
+      visit_id: visitId,
+      reason,
       password,
     },
   });

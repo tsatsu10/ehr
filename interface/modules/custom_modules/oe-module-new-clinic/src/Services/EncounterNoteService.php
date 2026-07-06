@@ -11,6 +11,7 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
+use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Auth\AuthUtils;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Logging\EventAuditLogger;
@@ -126,6 +127,7 @@ class EncounterNoteService
                 (int) ($visit['encounter'] ?? 0),
                 $actorUserId
             ),
+            'can_unlock_for_correction' => $signed && $this->canUnlockForClinicalCorrection(),
         ];
     }
 
@@ -252,6 +254,86 @@ class EncounterNoteService
             'signed' => true,
             'already_signed' => false,
             'sign_meta' => $this->buildSignMeta($formsRowId),
+        ];
+    }
+
+    /**
+     * Manager clinical correction — remove E-Sign lock so the note can be edited and re-signed.
+     *
+     * @param array<string, mixed> $body
+     * @return array<string, mixed>
+     */
+    public function unlockForClinicalCorrection(array $body, int $actorUserId): array
+    {
+        $visitId = (int) ($body['visit_id'] ?? 0);
+        if ($visitId <= 0) {
+            throw new \InvalidArgumentException('visit_id is required');
+        }
+
+        $reason = trim((string) ($body['reason'] ?? ''));
+        if ($reason === '') {
+            throw new \InvalidArgumentException('Correction reason is required');
+        }
+
+        $password = (string) ($body['password'] ?? '');
+        if (trim($password) === '') {
+            throw new \InvalidArgumentException('Password is required to unlock');
+        }
+
+        if (!(new AuthUtils())->confirmPassword($_SESSION['authUser'] ?? '', $password)) {
+            throw new \InvalidArgumentException('The password you entered is invalid');
+        }
+
+        if (!$this->canUnlockForClinicalCorrection()) {
+            throw new \RuntimeException('Manager access required to unlock signed consult notes', 403);
+        }
+
+        $visit = $this->loadClinicalVisit($visitId, $actorUserId);
+        $facilityId = (int) ($visit['facility_id'] ?? $this->visitScope->resolveDeskFacilityId());
+        $this->assertEncounterNoteAccess($facilityId);
+
+        $row = $this->loadNoteRow($visitId);
+        if ($row === null) {
+            throw new \RuntimeException('Consult note not found', 404);
+        }
+
+        $formsRowId = (int) ($row['forms_row_id'] ?? 0);
+        if ($formsRowId <= 0) {
+            throw new \RuntimeException('Consult note is missing a forms row', 409);
+        }
+
+        if (!$this->isFormSigned($formsRowId)) {
+            return [
+                'visit_id' => $visitId,
+                'forms_row_id' => $formsRowId,
+                'unlocked' => false,
+                'already_unlocked' => true,
+                'signed' => false,
+            ];
+        }
+
+        $this->removeFormLockSignatures($formsRowId);
+
+        EventAuditLogger::getInstance()->newEvent(
+            'new_clinic',
+            'encounter_note_unlocked',
+            $_SESSION['authUser'] ?? 'system',
+            $_SESSION['authProvider'] ?? 'default',
+            json_encode([
+                'visit_id' => $visitId,
+                'encounter_id' => (int) ($row['encounter'] ?? 0),
+                'forms_row_id' => $formsRowId,
+                'reason' => $reason,
+            ]),
+            (int) ($row['pid'] ?? 0)
+        );
+
+        return [
+            'visit_id' => $visitId,
+            'forms_row_id' => $formsRowId,
+            'unlocked' => true,
+            'already_unlocked' => false,
+            'signed' => false,
         ];
     }
 
@@ -564,10 +646,45 @@ class EncounterNoteService
             'background' => $this->loadBackgroundPrefill($pid),
             'recent_labs' => $this->loadRecentLabsPrefill($pid),
             'referral' => $this->loadReferralPrefill($visit),
-            'patient' => [
-                'display_name' => trim((string) ($visit['patient_name'] ?? '')),
-                'queue_number' => (int) ($visit['queue_number'] ?? 0),
-            ],
+            'patient' => $this->loadPatientIdentityForPrefill($pid, $visit),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $visit
+     * @return array<string, mixed>
+     */
+    private function loadPatientIdentityForPrefill(int $pid, array $visit): array
+    {
+        $identity = [
+            'display_name' => '',
+            'pubpid' => $pid > 0 ? (string) $pid : '',
+            'sex' => '',
+            'age_years' => null,
+            'queue_number' => (int) ($visit['queue_number'] ?? 0),
+        ];
+
+        if ($pid <= 0) {
+            return $identity;
+        }
+
+        $patient = QueryUtils::querySingleRow(
+            'SELECT fname, lname, pubpid, sex, DOB FROM patient_data WHERE pid = ? LIMIT 1',
+            [$pid]
+        );
+        if (!is_array($patient)) {
+            return $identity;
+        }
+
+        $displayName = trim(trim((string) ($patient['fname'] ?? '')) . ' ' . trim((string) ($patient['lname'] ?? '')));
+        $ageYears = VisitRowEnricher::ageFromDob(isset($patient['DOB']) ? (string) $patient['DOB'] : null);
+
+        return [
+            'display_name' => $displayName,
+            'pubpid' => trim((string) ($patient['pubpid'] ?? '')) !== '' ? (string) $patient['pubpid'] : (string) $pid,
+            'sex' => trim((string) ($patient['sex'] ?? '')),
+            'age_years' => $ageYears,
+            'queue_number' => (int) ($visit['queue_number'] ?? 0),
         ];
     }
 
@@ -1496,6 +1613,20 @@ class EncounterNoteService
         }
     }
 
+    private function canUnlockForClinicalCorrection(): bool
+    {
+        return AclMain::aclCheckCore('new_clinic', 'new_admin')
+            || AclMain::aclCheckCore('admin', 'super');
+    }
+
+    private function removeFormLockSignatures(int $formsRowId): void
+    {
+        QueryUtils::sqlStatementThrowException(
+            'DELETE FROM esign_signatures WHERE tid = ? AND `table` = ? AND is_lock = 1',
+            [$formsRowId, 'forms']
+        );
+    }
+
     private function isFormSigned(int $formsRowId): bool
     {
         $row = QueryUtils::querySingleRow(
@@ -1518,7 +1649,7 @@ class EncounterNoteService
         }
 
         $row = QueryUtils::querySingleRow(
-            'SELECT es.uid, es.datetime, u.fname, u.lname, u.mname, u.see_auth
+            'SELECT es.uid, es.datetime, es.amendment, u.fname, u.lname, u.mname, u.see_auth
              FROM esign_signatures es
              LEFT JOIN users u ON u.id = es.uid
              WHERE es.tid = ? AND es.`table` = ? AND es.is_lock = 1
@@ -1541,6 +1672,9 @@ class EncounterNoteService
             'author_display_name' => $name !== '' ? $name : null,
             'author_role' => $this->resolveAuthorRoleLabel((int) ($row['see_auth'] ?? 0)),
             'signed_at' => $signedAt !== '' ? $signedAt : null,
+            'amendment' => trim((string) ($row['amendment'] ?? '')) !== ''
+                ? trim((string) ($row['amendment'] ?? ''))
+                : null,
         ];
     }
 

@@ -136,6 +136,7 @@ export interface EncounterSignMeta {
   author_display_name: string | null;
   author_role: string | null;
   signed_at: string | null;
+  amendment?: string | null;
 }
 
 export interface EncounterNoteContextSection {
@@ -191,6 +192,9 @@ export interface EncounterNotePrefill {
   referral: EncounterReferralPrefill;
   patient: {
     display_name: string;
+    pubpid?: string;
+    sex?: string;
+    age_years?: number | null;
     queue_number: number;
   };
 }
@@ -222,6 +226,7 @@ export interface EncounterNotePayload {
   return_url: string;
   note_config?: EncounterNoteConfig;
   supervisor?: EncounterSupervisorMeta;
+  can_unlock_for_correction?: boolean;
 }
 
 export interface EncounterConsultProps {

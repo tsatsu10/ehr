@@ -2261,6 +2261,22 @@ class AjaxController
                         $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
                     }
                     break;
+                case 'encounter_note.unlock':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $payload = $this->encounterNoteService->unlockForClinicalCorrection($body, $userId);
+                        $this->respond(true, 'Unlocked', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
+                    break;
                 case 'clinical_doc.favorites':
                     $this->clinicalDocAccessService->assertHubAccess();
                     $visitId = (int) ($_REQUEST['visit_id'] ?? 0);

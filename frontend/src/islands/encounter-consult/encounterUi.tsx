@@ -281,9 +281,15 @@ export function EncounterSignedBanner({
             <dd className="font-medium text-[var(--oe-nc-text)]">{supervisorName}</dd>
           </div>
         )}
+        {signMeta.amendment && (
+          <div className="sm:col-span-2">
+            <dt className="text-[var(--oe-nc-text-muted)]">Signature note</dt>
+            <dd className="font-medium text-[var(--oe-nc-text)]">{signMeta.amendment}</dd>
+          </div>
+        )}
       </dl>
       <p className="mt-3 text-sm text-[var(--oe-nc-text-muted)]">
-        This note is locked. Open the clinical documentation hub to review other encounter forms.
+        This note is locked. Managers can unlock it for clinical correction, then re-sign after editing.
       </p>
     </section>
   );

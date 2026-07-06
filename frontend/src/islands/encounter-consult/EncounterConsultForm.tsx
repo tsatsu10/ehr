@@ -27,6 +27,7 @@ import {
   fetchEncounterNote,
   saveEncounterNote,
   signEncounterNote,
+  unlockEncounterNote,
   validateEncounterNote,
 } from './encounterConsultApi';
 import {
@@ -209,6 +210,7 @@ export function EncounterConsultForm({
   const [signing, setSigning] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [signed, setSigned] = useState(false);
+  const [canUnlockForCorrection, setCanUnlockForCorrection] = useState(false);
   const [signMeta, setSignMeta] = useState<EncounterSignMeta | null>(null);
   const [statusMessage, setStatusMessage] = useState('Loading consult note…');
   const [statusTone, setStatusTone] = useState<'default' | 'success' | 'danger'>('default');
@@ -216,7 +218,13 @@ export function EncounterConsultForm({
   const [validationErrors, setValidationErrors] = useState<EncounterValidationIssue[]>([]);
   const [signOpen, setSignOpen] = useState(false);
   const [signPassword, setSignPassword] = useState('');
+  const [signAmendment, setSignAmendment] = useState('');
   const [signError, setSignError] = useState<string | null>(null);
+  const [unlockOpen, setUnlockOpen] = useState(false);
+  const [unlockReason, setUnlockReason] = useState('');
+  const [unlockPassword, setUnlockPassword] = useState('');
+  const [unlockError, setUnlockError] = useState<string | null>(null);
+  const [unlocking, setUnlocking] = useState(false);
   const focusSignHandledRef = useRef(false);
   const sectionsRef = useRef(sections);
   const viewport = useDeskViewport();
@@ -288,6 +296,7 @@ export function EncounterConsultForm({
       setSections(mergeSections(payload.sections, payload.prefill));
       setLastSavedAt(payload.updated_at);
       setSigned(Boolean(payload.signed));
+      setCanUnlockForCorrection(Boolean(payload.can_unlock_for_correction));
       setSignMeta(payload.sign_meta ?? null);
       setValidationErrors([]);
       setActiveSection(visibleSectionIds(resolvedVariant)[0] ?? 'cc');
@@ -460,12 +469,15 @@ export function EncounterConsultForm({
         variantRef.current,
         sectionsRef.current,
         signPassword,
+        signAmendment,
       );
       if (result.signed) {
         setSigned(true);
+        setCanUnlockForCorrection(false);
         setDirty(false);
         setSignOpen(false);
         setSignPassword('');
+        setSignAmendment('');
         setValidationErrors([]);
         if (result.sign_meta) {
           setSignMeta(result.sign_meta);
@@ -480,7 +492,40 @@ export function EncounterConsultForm({
     } finally {
       setSigning(false);
     }
-  }, [ajaxUrl, csrfToken, loadNote, prefill, readOnly, signPassword, visitId]);
+  }, [ajaxUrl, csrfToken, loadNote, prefill, readOnly, signAmendment, signPassword, visitId]);
+
+  const handleUnlock = useCallback(async () => {
+    if (!prefill || !canUnlockForCorrection) {
+      return;
+    }
+
+    setUnlocking(true);
+    setUnlockError(null);
+    try {
+      const result = await unlockEncounterNote(
+        ajaxUrl,
+        csrfToken,
+        visitId,
+        unlockReason,
+        unlockPassword,
+      );
+      if (result.unlocked || result.already_unlocked) {
+        setSigned(false);
+        setCanUnlockForCorrection(false);
+        setSignMeta(null);
+        setUnlockOpen(false);
+        setUnlockReason('');
+        setUnlockPassword('');
+        setStatusMessage(result.already_unlocked ? 'Consult note already unlocked' : 'Consult note unlocked for correction');
+        setStatusTone('success');
+        void loadNote();
+      }
+    } catch (err) {
+      setUnlockError(err instanceof Error ? err.message : 'Unlock failed');
+    } finally {
+      setUnlocking(false);
+    }
+  }, [ajaxUrl, canUnlockForCorrection, csrfToken, loadNote, prefill, unlockPassword, unlockReason, visitId]);
 
   if (loading) {
     return (
@@ -520,6 +565,9 @@ export function EncounterConsultForm({
           identity={{
             pid: patientPid > 0 ? patientPid : undefined,
             display_name: prefill.patient.display_name,
+            pubpid: prefill.patient.pubpid,
+            sex: prefill.patient.sex,
+            age_years: prefill.patient.age_years ?? undefined,
           }}
           chiefComplaint={prefill.chief_complaint || null}
           className="mb-1"
@@ -797,6 +845,11 @@ export function EncounterConsultForm({
                   <a href={returnUrl}>Back to hub</a>
                 </Button>
               )}
+              {signed && canUnlockForCorrection && (
+                <Button type="button" variant="outline" onClick={() => setUnlockOpen(true)}>
+                  Unlock for correction
+                </Button>
+              )}
               {!readOnly && (
                 <>
                   <Button type="button" variant="outline" onClick={() => void persist(true)} disabled={saving}>
@@ -834,15 +887,26 @@ export function EncounterConsultForm({
               Your OpenEMR password is your electronic signature. The note will lock after signing.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="encounter-sign-password">Password</Label>
-            <Input
-              id="encounter-sign-password"
-              type="password"
-              autoComplete="current-password"
-              value={signPassword}
-              onChange={(event) => setSignPassword(event.target.value)}
-            />
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="encounter-sign-amendment">Signature note (optional)</Label>
+              <Textarea
+                id="encounter-sign-amendment"
+                placeholder="Optional comment recorded with your electronic signature — not a chart correction"
+                value={signAmendment}
+                onChange={(event) => setSignAmendment(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="encounter-sign-password">Password</Label>
+              <Input
+                id="encounter-sign-password"
+                type="password"
+                autoComplete="current-password"
+                value={signPassword}
+                onChange={(event) => setSignPassword(event.target.value)}
+              />
+            </div>
             {signError && (
               <p className="text-sm text-[var(--color-oe-danger,#b91c1c)]">{signError}</p>
             )}
@@ -857,6 +921,52 @@ export function EncounterConsultForm({
               disabled={signing || signPassword.trim() === ''}
             >
               Sign note
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={unlockOpen} onOpenChange={setUnlockOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unlock consult note for correction</DialogTitle>
+            <DialogDescription>
+              This removes the E-Sign lock so the note can be edited and re-signed. Use only for manager-approved clinical corrections.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="encounter-unlock-reason">Correction reason</Label>
+              <Textarea
+                id="encounter-unlock-reason"
+                value={unlockReason}
+                onChange={(event) => setUnlockReason(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="encounter-unlock-password">Password</Label>
+              <Input
+                id="encounter-unlock-password"
+                type="password"
+                autoComplete="current-password"
+                value={unlockPassword}
+                onChange={(event) => setUnlockPassword(event.target.value)}
+              />
+            </div>
+            {unlockError && (
+              <p className="text-sm text-[var(--color-oe-danger,#b91c1c)]">{unlockError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setUnlockOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleUnlock()}
+              disabled={unlocking || unlockReason.trim() === '' || unlockPassword.trim() === ''}
+            >
+              Unlock note
             </Button>
           </DialogFooter>
         </DialogContent>

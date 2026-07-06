@@ -47,6 +47,12 @@ export function EncounterAttestationSection({
             <p className="mt-1 text-[var(--oe-nc-text)]">{signMeta.signed_at}</p>
           </div>
         )}
+        {signMeta.amendment && (
+          <div>
+            <Label>Signature note</Label>
+            <p className="mt-1 text-[var(--oe-nc-text)]">{signMeta.amendment}</p>
+          </div>
+        )}
         {supervisor.supervisor_display_name && (
           <div>
             <Label>Supervising provider</Label>

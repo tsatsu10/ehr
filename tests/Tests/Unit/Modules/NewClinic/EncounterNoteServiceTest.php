@@ -227,4 +227,35 @@ class EncounterNoteServiceTest extends TestCase
         $this->assertStringContainsString('sqlCommitTrans()', $saveBody);
         $this->assertStringContainsString('sqlRollbackTrans()', $saveBody);
     }
+
+    public function testUnlockForClinicalCorrectionIsImplemented(): void
+    {
+        $source = (string) file_get_contents(
+            __DIR__ . '/../../../../../interface/modules/custom_modules/oe-module-new-clinic/src/Services/EncounterNoteService.php'
+        );
+
+        $this->assertStringContainsString('unlockForClinicalCorrection', $source);
+        $this->assertStringContainsString('encounter_note_unlocked', $source);
+        $this->assertStringContainsString('removeFormLockSignatures', $source);
+    }
+
+    public function testBuildPrefillLoadsPatientDemographics(): void
+    {
+        $source = (string) file_get_contents(
+            __DIR__ . '/../../../../../interface/modules/custom_modules/oe-module-new-clinic/src/Services/EncounterNoteService.php'
+        );
+
+        $this->assertStringContainsString('loadPatientIdentityForPrefill', $source);
+        $this->assertStringContainsString('pubpid', $source);
+        $this->assertStringContainsString('age_years', $source);
+    }
+
+    public function testSignMetaIncludesAmendmentField(): void
+    {
+        $source = (string) file_get_contents(
+            __DIR__ . '/../../../../../interface/modules/custom_modules/oe-module-new-clinic/src/Services/EncounterNoteService.php'
+        );
+
+        $this->assertStringContainsString("'amendment'", $source);
+    }
 }
