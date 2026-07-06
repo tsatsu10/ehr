@@ -1,6 +1,13 @@
+import { MessageSquare, Plus } from 'lucide-react';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
+import {
+  ChartEmptyState,
+  ChartLoadingState,
+  ChartSection,
+  ChartStack,
+} from './chartUi';
 import type { ChartMessageRow, ChartMessagesData } from './patientChartTypes';
 
 interface MessagesTabProps {
@@ -15,34 +22,40 @@ function MessageRow({ item }: { item: ChartMessageRow }) {
   const variant = item.active === false ? 'neutral' : 'info';
 
   return (
-    <div className="border rounded p-2 mb-2">
-      <div className="flex flex-wrap justify-between items-start">
-        <div className="flex-grow">
+    <article className="nc-chart-visit-row">
+      <div className="flex flex-wrap justify-between gap-2">
+        <div className="min-w-0 flex-1">
           {item.detail_url ? (
-            <a href={item.detail_url} target="_top">
+            <a
+              href={item.detail_url}
+              target="_top"
+              className="font-medium text-[var(--oe-nc-primary)] hover:underline"
+            >
               {item.title ?? 'Message'}
             </a>
           ) : (
-            <strong>{item.title ?? '—'}</strong>
+            <strong className="text-sm">{item.title ?? '—'}</strong>
           )}
           {item.status && <Badge variant={variant} className="ml-2">{item.status}</Badge>}
           {item.assigned_to && (
-            <span className="text-[var(--oe-nc-text-muted)] text-sm"> → {item.assigned_to}</span>
+            <span className="text-sm text-[var(--oe-nc-text-muted)]"> → {item.assigned_to}</span>
           )}
-          {item.preview && <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">{item.preview}</div>}
-          <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">
+          {item.preview && (
+            <div className="mt-1 text-sm text-[var(--oe-nc-text-muted)]">{item.preview}</div>
+          )}
+          <div className="mt-1 text-sm text-[var(--oe-nc-text-muted)]">
             {item.author ?? '—'}
             {item.date ? ` · ${item.date}` : ''}
           </div>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
 
 export function MessagesTab({ data, loading, loadingMore, error, onLoadMore }: MessagesTabProps) {
   if (loading) {
-    return <em>Loading messages…</em>;
+    return <ChartLoadingState label="Loading messages…" />;
   }
 
   if (error) {
@@ -56,69 +69,78 @@ export function MessagesTab({ data, loading, loadingMore, error, onLoadMore }: M
   const reminders = data.reminders ?? [];
 
   return (
-    <>
-      <p className="text-[var(--oe-nc-text-muted)] text-sm">
-        Chart-scoped messages and reminders for this patient. Use the clinic Communications hub for
-        staff inbox across all patients.
-      </p>
+    <ChartStack>
+      <ChartSection
+        title="Chart communications"
+        description="Messages and reminders scoped to this patient"
+        icon={<MessageSquare className="h-4 w-4" aria-hidden />}
+        variant="muted"
+        action={(
+          <div className="flex flex-wrap gap-1">
+            {urls.add_message && (
+              <Button size="sm" asChild>
+                <a href={urls.add_message} target="_top">
+                  <Plus className="mr-1 h-4 w-4" aria-hidden />
+                  New message
+                </a>
+              </Button>
+            )}
+            {urls.pnotes && (
+              <Button variant="outline" size="sm" asChild>
+                <a href={urls.pnotes} target="_top">All notes</a>
+              </Button>
+            )}
+            {urls.dated_reminders && (
+              <Button variant="outline" size="sm" asChild>
+                <a href={urls.dated_reminders} target="_top">Reminders</a>
+              </Button>
+            )}
+          </div>
+        )}
+      >
+        <p className="mb-0 text-sm text-[var(--oe-nc-text-muted)]">
+          Use the clinic Communications hub for staff inbox across all patients.
+        </p>
+      </ChartSection>
 
-      <div className="flex flex-wrap mb-3">
-        {urls.add_message && (
-          <Button size="sm" className="mr-2 mb-2" asChild>
-            <a href={urls.add_message} target="_top">
-              New message
-            </a>
+      <ChartSection
+        title={`Messages (${data.message_total ?? 0})`}
+        bodyClassName="pt-2"
+      >
+        {messages.length === 0 ? (
+          <ChartEmptyState title="No chart messages for this patient" />
+        ) : (
+          <div id="nc-chart-messages-list" className="space-y-2">
+            {messages.map((item, idx) => (
+              <MessageRow key={`msg-${item.title ?? idx}-${item.date ?? ''}`} item={item} />
+            ))}
+          </div>
+        )}
+        {data.has_more && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-3 cursor-pointer"
+            disabled={loadingMore}
+            onClick={onLoadMore}
+          >
+            {loadingMore ? 'Loading…' : 'Load more'}
           </Button>
         )}
-        {urls.pnotes && (
-          <Button variant="outline" size="sm" className="mr-2 mb-2" asChild>
-            <a href={urls.pnotes} target="_top">
-              Open all notes
-            </a>
-          </Button>
-        )}
-        {urls.dated_reminders && (
-          <Button variant="outline" size="sm" className="mb-2" asChild>
-            <a href={urls.dated_reminders} target="_top">
-              Dated reminders
-            </a>
-          </Button>
-        )}
-      </div>
+      </ChartSection>
 
-      <h5 className="mb-2">
-        Messages <span className="text-[var(--oe-nc-text-muted)] text-sm">({data.message_total ?? 0})</span>
-      </h5>
-      {messages.length === 0 ? (
-        <p className="text-[var(--oe-nc-text-muted)]">No chart messages for this patient.</p>
-      ) : (
-        <div id="nc-chart-messages-list">
-          {messages.map((item, idx) => (
-            <MessageRow key={`msg-${item.title ?? idx}-${item.date ?? ''}`} item={item} />
-          ))}
-        </div>
-      )}
-      {data.has_more && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="mt-2"
-          disabled={loadingMore}
-          onClick={onLoadMore}
-        >
-          Load more
-        </Button>
-      )}
-
-      <h5 className="mb-2 mt-4">Reminders</h5>
-      {reminders.length === 0 ? (
-        <p className="text-[var(--oe-nc-text-muted)] mb-0">No reminders for this patient.</p>
-      ) : (
-        reminders.map((item, idx) => (
-          <MessageRow key={`rem-${item.title ?? idx}-${item.date ?? ''}`} item={item} />
-        ))
-      )}
-    </>
+      <ChartSection title="Reminders">
+        {reminders.length === 0 ? (
+          <ChartEmptyState title="No reminders for this patient" />
+        ) : (
+          <div className="space-y-2">
+            {reminders.map((item, idx) => (
+              <MessageRow key={`rem-${item.title ?? idx}-${item.date ?? ''}`} item={item} />
+            ))}
+          </div>
+        )}
+      </ChartSection>
+    </ChartStack>
   );
 }

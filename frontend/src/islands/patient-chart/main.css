@@ -1,0 +1,179 @@
+/*
+ * patient-chart island — clinical MRD shell
+ */
+
+@import '../../core/tokens.css';
+@import '../../components/ui/ui-primitives.css';
+
+.nc-patient-chart {
+  width: 100%;
+  font-family: var(--font-sans, 'Noto Sans', system-ui, sans-serif);
+  color: var(--oe-nc-text, #1e293b);
+}
+
+.nc-chart-shell {
+  animation: nc-chart-shell-enter 280ms ease both;
+}
+
+.nc-chart-shell-title {
+  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+}
+
+.nc-chart-tabs-sticky {
+  background: color-mix(in srgb, var(--oe-nc-bg, #fafaf9) 88%, transparent);
+}
+
+.nc-chart-tab-enter {
+  animation: nc-chart-tab-enter 220ms ease both;
+}
+
+.nc-chart-section:hover {
+  box-shadow: var(--oe-nc-shadow-md, 0 4px 6px rgba(0, 0, 0, 0.08));
+}
+
+.nc-chart-section--accent {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--oe-nc-primary) 6%, white) 0%,
+    var(--oe-nc-surface, #fff) 100%
+  );
+}
+
+.nc-chart-feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nc-chart-feed-item {
+  border: 1px solid var(--oe-nc-border, #cbd5e1);
+  border-radius: 0.75rem;
+  background: var(--oe-nc-surface, #fff);
+  padding: 0.75rem 0.875rem;
+  transition:
+    border-color var(--oe-nc-transition, 150ms ease),
+    box-shadow var(--oe-nc-transition, 150ms ease),
+    transform var(--oe-nc-transition, 150ms ease);
+}
+
+.nc-chart-feed-item:hover {
+  border-color: color-mix(in srgb, var(--oe-nc-primary) 28%, var(--oe-nc-border));
+  box-shadow: var(--oe-nc-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+}
+
+.nc-chart-feed-item--expanded {
+  border-color: color-mix(in srgb, var(--oe-nc-primary) 35%, var(--oe-nc-border));
+  box-shadow: var(--oe-nc-shadow-md, 0 4px 6px rgba(0, 0, 0, 0.08));
+}
+
+.nc-chart-feed-item__detail {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms ease;
+}
+
+.nc-chart-feed-item__detail--open {
+  grid-template-rows: 1fr;
+}
+
+.nc-chart-feed-item__detail-inner {
+  overflow: hidden;
+}
+
+.nc-chart-feed-item__detail-content {
+  padding-top: 0.625rem;
+  border-top: 1px solid color-mix(in srgb, var(--oe-nc-border) 70%, transparent);
+  animation: nc-chart-detail-enter 220ms ease both;
+}
+
+.nc-chart-visit-row {
+  border: 1px solid var(--oe-nc-border, #cbd5e1);
+  border-radius: 0.75rem;
+  background: var(--oe-nc-surface, #fff);
+  padding: 0.875rem 1rem;
+  transition:
+    border-color var(--oe-nc-transition, 150ms ease),
+    box-shadow var(--oe-nc-transition, 150ms ease);
+}
+
+.nc-chart-visit-row:hover {
+  border-color: color-mix(in srgb, var(--oe-nc-secondary, #0e7490) 30%, var(--oe-nc-border));
+  box-shadow: var(--oe-nc-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+}
+
+.nc-chart-visit-row--today {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--oe-nc-primary) 5%, white) 0%,
+    var(--oe-nc-surface, #fff) 100%
+  );
+}
+
+.nc-chart-action-card {
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-oe-warning, #d97706) 35%, var(--oe-nc-border));
+  background: color-mix(in srgb, var(--color-oe-warning, #d97706) 8%, white);
+}
+
+.nc-profile-checklist-card {
+  border-radius: 0.75rem;
+  border: 1px solid var(--oe-nc-border);
+  background: var(--oe-nc-surface, #fff);
+  transition:
+    border-color var(--oe-nc-transition, 150ms ease),
+    box-shadow var(--oe-nc-transition, 150ms ease);
+}
+
+.nc-profile-checklist-card--complete {
+  border-color: color-mix(in srgb, var(--color-oe-cta, #047857) 35%, var(--oe-nc-border));
+  background: color-mix(in srgb, var(--color-oe-cta, #047857) 6%, white);
+}
+
+@keyframes nc-chart-shell-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes nc-chart-tab-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes nc-chart-detail-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.nc-chart-in-chart-search-results .nc-chart-in-chart-search-result:focus-visible {
+  outline: 2px solid var(--oe-nc-primary);
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nc-chart-shell,
+  .nc-chart-tab-enter,
+  .nc-chart-feed-item__detail-content,
+  .nc-chart-feed-item,
+  .nc-chart-visit-row {
+    animation: none !important;
+    transition: none !important;
+  }
+}

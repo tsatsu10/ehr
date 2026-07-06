@@ -34,6 +34,7 @@ $clinicalAnchor = $tabResolver->resolveClinicalAnchor(
     $roleAco,
     $tab
 );
+$visitIdFilter = max(0, (int) ($_GET['visit_id'] ?? 0));
 
 if ($pid <= 0) {
     http_response_code(400);
@@ -64,6 +65,7 @@ $reactPatientChart = $config->get('enable_react_patient_chart', '1') === '1';
         'pid' => $pid,
         'active_tab' => $tab,
         'clinical_anchor' => $clinicalAnchor,
+        'visit_id_filter' => $visitIdFilter,
         'registration_mode' => $config->get('registration_mode', 'desk_full_form') ?? 'desk_full_form',
         'enable_in_chart_patient_search' => $config->getInt('enable_in_chart_patient_search', 0) === 1,
         'enable_react_patient_chart' => $reactPatientChart,

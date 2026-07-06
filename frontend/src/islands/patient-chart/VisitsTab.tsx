@@ -1,8 +1,16 @@
+import { CalendarDays, ChevronRight, FileText, History } from 'lucide-react';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { AncillaryVisitBadges } from '@components/AncillaryVisitBadges';
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
+import { cn } from '@/lib/utils';
+import {
+  ChartEmptyState,
+  ChartLoadingState,
+  ChartSection,
+  ChartStack,
+} from './chartUi';
 import type { ChartVisitRow } from './patientChartTypes';
-import { AncillaryVisitBadges } from '@components/AncillaryVisitBadges';
 import { formatStateLabel } from './patientChartUtils';
 
 interface VisitsTabProps {
@@ -28,52 +36,59 @@ function VisitRow({
   const dateLabel = isToday ? 'Today' : visit.visit_date ?? '—';
 
   return (
-    <div className="border rounded p-2 mb-2 flex flex-wrap items-start">
-      <div className="grow">
-        <div className="flex items-center flex-wrap">
-          <strong className="mr-2">#{visit.queue_number}</strong>
-          <span className="text-[var(--oe-nc-text-muted)] text-sm mr-2">{dateLabel}</span>
-          <Badge variant="info" className="mr-1">{formatStateLabel(visit.state)}</Badge>
-          {visit.is_urgent && <Badge variant="warning" className="mr-1">URGENT</Badge>}
-          {visit.skipped_triage && (
-            <Badge variant="neutral" className="mr-1">Skipped triage</Badge>
-          )}
-          <AncillaryVisitBadges badges={visit.ancillary_badges} className="mr-1" />
+    <article
+      className={cn(
+        'nc-chart-visit-row flex flex-wrap items-start gap-3',
+        isToday && 'nc-chart-visit-row--today',
+      )}
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <strong className="text-[var(--oe-nc-text)]">#{visit.queue_number}</strong>
+          <span className="text-sm text-[var(--oe-nc-text-muted)]">{dateLabel}</span>
+          <Badge variant="info">{formatStateLabel(visit.state)}</Badge>
+          {visit.is_urgent && <Badge variant="warning">URGENT</Badge>}
+          {visit.skipped_triage && <Badge variant="neutral">Skipped triage</Badge>}
+          <AncillaryVisitBadges badges={visit.ancillary_badges} />
         </div>
-        <div className="text-sm">
+        <div className="mt-1 text-sm text-[var(--oe-nc-text)]">
           {visit.visit_type_label ?? 'Visit'}
           {visit.service_profile && visit.service_profile !== 'full_opd'
             ? ` · ${visit.service_profile}`
             : ''}
         </div>
         {visit.chief_complaint && (
-          <div className="text-sm text-[var(--oe-nc-text-muted)]">CC: {visit.chief_complaint}</div>
+          <div className="mt-1 text-sm text-[var(--oe-nc-text-muted)]">
+            CC: {visit.chief_complaint}
+          </div>
         )}
       </div>
-      <div className="flex flex-wrap items-center ml-auto">
+      <div className="ml-auto flex flex-wrap items-center gap-1">
         {visit.documentation_url && (
-          <Button variant="outline" size="sm" className="ml-2" asChild>
+          <Button variant="outline" size="sm" asChild>
             <a href={visit.documentation_url} target="_top">
+              <FileText className="mr-1 h-4 w-4" aria-hidden />
               View documentation
             </a>
           </Button>
         )}
         {visit.export_visit_summary_url && (
-          <Button variant="outline" size="sm" className="ml-2" asChild>
+          <Button variant="outline" size="sm" asChild>
             <a href={visit.export_visit_summary_url} target="_top">
-              Export visit summary
+              Export summary
             </a>
           </Button>
         )}
         {isToday && visitBoardUrl && (
-          <Button variant="outline" size="sm" className="ml-2" asChild>
+          <Button variant="ghost" size="sm" asChild>
             <a href={visitBoardUrl}>
               Board
+              <ChevronRight className="ml-1 h-4 w-4" aria-hidden />
             </a>
           </Button>
         )}
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -88,7 +103,7 @@ export function VisitsTab({
   onLoadMore,
 }: VisitsTabProps) {
   if (loading) {
-    return <em>Loading visits…</em>;
+    return <ChartLoadingState label="Loading visits…" />;
   }
 
   if (error) {
@@ -96,47 +111,61 @@ export function VisitsTab({
   }
 
   return (
-    <>
-      <h5 className="mb-2">Today</h5>
-      {todayVisits.length === 0 ? (
-        <p className="text-[var(--oe-nc-text-muted)]">No visits today.</p>
-      ) : (
-        todayVisits.map((visit, idx) => (
-          <VisitRow
-            key={`today-${visit.queue_number ?? idx}`}
-            visit={visit}
-            visitBoardUrl={visitBoardUrl}
-            isToday
-          />
-        ))
-      )}
+    <ChartStack>
+      <ChartSection
+        title="Today"
+        description="Visits in progress or completed today"
+        icon={<CalendarDays className="h-4 w-4" aria-hidden />}
+        variant="accent"
+      >
+        {todayVisits.length === 0 ? (
+          <ChartEmptyState title="No visits today" />
+        ) : (
+          <div className="space-y-2">
+            {todayVisits.map((visit, idx) => (
+              <VisitRow
+                key={`today-${visit.queue_number ?? idx}`}
+                visit={visit}
+                visitBoardUrl={visitBoardUrl}
+                isToday
+              />
+            ))}
+          </div>
+        )}
+      </ChartSection>
 
-      <h5 className="mb-2 mt-4">Past visits</h5>
-      {pastVisits.length === 0 ? (
-        <p className="text-[var(--oe-nc-text-muted)]">No past visits on file.</p>
-      ) : (
-        pastVisits.map((visit, idx) => (
-          <VisitRow
-            key={`past-${visit.visit_date ?? ''}-${visit.queue_number ?? idx}`}
-            visit={visit}
-            visitBoardUrl={visitBoardUrl}
-            isToday={false}
-          />
-        ))
-      )}
-
-      {pastHasMore && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="mt-2"
-          disabled={loadingMore}
-          onClick={onLoadMore}
-        >
-          Load more
-        </Button>
-      )}
-    </>
+      <ChartSection
+        title="Past visits"
+        description="Historical encounters, most recent first"
+        icon={<History className="h-4 w-4" aria-hidden />}
+      >
+        {pastVisits.length === 0 ? (
+          <ChartEmptyState title="No past visits on file" />
+        ) : (
+          <div className="space-y-2">
+            {pastVisits.map((visit, idx) => (
+              <VisitRow
+                key={`past-${visit.visit_date ?? ''}-${visit.queue_number ?? idx}`}
+                visit={visit}
+                visitBoardUrl={visitBoardUrl}
+                isToday={false}
+              />
+            ))}
+          </div>
+        )}
+        {pastHasMore && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-3 cursor-pointer"
+            disabled={loadingMore}
+            onClick={onLoadMore}
+          >
+            {loadingMore ? 'Loading…' : 'Load more'}
+          </Button>
+        )}
+      </ChartSection>
+    </ChartStack>
   );
 }

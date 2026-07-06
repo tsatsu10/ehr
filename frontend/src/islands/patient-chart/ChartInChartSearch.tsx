@@ -1,3 +1,4 @@
+import { Loader2, Search, X } from 'lucide-react';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
@@ -28,16 +29,19 @@ export function ChartInChartSearch({
   const showResults = query.trim().length >= 2;
 
   return (
-    <section className="nc-chart-in-chart-search mb-3" aria-label="Search within chart">
+    <section className="nc-chart-in-chart-search nc-chart-section overflow-hidden rounded-xl border border-[var(--oe-nc-border)] bg-[var(--oe-nc-surface,#fff)] shadow-[var(--oe-nc-shadow-sm,0_1px_2px_rgba(0,0,0,0.05))] px-4 py-3" aria-label="Search within chart">
       <label className="sr-only" htmlFor="nc-chart-in-chart-search-input">
         Search within chart
       </label>
-      <div className="nc-search-input-wrap">
-        <i className="fa fa-search nc-search-input-icon" aria-hidden="true" />
+      <div className="nc-search-input-wrap relative">
+        <Search
+          className="nc-search-input-icon pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--oe-nc-text-muted)]"
+          aria-hidden
+        />
         <Input
           id="nc-chart-in-chart-search-input"
           type="search"
-          className="nc-search-input-field h-8"
+          className="nc-search-input-field h-9 pl-9 pr-9"
           placeholder="Search this chart (medications, problems, labs…)"
           value={query}
           onChange={(event) => handleInput(event.target.value)}
@@ -45,22 +49,22 @@ export function ChartInChartSearch({
           spellCheck={false}
         />
         {loading && (
-          <span className="nc-search-input-spinner" aria-hidden="true">
-            <i className="fa fa-spinner fa-spin" />
+          <span className="nc-search-input-spinner absolute right-3 top-1/2 -translate-y-1/2" aria-hidden>
+            <Loader2 className="h-4 w-4 animate-spin text-[var(--oe-nc-primary)]" />
           </span>
         )}
         {query && !loading && (
           <button
             type="button"
-            className="nc-search-input-clear"
+            className="nc-search-input-clear absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-[var(--oe-nc-text-muted)] transition-colors hover:bg-[var(--oe-nc-bg-tint)] hover:text-[var(--oe-nc-text)]"
             aria-label="Clear chart search"
             onClick={clearSearch}
           >
-            <i className="fa fa-times" aria-hidden="true" />
+            <X className="h-4 w-4" aria-hidden />
           </button>
         )}
       </div>
-      <p className="text-sm text-[var(--oe-nc-text-muted)] mb-0 mt-1">
+      <p className="mb-0 mt-2 text-xs text-[var(--oe-nc-text-muted)]">
         Informational lookup only — not clinical decision support.
       </p>
 
@@ -71,7 +75,7 @@ export function ChartInChartSearch({
       )}
 
       {showResults && results && results.items.length > 0 && (
-        <ul className="nc-list-group mt-2 nc-chart-in-chart-search-results">
+        <ul className="nc-chart-in-chart-search-results mt-3 flex flex-col gap-1 overflow-hidden rounded-lg border border-[var(--oe-nc-border)]">
           {results.items.map((item) => (
             <ChartSearchResultRow
               key={`${item.category}-${item.id ?? item.title}-${item.anchor ?? item.tab}`}
@@ -98,11 +102,11 @@ function ChartSearchResultRow({
   onNavigate: (tab: ChartTabId, anchor?: string) => void;
 }) {
   return (
-    <li className="nc-list-group-item nc-list-group-item-action p-0">
+    <li className="border-b border-[var(--oe-nc-border)] last:border-b-0">
       <Button
         type="button"
-        variant="link"
-        className="block w-full text-left px-3 py-2 h-auto nc-chart-in-chart-search-result"
+        variant="ghost"
+        className="nc-chart-in-chart-search-result h-auto w-full justify-start rounded-none px-3 py-2.5 text-left hover:bg-[var(--oe-nc-bg-tint)]"
         onClick={() => onNavigate(item.tab, item.anchor)}
       >
         <span className="flex justify-between items-start">

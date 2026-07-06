@@ -1,17 +1,30 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ClipboardList,
+  Download,
+  LayoutGrid,
+} from 'lucide-react';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
-import { WidgetCard } from '@components/WidgetCard';
 import { SegmentedControl } from '@components/SegmentedControl';
 import { Button } from '@components/ui/button';
+import { Card, CardContent } from '@components/ui/card';
 import { oeFetch } from '@core/oeFetch';
 import { ChartBanner } from './ChartBanner';
 import { ChartInChartSearch } from './ChartInChartSearch';
 import { ClinicalTab } from './ClinicalTab';
+import {
+  ChartLoadingState,
+  ChartShell,
+  ChartShellHeader,
+  ChartStickyTabs,
+  ChartTabPanel,
+} from './chartUi';
 import { MessagesTab } from './MessagesTab';
 import { OverviewTab } from './OverviewTab';
 import { ProfileTab } from './ProfileTab';
 import {
   CHART_TAB_IDS,
+  type ActivityFeedResponse,
   type ActivityFeedItem,
   type ChartMessagesData,
   type ChartPreview,
@@ -42,6 +55,7 @@ export function PatientChart({
   pid,
   activeTab: initialTab,
   clinicalAnchor = '',
+  visitIdFilter = 0,
   visitBoardUrl,
   frontDeskUrl,
   exportChartUrl,
@@ -63,6 +77,8 @@ export function PatientChart({
   const [activityHasMore, setActivityHasMore] = useState(false);
   const [activityLoadingMore, setActivityLoadingMore] = useState(false);
   const [lookbackDays, setLookbackDays] = useState(90);
+  const [canExtendLookback, setCanExtendLookback] = useState(false);
+  const [olderHistoryMessage, setOlderHistoryMessage] = useState<string | null>(null);
 
   const [checklist, setChecklist] = useState<RegistrationGetData | null>(null);
   const [payments, setPayments] = useState<PaymentsStripData | null>(null);
@@ -92,6 +108,30 @@ export function PatientChart({
   const [messagesOffset, setMessagesOffset] = useState(0);
   const [pendingClinicalAnchor, setPendingClinicalAnchor] = useState(clinicalAnchor ?? '');
 
+  const applyActivityFeed = useCallback((feed: ActivityFeedResponse) => {
+    setActivityItems(feed.items ?? []);
+    setActivityOffset((feed.items ?? []).length);
+    setActivityHasMore(!!feed.has_more);
+    setLookbackDays(feed.lookback_days ?? 90);
+    setCanExtendLookback(!!feed.can_extend_lookback);
+    setOlderHistoryMessage(feed.older_history_message ?? null);
+  }, []);
+
+  const fetchActivityFeed = useCallback(
+    async (offset: number, lookback: number) => {
+      const params: Record<string, number> = { pid, offset, lookback_days: lookback };
+      if (visitIdFilter > 0) {
+        params.visit_id = visitIdFilter;
+      }
+
+      return oeFetch<ActivityFeedResponse>('patients.chart.activity_feed', {
+        ...fetchOptions,
+        params,
+      });
+    },
+    [fetchOptions, pid, visitIdFilter]
+  );
+
   const reloadContext = useCallback(async () => {
     setPreviewLoading(true);
     setPreviewError(null);
@@ -102,17 +142,19 @@ export function PatientChart({
         json: { pid, context: 'patient-chart' },
       });
       setPreview(data);
-      const feed = data.activity_feed ?? {};
-      setActivityItems(feed.items ?? []);
-      setActivityOffset((feed.items ?? []).length);
-      setActivityHasMore(!!feed.has_more);
-      setLookbackDays(feed.lookback_days ?? 90);
+
+      if (visitIdFilter > 0) {
+        const feed = await fetchActivityFeed(0, data.activity_feed?.lookback_days ?? 90);
+        applyActivityFeed(feed);
+      } else {
+        applyActivityFeed(data.activity_feed ?? {});
+      }
     } catch (err) {
       setPreviewError(err instanceof Error ? err.message : 'Could not load chart.');
     } finally {
       setPreviewLoading(false);
     }
-  }, [fetchOptions, pid]);
+  }, [applyActivityFeed, fetchActivityFeed, fetchOptions, pid, visitIdFilter]);
 
   const reloadChecklist = useCallback(async () => {
     try {
@@ -274,24 +316,44 @@ export function PatientChart({
   const loadMoreActivity = useCallback(async () => {
     setActivityLoadingMore(true);
     try {
-      const feed = await oeFetch<{ items?: ActivityFeedItem[]; has_more?: boolean }>(
-        'patients.chart.activity_feed',
-        { ...fetchOptions, params: { pid, offset: activityOffset } }
-      );
+      if (canExtendLookback) {
+        const feed = await fetchActivityFeed(0, 365);
+        applyActivityFeed(feed);
+        return;
+      }
+
+      const feed = await fetchActivityFeed(activityOffset, lookbackDays);
       const newItems = feed.items ?? [];
       setActivityItems((prev) => [...prev, ...newItems]);
       setActivityOffset((prev) => prev + newItems.length);
       setActivityHasMore(!!feed.has_more);
+      setCanExtendLookback(!!feed.can_extend_lookback);
+      setOlderHistoryMessage(feed.older_history_message ?? null);
     } finally {
       setActivityLoadingMore(false);
     }
-  }, [activityOffset, fetchOptions, pid]);
+  }, [
+    activityOffset,
+    applyActivityFeed,
+    canExtendLookback,
+    fetchActivityFeed,
+    lookbackDays,
+  ]);
 
   const scrollToClinicalAnchor = useCallback((anchor: string) => {
     if (!anchor) return;
     const el = document.getElementById(anchor);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
+
+  const scrollToProfileAnchor = useCallback((anchor: string) => {
+    if (anchor === 'profile-payments') {
+      const el = document.getElementById('nc-profile-payments-strip-panel');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
   }, []);
 
@@ -326,8 +388,17 @@ export function PatientChart({
       } else if (tab === 'clinical' && nextAnchor) {
         scrollToClinicalAnchor(nextAnchor);
       }
-      if (tab === 'profile' && !paymentsLoaded) {
-        void loadPaymentsStrip();
+      if (tab === 'profile') {
+        const scrollProfile = () => {
+          if (anchor) {
+            scrollToProfileAnchor(anchor);
+          }
+        };
+        if (!paymentsLoaded) {
+          void loadPaymentsStrip().then(scrollProfile);
+        } else {
+          scrollProfile();
+        }
       }
       if (tab === 'messages' && !messagesLoaded) {
         void loadMessages(true);
@@ -343,6 +414,7 @@ export function PatientChart({
       paymentsLoaded,
       pendingClinicalAnchor,
       scrollToClinicalAnchor,
+      scrollToProfileAnchor,
       visitsLoaded,
     ]
   );
@@ -391,71 +463,94 @@ export function PatientChart({
     }
   }, [activeTab, loadMessages, messagesLoaded]);
 
+  useEffect(() => {
+    if (activeTab !== 'overview' || !preview?.active_visit?.visit_id) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      if (document.hidden) {
+        return;
+      }
+      void reloadContext();
+    }, 60_000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [activeTab, preview?.active_visit?.visit_id, reloadContext]);
+
+  const tabSegments = CHART_TAB_IDS.map((tab) => ({
+    id: tab,
+    label: TAB_LABELS[tab],
+  }));
+
   return (
     <div className="nc-patient-chart" id="nc-patient-chart" data-pid={pid}>
-      <WidgetCard
-        className="mb-3"
-        title="Patient chart"
-        headerClassName="flex justify-between items-center flex-wrap"
-        bodyPad="pad"
-        actions={(
-          <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
-            {exportChartUrl && (
-              <Button variant="outline" size="sm" asChild>
-                <a href={exportChartUrl} target="_top">
-                  Export chart
-                </a>
-              </Button>
+      <Card className="overflow-hidden border-[var(--oe-nc-border)] shadow-[var(--oe-nc-shadow-md)]">
+        <CardContent className="p-4 md:p-5">
+          <ChartShell>
+            <ChartShellHeader
+              title="Medical record"
+              subtitle="Patient chart · overview, profile, visits, and clinical summary"
+              actions={(
+                <>
+                  {exportChartUrl && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={exportChartUrl} target="_top">
+                        <Download className="mr-1.5 h-4 w-4" aria-hidden />
+                        Export
+                      </a>
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={frontDeskUrl} target="_top">
+                      <ClipboardList className="mr-1.5 h-4 w-4" aria-hidden />
+                      Front Desk
+                    </a>
+                  </Button>
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={visitBoardUrl} target="_top">
+                      <LayoutGrid className="mr-1.5 h-4 w-4" aria-hidden />
+                      Visit Board
+                    </a>
+                  </Button>
+                </>
+              )}
+            />
+
+            <div id="nc-chart-banner">
+              {previewLoading && !preview && <ChartLoadingState label="Loading patient…" />}
+              {previewError && <div className={deskCalloutClass('error')}>{previewError}</div>}
+              {preview && <ChartBanner preview={preview} />}
+            </div>
+
+            {enableInChartPatientSearch && (
+              <ChartInChartSearch
+                ajaxUrl={ajaxUrl}
+                csrfToken={csrfToken}
+                pid={pid}
+                onNavigate={navigateToChartSection}
+              />
             )}
-            <Button variant="outline" size="sm" asChild>
-              <a href={frontDeskUrl} target="_top">
-                Front Desk
-              </a>
-            </Button>
-            <Button variant="outline" size="sm" asChild>
-              <a href={visitBoardUrl} target="_top">
-                Visit Board
-              </a>
-            </Button>
-          </div>
-        )}
-      >
-        <div id="nc-chart-banner" className="mb-3">
-          {previewLoading && !preview && <em>Loading patient…</em>}
-          {previewError && <div className={deskCalloutClass('error')}>{previewError}</div>}
-          {preview && <ChartBanner preview={preview} />}
-        </div>
 
-        {enableInChartPatientSearch && (
-          <ChartInChartSearch
-            ajaxUrl={ajaxUrl}
-            csrfToken={csrfToken}
-            pid={pid}
-            onNavigate={navigateToChartSection}
-          />
-        )}
+            <ChartStickyTabs>
+              <div id="nc-chart-tabs" className="nc-chart-tabs">
+                <SegmentedControl
+                  segments={tabSegments}
+                  value={activeTab}
+                  onChange={(id) => {
+                    handleTabChange(id as ChartTabId);
+                  }}
+                  ariaLabel="Chart sections"
+                  className="w-full max-w-full flex-wrap"
+                />
+              </div>
+            </ChartStickyTabs>
 
-        <div id="nc-chart-tabs">
-          <SegmentedControl
-            segments={CHART_TAB_IDS.map((tab) => ({ id: tab, label: TAB_LABELS[tab] }))}
-            value={activeTab}
-            onChange={(id) => {
-              handleTabChange(id as ChartTabId);
-            }}
-            ariaLabel="Chart sections"
-            className="mb-3"
-          />
-        </div>
-
-        <div className="nc-tab-content" id="nc-chart-tab-panes">
-          <div
-            className={activeTab === 'overview' ? 'nc-tab-pane' : 'nc-tab-pane hidden'}
-            id="nc-chart-tab-overview"
-            role="tabpanel"
-          >
-            {activeTab === 'overview' && (
-              <>
-                {previewLoading && !preview && <em>Loading overview…</em>}
+            <div className="nc-tab-content" id="nc-chart-tab-panes">
+              <ChartTabPanel tabId="overview" active={activeTab === 'overview'}>
+                {previewLoading && !preview && <ChartLoadingState label="Loading overview…" />}
                 {preview && (
                   <OverviewTab
                     preview={preview}
@@ -463,94 +558,72 @@ export function PatientChart({
                     activityItems={activityItems}
                     activityHasMore={activityHasMore}
                     lookbackDays={lookbackDays}
+                    olderHistoryMessage={olderHistoryMessage}
                     loadingMore={activityLoadingMore}
                     onEditProfile={() => handleTabChange('profile')}
                     onLoadMoreActivity={() => {
                       void loadMoreActivity();
                     }}
+                    onNavigateChartSection={navigateToChartSection}
                   />
                 )}
-              </>
-            )}
-          </div>
+              </ChartTabPanel>
 
-          <div
-            className={activeTab === 'profile' ? 'nc-tab-pane' : 'nc-tab-pane hidden'}
-            id="nc-chart-tab-profile"
-            role="tabpanel"
-          >
-            {activeTab === 'profile' && (
-              <ProfileTab
-                ajaxUrl={ajaxUrl}
-                csrfToken={csrfToken}
-                pid={pid}
-                registrationMode={registrationMode}
-                checklist={checklist}
-                payments={payments}
-                onProfileSaved={handleProfileSaved}
-              />
-            )}
-          </div>
+              <ChartTabPanel tabId="profile" active={activeTab === 'profile'}>
+                <ProfileTab
+                  ajaxUrl={ajaxUrl}
+                  csrfToken={csrfToken}
+                  pid={pid}
+                  registrationMode={registrationMode}
+                  checklist={checklist}
+                  payments={payments}
+                  onProfileSaved={handleProfileSaved}
+                />
+              </ChartTabPanel>
 
-          <div
-            className={activeTab === 'visits' ? 'nc-tab-pane' : 'nc-tab-pane hidden'}
-            id="nc-chart-tab-visits"
-            role="tabpanel"
-          >
-            {activeTab === 'visits' && (
-              <VisitsTab
-                todayVisits={visitsData?.today_visits ?? []}
-                pastVisits={visitsData?.past_visits ?? []}
-                pastHasMore={pastHasMore}
-                loading={visitsLoading && !visitsData}
-                loadingMore={visitsLoadingMore}
-                error={visitsError}
-                visitBoardUrl={visitBoardUrl}
-                onLoadMore={() => {
-                  void loadVisits(false);
-                }}
-              />
-            )}
-          </div>
+              <ChartTabPanel tabId="visits" active={activeTab === 'visits'}>
+                <VisitsTab
+                  todayVisits={visitsData?.today_visits ?? []}
+                  pastVisits={visitsData?.past_visits ?? []}
+                  pastHasMore={pastHasMore}
+                  loading={visitsLoading && !visitsData}
+                  loadingMore={visitsLoadingMore}
+                  error={visitsError}
+                  visitBoardUrl={visitBoardUrl}
+                  onLoadMore={() => {
+                    void loadVisits(false);
+                  }}
+                />
+              </ChartTabPanel>
 
-          <div
-            className={activeTab === 'clinical' ? 'nc-tab-pane' : 'nc-tab-pane hidden'}
-            id="nc-chart-tab-clinical"
-            role="tabpanel"
-          >
-            {activeTab === 'clinical' && (
-              <ClinicalTab
-                data={clinicalData}
-                referralsStrip={referralsStrip}
-                labsStrip={labsStrip}
-                medsStrip={medsStrip}
-                loading={clinicalLoading && !clinicalData}
-                error={clinicalError}
-                clinicalAnchor={pendingClinicalAnchor || clinicalAnchor}
-                onScrollToAnchor={scrollToClinicalAnchor}
-              />
-            )}
-          </div>
+              <ChartTabPanel tabId="clinical" active={activeTab === 'clinical'}>
+                <ClinicalTab
+                  data={clinicalData}
+                  referralsStrip={referralsStrip}
+                  labsStrip={labsStrip}
+                  medsStrip={medsStrip}
+                  loading={clinicalLoading && !clinicalData}
+                  error={clinicalError}
+                  clinicalAnchor={pendingClinicalAnchor || clinicalAnchor}
+                  onScrollToAnchor={scrollToClinicalAnchor}
+                />
+              </ChartTabPanel>
 
-          <div
-            className={activeTab === 'messages' ? 'nc-tab-pane' : 'nc-tab-pane hidden'}
-            id="nc-chart-tab-messages"
-            role="tabpanel"
-          >
-            {activeTab === 'messages' && (
-              <MessagesTab
-                data={messagesData}
-                loading={messagesLoading && !messagesData}
-                loadingMore={messagesLoadingMore}
-                error={messagesError}
-                onLoadMore={() => {
-                  void loadMessages(false);
-                }}
-              />
-            )}
-          </div>
-        </div>
-      </WidgetCard>
+              <ChartTabPanel tabId="messages" active={activeTab === 'messages'}>
+                <MessagesTab
+                  data={messagesData}
+                  loading={messagesLoading && !messagesData}
+                  loadingMore={messagesLoadingMore}
+                  error={messagesError}
+                  onLoadMore={() => {
+                    void loadMessages(false);
+                  }}
+                />
+              </ChartTabPanel>
+            </div>
+          </ChartShell>
+        </CardContent>
+      </Card>
     </div>
   );
 }
