@@ -201,6 +201,14 @@ export function validateEncounterNote(
 
   validateProblems(sections, variant, context.config, errors);
 
+  if (visible.has('follow_up') && !sections.follow_up.instructions.trim()) {
+    errors.push({
+      section: 'follow_up',
+      field: 'instructions',
+      message: 'Follow-up instructions are required',
+    });
+  }
+
   if (visible.has('attestation') && context.config.supervisor_required) {
     if (!context.supervisor?.supervisor_id) {
       errors.push({

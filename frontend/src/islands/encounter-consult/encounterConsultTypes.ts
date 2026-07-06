@@ -13,6 +13,7 @@ export type EncounterConsultSectionId =
   | 'pe'
   | 'data_reviewed'
   | 'problems'
+  | 'follow_up'
   | 'attestation';
 
 export interface EncounterNoteHpiSection {
@@ -123,6 +124,20 @@ export interface EncounterNoteAttestationSection {
   supervisor_attested: boolean;
 }
 
+export interface EncounterNoteFollowUpSection {
+  return_visit: string;
+  callback_contact: string;
+  availability: string;
+  instructions: string;
+}
+
+export interface EncounterSignMeta {
+  author_user_id: number | null;
+  author_display_name: string | null;
+  author_role: string | null;
+  signed_at: string | null;
+}
+
 export interface EncounterNoteContextSection {
   allergies_acknowledged: boolean;
   meds_acknowledged: boolean;
@@ -137,6 +152,7 @@ export interface EncounterNoteSections {
   data_reviewed: EncounterNoteDataReviewedSection;
   pe: EncounterNotePeSection;
   problems: EncounterNoteProblemsSection;
+  follow_up: EncounterNoteFollowUpSection;
   assessment: { narrative: string };
   plan: { narrative: string };
   attestation: EncounterNoteAttestationSection;
@@ -201,6 +217,7 @@ export interface EncounterNotePayload {
   form_id: number | null;
   updated_at: string | null;
   signed: boolean;
+  sign_meta?: EncounterSignMeta | null;
   prefill: EncounterNotePrefill;
   return_url: string;
   note_config?: EncounterNoteConfig;
@@ -243,7 +260,8 @@ export const ENCOUNTER_SECTIONS: Array<{
   { id: 'pe', label: 'Physical examination', description: 'General exam and specialty overlays' },
   { id: 'data_reviewed', label: 'Data reviewed', description: 'Recent labs, imaging, and outside records' },
   { id: 'problems', label: 'Assessment & plan', description: 'Problem-oriented diagnoses and linked actions' },
-  { id: 'attestation', label: 'Attestation', description: 'Supervisor review before sign' },
+  { id: 'follow_up', label: 'Follow-up', description: 'Return visit, callbacks, and communication plan' },
+  { id: 'attestation', label: 'Attestation', description: 'Author, supervisor review, and sign record' },
 ];
 
 export function emptyProblemRow(): EncounterProblemRow {
@@ -284,6 +302,15 @@ export function emptyBackgroundPrefill(): EncounterBackgroundPrefill {
   };
 }
 
+export function emptyFollowUpSection(): EncounterNoteFollowUpSection {
+  return {
+    return_visit: '',
+    callback_contact: '',
+    availability: '',
+    instructions: '',
+  };
+}
+
 export function emptySections(): EncounterNoteSections {
   return {
     referral: {
@@ -309,6 +336,7 @@ export function emptySections(): EncounterNoteSections {
     data_reviewed: emptyDataReviewedSection(),
     pe: emptyPeSection(),
     problems: { items: [] },
+    follow_up: emptyFollowUpSection(),
     assessment: { narrative: '' },
     plan: { narrative: '' },
     attestation: {
@@ -412,6 +440,12 @@ export function mergeSections(
       specialty: saved?.pe?.specialty ?? {},
     },
     problems: { items: problems },
+    follow_up: {
+      return_visit: saved?.follow_up?.return_visit ?? '',
+      callback_contact: saved?.follow_up?.callback_contact ?? '',
+      availability: saved?.follow_up?.availability ?? '',
+      instructions: saved?.follow_up?.instructions ?? '',
+    },
     assessment: { narrative: saved?.assessment?.narrative ?? '' },
     plan: { narrative: saved?.plan?.narrative ?? '' },
     attestation: {

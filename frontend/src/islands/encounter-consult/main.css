@@ -25,15 +25,43 @@
 }
 
 @media (max-width: 1023px) {
-  .nc-encounter-nav .nc-encounter-section-nav {
+  .nc-encounter-nav--chips .nc-encounter-section-nav {
     display: flex;
     gap: 0.5rem;
     overflow-x: auto;
     padding-bottom: 0.25rem;
+    scroll-snap-type: x proximity;
   }
 
-  .nc-encounter-nav .nc-encounter-section-link {
-    min-width: 9rem;
-    white-space: nowrap;
+  .nc-encounter-nav--chips .nc-encounter-section-link {
+    scroll-snap-align: start;
+  }
+}
+
+@media (max-width: 767px) {
+  .nc-encounter-layout--mobile-stepper {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .nc-encounter-main--mobile-stepper {
+    padding-bottom: 5.75rem;
+  }
+
+  .nc-encounter-section-card--stepper.is-collapsed {
+    opacity: 0.92;
+  }
+
+  .nc-encounter-section-card--stepper.is-expanded {
+    border-color: color-mix(in srgb, var(--color-oe-primary, #0369a1) 28%, var(--oe-nc-border));
+  }
+
+  .nc-encounter-footer.nc-encounter-footer--fixed {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
+
+@media (min-width: 768px) {
+  .nc-encounter-nav .nc-encounter-section-nav:not(.flex) .nc-encounter-section-link {
+    width: 100%;
   }
 }

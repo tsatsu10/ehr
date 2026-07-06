@@ -79,6 +79,9 @@ class EncounterNoteExportRenderer
         if (in_array('problems', $visible, true)) {
             $this->renderProblemsSection($sections['problems'] ?? []);
         }
+        if (in_array('follow_up', $visible, true)) {
+            $this->renderFollowUpSection($sections['follow_up'] ?? []);
+        }
         if (in_array('attestation', $visible, true)) {
             $this->renderAttestationSection($sections['attestation'] ?? []);
         }
@@ -291,6 +294,28 @@ class EncounterNoteExportRenderer
             echo '</table>';
             $index++;
         }
+    }
+
+    /**
+     * @param array<string, mixed> $followUp
+     */
+    private function renderFollowUpSection(array $followUp): void
+    {
+        $instructions = trim((string) ($followUp['instructions'] ?? ''));
+        $returnVisit = trim((string) ($followUp['return_visit'] ?? ''));
+        $callback = trim((string) ($followUp['callback_contact'] ?? ''));
+        $availability = trim((string) ($followUp['availability'] ?? ''));
+        if ($instructions === '' && $returnVisit === '' && $callback === '' && $availability === '') {
+            return;
+        }
+
+        echo '<h5>' . xlt('Follow-up and communication') . '</h5>';
+        echo '<table class="table table-sm">';
+        $this->renderTableRow(xl('Return visit'), $returnVisit);
+        $this->renderTableRow(xl('Who calls whom'), $callback);
+        $this->renderTableRow(xl('Availability for questions'), $availability);
+        $this->renderTableRow(xl('Instructions'), $instructions);
+        echo '</table>';
     }
 
     /**

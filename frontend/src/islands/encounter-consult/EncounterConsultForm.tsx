@@ -14,9 +14,11 @@ import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
 import { Textarea } from '@components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@components/ui/select';
+import { useDeskViewport } from '@/core/useDeskViewport';
 import { EncounterAttestationSection } from './EncounterAttestationSection';
 import { EncounterBackgroundSection } from './EncounterBackgroundSection';
 import { EncounterDataReviewedSection } from './EncounterDataReviewedSection';
+import { EncounterFollowUpSection } from './EncounterFollowUpSection';
 import { EncounterPeSection } from './EncounterPeSection';
 import { EncounterProblemsSection } from './EncounterProblemsSection';
 import { EncounterRosSection } from './EncounterRosSection';
@@ -36,6 +38,7 @@ import {
   type EncounterNoteConfig,
   type EncounterNotePrefill,
   type EncounterNoteSections,
+  type EncounterSignMeta,
   type EncounterSupervisorMeta,
 } from './encounterConsultTypes';
 import {
@@ -48,6 +51,7 @@ import {
   EncounterSectionCard,
   EncounterSectionNav,
   EncounterShell,
+  EncounterSignedBanner,
   EncounterStatusBar,
   EncounterStickyFooter,
   VitalsMetricTile,
@@ -105,6 +109,8 @@ function sectionComplete(
         problem.problem_label.trim().length > 0
         && problem.plan_items.some((item) => item.text.trim().length > 0)
       ));
+    case 'follow_up':
+      return sections.follow_up.instructions.trim().length > 0;
     case 'attestation':
       return !variant || sections.attestation.supervisor_attested;
     default: {
@@ -201,6 +207,7 @@ export function EncounterConsultForm({
   const [signing, setSigning] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [signed, setSigned] = useState(false);
+  const [signMeta, setSignMeta] = useState<EncounterSignMeta | null>(null);
   const [statusMessage, setStatusMessage] = useState('Loading consult note…');
   const [statusTone, setStatusTone] = useState<'default' | 'success' | 'danger'>('default');
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
@@ -210,6 +217,8 @@ export function EncounterConsultForm({
   const [signError, setSignError] = useState<string | null>(null);
   const focusSignHandledRef = useRef(false);
   const sectionsRef = useRef(sections);
+  const viewport = useDeskViewport();
+  const mobileStepper = viewport === 'mobile';
   const variantRef = useRef(variant);
   const dirtyRef = useRef(false);
   const signedRef = useRef(false);
@@ -230,6 +239,12 @@ export function EncounterConsultForm({
         complete: sectionComplete(section.id, sections, variant),
       })),
     [sections, variant, visibleIds],
+  );
+  const warningSectionIds = useMemo(
+    () => [...new Set(validationErrors.map((error) => error.section).filter(
+      (section): section is EncounterConsultSectionId => section !== 'context',
+    ))],
+    [validationErrors],
   );
 
   const validationContext = useMemo(() => ({
@@ -270,6 +285,7 @@ export function EncounterConsultForm({
       setSections(mergeSections(payload.sections, payload.prefill));
       setLastSavedAt(payload.updated_at);
       setSigned(Boolean(payload.signed));
+      setSignMeta(payload.sign_meta ?? null);
       setValidationErrors([]);
       setActiveSection(visibleSectionIds(resolvedVariant)[0] ?? 'cc');
       setStatusMessage(
@@ -448,6 +464,11 @@ export function EncounterConsultForm({
         setSignOpen(false);
         setSignPassword('');
         setValidationErrors([]);
+        if (result.sign_meta) {
+          setSignMeta(result.sign_meta);
+        } else {
+          void loadNote();
+        }
         setStatusMessage(result.already_signed ? 'Consult note already signed' : 'Consult note signed');
         setStatusTone('success');
       }
@@ -456,7 +477,7 @@ export function EncounterConsultForm({
     } finally {
       setSigning(false);
     }
-  }, [ajaxUrl, csrfToken, prefill, readOnly, signPassword, visitId]);
+  }, [ajaxUrl, csrfToken, loadNote, prefill, readOnly, signPassword, visitId]);
 
   if (loading) {
     return (
@@ -499,11 +520,21 @@ export function EncounterConsultForm({
 
       <ValidationList errors={validationErrors} />
 
+      {signed && signMeta && (
+        <EncounterSignedBanner
+          signMeta={signMeta}
+          supervisorName={supervisor.supervisor_display_name}
+        />
+      )}
+
       <EncounterLayout
+        mobileStepper={mobileStepper}
         nav={(
           <EncounterSectionNav
             sections={navSections}
             activeId={activeSection}
+            warningIds={warningSectionIds}
+            chipMode={mobileStepper || viewport === 'tablet'}
             onSelect={(id) => scrollToSection(id as EncounterConsultSectionId)}
           />
         )}
@@ -515,6 +546,9 @@ export function EncounterConsultForm({
                 id={meta.id}
                 title={meta.label}
                 description={meta.description}
+                stepperMode={mobileStepper}
+                expanded={!mobileStepper || activeSection === meta.id}
+                onHeaderClick={mobileStepper ? () => scrollToSection(meta.id) : undefined}
               >
                 {meta.id === 'referral' && (
                   <div className="grid gap-4 md:grid-cols-2">
@@ -700,10 +734,19 @@ export function EncounterConsultForm({
                     onFocus={() => setActiveSection('problems')}
                   />
                 )}
+                {meta.id === 'follow_up' && (
+                  <EncounterFollowUpSection
+                    section={sections.follow_up}
+                    readOnly={readOnly}
+                    onChange={(followUp) => updateSection('follow_up', followUp)}
+                    onFocus={() => setActiveSection('follow_up')}
+                  />
+                )}
                 {meta.id === 'attestation' && (
                   <EncounterAttestationSection
                     sections={sections}
                     supervisor={supervisor}
+                    signMeta={signMeta}
                     encounterId={encounterId}
                     facilityId={facilityId}
                     ajaxUrl={ajaxUrl}
@@ -725,7 +768,7 @@ export function EncounterConsultForm({
           </div>
         )}
         footer={(
-          <EncounterStickyFooter>
+          <EncounterStickyFooter mobileFixed={mobileStepper} className={mobileStepper ? 'nc-encounter-footer--fixed' : undefined}>
             <div className="text-sm text-[var(--oe-nc-text-muted)]">
               {signed
                 ? 'Signed — read only'
@@ -734,17 +777,21 @@ export function EncounterConsultForm({
                   : 'Draft not saved yet'}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" asChild>
-                <a href={returnUrl}>Back to hub</a>
-              </Button>
+              {!mobileStepper && (
+                <Button type="button" variant="outline" asChild>
+                  <a href={returnUrl}>Back to hub</a>
+                </Button>
+              )}
               {!readOnly && (
                 <>
                   <Button type="button" variant="outline" onClick={() => void persist(true)} disabled={saving}>
                     Save draft
                   </Button>
-                  <Button type="button" variant="secondary" onClick={() => void runValidate()} disabled={validating || saving}>
-                    Validate
-                  </Button>
+                  {!mobileStepper && (
+                    <Button type="button" variant="secondary" onClick={() => void runValidate()} disabled={validating || saving}>
+                      Validate
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     onClick={() => {

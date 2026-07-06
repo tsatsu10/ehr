@@ -1,10 +1,11 @@
 import { Label } from '@components/ui/label';
 import { SupervisorCombobox } from '../doctor-desk/SupervisorCombobox';
-import type { EncounterNoteSections, EncounterSupervisorMeta } from './encounterConsultTypes';
+import type { EncounterNoteSections, EncounterSignMeta, EncounterSupervisorMeta } from './encounterConsultTypes';
 
 interface EncounterAttestationSectionProps {
   sections: EncounterNoteSections;
   supervisor: EncounterSupervisorMeta;
+  signMeta?: EncounterSignMeta | null;
   encounterId: number;
   facilityId: number;
   ajaxUrl: string;
@@ -19,6 +20,7 @@ interface EncounterAttestationSectionProps {
 export function EncounterAttestationSection({
   sections,
   supervisor,
+  signMeta,
   encounterId,
   facilityId,
   ajaxUrl,
@@ -29,6 +31,37 @@ export function EncounterAttestationSection({
   onSupervisorUpdated,
   onNotice,
 }: EncounterAttestationSectionProps) {
+  if (readOnly && signMeta) {
+    return (
+      <div className="space-y-3 text-sm">
+        <div>
+          <Label>Author</Label>
+          <p className="mt-1 text-[var(--oe-nc-text)]">
+            {signMeta.author_display_name ?? 'Unknown author'}
+            {signMeta.author_role ? ` · ${signMeta.author_role}` : ''}
+          </p>
+        </div>
+        {signMeta.signed_at && (
+          <div>
+            <Label>Signed</Label>
+            <p className="mt-1 text-[var(--oe-nc-text)]">{signMeta.signed_at}</p>
+          </div>
+        )}
+        {supervisor.supervisor_display_name && (
+          <div>
+            <Label>Supervising provider</Label>
+            <p className="mt-1 text-[var(--oe-nc-text)]">{supervisor.supervisor_display_name}</p>
+          </div>
+        )}
+        {sections.attestation.supervisor_attested && (
+          <p className="rounded-lg border border-[var(--oe-nc-border)] bg-[var(--oe-nc-bg-tint,#f8fafc)] px-3 py-2 text-[var(--oe-nc-text-muted)]">
+            Supervisor attestation recorded for this consult note.
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {supervisorRequired && (

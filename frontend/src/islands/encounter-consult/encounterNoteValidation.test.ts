@@ -54,6 +54,7 @@ const completeProblemSections = () => {
     differential: 'Migraine',
     plan_items: [{ id: 'plan1', type: 'education', text: 'Rest and fluids' }],
   }];
+  sections.follow_up.instructions = 'Return in 2 weeks if not improved';
   return sections;
 };
 
@@ -114,5 +115,18 @@ describe('encounterNoteValidation', () => {
     });
     expect(result.valid).toBe(false);
     expect(result.errors.some((error) => error.section === 'ros')).toBe(true);
+  });
+
+  it('requires follow-up instructions when follow_up section is visible', () => {
+    const sections = completeProblemSections();
+    sections.follow_up.instructions = '';
+
+    const result = validateEncounterNote(sections, {
+      variant: 'general_opd',
+      config: { require_icd: false, supervisor_required: false },
+      prefill: basePrefill,
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((error) => error.section === 'follow_up')).toBe(true);
   });
 });

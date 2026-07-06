@@ -3,6 +3,7 @@ import type {
   EncounterNotePayload,
   EncounterNotePrefill,
   EncounterNoteSections,
+  EncounterSignMeta,
 } from './encounterConsultTypes';
 import type { EncounterValidationResult } from './encounterNoteValidation';
 
@@ -63,8 +64,8 @@ export async function signEncounterNote(
   variant: string,
   sections: EncounterNoteSections,
   password: string,
-): Promise<{ signed: boolean; already_signed?: boolean }> {
-  return oeFetch<{ signed: boolean; already_signed?: boolean }>('encounter_note.sign', {
+): Promise<{ signed: boolean; already_signed?: boolean; sign_meta?: EncounterSignMeta | null }> {
+  return oeFetch<{ signed: boolean; already_signed?: boolean; sign_meta?: EncounterSignMeta | null }>('encounter_note.sign', {
     ajaxUrl,
     csrfToken,
     method: 'POST',

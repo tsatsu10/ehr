@@ -56,7 +56,7 @@ export function variantLabel(variant: EncounterNoteVariant): string {
 export function visibleSectionIds(variant: EncounterNoteVariant): EncounterConsultSectionId[] {
   switch (variant) {
     case 'general_opd':
-      return ['cc', 'hpi', 'ros', 'background', 'vitals', 'pe', 'problems'];
+      return ['cc', 'hpi', 'ros', 'background', 'vitals', 'pe', 'problems', 'follow_up'];
     case 'referral_consult':
       return [
         'referral',
@@ -69,10 +69,11 @@ export function visibleSectionIds(variant: EncounterNoteVariant): EncounterConsu
         'pe',
         'data_reviewed',
         'problems',
+        'follow_up',
         'attestation',
       ];
     case 'follow_up':
-      return ['cc', 'hpi', 'background', 'vitals', 'pe', 'problems'];
+      return ['cc', 'hpi', 'background', 'vitals', 'pe', 'problems', 'follow_up'];
     case 'pre_procedure':
       return [
         'source',
@@ -84,6 +85,7 @@ export function visibleSectionIds(variant: EncounterNoteVariant): EncounterConsu
         'pe',
         'data_reviewed',
         'problems',
+        'follow_up',
         'attestation',
       ];
     default: {

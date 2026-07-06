@@ -102,6 +102,7 @@ class EncounterNoteService
         $variant = $storedVariant !== ''
             ? $this->normalizeVariant($storedVariant)
             : $this->resolveVariantForVisit($visit, $facilityId);
+        $signed = $formsRowId > 0 && $this->isFormSigned($formsRowId);
 
         return [
             'visit_id' => $visitId,
@@ -112,7 +113,8 @@ class EncounterNoteService
             'forms_row_id' => $formsRowId > 0 ? $formsRowId : null,
             'form_id' => $formsRowId > 0 ? $formsRowId : null,
             'updated_at' => $row['updated_at'] ?? null,
-            'signed' => $formsRowId > 0 && $this->isFormSigned($formsRowId),
+            'signed' => $signed,
+            'sign_meta' => $signed ? $this->buildSignMeta($formsRowId) : null,
             'prefill' => $this->buildPrefill($visit),
             'return_url' => $this->defaultReturnUrl($visitId),
             'engine' => self::ENGINE_NATIVE,
@@ -204,6 +206,7 @@ class EncounterNoteService
                 'forms_row_id' => $formsRowId,
                 'signed' => true,
                 'already_signed' => true,
+                'sign_meta' => $this->buildSignMeta($formsRowId),
             ];
         }
 
@@ -244,6 +247,7 @@ class EncounterNoteService
             'forms_row_id' => $formsRowId,
             'signed' => true,
             'already_signed' => false,
+            'sign_meta' => $this->buildSignMeta($formsRowId),
         ];
     }
 
@@ -1016,6 +1020,12 @@ class EncounterNoteService
 
         $this->appendProblemValidationErrors($sections, $variant, $config, $errors);
 
+        if (in_array('follow_up', $visible, true)) {
+            if (trim((string) ($sections['follow_up']['instructions'] ?? '')) === '') {
+                $errors[] = ['section' => 'follow_up', 'field' => 'instructions', 'message' => xl('Follow-up instructions are required')];
+            }
+        }
+
         if (in_array('attestation', $visible, true) && !empty($config['supervisor_required'])) {
             if (empty($supervisor['supervisor_id'])) {
                 $errors[] = ['section' => 'attestation', 'field' => 'supervisor_id', 'message' => xl('Select a supervising provider before signing')];
@@ -1207,13 +1217,13 @@ class EncounterNoteService
 
         return match ($variant) {
             'referral_consult' => [
-                'referral', 'source', 'cc', 'hpi', 'ros', 'background', 'vitals', 'pe', 'data_reviewed', 'problems', 'attestation',
+                'referral', 'source', 'cc', 'hpi', 'ros', 'background', 'vitals', 'pe', 'data_reviewed', 'problems', 'follow_up', 'attestation',
             ],
-            'follow_up' => ['cc', 'hpi', 'background', 'vitals', 'pe', 'problems'],
+            'follow_up' => ['cc', 'hpi', 'background', 'vitals', 'pe', 'problems', 'follow_up'],
             'pre_procedure' => [
-                'source', 'cc', 'hpi', 'ros', 'background', 'vitals', 'pe', 'data_reviewed', 'problems', 'attestation',
+                'source', 'cc', 'hpi', 'ros', 'background', 'vitals', 'pe', 'data_reviewed', 'problems', 'follow_up', 'attestation',
             ],
-            default => ['cc', 'hpi', 'ros', 'background', 'vitals', 'pe', 'problems'],
+            default => ['cc', 'hpi', 'ros', 'background', 'vitals', 'pe', 'problems', 'follow_up'],
         };
     }
 
@@ -1451,6 +1461,51 @@ class EncounterNoteService
     }
 
     /**
+     * @return array<string, mixed>|null
+     */
+    private function buildSignMeta(int $formsRowId): ?array
+    {
+        if ($formsRowId <= 0 || !$this->isFormSigned($formsRowId)) {
+            return null;
+        }
+
+        $row = QueryUtils::querySingleRow(
+            'SELECT es.uid, es.datetime, u.fname, u.lname, u.mname, u.see_auth
+             FROM esign_signatures es
+             LEFT JOIN users u ON u.id = es.uid
+             WHERE es.tid = ? AND es.`table` = ? AND es.is_lock = 1
+             ORDER BY es.datetime DESC
+             LIMIT 1',
+            [$formsRowId, 'forms']
+        );
+        if (!is_array($row)) {
+            return null;
+        }
+
+        $name = trim(trim((string) ($row['fname'] ?? '')) . ' ' . trim((string) ($row['mname'] ?? '')) . ' ' . trim((string) ($row['lname'] ?? '')));
+        $signedAt = (string) ($row['datetime'] ?? '');
+        if ($signedAt !== '' && function_exists('oeFormatDateTime')) {
+            $signedAt = oeFormatDateTime($signedAt);
+        }
+
+        return [
+            'author_user_id' => (int) ($row['uid'] ?? 0) > 0 ? (int) ($row['uid'] ?? 0) : null,
+            'author_display_name' => $name !== '' ? $name : null,
+            'author_role' => $this->resolveAuthorRoleLabel((int) ($row['see_auth'] ?? 0)),
+            'signed_at' => $signedAt !== '' ? $signedAt : null,
+        ];
+    }
+
+    private function resolveAuthorRoleLabel(int $seeAuth): ?string
+    {
+        return match ($seeAuth) {
+            1 => xl('Consulting provider'),
+            2 => xl('Clinical staff'),
+            default => xl('Author'),
+        };
+    }
+
+    /**
      * @param array<string, mixed> $row
      */
     private function insertFormSignature(array $row, int $actorUserId, string $amendment): void
@@ -1559,7 +1614,7 @@ class EncounterNoteService
         }
 
         $merged = array_merge($this->emptySections(), $sections);
-        foreach (['hpi', 'referral', 'source', 'context', 'attestation', 'ros', 'data_reviewed'] as $nestedKey) {
+        foreach (['hpi', 'referral', 'source', 'context', 'attestation', 'ros', 'data_reviewed', 'follow_up'] as $nestedKey) {
             if (isset($sections[$nestedKey]) && is_array($sections[$nestedKey])) {
                 $merged[$nestedKey] = array_merge($this->emptySections()[$nestedKey], $sections[$nestedKey]);
             }
@@ -1619,6 +1674,12 @@ class EncounterNoteService
                 'specialty' => [],
             ],
             'problems' => ['items' => []],
+            'follow_up' => [
+                'return_visit' => '',
+                'callback_contact' => '',
+                'availability' => '',
+                'instructions' => '',
+            ],
             'assessment' => ['narrative' => ''],
             'plan' => ['narrative' => ''],
             'attestation' => [

@@ -99,6 +99,7 @@ class EncounterNoteServiceTest extends TestCase
         $this->assertContains('ros', $sections);
         $this->assertContains('data_reviewed', $sections);
         $this->assertContains('background', $sections);
+        $this->assertContains('follow_up', $sections);
     }
 
     public function testBuildNotePreviewReturnsDisabledPayloadWhenNativeEngineOff(): void
