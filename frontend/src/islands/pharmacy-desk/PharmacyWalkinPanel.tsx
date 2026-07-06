@@ -28,10 +28,10 @@ export function PharmacyWalkinPanel({
   const dispenseDisabled = disabled || (triage.allergies_undocumented ?? false) || triage.can_dispense === false;
 
   return (
-    <div className="nc-pharm-walkin-panel mb-3 rounded-lg border border-[var(--oe-nc-border)] bg-[var(--oe-nc-bg-tint)] p-3">
-      <h5 className="mb-2">Pharmacy walk-in triage</h5>
-      <p className="mb-3 text-sm text-[var(--oe-nc-text-muted)]">
-        Reception started a pharmacy walk-in visit. Choose the pharmacist outcome before completing or closing.
+    <div className="nc-pharm-walkin-panel">
+      <h3 className="nc-pharm-walkin-panel__title">Walk-in triage</h3>
+      <p className="nc-pharm-walkin-panel__hint">
+        Choose a pharmacist outcome before completing or closing this visit.
       </p>
 
       {triage.allergies_undocumented && (
@@ -40,8 +40,8 @@ export function PharmacyWalkinPanel({
         </div>
       )}
 
-      <div className="mb-3">
-        <div className="mb-2 text-sm font-semibold">Dispense paths</div>
+      <div className="nc-pharm-walkin-panel__section">
+        <div className="nc-pharm-walkin-panel__section-title">Dispense paths</div>
         <div className="flex flex-wrap gap-2">
           {triage.dispense_outcomes.map((outcome) => (
             <Button
@@ -58,8 +58,8 @@ export function PharmacyWalkinPanel({
         </div>
       </div>
 
-      <div>
-        <div className="mb-2 text-sm font-semibold">Close without dispense</div>
+      <div className="nc-pharm-walkin-panel__section">
+        <div className="nc-pharm-walkin-panel__section-title">Close without dispense</div>
         <div className="flex flex-wrap gap-2">
           {triage.can_refer_to_opd && (
             <Button

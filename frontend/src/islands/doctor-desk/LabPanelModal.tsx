@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
+import { useModalDismiss } from '@components/useModalDismiss';
 import { Button } from '@components/ui/button';
 import { Checkbox } from '@components/ui/checkbox';
 import {
@@ -53,6 +54,8 @@ export function LabPanelModal({
   onPlaced,
   onFullLabForm,
 }: LabPanelModalProps) {
+  useModalDismiss(open, onClose);
+
   const [catalog, setCatalog] = useState<LabPanelCatalogData | null>(null);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -84,10 +87,11 @@ export function LabPanelModal({
   }, [open, visit?.id, ajaxUrl, csrfToken, facilityId]);
 
   const estimatedTotal = useMemo(() => {
-    if (!catalog) return null;
+    if (!catalog?.tests) return null;
+    const tests = catalog.tests ?? [];
     let total = 0;
     let hasFee = false;
-    for (const test of catalog.tests) {
+    for (const test of tests) {
       if (selected.has(test.procedure_type_id) && test.fee_amount != null && !Number.isNaN(test.fee_amount)) {
         total += test.fee_amount;
         hasFee = true;
@@ -106,8 +110,8 @@ export function LabPanelModal({
   }, []);
 
   const applyStarterPanel = useCallback(() => {
-    if (!catalog) return;
-    setSelected(new Set(catalog.tests.filter((t) => t.is_starter).map((t) => t.procedure_type_id)));
+    if (!catalog?.tests?.length) return;
+    setSelected(new Set((catalog.tests ?? []).filter((t) => t.is_starter).map((t) => t.procedure_type_id)));
   }, [catalog]);
 
   const handlePlace = async () => {
@@ -139,6 +143,8 @@ export function LabPanelModal({
 
     onPlaced(result.data);
   };
+
+  const tests = catalog?.tests ?? [];
 
   if (!visit) return null;
 
@@ -173,7 +179,7 @@ export function LabPanelModal({
                 Lab catalog is not ready. Use Full lab form or complete Lab Operations setup.
               </p>
             )}
-            {!loading && catalog?.has_catalog && catalog.tests.map((test: LabPanelCatalogTest) => (
+            {!loading && catalog?.has_catalog && tests.map((test: LabPanelCatalogTest) => (
               <div className="flex items-start gap-2 mb-2" key={test.procedure_type_id}>
                 <Checkbox
                   className="nc-lab-panel-test mt-0.5"

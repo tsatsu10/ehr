@@ -32,6 +32,8 @@ import type {
 } from '@core/types';
 import { TriageQueue } from './TriageQueue';
 import { TriageActivePane, type ActiveMode } from './TriageActivePane';
+import { TriageDeskLayout } from './triageDeskUi';
+import { TriageMobileQueueBar, TriageMobileQueueSheet } from './TriageMobileQueueSheet';
 import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import { ConfirmModal, IdentityConfirmBanner } from '@components/ConfirmModal';
@@ -113,6 +115,7 @@ export function TriageDesk({
     Array<{ user_id: number; display_name: string; taking_patients: boolean }>
   >([]);
   const [sendDoctorModalOpen, setSendDoctorModalOpen] = useState(false);
+  const [mobileQueueOpen, setMobileQueueOpen] = useState(false);
 
   // Stale-response guard for queue polling
   const queueSeq = useRef(0);
@@ -590,10 +593,13 @@ export function TriageDesk({
     }
   }, [autoStart, ajaxUrl, csrfToken, facilityId, fetchQueue, selectVisit]);
 
+  const inActiveWork = mode !== 'idle';
+  const queueCount = cards.length;
+
   // ── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <>
+    <div id="nc-triage-desk" className="nc-triage-react-active">
       {sharedDevice.probeData && (
         <DeskSharedDeviceBanner
           prefix="nc-triage"
@@ -619,24 +625,10 @@ export function TriageDesk({
           { label: 'In triage', value: counts?.in_triage ?? 0 },
         ]}
         loading={queueLoading}
-        onRefresh={() => { void fetchQueue(); }}
       />
 
-      <div className="grid grid-cols-12 gap-3">
-        {/* Left: queue */}
-        <div className="col-span-12 lg:col-span-4 mb-3">
-          <TriageQueue
-            cards={cards}
-            activeVisitId={activeVisit?.id ?? null}
-            loading={queueLoading}
-            error={queueError}
-            queueDateFilter={queueDateFilter}
-            onCardClick={handleCardClick}
-          />
-        </div>
-
-        {/* Right: active pane */}
-        <div className="col-span-12 lg:col-span-8 mb-3">
+      <TriageDeskLayout
+        activePane={(
           <TriageActivePane
             mode={mode}
             visit={activeVisit}
@@ -660,8 +652,37 @@ export function TriageDesk({
             onSend={handleSend}
             onReenter={handleReenter}
           />
-        </div>
-      </div>
+        )}
+        queue={(
+          <TriageQueue
+            cards={cards}
+            activeVisitId={activeVisit?.id ?? null}
+            loading={queueLoading}
+            error={queueError}
+            queueDateFilter={queueDateFilter}
+            onCardClick={handleCardClick}
+          />
+        )}
+      />
+
+      <TriageMobileQueueBar
+        queueCount={queueCount}
+        inActiveWork={inActiveWork}
+        onOpen={() => setMobileQueueOpen(true)}
+      />
+
+      <TriageMobileQueueSheet
+        open={mobileQueueOpen}
+        onClose={() => setMobileQueueOpen(false)}
+        queueCount={queueCount}
+        cards={cards}
+        activeVisitId={activeVisit?.id ?? null}
+        inActiveWork={inActiveWork}
+        loading={queueLoading}
+        error={queueError}
+        queueDateFilter={queueDateFilter}
+        onCardClick={handleCardClick}
+      />
 
       {/* Auto-start modal */}
       {autoStart && (
@@ -728,6 +749,6 @@ export function TriageDesk({
       >
         <p className="mb-0">Discard unsaved vitals and open another patient?</p>
       </ConfirmModal>
-    </>
+    </div>
   );
 }

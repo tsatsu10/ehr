@@ -1,5 +1,5 @@
 /**
- * DoctorQueue — right column queue list + done today + reopen sections.
+ * DoctorQueue — waiting patients list with take affordance.
  */
 
 import { useState } from 'react';
@@ -9,18 +9,12 @@ import type {
   DoctorReopenableRow,
 } from '@core/types';
 import { WaitTimeSpan } from '@components/WaitTimeSpan';
-import { RoutingChips } from '@components/RoutingChips';
-import { AncillaryVisitBadges } from '@components/AncillaryVisitBadges';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
-import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
-import {
-  queueCardCcClass,
-  queueCardHeaderClass,
-  queueCardMetaClass,
-  queueCardShellClass,
-} from '@components/queueCardStyles';
-import { cn } from '@/lib/utils';
+import { ChevronRight } from 'lucide-react';
+import { DoctorQueueCardBadges } from './DoctorQueueCardBadges';
+import { DoctorQueuePanel } from './doctorDeskUi';
+import type { ReactNode } from 'react';
 
 interface DoctorQueueProps {
   cards: DoctorQueueCard[];
@@ -32,6 +26,7 @@ interface DoctorQueueProps {
   error: string | null;
   onTakePatient: (card: DoctorQueueCard) => void;
   onReopenClick: (row: DoctorReopenableRow) => void;
+  queueHeaderExtra?: ReactNode;
 }
 
 function DoctorQueueCardButton({
@@ -44,6 +39,7 @@ function DoctorQueueCardButton({
   onTake: (card: DoctorQueueCard) => void;
 }) {
   const isClaimLost = !!card.claim_lost;
+  const isUrgent = card.is_urgent === 1;
 
   const claimLostTitle =
     isClaimLost && card.claim_lost_by
@@ -53,61 +49,49 @@ function DoctorQueueCardButton({
   return (
     <button
       type="button"
-      className={queueCardShellClass({
-        urgent: Boolean(card.is_urgent),
-        claimLost: isClaimLost,
-      })}
+      className={[
+        'nc-doctor-queue-card',
+        isUrgent && 'nc-doctor-queue-card--urgent',
+        isClaimLost && 'nc-doctor-queue-card--claim-lost',
+        disabled && 'nc-doctor-queue-card--disabled',
+      ].filter(Boolean).join(' ')}
       data-visit-id={card.id}
       data-from-state="ready_for_doctor"
       disabled={disabled || isClaimLost}
       title={disabled ? 'Complete your current patient first' : claimLostTitle}
       onClick={() => !disabled && !isClaimLost && onTake(card)}
     >
-      <div className={cn(queueCardHeaderClass, 'justify-between')}>
-        <span>
-          <strong>#{card.queue_number} {card.display_name}</strong>
-          {card.is_urgent === 1 && (
-            <Badge variant="warning" className="ml-1">URGENT</Badge>
-          )}
-          {card.skipped_triage && (
-            <Badge variant="neutral" className="ml-1">Skipped triage</Badge>
-          )}
-          <AncillaryVisitBadges badges={card.ancillary_badges} />
-          {card.assigned_provider_name && (
-            <Badge variant="info" className="ml-1">
-              Appt: {card.assigned_provider_name}
-            </Badge>
-          )}
-          {card.routing_suggested_provider_name && (
-            <Badge className="ml-1" title="Advisory routing suggestion">
-              Routing suggests: {card.routing_suggested_provider_name}
-            </Badge>
-          )}
-          {card.hard_assigned_provider_name && (
-            <Badge
-              variant="neutral"
-              className="ml-1 border-transparent bg-slate-800 text-white"
-              title="Hard-assigned provider"
-            >
-              Assigned: {card.hard_assigned_provider_name}
-            </Badge>
-          )}
-          <RoutingChips chips={card.routing_chips} />
+      <span className="nc-doctor-queue-card__number" aria-hidden="true">
+        {card.queue_number}
+      </span>
+
+      <span className="nc-doctor-queue-card__body">
+        <span className="nc-doctor-queue-card__top">
+          <strong className="nc-doctor-queue-card__name">{card.display_name}</strong>
+          <DoctorQueueCardBadges card={card} />
         </span>
-      </div>
-      <div className={queueCardMetaClass}>
-        {card.sex} · {card.age_years} · <WaitTimeSpan card={card} suffix=" waiting" /> · {card.visit_type_label}
-      </div>
-      {card.chief_complaint && (
-        <div className={queueCardCcClass}>
-          CC: {card.chief_complaint}
-        </div>
+        <span className="nc-doctor-queue-card__meta">
+          {card.sex} · {card.age_years}
+          {' · '}
+          <WaitTimeSpan card={card} suffix=" wait" />
+          {card.visit_type_label ? ` · ${card.visit_type_label}` : ''}
+        </span>
+        {card.chief_complaint && (
+          <span className="nc-doctor-queue-card__cc">{card.chief_complaint}</span>
+        )}
+      </span>
+
+      {!disabled && !isClaimLost && (
+        <span className="nc-doctor-queue-card__take" aria-hidden="true">
+          Take
+          <ChevronRight className="h-3.5 w-3.5" />
+        </span>
       )}
     </button>
   );
 }
 
-export function DoctorQueue({
+export function DoctorQueueBody({
   cards,
   doneToday,
   reopenableToday,
@@ -117,15 +101,14 @@ export function DoctorQueue({
   error,
   onTakePatient,
   onReopenClick,
+  queueHeaderExtra,
 }: DoctorQueueProps) {
   const [doneOpen, setDoneOpen] = useState(false);
   const [reopenOpen, setReopenOpen] = useState(false);
 
   return (
-    <div className="nc-doctor-queue-panel">
-      <div className="mb-2 flex items-center justify-between">
-        <strong>My queue</strong>
-      </div>
+    <>
+      {queueHeaderExtra}
 
       {error && (
         <div className={deskCalloutClass('error', 'mb-2 text-sm')} role="alert">
@@ -133,17 +116,24 @@ export function DoctorQueue({
         </div>
       )}
 
+      {hasActiveConsult && cards.length > 0 && (
+        <p className="nc-doctor-queue-hint">
+          Finish your current consult before taking another patient.
+        </p>
+      )}
+
       {!error && loading && cards.length === 0 && (
-        <div className="text-[var(--oe-nc-text-muted)] py-3"><em>Loading queue…</em></div>
+        <div className="nc-doctor-queue-empty"><em>Loading queue…</em></div>
       )}
 
       {!error && !loading && cards.length === 0 && (
-        <div className="text-[var(--oe-nc-text-muted)] py-3">
-          <em>No patients ready. New visits appear within 30s.</em>
+        <div className="nc-doctor-queue-empty">
+          <em>No patients waiting.</em>
+          <span className="nc-doctor-queue-empty__sub">New visits appear within 30 seconds.</span>
         </div>
       )}
 
-      <div id="nc-doctor-queue-list">
+      <div id="nc-doctor-queue-list" className="nc-doctor-queue-list">
         {cards.map((card) => (
           <DoctorQueueCardButton
             key={card.id}
@@ -155,74 +145,78 @@ export function DoctorQueue({
       </div>
 
       {canReopenConsult && (
-        <div className="mt-3" id="nc-doctor-reopen-section">
-          <Button
-            type="button"
-            variant="link"
-            size="sm"
-            className="h-auto p-0"
-            id="nc-doctor-reopen-toggle"
-            onClick={() => setReopenOpen((v) => !v)}
-          >
-            Reopen consult ({reopenableToday.length})
-          </Button>
-          {reopenOpen && (
-            <div id="nc-doctor-reopen-list" className="mt-2">
-              {reopenableToday.length === 0 ? (
-                <div className="text-sm text-[var(--oe-nc-text-muted)]">None sent out today</div>
-              ) : (
-                reopenableToday.map((row) => (
-                  <div
-                    key={row.id}
-                    className="flex items-start justify-between border-b py-1"
-                  >
-                    <div className="text-sm">
-                      <div>#{row.queue_number} {row.display_name}</div>
-                      <div className="text-[var(--oe-nc-text-muted)]">{row.state.replace(/_/g, ' ')}</div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="nc-doctor-reopen-btn border-amber-400 text-amber-800 hover:bg-amber-50"
-                      data-visit-id={row.id}
-                      onClick={() => onReopenClick(row)}
-                    >
-                      Reopen
-                    </Button>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="mt-3">
-        <Button
-          type="button"
-          variant="link"
-          size="sm"
-          className="h-auto p-0"
-          id="nc-doctor-done-toggle"
-          onClick={() => setDoneOpen((v) => !v)}
+        <details
+          className="nc-doctor-queue-archive"
+          id="nc-doctor-reopen-section"
+          open={reopenOpen}
+          onToggle={(e) => setReopenOpen((e.target as HTMLDetailsElement).open)}
         >
-          Done today ({doneToday.length})
-        </Button>
-        {doneOpen && (
-          <div id="nc-doctor-done-list" className="mt-2">
-            {doneToday.length === 0 ? (
-              <div className="text-sm text-[var(--oe-nc-text-muted)]">None yet today</div>
+          <summary className="nc-doctor-queue-archive__summary" id="nc-doctor-reopen-toggle">
+            Reopen today ({reopenableToday.length})
+          </summary>
+          <div id="nc-doctor-reopen-list" className="nc-doctor-queue-archive__body">
+            {reopenableToday.length === 0 ? (
+              <div className="nc-doctor-queue-archive__empty">None sent out today</div>
             ) : (
-              doneToday.map((row) => (
-                <div key={row.id} className="text-sm text-[var(--oe-nc-text-muted)] py-1">
-                  #{row.queue_number} {row.display_name}
+              reopenableToday.map((row) => (
+                <div key={row.id} className="nc-doctor-queue-archive__row">
+                  <div>
+                    <div className="nc-doctor-queue-archive__row-title">
+                      #{row.queue_number} {row.display_name}
+                    </div>
+                    <div className="nc-doctor-queue-archive__row-meta">
+                      {row.state.replace(/_/g, ' ')}
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="nc-doctor-reopen-btn"
+                    data-visit-id={row.id}
+                    onClick={() => onReopenClick(row)}
+                  >
+                    Reopen
+                  </Button>
                 </div>
               ))
             )}
           </div>
-        )}
-      </div>
-    </div>
+        </details>
+      )}
+
+      <details
+        className="nc-doctor-queue-archive"
+        open={doneOpen}
+        onToggle={(e) => setDoneOpen((e.target as HTMLDetailsElement).open)}
+      >
+        <summary className="nc-doctor-queue-archive__summary" id="nc-doctor-done-toggle">
+          Done today ({doneToday.length})
+        </summary>
+        <div id="nc-doctor-done-list" className="nc-doctor-queue-archive__body">
+          {doneToday.length === 0 ? (
+            <div className="nc-doctor-queue-archive__empty">None yet today</div>
+          ) : (
+            doneToday.map((row) => (
+              <div key={row.id} className="nc-doctor-queue-archive__row nc-doctor-queue-archive__row--static">
+                #{row.queue_number} {row.display_name}
+              </div>
+            ))
+          )}
+        </div>
+      </details>
+    </>
+  );
+}
+
+export function DoctorQueue({
+  cards,
+  queueHeaderExtra,
+  ...rest
+}: DoctorQueueProps) {
+  return (
+    <DoctorQueuePanel title="Waiting for doctor" count={cards.length}>
+      <DoctorQueueBody cards={cards} queueHeaderExtra={queueHeaderExtra} {...rest} />
+    </DoctorQueuePanel>
   );
 }

@@ -26,6 +26,8 @@ import type {
 } from '@core/types';
 import { CashierQueue } from './CashierQueue';
 import { CashierActivePane, type CashierActiveMode } from './CashierActivePane';
+import { CashierDeskLayout } from './cashierDeskUi';
+import { CashierMobileQueueBar, CashierMobileQueueSheet } from './CashierMobileQueueSheet';
 import { PayConfirmModal } from './PayConfirmModal';
 import { ReceiptModal } from './ReceiptModal';
 import { CloseZeroModal } from './CloseZeroModal';
@@ -44,6 +46,22 @@ import {
 import type { PatientSearchHint } from './PatientSearchPanel';
 
 const STORAGE_KEY = 'cashier_desk_active_visit_id';
+const NARROW_DESK_QUERY = '(max-width: 1023px)';
+
+function useNarrowCashierDesk(): boolean {
+  const [narrow, setNarrow] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(NARROW_DESK_QUERY).matches,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(NARROW_DESK_QUERY);
+    const update = () => setNarrow(mq.matches);
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  return narrow;
+}
 
 function selectToSignMeta(data: CashierSelectData, canEsignOverride: boolean): CashierSignMeta {
   return {
@@ -133,9 +151,12 @@ export function CashierDesk({
   const [markUnpaidOpen, setMarkUnpaidOpen] = useState(false);
   const [markUnpaidError, setMarkUnpaidError] = useState<string | null>(null);
   const [markUnpaidSubmitting, setMarkUnpaidSubmitting] = useState(false);
+  const [mobileQueueOpen, setMobileQueueOpen] = useState(false);
+  const narrowDesk = useNarrowCashierDesk();
 
   const queueSeq = useRef(0);
   const activeVisitIdRef = useRef<number | null>(null);
+  const modalOpenRef = useRef(false);
 
   const facilityParams = useMemo(
     () => (facilityId > 0 ? { facility_id: facilityId } : undefined),
@@ -176,6 +197,28 @@ export function CashierDesk({
     setSearchHint(null);
   }, [canApplyDiscount, canEsignOverride, canSkipCompletion, sharedSession]);
 
+  useEffect(() => {
+    modalOpenRef.current = esignOpen
+      || completionOverrideOpen
+      || discountOpen
+      || pickOpen
+      || payConfirmOpen
+      || closeZeroOpen
+      || markUnpaidOpen
+      || mobileQueueOpen
+      || receipt !== null;
+  }, [
+    esignOpen,
+    completionOverrideOpen,
+    discountOpen,
+    pickOpen,
+    payConfirmOpen,
+    closeZeroOpen,
+    markUnpaidOpen,
+    mobileQueueOpen,
+    receipt,
+  ]);
+
   const fetchQueue = useCallback(async () => {
     queueSeq.current += 1;
     const token = queueSeq.current;
@@ -206,7 +249,7 @@ export function CashierDesk({
               : prev
           );
         }
-        if (!match) resetActivePane();
+        if (!match && !modalOpenRef.current) resetActivePane();
       }
     } catch (err) {
       if (token !== queueSeq.current) return;
@@ -522,6 +565,7 @@ export function CashierDesk({
     : [];
 
   const esignOverrideAllowed = !!(signMeta?.can_esign_override ?? canEsignOverride);
+  const inCheckout = mode === 'checkout' || mode === 'loading';
 
   return (
     <div id="nc-cashier-desk" className="nc-cashier-react-active">
@@ -556,12 +600,58 @@ export function CashierDesk({
           { label: 'Paid today', value: counts?.paid_today ?? 0 },
         ]}
         loading={queueLoading}
-        onRefresh={() => { void fetchQueue(); }}
       />
 
-      <div className="grid grid-cols-12 gap-3">
-        <div className="col-span-12 lg:col-span-4 mb-3">
-          <CashierQueue
+      <div className="nc-cashier-desk">
+        <CashierDeskLayout
+          activePane={(
+            <CashierActivePane
+              mode={mode}
+              data={mergedSelectData}
+              staged={staged}
+              signMeta={signMeta}
+              visitBoardUrl={visitBoardUrl}
+              canMarkUnpaid={canMarkUnpaid}
+              esignOverrideAllowed={esignOverrideAllowed}
+              blocked={sharedSession.blocked}
+              posting={posting}
+              paneError={paneError}
+              onStagedChange={setStaged}
+              onPostCharges={() => void handlePostChargesClick()}
+              onTakePayment={handleTakePaymentClick}
+              onEsignOverride={handleEsignOverrideClick}
+              onMarkUnpaid={() => setMarkUnpaidOpen(true)}
+              onCloseZero={() => setCloseZeroOpen(true)}
+            />
+          )}
+          queue={(
+            <CashierQueue
+              ajaxUrl={ajaxUrl}
+              csrfToken={csrfToken}
+              cards={cards}
+              paidToday={paidToday ?? []}
+              loading={queueLoading}
+              error={queueError}
+              blocked={sharedSession.blocked}
+              searchHint={searchHint}
+              onSelectVisit={(card) => void selectVisit(card.id)}
+              onSelectPatient={(pid) => void handleResolvePatient(pid)}
+            />
+          )}
+        />
+      </div>
+
+      {narrowDesk && (
+        <>
+          <CashierMobileQueueBar
+            waitingCount={counts?.waiting ?? cards.length}
+            inCheckout={inCheckout}
+            onOpen={() => setMobileQueueOpen(true)}
+          />
+          <CashierMobileQueueSheet
+            open={mobileQueueOpen}
+            onClose={() => setMobileQueueOpen(false)}
+            waitingCount={counts?.waiting ?? cards.length}
             ajaxUrl={ajaxUrl}
             csrfToken={csrfToken}
             cards={cards}
@@ -573,29 +663,8 @@ export function CashierDesk({
             onSelectVisit={(card) => void selectVisit(card.id)}
             onSelectPatient={(pid) => void handleResolvePatient(pid)}
           />
-        </div>
-
-        <div className="col-span-12 lg:col-span-8 mb-3">
-          <CashierActivePane
-            mode={mode}
-            data={mergedSelectData}
-            staged={staged}
-            signMeta={signMeta}
-            visitBoardUrl={visitBoardUrl}
-            canMarkUnpaid={canMarkUnpaid}
-            esignOverrideAllowed={esignOverrideAllowed}
-            blocked={sharedSession.blocked}
-            posting={posting}
-            paneError={paneError}
-            onStagedChange={setStaged}
-            onPostCharges={() => void handlePostChargesClick()}
-            onTakePayment={handleTakePaymentClick}
-            onEsignOverride={handleEsignOverrideClick}
-            onMarkUnpaid={() => setMarkUnpaidOpen(true)}
-            onCloseZero={() => setCloseZeroOpen(true)}
-          />
-        </div>
-      </div>
+        </>
+      )}
 
       <PayConfirmModal
         open={payConfirmOpen}

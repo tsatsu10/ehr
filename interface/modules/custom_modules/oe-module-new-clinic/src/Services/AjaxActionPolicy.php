@@ -298,16 +298,21 @@ class AjaxActionPolicy
         'clinical_doc.catalog',
         'clinical_doc.sign_status',
         'clinical_doc.favorites',
-        'encounter_note.get',
-        'encounter_note.prefill',
     ];
 
     /** @var array<int, string> */
     private const CLINICAL_DOC_WRITE_ACTIONS = [
         'clinical_doc.open_form',
+    ];
+
+    /** @var array<int, string> */
+    private const ENCOUNTER_NOTE_ACTIONS = [
+        'encounter_note.get',
+        'encounter_note.prefill',
         'encounter_note.save',
         'encounter_note.validate',
         'encounter_note.sign',
+        'encounter_note.unlock',
     ];
 
     /** @var array<int, string> */
@@ -551,6 +556,10 @@ class AjaxActionPolicy
 
         if (in_array($action, self::REPORT_HUB_EXPORT_ACTIONS, true)) {
             return ['type' => 'report_hub_export_acl'];
+        }
+
+        if (in_array($action, self::ENCOUNTER_NOTE_ACTIONS, true)) {
+            return ['type' => 'encounter_note_acl'];
         }
 
         if (in_array($action, self::CLINICAL_DOC_READ_ACTIONS, true)) {

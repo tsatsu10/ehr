@@ -14,7 +14,6 @@ import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
 import { EsignOverrideModal } from '@components/EsignOverrideModal';
-import { SkipToPaymentModal } from '@components/SkipToPaymentModal';
 import { handleDeskCompleteResult } from '@core/deskCompleteAction';
 import { postDeskAction } from '@core/postDeskAction';
 import type {
@@ -25,10 +24,29 @@ import type {
 } from '@core/types';
 import { LabQueue } from './LabQueue';
 import { LabActivePane, type LabActiveMode } from './LabActivePane';
+import { LabDeskLayout } from './labDeskUi';
+import { LabMobileQueueBar, LabMobileQueueSheet } from './LabMobileQueueSheet';
 import { LabOpsResultDrawer } from '@islands/lab-ops/LabOpsResultDrawer';
 import { openClinicalDocForm } from '@islands/clinical-doc/clinicalDocApi';
+import { Button } from '@components/ui/button';
 
 const STORAGE_KEY = 'lab_desk_active_visit_id';
+const NARROW_DESK_QUERY = '(max-width: 1023px)';
+
+function useNarrowLabDesk(): boolean {
+  const [narrow, setNarrow] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(NARROW_DESK_QUERY).matches,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(NARROW_DESK_QUERY);
+    const update = () => setNarrow(mq.matches);
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  return narrow;
+}
 
 export function LabDesk({
   ajaxUrl,
@@ -40,7 +58,6 @@ export function LabDesk({
   labOpsEnabled = false,
   canEnterResults = false,
   canReleaseResults = false,
-  canSkipToPayment = false,
   sharedDeviceWarning = false,
   canEsignOverride = false,
 }: LabDeskProps) {
@@ -58,15 +75,17 @@ export function LabDesk({
   const [actionError, setActionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [skipOpen, setSkipOpen] = useState(false);
-  const [skipError, setSkipError] = useState<string | null>(null);
   const [esignOpen, setEsignOpen] = useState(false);
   const [labOpsDrawerOpen, setLabOpsDrawerOpen] = useState(false);
   const [labOpsOrderId, setLabOpsOrderId] = useState<number | null>(null);
+  const [mobileQueueOpen, setMobileQueueOpen] = useState(false);
+  const narrowDesk = useNarrowLabDesk();
 
   const queueSeq = useRef(0);
   const activeVisitIdRef = useRef<number | null>(null);
+  const activeWorkStateRef = useRef<LabSelectData['visit']['state'] | null>(null);
   const hasActiveWorkRef = useRef(false);
+  const modalOpenRef = useRef(false);
 
   const facilityParams = useMemo(
     () => (facilityId > 0 ? { facility_id: facilityId } : undefined),
@@ -78,6 +97,7 @@ export function LabDesk({
     setSelectData(null);
     setActionError(null);
     activeVisitIdRef.current = null;
+    activeWorkStateRef.current = null;
     clearDeskActiveVisitId(STORAGE_KEY);
   }, []);
 
@@ -108,7 +128,12 @@ export function LabDesk({
     setInterrupt(null);
     sharedSession.setActiveVisitId(data.visit.id);
     activeVisitIdRef.current = data.visit.id;
+    activeWorkStateRef.current = data.visit.state;
   }, [sharedSession]);
+
+  useEffect(() => {
+    modalOpenRef.current = esignOpen || labOpsDrawerOpen || mobileQueueOpen;
+  }, [esignOpen, labOpsDrawerOpen, mobileQueueOpen]);
 
   const fetchQueue = useCallback(async () => {
     queueSeq.current += 1;
@@ -146,7 +171,8 @@ export function LabDesk({
           );
         }
         const stillMine = data.active_work?.id === activeId;
-        if (!match && !stillMine) {
+        const workLocallyActive = activeWorkStateRef.current === 'in_lab';
+        if (!match && !stillMine && !workLocallyActive && !modalOpenRef.current) {
           resetActivePane();
           setHasActiveWork(!!data.has_active_work);
           hasActiveWorkRef.current = !!data.has_active_work;
@@ -308,43 +334,6 @@ export function LabDesk({
     });
   }, [ajaxUrl, canEsignOverride, csrfToken, facilityId, resetActivePane, selectData, sharedSession, submitting]);
 
-  const handleSkip = useCallback(async (reason: string) => {
-    if (!selectData || submitting) return;
-
-    setSubmitting(true);
-    setSkipError(null);
-
-    try {
-      await oeFetch('lab.skip_to_payment', {
-        ajaxUrl,
-        csrfToken,
-        method: 'POST',
-        json: {
-          visit_id: selectData.visit.id,
-          row_version: selectData.visit.row_version ?? 0,
-          reason,
-        },
-      });
-      setSkipOpen(false);
-      resetActivePane();
-      setHasActiveWork(false);
-      hasActiveWorkRef.current = false;
-      void fetchQueueRef.current();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Skip failed';
-      setSkipError(msg);
-      if (msg.toLowerCase().includes('not on the lab queue')) {
-        setSkipOpen(false);
-        resetActivePane();
-        setHasActiveWork(false);
-        hasActiveWorkRef.current = false;
-        void fetchQueueRef.current();
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  }, [ajaxUrl, csrfToken, resetActivePane, selectData, submitting]);
-
   const runShortcut = useCallback(async (shortcut: string) => {
     if (!selectData || sharedSession.blocked) return;
 
@@ -441,58 +430,68 @@ export function LabDesk({
           { label: 'In lab', value: counts?.in_lab ?? 0 },
         ]}
         loading={queueLoading}
-        onRefresh={() => { void fetchQueue(); }}
+        trailing={labOpsUrl ? (
+          <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs" asChild>
+            <a href={labOpsUrl} target="_top">
+              Lab Operations
+            </a>
+          </Button>
+        ) : undefined}
       />
 
-      <div className="grid grid-cols-12 gap-3">
-        <div className="col-span-12 lg:col-span-4 mb-3">
-          <LabQueue
+      <div className="nc-lab-desk">
+        <LabDeskLayout
+          activePane={(
+            <LabActivePane
+              mode={mode}
+              data={selectData}
+              hasActiveWork={hasActiveWork}
+              labOpsEnabled={labOpsEnabled}
+              visitBoardUrl={visitBoardUrl}
+              blocked={sharedSession.blocked}
+              actionError={actionError}
+              submitting={submitting}
+              onTakePatient={() => {
+                if (selectData) void takePatient(selectData.visit.id, selectData.visit.row_version ?? 0);
+              }}
+              onComplete={() => void handleComplete()}
+              onOpenOrders={() => void runShortcut('orders')}
+              onOpenResults={handleOpenResults}
+              onOpenLabIntake={() => void handleOpenLabIntake()}
+              onCreateLabOrder={handleCreateLabOrder}
+            />
+          )}
+          queue={(
+            <LabQueue
+              cards={cards}
+              hasActiveWork={hasActiveWork}
+              loading={queueLoading}
+              error={queueError}
+              onSelectVisit={(card) => void selectVisit(card.id)}
+            />
+          )}
+        />
+      </div>
+
+      {narrowDesk && !hasActiveWork && (
+        <>
+          <LabMobileQueueBar
+            waitingCount={counts?.waiting ?? cards.length}
+            hasActiveWork={hasActiveWork}
+            onOpen={() => setMobileQueueOpen(true)}
+          />
+          <LabMobileQueueSheet
+            open={mobileQueueOpen}
+            onClose={() => setMobileQueueOpen(false)}
+            waitingCount={counts?.waiting ?? cards.length}
             cards={cards}
             hasActiveWork={hasActiveWork}
             loading={queueLoading}
             error={queueError}
-            labOpsUrl={labOpsUrl}
             onSelectVisit={(card) => void selectVisit(card.id)}
           />
-        </div>
-
-        <div className="col-span-12 lg:col-span-8 mb-3">
-          <LabActivePane
-            mode={mode}
-            data={selectData}
-            hasActiveWork={hasActiveWork}
-            labOpsEnabled={labOpsEnabled}
-            canSkipToPayment={canSkipToPayment}
-            visitBoardUrl={visitBoardUrl}
-            blocked={sharedSession.blocked}
-            actionError={actionError}
-            submitting={submitting}
-            onTakePatient={() => {
-              if (selectData) void takePatient(selectData.visit.id, selectData.visit.row_version ?? 0);
-            }}
-            onComplete={() => void handleComplete()}
-            onSkip={() => setSkipOpen(true)}
-            onOpenOrders={() => void runShortcut('orders')}
-            onOpenResults={handleOpenResults}
-            onOpenLabIntake={() => void handleOpenLabIntake()}
-            onCreateLabOrder={handleCreateLabOrder}
-          />
-        </div>
-      </div>
-
-      <SkipToPaymentModal
-        open={skipOpen}
-        preview={selectData?.preview ?? null}
-        visit={selectData?.visit ?? null}
-        deskLabel="lab"
-        submitting={submitting}
-        error={skipError}
-        onClose={() => {
-          setSkipOpen(false);
-          setSkipError(null);
-        }}
-        onConfirm={(reason) => void handleSkip(reason)}
-      />
+        </>
+      )}
 
       <EsignOverrideModal
         open={esignOpen}

@@ -12,32 +12,24 @@
 require_once __DIR__ . '/bootstrap.php';
 
 use OpenEMR\Modules\NewClinic\Controllers\PageController;
-use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocAccessService;
 use OpenEMR\Modules\NewClinic\Services\EncounterNoteService;
 use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 
-$config = new ClinicConfigService();
 $visitScope = new VisitScopeService();
 $sessionFacility = !empty($_SESSION['facilityId']) ? (int) $_SESSION['facilityId'] : null;
 $facilityId = $visitScope->resolveDeskFacilityId($sessionFacility);
 
-
-if (!$config->isEnabled('enable_clinical_doc_hub', 0, $facilityId)) {
+$encounterNote = new EncounterNoteService();
+if (!$encounterNote->isNativeEngineEnabled($facilityId)) {
     $webroot = $GLOBALS['webroot'] ?? '';
     header('Location: ' . $webroot . '/interface/patient_file/encounter/encounter_top.php', true, 302);
     exit;
 }
 
-if (!(new EncounterNoteService())->isNativeEngineEnabled($facilityId)) {
-    http_response_code(403);
-    echo xlt('Native encounter note engine is not enabled');
-    exit;
-}
-
 $access = new ClinicalDocAccessService();
 try {
-    $access->assertWriteAccess();
+    $access->assertConsultNoteAccess();
 } catch (\Throwable) {
     http_response_code(403);
     echo xlt('Access denied');
@@ -46,7 +38,6 @@ try {
 
 $visitId = (int) ($_GET['visit_id'] ?? 0);
 $formId = (int) ($_GET['form_id'] ?? 0);
-$encounterNote = new EncounterNoteService();
 if ($visitId <= 0 && $formId > 0) {
     $visitId = $encounterNote->resolveVisitIdFromFormsRow($formId);
 }

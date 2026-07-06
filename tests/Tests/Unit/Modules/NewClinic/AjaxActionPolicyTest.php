@@ -46,4 +46,13 @@ class AjaxActionPolicyTest extends TestCase
         $this->assertContains('new_admin', $policy->describe('doctor.routing.reassign')['acls'] ?? []);
         $this->assertContains('new_reception', $policy->describe('doctor.routing.reassign')['acls'] ?? []);
     }
+
+    public function testEncounterNoteActionsDoNotRequireClinicalDocHub(): void
+    {
+        $policy = new AjaxActionPolicy();
+
+        $this->assertSame('encounter_note_acl', $policy->describe('encounter_note.get')['type']);
+        $this->assertSame('encounter_note_acl', $policy->describe('encounter_note.save')['type']);
+        $this->assertSame('encounter_note_acl', $policy->describe('encounter_note.unlock')['type']);
+    }
 }

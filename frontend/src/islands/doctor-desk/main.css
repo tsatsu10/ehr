@@ -1,22 +1,791 @@
 /*
- * Doctor Desk island styles
+ * Doctor Desk island — consult workspace + queue
  *
- * CASCADE RULE: non-layered BEM CSS only (beats Bootstrap's unlayered styles).
- * Atom styles (nc-queue-card, etc.) live in components.css — do NOT duplicate.
+ * Non-layered BEM layout beats Bootstrap when Tailwind utilities lose cascade.
  */
 
 @import '../../core/tokens.css';
 @import '../../components/ui/ui-primitives.css';
+@import '../../core/desk-layout.css';
 
-.nc-doctor-queue-panel {
-  position: sticky;
-  top: 1rem;
+.nc-doctor-react-active {
+  width: 100%;
+  font-family: var(--font-sans, 'Noto Sans', system-ui, sans-serif);
+  color: var(--oe-nc-text, #1e293b);
 }
 
-#nc-doctor-active-pane .card {
-  min-height: 12rem;
+.nc-doctor-desk-layout {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+}
+
+.nc-doctor-desk-layout__active,
+.nc-doctor-desk-layout__queue {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .nc-doctor-desk-layout {
+    grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+    align-items: start;
+  }
+
+  .nc-doctor-desk-layout__queue {
+    position: sticky;
+    top: 1rem;
+  }
+}
+
+@media (max-width: 1023px) {
+  .nc-doctor-desk-layout__queue {
+    display: none;
+  }
+
+  .nc-doctor-react-active {
+    padding-bottom: 4.5rem;
+  }
+}
+
+/* Active consult shell */
+.nc-doctor-active-shell {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--oe-nc-border, #cbd5e1);
+  border-radius: 1rem;
+  background: var(--oe-nc-surface, #fff);
+  box-shadow: var(--oe-nc-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  overflow: hidden;
+}
+
+.nc-doctor-active-shell__content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.nc-doctor-active-shell__empty,
+.nc-doctor-active-shell__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 14rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.nc-doctor-active-shell__empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--color-oe-primary, #1e40af) 10%, white);
+  color: var(--color-oe-primary, #1e40af);
+}
+
+.nc-doctor-active-shell__empty-title {
+  margin: 0;
+  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--oe-nc-text, #1e293b);
+}
+
+.nc-doctor-active-shell__empty-message {
+  margin: 0;
+  max-width: 22rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-doctor-active-shell__loading {
+  flex-direction: row;
+  font-size: 0.875rem;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-doctor-active-shell__hero {
+  display: block;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--oe-nc-border, #cbd5e1);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-oe-primary, #1e40af) 6%, white),
+    var(--oe-nc-surface, #fff)
+  );
+}
+
+.nc-doctor-active-shell__hero-title {
+  margin: 0;
+  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--oe-nc-text, #1e293b);
+}
+
+.nc-doctor-active-shell__hero-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-doctor-active-section {
+  display: block;
+  width: 100%;
+}
+
+.nc-doctor-active-section__header {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.nc-doctor-active-section__title {
+  display: block;
+  margin: 0;
+  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--oe-nc-text, #1e293b);
+}
+
+.nc-doctor-active-section__description {
+  display: block;
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-doctor-active-section__body {
+  display: block;
+  width: 100%;
+}
+
+.nc-doctor-active-shell__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--oe-nc-border, #cbd5e1);
+}
+
+.nc-doctor-active-shell--with-sticky-footer .nc-doctor-active-shell__content {
+  padding-bottom: 0.5rem;
+}
+
+.nc-doctor-active-shell__sticky-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--oe-nc-border, #cbd5e1);
+  background: color-mix(in srgb, var(--oe-nc-surface, #fff) 92%, transparent);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.06);
+}
+
+/* Slim banner — allergies + clinical meta only (hero owns identity) */
+.nc-doctor-patient-banner--slim .nc-doctor-banner-meta {
+  margin-top: 0;
+}
+
+/* Mobile queue affordance */
+.nc-doctor-mobile-queue-bar {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .nc-doctor-mobile-queue-bar {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--oe-nc-border, #cbd5e1);
+    background: var(--oe-nc-surface, #fff);
+    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08);
+  }
+
+  .nc-doctor-mobile-queue-bar__btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Queue card badge density */
+.nc-doctor-queue-card__header-line {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .nc-doctor-queue-card__header-line {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
+  }
+}
+
+.nc-doctor-queue-card__badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.nc-doctor-queue-card__badges-more {
+  display: inline-block;
+}
+
+.nc-doctor-queue-card__badges-more-trigger {
+  display: inline-block;
+  padding: 0.125rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--oe-nc-text-muted, #64748b);
+  background: var(--oe-nc-bg-tint, #f8fafc);
+  cursor: pointer;
+  list-style: none;
+}
+
+.nc-doctor-queue-card__badges-more-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.nc-doctor-queue-card__badges-overflow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+}
+
+/* Shortcut primary row + more links */
+.nc-doctor-shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.nc-doctor-shortcuts__primary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .nc-doctor-shortcuts__primary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.nc-doctor-shortcut-primary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 3.25rem;
+  padding: 0.65rem 0.5rem;
+  border: 1px solid var(--oe-nc-border, #cbd5e1);
+  border-radius: 0.75rem;
+  background: var(--oe-nc-surface, #fff);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--oe-nc-text, #1e293b);
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.nc-doctor-shortcut-primary:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-oe-primary, #1e40af) 35%, var(--oe-nc-border));
+  background: color-mix(in srgb, var(--color-oe-primary, #1e40af) 5%, white);
+}
+
+.nc-doctor-shortcut-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.nc-doctor-shortcut-primary__icon {
+  color: var(--color-oe-primary, #1e40af);
+}
+
+.nc-doctor-shortcut-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.5rem;
+  background: var(--oe-nc-bg-tint, #f8fafc);
+  font-size: 0.8125rem;
+}
+
+.nc-doctor-shortcut-more--disabled {
+  opacity: 0.65;
+}
+
+.nc-doctor-shortcut-more__label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-doctor-shortcut-more__link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-oe-primary, #1e40af);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.nc-doctor-shortcut-more__link:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* On-duty toggle (status bar) */
+.nc-doctor-duty-toggle--on {
+  border-color: color-mix(in srgb, #059669 40%, var(--oe-nc-border));
+  background: color-mix(in srgb, #059669 8%, white);
+}
+
+.nc-doctor-duty-toggle__dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+}
+
+.nc-doctor-duty-toggle__dot--on {
+  background: #059669;
+}
+
+.nc-doctor-duty-toggle__dot--off {
+  background: #94a3b8;
+}
+
+/* Team roster (collapsible in queue) */
+.nc-doctor-team-roster {
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--oe-nc-border, #cbd5e1);
+  border-radius: 0.5rem;
+  background: var(--oe-nc-bg-tint, #f8fafc);
+  font-size: 0.8125rem;
+}
+
+.nc-doctor-team-roster__summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--oe-nc-text, #1e293b);
+  list-style: none;
+}
+
+.nc-doctor-team-roster__summary::-webkit-details-marker {
+  display: none;
+}
+
+.nc-doctor-team-roster__list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.nc-doctor-team-roster__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--oe-nc-border, #cbd5e1);
+}
+
+.nc-doctor-team-roster__row:first-child {
+  border-top: 0;
+}
+
+.nc-doctor-team-roster__name {
+  font-weight: 600;
+}
+
+.nc-doctor-team-roster__you {
+  font-weight: 400;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-doctor-team-roster__meta {
+  color: var(--oe-nc-text-muted, #64748b);
+  font-size: 0.75rem;
+}
+
+.nc-doctor-team-roster__status--on {
+  color: #059669;
+  font-weight: 600;
+}
+
+/* Queue panel header count */
+.nc-doctor-queue-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--oe-nc-border, #cbd5e1);
+  background: var(--oe-nc-bg-tint, #f8fafc);
+}
+
+.nc-doctor-queue-panel__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-oe-primary, #1e40af);
+  background: color-mix(in srgb, var(--color-oe-primary, #1e40af) 12%, white);
+}
+
+/* Queue cards */
+.nc-doctor-queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nc-doctor-queue-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--oe-nc-border, #cbd5e1);
+  border-radius: 0.75rem;
+  background: var(--oe-nc-surface, #fff);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.nc-doctor-queue-card:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-oe-primary, #1e40af) 30%, var(--oe-nc-border));
+  box-shadow: var(--oe-nc-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+}
+
+.nc-doctor-queue-card--urgent {
+  border-color: color-mix(in srgb, #ea580c 45%, var(--oe-nc-border));
+  background: color-mix(in srgb, #ea580c 4%, white);
+}
+
+.nc-doctor-queue-card--claim-lost,
+.nc-doctor-queue-card--disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.nc-doctor-queue-card__number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-oe-primary, #1e40af);
+  background: color-mix(in srgb, var(--color-oe-primary, #1e40af) 10%, white);
+}
+
+.nc-doctor-queue-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.nc-doctor-queue-card__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.nc-doctor-queue-card__name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--oe-nc-text, #1e293b);
+}
+
+.nc-doctor-queue-card__meta {
+  font-size: 0.75rem;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-doctor-queue-card__cc {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--oe-nc-text, #1e293b);
+}
+
+.nc-doctor-queue-card__take {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-oe-primary, #1e40af);
+  white-space: nowrap;
+}
+
+.nc-doctor-queue-hint {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-doctor-queue-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 0.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-doctor-queue-empty__sub {
+  font-size: 0.75rem;
+}
+
+.nc-doctor-queue-archive {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--oe-nc-border, #cbd5e1);
+}
+
+.nc-doctor-queue-archive__summary {
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-oe-primary, #1e40af);
+  list-style: none;
+}
+
+.nc-doctor-queue-archive__summary::-webkit-details-marker {
+  display: none;
+}
+
+.nc-doctor-queue-archive__body {
+  margin-top: 0.5rem;
+}
+
+.nc-doctor-queue-archive__empty {
+  font-size: 0.8125rem;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-doctor-queue-archive__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--oe-nc-border, #cbd5e1);
+  font-size: 0.8125rem;
+}
+
+.nc-doctor-queue-archive__row--static {
+  color: var(--oe-nc-text-muted, #64748b);
+  border-bottom: 0;
+}
+
+.nc-doctor-queue-archive__row-title {
+  font-weight: 500;
+}
+
+.nc-doctor-queue-archive__row-meta {
+  font-size: 0.75rem;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-doctor-reopen-btn {
+  border-color: #fbbf24;
+  color: #92400e;
+}
+
+/* Patient banner meta — vertical stacks, not inline runs */
+.nc-doctor-banner-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.nc-doctor-banner-meta__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+@media (min-width: 640px) {
+  .nc-doctor-banner-meta__row--inline {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.75rem;
+  }
+}
+
+.nc-doctor-banner-meta__label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-doctor-banner-meta__value {
+  display: block;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--oe-nc-text, #1e293b);
+}
+
+/* Shortcut action grid */
+.nc-doctor-shortcuts__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+@media (min-width: 480px) {
+  .nc-doctor-shortcuts__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .nc-doctor-shortcuts__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.nc-doctor-shortcut-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--oe-nc-border, #cbd5e1);
+  border-radius: 0.75rem;
+  background: var(--oe-nc-surface, #fff);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: left;
+  color: var(--oe-nc-text, #1e293b);
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.nc-doctor-shortcut-tile:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-oe-primary, #1e40af) 35%, var(--oe-nc-border));
+  background: var(--oe-nc-bg-tint, #f8fafc);
+}
+
+.nc-doctor-shortcut-tile:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.nc-doctor-shortcut-tile--primary {
+  border-color: color-mix(in srgb, var(--color-oe-primary, #1e40af) 30%, var(--oe-nc-border));
+  background: color-mix(in srgb, var(--color-oe-primary, #1e40af) 6%, white);
+}
+
+.nc-doctor-shortcut-tile__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-oe-primary, #1e40af);
+}
+
+.nc-doctor-shortcut-tile__hint {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+/* Queue panel */
+.nc-doctor-queue-panel {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--oe-nc-border, #cbd5e1);
+  border-radius: 1rem;
+  background: var(--oe-nc-surface, #fff);
+  box-shadow: var(--oe-nc-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+}
+
+.nc-doctor-queue-panel__title {
+  margin: 0;
+  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--oe-nc-text, #1e293b);
+}
+
+.nc-doctor-queue-panel__body {
+  display: block;
+  padding: 0.75rem;
+}
+
+#nc-doctor-queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .nc-doctor-react-active .modal-backdrop {
-  display: block !important;
+  display: none !important;
 }

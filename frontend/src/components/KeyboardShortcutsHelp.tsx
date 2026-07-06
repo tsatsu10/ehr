@@ -2,7 +2,7 @@
  * Keyboard shortcuts help modal — shows available shortcuts when ? is pressed
  */
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, dialogContentSizeClass } from '@components/ui/dialog';
 import { Keyboard, Command } from 'lucide-react';
 
 interface KeyboardShortcut {
@@ -84,7 +84,7 @@ export function KeyboardShortcutsHelp({ contextShortcuts = [] }: KeyboardShortcu
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className={dialogContentSizeClass.lg}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Keyboard className="h-5 w-5" />

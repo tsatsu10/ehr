@@ -1,0 +1,66 @@
+---
+description: Backend verification gate for New Clinic PHP — especially after Cursor iOS sessions
+globs: interface/modules/custom_modules/oe-module-new-clinic/src/**/*.php
+alwaysApply: false
+---
+
+# New Clinic — Mobile / Backend Verification Gate
+
+Cursor on iOS cannot easily watch Apache logs, curl `ajax.php`, or run multi-file
+smoke tests. **Backend PHP changes from mobile are draft until verified.**
+
+## Before you finish any backend PHP session
+
+1. Run the module verifier (desktop or any host with PHP CLI):
+   ```bash
+   php interface/modules/custom_modules/oe-module-new-clinic/scripts/verify-module.php --bootstrap
+   ```
+   Or from repo root: `composer verify:new-clinic`
+
+2. If verification cannot run on this device, **tell the user explicitly**:
+   > Run `composer verify:new-clinic` on desktop before using the app.
+
+3. End with a short desktop smoke reminder:
+   - Hard-refresh browser
+   - Open report hub + one desk
+   - Network tab: `ajax.php?action=queue.counts` should be **200**, not `ERR_CONNECTION_RESET`
+
+## Constructor rules (prevent stack overflow)
+
+Apache on Windows dies with exit `3221225725` when PHP hits infinite constructor recursion.
+
+- **Never** add `private readonly Foo $foo = new Foo()` if `Foo` (or its deps) might
+  eventually construct the current class.
+- Known hot cycle (already broken once):  
+  `DoctorService` ↔ `ClinicalDocDocumentationStatusService` ↔ `EncounterNoteService`
+- Prefer **lazy getters** for cross-cutting deps (`getDoctorService()`, `getConfig()`, etc.).
+- After touching any `__construct`, re-run the verifier — it scans all 149 module classes for cycles.
+
+## Import rules (AjaxController)
+
+`AjaxController` has 90+ constructor-injected services. A missing `use` line resolves
+to `OpenEMR\Modules\NewClinic\Controllers\SomeService` and fatals every `ajax.php` request.
+
+- Every `new XxxService()` / `readonly XxxService $` in a Controller **must** have a
+  matching `use OpenEMR\Modules\NewClinic\Services\XxxService;`
+- The verifier checks all files in `src/Controllers/`.
+
+## File hygiene
+
+- Do **not** delete, rename, or leave `.broken` / `.bak` copies of service files.
+- If a service is mid-refactor, keep one canonical `ClassName.php` on disk.
+
+## Scope discipline on mobile
+
+Avoid on iOS (do on desktop instead):
+
+- New service classes with deep dependency trees
+- `AjaxController` constructor changes
+- Encounter note + clinical doc + doctor queue refactors in one session
+
+Safe on iOS: single-file fixes, frontend islands, docs, config toggles.
+
+## Pair with big-picture-first
+
+When a change touches rendering, formatting, or data paths, still follow
+`new-clinic-big-picture-first.mdc` — grep every call site before shipping.

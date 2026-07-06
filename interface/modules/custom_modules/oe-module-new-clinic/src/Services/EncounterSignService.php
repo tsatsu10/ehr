@@ -104,11 +104,12 @@ class EncounterSignService
             return;
         }
 
-        $webroot = $GLOBALS['webroot'] ?? '';
         throw new UnsignedEncounterException(
             'Documentation must be signed before completing the consult',
             $this->getUnsignedReason($encounterId),
-            self::buildEncounterUrl($webroot, $pid, $encounterId)
+            is_array($visit)
+                ? $this->buildOpenUrlForVisit($visit)
+                : self::buildEncounterUrl($GLOBALS['webroot'] ?? '', $pid, $encounterId)
         );
     }
 
@@ -136,12 +137,11 @@ class EncounterSignService
         }
         $pid = (int) ($visit['pid'] ?? 0);
         $encounterId = (int) ($visit['encounter'] ?? 0);
-        $webroot = $GLOBALS['webroot'] ?? '';
 
         throw new UnsignedEncounterException(
             $this->getProfileUnsignedReason($visitId),
             'unsigned_encounter',
-            $encounterId > 0 ? self::buildEncounterUrl($webroot, $pid, $encounterId) : null
+            $encounterId > 0 ? $this->buildOpenUrlForVisit($visit) : null
         );
     }
 
@@ -296,6 +296,25 @@ class EncounterSignService
         return $webroot . '/interface/patient_file/encounter/encounter_top.php?set_pid='
             . urlencode((string) $pid)
             . '&set_encounter=' . urlencode((string) $encounterId);
+    }
+
+    /**
+     * @param array<string, mixed> $visit
+     * @param array<string, mixed> $query
+     */
+    public function buildOpenUrlForVisit(array $visit, array $query = []): string
+    {
+        return $this->getEncounterNoteService()->buildOpenUrlForVisit($visit, $query);
+    }
+
+    private function getEncounterNoteService(): EncounterNoteService
+    {
+        static $service = null;
+        if ($service === null) {
+            $service = new EncounterNoteService();
+        }
+
+        return $service;
     }
 
     /**

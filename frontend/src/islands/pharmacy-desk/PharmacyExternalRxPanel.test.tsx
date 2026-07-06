@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { PharmacyExternalRxPanel } from './PharmacyExternalRxPanel';
 import type { PharmacyExternalRxStatus } from '@core/types';
 
@@ -20,19 +20,11 @@ const baseStatus: PharmacyExternalRxStatus = {
 };
 
 describe('PharmacyExternalRxPanel', () => {
-  it('shows warning and opens pharmacy service note', () => {
-    const onOpenPharmacyService = vi.fn();
+  it('shows warning when metadata is incomplete', () => {
+    render(<PharmacyExternalRxPanel status={baseStatus} />);
 
-    render(
-      <PharmacyExternalRxPanel
-        status={baseStatus}
-        onOpenPharmacyService={onOpenPharmacyService}
-      />,
-    );
-
-    expect(screen.getByText(/External paper Rx metadata/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Start pharmacy service note/i }));
-    expect(onOpenPharmacyService).toHaveBeenCalled();
+    expect(screen.getByText(/External paper Rx/i)).toBeInTheDocument();
+    expect(screen.getByText(/Complete required fields on the service note/i)).toBeInTheDocument();
   });
 
   it('shows complete badge when metadata is valid', () => {
@@ -48,7 +40,6 @@ describe('PharmacyExternalRxPanel', () => {
             rx_date: '2026-01-15',
           },
         }}
-        onOpenPharmacyService={() => {}}
       />,
     );
 

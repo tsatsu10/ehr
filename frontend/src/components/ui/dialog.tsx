@@ -10,16 +10,14 @@ export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogPortal = DialogPrimitive.Portal;
 
-const overlayClass =
-  'fixed inset-0 z-[1050] bg-slate-900/45 motion-reduce:transition-none';
+const overlayClass = 'nc-radix-dialog-overlay motion-reduce:transition-none';
 
-const contentClass =
-  'fixed left-1/2 top-1/2 z-[1051] flex max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg border border-[var(--oe-nc-border,#e2e8f0)] bg-white shadow-lg outline-none';
+const contentClass = 'nc-radix-dialog-content';
 
 export const dialogContentSizeClass = {
-  sm: 'max-w-md',
-  lg: 'max-w-3xl',
-  confirm: 'max-w-lg',
+  sm: 'nc-radix-dialog-content--sm',
+  lg: 'nc-radix-dialog-content--lg',
+  confirm: 'nc-radix-dialog-content--confirm',
 } as const;
 
 export type DialogContentSize = keyof typeof dialogContentSizeClass;
@@ -27,7 +25,7 @@ export type DialogContentSize = keyof typeof dialogContentSizeClass;
 export const dialogCloseClass =
   'inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded border-0 bg-transparent text-xl leading-none text-[var(--oe-nc-text-muted)] hover:bg-[var(--oe-nc-bg-tint,#eff6ff)] hover:text-[var(--oe-nc-text)] focus-visible:outline-none focus-visible:shadow-[var(--oe-nc-focus-ring)]';
 
-export const dialogBodyClass = 'overflow-y-auto px-5 py-4';
+export const dialogBodyClass = 'nc-radix-dialog-body';
 
 export const DialogOverlay = forwardRef<
   ElementRef<typeof DialogPrimitive.Overlay>,
@@ -43,7 +41,11 @@ export const DialogContent = forwardRef<
 >(({ className, children, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
-    <DialogPrimitive.Content ref={ref} className={cn(contentClass, className)} {...props}>
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(contentClass, className ?? dialogContentSizeClass.confirm)}
+      {...props}
+    >
       {children}
     </DialogPrimitive.Content>
   </DialogPortal>
@@ -51,23 +53,11 @@ export const DialogContent = forwardRef<
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 export const DialogHeader = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn(
-      'flex items-center justify-between gap-3 border-b border-[var(--oe-nc-border,#e2e8f0)] px-5 py-4',
-      className,
-    )}
-    {...props}
-  />
+  <div className={cn('nc-radix-dialog-header', className)} {...props} />
 );
 
 export const DialogFooter = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn(
-      'flex flex-wrap justify-end gap-2 border-t border-[var(--oe-nc-border,#e2e8f0)] px-5 py-3 pb-4',
-      className,
-    )}
-    {...props}
-  />
+  <div className={cn('nc-radix-dialog-footer', className)} {...props} />
 );
 
 export const DialogBody = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => (
@@ -81,7 +71,7 @@ export const DialogTitle = forwardRef<
   <DialogPrimitive.Title
     ref={ref}
     className={cn(
-      'font-display m-0 text-lg font-semibold leading-tight text-[var(--oe-nc-text,#111827)]',
+      'nc-radix-dialog-title font-display',
       className,
     )}
     {...props}

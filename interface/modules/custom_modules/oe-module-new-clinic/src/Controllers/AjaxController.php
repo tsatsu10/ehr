@@ -84,6 +84,7 @@ use OpenEMR\Modules\NewClinic\Services\ClinicAdminService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\SessionRoleService;
 use OpenEMR\Modules\NewClinic\Services\EncounterNoteService;
+use OpenEMR\Modules\NewClinic\Services\EncounterSessionService;
 use OpenEMR\Modules\NewClinic\Services\SharedDeviceSessionService;
 use OpenEMR\Modules\NewClinic\Services\PatientActivityFeedService;
 use OpenEMR\Modules\NewClinic\Services\PatientChartClinicalService;
@@ -127,6 +128,16 @@ class AjaxController
     /** @var array<string, mixed>|null */
     private ?array $jsonBodyCache = null;
 
+    private ?ClinicalDocCatalogService $clinicalDocCatalogService = null;
+
+    private function getClinicalDocCatalogService(): ClinicalDocCatalogService
+    {
+        if ($this->clinicalDocCatalogService === null) {
+            $this->clinicalDocCatalogService = new ClinicalDocCatalogService();
+        }
+        return $this->clinicalDocCatalogService;
+    }
+
     public function __construct(
         private readonly VisitQueueService $visitQueueService = new VisitQueueService(),
         private readonly VisitBoardService $visitBoardService = new VisitBoardService(),
@@ -158,7 +169,6 @@ class AjaxController
         private readonly ReportHubCatalogService $reportHubCatalogService = new ReportHubCatalogService(),
         private readonly ReportHubExportService $reportHubExportService = new ReportHubExportService(),
         private readonly ClinicalDocAccessService $clinicalDocAccessService = new ClinicalDocAccessService(),
-        private readonly ClinicalDocCatalogService $clinicalDocCatalogService = new ClinicalDocCatalogService(),
         private readonly ClinicalDocVisitSummaryService $clinicalDocVisitSummaryService = new ClinicalDocVisitSummaryService(),
         private readonly ClinicalDocFormOpenService $clinicalDocFormOpenService = new ClinicalDocFormOpenService(),
         private readonly EncounterNoteService $encounterNoteService = new EncounterNoteService(),
@@ -2162,7 +2172,7 @@ class AjaxController
                     if ($lens === '') {
                         $lens = null;
                     }
-                    $this->respond(true, 'ok', $this->clinicalDocCatalogService->getCatalog($lens, $facilityId));
+                    $this->respond(true, 'ok', $this->getClinicalDocCatalogService()->getCatalog($lens, $facilityId));
                     break;
                 case 'clinical_doc.sign_status':
                     $this->clinicalDocAccessService->assertHubAccess();
@@ -2194,7 +2204,6 @@ class AjaxController
                     }
                     break;
                 case 'encounter_note.get':
-                    $this->clinicalDocAccessService->assertWriteAccess();
                     $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
                     if ($visitId <= 0) {
                         $this->respond(false, 'visit_id required', [], 400);
@@ -2226,7 +2235,6 @@ class AjaxController
                     }
                     break;
                 case 'encounter_note.prefill':
-                    $this->clinicalDocAccessService->assertWriteAccess();
                     $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
                     if ($visitId <= 0) {
                         $this->respond(false, 'visit_id required', [], 400);
@@ -3358,6 +3366,7 @@ class AjaxController
             'scheduling_write_acl' => $this->requireSchedulingWriteAcl(),
             'clinical_doc_read_acl' => $this->requireClinicalDocReadAcl(),
             'clinical_doc_write_acl' => $this->requireClinicalDocWriteAcl(),
+            'encounter_note_acl' => $this->requireEncounterNoteAcl(),
             'deprecated' => $this->respond(
                 false,
                 'Use role-specific workflow actions (triage, doctor, cashier)',
@@ -3630,6 +3639,15 @@ class AjaxController
     {
         try {
             $this->clinicalDocAccessService->assertWriteAccess();
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requireEncounterNoteAcl(): void
+    {
+        try {
+            $this->clinicalDocAccessService->assertConsultNoteAccess();
         } catch (\RuntimeException $e) {
             $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
         }

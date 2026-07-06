@@ -20,19 +20,42 @@ class EncounterNoteEnginePolicy
     public const ENGINE_LEGACY = 'legacy';
     public const ENGINE_NATIVE = 'native';
 
+    private ?ClinicConfigService $config = null;
+    private ?VisitScopeService $visitScope = null;
+
     public function __construct(
-        private readonly ClinicConfigService $config = new ClinicConfigService(),
-        private readonly VisitScopeService $visitScope = new VisitScopeService(),
+        ?ClinicConfigService $config = null,
+        ?VisitScopeService $visitScope = null,
     ) {
+        $this->config = $config;
+        $this->visitScope = $visitScope;
+    }
+
+    private function getConfig(): ClinicConfigService
+    {
+        if ($this->config === null) {
+            $this->config = new ClinicConfigService();
+        }
+
+        return $this->config;
+    }
+
+    private function getVisitScope(): VisitScopeService
+    {
+        if ($this->visitScope === null) {
+            $this->visitScope = new VisitScopeService();
+        }
+
+        return $this->visitScope;
     }
 
     public function isNativeEngineEnabled(?int $facilityId = null): bool
     {
         if ($facilityId === null || $facilityId <= 0) {
-            $facilityId = $this->visitScope->resolveDeskFacilityId();
+            $facilityId = $this->getVisitScope()->resolveDeskFacilityId();
         }
 
-        $engine = strtolower(trim((string) ($this->config->get(
+        $engine = strtolower(trim((string) ($this->getConfig()->get(
             'encounter_note_engine',
             self::ENGINE_LEGACY,
             $facilityId
@@ -47,7 +70,7 @@ class EncounterNoteEnginePolicy
             return self::NATIVE_FORMDIR;
         }
 
-        $formdir = strtolower(trim((string) ($this->config->get('consult_note_formdir', 'soap', $facilityId) ?? 'soap')));
+        $formdir = strtolower(trim((string) ($this->getConfig()->get('consult_note_formdir', 'soap', $facilityId) ?? 'soap')));
 
         return $formdir !== '' ? $formdir : 'soap';
     }
@@ -66,6 +89,6 @@ class EncounterNoteEnginePolicy
         $formdir = strtolower(trim($formdir));
 
         return $formdir === self::NATIVE_FORMDIR
-            || $formdir === strtolower(trim((string) ($this->config->get('consult_note_formdir', 'soap', $facilityId) ?? 'soap')));
+            || $formdir === strtolower(trim((string) ($this->getConfig()->get('consult_note_formdir', 'soap', $facilityId) ?? 'soap')));
     }
 }

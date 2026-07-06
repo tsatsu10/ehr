@@ -11,6 +11,9 @@
             "OpenEMR\\Modules\\NewClinic\\": "src/"
         }
     },
+    "scripts": {
+        "verify": "php scripts/verify-module.php --bootstrap"
+    },
     "extra": {
         "openemr": {
             "type": "custom-module",

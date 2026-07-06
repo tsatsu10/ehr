@@ -84,7 +84,7 @@ describe('PharmacyDesk', () => {
   it('shows idle placeholder while loading queue', async () => {
     mockFetch.mockReturnValue(new Promise(() => {}));
     render(<PharmacyDesk {...props} />);
-    expect(screen.getByText(/Select a patient from the pharmacy queue/i)).toBeInTheDocument();
+    expect(screen.getByText(/Choose a patient from the pharmacy queue/i)).toBeInTheDocument();
   });
 
   it('renders queue visits after poll', async () => {
@@ -132,7 +132,7 @@ describe('PharmacyDesk', () => {
     fireEvent.click(screen.getByText(/Ama Mensah/));
 
     await waitFor(() => {
-      expect(screen.getByText(/Prescriptions for this visit/)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /^Prescriptions$/i })).toBeInTheDocument();
     });
     expect(screen.getByRole('button', { name: /Pharmacy complete/i })).toBeInTheDocument();
     expect(screen.getByText(/Paracetamol 500mg/)).toBeInTheDocument();

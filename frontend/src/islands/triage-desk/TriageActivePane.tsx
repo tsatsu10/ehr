@@ -1,10 +1,7 @@
 /**
- * TriageActivePane — right column (8/12) of the triage desk.
+ * TriageActivePane — active work column for the triage desk.
  *
- * Orchestrates three modes:
- *  idle  — "Select a patient from the queue"
- *  form  — patient banner + vitals form (start_triage / save_vitals)
- *  saved — patient banner + saved panel (send_doctor / record another set)
+ * Modes: idle → loading → form → saved
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -18,10 +15,16 @@ import type {
 import { useVitalsValidation } from '@core/useVitalsValidation';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Button } from '@components/ui/button';
-import { Card, CardContent } from '@components/ui/card';
-import { PatientBanner } from './PatientBanner';
+import { TriagePatientBanner } from './TriagePatientBanner';
 import { VitalsForm } from './VitalsForm';
 import { VitalsSavedPanel } from './VitalsSavedPanel';
+import {
+  TriageActiveEmpty,
+  TriageActiveLoading,
+  TriageActiveSection,
+  TriageActiveShell,
+  TriageActiveStickyFooter,
+} from './triageDeskUi';
 
 export type ActiveMode = 'idle' | 'loading' | 'form' | 'saved';
 
@@ -89,8 +92,6 @@ export function TriageActivePane({
 
   const validation = useVitalsValidation(vitals, vitalsRules);
 
-  // Scroll to first invalid field AFTER the DOM has re-rendered with error classes.
-  // setSubmitted(true) triggers the re-render; this effect runs once it's committed.
   useEffect(() => {
     if (!submitted || validation.valid) return;
     const first = formRef.current?.querySelector<HTMLElement>('[class*="--oe-nc-danger"], .nc-vitals-warning');
@@ -111,114 +112,119 @@ export function TriageActivePane({
 
   const tempUnit = vitalsRules?.temperature_unit ?? '°C';
 
-  // ── Idle ────────────────────────────────────────────────────────────────
   if (mode === 'idle') {
-    return (
-      <Card id="nc-triage-active-pane">
-        <CardContent className="text-[var(--oe-nc-text-muted)] text-center py-5">
-          <em>Select a patient from the queue or use Find patient.</em>
-        </CardContent>
-      </Card>
-    );
+    return <TriageActiveEmpty />;
   }
 
-  // ── Loading ─────────────────────────────────────────────────────────────
   if (mode === 'loading') {
-    return (
-      <Card id="nc-triage-active-pane">
-        <CardContent>
-          <div className="nc-vb-skeleton mb-3" style={{ height: '5rem' }} aria-hidden="true" />
-          <div className="nc-vb-skeleton mb-2" aria-hidden="true" />
-          <div className="nc-vb-skeleton mb-2" style={{ height: '8rem' }} aria-hidden="true" />
-        </CardContent>
-      </Card>
-    );
+    return <TriageActiveLoading />;
   }
 
   if (!visit || !preview) return null;
 
-  // ── Form + Saved shared wrapper ─────────────────────────────────────────
-  return (
-    <Card id="nc-triage-active-pane">
-      <CardContent>
-        <PatientBanner preview={preview} visit={visit} chiefComplaint={chiefComplaint} />
+  const heroTitle = mode === 'saved'
+    ? `Vitals saved · #${visit.queue_number} ${preview.identity.display_name}`
+    : visit.state === 'waiting'
+      ? `Ready for triage · #${visit.queue_number} ${preview.identity.display_name}`
+      : `Active triage · #${visit.queue_number} ${preview.identity.display_name}`;
 
+  const heroSub = mode === 'saved'
+    ? 'Review vitals and send to doctor when ready'
+    : visit.state === 'waiting'
+      ? 'Start triage to record vitals'
+      : 'Record vitals and chief complaint';
+
+  return (
+    <TriageActiveShell className="nc-triage-active-shell--with-sticky-footer">
+      <header className="nc-triage-active-shell__hero">
+        <h2 className="nc-triage-active-shell__hero-title">{heroTitle}</h2>
+        <p className="nc-triage-active-shell__hero-sub">{heroSub}</p>
+      </header>
+
+      <div className="nc-triage-active-shell__content">
+        <TriagePatientBanner
+          preview={preview}
+          visit={visit}
+          chiefComplaint={chiefComplaint}
+        />
+
+        <TriageActiveSection title={mode === 'saved' ? 'Saved vitals' : 'Vitals'}>
+          {mode === 'saved' ? (
+            <VitalsSavedPanel
+              summary={buildVitalsSummary(savedVitals, tempUnit)}
+              warnings={warnings}
+              recordCount={recordCount}
+              savedAt={savedAt ?? new Date()}
+            />
+          ) : vitalsRules == null ? (
+            <div className={deskCalloutClass('warn', 'text-sm')} role="alert">
+              Vitals rules are still loading. Please wait a moment and try again.
+            </div>
+          ) : (
+            <VitalsForm
+              rules={vitalsRules}
+              values={vitals}
+              chiefComplaint={chiefComplaint}
+              fieldErrors={submitted ? validation.fields : {}}
+              onVitalChange={onVitalsChange}
+              onChiefComplaintChange={onChiefComplaintChange}
+              formRef={formRef}
+              formError={formError}
+            />
+          )}
+        </TriageActiveSection>
+      </div>
+
+      <TriageActiveStickyFooter>
         {mode === 'saved' ? (
-          <VitalsSavedPanel
-            summary={buildVitalsSummary(savedVitals, tempUnit)}
-            warnings={warnings}
-            recordCount={recordCount}
-            savedAt={savedAt ?? new Date()}
-          />
-        ) : vitalsRules == null ? (
-          <div className={deskCalloutClass('warn', 'text-sm')} role="alert">
-            Vitals rules are still loading. Please wait a moment and try again.
-          </div>
+          <>
+            <Button
+              type="button"
+              disabled={sending}
+              onClick={onSend}
+            >
+              {sending ? 'Sending…' : 'Send to doctor'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleReenter}
+            >
+              Record another set
+            </Button>
+          </>
         ) : (
-          <VitalsForm
-            rules={vitalsRules}
-            values={vitals}
-            chiefComplaint={chiefComplaint}
-            fieldErrors={submitted ? validation.fields : {}}
-            onVitalChange={onVitalsChange}
-            onChiefComplaintChange={onChiefComplaintChange}
-            formRef={formRef}
-            formError={formError}
-          />
+          <>
+            {visit.state === 'waiting' && (
+              <Button
+                type="button"
+                disabled={starting}
+                onClick={onStart}
+              >
+                {starting ? 'Starting…' : 'Start triage'}
+              </Button>
+            )}
+            {visit.state === 'in_triage' && (
+              <Button
+                type="button"
+                variant="cta"
+                disabled={saving}
+                onClick={handleSave}
+              >
+                {saving ? 'Saving…' : 'Save vitals'}
+              </Button>
+            )}
+          </>
         )}
 
-        {/* Actions */}
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {mode === 'saved' ? (
-            <>
-              <Button
-                type="button"
-                disabled={sending}
-                onClick={onSend}
-              >
-                {sending ? 'Sending…' : 'Send to doctor'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleReenter}
-              >
-                Record another set
-              </Button>
-            </>
-          ) : (
-            <>
-              {visit.state === 'waiting' && (
-                <Button
-                  type="button"
-                  disabled={starting}
-                  onClick={onStart}
-                >
-                  {starting ? 'Starting…' : 'Start triage'}
-                </Button>
-              )}
-              {visit.state === 'in_triage' && (
-                <Button
-                  type="button"
-                  variant="cta"
-                  disabled={saving}
-                  onClick={handleSave}
-                >
-                  {saving ? 'Saving…' : 'Save vitals'}
-                </Button>
-              )}
-            </>
-          )}
-
-          {visitBoardUrl && (
-            <Button variant="outline" size="sm" className="ml-auto" asChild>
-              <a href={visitBoardUrl} target="_top">
-                View on Visit Board
-              </a>
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+        {visitBoardUrl && (
+          <Button variant="outline" size="sm" className="ml-auto" asChild>
+            <a href={visitBoardUrl} target="_top">
+              View on Visit Board
+            </a>
+          </Button>
+        )}
+      </TriageActiveStickyFooter>
+    </TriageActiveShell>
   );
 }

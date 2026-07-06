@@ -250,23 +250,36 @@ export const HPI_PROMPTS: Array<{ key: keyof EncounterNoteHpiSection; label: str
   { key: 'relieving', label: 'Relieving', placeholder: 'What helps?' },
 ];
 
+export type EncounterSectionPhase = 'subjective' | 'objective' | 'assessment';
+
+export const ENCOUNTER_SECTION_PHASES: Record<
+  EncounterSectionPhase,
+  { label: string; hint: string }
+> = {
+  subjective: { label: 'Subjective', hint: 'History & symptoms' },
+  objective: { label: 'Objective', hint: 'Exam & data' },
+  assessment: { label: 'Assessment & plan', hint: 'Diagnosis & next steps' },
+};
+
 export const ENCOUNTER_SECTIONS: Array<{
   id: EncounterConsultSectionId;
   label: string;
+  shortLabel: string;
   description: string;
+  phase: EncounterSectionPhase;
 }> = [
-  { id: 'referral', label: 'Referral', description: 'Requesting clinician, service, and clinical question' },
-  { id: 'source', label: 'Source of information', description: 'Who provided the history for this visit' },
-  { id: 'cc', label: 'Chief complaint', description: 'One-line reason for visit' },
-  { id: 'hpi', label: 'History of present illness', description: 'OLDCARTS prompts + narrative' },
-  { id: 'ros', label: 'Review of systems', description: 'Pertinent systems checklist and negatives' },
-  { id: 'background', label: 'Background', description: 'PMH, meds, allergies, and social history from chart' },
-  { id: 'vitals', label: 'Vitals', description: 'Prefilled from triage — read only' },
-  { id: 'pe', label: 'Physical examination', description: 'General exam and specialty overlays' },
-  { id: 'data_reviewed', label: 'Data reviewed', description: 'Recent labs, imaging, and outside records' },
-  { id: 'problems', label: 'Assessment & plan', description: 'Problem-oriented diagnoses and linked actions' },
-  { id: 'follow_up', label: 'Follow-up', description: 'Return visit, callbacks, and communication plan' },
-  { id: 'attestation', label: 'Attestation', description: 'Author, supervisor review, and sign record' },
+  { id: 'referral', label: 'Referral', shortLabel: 'Referral', description: 'Requesting clinician, service, and clinical question', phase: 'subjective' },
+  { id: 'source', label: 'Source of information', shortLabel: 'Source', description: 'Who provided the history for this visit', phase: 'subjective' },
+  { id: 'cc', label: 'Chief complaint', shortLabel: 'Complaint', description: 'One-line reason for visit', phase: 'subjective' },
+  { id: 'hpi', label: 'History of present illness', shortLabel: 'HPI', description: 'Guided symptom prompts and narrative', phase: 'subjective' },
+  { id: 'ros', label: 'Review of systems', shortLabel: 'ROS', description: 'Pertinent systems checklist and negatives', phase: 'subjective' },
+  { id: 'background', label: 'Background', shortLabel: 'Background', description: 'PMH, meds, allergies, and social history from chart', phase: 'subjective' },
+  { id: 'vitals', label: 'Vitals', shortLabel: 'Vitals', description: 'Prefilled from triage — read only', phase: 'objective' },
+  { id: 'pe', label: 'Physical examination', shortLabel: 'Exam', description: 'General exam and specialty overlays', phase: 'objective' },
+  { id: 'data_reviewed', label: 'Data reviewed', shortLabel: 'Data', description: 'Recent labs, imaging, and outside records', phase: 'objective' },
+  { id: 'problems', label: 'Assessment & plan', shortLabel: 'A&P', description: 'Problem-oriented diagnoses and linked actions', phase: 'assessment' },
+  { id: 'follow_up', label: 'Follow-up', shortLabel: 'Follow-up', description: 'Return visit, callbacks, and communication plan', phase: 'assessment' },
+  { id: 'attestation', label: 'Attestation', shortLabel: 'Sign', description: 'Author, supervisor review, and sign record', phase: 'assessment' },
 ];
 
 export function emptyProblemRow(): EncounterProblemRow {

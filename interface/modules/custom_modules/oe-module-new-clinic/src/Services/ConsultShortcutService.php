@@ -79,7 +79,7 @@ class ConsultShortcutService
         $modulePublic = ($GLOBALS['webroot'] ?? '') . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
 
         $redirectUrl = match ($shortcut) {
-            'encounter' => $this->resolveEncounterShortcutUrl($visitId, $facilityId),
+            'encounter' => $this->resolveEncounterShortcutUrl($visit),
             'encounter_hub' => $modulePublic . 'clinical-doc/index.php?visit_id=' . urlencode((string) $visitId) . '&tab=visit',
             'lab' => $this->procedureOrderLinks->buildNewOrderUrl(
                 $pid,
@@ -98,16 +98,15 @@ class ConsultShortcutService
         ];
     }
 
-    private function resolveEncounterShortcutUrl(int $visitId, int $facilityId): string
+    /**
+     * @param array<string, mixed> $visit
+     */
+    private function resolveEncounterShortcutUrl(array $visit): string
     {
-        if ($this->encounterNote->isNativeEngineEnabled($facilityId)) {
-            return $this->encounterNote->buildPageUrl($visitId, [
-                'return_to' => 'doctor',
-                'tab' => 'consult',
-            ]);
-        }
-
-        return ($GLOBALS['webroot'] ?? '') . '/interface/patient_file/encounter/encounter_top.php';
+        return $this->encounterNote->buildOpenUrlForVisit($visit, [
+            'return_to' => 'doctor',
+            'tab' => 'consult',
+        ]);
     }
 
     private function assertRxAllergyOverrideAllowed(

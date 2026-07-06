@@ -15,10 +15,33 @@ use OpenEMR\Common\Database\QueryUtils;
 
 class VisitScopeService
 {
+    private ?FacilityScopeService $facilityScope = null;
+    private ?ClinicConfigService $config = null;
+
     public function __construct(
-        private readonly FacilityScopeService $facilityScope = new FacilityScopeService(),
-        private readonly ClinicConfigService $config = new ClinicConfigService(),
+        ?FacilityScopeService $facilityScope = null,
+        ?ClinicConfigService $config = null,
     ) {
+        $this->facilityScope = $facilityScope;
+        $this->config = $config;
+    }
+
+    private function getFacilityScope(): FacilityScopeService
+    {
+        if ($this->facilityScope === null) {
+            $this->facilityScope = new FacilityScopeService();
+        }
+
+        return $this->facilityScope;
+    }
+
+    private function getConfig(): ClinicConfigService
+    {
+        if ($this->config === null) {
+            $this->config = new ClinicConfigService();
+        }
+
+        return $this->config;
     }
 
     public function resolveActorFacilityId(?int $requestedFacilityId = null): int
@@ -63,12 +86,12 @@ class VisitScopeService
      */
     public function assertVisitAccessible(array $visit): void
     {
-        if (!$this->facilityScope->shouldFilterByFacility()) {
+        if (!$this->getFacilityScope()->shouldFilterByFacility()) {
             return;
         }
 
         $visitFacilityId = (int) ($visit['facility_id'] ?? 0);
-        $allowed = $this->facilityScope->getActorFacilityIds();
+        $allowed = $this->getFacilityScope()->getActorFacilityIds();
 
         if (empty($allowed)) {
             throw new \RuntimeException('Visit not accessible', 404);
@@ -90,11 +113,11 @@ class VisitScopeService
 
     public function assertFacilityAccessible(int $facilityId): void
     {
-        if (!$this->facilityScope->shouldFilterByFacility()) {
+        if (!$this->getFacilityScope()->shouldFilterByFacility()) {
             return;
         }
 
-        $allowed = $this->facilityScope->getActorFacilityIds();
+        $allowed = $this->getFacilityScope()->getActorFacilityIds();
         if (!in_array($facilityId, $allowed, true)) {
             throw new \RuntimeException('Facility not accessible', 403);
         }
@@ -249,7 +272,7 @@ class VisitScopeService
 
     private function shouldRunAggressiveOrphanRepair(): bool
     {
-        return $this->config->getInt('enable_aggressive_orphan_facility_repair', 0) === 1;
+        return $this->getConfig()->getInt('enable_aggressive_orphan_facility_repair', 0) === 1;
     }
 
     private function hasMultipleServiceLocations(): bool

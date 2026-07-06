@@ -17,7 +17,6 @@ import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
 import { UndispensedRxModal } from '@components/UndispensedRxModal';
 import { ExternalRxIncompleteModal } from '@components/ExternalRxIncompleteModal';
 import { EsignOverrideModal } from '@components/EsignOverrideModal';
-import { SkipToPaymentModal } from '@components/SkipToPaymentModal';
 import { handleDeskCompleteResult } from '@core/deskCompleteAction';
 import { postDeskAction } from '@core/postDeskAction';
 import type {
@@ -28,6 +27,8 @@ import type {
 } from '@core/types';
 import { PharmacyQueue } from './PharmacyQueue';
 import { PharmacyActivePane, type PharmacyActiveMode } from './PharmacyActivePane';
+import { PharmacyDeskLayout } from './pharmacyDeskUi';
+import { PharmacyMobileQueueBar, PharmacyMobileQueueSheet } from './PharmacyMobileQueueSheet';
 import type { OtcSaleInitialContext } from '../pharm-ops/pharmOpsTypes';
 import { printRxWithNotice } from '../pharm-ops/pharmOpsPrintRx';
 import { openClinicalDocForm } from '@islands/clinical-doc/clinicalDocApi';
@@ -45,6 +46,22 @@ const PharmOpsDispenseDrawer = lazy(() =>
 );
 
 const STORAGE_KEY = 'pharmacy_desk_active_visit_id';
+const NARROW_DESK_QUERY = '(max-width: 1023px)';
+
+function useNarrowPharmacyDesk(): boolean {
+  const [narrow, setNarrow] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(NARROW_DESK_QUERY).matches,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(NARROW_DESK_QUERY);
+    const update = () => setNarrow(mq.matches);
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  return narrow;
+}
 
 export function PharmacyDesk({
   ajaxUrl,
@@ -52,7 +69,6 @@ export function PharmacyDesk({
   facilityId,
   pollMs = 30_000,
   visitBoardUrl,
-  canSkipToPayment = false,
   sharedDeviceWarning = false,
   canEsignOverride = false,
   canSellOtc = false,
@@ -75,8 +91,6 @@ export function PharmacyDesk({
   const [actionError, setActionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [skipOpen, setSkipOpen] = useState(false);
-  const [skipError, setSkipError] = useState<string | null>(null);
   const [esignOpen, setEsignOpen] = useState(false);
   const [otcOpen, setOtcOpen] = useState(false);
   const [dispenseRxId, setDispenseRxId] = useState<number | null>(null);
@@ -92,11 +106,15 @@ export function PharmacyDesk({
   const [externalRxError, setExternalRxError] = useState<string | null>(null);
   const [walkinOutcome, setWalkinOutcome] = useState<string | null>(null);
   const [pendingWalkinClose, setPendingWalkinClose] = useState<string | null>(null);
+  const [mobileQueueOpen, setMobileQueueOpen] = useState(false);
+  const narrowDesk = useNarrowPharmacyDesk();
   const esignActionRef = useRef<'complete' | 'walkin_close'>('complete');
 
   const queueSeq = useRef(0);
   const activeVisitIdRef = useRef<number | null>(null);
+  const activeWorkStateRef = useRef<PharmacySelectData['visit']['state'] | null>(null);
   const hasActiveWorkRef = useRef(false);
+  const modalOpenRef = useRef(false);
 
   const facilityParams = useMemo(
     () => (facilityId > 0 ? { facility_id: facilityId } : undefined),
@@ -120,6 +138,7 @@ export function PharmacyDesk({
     setWalkinOutcome(null);
     setPendingWalkinClose(null);
     activeVisitIdRef.current = null;
+    activeWorkStateRef.current = null;
     clearDeskActiveVisitId(STORAGE_KEY);
   }, []);
 
@@ -163,7 +182,12 @@ export function PharmacyDesk({
     }
     sharedSession.setActiveVisitId(data.visit.id);
     activeVisitIdRef.current = data.visit.id;
+    activeWorkStateRef.current = data.visit.state;
   }, [sharedSession]);
+
+  useEffect(() => {
+    modalOpenRef.current = esignOpen || otcOpen || undispensedOpen || externalRxOpen || mobileQueueOpen;
+  }, [esignOpen, otcOpen, undispensedOpen, externalRxOpen, mobileQueueOpen]);
 
   const fetchQueue = useCallback(async () => {
     queueSeq.current += 1;
@@ -204,7 +228,8 @@ export function PharmacyDesk({
           );
         }
         const stillMine = data.active_work?.id === activeId;
-        if (!match && !stillMine) {
+        const workLocallyActive = activeWorkStateRef.current === 'in_pharmacy';
+        if (!match && !stillMine && !workLocallyActive && !modalOpenRef.current) {
           resetActivePane();
           setHasActiveWork(!!data.has_active_work);
           hasActiveWorkRef.current = !!data.has_active_work;
@@ -454,43 +479,6 @@ export function PharmacyDesk({
     void fetchQueueRef.current();
   }, [ajaxUrl, canEsignOverride, csrfToken, facilityId, resetActivePane, selectData, sharedSession, submitting]);
 
-  const handleSkip = useCallback(async (reason: string) => {
-    if (!selectData || submitting) return;
-
-    setSubmitting(true);
-    setSkipError(null);
-
-    try {
-      await oeFetch('pharmacy.skip_to_payment', {
-        ajaxUrl,
-        csrfToken,
-        method: 'POST',
-        json: {
-          visit_id: selectData.visit.id,
-          row_version: selectData.visit.row_version ?? 0,
-          reason,
-        },
-      });
-      setSkipOpen(false);
-      resetActivePane();
-      setHasActiveWork(false);
-      hasActiveWorkRef.current = false;
-      void fetchQueueRef.current();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Skip failed';
-      setSkipError(msg);
-      if (msg.toLowerCase().includes('not on the pharmacy queue')) {
-        setSkipOpen(false);
-        resetActivePane();
-        setHasActiveWork(false);
-        hasActiveWorkRef.current = false;
-        void fetchQueueRef.current();
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  }, [ajaxUrl, csrfToken, resetActivePane, selectData, submitting]);
-
   const refreshActiveVisit = useCallback(async () => {
     if (!activeVisitIdRef.current) return;
     try {
@@ -609,75 +597,78 @@ export function PharmacyDesk({
           { label: 'In pharmacy', value: counts?.in_pharmacy ?? 0 },
         ]}
         loading={queueLoading}
-        onRefresh={() => { void fetchQueue(); }}
-      />
-
-      {canSellOtc ? (
-        <div className="mb-3">
+        trailing={canSellOtc ? (
           <Button
             type="button"
+            variant="outline"
             size="sm"
+            className="h-7 px-2.5 text-xs"
             id="nc-pharmacy-sell-otc"
             onClick={() => setOtcOpen(true)}
           >
             Sell OTC
           </Button>
-        </div>
-      ) : null}
+        ) : undefined}
+      />
 
-      <div className="grid grid-cols-12 gap-3">
-        <div className="col-span-12 lg:col-span-4 mb-3">
-          <PharmacyQueue
+      <div className="nc-pharmacy-desk">
+        <PharmacyDeskLayout
+          activePane={(
+            <PharmacyActivePane
+              mode={mode}
+              data={selectData}
+              hasActiveWork={hasActiveWork}
+              visitBoardUrl={visitBoardUrl}
+              blocked={sharedSession.blocked}
+              actionError={actionError}
+              submitting={submitting}
+              pharmOpsEnabled={pharmOpsEnabled}
+              canDispense={canDispense}
+              onTakePatient={() => {
+                if (selectData) void takePatient(selectData.visit.id, selectData.visit.row_version ?? 0);
+              }}
+              onComplete={() => void handleComplete()}
+              onOpenDispense={() => void runShortcut('dispense')}
+              onOpenRxEdit={() => void runShortcut('rx_edit')}
+              onDispenseRx={(prescriptionId) => setDispenseRxId(prescriptionId)}
+              onPrintRx={(prescriptionId) => { void handlePrintRx(prescriptionId); }}
+              walkinOutcome={walkinOutcome}
+              onSelectWalkinOutcome={setWalkinOutcome}
+              onWalkinClose={(outcome) => { void handleWalkinClose(outcome); }}
+              onOpenPharmacyService={() => { void handleOpenPharmacyService(); }}
+            />
+          )}
+          queue={(
+            <PharmacyQueue
+              cards={cards}
+              hasActiveWork={hasActiveWork}
+              loading={queueLoading}
+              error={queueError}
+              onSelectVisit={(card) => void selectVisit(card.id)}
+            />
+          )}
+        />
+      </div>
+
+      {narrowDesk && !hasActiveWork && (
+        <>
+          <PharmacyMobileQueueBar
+            waitingCount={counts?.waiting ?? cards.length}
+            hasActiveWork={hasActiveWork}
+            onOpen={() => setMobileQueueOpen(true)}
+          />
+          <PharmacyMobileQueueSheet
+            open={mobileQueueOpen}
+            onClose={() => setMobileQueueOpen(false)}
+            waitingCount={counts?.waiting ?? cards.length}
             cards={cards}
             hasActiveWork={hasActiveWork}
             loading={queueLoading}
             error={queueError}
             onSelectVisit={(card) => void selectVisit(card.id)}
           />
-        </div>
-
-        <div className="col-span-12 lg:col-span-8 mb-3">
-          <PharmacyActivePane
-            mode={mode}
-            data={selectData}
-            hasActiveWork={hasActiveWork}
-            canSkipToPayment={canSkipToPayment}
-            visitBoardUrl={visitBoardUrl}
-            blocked={sharedSession.blocked}
-            actionError={actionError}
-            submitting={submitting}
-            pharmOpsEnabled={pharmOpsEnabled}
-            canDispense={canDispense}
-            onTakePatient={() => {
-              if (selectData) void takePatient(selectData.visit.id, selectData.visit.row_version ?? 0);
-            }}
-            onComplete={() => void handleComplete()}
-            onSkip={() => setSkipOpen(true)}
-            onOpenDispense={() => void runShortcut('dispense')}
-            onOpenRxEdit={() => void runShortcut('rx_edit')}
-            onDispenseRx={(prescriptionId) => setDispenseRxId(prescriptionId)}
-            onPrintRx={(prescriptionId) => { void handlePrintRx(prescriptionId); }}
-            walkinOutcome={walkinOutcome}
-            onSelectWalkinOutcome={setWalkinOutcome}
-            onWalkinClose={(outcome) => { void handleWalkinClose(outcome); }}
-            onOpenPharmacyService={() => { void handleOpenPharmacyService(); }}
-          />
-        </div>
-      </div>
-
-      <SkipToPaymentModal
-        open={skipOpen}
-        preview={selectData?.preview ?? null}
-        visit={selectData?.visit ?? null}
-        deskLabel="pharmacy"
-        submitting={submitting}
-        error={skipError}
-        onClose={() => {
-          setSkipOpen(false);
-          setSkipError(null);
-        }}
-        onConfirm={(reason) => void handleSkip(reason)}
-      />
+        </>
+      )}
 
       <EsignOverrideModal
         open={esignOpen}

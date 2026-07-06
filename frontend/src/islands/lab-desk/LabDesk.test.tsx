@@ -84,7 +84,7 @@ describe('LabDesk', () => {
   it('shows idle placeholder while loading queue', async () => {
     mockFetch.mockReturnValue(new Promise(() => {}));
     render(<LabDesk {...props} />);
-    expect(screen.getByText(/Select a patient from the lab queue/i)).toBeInTheDocument();
+    expect(screen.getByText(/Choose a patient from the lab queue/i)).toBeInTheDocument();
   });
 
   it('renders queue visits after poll', async () => {

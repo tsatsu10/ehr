@@ -86,10 +86,11 @@ export function FormularyRxModal({
   }, [open, visit?.id, ajaxUrl, csrfToken, facilityId]);
 
   const estimatedTotal = useMemo(() => {
-    if (!catalog) return null;
+    if (!catalog?.drugs) return null;
+    const drugs = catalog.drugs ?? [];
     let total = 0;
     let hasFee = false;
-    for (const drug of catalog.drugs) {
+    for (const drug of drugs) {
       if (selected.has(drug.drug_id) && drug.fee_amount != null && !Number.isNaN(drug.fee_amount)) {
         total += drug.fee_amount;
         hasFee = true;
@@ -108,8 +109,8 @@ export function FormularyRxModal({
   }, []);
 
   const applyStarterPack = useCallback(() => {
-    if (!catalog) return;
-    setSelected(new Set(catalog.drugs.filter((d) => d.is_starter).map((d) => d.drug_id)));
+    if (!catalog?.drugs?.length) return;
+    setSelected(new Set((catalog.drugs ?? []).filter((d) => d.is_starter).map((d) => d.drug_id)));
   }, [catalog]);
 
   const handlePlace = async () => {
@@ -144,6 +145,8 @@ export function FormularyRxModal({
 
   if (!visit) return null;
 
+  const drugs = catalog?.drugs ?? [];
+
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent
@@ -169,7 +172,7 @@ export function FormularyRxModal({
                 Formulary is not ready. Use Full Rx form or import the starter pack in Pharm Ops setup.
               </p>
             )}
-            {!loading && catalog?.has_catalog && catalog.drugs.map((drug: FormularyRxCatalogDrug) => (
+            {!loading && catalog?.has_catalog && drugs.map((drug: FormularyRxCatalogDrug) => (
               <div className="flex items-start gap-2 mb-2" key={drug.drug_id}>
                 <Checkbox
                   className="nc-formulary-rx-drug mt-0.5"

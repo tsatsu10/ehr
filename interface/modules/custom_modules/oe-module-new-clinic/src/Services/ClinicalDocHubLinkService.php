@@ -68,15 +68,25 @@ class ClinicalDocHubLinkService
         }
 
         $webroot = $GLOBALS['webroot'] ?? '';
-        if (!$this->isHubEnabled($facilityId)) {
-            return EncounterSignService::buildEncounterUrl($webroot, $pid, $encounterId);
-        }
-
         $visitId = $this->resolveVisitIdForEncounter($pid, $encounterId);
-        if ($visitId === null) {
-            return EncounterSignService::buildEncounterUrl($webroot, $pid, $encounterId);
+        if ($visitId !== null) {
+            $visit = [
+                'id' => $visitId,
+                'pid' => $pid,
+                'encounter' => $encounterId,
+                'facility_id' => $facilityId ?? 0,
+            ];
+            $openUrl = (new EncounterSignService())->buildOpenUrlForVisit($visit, [
+                'return_to' => 'hub',
+                'tab' => 'consult',
+            ]);
+            if ($this->isHubEnabled($facilityId)) {
+                return self::buildHubUrl($visitId);
+            }
+
+            return $openUrl;
         }
 
-        return self::buildHubUrl($visitId);
+        return EncounterSignService::buildEncounterUrl($webroot, $pid, $encounterId);
     }
 }

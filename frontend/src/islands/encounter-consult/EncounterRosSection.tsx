@@ -82,7 +82,7 @@ export function EncounterRosSection({
           return (
             <div
               key={system}
-              className="grid gap-2 rounded-lg border border-[var(--oe-nc-border)] p-3 md:grid-cols-[minmax(140px,180px)_160px_1fr]"
+              className="grid gap-3 rounded-lg border border-[var(--oe-nc-border)] p-3 lg:grid-cols-[minmax(140px,180px)_160px_1fr] lg:gap-2"
             >
               <div className="font-medium text-sm">{system}</div>
               <Select

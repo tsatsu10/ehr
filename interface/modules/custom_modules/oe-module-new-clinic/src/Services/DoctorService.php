@@ -526,11 +526,10 @@ class DoctorService
                 0,
                 (int) ($visit['facility_id'] ?? 0)
             ) === 1,
-            'encounter_url' => EncounterSignService::buildEncounterUrl(
-                $GLOBALS['webroot'] ?? '',
-                $pid,
-                $encounter
-            ),
+            'encounter_url' => $this->signService->buildOpenUrlForVisit($visit, [
+                'return_to' => 'doctor',
+                'tab' => 'consult',
+            ]),
             'supervisor_id' => $supervisorMeta['supervisor_id'],
             'supervisor_display_name' => $supervisorMeta['supervisor_display_name'],
             'supervisor_from_profile' => $supervisorMeta['supervisor_from_profile'],

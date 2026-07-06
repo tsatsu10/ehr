@@ -72,21 +72,44 @@ class ClinicalDocAccessService
     /** @var callable|null */
     private $aclChecker;
 
+    private ?ClinicConfigService $config = null;
+    private ?VisitScopeService $visitScope = null;
+
     public function __construct(
-        private readonly ClinicConfigService $config = new ClinicConfigService(),
-        private readonly VisitScopeService $visitScope = new VisitScopeService(),
+        ?ClinicConfigService $config = null,
+        ?VisitScopeService $visitScope = null,
         ?callable $aclChecker = null,
     ) {
+        $this->config = $config;
+        $this->visitScope = $visitScope;
         $this->aclChecker = $aclChecker;
+    }
+
+    private function getConfig(): ClinicConfigService
+    {
+        if ($this->config === null) {
+            $this->config = new ClinicConfigService();
+        }
+
+        return $this->config;
+    }
+
+    private function getVisitScope(): VisitScopeService
+    {
+        if ($this->visitScope === null) {
+            $this->visitScope = new VisitScopeService();
+        }
+
+        return $this->visitScope;
     }
 
     public function isHubEnabled(?int $facilityId = null): bool
     {
         if ($facilityId === null || $facilityId <= 0) {
-            $facilityId = $this->visitScope->resolveDeskFacilityId();
+            $facilityId = $this->getVisitScope()->resolveDeskFacilityId();
         }
 
-        return $this->config->getInt('enable_clinical_doc_hub', 0, $facilityId) === 1;
+        return $this->getConfig()->getInt('enable_clinical_doc_hub', 0, $facilityId) === 1;
     }
 
     public function assertHubEnabled(?int $facilityId = null): void
@@ -134,28 +157,28 @@ class ClinicalDocAccessService
     public function showScreeningLens(?int $facilityId = null): bool
     {
         if ($facilityId === null || $facilityId <= 0) {
-            $facilityId = $this->visitScope->resolveDeskFacilityId();
+            $facilityId = $this->getVisitScope()->resolveDeskFacilityId();
         }
 
-        return $this->config->getInt('clinical_doc_show_screening', 0, $facilityId) === 1;
+        return $this->getConfig()->getInt('clinical_doc_show_screening', 0, $facilityId) === 1;
     }
 
     public function showSpecialtyLens(?int $facilityId = null): bool
     {
         if ($facilityId === null || $facilityId <= 0) {
-            $facilityId = $this->visitScope->resolveDeskFacilityId();
+            $facilityId = $this->getVisitScope()->resolveDeskFacilityId();
         }
 
-        return $this->config->getInt('clinical_doc_show_specialty', 0, $facilityId) === 1;
+        return $this->getConfig()->getInt('clinical_doc_show_specialty', 0, $facilityId) === 1;
     }
 
     public function showUsQualityWidgets(?int $facilityId = null): bool
     {
         if ($facilityId === null || $facilityId <= 0) {
-            $facilityId = $this->visitScope->resolveDeskFacilityId();
+            $facilityId = $this->getVisitScope()->resolveDeskFacilityId();
         }
 
-        return $this->config->getInt('clinical_doc_show_us_quality', 0, $facilityId) === 1;
+        return $this->getConfig()->getInt('clinical_doc_show_us_quality', 0, $facilityId) === 1;
     }
 
     public function canAccessLens(string $lens, ?int $facilityId = null): bool
@@ -186,6 +209,16 @@ class ClinicalDocAccessService
     {
         $this->assertHubAccess();
         if (!$this->canWriteAnyLens()) {
+            throw new \RuntimeException('Forbidden', 403);
+        }
+    }
+
+    /**
+     * V1.2-DOC-HLF native consult note — consult ACL only; hub not required.
+     */
+    public function assertConsultNoteAccess(): void
+    {
+        if (!$this->canViewConsult()) {
             throw new \RuntimeException('Forbidden', 403);
         }
     }

@@ -15,7 +15,8 @@ export interface DeskQueueStatusBarProps {
   ariaLabel: string;
   items: DeskStatusItem[];
   loading?: boolean;
-  onRefresh: () => void;
+  /** Omit when the Twig page heading already provides a refresh control. */
+  onRefresh?: () => void;
   compact?: boolean;
   trailing?: React.ReactNode;
 }
@@ -33,10 +34,13 @@ export function DeskQueueStatusBar({
   compact = false,
   trailing,
 }: DeskQueueStatusBarProps) {
+  const hasActions = Boolean(trailing || onRefresh);
+
   return (
     <div
       className={cn(
-        'mb-4 grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 rounded-xl',
+        'mb-4 grid items-center gap-x-4 gap-y-2 rounded-xl',
+        hasActions ? 'grid-cols-[1fr_auto]' : 'grid-cols-1',
         'border border-[var(--oe-clinical-border)] bg-[var(--oe-clinical-surface)]',
         'px-5 py-3.5 text-sm shadow-[var(--oe-clinical-shadow-sm)]',
         compact && '[&_.nc-desk-stat-group]:gap-x-3.5 [&_.nc-desk-stat-group]:text-[var(--oe-clinical-text-xs)]',
@@ -59,23 +63,27 @@ export function DeskQueueStatusBar({
         ))}
       </div>
 
-      <div className="flex shrink-0 items-center gap-1">
-        {trailing}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 px-2.5"
-          onClick={onRefresh}
-          disabled={loading}
-          aria-label="Refresh status"
-          title="Refresh"
-        >
-          <RefreshCw className={cn(
-            'h-4 w-4 text-[var(--oe-clinical-text-muted)]',
-            loading && 'animate-spin'
-          )} />
-        </Button>
-      </div>
+      {hasActions && (
+        <div className="flex shrink-0 items-center gap-1">
+          {trailing}
+          {onRefresh && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2.5"
+              onClick={onRefresh}
+              disabled={loading}
+              aria-label="Refresh status"
+              title="Refresh"
+            >
+              <RefreshCw className={cn(
+                'h-4 w-4 text-[var(--oe-clinical-text-muted)]',
+                loading && 'animate-spin',
+              )} />
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

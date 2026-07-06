@@ -8,9 +8,6 @@
 <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary" id="nc-lab-refresh" aria-label="{{ 'Refresh'|xlt }}">
     <i class="fa fa-refresh" aria-hidden="true"></i>
 </button>
-{% if lab_ops_url %}
-<a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary" href="{{ lab_ops_url|attr }}" target="_top">{{ 'Lab Operations'|xlt }}</a>
-{% endif %}
 <span class="nc-text-muted nc-text-sm" id="nc-lab-updated"></span>
 {% endblock %}
 
@@ -27,7 +24,6 @@
         labOpsEnabled:         lab_ops_enabled ? true : false,
         canEnterResults:       can_enter_results ? true : false,
         canReleaseResults:     can_release_results ? true : false,
-        canSkipToPayment:      can_skip_to_payment ? true : false,
         sharedDeviceWarning:   enable_shared_device_session_warning ? true : false,
         canEsignOverride:      can_esign_override ? true : false,
         pollMs:                queue_poll_ms|default(30000)

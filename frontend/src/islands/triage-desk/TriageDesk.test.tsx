@@ -100,9 +100,7 @@ describe('TriageDesk', () => {
   it('shows idle placeholder while loading queue', async () => {
     mockFetch.mockReturnValue(new Promise(() => {})); // never resolves
     render(<TriageDesk {...props} />);
-    // Shows skeleton loaders in queue panel
-    expect(document.querySelectorAll('.nc-vb-skeleton').length).toBeGreaterThan(0);
-    // Shows idle pane
+    expect(screen.getByText(/loading queue/i)).toBeInTheDocument();
     expect(screen.getByText(/select a patient/i)).toBeInTheDocument();
   });
 

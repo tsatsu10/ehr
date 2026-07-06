@@ -16,9 +16,20 @@ use OpenEMR\Common\Database\QueryUtils;
 
 class FacilityScopeService
 {
-    public function __construct(
-        private readonly ClinicConfigService $config = new ClinicConfigService()
-    ) {
+    private ?ClinicConfigService $config = null;
+
+    public function __construct(?ClinicConfigService $config = null)
+    {
+        $this->config = $config;
+    }
+
+    private function getConfig(): ClinicConfigService
+    {
+        if ($this->config === null) {
+            $this->config = new ClinicConfigService();
+        }
+
+        return $this->config;
     }
 
     public function shouldFilterByFacility(): bool
@@ -38,7 +49,7 @@ class FacilityScopeService
 
     public function canSearchAllFacilities(): bool
     {
-        if ($this->config->getInt('search_all_facilities_for_admin', 1) !== 1) {
+        if ($this->getConfig()->getInt('search_all_facilities_for_admin', 1) !== 1) {
             return false;
         }
 

@@ -1,15 +1,21 @@
 /**
- * DoctorActivePane — left column: patient banner, shortcuts, complete consult.
+ * DoctorActivePane — active consult workspace: banner, shortcuts, complete.
  */
 
 import type { DoctorConsultPayload, DoctorSupervisorMeta } from '@core/types';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Button } from '@components/ui/button';
-import { Card, CardContent } from '@components/ui/card';
 import { DoctorPatientBanner, type DoctorSignMeta } from './DoctorPatientBanner';
 import { ConsultShortcuts, type ShortcutKind } from './ConsultShortcuts';
 import { SupervisorCombobox } from './SupervisorCombobox';
 import { PharmacyPrescriptionsTable } from '../pharmacy-desk/PharmacyPrescriptionsTable';
+import {
+  DoctorActiveEmpty,
+  DoctorActiveLoading,
+  DoctorActiveSection,
+  DoctorActiveShell,
+  DoctorActiveStickyFooter,
+} from './doctorDeskUi';
 
 export type ActiveMode = 'idle' | 'loading' | 'consult' | 'error';
 
@@ -57,34 +63,22 @@ export function DoctorActivePane({
   onSupervisorNotice,
 }: DoctorActivePaneProps) {
   if (mode === 'idle') {
-    return (
-      <div id="nc-doctor-active-pane">
-        <Card>
-          <CardContent className="text-[var(--oe-nc-text-muted)] text-center py-5">
-            <em>Pick a patient from the queue to start a consult.</em>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <DoctorActiveEmpty />;
   }
 
   if (mode === 'loading') {
-    return (
-      <div id="nc-doctor-active-pane">
-        <Card>
-          <CardContent><em>Loading consult…</em></CardContent>
-        </Card>
-      </div>
-    );
+    return <DoctorActiveLoading />;
   }
 
   if (mode === 'error' || !payload || !signMeta) {
     return (
-      <div id="nc-doctor-active-pane">
-        <div className={deskCalloutClass('error', 'm-0 text-sm')} role="alert">
-          Failed to load consult.
+      <DoctorActiveShell>
+        <div className="nc-doctor-active-shell__content">
+          <div className={deskCalloutClass('error', 'm-0 text-sm')} role="alert">
+            Failed to load consult.
+          </div>
         </div>
-      </div>
+      </DoctorActiveShell>
     );
   }
 
@@ -93,10 +87,21 @@ export function DoctorActivePane({
     blocked || (signMeta.require_esign_before_complete_consult && !signMeta.encounter_signed);
 
   return (
-    <div id="nc-doctor-active-pane">
-      <Card>
-        <CardContent>
-          <DoctorPatientBanner preview={preview} visit={visit} signMeta={signMeta} />
+    <DoctorActiveShell className="nc-doctor-active-shell--with-sticky-footer">
+      <header className="nc-doctor-active-shell__hero">
+        <h2 className="nc-doctor-active-shell__hero-title">
+          Active consult · #{visit.queue_number} {preview.identity.display_name}
+        </h2>
+        <p className="nc-doctor-active-shell__hero-sub">
+          {visit.visit_type_label || 'Visit'}
+          {visit.chief_complaint ? ` — ${visit.chief_complaint}` : ''}
+        </p>
+      </header>
+
+      <div className="nc-doctor-active-shell__content">
+        <DoctorPatientBanner preview={preview} visit={visit} signMeta={signMeta} slim />
+
+        <DoctorActiveSection>
           <SupervisorCombobox
             visit={visit}
             supervisor={{
@@ -111,6 +116,9 @@ export function DoctorActivePane({
             onUpdated={onSupervisorUpdated}
             onNotice={onSupervisorNotice}
           />
+        </DoctorActiveSection>
+
+        <DoctorActiveSection title="Clinical actions">
           <ConsultShortcuts
             blocked={blocked}
             clinicalDocHubEnabled={!!payload.clinical_doc_hub_enabled}
@@ -121,24 +129,26 @@ export function DoctorActivePane({
             onOpenFormularyRx={onOpenFormularyRx}
             runShortcut={runShortcut}
           />
-          {(payload.pharm_ops_enabled || payload.rx_print_enabled) ? (
-            <div className="mb-3" id="nc-doctor-rx-stock-panel">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <h5 className="mb-0">
-                  {payload.pharm_ops_enabled ? 'Prescriptions (stock)' : 'Prescriptions'}
-                </h5>
-                {payload.rx_list_url ? (
+        </DoctorActiveSection>
+
+        {(payload.pharm_ops_enabled || payload.rx_print_enabled) && (
+          <DoctorActiveSection
+            title={payload.pharm_ops_enabled ? 'Prescriptions (stock)' : 'Prescriptions'}
+            description={
+              payload.pharm_ops_enabled
+                ? 'Quantity on hand is read-only when Pharmacy Operations is enabled.'
+                : undefined
+            }
+          >
+            <div id="nc-doctor-rx-stock-panel">
+              {payload.rx_list_url ? (
+                <div className="mb-2 flex justify-end">
                   <Button variant="outline" size="sm" asChild>
                     <a href={payload.rx_list_url} target="_blank" rel="noopener noreferrer">
                       Open Rx list
                     </a>
                   </Button>
-                ) : null}
-              </div>
-              {payload.pharm_ops_enabled ? (
-                <p className="text-sm text-[var(--oe-nc-text-muted)] mb-2">
-                  Read-only quantity on hand when Pharmacy Operations is enabled.
-                </p>
+                </div>
               ) : null}
               <PharmacyPrescriptionsTable
                 prescriptions={payload.prescriptions ?? []}
@@ -147,32 +157,33 @@ export function DoctorActivePane({
                 onPrintRx={onPrintRx}
               />
             </div>
-          ) : null}
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              id="nc-doctor-complete-btn"
-              variant="cta"
-              disabled={completeDisabled}
-              title={
-                completeDisabled && signMeta.require_esign_before_complete_consult && !signMeta.encounter_signed
-                  ? 'Sign documentation in the encounter first'
-                  : undefined
-              }
-              onClick={onComplete}
-            >
-              Complete consult
-            </Button>
-            {visitBoardUrl && (
-              <Button variant="outline" size="sm" asChild>
-                <a href={visitBoardUrl} target="_top">
-                  View on Visit Board
-                </a>
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          </DoctorActiveSection>
+        )}
+      </div>
+
+      <DoctorActiveStickyFooter>
+        <Button
+          type="button"
+          id="nc-doctor-complete-btn"
+          variant="cta"
+          disabled={completeDisabled}
+          title={
+            completeDisabled && signMeta.require_esign_before_complete_consult && !signMeta.encounter_signed
+              ? 'Sign documentation in the encounter first'
+              : undefined
+          }
+          onClick={onComplete}
+        >
+          Complete consult
+        </Button>
+        {visitBoardUrl && (
+          <Button variant="outline" size="sm" asChild>
+            <a href={visitBoardUrl} target="_top">
+              View on Visit Board
+            </a>
+          </Button>
+        )}
+      </DoctorActiveStickyFooter>
+    </DoctorActiveShell>
   );
 }

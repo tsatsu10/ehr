@@ -36,6 +36,11 @@ class EncounterNoteService
 
     private readonly EncounterNoteEnginePolicy $enginePolicy;
 
+    // Lazy: EncounterNoteService <-> DoctorService form a constructor cycle
+    // (DoctorService -> ClinicalDocDocumentationStatusService -> EncounterNoteService),
+    // which overflows the stack if resolved eagerly.
+    private ?DoctorService $doctorService = null;
+
     public function __construct(
         private readonly ClinicalDocAccessService $access = new ClinicalDocAccessService(),
         private readonly VisitQueueService $queueService = new VisitQueueService(),
@@ -45,10 +50,20 @@ class EncounterNoteService
         private readonly VitalsPreviewBuilder $vitalsPreview = new VitalsPreviewBuilder(),
         private readonly EncounterSessionService $encounterSession = new EncounterSessionService(),
         private readonly PatientCompletionService $completionService = new PatientCompletionService(),
-        private readonly DoctorService $doctorService = new DoctorService(),
+        ?DoctorService $doctorService = null,
         private readonly EncounterNoteLbfExportService $lbfExport = new EncounterNoteLbfExportService(),
     ) {
         $this->enginePolicy = $enginePolicy ?? new EncounterNoteEnginePolicy($this->config, $this->visitScope);
+        $this->doctorService = $doctorService;
+    }
+
+    private function getDoctorService(): DoctorService
+    {
+        if ($this->doctorService === null) {
+            $this->doctorService = new DoctorService();
+        }
+
+        return $this->doctorService;
     }
 
     public function isNativeEngineEnabled(?int $facilityId = null): bool
@@ -104,7 +119,7 @@ class EncounterNoteService
             'native_formdir' => self::NATIVE_FORMDIR,
             'facility_id' => $facilityId,
             'note_config' => $this->getNoteConfig($facilityId),
-            'supervisor' => $this->doctorService->getSupervisorMeta(
+            'supervisor' => $this->getDoctorService()->getSupervisorMeta(
                 (int) ($visit['encounter'] ?? 0),
                 $actorUserId
             ),
@@ -139,7 +154,7 @@ class EncounterNoteService
             $this->buildPrefill($visit),
             $variant,
             $facilityId,
-            $this->doctorService->getSupervisorMeta((int) ($visit['encounter'] ?? 0), $actorUserId)
+            $this->getDoctorService()->getSupervisorMeta((int) ($visit['encounter'] ?? 0), $actorUserId)
         );
     }
 
@@ -205,7 +220,7 @@ class EncounterNoteService
             $this->buildPrefill($visit),
             $variant,
             $facilityId,
-            $this->doctorService->getSupervisorMeta((int) ($visit['encounter'] ?? 0), $actorUserId)
+            $this->getDoctorService()->getSupervisorMeta((int) ($visit['encounter'] ?? 0), $actorUserId)
         );
         if (!$validation['valid']) {
             throw new \InvalidArgumentException('Consult note is incomplete — run Validate and fix required fields');
@@ -492,6 +507,27 @@ class EncounterNoteService
     }
 
     /**
+     * Open-encounter deep link: native consult island when engine is native, else stock encounter_top.
+     *
+     * @param array<string, mixed> $visit
+     * @param array<string, mixed> $query
+     */
+    public function buildOpenUrlForVisit(array $visit, array $query = []): string
+    {
+        $visitId = (int) ($visit['id'] ?? 0);
+        $pid = (int) ($visit['pid'] ?? 0);
+        $encounterId = (int) ($visit['encounter'] ?? 0);
+        $facilityId = (int) ($visit['facility_id'] ?? 0);
+        $webroot = $GLOBALS['webroot'] ?? '';
+
+        if ($visitId > 0 && $this->isNativeEngineEnabled($facilityId)) {
+            return $this->buildPageUrl($visitId, $query);
+        }
+
+        return EncounterSignService::buildEncounterUrl($webroot, $pid, $encounterId);
+    }
+
+    /**
      * V1.2-DOC-HLF-4 — hub card + MRD summary preview for native consult note.
      *
      * @return array<string, mixed>
@@ -545,7 +581,7 @@ class EncounterNoteService
                 $prefill,
                 $variant,
                 $facilityId,
-                $this->doctorService->getSupervisorMeta(
+                $this->getDoctorService()->getSupervisorMeta(
                     (int) ($visit['encounter'] ?? 0),
                     $previewActorUserId
                 )
@@ -1572,8 +1608,7 @@ class EncounterNoteService
 
     private function assertEncounterNoteAccess(int $facilityId): void
     {
-        $this->access->assertWriteAccess();
-        $this->access->assertLensAccess('consult');
+        $this->access->assertConsultNoteAccess();
         if (!$this->isNativeEngineEnabled($facilityId)) {
             throw new \RuntimeException('Native encounter note engine is not enabled', 403);
         }

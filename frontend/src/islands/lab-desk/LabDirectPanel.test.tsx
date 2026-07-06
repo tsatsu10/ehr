@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { LabDirectPanel } from './LabDirectPanel';
 import type { LabDirectIntake } from '@core/types';
 
@@ -17,24 +17,10 @@ const intake: LabDirectIntake = {
 };
 
 describe('LabDirectPanel', () => {
-  it('renders intake actions and referral link', () => {
-    const onOpenLabIntake = vi.fn();
-    const onCreateOrder = vi.fn();
+  it('renders collapsible lab-direct status', () => {
+    render(<LabDirectPanel intake={intake} />);
 
-    render(
-      <LabDirectPanel
-        intake={intake}
-        inLab
-        onOpenLabIntake={onOpenLabIntake}
-        onCreateOrder={onCreateOrder}
-      />,
-    );
-
-    expect(screen.getByText(/Lab-direct intake/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /View referral on file/i })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Start lab intake/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Create lab order/i }));
-    expect(onOpenLabIntake).toHaveBeenCalled();
-    expect(onCreateOrder).toHaveBeenCalled();
+    expect(screen.getByText(/Lab-direct visit/i)).toBeInTheDocument();
+    expect(screen.getByText(/Not started/i)).toBeInTheDocument();
   });
 });

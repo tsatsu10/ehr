@@ -110,7 +110,61 @@ class ClinicalDocCatalogService
     /** @var array<string, list<string>>|null */
     private ?array $allowedFormdirsCache = null;
 
-    private readonly EncounterNoteEnginePolicy $enginePolicy;
+    private ?ClinicalDocAccessService $access = null;
+    private ?ClinicConfigService $config = null;
+    private ?VisitScopeService $visitScope = null;
+    private ?EncounterNoteEnginePolicy $enginePolicy = null;
+
+    public function __construct(
+        ?ClinicalDocAccessService $access = null,
+        ?ClinicConfigService $config = null,
+        ?VisitScopeService $visitScope = null,
+        ?EncounterNoteEnginePolicy $enginePolicy = null,
+    ) {
+        $this->access = $access;
+        $this->config = $config;
+        $this->visitScope = $visitScope;
+        $this->enginePolicy = $enginePolicy;
+    }
+
+    private function getAccess(): ClinicalDocAccessService
+    {
+        if ($this->access === null) {
+            $this->access = new ClinicalDocAccessService();
+        }
+
+        return $this->access;
+    }
+
+    private function getConfig(): ClinicConfigService
+    {
+        if ($this->config === null) {
+            $this->config = new ClinicConfigService();
+        }
+
+        return $this->config;
+    }
+
+    private function getVisitScope(): VisitScopeService
+    {
+        if ($this->visitScope === null) {
+            $this->visitScope = new VisitScopeService();
+        }
+
+        return $this->visitScope;
+    }
+
+    private function getEnginePolicy(): EncounterNoteEnginePolicy
+    {
+        if ($this->enginePolicy === null) {
+            $this->enginePolicy = new EncounterNoteEnginePolicy(
+                $this->getConfig(),
+                $this->getVisitScope()
+            );
+        }
+
+        return $this->enginePolicy;
+    }
 
     public static function normalizeBundleKey(string $key): string
     {
@@ -122,10 +176,10 @@ class ClinicalDocCatalogService
     public function resolveBundleKey(?int $facilityId = null): string
     {
         if ($facilityId === null || $facilityId <= 0) {
-            $facilityId = $this->visitScope->resolveDeskFacilityId();
+            $facilityId = $this->getVisitScope()->resolveDeskFacilityId();
         }
 
-        $raw = trim((string) ($this->config->get(
+        $raw = trim((string) ($this->getConfig()->get(
             'clinical_doc_bundle',
             self::DEFAULT_BUNDLE_KEY,
             $facilityId
@@ -134,27 +188,18 @@ class ClinicalDocCatalogService
         return self::normalizeBundleKey($raw);
     }
 
-    public function __construct(
-        private readonly ClinicalDocAccessService $access = new ClinicalDocAccessService(),
-        private readonly ClinicConfigService $config = new ClinicConfigService(),
-        private readonly VisitScopeService $visitScope = new VisitScopeService(),
-        ?EncounterNoteEnginePolicy $enginePolicy = null,
-    ) {
-        $this->enginePolicy = $enginePolicy ?? new EncounterNoteEnginePolicy($this->config, $this->visitScope);
-    }
-
     /**
      * @return array<string, mixed>
      */
     public function getCatalog(?string $lens = null, ?int $facilityId = null): array
     {
         if ($facilityId === null || $facilityId <= 0) {
-            $facilityId = $this->visitScope->resolveDeskFacilityId();
+            $facilityId = $this->getVisitScope()->resolveDeskFacilityId();
         }
 
-        $allowedLenses = $this->access->allowedLenses($facilityId);
+        $allowedLenses = $this->getAccess()->allowedLenses($facilityId);
         if ($lens !== null && $lens !== '') {
-            $this->access->assertLensAccess($lens);
+            $this->getAccess()->assertLensAccess($lens);
             $allowedLenses = in_array($lens, $allowedLenses, true) ? [$lens] : [];
         }
 
@@ -168,7 +213,7 @@ class ClinicalDocCatalogService
             'cards' => $cards,
             'bundle_key' => $this->resolveBundleKey($facilityId),
             'consult_note_formdir' => $this->consultNoteFormdir($facilityId),
-            'show_us_quality' => $this->access->showUsQualityWidgets($facilityId),
+            'show_us_quality' => $this->getAccess()->showUsQualityWidgets($facilityId),
         ];
     }
 
@@ -180,7 +225,7 @@ class ClinicalDocCatalogService
     public function getFavoritePinCards(?int $facilityId = null): array
     {
         if ($facilityId === null || $facilityId <= 0) {
-            $facilityId = $this->visitScope->resolveDeskFacilityId();
+            $facilityId = $this->getVisitScope()->resolveDeskFacilityId();
         }
 
         $primaryFormdir = $this->consultNoteFormdir($facilityId);
@@ -209,7 +254,7 @@ class ClinicalDocCatalogService
         $cards = [];
         $pin = 1;
         foreach ($pinSpecs as $spec) {
-            if (!$this->access->canAccessLens($spec['lens'], $facilityId)) {
+            if (!$this->getAccess()->canAccessLens($spec['lens'], $facilityId)) {
                 continue;
             }
 
@@ -241,7 +286,7 @@ class ClinicalDocCatalogService
     public function allowedFormdirs(?int $facilityId = null): array
     {
         if ($facilityId === null || $facilityId <= 0) {
-            $facilityId = $this->visitScope->resolveDeskFacilityId();
+            $facilityId = $this->getVisitScope()->resolveDeskFacilityId();
         }
 
         $cacheKey = (string) $facilityId;
@@ -275,7 +320,7 @@ class ClinicalDocCatalogService
             return false;
         }
 
-        if ($this->enginePolicy->isNativeFormdir($formdir) && $this->enginePolicy->isNativeEngineEnabled($facilityId)) {
+        if ($this->getEnginePolicy()->isNativeFormdir($formdir) && $this->getEnginePolicy()->isNativeEngineEnabled($facilityId)) {
             return true;
         }
 
@@ -291,7 +336,7 @@ class ClinicalDocCatalogService
     public function resolveSourceLensForFormdir(string $formdir, ?int $facilityId = null): ?string
     {
         if ($facilityId === null || $facilityId <= 0) {
-            $facilityId = $this->visitScope->resolveDeskFacilityId();
+            $facilityId = $this->getVisitScope()->resolveDeskFacilityId();
         }
 
         $formdir = strtolower(trim($formdir));
@@ -299,7 +344,7 @@ class ClinicalDocCatalogService
             return $formdir === 'rx' ? 'orders' : null;
         }
 
-        if ($this->enginePolicy->isNativeFormdir($formdir) && $this->enginePolicy->isNativeEngineEnabled($facilityId)) {
+        if ($this->getEnginePolicy()->isNativeFormdir($formdir) && $this->getEnginePolicy()->isNativeEngineEnabled($facilityId)) {
             return 'consult';
         }
 
@@ -321,7 +366,7 @@ class ClinicalDocCatalogService
             return '';
         }
 
-        if ($this->enginePolicy->isNativeFormdir($formdir)) {
+        if ($this->getEnginePolicy()->isNativeFormdir($formdir)) {
             return EncounterNoteService::NATIVE_FORMDIR;
         }
 
@@ -434,7 +479,7 @@ class ClinicalDocCatalogService
         $cards = [];
         $seen = [];
         foreach (['consult', 'nursing', 'orders'] as $sourceLens) {
-            if (!$this->access->canAccessLens($sourceLens, $facilityId)) {
+            if (!$this->getAccess()->canAccessLens($sourceLens, $facilityId)) {
                 continue;
             }
             foreach ($this->cardsForLens($sourceLens, $facilityId) as $card) {
@@ -489,7 +534,7 @@ class ClinicalDocCatalogService
      */
     private function filterSpecialtyPack(array $defs, int $facilityId): array
     {
-        $raw = trim((string) ($this->config->get('clinical_doc_specialty_pack', '[]', $facilityId) ?? '[]'));
+        $raw = trim((string) ($this->getConfig()->get('clinical_doc_specialty_pack', '[]', $facilityId) ?? '[]'));
         $enabled = json_decode($raw, true);
         if (!is_array($enabled) || $enabled === []) {
             return [];
@@ -512,7 +557,7 @@ class ClinicalDocCatalogService
         $formdir = strtolower(trim($canonical));
         $kind = $def['kind'];
         if ($kind === 'form') {
-            if ($this->enginePolicy->isNativeFormdir($formdir) && $this->enginePolicy->isNativeEngineEnabled($facilityId)) {
+            if ($this->getEnginePolicy()->isNativeFormdir($formdir) && $this->getEnginePolicy()->isNativeEngineEnabled($facilityId)) {
                 // Virtual native consult card — not in OpenEMR registry.
             } elseif (!$this->isRegistryFormActive($formdir)) {
                 return null;
@@ -536,7 +581,7 @@ class ClinicalDocCatalogService
 
     private function consultNoteFormdir(int $facilityId): string
     {
-        return $this->enginePolicy->effectiveConsultFormdir($facilityId);
+        return $this->getEnginePolicy()->effectiveConsultFormdir($facilityId);
     }
 
     /**
@@ -545,11 +590,11 @@ class ClinicalDocCatalogService
      */
     private function applyNativeConsultLens(array $defs, int $facilityId): array
     {
-        if (!$this->enginePolicy->isNativeEngineEnabled($facilityId)) {
+        if (!$this->getEnginePolicy()->isNativeEngineEnabled($facilityId)) {
             return $defs;
         }
 
-        $legacyPrimary = strtolower(trim((string) ($this->config->get('consult_note_formdir', 'soap', $facilityId) ?? 'soap')));
+        $legacyPrimary = strtolower(trim((string) ($this->getConfig()->get('consult_note_formdir', 'soap', $facilityId) ?? 'soap')));
         $filtered = array_values(array_filter(
             $defs,
             static fn (array $def): bool => strcasecmp($def['formdir'], EncounterNoteService::NATIVE_FORMDIR) !== 0

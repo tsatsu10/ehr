@@ -26,7 +26,7 @@ describe('PharmacyWalkinPanel', () => {
       />,
     );
 
-    expect(screen.getByText(/Pharmacy walk-in triage/i)).toBeInTheDocument();
+    expect(screen.getByText(/Walk-in triage/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /OTC dispensed/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Refer to OPD/i })).toBeInTheDocument();
   });

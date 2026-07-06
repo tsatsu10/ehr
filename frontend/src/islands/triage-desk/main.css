@@ -1,39 +1,49 @@
 /*
  * Triage Desk island styles
- *
- * CASCADE RULE: non-layered BEM CSS only (beats Bootstrap's unlayered styles).
- * Atom styles (nc-queue-card, nc-status-pill, etc.) live in
- * the module's components.css — do NOT duplicate here.
- * Only triage-specific layout additions go below.
- *
- * See: Documentation/FRONTEND_MODULE_GUIDE.md §5.2
  */
 
 @import '../../core/tokens.css';
 @import '../../components/ui/ui-primitives.css';
+@import '../../core/desk-layout.css';
 
-/* ── Queue panel ───────────────────────────────────────────────────────── */
-
-.nc-triage-queue-panel {
-  /* Sticky within viewport on tall screens */
-  position: sticky;
-  top: 1rem;
+/* Patient banner */
+.nc-triage-patient-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-/* ── Active pane ───────────────────────────────────────────────────────── */
-
-#nc-triage-active-pane .card {
-  min-height: 12rem;
+.nc-triage-banner-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
 }
 
-/* ── Vitals form ──────────────────────────────────────────────────────── */
+.nc-triage-banner-meta__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
 
+.nc-triage-banner-meta__label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-triage-banner-meta__value {
+  font-size: 0.875rem;
+}
+
+/* Vitals form */
 .nc-triage-vitals-form .nc-vitals-range-hint {
   color: var(--oe-nc-text-muted, #64748b);
   font-size: 0.72rem;
 }
 
-/* Amber border for out-of-normal-range but saveable values */
 .nc-vitals-warning {
   border-color: #f59e0b !important;
   box-shadow: 0 0 0 0.2rem rgba(245, 158, 11, 0.25) !important;
@@ -48,8 +58,7 @@
   font-size: 0.8rem;
 }
 
-/* ── Saved vitals panel ────────────────────────────────────────────────── */
-
+/* Saved vitals panel */
 .nc-triage-vitals-saved {
   padding: 0.75rem 1rem;
   border: 1px solid var(--oe-nc-border, #e2e8f0);
@@ -61,11 +70,4 @@
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.875rem;
   color: var(--oe-nc-text, #164e63);
-}
-
-/* ── Auto-start modal ─────────────────────────────────────────────────── */
-
-/* React renders its own backdrop — prevent double backdrop from Bootstrap */
-.nc-triage-react-active .modal-backdrop {
-  display: none !important;
 }

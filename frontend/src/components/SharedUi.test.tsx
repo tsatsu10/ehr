@@ -9,7 +9,22 @@ import { WidgetCard } from './WidgetCard';
 import { DeskQueueStatusBar } from './DeskQueueStatusBar';
 
 describe('DeskQueueStatusBar', () => {
-  it('renders status items and refresh control', () => {
+  it('renders status items without refresh when onRefresh omitted', () => {
+    render(
+      <DeskQueueStatusBar
+        ariaLabel="Test desk status"
+        items={[
+          { label: 'Waiting', value: 3 },
+          { label: 'Done today', value: 12 },
+        ]}
+      />,
+    );
+    expect(screen.getByLabelText(/Test desk status/i)).toBeInTheDocument();
+    expect(screen.getByText('Waiting')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Refresh status/i)).not.toBeInTheDocument();
+  });
+
+  it('renders refresh control when onRefresh is provided', () => {
     render(
       <DeskQueueStatusBar
         ariaLabel="Test desk status"

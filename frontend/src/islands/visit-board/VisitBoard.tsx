@@ -308,7 +308,6 @@ export function VisitBoard({
             ariaLabel="Visit board status"
             items={statusItems}
             loading={initialLoading}
-            onRefresh={() => { void fetchBoard(); }}
             compact
           />
 

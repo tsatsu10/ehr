@@ -1,13 +1,18 @@
 import type { PharmacySelectData } from '@core/types';
-import { PatientContextBanner } from '@components/PatientContextBanner';
-import { bannerPropsFromPreview } from '@components/bannerPreviewProps';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
-import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
-import { Card, CardContent } from '@components/ui/card';
 import { PharmacyPrescriptionsTable } from './PharmacyPrescriptionsTable';
 import { PharmacyWalkinPanel } from './PharmacyWalkinPanel';
 import { PharmacyExternalRxPanel } from './PharmacyExternalRxPanel';
+import { PharmacyPatientBanner } from './PharmacyPatientBanner';
+import { PharmacyShortcuts } from './PharmacyShortcuts';
+import {
+  PharmacyActiveEmpty,
+  PharmacyActiveLoading,
+  PharmacyActiveSection,
+  PharmacyActiveShell,
+  PharmacyActiveStickyFooter,
+} from './pharmacyDeskUi';
 
 export type PharmacyActiveMode = 'idle' | 'loading' | 'active' | 'error';
 
@@ -15,7 +20,6 @@ interface PharmacyActivePaneProps {
   mode: PharmacyActiveMode;
   data: PharmacySelectData | null;
   hasActiveWork: boolean;
-  canSkipToPayment?: boolean;
   visitBoardUrl?: string;
   blocked: boolean;
   actionError: string | null;
@@ -24,7 +28,6 @@ interface PharmacyActivePaneProps {
   canDispense?: boolean;
   onTakePatient: () => void;
   onComplete: () => void;
-  onSkip: () => void;
   onOpenDispense: () => void;
   onOpenRxEdit: () => void;
   onDispenseRx?: (prescriptionId: number) => void;
@@ -35,30 +38,10 @@ interface PharmacyActivePaneProps {
   onOpenPharmacyService?: () => void;
 }
 
-function PatientBanner({ data }: { data: PharmacySelectData }) {
-  const { preview, visit } = data;
-
-  return (
-    <PatientContextBanner
-      identity={preview.identity}
-      layout="compact"
-      completion={preview.completion}
-      safety={preview.safety}
-      {...bannerPropsFromPreview(preview)}
-      aside={<Badge variant="neutral">{visit.state}</Badge>}
-    >
-      <div className="text-sm mt-1 text-[var(--oe-nc-text-muted)]">
-        Visit #{visit.queue_number} · {visit.visit_type_label || 'Visit'}
-      </div>
-    </PatientContextBanner>
-  );
-}
-
 export function PharmacyActivePane({
   mode,
   data,
   hasActiveWork,
-  canSkipToPayment = false,
   visitBoardUrl,
   blocked,
   actionError,
@@ -67,7 +50,6 @@ export function PharmacyActivePane({
   canDispense = false,
   onTakePatient,
   onComplete,
-  onSkip,
   onOpenDispense,
   onOpenRxEdit,
   onDispenseRx,
@@ -78,84 +60,79 @@ export function PharmacyActivePane({
   onOpenPharmacyService,
 }: PharmacyActivePaneProps) {
   if (mode === 'idle') {
-    return (
-      <div id="nc-pharmacy-active-pane">
-        <Card>
-          <CardContent className="text-[var(--oe-nc-text-muted)] text-center py-5">
-            <em>Select a patient from the pharmacy queue.</em>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <PharmacyActiveEmpty />;
   }
 
   if (mode === 'loading') {
-    return (
-      <div id="nc-pharmacy-active-pane">
-        <Card>
-          <CardContent><em>Loading…</em></CardContent>
-        </Card>
-      </div>
-    );
+    return <PharmacyActiveLoading />;
   }
 
   if (mode === 'error' || !data) {
     return (
-      <div id="nc-pharmacy-active-pane">
-        <div className={deskCalloutClass('error', 'm-0 text-sm')} role="alert">
-          Failed to load visit.
+      <PharmacyActiveShell>
+        <div className="nc-pharmacy-active-shell__content">
+          <div className={deskCalloutClass('error', 'm-0 text-sm')} role="alert">
+            Failed to load visit.
+          </div>
         </div>
-      </div>
+      </PharmacyActiveShell>
     );
   }
 
   const inPharmacy = data.visit.state === 'in_pharmacy';
   const canTake = data.visit.state === 'ready_for_pharmacy' && !hasActiveWork;
-  const canSkip = canSkipToPayment && (data.visit.state === 'ready_for_pharmacy' || inPharmacy);
   const walkinTriage = data.walkin_triage;
   const needsWalkinOutcome = !!walkinTriage?.enabled;
   const completeBlocked = needsWalkinOutcome && !walkinOutcome;
-  const rxListUrl = data.rx_list_url || '#';
+  const firstUndispensedId = data.prescriptions?.find((line) => line.status === 'to_dispense')?.id;
+  const firstPrintableId = data.prescriptions?.[0]?.id;
+
+  const heroTitle = inPharmacy
+    ? `Active pharmacy · #${data.visit.queue_number} ${data.preview.identity.display_name}`
+    : `Ready for pharmacy · #${data.visit.queue_number} ${data.preview.identity.display_name}`;
+
+  const handleDispensePrimary = () => {
+    if (pharmOpsEnabled && canDispense && firstUndispensedId && onDispenseRx) {
+      onDispenseRx(firstUndispensedId);
+      return;
+    }
+    onOpenDispense();
+  };
+
+  const handlePrintPrimary = () => {
+    if (firstPrintableId && onPrintRx) {
+      onPrintRx(firstPrintableId);
+    }
+  };
 
   return (
-    <div id="nc-pharmacy-active-pane">
-      <Card>
-        <CardContent>
-          <PatientBanner data={data} />
+    <PharmacyActiveShell className="nc-pharmacy-active-shell--with-sticky-footer">
+      <header className="nc-pharmacy-active-shell__hero">
+        <h2 className="nc-pharmacy-active-shell__hero-title">{heroTitle}</h2>
+        <p className="nc-pharmacy-active-shell__hero-sub">
+          {data.visit.visit_type_label || 'Visit'}
+          {inPharmacy ? ' — dispense and complete' : ' — take patient to begin'}
+        </p>
+      </header>
 
-          {walkinTriage?.enabled && onSelectWalkinOutcome && onWalkinClose && (
-            <PharmacyWalkinPanel
-              triage={walkinTriage}
-              selectedOutcome={walkinOutcome}
-              disabled={blocked || submitting}
-              onSelectOutcome={onSelectWalkinOutcome}
-              onCloseWithoutDispense={onWalkinClose}
-            />
-          )}
+      <div className="nc-pharmacy-active-shell__content">
+        <PharmacyPatientBanner data={data} />
 
-          {walkinOutcome === 'external_rx_dispensed'
-            && walkinTriage?.external_rx
-            && onOpenPharmacyService && (
-            <PharmacyExternalRxPanel
-              status={walkinTriage.external_rx}
-              disabled={blocked || submitting}
-              onOpenPharmacyService={onOpenPharmacyService}
-            />
-          )}
+        {walkinTriage?.enabled && onSelectWalkinOutcome && onWalkinClose && (
+          <PharmacyWalkinPanel
+            triage={walkinTriage}
+            selectedOutcome={walkinOutcome}
+            disabled={blocked || submitting}
+            onSelectOutcome={onSelectWalkinOutcome}
+            onCloseWithoutDispense={onWalkinClose}
+          />
+        )}
 
-          {(data.undispensed_rx_count ?? 0) > 0 ? (
-            <div className={deskCalloutClass('warn', 'mb-3 text-sm')} role="alert">
-              <strong>
-                {data.undispensed_rx_count === 1
-                  ? '1 Rx undispensed'
-                  : `${data.undispensed_rx_count} Rx undispensed`}
-              </strong>
-              {' '}
-              — Pharmacy complete is blocked until dispensed, skipped to payment, or supervisor override.
-            </div>
-          ) : null}
+        {walkinOutcome === 'external_rx_dispensed' && walkinTriage?.external_rx && (
+          <PharmacyExternalRxPanel status={walkinTriage.external_rx} />
+        )}
 
-          <h5>Prescriptions for this visit</h5>
+        <PharmacyActiveSection title="Prescriptions">
           <PharmacyPrescriptionsTable
             prescriptions={data.prescriptions ?? []}
             showStockBadges={pharmOpsEnabled}
@@ -165,105 +142,66 @@ export function PharmacyActivePane({
             onDispense={onDispenseRx}
             onPrintRx={onPrintRx}
           />
+        </PharmacyActiveSection>
 
-          <div className="mb-3 mt-3 flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" asChild>
-              <a
-                id="nc-pharmacy-open-rx-list"
-                href={rxListUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Open Rx list (core)
-              </a>
-            </Button>
-            {pharmOpsEnabled ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                id="nc-pharmacy-open-dispense"
-                disabled={blocked || !inPharmacy}
-                onClick={onOpenDispense}
-                title="Legacy stock dispense screen"
-              >
-                Advanced dispense (core)
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                id="nc-pharmacy-open-dispense"
-                disabled={blocked || !inPharmacy}
-                onClick={onOpenDispense}
-              >
-                Open encounter / dispense
-              </Button>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              id="nc-pharmacy-open-rx-edit"
-              disabled={blocked || !inPharmacy}
-              onClick={onOpenRxEdit}
-            >
-              Add Rx (core)
-            </Button>
+        <PharmacyActiveSection title="Actions">
+          <PharmacyShortcuts
+            blocked={blocked || submitting}
+            inPharmacy={inPharmacy}
+            pharmOpsEnabled={pharmOpsEnabled}
+            canPrintRx={!!data.can_print_rx}
+            rxListUrl={data.rx_list_url}
+            showPharmacyService={
+              walkinOutcome === 'external_rx_dispensed' && !!walkinTriage?.external_rx
+            }
+            pharmacyServiceStarted={walkinTriage?.external_rx?.pharmacy_service_started}
+            onDispense={handleDispensePrimary}
+            onAddRx={onOpenRxEdit}
+            onPrintRx={data.can_print_rx ? handlePrintPrimary : undefined}
+            onOpenPharmacyService={onOpenPharmacyService}
+            onOpenDispenseCore={onOpenDispense}
+          />
+        </PharmacyActiveSection>
+
+        {actionError && (
+          <div className={deskCalloutClass('error', 'text-sm')} id="nc-pharmacy-action-error" role="alert">
+            {actionError}
           </div>
+        )}
+      </div>
 
-          {actionError && (
-            <div className={deskCalloutClass('error', 'text-sm')} id="nc-pharmacy-action-error" role="alert">
-              {actionError}
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            {canTake && (
-              <Button
-                type="button"
-                id="nc-pharmacy-take-btn"
-                disabled={blocked || submitting}
-                onClick={onTakePatient}
-              >
-                Take patient
-              </Button>
-            )}
-            {inPharmacy && (
-              <Button
-                type="button"
-                variant="cta"
-                id="nc-pharmacy-complete-btn"
-                disabled={blocked || submitting || completeBlocked}
-                title={completeBlocked ? 'Select a dispense outcome first' : undefined}
-                onClick={onComplete}
-              >
-                {submitting ? 'Completing…' : 'Pharmacy complete'}
-              </Button>
-            )}
-            {canSkip && (
-              <Button
-                type="button"
-                variant="outline"
-                className="border-amber-400 text-amber-800 hover:bg-amber-50"
-                id="nc-pharmacy-skip-btn"
-                disabled={blocked || submitting}
-                onClick={onSkip}
-              >
-                Skip to payment
-              </Button>
-            )}
-            {visitBoardUrl && (
-              <Button variant="outline" size="sm" asChild>
-                <a href={visitBoardUrl} target="_top">
-                  Visit Board
-                </a>
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+      <PharmacyActiveStickyFooter>
+        {canTake && (
+          <Button
+            type="button"
+            id="nc-pharmacy-take-btn"
+            variant="cta"
+            disabled={blocked || submitting}
+            onClick={onTakePatient}
+          >
+            Take patient
+          </Button>
+        )}
+        {inPharmacy && (
+          <Button
+            type="button"
+            variant="cta"
+            id="nc-pharmacy-complete-btn"
+            disabled={blocked || submitting || completeBlocked}
+            title={completeBlocked ? 'Select a dispense outcome first' : undefined}
+            onClick={onComplete}
+          >
+            {submitting ? 'Completing…' : 'Pharmacy complete'}
+          </Button>
+        )}
+        {visitBoardUrl && (
+          <Button variant="outline" size="sm" asChild>
+            <a href={visitBoardUrl} target="_top">
+              Visit Board
+            </a>
+          </Button>
+        )}
+      </PharmacyActiveStickyFooter>
+    </PharmacyActiveShell>
   );
 }

@@ -1,13 +1,13 @@
+/**
+ * PharmacyQueue — waiting / in-pharmacy patients.
+ */
+
 import type { PharmacyQueueCard } from '@core/types';
 import { WaitTimeSpan } from '@components/WaitTimeSpan';
-import { AncillaryVisitBadges } from '@components/AncillaryVisitBadges';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
-import { Badge } from '@components/ui/badge';
-import {
-  queueCardHeaderClass,
-  queueCardMetaClass,
-  queueCardShellClass,
-} from '@components/queueCardStyles';
+import { ChevronRight } from 'lucide-react';
+import { PharmacyQueueCardBadges } from './PharmacyQueueCardBadges';
+import { PharmacyQueuePanel } from './pharmacyDeskUi';
 
 interface PharmacyQueueProps {
   cards: PharmacyQueueCard[];
@@ -17,7 +17,64 @@ interface PharmacyQueueProps {
   onSelectVisit: (card: PharmacyQueueCard) => void;
 }
 
-export function PharmacyQueue({
+function formatState(state: PharmacyQueueCard['state']): string {
+  return state === 'in_pharmacy' ? 'In pharmacy' : 'Ready';
+}
+
+function PharmacyQueueCardButton({
+  card,
+  disabled,
+  onSelect,
+}: {
+  card: PharmacyQueueCard;
+  disabled: boolean;
+  onSelect: (card: PharmacyQueueCard) => void;
+}) {
+  const isClaimLost = !!card.claim_lost;
+  const isUrgent = card.is_urgent === 1;
+  const actionLabel = card.state === 'in_pharmacy' ? 'Open' : 'Take';
+
+  return (
+    <button
+      type="button"
+      className={[
+        'nc-pharmacy-queue-card',
+        isUrgent && 'nc-pharmacy-queue-card--urgent',
+        isClaimLost && 'nc-pharmacy-queue-card--claim-lost',
+        disabled && 'nc-pharmacy-queue-card--disabled',
+      ].filter(Boolean).join(' ')}
+      data-visit-id={card.id}
+      data-from-state={card.state}
+      disabled={disabled || isClaimLost}
+      title={disabled ? 'Complete your current patient first' : undefined}
+      onClick={() => !disabled && !isClaimLost && onSelect(card)}
+    >
+      <span className="nc-pharmacy-queue-card__number" aria-hidden="true">
+        {card.queue_number}
+      </span>
+      <span className="nc-pharmacy-queue-card__body">
+        <span className="nc-pharmacy-queue-card__top">
+          <strong className="nc-pharmacy-queue-card__name">{card.display_name}</strong>
+          <PharmacyQueueCardBadges card={card} />
+        </span>
+        <span className="nc-pharmacy-queue-card__meta">
+          {formatState(card.state)}
+          {' · '}
+          <WaitTimeSpan card={card} suffix="" />
+          {card.visit_type_label ? ` · ${card.visit_type_label}` : ''}
+        </span>
+      </span>
+      {!disabled && !isClaimLost && (
+        <span className="nc-pharmacy-queue-card__action" aria-hidden="true">
+          {actionLabel}
+          <ChevronRight className="h-3.5 w-3.5" />
+        </span>
+      )}
+    </button>
+  );
+}
+
+export function PharmacyQueueBody({
   cards,
   hasActiveWork,
   loading,
@@ -25,71 +82,51 @@ export function PharmacyQueue({
   onSelectVisit,
 }: PharmacyQueueProps) {
   return (
-    <div className="nc-pharmacy-queue-panel">
-      <div className="mb-2">
-        <strong>Pharmacy queue</strong>
-      </div>
-
+    <>
       {error && (
         <div className={deskCalloutClass('error', 'mb-2 text-sm')} role="alert">
           {error}
         </div>
       )}
 
+      {hasActiveWork && cards.some((c) => c.state === 'ready_for_pharmacy') && (
+        <p className="nc-pharmacy-queue-hint">
+          Finish your current patient before taking another from the queue.
+        </p>
+      )}
+
       {loading && cards.length === 0 && (
-        <div className="text-[var(--oe-nc-text-muted)] py-2"><em>Loading pharmacy queue…</em></div>
+        <div className="nc-pharmacy-queue-empty"><em>Loading queue…</em></div>
       )}
 
       {!loading && !error && cards.length === 0 && (
-        <div className="text-[var(--oe-nc-text-muted)] py-3"><em>No pharmacy work pending.</em></div>
+        <div className="nc-pharmacy-queue-empty">
+          <em>No pharmacy work pending.</em>
+          <span className="nc-pharmacy-queue-empty__sub">Skipped patients appear on Visit Board.</span>
+        </div>
       )}
 
-      <div id="nc-pharmacy-queue-list">
+      <div id="nc-pharmacy-queue-list" className="nc-pharmacy-queue-list">
         {cards.map((card) => {
           const disabled = hasActiveWork && card.state === 'ready_for_pharmacy';
-          const rxBadgeLabel = card.undispensed_rx_count != null
-            ? (card.undispensed_rx_count > 0 ? `${card.undispensed_rx_count} Rx undispensed` : null)
-            : (card.rx_count ?? 0) > 0
-              ? `${card.rx_count} Rx`
-              : null;
-
           return (
-            <button
+            <PharmacyQueueCardButton
               key={card.id}
-              type="button"
-              className={queueCardShellClass({
-                urgent: Boolean(card.is_urgent),
-                claimLost: !!card.claim_lost,
-              })}
-              data-visit-id={card.id}
-              data-from-state={card.state}
+              card={card}
               disabled={disabled}
-              title={disabled ? 'Complete your current patient first' : undefined}
-              onClick={() => !disabled && onSelectVisit(card)}
-            >
-              <div className={queueCardHeaderClass}>
-                <strong>#{card.queue_number} {card.display_name}</strong>
-                {card.is_urgent === 1 && <Badge variant="warning" className="ml-1">URGENT</Badge>}
-                <AncillaryVisitBadges badges={card.ancillary_badges} />
-                {card.pharmacy_mine && <Badge className="ml-1">You</Badge>}
-                {card.pharmacy_actor_name && !card.pharmacy_mine && (
-                  <Badge variant="info" className="ml-1">{card.pharmacy_actor_name}</Badge>
-                )}
-                {rxBadgeLabel ? (
-                  <Badge variant="outline" className="ml-1">{rxBadgeLabel}</Badge>
-                ) : null}
-              </div>
-              <div className={queueCardMetaClass}>
-                {card.state} · <WaitTimeSpan card={card} suffix="" />
-              </div>
-            </button>
+              onSelect={onSelectVisit}
+            />
           );
         })}
       </div>
+    </>
+  );
+}
 
-      <p className="text-[var(--oe-nc-text-muted)] text-sm mt-3 mb-0">
-        Skipped pharmacy patients appear on Visit Board under Payment.
-      </p>
-    </div>
+export function PharmacyQueue(props: PharmacyQueueProps) {
+  return (
+    <PharmacyQueuePanel title="Pharmacy queue" count={props.cards.length}>
+      <PharmacyQueueBody {...props} />
+    </PharmacyQueuePanel>
   );
 }

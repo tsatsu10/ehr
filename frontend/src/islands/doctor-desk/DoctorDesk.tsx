@@ -6,7 +6,7 @@
  * doctor.set_supervisor, doctor.lab_panel_place
  */
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo, type MutableRefObject } from 'react';
 import { oeFetch, OeFetchError } from '@core/oeFetch';
 import { resolveActionConflict, type DeskInterrupt } from '@core/deskConflict';
 import { useInterval } from '@core/useInterval';
@@ -27,8 +27,11 @@ import type {
   PharmacyPrescriptionLine,
   RoutingPreview,
 } from '@core/types';
-import { DoctorRosterBar } from './DoctorRosterBar';
 import { DoctorQueue } from './DoctorQueue';
+import { DoctorMobileQueueBar, DoctorMobileQueueSheet } from './DoctorMobileQueueSheet';
+import { DoctorDutyToggle } from './DoctorDutyToggle';
+import { DoctorTeamRoster } from './DoctorTeamRoster';
+import { useDoctorRoster } from './useDoctorRoster';
 import { DoctorActivePane, type ActiveMode } from './DoctorActivePane';
 import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
@@ -55,8 +58,25 @@ import { useDoctorShortcutNav } from './useDoctorShortcutNav';
 import { DOCTOR_LEFT_VIA_KEY } from './doctorShortcutNav';
 import { setDoctorDeskCurrencyFormat } from './doctorDeskUtils';
 import type { DoctorSignMeta } from './DoctorPatientBanner';
+import { DoctorDeskLayout } from './doctorDeskUi';
 
 const STORAGE_KEY = 'doctor_desk_active_visit_id';
+const NARROW_DESK_QUERY = '(max-width: 1023px)';
+
+function useNarrowDoctorDesk(): boolean {
+  const [narrow, setNarrow] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(NARROW_DESK_QUERY).matches,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(NARROW_DESK_QUERY);
+    const update = () => setNarrow(mq.matches);
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  return narrow;
+}
 
 function payloadToSignMeta(data: DoctorConsultPayload): DoctorSignMeta {
   return {
@@ -85,8 +105,12 @@ function applyConsultPayload(
     prescriptions?: PharmacyPrescriptionLine[];
     rx_list_url?: string;
   }) => void,
+  activeVisitRef?: MutableRefObject<DoctorConsultPayload['visit'] | null>,
 ) {
   setActiveVisit(data.visit);
+  if (activeVisitRef) {
+    activeVisitRef.current = data.visit;
+  }
   setActivePreview(data.preview);
   setRoutingPreview(data.routing_preview ?? null);
   setSignMeta(payloadToSignMeta(data));
@@ -126,6 +150,8 @@ export function DoctorDesk({
     }
   }, [currencyFormat]);
   const [scope, setScope] = useState<'me' | 'all'>(multiDoctorFilters ? 'me' : 'all');
+  const [mobileQueueOpen, setMobileQueueOpen] = useState(false);
+  const narrowDesk = useNarrowDoctorDesk();
   const [cards, setCards] = useState<DoctorQueueCard[]>([]);
   const [counts, setCounts] = useState<DoctorQueueData['counts'] | null>(null);
   const [visitDate, setVisitDate] = useState<string | null>(null);
@@ -138,7 +164,28 @@ export function DoctorDesk({
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [queueRefreshToken, setQueueRefreshToken] = useState(0);
 
+  const roster = useDoctorRoster({
+    ajaxUrl,
+    csrfToken,
+    facilityId,
+    visitDate,
+    refreshToken: queueRefreshToken,
+    enabled: doctorRosterEnabled,
+  });
+
+  const teamRosterExtra = doctorRosterEnabled ? (
+    <DoctorTeamRoster
+      doctors={roster.doctors}
+      myUserId={roster.myUserId}
+      loading={roster.loading}
+    />
+  ) : null;
+
   const [mode, setMode] = useState<ActiveMode>('idle');
+  const modeRef = useRef(mode);
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
   const [activeVisit, setActiveVisit] = useState<DoctorConsultPayload['visit'] | null>(null);
   const [activePreview, setActivePreview] = useState<DoctorConsultPayload['preview'] | null>(null);
   const [routingPreview, setRoutingPreview] = useState<RoutingPreview | null>(null);
@@ -174,6 +221,11 @@ export function DoctorDesk({
     activeVisitRef.current = activeVisit;
   }, [activeVisit]);
 
+  const modalOpenRef = useRef(false);
+  useEffect(() => {
+    modalOpenRef.current = labPanelOpen || formularyRxOpen || routingOpen || docFavoritesOpen;
+  }, [labPanelOpen, formularyRxOpen, routingOpen, docFavoritesOpen]);
+
   const facilityParams = useMemo<Record<string, string | number> | undefined>(
     () => (facilityId > 0 ? { facility_id: facilityId } : undefined),
     [facilityId],
@@ -190,6 +242,7 @@ export function DoctorDesk({
 
   const resetActivePane = useCallback(() => {
     setMode('idle');
+    activeVisitRef.current = null;
     setActiveVisit(null);
     setActivePreview(null);
     setRoutingPreview(null);
@@ -235,6 +288,7 @@ export function DoctorDesk({
         setSignMeta,
         sharedSession.setActiveVisitId,
         setPharmOpsConsult,
+        activeVisitRef,
       );
       setMode('consult');
 
@@ -360,7 +414,7 @@ export function DoctorDesk({
 
       const current = activeVisitRef.current;
 
-      if (data.active_consult && !current) {
+      if (data.active_consult && !current && modeRef.current !== 'consult' && modeRef.current !== 'loading') {
         void loadActiveConsultRef.current(data.active_consult.id);
       }
 
@@ -377,7 +431,8 @@ export function DoctorDesk({
 
         const onQueue = !!queueMatch;
         const stillMine = data.active_consult?.id === activeId;
-        if (!onQueue && !stillMine) {
+        const consultLocallyActive = current.state === 'with_doctor';
+        if (!onQueue && !stillMine && !consultLocallyActive && !modalOpenRef.current) {
           resetActivePane();
           sharedSession.clearActiveVisitId();
           setHasActiveConsult(!!data.has_active_consult);
@@ -498,6 +553,7 @@ export function DoctorDesk({
         setSignMeta,
         sharedSession.setActiveVisitId,
         setPharmOpsConsult,
+        activeVisitRef,
       );
       setMode('consult');
       void fetchQueue();
@@ -588,6 +644,7 @@ export function DoctorDesk({
       setSignMeta,
       sharedSession.setActiveVisitId,
       setPharmOpsConsult,
+      activeVisitRef,
     );
     setMode('consult');
     void fetchQueue();
@@ -648,6 +705,36 @@ export function DoctorDesk({
         }
       : null;
 
+  const statusBarTrailing = useMemo(() => {
+    const showDuty = doctorRosterEnabled && roster.self;
+    const showScope = multiDoctorFilters;
+    if (!showDuty && !showScope) return undefined;
+    return (
+      <>
+        {showDuty && (
+          <DoctorDutyToggle
+            taking={roster.self!.taking_patients}
+            saving={roster.saving}
+            onToggle={(next) => { void roster.toggleTaking(next); }}
+          />
+        )}
+        {showScope && (
+          <NativeSelect
+            className="h-7 w-auto"
+            style={{ maxWidth: 120 }}
+            id="nc-doctor-scope"
+            value={scope}
+            onChange={(e) => setScope(e.target.value === 'all' ? 'all' : 'me')}
+            aria-label="Queue scope"
+          >
+            <option value="me">Me</option>
+            <option value="all">All</option>
+          </NativeSelect>
+        )}
+      </>
+    );
+  }, [doctorRosterEnabled, roster.self, roster.saving, roster.toggleTaking, multiDoctorFilters, scope]);
+
   return (
     <div id="nc-doctor-desk" className="nc-doctor-react-active">
       <DeskInterruptBanner interrupt={interrupt} onDismiss={handleInterruptDismiss} />
@@ -678,62 +765,64 @@ export function DoctorDesk({
             : []),
         ]}
         loading={queueLoading}
-        onRefresh={() => { void fetchQueue(); }}
-        trailing={
-          multiDoctorFilters ? (
-            <NativeSelect
-              className="h-7 w-auto"
-              style={{ maxWidth: 120 }}
-              id="nc-doctor-scope"
-              value={scope}
-              onChange={(e) => setScope(e.target.value === 'all' ? 'all' : 'me')}
-              aria-label="Queue scope"
-            >
-              <option value="me">Me</option>
-              <option value="all">All</option>
-            </NativeSelect>
-          ) : undefined
-        }
+        trailing={statusBarTrailing}
       />
 
-      <div className="grid grid-cols-12 gap-3">
-        <div className="col-span-12 lg:col-span-8 mb-3">
-          <DoctorActivePane
-            mode={mode}
-            payload={consultPayload}
-            signMeta={signMeta}
-            ajaxUrl={ajaxUrl}
-            csrfToken={csrfToken}
-            facilityId={facilityId}
-            visitBoardUrl={visitBoardUrl}
-            blocked={sharedSession.blocked}
-            labPanelOrderEnabled={labPanelOrderEnabled}
-            formularyRxEnabled={formularyRxEnabled}
-            onComplete={handleComplete}
-            onOpenLabPanel={() => setLabPanelOpen(true)}
-            onOpenFormularyRx={() => setFormularyRxOpen(true)}
-            onOpenDocFavorites={
-              consultPayload?.clinical_doc_hub_enabled ? () => setDocFavoritesOpen(true) : undefined
-            }
-            runShortcut={shortcutNav.runShortcut}
-            onShortcutError={(msg) => showDeskToast(msg, 'danger')}
-            onPrintRx={(id) => { void handlePrintRx(id); }}
-            onSupervisorUpdated={handleSupervisorUpdated}
-            onSupervisorNotice={(message, variant) => showDeskToast(message, variant)}
-          />
-        </div>
-
-        <div className="col-span-12 lg:col-span-4 mb-3">
-          {doctorRosterEnabled && (
-            <DoctorRosterBar
+      <div className="nc-doctor-desk">
+        <DoctorDeskLayout
+          activePane={(
+            <DoctorActivePane
+              mode={mode}
+              payload={consultPayload}
+              signMeta={signMeta}
               ajaxUrl={ajaxUrl}
               csrfToken={csrfToken}
               facilityId={facilityId}
-              visitDate={visitDate}
-              refreshToken={queueRefreshToken}
+              visitBoardUrl={visitBoardUrl}
+              blocked={sharedSession.blocked}
+              labPanelOrderEnabled={labPanelOrderEnabled}
+              formularyRxEnabled={formularyRxEnabled}
+              onComplete={handleComplete}
+              onOpenLabPanel={() => setLabPanelOpen(true)}
+              onOpenFormularyRx={() => setFormularyRxOpen(true)}
+              onOpenDocFavorites={
+                consultPayload?.clinical_doc_hub_enabled ? () => setDocFavoritesOpen(true) : undefined
+              }
+              runShortcut={shortcutNav.runShortcut}
+              onShortcutError={(msg) => showDeskToast(msg, 'danger')}
+              onPrintRx={(id) => { void handlePrintRx(id); }}
+              onSupervisorUpdated={handleSupervisorUpdated}
+              onSupervisorNotice={(message, variant) => showDeskToast(message, variant)}
             />
           )}
-          <DoctorQueue
+          queue={(
+            <DoctorQueue
+              cards={cards}
+              doneToday={doneToday}
+              reopenableToday={reopenableToday}
+              canReopenConsult={canReopenConsult}
+              hasActiveConsult={hasActiveConsult}
+              loading={queueLoading}
+              error={queueError}
+              queueHeaderExtra={teamRosterExtra}
+              onTakePatient={(card) => void handleTakePatient(card)}
+              onReopenClick={setReopenTarget}
+            />
+          )}
+        />
+      </div>
+
+      {narrowDesk && !hasActiveConsult && (
+        <>
+          <DoctorMobileQueueBar
+            waitingCount={counts?.waiting ?? cards.length}
+            hasActiveConsult={hasActiveConsult}
+            onOpen={() => setMobileQueueOpen(true)}
+          />
+          <DoctorMobileQueueSheet
+            open={mobileQueueOpen}
+            onClose={() => setMobileQueueOpen(false)}
+            waitingCount={counts?.waiting ?? cards.length}
             cards={cards}
             doneToday={doneToday}
             reopenableToday={reopenableToday}
@@ -743,9 +832,10 @@ export function DoctorDesk({
             error={queueError}
             onTakePatient={(card) => void handleTakePatient(card)}
             onReopenClick={setReopenTarget}
+            queueHeaderExtra={teamRosterExtra}
           />
-        </div>
-      </div>
+        </>
+      )}
 
       <RoutingModal
         open={routingOpen}

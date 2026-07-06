@@ -42,4 +42,16 @@ class ClinicalDocAccessServiceTest extends TestCase
 
         $this->assertFalse($access->canWriteAnyLens());
     }
+
+    public function testConsultNoteAccessDoesNotRequireHub(): void
+    {
+        $access = new ClinicalDocAccessService(
+            aclChecker: static fn (string $section, string $aco): bool =>
+                $section === 'new_clinic' && $aco === 'new_clinical_doc_consult',
+        );
+
+        $access->assertConsultNoteAccess();
+        $this->expectException(\RuntimeException::class);
+        $access->assertHubAccess();
+    }
 }

@@ -15,9 +15,19 @@ use OpenEMR\Common\Database\QueryUtils;
 
 class ClinicConfigService
 {
+    private ?VisitScopeService $visitScope = null;
+
+    private function getVisitScope(): VisitScopeService
+    {
+        if ($this->visitScope === null) {
+            $this->visitScope = new VisitScopeService();
+        }
+        return $this->visitScope;
+    }
+
     public function resolveReaderFacilityId(): int
     {
-        return (new VisitScopeService())->resolveDefaultFacilityId();
+        return $this->getVisitScope()->resolveDefaultFacilityId();
     }
 
     public function isEnabled(string $key, int $default = 0, ?int $facilityId = null): bool

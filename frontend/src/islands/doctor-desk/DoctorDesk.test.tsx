@@ -88,7 +88,7 @@ describe('DoctorDesk', () => {
   it('shows idle placeholder while loading queue', async () => {
     mockFetch.mockReturnValue(new Promise(() => {}));
     render(<DoctorDesk {...props} />);
-    expect(screen.getByText(/Pick a patient from the queue/i)).toBeInTheDocument();
+    expect(screen.getByText(/Choose a patient from the queue/i)).toBeInTheDocument();
   });
 
   it('renders queue patients after poll', async () => {
@@ -130,7 +130,7 @@ describe('DoctorDesk', () => {
     fireEvent.click(screen.getByText(/Kwame Mensah/));
 
     await waitFor(() => {
-      expect(screen.getByText(/In consult #3/)).toBeInTheDocument();
+      expect(screen.getByText(/Active consult · #3 Kwame Mensah/)).toBeInTheDocument();
     });
     expect(screen.getByText(/Supervising provider/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Complete consult/i })).toBeEnabled();
@@ -236,11 +236,15 @@ describe('DoctorDesk', () => {
     fireEvent.click(screen.getByText(/Kwame Mensah/));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Open documentation/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Documentation hub/i })).toBeInTheDocument();
     });
   });
 
   it('shows lab results ready toast when results_ready flips on queue poll', async () => {
+    const refreshBtn = document.createElement('button');
+    refreshBtn.id = 'nc-doctor-refresh';
+    document.body.appendChild(refreshBtn);
+
     const patientPending = { ...waitingPatient, routing_chips: { results_ready: false } };
     const patientReady = { ...waitingPatient, routing_chips: { results_ready: true } };
 
@@ -260,10 +264,65 @@ describe('DoctorDesk', () => {
 
     await waitFor(() => screen.getByText(/Kwame Mensah/));
 
-    fireEvent.click(screen.getByRole('button', { name: /Refresh status/i }));
+    fireEvent.click(refreshBtn);
 
     await waitFor(() => {
       expect(screen.getByText(/Lab results ready for Kwame Mensah/i)).toBeInTheDocument();
     });
+
+    refreshBtn.remove();
+  });
+
+  it('opens quick lab order modal when lab panel ordering is enabled', async () => {
+    const catalog = {
+      has_catalog: true,
+      tests: [{ procedure_type_id: 1, name: 'CBC', code: 'CBC', has_fee: true, fee_amount: 10, is_starter: true }],
+      provider_name: 'Lab',
+      auto_bill_on_order: false,
+    };
+
+    const queueWithPatient = {
+      ...emptyQueue,
+      visits: [waitingPatient],
+      counts: { waiting: 1, done_today: 0, reopenable_today: 0 },
+    };
+
+    const queueWithConsult = {
+      ...emptyQueue,
+      visits: [],
+      counts: { waiting: 0, done_today: 0, reopenable_today: 0 },
+      has_active_consult: true,
+      active_consult: { ...waitingPatient, state: 'with_doctor' as const },
+    };
+
+    let taken = false;
+
+    mockFetch.mockImplementation((action: string) => {
+      if (action === 'doctor.take') {
+        taken = true;
+        return Promise.resolve(consultPayload);
+      }
+      if (action === 'doctor.queue') {
+        return Promise.resolve(taken ? queueWithConsult : queueWithPatient);
+      }
+      if (action === 'doctor.lab_panel_catalog') {
+        return Promise.resolve(catalog);
+      }
+      return Promise.resolve(emptyQueue);
+    });
+
+    render(<DoctorDesk {...props} labPanelOrderEnabled />);
+
+    const takeCard = await waitFor(() => screen.getByRole('button', { name: /Kwame Mensah/i }));
+    fireEvent.click(takeCard);
+
+    await waitFor(() => screen.getByRole('button', { name: /Lab order/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: /Lab order/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: /Quick lab order/i })).toBeInTheDocument();
+    });
+    expect(screen.getByLabelText(/CBC/i)).toBeInTheDocument();
   });
 });

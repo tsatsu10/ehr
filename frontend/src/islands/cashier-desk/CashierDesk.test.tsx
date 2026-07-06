@@ -87,7 +87,7 @@ describe('CashierDesk', () => {
   it('shows idle placeholder while loading queue', async () => {
     mockFetch.mockReturnValue(new Promise(() => {}));
     render(<CashierDesk {...props} />);
-    expect(screen.getByText(/Select a visit from the payment queue/i)).toBeInTheDocument();
+    expect(screen.getByText(/Choose a patient from the payment queue/i)).toBeInTheDocument();
   });
 
   it('renders queue visits after poll', async () => {
@@ -124,7 +124,7 @@ describe('CashierDesk', () => {
     fireEvent.click(screen.getByText(/Ama Boateng/));
 
     await waitFor(() => {
-      expect(screen.getByText(/Posted charges/)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /^Posted charges$/i })).toBeInTheDocument();
     });
     expect(screen.getByRole('button', { name: /Take payment/i })).toBeInTheDocument();
   });

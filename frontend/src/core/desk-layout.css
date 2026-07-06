@@ -1,0 +1,562 @@
+/*
+ * Shared clinical desk layout — doctor, lab, pharmacy, cashier, triage
+ * Each island uses its own BEM prefix; rules are grouped here to avoid drift.
+ */
+
+.nc-doctor-react-active,
+.nc-lab-react-active,
+.nc-pharmacy-react-active,
+.nc-cashier-react-active,
+.nc-triage-react-active {
+  width: 100%;
+  font-family: var(--font-sans, 'Noto Sans', system-ui, sans-serif);
+  color: var(--oe-nc-text, #1e293b);
+}
+
+.nc-doctor-desk-layout,
+.nc-lab-desk-layout,
+.nc-pharmacy-desk-layout,
+.nc-cashier-desk-layout,
+.nc-triage-desk-layout {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+}
+
+.nc-doctor-desk-layout__active,
+.nc-doctor-desk-layout__queue,
+.nc-lab-desk-layout__active,
+.nc-lab-desk-layout__queue,
+.nc-pharmacy-desk-layout__active,
+.nc-pharmacy-desk-layout__queue,
+.nc-cashier-desk-layout__active,
+.nc-cashier-desk-layout__queue,
+.nc-triage-desk-layout__active,
+.nc-triage-desk-layout__queue {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .nc-doctor-desk-layout,
+  .nc-lab-desk-layout,
+  .nc-pharmacy-desk-layout,
+  .nc-cashier-desk-layout,
+  .nc-triage-desk-layout {
+    grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+    align-items: start;
+  }
+
+  .nc-doctor-desk-layout__queue,
+  .nc-lab-desk-layout__queue,
+  .nc-pharmacy-desk-layout__queue,
+  .nc-cashier-desk-layout__queue,
+  .nc-triage-desk-layout__queue {
+    position: sticky;
+    top: 1rem;
+  }
+}
+
+@media (max-width: 1023px) {
+  .nc-doctor-desk-layout__queue,
+  .nc-lab-desk-layout__queue,
+  .nc-pharmacy-desk-layout__queue,
+  .nc-cashier-desk-layout__queue,
+  .nc-triage-desk-layout__queue {
+    display: none;
+  }
+
+  .nc-doctor-react-active,
+  .nc-lab-react-active,
+  .nc-pharmacy-react-active,
+  .nc-cashier-react-active,
+  .nc-triage-react-active {
+    padding-bottom: 4.5rem;
+  }
+}
+
+/* Active shell */
+.nc-doctor-active-shell,
+.nc-lab-active-shell,
+.nc-pharmacy-active-shell,
+.nc-cashier-active-shell,
+.nc-triage-active-shell {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--oe-nc-border, #cbd5e1);
+  border-radius: 1rem;
+  background: var(--oe-nc-surface, #fff);
+  box-shadow: var(--oe-nc-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  overflow: hidden;
+}
+
+.nc-doctor-active-shell__content,
+.nc-lab-active-shell__content,
+.nc-pharmacy-active-shell__content,
+.nc-cashier-active-shell__content,
+.nc-triage-active-shell__content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.nc-doctor-active-shell__empty,
+.nc-doctor-active-shell__loading,
+.nc-lab-active-shell__empty,
+.nc-lab-active-shell__loading,
+.nc-pharmacy-active-shell__empty,
+.nc-pharmacy-active-shell__loading,
+.nc-cashier-active-shell__empty,
+.nc-cashier-active-shell__loading,
+.nc-triage-active-shell__empty,
+.nc-triage-active-shell__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 14rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.nc-doctor-active-shell__empty-icon,
+.nc-lab-active-shell__empty-icon,
+.nc-pharmacy-active-shell__empty-icon,
+.nc-cashier-active-shell__empty-icon,
+.nc-triage-active-shell__empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--color-oe-primary, #1e40af) 10%, white);
+  color: var(--color-oe-primary, #1e40af);
+}
+
+.nc-doctor-active-shell__empty-title,
+.nc-lab-active-shell__empty-title,
+.nc-pharmacy-active-shell__empty-title,
+.nc-cashier-active-shell__empty-title,
+.nc-triage-active-shell__empty-title {
+  margin: 0;
+  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.nc-doctor-active-shell__empty-message,
+.nc-lab-active-shell__empty-message,
+.nc-pharmacy-active-shell__empty-message,
+.nc-cashier-active-shell__empty-message,
+.nc-triage-active-shell__empty-message {
+  margin: 0;
+  max-width: 22rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-doctor-active-shell__loading,
+.nc-lab-active-shell__loading,
+.nc-pharmacy-active-shell__loading,
+.nc-cashier-active-shell__loading,
+.nc-triage-active-shell__loading {
+  flex-direction: row;
+  font-size: 0.875rem;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-doctor-active-shell__hero,
+.nc-lab-active-shell__hero,
+.nc-pharmacy-active-shell__hero,
+.nc-cashier-active-shell__hero,
+.nc-triage-active-shell__hero {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--oe-nc-border, #cbd5e1);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-oe-primary, #1e40af) 6%, white),
+    var(--oe-nc-surface, #fff)
+  );
+}
+
+.nc-doctor-active-shell__hero-title,
+.nc-lab-active-shell__hero-title,
+.nc-pharmacy-active-shell__hero-title,
+.nc-cashier-active-shell__hero-title,
+.nc-triage-active-shell__hero-title {
+  margin: 0;
+  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.nc-doctor-active-shell__hero-sub,
+.nc-lab-active-shell__hero-sub,
+.nc-pharmacy-active-shell__hero-sub,
+.nc-cashier-active-shell__hero-sub,
+.nc-triage-active-shell__hero-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-doctor-active-section__title,
+.nc-lab-active-section__title,
+.nc-pharmacy-active-section__title,
+.nc-cashier-active-section__title,
+.nc-triage-active-section__title {
+  margin: 0 0 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.nc-doctor-active-shell--with-sticky-footer .nc-doctor-active-shell__content,
+.nc-lab-active-shell--with-sticky-footer .nc-lab-active-shell__content,
+.nc-pharmacy-active-shell--with-sticky-footer .nc-pharmacy-active-shell__content,
+.nc-cashier-active-shell--with-sticky-footer .nc-cashier-active-shell__content,
+.nc-triage-active-shell--with-sticky-footer .nc-triage-active-shell__content {
+  padding-bottom: 0.5rem;
+}
+
+.nc-doctor-active-shell__sticky-footer,
+.nc-lab-active-shell__sticky-footer,
+.nc-pharmacy-active-shell__sticky-footer,
+.nc-cashier-active-shell__sticky-footer,
+.nc-triage-active-shell__sticky-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--oe-nc-border, #cbd5e1);
+  background: color-mix(in srgb, var(--oe-nc-surface, #fff) 92%, transparent);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.06);
+}
+
+/* Queue panel */
+.nc-doctor-queue-panel,
+.nc-lab-queue-panel,
+.nc-pharmacy-queue-panel,
+.nc-cashier-queue-panel,
+.nc-triage-queue-panel {
+  border: 1px solid var(--oe-nc-border, #cbd5e1);
+  border-radius: 1rem;
+  background: var(--oe-nc-surface, #fff);
+  box-shadow: var(--oe-nc-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+}
+
+.nc-doctor-queue-panel__header,
+.nc-lab-queue-panel__header,
+.nc-pharmacy-queue-panel__header,
+.nc-cashier-queue-panel__header,
+.nc-triage-queue-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--oe-nc-border, #cbd5e1);
+  background: var(--oe-nc-bg-tint, #f8fafc);
+}
+
+.nc-doctor-queue-panel__title,
+.nc-lab-queue-panel__title,
+.nc-pharmacy-queue-panel__title,
+.nc-cashier-queue-panel__title,
+.nc-triage-queue-panel__title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.nc-doctor-queue-panel__count,
+.nc-lab-queue-panel__count,
+.nc-pharmacy-queue-panel__count,
+.nc-cashier-queue-panel__count,
+.nc-triage-queue-panel__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-oe-primary, #1e40af);
+  background: color-mix(in srgb, var(--color-oe-primary, #1e40af) 12%, white);
+}
+
+.nc-doctor-queue-panel__body,
+.nc-lab-queue-panel__body,
+.nc-pharmacy-queue-panel__body,
+.nc-cashier-queue-panel__body,
+.nc-triage-queue-panel__body {
+  padding: 0.75rem;
+}
+
+.nc-doctor-queue-list,
+.nc-lab-queue-list,
+.nc-pharmacy-queue-list,
+.nc-cashier-queue-list,
+.nc-triage-queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nc-doctor-queue-card,
+.nc-lab-queue-card,
+.nc-pharmacy-queue-card,
+.nc-cashier-queue-card,
+.nc-triage-queue-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--oe-nc-border, #cbd5e1);
+  border-radius: 0.75rem;
+  background: var(--oe-nc-surface, #fff);
+  text-align: left;
+  cursor: pointer;
+}
+
+.nc-doctor-queue-card--urgent,
+.nc-lab-queue-card--urgent,
+.nc-pharmacy-queue-card--urgent,
+.nc-cashier-queue-card--urgent,
+.nc-triage-queue-card--urgent {
+  border-color: color-mix(in srgb, #ea580c 45%, var(--oe-nc-border));
+  background: color-mix(in srgb, #ea580c 4%, white);
+}
+
+.nc-doctor-queue-card--claim-lost,
+.nc-doctor-queue-card--disabled,
+.nc-lab-queue-card--claim-lost,
+.nc-lab-queue-card--disabled,
+.nc-pharmacy-queue-card--claim-lost,
+.nc-pharmacy-queue-card--disabled,
+.nc-cashier-queue-card--disabled,
+.nc-triage-queue-card--claim-lost,
+.nc-triage-queue-card--disabled,
+.nc-triage-queue-card--held {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.nc-triage-queue-card--active {
+  border-color: var(--color-oe-primary, #1e40af);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-oe-primary, #1e40af) 25%, transparent);
+}
+
+.nc-triage-queue-card--mine {
+  border-color: color-mix(in srgb, var(--color-oe-primary, #1e40af) 35%, var(--oe-nc-border));
+  background: color-mix(in srgb, var(--color-oe-primary, #1e40af) 4%, white);
+}
+
+.nc-doctor-queue-card__number,
+.nc-lab-queue-card__number,
+.nc-pharmacy-queue-card__number,
+.nc-cashier-queue-card__number,
+.nc-triage-queue-card__number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-oe-primary, #1e40af);
+  background: color-mix(in srgb, var(--color-oe-primary, #1e40af) 10%, white);
+}
+
+.nc-doctor-queue-card__body,
+.nc-lab-queue-card__body,
+.nc-pharmacy-queue-card__body,
+.nc-cashier-queue-card__body,
+.nc-triage-queue-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.nc-doctor-queue-card__top,
+.nc-lab-queue-card__top,
+.nc-pharmacy-queue-card__top,
+.nc-cashier-queue-card__top,
+.nc-triage-queue-card__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.nc-doctor-queue-card__name,
+.nc-lab-queue-card__name,
+.nc-pharmacy-queue-card__name,
+.nc-cashier-queue-card__name,
+.nc-triage-queue-card__name {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.nc-doctor-queue-card__meta,
+.nc-lab-queue-card__meta,
+.nc-pharmacy-queue-card__meta,
+.nc-cashier-queue-card__meta,
+.nc-triage-queue-card__meta {
+  font-size: 0.75rem;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-doctor-queue-card__action,
+.nc-doctor-queue-card__take,
+.nc-lab-queue-card__action,
+.nc-pharmacy-queue-card__action,
+.nc-cashier-queue-card__action,
+.nc-triage-queue-card__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-oe-primary, #1e40af);
+  white-space: nowrap;
+}
+
+.nc-doctor-queue-card__badges,
+.nc-lab-queue-card__badges,
+.nc-pharmacy-queue-card__badges,
+.nc-cashier-queue-card__badges,
+.nc-triage-queue-card__badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.nc-doctor-queue-card__badges-more-trigger,
+.nc-lab-queue-card__badges-more-trigger,
+.nc-pharmacy-queue-card__badges-more-trigger,
+.nc-cashier-queue-card__badges-more-trigger,
+.nc-triage-queue-card__badges-more-trigger {
+  display: inline-block;
+  padding: 0.125rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--oe-nc-text-muted, #64748b);
+  background: var(--oe-nc-bg-tint, #f8fafc);
+  cursor: pointer;
+  list-style: none;
+}
+
+.nc-doctor-queue-card__badges-more-trigger::-webkit-details-marker,
+.nc-lab-queue-card__badges-more-trigger::-webkit-details-marker,
+.nc-pharmacy-queue-card__badges-more-trigger::-webkit-details-marker,
+.nc-cashier-queue-card__badges-more-trigger::-webkit-details-marker,
+.nc-triage-queue-card__badges-more-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.nc-doctor-queue-card__badges-overflow,
+.nc-lab-queue-card__badges-overflow,
+.nc-pharmacy-queue-card__badges-overflow,
+.nc-cashier-queue-card__badges-overflow,
+.nc-triage-queue-card__badges-overflow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+}
+
+.nc-doctor-queue-hint,
+.nc-lab-queue-hint,
+.nc-pharmacy-queue-hint,
+.nc-cashier-queue-hint,
+.nc-triage-queue-hint {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-doctor-queue-empty,
+.nc-lab-queue-empty,
+.nc-pharmacy-queue-empty,
+.nc-cashier-queue-empty,
+.nc-triage-queue-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 0.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-doctor-queue-empty__sub,
+.nc-lab-queue-empty__sub,
+.nc-pharmacy-queue-empty__sub,
+.nc-cashier-queue-empty__sub,
+.nc-triage-queue-empty__sub {
+  font-size: 0.75rem;
+}
+
+/* Mobile queue bar */
+.nc-doctor-mobile-queue-bar,
+.nc-lab-mobile-queue-bar,
+.nc-pharmacy-mobile-queue-bar,
+.nc-cashier-mobile-queue-bar,
+.nc-triage-mobile-queue-bar {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .nc-doctor-mobile-queue-bar,
+  .nc-lab-mobile-queue-bar,
+  .nc-pharmacy-mobile-queue-bar,
+  .nc-cashier-mobile-queue-bar,
+  .nc-triage-mobile-queue-bar {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--oe-nc-border, #cbd5e1);
+    background: var(--oe-nc-surface, #fff);
+    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08);
+  }
+
+  .nc-doctor-mobile-queue-bar__btn,
+  .nc-lab-mobile-queue-bar__btn,
+  .nc-pharmacy-mobile-queue-bar__btn,
+  .nc-cashier-mobile-queue-bar__btn,
+  .nc-triage-mobile-queue-bar__btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.nc-doctor-react-active .modal-backdrop,
+.nc-lab-react-active .modal-backdrop,
+.nc-pharmacy-react-active .modal-backdrop,
+.nc-cashier-react-active .modal-backdrop,
+.nc-triage-react-active .modal-backdrop {
+  display: none !important;
+}

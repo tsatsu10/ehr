@@ -3,7 +3,6 @@ import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { ncShadcnTableClass } from '@components/ncTableStyles';
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
-import { Card, CardContent } from '@components/ui/card';
 import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
 import { NativeSelect } from '@components/ui/native-select';
@@ -78,10 +77,9 @@ export function ChargePicker({
   };
 
   return (
-    <Card className="mb-3 border-2 border-[var(--oe-nc-primary)]">
-      <CardContent className="py-3">
-        <h6 className="mb-2">Add charges from clinic fee schedule</h6>
-        <div className="mb-2 grid grid-cols-1 items-end gap-2 md:grid-cols-12">
+    <div className="nc-cashier-charge-picker mb-3">
+      <h3 className="nc-cashier-charge-picker__title">Add charges from clinic fee schedule</h3>
+      <div className="nc-cashier-charge-picker__pick-row">
           <div className="space-y-1.5 md:col-span-8">
             <Label className="normal-case font-normal" htmlFor="nc-cashier-fee-pick">Fee line</Label>
             <NativeSelect
@@ -193,7 +191,6 @@ export function ChargePicker({
         >
           {posting ? 'Posting…' : 'Post charges to visit'}
         </Button>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
