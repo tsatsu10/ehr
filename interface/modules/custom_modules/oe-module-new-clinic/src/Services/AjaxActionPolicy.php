@@ -90,7 +90,9 @@ class AjaxActionPolicy
         'admin.config.import' => 'new_admin',
         'admin.completion_weights.save' => 'new_admin',
         'clinical_doc.ghana_pack_status' => 'new_admin',
+        'clinical_doc.referral_hospital_pack_status' => 'new_admin',
         'clinical_doc.import_ghana_pack' => 'new_admin',
+        'clinical_doc.import_referral_hospital_pack' => 'new_admin',
         'clinical_doc.import_ancillary_pack' => 'new_admin',
         'reports.daily' => 'reports',
         'reports.reconciliation' => 'reports',
@@ -296,11 +298,16 @@ class AjaxActionPolicy
         'clinical_doc.catalog',
         'clinical_doc.sign_status',
         'clinical_doc.favorites',
+        'encounter_note.get',
+        'encounter_note.prefill',
     ];
 
     /** @var array<int, string> */
     private const CLINICAL_DOC_WRITE_ACTIONS = [
         'clinical_doc.open_form',
+        'encounter_note.save',
+        'encounter_note.validate',
+        'encounter_note.sign',
     ];
 
     /** @var array<int, string> */

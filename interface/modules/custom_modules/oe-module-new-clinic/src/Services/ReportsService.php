@@ -145,8 +145,7 @@ class ReportsService
 
         $webroot = $GLOBALS['webroot'] ?? '';
         $unsigned = [];
-        $encounterIds = array_map(static fn (array $row): int => (int) ($row['encounter'] ?? 0), $rows);
-        $signedMap = $this->signService->batchEncounterDocumentationSigned($encounterIds);
+        $signedMap = $this->signService->batchVisitDocumentationSigned($rows);
 
         foreach ($rows as $row) {
             $encounterId = (int) ($row['encounter'] ?? 0);

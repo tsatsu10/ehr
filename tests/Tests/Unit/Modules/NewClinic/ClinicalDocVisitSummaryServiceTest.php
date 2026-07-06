@@ -84,9 +84,9 @@ class ClinicalDocVisitSummaryServiceTest extends TestCase
         };
 
         $sign = new class extends EncounterSignService {
-            public function isEncounterDocumentationSigned(int $encounterId): bool
+            public function isVisitDocumentationSigned(array $visit, ?int $facilityId = null): bool
             {
-                return $encounterId === 55;
+                return (int) ($visit['encounter'] ?? 0) === 55;
             }
         };
 
@@ -121,7 +121,7 @@ class ClinicalDocVisitSummaryServiceTest extends TestCase
         };
 
         $sign = new class extends EncounterSignService {
-            public function isEncounterDocumentationSigned(int $encounterId): bool
+            public function isVisitDocumentationSigned(array $visit, ?int $facilityId = null): bool
             {
                 return false;
             }

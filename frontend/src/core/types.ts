@@ -429,6 +429,13 @@ export interface DocumentationStatus {
   encounter_signed: boolean;
   unsigned_required: DocumentationRequiredForm[];
   documentation_hub_url?: string | null;
+  encounter_note_preview?: {
+    cc_preview?: string | null;
+    problem_count?: number;
+    signed?: boolean;
+    validate_ready?: boolean;
+    variant_label?: string;
+  } | null;
 }
 
 /** Response from doctor.take / doctor.active / doctor.reopen */

@@ -146,6 +146,7 @@ function ClinicalThisVisit({ section }: { section: ClinicalThisVisitSection }) {
   if (section.hidden) return null;
 
   const forms = section.forms ?? [];
+  const note = section.encounter_note;
 
   return (
     <section className="border rounded p-3 mb-3" id={section.anchor ?? 'clinical-encounter-forms'}>
@@ -159,6 +160,48 @@ function ClinicalThisVisit({ section }: { section: ClinicalThisVisitSection }) {
           </Button>
         )}
       </div>
+      {note?.native_enabled ? (
+        <div className="border rounded p-3 mb-3 bg-[var(--oe-nc-bg-tint)]">
+          <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+            <div>
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <strong>Consultation note</strong>
+                <Badge variant={note.signed ? 'success' : note.validate_ready ? 'warning' : 'neutral'}>
+                  {note.signed ? 'Signed' : note.validate_ready ? 'Ready to sign' : 'Draft'}
+                </Badge>
+                {note.variant_label ? (
+                  <Badge variant="neutral">{note.variant_label}</Badge>
+                ) : null}
+              </div>
+              {note.cc_preview ? (
+                <p className="text-sm text-[var(--oe-nc-text-muted)] mb-1">{note.cc_preview}</p>
+              ) : null}
+              {(note.problem_count ?? 0) > 0 ? (
+                <p className="text-sm mb-0">
+                  {note.problem_count} problem{(note.problem_count ?? 0) === 1 ? '' : 's'}
+                  {(note.incomplete_problem_count ?? 0) > 0 && !note.signed
+                    ? ` · ${note.incomplete_problem_count} incomplete`
+                    : ''}
+                </p>
+              ) : null}
+            </div>
+            {note.open_url ? (
+              <Button size="sm" asChild>
+                <a href={note.open_url} target="_top">
+                  {note.signed ? 'View note' : 'Open consult note'}
+                </a>
+              </Button>
+            ) : null}
+          </div>
+          {note.problem_labels && note.problem_labels.length > 0 ? (
+            <ul className="text-sm text-[var(--oe-nc-text-muted)] mb-0 pl-4 list-disc">
+              {note.problem_labels.map((label) => (
+                <li key={label}>{label}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
       {forms.length ? (
         <div className="overflow-x-auto">
           <Table className={ncShadcnTableClass({ className: 'mb-0' })}>
@@ -194,9 +237,9 @@ function ClinicalThisVisit({ section }: { section: ClinicalThisVisitSection }) {
             </TableBody>
           </Table>
         </div>
-      ) : (
+      ) : section.empty ? (
         <p className="text-[var(--oe-nc-text-muted)] mb-0">No encounter forms recorded yet.</p>
-      )}
+      ) : null}
     </section>
   );
 }

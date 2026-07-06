@@ -24,7 +24,7 @@ export async function openClinicalDocForm(
   csrfToken: string,
   visitId: number,
   card: ClinicalDocCard,
-  options?: { lens?: ClinicalDocLens; returnTo?: 'doctor' | 'hub' },
+  options?: { lens?: ClinicalDocLens; returnTo?: 'doctor' | 'hub'; focus?: 'sign' },
 ): Promise<void> {
   const lens = options?.lens ?? card.source_lens ?? card.lens ?? 'visit';
   const data = await oeFetch<{ redirect_url: string }>('clinical_doc.open_form', {
@@ -38,6 +38,7 @@ export async function openClinicalDocForm(
       action: card.started && card.form_id ? 'edit' : 'new',
       form_id: card.form_id ?? undefined,
       return_to: options?.returnTo ?? 'hub',
+      ...(options?.focus === 'sign' ? { focus: 'sign' } : {}),
     },
   });
   window.location.assign(data.redirect_url);

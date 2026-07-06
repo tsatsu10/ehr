@@ -30,22 +30,77 @@ class EncounterSignService
 
     public function __construct(
         private readonly VisitQueueService $queueService = new VisitQueueService(),
+        private readonly ClinicalDocCatalogService $catalog = new ClinicalDocCatalogService(),
+        private readonly ClinicConfigService $config = new ClinicConfigService(),
     ) {
     }
 
-    public function isConsultSigned(int $encounterId): bool
+    public function isConsultSigned(int $encounterId, ?array $visit = null): bool
     {
+        if (is_array($visit) && (int) ($visit['encounter'] ?? 0) > 0) {
+            return $this->isVisitDocumentationSigned($visit);
+        }
+
+        $resolvedVisit = $this->resolveVisitByEncounter($encounterId);
+        if ($resolvedVisit !== null) {
+            return $this->isVisitDocumentationSigned($resolvedVisit);
+        }
+
         return $this->isEncounterDocumentationSigned($encounterId);
     }
 
+    /**
+     * Legacy check: true when any encounter-level or forms-row E-Sign lock exists.
+     * Prefer {@see isVisitDocumentationSigned()} for payment and complete-consult gates.
+     */
     public function isEncounterDocumentationSigned(int $encounterId): bool
     {
         return ($this->batchEncounterDocumentationSigned([$encounterId])[$encounterId] ?? false);
     }
 
-    public function assertConsultSigned(int $encounterId, int $pid): void
+    /**
+     * @param array<string, mixed> $visit
+     */
+    public function isVisitDocumentationSigned(array $visit, ?int $facilityId = null): bool
     {
-        if ($this->isConsultSigned($encounterId)) {
+        $encounterId = (int) ($visit['encounter'] ?? 0);
+        $pid = (int) ($visit['pid'] ?? 0);
+        if ($encounterId <= 0 || $pid <= 0) {
+            return false;
+        }
+
+        if ($facilityId === null || $facilityId < 0) {
+            $facilityId = (int) ($visit['facility_id'] ?? 0);
+        }
+
+        foreach ($this->getRequiredDocumentationSpecs($visit, $facilityId) as $spec) {
+            $formdir = $this->catalog->resolveRegistryDirectory($spec['formdir']);
+            if (!$this->isFormdirSignedOnEncounter($encounterId, $pid, $formdir)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function isVisitDocumentationSignedById(int $visitId): bool
+    {
+        try {
+            $visit = $this->queueService->getVisitForActor($visitId);
+        } catch (\Throwable) {
+            return false;
+        }
+
+        return $this->isVisitDocumentationSigned($visit);
+    }
+
+    public function assertConsultSigned(int $encounterId, int $pid, ?array $visit = null): void
+    {
+        if (is_array($visit)) {
+            if ($this->isVisitDocumentationSigned($visit)) {
+                return;
+            }
+        } elseif ($this->isConsultSigned($encounterId)) {
             return;
         }
 
@@ -59,15 +114,7 @@ class EncounterSignService
 
     public function isProfileSigned(int $visitId): bool
     {
-        try {
-            $visit = $this->queueService->getVisitForActor($visitId);
-        } catch (\Throwable) {
-            return false;
-        }
-
-        $encounterId = (int) ($visit['encounter'] ?? 0);
-
-        return $encounterId > 0 && $this->isEncounterDocumentationSigned($encounterId);
+        return $this->isVisitDocumentationSignedById($visitId);
     }
 
     public function assertProfileSigned(int $visitId, ?string $overrideReason = null): void
@@ -104,7 +151,7 @@ class EncounterSignService
             return 'missing_note';
         }
 
-        return $this->isEncounterDocumentationSigned($encounterId)
+        return $this->isConsultSigned($encounterId)
             ? 'signed'
             : 'unsigned_encounter';
     }
@@ -124,6 +171,56 @@ class EncounterSignService
             'pharmacy_walkin' => 'Pharmacy service note not signed — contact pharmacy',
             default => 'Consultation not signed — contact doctor',
         };
+    }
+
+    /**
+     * @param array<string, mixed> $visit
+     * @return list<array{formdir: string, title: string}>
+     */
+    public function getRequiredDocumentationSpecs(array $visit, int $facilityId): array
+    {
+        $profile = (string) ($visit['service_profile'] ?? 'full_opd');
+
+        return match ($profile) {
+            'lab_direct' => [[
+                'formdir' => (string) ($this->config->get('lab_intake_formdir', 'lab_intake', $facilityId) ?? 'lab_intake'),
+                'title' => 'Lab intake',
+            ]],
+            'pharmacy_walkin' => [[
+                'formdir' => (string) ($this->config->get('pharmacy_service_formdir', 'pharmacy_service', $facilityId) ?? 'pharmacy_service'),
+                'title' => 'Pharmacy service note',
+            ]],
+            default => [[
+                'formdir' => $this->catalog->getCatalog(null, $facilityId)['consult_note_formdir'] ?? 'soap',
+                'title' => 'Consult note',
+            ]],
+        };
+    }
+
+    public function isFormdirSignedOnEncounter(int $encounterId, int $pid, string $formdir): bool
+    {
+        $row = QueryUtils::querySingleRow(
+            'SELECT id FROM forms
+             WHERE encounter = ? AND pid = ? AND deleted = 0 AND LOWER(formdir) = ?
+             ORDER BY date DESC LIMIT 1',
+            [$encounterId, $pid, strtolower($formdir)]
+        );
+        if (!is_array($row)) {
+            return false;
+        }
+
+        $formsRowId = (int) ($row['id'] ?? 0);
+        if ($formsRowId <= 0) {
+            return false;
+        }
+
+        $signed = QueryUtils::querySingleRow(
+            "SELECT tid FROM esign_signatures
+             WHERE tid = ? AND `table` = 'forms' AND is_lock = 1 LIMIT 1",
+            [$formsRowId]
+        );
+
+        return is_array($signed);
     }
 
     /**
@@ -174,11 +271,48 @@ class EncounterSignService
         return $signed;
     }
 
+    /**
+     * Profile-aware batch check for unsigned-documentation reports.
+     *
+     * @param list<array<string, mixed>> $visitRows
+     * @return array<int, bool>
+     */
+    public function batchVisitDocumentationSigned(array $visitRows): array
+    {
+        $signed = [];
+        foreach ($visitRows as $row) {
+            $encounterId = (int) ($row['encounter'] ?? 0);
+            if ($encounterId <= 0) {
+                continue;
+            }
+            $signed[$encounterId] = $this->isVisitDocumentationSigned($row);
+        }
+
+        return $signed;
+    }
+
     public static function buildEncounterUrl(string $webroot, int $pid, int $encounterId): string
     {
         return $webroot . '/interface/patient_file/encounter/encounter_top.php?set_pid='
             . urlencode((string) $pid)
             . '&set_encounter=' . urlencode((string) $encounterId);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function resolveVisitByEncounter(int $encounterId): ?array
+    {
+        if ($encounterId <= 0) {
+            return null;
+        }
+
+        $row = QueryUtils::querySingleRow(
+            'SELECT * FROM new_visit WHERE encounter = ? ORDER BY id DESC LIMIT 1',
+            [$encounterId]
+        );
+
+        return is_array($row) ? $row : null;
     }
 
     private function allowEsignOverride(?string $reason): bool

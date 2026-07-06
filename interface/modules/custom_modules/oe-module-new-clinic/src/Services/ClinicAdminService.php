@@ -125,6 +125,12 @@ class ClinicAdminService
         'clinical_doc_bundle' => ['type' => 'string', 'default' => 'ghana_opd_v1'],
         'clinical_doc_specialty_pack' => ['type' => 'string', 'default' => '[]'],
         'consult_note_formdir' => ['type' => 'string', 'default' => 'soap'],
+        'encounter_note_engine' => ['type' => 'string', 'default' => 'legacy'],
+        'encounter_note_variant_map' => ['type' => 'string', 'default' => '{}'],
+        'encounter_note_require_icd' => ['type' => 'bool', 'default' => '0'],
+        'encounter_note_supervisor_required' => ['type' => 'bool', 'default' => '0'],
+        'encounter_note_lbf_export_on_save' => ['type' => 'bool', 'default' => '0'],
+        'encounter_note_lbf_export_formdir' => ['type' => 'string', 'default' => ''],
         'enable_react_clinical_doc_hub' => ['type' => 'bool', 'default' => '1'],
         'enable_admin_hub' => ['type' => 'bool', 'default' => '0'],
         'admin_hub_backup_retention_days' => ['type' => 'int', 'default' => '30', 'min' => 1, 'max' => 365],
@@ -149,6 +155,7 @@ class ClinicAdminService
         private readonly CashClinicProfileService $cashProfile = new CashClinicProfileService(),
         private readonly MoneyFormatService $moneyFormat = new MoneyFormatService(),
         private readonly ClinicalDocLbfWizardService $clinicalDocLbfWizard = new ClinicalDocLbfWizardService(),
+        private readonly ClinicalDocReferralHospitalLbfWizardService $referralHospitalLbfWizard = new ClinicalDocReferralHospitalLbfWizardService(),
         private readonly ClinicalDocAncillaryLbfService $ancillaryLbf = new ClinicalDocAncillaryLbfService(),
         private readonly AdminFormBundleService $formBundle = new AdminFormBundleService(),
         private readonly AdminFormsCatalogService $formsCatalog = new AdminFormsCatalogService(),
@@ -216,6 +223,7 @@ class ClinicAdminService
             'roles' => $this->rolesService->getRolesPayload(),
             'cash_profile' => $this->cashProfile->getProfileStatus($facilityId),
             'ghana_lbf_pack' => $this->clinicalDocLbfWizard->getPackStatus($facilityId),
+            'referral_hospital_lbf_pack' => $this->referralHospitalLbfWizard->getPackStatus($facilityId),
             'ancillary_lbf_packs' => $this->ancillaryLbf->getAllPackStatus($facilityId),
             'form_bundle_board' => $this->formBundle->getBoard($facilityId),
             'forms_catalog' => $this->formsCatalog->getCatalog($facilityId),
@@ -294,6 +302,20 @@ class ClinicAdminService
         return array_merge(
             $this->getSettingsPayload($scope, $requestedFacilityId),
             ['ghana_lbf_pack_result' => $result]
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function importReferralHospitalLbfPack(string $scope, int $actorUserId, bool $setAsConsultNote, ?int $requestedFacilityId = null): array
+    {
+        $facilityId = $this->resolveSettingsFacilityId($scope, $requestedFacilityId);
+        $result = $this->referralHospitalLbfWizard->importPack($facilityId, $actorUserId, $setAsConsultNote);
+
+        return array_merge(
+            $this->getSettingsPayload($scope, $requestedFacilityId),
+            ['referral_hospital_lbf_pack_result' => $result]
         );
     }
 
@@ -526,6 +548,18 @@ class ClinicAdminService
                 }
                 if (!$this->isActiveClinicalFormdir($formdir)) {
                     throw new \InvalidArgumentException('consult_note_formdir must match an active registry or LBF form');
+                }
+            }
+            if ($key === 'encounter_note_engine') {
+                $engine = strtolower(trim($value));
+                if (!in_array($engine, ['legacy', 'native'], true)) {
+                    throw new \InvalidArgumentException('encounter_note_engine must be legacy or native');
+                }
+            }
+            if ($key === 'encounter_note_variant_map') {
+                $decoded = json_decode(trim($value), true);
+                if (!is_array($decoded)) {
+                    throw new \InvalidArgumentException('encounter_note_variant_map must be valid JSON object');
                 }
             }
             $previous = $this->config->get($key, $meta['default'], $facilityId);

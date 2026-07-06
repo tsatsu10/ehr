@@ -78,11 +78,12 @@ use OpenEMR\Modules\NewClinic\Services\ClinicalDocAccessService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocCatalogService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocFormOpenService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocLbfWizardService;
+use OpenEMR\Modules\NewClinic\Services\ClinicalDocReferralHospitalLbfWizardService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocVisitSummaryService;
 use OpenEMR\Modules\NewClinic\Services\ClinicAdminService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\SessionRoleService;
-use OpenEMR\Modules\NewClinic\Services\EncounterSessionService;
+use OpenEMR\Modules\NewClinic\Services\EncounterNoteService;
 use OpenEMR\Modules\NewClinic\Services\SharedDeviceSessionService;
 use OpenEMR\Modules\NewClinic\Services\PatientActivityFeedService;
 use OpenEMR\Modules\NewClinic\Services\PatientChartClinicalService;
@@ -160,6 +161,7 @@ class AjaxController
         private readonly ClinicalDocCatalogService $clinicalDocCatalogService = new ClinicalDocCatalogService(),
         private readonly ClinicalDocVisitSummaryService $clinicalDocVisitSummaryService = new ClinicalDocVisitSummaryService(),
         private readonly ClinicalDocFormOpenService $clinicalDocFormOpenService = new ClinicalDocFormOpenService(),
+        private readonly EncounterNoteService $encounterNoteService = new EncounterNoteService(),
         private readonly RateLimitService $rateLimitService = new RateLimitService(),
         private readonly AjaxActionPolicy $actionPolicy = new AjaxActionPolicy(),
         private readonly VisitScopeService $visitScopeService = new VisitScopeService(),
@@ -2179,6 +2181,102 @@ class AjaxController
                         $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
                     }
                     break;
+                case 'encounter_note.get':
+                    $this->clinicalDocAccessService->assertWriteAccess();
+                    $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                    if ($visitId <= 0) {
+                        $this->respond(false, 'visit_id required', [], 400);
+                    }
+                    try {
+                        $payload = $this->encounterNoteService->get($visitId, $userId);
+                        $this->respond(true, 'ok', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
+                    break;
+                case 'encounter_note.save':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $payload = $this->encounterNoteService->save($body, $userId);
+                        $this->respond(true, 'Saved', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
+                    break;
+                case 'encounter_note.prefill':
+                    $this->clinicalDocAccessService->assertWriteAccess();
+                    $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                    if ($visitId <= 0) {
+                        $this->respond(false, 'visit_id required', [], 400);
+                    }
+                    try {
+                        $payload = $this->encounterNoteService->prefill($visitId, $userId);
+                        $this->respond(true, 'ok', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
+                    break;
+                case 'encounter_note.validate':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $payload = $this->encounterNoteService->validate($body, $userId);
+                        $this->respond(true, 'ok', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
+                    break;
+                case 'encounter_note.sign':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $payload = $this->encounterNoteService->sign($body, $userId);
+                        $this->respond(true, 'Signed', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
+                    break;
+                case 'encounter_note.unlock':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $payload = $this->encounterNoteService->unlockForClinicalCorrection($body, $userId);
+                        $this->respond(true, 'Unlocked', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
+                    break;
                 case 'clinical_doc.favorites':
                     $this->clinicalDocAccessService->assertHubAccess();
                     $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
@@ -2200,6 +2298,13 @@ class AjaxController
                     $facilityId = $this->resolveRequestFacilityId();
                     $this->respond(true, 'ok', (new ClinicalDocLbfWizardService())->getPackStatus($facilityId));
                     break;
+                case 'clinical_doc.referral_hospital_pack_status':
+                    if ($method !== 'GET') {
+                        $this->respond(false, 'GET required', [], 405);
+                    }
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $this->respond(true, 'ok', (new ClinicalDocReferralHospitalLbfWizardService())->getPackStatus($facilityId));
+                    break;
                 case 'clinical_doc.import_ghana_pack':
                     if ($method !== 'POST') {
                         $this->respond(false, 'POST required', [], 405);
@@ -2220,6 +2325,27 @@ class AjaxController
                         $requestedFacilityId > 0 ? $requestedFacilityId : null
                     );
                     $this->respond(true, 'Ghana OPD LBF pack imported', $payload);
+                    break;
+                case 'clinical_doc.import_referral_hospital_pack':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $this->requireSuperAdmin();
+                    $scope = strtolower(trim((string) ($body['scope'] ?? 'facility')));
+                    if ($scope !== 'global') {
+                        $scope = 'facility';
+                    }
+                    $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    $setAsConsultNote = !empty($body['set_as_consult_note']);
+                    $payload = $this->clinicAdminService->importReferralHospitalLbfPack(
+                        $scope,
+                        $userId,
+                        $setAsConsultNote,
+                        $requestedFacilityId > 0 ? $requestedFacilityId : null
+                    );
+                    $this->respond(true, 'Referral hospital LBF pack imported', $payload);
                     break;
                 case 'clinical_doc.import_ancillary_pack':
                     if ($method !== 'POST') {

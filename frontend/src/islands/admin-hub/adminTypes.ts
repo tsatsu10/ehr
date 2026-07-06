@@ -130,6 +130,14 @@ export interface GhanaLbfPackStatus {
   is_primary_consult_note?: boolean;
 }
 
+export interface ReferralHospitalLbfPackStatus {
+  pack_key?: string;
+  form_id?: string;
+  installed?: boolean;
+  consult_note_formdir?: string;
+  is_primary_consult_note?: boolean;
+}
+
 export interface AncillaryLbfPackStatus {
   pack_key: string;
   form_id: string;
@@ -317,6 +325,7 @@ export interface AdminConfigPayload {
   roles?: RolesPayload;
   cash_profile?: CashProfileStatus;
   ghana_lbf_pack?: GhanaLbfPackStatus;
+  referral_hospital_lbf_pack?: ReferralHospitalLbfPackStatus;
   ancillary_lbf_packs?: AncillaryLbfPackStatus[];
   form_bundle_board?: FormBundleBoardPayload;
   forms_catalog?: FormsCatalogPayload;

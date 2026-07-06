@@ -22,6 +22,7 @@ import type {
   BillingCodeType,
   CashProfileStatus,
   GhanaLbfPackStatus,
+  ReferralHospitalLbfPackStatus,
   AncillaryLbfPackStatus,
   FormBundleBoardPayload,
   FormsCatalogItem,
@@ -110,6 +111,8 @@ export function AdminHub({
   const [cashProfileApplying, setCashProfileApplying] = useState(false);
   const [ghanaLbfPack, setGhanaLbfPack] = useState<GhanaLbfPackStatus>({ installed: false });
   const [ghanaLbfImporting, setGhanaLbfImporting] = useState(false);
+  const [referralHospitalLbfPack, setReferralHospitalLbfPack] = useState<ReferralHospitalLbfPackStatus>({ installed: false });
+  const [referralHospitalLbfImporting, setReferralHospitalLbfImporting] = useState(false);
   const [ancillaryLbfPacks, setAncillaryLbfPacks] = useState<AncillaryLbfPackStatus[]>([]);
   const [ancillaryLbfImporting, setAncillaryLbfImporting] = useState<string | null>(null);
   const [formBundleBoard, setFormBundleBoard] = useState<FormBundleBoardPayload | null>(null);
@@ -195,6 +198,7 @@ export function AdminHub({
     setRoleGroups(data.roles ?? {});
     setCashProfile(data.cash_profile ?? { applied: false });
     setGhanaLbfPack(data.ghana_lbf_pack ?? { installed: false });
+    setReferralHospitalLbfPack(data.referral_hospital_lbf_pack ?? { installed: false });
     setAncillaryLbfPacks(data.ancillary_lbf_packs ?? []);
     setFormBundleBoard(data.form_bundle_board ?? null);
     setFormsCatalog(data.forms_catalog ?? null);
@@ -783,6 +787,31 @@ export function AdminHub({
     }
   }, [applyPayload, facilityId, fetchOptions, scope]);
 
+  const importReferralHospitalLbfPack = useCallback(async (setAsConsultNote: boolean) => {
+    setReferralHospitalLbfImporting(true);
+    setErrorMessage(null);
+    try {
+      const data = await oeFetch<AdminConfigPayload>('clinical_doc.import_referral_hospital_pack', {
+        ...fetchOptions,
+        json: {
+          scope,
+          facility_id: facilityId,
+          set_as_consult_note: setAsConsultNote,
+        },
+      });
+      applyPayload(data);
+      setSuccessMessage(
+        setAsConsultNote
+          ? 'Referral hospital LBF pack imported and set as primary consult note.'
+          : 'Referral hospital LBF pack imported.'
+      );
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Referral hospital LBF import failed');
+    } finally {
+      setReferralHospitalLbfImporting(false);
+    }
+  }, [applyPayload, facilityId, fetchOptions, scope]);
+
   const importAncillaryLbfPack = useCallback(async (packKey: string) => {
     setAncillaryLbfImporting(packKey);
     setErrorMessage(null);
@@ -985,10 +1014,13 @@ export function AdminHub({
                 settings={settings}
                 ghanaLbfPack={ghanaLbfPack}
                 ghanaLbfImporting={ghanaLbfImporting}
+                referralHospitalLbfPack={referralHospitalLbfPack}
+                referralHospitalLbfImporting={referralHospitalLbfImporting}
                 ancillaryLbfPacks={ancillaryLbfPacks}
                 ancillaryLbfImporting={ancillaryLbfImporting}
                 onFieldChange={handleFieldChange}
                 onImportGhanaLbfPack={(setAsConsultNote) => { void importGhanaLbfPack(setAsConsultNote); }}
+                onImportReferralHospitalLbfPack={(setAsConsultNote) => { void importReferralHospitalLbfPack(setAsConsultNote); }}
                 onImportAncillaryLbfPack={(packKey) => { void importAncillaryLbfPack(packKey); }}
             />
           </AdminTabPanel>

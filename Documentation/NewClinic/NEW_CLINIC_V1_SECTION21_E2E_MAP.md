@@ -72,7 +72,7 @@ npm run test:e2e-new-clinic -- tests/e2e/new-clinic/specs/v21-golden-path-smoke.
 | §21.1u | Bill ops | `v12-bill-smoke.spec.js` · `v12-bill-depth-smoke` | 61 |
 | §21.1v | Admin hub | `v11-admin-smoke.spec.js` | 54 |
 | §21.1w | Report hub | `v11-rep-smoke.spec.js` | 55 |
-| §21.1x | Clinical doc | `v11-doc-smoke.spec.js` | 58 |
+| §21.1x | Clinical doc | `v11-doc-smoke.spec.js` · `encounter-consult-native.spec.js` | 58 |
 | §21.1y | Queue bridge | `v11-bridge-smoke.spec.js` | 57 |
 | §21.1z | Legacy chart CTX | `v12-ctx-smoke.spec.js` | — |
 | COM | Communications | `v11-comms-smoke.spec.js` | 62 |

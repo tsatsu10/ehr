@@ -1046,7 +1046,61 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'clinical_doc_show_us_quality', '0'),
 (0, 'clinical_doc_specialty_pack', '[]'),
 (0, 'consult_note_formdir', 'soap'),
+(0, 'encounter_note_engine', 'legacy'),
+(0, 'encounter_note_variant_map', '{}'),
+(0, 'encounter_note_require_icd', '0'),
+(0, 'encounter_note_supervisor_required', '0'),
 (0, 'enable_react_clinical_doc_hub', '1');
+#EndIf
+
+#IfNotRow2D registry directory nc_encounter_consult
+INSERT INTO `registry` (`name`, `state`, `directory`, `sql_run`, `unpackaged`, `date`, `priority`, `category`, `nickname`, `patient_encounter`, `therapy_group_encounter`, `aco_spec`)
+VALUES ('Consultation note', 1, 'nc_encounter_consult', 0, 1, NOW(), 0, 'Clinical', '', 1, 0, 'encounters|notes');
+#EndIf
+
+#IfNotTable nc_encounter_note
+CREATE TABLE IF NOT EXISTS `nc_encounter_note` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `facility_id` INT NOT NULL,
+    `visit_id` BIGINT NOT NULL,
+    `encounter` INT NOT NULL,
+    `pid` BIGINT NOT NULL,
+    `forms_row_id` BIGINT NULL,
+    `variant` VARCHAR(32) NOT NULL DEFAULT 'general_opd',
+    `payload` JSON NOT NULL,
+    `author_user_id` BIGINT NOT NULL,
+    `updated_by` BIGINT NOT NULL,
+    `created_at` DATETIME NOT NULL,
+    `updated_at` DATETIME NOT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_visit_note` (`visit_id`),
+    KEY `idx_encounter_note` (`encounter`),
+    KEY `idx_facility_updated` (`facility_id`, `updated_at`),
+    KEY `idx_forms_row_id` (`forms_row_id`)
+) ENGINE=InnoDB COMMENT='V1.2-DOC-HLF-2 native encounter consult note';
+#EndIf
+
+#IfNotIndex nc_encounter_note idx_forms_row_id
+ALTER TABLE `nc_encounter_note` ADD KEY `idx_forms_row_id` (`forms_row_id`);
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key encounter_note_engine
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'encounter_note_engine', 'legacy');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key encounter_note_supervisor_required
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'encounter_note_variant_map', '{}'),
+(0, 'encounter_note_require_icd', '0'),
+(0, 'encounter_note_supervisor_required', '0'),
+(0, 'encounter_note_lbf_export_on_save', '0'),
+(0, 'encounter_note_lbf_export_formdir', '');
+#EndIf
+
+#IfNotRow2D list_options list_id formdir_keys option_id nc_encounter_consult
+INSERT INTO list_options (list_id, option_id, title, seq, notes, activity) VALUES
+('formdir_keys', 'nc_encounter_consult', '"tbl":"nc_encounter_note","id":"id"', 40, 'Native New Clinic consult note JSON storage', 1);
 #EndIf
 
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_ancillary_services

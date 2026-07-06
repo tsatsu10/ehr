@@ -15,6 +15,7 @@ use OpenEMR\Modules\NewClinic\Services\ClinicalDocCatalogService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocDocumentationStatusService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocHubLinkService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
+use OpenEMR\Modules\NewClinic\Services\EncounterNoteService;
 use OpenEMR\Modules\NewClinic\Services\EncounterSignService;
 use PHPUnit\Framework\TestCase;
 
@@ -25,13 +26,24 @@ class ClinicalDocDocumentationStatusServiceTest extends TestCase
         $config = new ClinicConfigService();
         $prevHub = $config->get('enable_clinical_doc_hub', '0', 0);
         $prevFormdir = $config->get('consult_note_formdir', 'soap', 0);
+        $prevEngine = $config->get('encounter_note_engine', EncounterNoteService::ENGINE_LEGACY, 0);
         try {
             $config->set('enable_clinical_doc_hub', '1', 0);
             $config->set('consult_note_formdir', 'soap', 0);
+            $config->set('encounter_note_engine', EncounterNoteService::ENGINE_LEGACY, 0);
 
             $hubLinks = new ClinicalDocHubLinkService(config: $config);
-            $sign = new class extends EncounterSignService {
-                public function isEncounterDocumentationSigned(int $encounterId): bool
+            $encounterNote = new EncounterNoteService(config: $config);
+            $catalog = new ClinicalDocCatalogService(config: $config, encounterNote: $encounterNote);
+            $sign = new class ($config, $catalog) extends EncounterSignService {
+                public function __construct(
+                    private readonly ClinicConfigService $testConfig,
+                    ClinicalDocCatalogService $catalog,
+                ) {
+                    parent::__construct(catalog: $catalog, config: $this->testConfig);
+                }
+
+                public function isFormdirSignedOnEncounter(int $encounterId, int $pid, string $formdir): bool
                 {
                     return false;
                 }
@@ -39,9 +51,8 @@ class ClinicalDocDocumentationStatusServiceTest extends TestCase
 
             $service = new ClinicalDocDocumentationStatusService(
                 hubLinks: $hubLinks,
-                catalog: new ClinicalDocCatalogService(),
+                catalog: $catalog,
                 signService: $sign,
-                config: $config,
             );
 
             $status = $service->getStatusForVisit([
@@ -60,6 +71,83 @@ class ClinicalDocDocumentationStatusServiceTest extends TestCase
         } finally {
             $config->set('enable_clinical_doc_hub', (string) $prevHub, 0);
             $config->set('consult_note_formdir', (string) $prevFormdir, 0);
+            $config->set('encounter_note_engine', (string) $prevEngine, 0);
         }
+    }
+
+    public function testNativeEngineListsUnsignedNativeConsultNote(): void
+    {
+        $config = new ClinicConfigService();
+        $prevHub = $config->get('enable_clinical_doc_hub', '0', 0);
+        $prevEngine = $config->get('encounter_note_engine', EncounterNoteService::ENGINE_LEGACY, 0);
+        try {
+            $config->set('enable_clinical_doc_hub', '1', 0);
+            $config->set('encounter_note_engine', EncounterNoteService::ENGINE_NATIVE, 0);
+
+            $hubLinks = new ClinicalDocHubLinkService(config: $config);
+            $encounterNote = new EncounterNoteService(config: $config);
+            $catalog = new ClinicalDocCatalogService(config: $config, encounterNote: $encounterNote);
+            $sign = new class ($config, $catalog) extends EncounterSignService {
+                public function __construct(
+                    private readonly ClinicConfigService $testConfig,
+                    ClinicalDocCatalogService $catalog,
+                ) {
+                    parent::__construct(catalog: $catalog, config: $this->testConfig);
+                }
+
+                public function isFormdirSignedOnEncounter(int $encounterId, int $pid, string $formdir): bool
+                {
+                    return false;
+                }
+            };
+
+            $service = new ClinicalDocDocumentationStatusService(
+                hubLinks: $hubLinks,
+                catalog: $catalog,
+                signService: $sign,
+            );
+
+            $status = $service->getStatusForVisit([
+                'id' => 10,
+                'pid' => 2,
+                'encounter' => 101,
+                'facility_id' => 0,
+                'service_profile' => 'full_opd',
+            ], 0);
+
+            $this->assertFalse($status['encounter_signed']);
+            $this->assertNotEmpty($status['unsigned_required']);
+            $this->assertSame(
+                EncounterNoteService::NATIVE_FORMDIR,
+                strtolower((string) $status['unsigned_required'][0]['formdir'])
+            );
+        } finally {
+            $config->set('enable_clinical_doc_hub', (string) $prevHub, 0);
+            $config->set('encounter_note_engine', (string) $prevEngine, 0);
+        }
+    }
+
+    public function testEncounterSignedAlignsWithUnsignedRequired(): void
+    {
+        $config = new ClinicConfigService();
+        $sign = new class extends EncounterSignService {
+            public function isFormdirSignedOnEncounter(int $encounterId, int $pid, string $formdir): bool
+            {
+                return true;
+            }
+        };
+
+        $service = new ClinicalDocDocumentationStatusService(signService: $sign);
+
+        $status = $service->getStatusForVisit([
+            'id' => 11,
+            'pid' => 3,
+            'encounter' => 102,
+            'facility_id' => 0,
+            'service_profile' => 'full_opd',
+        ], 0);
+
+        $this->assertTrue($status['encounter_signed']);
+        $this->assertSame([], $status['unsigned_required']);
     }
 }

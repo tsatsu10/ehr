@@ -23,11 +23,27 @@ export interface ClinicalDocCard {
   last_saved_by?: string | null;
   signed?: boolean;
   pin?: number;
+  note_preview?: EncounterNotePreview;
   bundle_health?: {
     installed: boolean;
     esign_ok: boolean;
     status_label: string;
   };
+}
+
+export interface EncounterNotePreview {
+  native_enabled?: boolean;
+  started?: boolean;
+  signed?: boolean;
+  variant?: string;
+  variant_label?: string;
+  cc_preview?: string | null;
+  problem_count?: number;
+  incomplete_problem_count?: number;
+  problem_labels?: string[];
+  validate_ready?: boolean;
+  updated_at?: string | null;
+  open_url?: string | null;
 }
 
 export interface ClinicalDocSignOverview {
