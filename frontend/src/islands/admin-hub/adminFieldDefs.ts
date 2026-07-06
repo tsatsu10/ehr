@@ -122,6 +122,11 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'currency_symbol',
   'currency_decimals',
   'currency_symbol_position',
+  'enable_clinical_doc_hub',
+  'clinical_doc_show_screening',
+  'clinical_doc_show_specialty',
+  'consult_note_formdir',
+  'encounter_note_engine',
 ];
 
 export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
@@ -550,8 +555,19 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         key: 'consult_note_formdir',
         type: 'string',
         label: 'Primary consult note form directory',
-        hint: 'Registry formdir for the main consult card (default soap).',
+        hint: 'Registry formdir for the main consult card when encounter_note_engine=legacy (default soap).',
         indent: 1,
+      },
+      {
+        key: 'encounter_note_engine',
+        type: 'select',
+        label: 'Encounter consult note engine',
+        hint: 'native opens the React consultation form (V1.2-DOC-HLF-2). legacy keeps stock/LBF iframe forms.',
+        indent: 1,
+        choices: [
+          { value: 'legacy', label: 'Legacy (iframe SOAP/LBF)' },
+          { value: 'native', label: 'Native React consult form' },
+        ],
       },
       {
         key: 'clinical_doc_show_screening',

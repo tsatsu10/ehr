@@ -82,7 +82,7 @@ class ClinicalDocDocumentationStatusService
                 'title' => 'Pharmacy service note',
             ]],
             default => [[
-                'formdir' => strtolower(trim((string) ($this->config->get('consult_note_formdir', 'soap', $facilityId) ?? 'soap'))),
+                'formdir' => $this->catalog->getCatalog(null, $facilityId)['consult_note_formdir'] ?? 'soap',
                 'title' => 'Consult note',
             ]],
         };
@@ -90,6 +90,10 @@ class ClinicalDocDocumentationStatusService
 
     private function resolveFormTitle(string $formdir, string $fallback): string
     {
+        if (strcasecmp($formdir, EncounterNoteService::NATIVE_FORMDIR) === 0) {
+            return 'Consultation note';
+        }
+
         $row = QueryUtils::querySingleRow(
             'SELECT name FROM registry WHERE LOWER(directory) = ? LIMIT 1',
             [strtolower($formdir)]

@@ -296,11 +296,14 @@ class AjaxActionPolicy
         'clinical_doc.catalog',
         'clinical_doc.sign_status',
         'clinical_doc.favorites',
+        'encounter_note.get',
+        'encounter_note.prefill',
     ];
 
     /** @var array<int, string> */
     private const CLINICAL_DOC_WRITE_ACTIONS = [
         'clinical_doc.open_form',
+        'encounter_note.save',
     ];
 
     /** @var array<int, string> */

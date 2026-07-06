@@ -1,0 +1,39 @@
+.nc-encounter-consult {
+  --encounter-section-gap: 1rem;
+}
+
+.nc-encounter-section-enter {
+  animation: nc-encounter-section-enter 220ms ease-out both;
+}
+
+@keyframes nc-encounter-section-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nc-encounter-section-enter {
+    animation: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .nc-encounter-nav .nc-encounter-section-nav {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+
+  .nc-encounter-nav .nc-encounter-section-link {
+    min-width: 9rem;
+    white-space: nowrap;
+  }
+}

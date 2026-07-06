@@ -468,7 +468,8 @@ Align with New Clinic tokens (`--oe-nc-*`, Figtree + Noto Sans) and admin/chart 
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1.0 | 2026-07-06 | Initial draft — current-state analysis, external research, high-level facility target model, UX/data phasing |
+| 0.1.1 | 2026-07-06 | V1.2-DOC-HLF-2 implemented — native `encounter-consult` island, `nc_encounter_note` storage, vitals prefill API |
 
 ---
 
-**Next engineering step:** Implement **V1.2-DOC-HLF-2** — scaffold `encounter-consult` island with sections 3–7 + vitals prefill API, behind `encounter_note_engine=native` flag.
+**Next engineering step:** ~~Implement **V1.2-DOC-HLF-2**~~ — **V1.2-DOC-HLF-2 shipped** (`encounter-consult` island + `encounter_note.*` APIs behind `encounter_note_engine=native`). Next: **V1.2-DOC-HLF-3** (referral header, problem-plan linkage, validate/sign).

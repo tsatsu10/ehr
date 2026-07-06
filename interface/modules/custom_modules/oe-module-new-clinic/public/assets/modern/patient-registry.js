@@ -1,2 +1,2 @@
-import{f as e}from"./chunks/deskCalloutStyles-sccuUACN.js";import{t}from"./chunks/main-D5iG7PFW.js";e(`patient-registry`,t);
+import{d as e}from"./chunks/button-Ajb20jbY.js";import{t}from"./chunks/main-DlcY6Mf3.js";e(`patient-registry`,t);
 //# sourceMappingURL=patient-registry.js.map

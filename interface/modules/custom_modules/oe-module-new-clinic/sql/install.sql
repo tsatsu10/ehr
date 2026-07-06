@@ -1046,7 +1046,34 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'clinical_doc_show_us_quality', '0'),
 (0, 'clinical_doc_specialty_pack', '[]'),
 (0, 'consult_note_formdir', 'soap'),
+(0, 'encounter_note_engine', 'legacy'),
 (0, 'enable_react_clinical_doc_hub', '1');
+#EndIf
+
+#IfNotTable nc_encounter_note
+CREATE TABLE IF NOT EXISTS `nc_encounter_note` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `facility_id` INT NOT NULL,
+    `visit_id` BIGINT NOT NULL,
+    `encounter` INT NOT NULL,
+    `pid` BIGINT NOT NULL,
+    `forms_row_id` BIGINT NULL,
+    `variant` VARCHAR(32) NOT NULL DEFAULT 'general_opd',
+    `payload` JSON NOT NULL,
+    `author_user_id` BIGINT NOT NULL,
+    `updated_by` BIGINT NOT NULL,
+    `created_at` DATETIME NOT NULL,
+    `updated_at` DATETIME NOT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_visit_note` (`visit_id`),
+    KEY `idx_encounter_note` (`encounter`),
+    KEY `idx_facility_updated` (`facility_id`, `updated_at`)
+) ENGINE=InnoDB COMMENT='V1.2-DOC-HLF-2 native encounter consult note';
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key encounter_note_engine
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'encounter_note_engine', 'legacy');
 #EndIf
 
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_ancillary_services

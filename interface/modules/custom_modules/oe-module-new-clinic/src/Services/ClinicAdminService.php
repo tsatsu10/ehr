@@ -125,6 +125,7 @@ class ClinicAdminService
         'clinical_doc_bundle' => ['type' => 'string', 'default' => 'ghana_opd_v1'],
         'clinical_doc_specialty_pack' => ['type' => 'string', 'default' => '[]'],
         'consult_note_formdir' => ['type' => 'string', 'default' => 'soap'],
+        'encounter_note_engine' => ['type' => 'string', 'default' => 'legacy'],
         'enable_react_clinical_doc_hub' => ['type' => 'bool', 'default' => '1'],
         'enable_admin_hub' => ['type' => 'bool', 'default' => '0'],
         'admin_hub_backup_retention_days' => ['type' => 'int', 'default' => '30', 'min' => 1, 'max' => 365],
@@ -526,6 +527,12 @@ class ClinicAdminService
                 }
                 if (!$this->isActiveClinicalFormdir($formdir)) {
                     throw new \InvalidArgumentException('consult_note_formdir must match an active registry or LBF form');
+                }
+            }
+            if ($key === 'encounter_note_engine') {
+                $engine = strtolower(trim($value));
+                if (!in_array($engine, ['legacy', 'native'], true)) {
+                    throw new \InvalidArgumentException('encounter_note_engine must be legacy or native');
                 }
             }
             $previous = $this->config->get($key, $meta['default'], $facilityId);

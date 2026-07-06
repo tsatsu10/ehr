@@ -82,7 +82,7 @@ use OpenEMR\Modules\NewClinic\Services\ClinicalDocVisitSummaryService;
 use OpenEMR\Modules\NewClinic\Services\ClinicAdminService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\SessionRoleService;
-use OpenEMR\Modules\NewClinic\Services\EncounterSessionService;
+use OpenEMR\Modules\NewClinic\Services\EncounterNoteService;
 use OpenEMR\Modules\NewClinic\Services\SharedDeviceSessionService;
 use OpenEMR\Modules\NewClinic\Services\PatientActivityFeedService;
 use OpenEMR\Modules\NewClinic\Services\PatientChartClinicalService;
@@ -160,6 +160,7 @@ class AjaxController
         private readonly ClinicalDocCatalogService $clinicalDocCatalogService = new ClinicalDocCatalogService(),
         private readonly ClinicalDocVisitSummaryService $clinicalDocVisitSummaryService = new ClinicalDocVisitSummaryService(),
         private readonly ClinicalDocFormOpenService $clinicalDocFormOpenService = new ClinicalDocFormOpenService(),
+        private readonly EncounterNoteService $encounterNoteService = new EncounterNoteService(),
         private readonly RateLimitService $rateLimitService = new RateLimitService(),
         private readonly AjaxActionPolicy $actionPolicy = new AjaxActionPolicy(),
         private readonly VisitScopeService $visitScopeService = new VisitScopeService(),
@@ -2172,6 +2173,54 @@ class AjaxController
                         $this->respond(true, 'ok', $result);
                     } catch (EncounterSessionMismatchException $e) {
                         $this->respond(false, $e->getMessage(), ['code' => 'session_mismatch'], 409);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
+                    break;
+                case 'encounter_note.get':
+                    $this->clinicalDocAccessService->assertWriteAccess();
+                    $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                    if ($visitId <= 0) {
+                        $this->respond(false, 'visit_id required', [], 400);
+                    }
+                    try {
+                        $payload = $this->encounterNoteService->get($visitId, $userId);
+                        $this->respond(true, 'ok', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
+                    break;
+                case 'encounter_note.save':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $payload = $this->encounterNoteService->save($body, $userId);
+                        $this->respond(true, 'Saved', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
+                    break;
+                case 'encounter_note.prefill':
+                    $this->clinicalDocAccessService->assertWriteAccess();
+                    $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                    if ($visitId <= 0) {
+                        $this->respond(false, 'visit_id required', [], 400);
+                    }
+                    try {
+                        $payload = $this->encounterNoteService->prefill($visitId, $userId);
+                        $this->respond(true, 'ok', $payload);
                     } catch (\InvalidArgumentException $e) {
                         $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
                     } catch (\RuntimeException $e) {
