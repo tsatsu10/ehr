@@ -379,6 +379,8 @@ Align with New Clinic tokens (`--oe-nc-*`, Figtree + Noto Sans) and admin/chart 
 | `encounter_note_variant_map` | JSON | Visit type → variant id |
 | `encounter_note_require_icd` | `0` | Force ICD on problems when native |
 | `encounter_note_supervisor_required` | `0` | Trainee attestation gate |
+| `encounter_note_lbf_export_on_save` | `0` | Mirror native note into LBF layout on each save (stock reporting) |
+| `encounter_note_lbf_export_formdir` | *(empty)* | Target LBF form id; empty = derive from `clinical_doc_bundle` |
 
 ---
 
@@ -473,9 +475,9 @@ Align with New Clinic tokens (`--oe-nc-*`, Figtree + Noto Sans) and admin/chart 
 | 0.1.2 | 2026-07-06 | V1.2-DOC-HLF-1 implemented — `referral_hospital_v1` bundle, `LBFreferral_opd_consult` LBF wizard + admin import |
 | 0.1.3 | 2026-07-06 | V1.2-DOC-HLF-3 implemented — referral/source sections, problem-plan model, variant validation, supervisor attestation, admin config keys |
 | 0.1.4 | 2026-07-06 | V1.2-DOC-HLF-4/5 implemented — hub/MRD integration; ROS, background, data reviewed, specialty PE overlays |
-| 0.1.5 | 2026-07-06 | V1.2-DOC-HLF-6 implemented — referral header prefill from encounter/LBTref/inbound document; visit summary export renders native consult note |
+| 0.1.6 | 2026-07-06 | ENC-HLF-7 — profile-aware documentation gates; optional on-save LBF export (`encounter_note_lbf_export_on_save`); `formdir_keys` for `nc_encounter_consult` |
 | 0.1.6 | 2026-07-06 | UX polish — mobile stepper + sticky Save/Sign bar, follow-up section, signed attestation banner with author/timestamp |
 
 ---
 
-**Next engineering step:** ~~HLF-1 through HLF-6 shipped~~. UX polish shipped. ~~ENC-HLF-7 gate regression shipped~~ (`EncounterSignService::isVisitDocumentationSigned` — profile-aware required formdir checks for payment, complete consult, hub unsigned state, and unsigned-doc reports). Next: optional LBF export on save, broader test coverage, docs checklist.
+**Next engineering step:** ~~HLF-1 through HLF-6 shipped~~. UX polish shipped. ~~ENC-HLF-7 gate regression shipped~~. ~~Optional on-save LBF export shipped~~ (`EncounterNoteLbfExportService`, default OFF). Next: broader test coverage (PHPUnit/Vitest/E2E), docs acceptance checklist.

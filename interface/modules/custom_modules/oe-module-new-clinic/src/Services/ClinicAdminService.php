@@ -129,6 +129,8 @@ class ClinicAdminService
         'encounter_note_variant_map' => ['type' => 'string', 'default' => '{}'],
         'encounter_note_require_icd' => ['type' => 'bool', 'default' => '0'],
         'encounter_note_supervisor_required' => ['type' => 'bool', 'default' => '0'],
+        'encounter_note_lbf_export_on_save' => ['type' => 'bool', 'default' => '0'],
+        'encounter_note_lbf_export_formdir' => ['type' => 'string', 'default' => ''],
         'enable_react_clinical_doc_hub' => ['type' => 'bool', 'default' => '1'],
         'enable_admin_hub' => ['type' => 'bool', 'default' => '0'],
         'admin_hub_backup_retention_days' => ['type' => 'int', 'default' => '30', 'min' => 1, 'max' => 365],

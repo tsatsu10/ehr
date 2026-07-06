@@ -42,6 +42,7 @@ class EncounterNoteService
         private readonly EncounterSessionService $encounterSession = new EncounterSessionService(),
         private readonly PatientCompletionService $completionService = new PatientCompletionService(),
         private readonly DoctorService $doctorService = new DoctorService(),
+        private readonly EncounterNoteLbfExportService $lbfExport = new EncounterNoteLbfExportService(),
     ) {
     }
 
@@ -376,12 +377,21 @@ class EncounterNoteService
             0
         );
 
+        $lbfExport = $this->lbfExport->syncFromSave(
+            $visit,
+            $sections,
+            $variant,
+            $this->buildPrefill($visit),
+            $actorUserId
+        );
+
         return [
             'visit_id' => $visitId,
             'forms_row_id' => $formsRowId > 0 ? $formsRowId : null,
             'form_id' => $formsRowId > 0 ? $formsRowId : null,
             'updated_at' => date('Y-m-d H:i:s'),
             'saved' => true,
+            'lbf_export' => $lbfExport,
         ];
     }
 

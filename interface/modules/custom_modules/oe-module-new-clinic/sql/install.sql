@@ -1087,7 +1087,14 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'encounter_note_variant_map', '{}'),
 (0, 'encounter_note_require_icd', '0'),
-(0, 'encounter_note_supervisor_required', '0');
+(0, 'encounter_note_supervisor_required', '0'),
+(0, 'encounter_note_lbf_export_on_save', '0'),
+(0, 'encounter_note_lbf_export_formdir', '');
+#EndIf
+
+#IfNotRow2D list_options list_id formdir_keys option_id nc_encounter_consult
+INSERT INTO list_options (list_id, option_id, title, seq, notes, activity) VALUES
+('formdir_keys', 'nc_encounter_consult', '"tbl":"nc_encounter_note","id":"id"', 40, 'Native New Clinic consult note JSON storage', 1);
 #EndIf
 
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
