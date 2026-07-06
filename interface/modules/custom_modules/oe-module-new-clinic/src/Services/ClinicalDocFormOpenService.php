@@ -96,6 +96,7 @@ class ClinicalDocFormOpenService
             $modulePublic = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
             $returnTo = strtolower(trim((string) ($body['return_to'] ?? 'hub')));
             $returnTab = $lens !== '' ? $lens : 'visit';
+            $focus = strtolower(trim((string) ($body['focus'] ?? '')));
             $returnUrl = $returnTo === 'doctor'
                 ? $modulePublic . 'doctor.php'
                 : $modulePublic . 'clinical-doc/index.php?visit_id=' . urlencode((string) $visitId)
@@ -104,6 +105,7 @@ class ClinicalDocFormOpenService
                 'return_to' => $returnTo,
                 'tab' => $returnTab,
                 'form_id' => ($action === 'edit' && $formId > 0) ? (string) $formId : null,
+                'focus' => $focus === 'sign' ? 'sign' : null,
             ]));
             $this->markIdentityStripForNativeOpen($visitId, $returnTo, $sourceLens, $returnUrl);
             $this->recordFormOpen(

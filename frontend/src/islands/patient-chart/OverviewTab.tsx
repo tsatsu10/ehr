@@ -55,6 +55,15 @@ function ActivityFeedItemRow({ item }: { item: ActivityFeedItem }) {
         {item.queue_number ? ` · Queue #${item.queue_number}` : ''}
       </div>
     );
+  } else if (item.event_type === 'encounter_note_signed') {
+    detail = (
+      <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">
+        {(expand.problem_count ?? 0) > 0
+          ? `${expand.problem_count} problem${expand.problem_count === 1 ? '' : 's'} documented`
+          : 'Consult note signed'}
+        {expand.variant ? ` · ${expand.variant.replace(/_/g, ' ')}` : ''}
+      </div>
+    );
   } else if (expand.to_state) {
     detail = (
       <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">

@@ -60,6 +60,7 @@ $webroot = $GLOBALS['webroot'] ?? '';
 $moduleUrl = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public';
 $returnTo = strtolower(trim((string) ($_GET['return_to'] ?? 'hub')));
 $returnTab = trim((string) ($_GET['tab'] ?? 'consult'));
+$initialFocus = strtolower(trim((string) ($_GET['focus'] ?? '')));
 $returnUrl = $returnTo === 'doctor'
     ? $moduleUrl . '/doctor.php'
     : $moduleUrl . '/clinical-doc/index.php?visit_id=' . urlencode((string) $visitId)
@@ -79,6 +80,7 @@ $returnUrl = $returnTo === 'doctor'
         'return_url' => $returnUrl,
         'return_to' => $returnTo,
         'return_tab' => $returnTab,
+        'initial_focus' => $initialFocus === 'sign' ? 'sign' : '',
         'webroot' => $webroot,
     ]
 );

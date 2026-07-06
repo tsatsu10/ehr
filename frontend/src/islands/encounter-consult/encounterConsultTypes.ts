@@ -144,6 +144,7 @@ export interface EncounterConsultProps {
   returnUrl: string;
   returnTo?: string;
   returnTab?: string;
+  initialFocus?: string;
   webroot?: string;
 }
 

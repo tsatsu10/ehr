@@ -97,4 +97,30 @@ class EncounterNoteServiceTest extends TestCase
         $this->assertContains('referral', $sections);
         $this->assertContains('problems', $sections);
     }
+
+    public function testBuildNotePreviewReturnsDisabledPayloadWhenNativeEngineOff(): void
+    {
+        $config = $this->createMock(ClinicConfigService::class);
+        $config->method('get')->willReturnCallback(
+            static function (string $key, $default = null): string {
+                return match ($key) {
+                    'encounter_note_engine' => EncounterNoteService::ENGINE_LEGACY,
+                    default => (string) $default,
+                };
+            }
+        );
+
+        $service = new EncounterNoteService(config: $config);
+        $preview = $service->buildNotePreview(99, 0);
+
+        $this->assertFalse($preview['native_enabled']);
+        $this->assertSame(0, $preview['problem_count']);
+    }
+
+    public function testVariantDisplayLabelForReferralConsult(): void
+    {
+        $service = new EncounterNoteService();
+
+        $this->assertSame('Referral consult', $service->variantDisplayLabel('referral_consult'));
+    }
 }

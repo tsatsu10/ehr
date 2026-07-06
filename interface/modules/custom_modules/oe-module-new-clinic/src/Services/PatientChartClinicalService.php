@@ -23,6 +23,7 @@ class PatientChartClinicalService
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
         private readonly ClinicalDocHubLinkService $docHubLinks = new ClinicalDocHubLinkService(),
         private readonly HistoryEditorWrapService $historyEditorWrap = new HistoryEditorWrapService(),
+        private readonly EncounterNoteService $encounterNote = new EncounterNoteService(),
     ) {
     }
 
@@ -440,13 +441,31 @@ class PatientChartClinicalService
             ];
         }
 
+        $visitRow = QueryUtils::querySingleRow(
+            'SELECT id FROM new_visit
+             WHERE pid = ? AND encounter = ?
+             AND state NOT IN (\'completed\', \'closed_unpaid\', \'cancelled\')
+             ORDER BY id DESC LIMIT 1',
+            [$pid, $encounterId]
+        );
+        $visitId = is_array($visitRow) ? (int) ($visitRow['id'] ?? 0) : 0;
+        $encounterNote = null;
+        if ($visitId > 0) {
+            $preview = $this->encounterNote->buildNotePreview($visitId, $facilityId);
+            if (!empty($preview['native_enabled'])) {
+                $encounterNote = $preview;
+            }
+        }
+
         return [
             'anchor' => 'clinical-encounter-forms',
             'hidden' => false,
             'encounter_id' => $encounterId,
+            'visit_id' => $visitId > 0 ? $visitId : null,
             'open_encounter_url' => $this->docHubLinks->buildDocumentationUrl($pid, $encounterId, $facilityId),
+            'encounter_note' => $encounterNote,
             'forms' => $forms,
-            'empty' => $forms === [],
+            'empty' => $forms === [] && $encounterNote === null,
         ];
     }
 

@@ -166,6 +166,7 @@ export function EncounterConsultForm({
   visitId,
   facilityId,
   returnUrl,
+  initialFocus,
 }: EncounterConsultProps) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -191,6 +192,7 @@ export function EncounterConsultForm({
   const [signOpen, setSignOpen] = useState(false);
   const [signPassword, setSignPassword] = useState('');
   const [signError, setSignError] = useState<string | null>(null);
+  const focusSignHandledRef = useRef(false);
   const sectionsRef = useRef(sections);
   const variantRef = useRef(variant);
   const dirtyRef = useRef(false);
@@ -342,9 +344,9 @@ export function EncounterConsultForm({
     document.getElementById(`encounter-section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const runValidate = useCallback(async () => {
+  const runValidate = useCallback(async (): Promise<boolean> => {
     if (!prefill || readOnly) {
-      return;
+      return false;
     }
 
     setValidating(true);
@@ -353,7 +355,7 @@ export function EncounterConsultForm({
       if (dirtyRef.current) {
         const saved = await persist(true);
         if (!saved) {
-          return;
+          return false;
         }
       }
 
@@ -370,18 +372,34 @@ export function EncounterConsultForm({
       if (errors.length === 0) {
         setStatusMessage('Validation passed — ready to sign');
         setStatusTone('success');
-      } else {
-        setStatusMessage(`${errors.length} item${errors.length === 1 ? '' : 's'} need attention before signing`);
-        setStatusTone('danger');
+        return true;
       }
+
+      setStatusMessage(`${errors.length} item${errors.length === 1 ? '' : 's'} need attention before signing`);
+      setStatusTone('danger');
+      return false;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Validation failed';
       setStatusMessage(message);
       setStatusTone('danger');
+      return false;
     } finally {
       setValidating(false);
     }
   }, [ajaxUrl, csrfToken, persist, prefill, readOnly, validationContext, visitId]);
+
+  useEffect(() => {
+    if (initialFocus !== 'sign' || loading || loadError || signed || focusSignHandledRef.current) {
+      return;
+    }
+
+    focusSignHandledRef.current = true;
+    void runValidate().then((valid) => {
+      if (valid) {
+        setSignOpen(true);
+      }
+    });
+  }, [initialFocus, loading, loadError, signed, runValidate]);
 
   const handleSign = useCallback(async () => {
     if (!prefill || readOnly) {

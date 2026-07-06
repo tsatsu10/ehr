@@ -25,6 +25,7 @@ class ClinicalDocVisitSummaryService
         private readonly ClinicalDocDocumentationStatusService $docStatus = new ClinicalDocDocumentationStatusService(),
         private readonly LabPanelOrderService $labPanelOrder = new LabPanelOrderService(),
         private readonly AdminFormBundleService $formBundle = new AdminFormBundleService(),
+        private readonly EncounterNoteService $encounterNote = new EncounterNoteService(),
     ) {
     }
 
@@ -54,7 +55,11 @@ class ClinicalDocVisitSummaryService
         $catalog = $this->catalog->getCatalog($lens, $facilityId);
         $instances = $this->loadFormInstances($encounterId, $pid);
         $cards = $this->enrichCardsWithBundleHealth(
-            $this->mergeCardsWithInstances($catalog['cards'], $instances),
+            $this->enrichCardsWithNotePreview(
+                $this->mergeCardsWithInstances($catalog['cards'], $instances),
+                $visitId,
+                $facilityId
+            ),
             $facilityId
         );
 
@@ -183,6 +188,29 @@ class ClinicalDocVisitSummaryService
             $health = $this->formBundle->getFormHealth($formdir, $facilityId);
             if ($health !== null) {
                 $card['bundle_health'] = $health;
+            }
+            $enriched[] = $card;
+        }
+
+        return $enriched;
+    }
+
+    /**
+     * V1.2-DOC-HLF-4 — CC snippet, problem counts, validate-ready for native consult card.
+     *
+     * @param list<array<string, mixed>> $cards
+     * @return list<array<string, mixed>>
+     */
+    private function enrichCardsWithNotePreview(array $cards, int $visitId, int $facilityId): array
+    {
+        $preview = null;
+        $enriched = [];
+        foreach ($cards as $card) {
+            if (strcasecmp((string) ($card['formdir'] ?? ''), EncounterNoteService::NATIVE_FORMDIR) === 0) {
+                $preview ??= $this->encounterNote->buildNotePreview($visitId, $facilityId);
+                if (!empty($preview['native_enabled'])) {
+                    $card['note_preview'] = $preview;
+                }
             }
             $enriched[] = $card;
         }

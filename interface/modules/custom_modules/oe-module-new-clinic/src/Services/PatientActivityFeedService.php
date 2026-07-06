@@ -93,13 +93,26 @@ class PatientActivityFeedService
             $pharmBind
         );
         $pharmTotal = is_array($pharmTotalRow) ? (int) ($pharmTotalRow['cnt'] ?? 0) : 0;
-        $total = $stateTotal + $labTotal + $pharmTotal;
+
+        $noteSignedBind = [$pid, $since];
+        $noteSignedTotalRow = QueryUtils::querySingleRow(
+            "SELECT COUNT(*) AS cnt
+             FROM log l
+             WHERE l.category = 'new_clinic'
+               AND l.user = 'encounter_note_signed'
+               AND l.patient_id = ?
+               AND l.date >= ?",
+            $noteSignedBind
+        );
+        $noteSignedTotal = is_array($noteSignedTotalRow) ? (int) ($noteSignedTotalRow['cnt'] ?? 0) : 0;
+        $total = $stateTotal + $labTotal + $pharmTotal + $noteSignedTotal;
 
         $fetchSize = min($offset + $limit + 50, 500);
         $stateItems = $this->fetchStateLogItems($pid, $since, $fetchSize, 0, $facilityFilter);
         $labItems = $this->fetchLabResultReadyItems($pid, $since, $fetchSize, 0, $facilityFilter);
         $pharmItems = $this->fetchPharmacyDispensedItems($pid, $since, $fetchSize, 0, $facilityFilter);
-        $merged = array_merge($stateItems, $labItems, $pharmItems);
+        $noteSignedItems = $this->fetchEncounterNoteSignedItems($pid, $since, $fetchSize, 0, $facilityFilter);
+        $merged = array_merge($stateItems, $labItems, $pharmItems, $noteSignedItems);
         usort($merged, static function (array $a, array $b): int {
             return strcmp((string) ($b['occurred_at'] ?? ''), (string) ($a['occurred_at'] ?? ''));
         });
@@ -204,6 +217,37 @@ class PatientActivityFeedService
         ) ?: [];
 
         return array_map(fn (array $row): array => $this->mapPharmacyDispensedItem($row), $rows);
+    }
+
+    /**
+     * V1.2-DOC-HLF-4 — native consult note signed events from audit log.
+     *
+     * @param array{sql: string, bind: array<int, mixed>} $facilityFilter
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchEncounterNoteSignedItems(
+        int $pid,
+        string $since,
+        int $limit,
+        int $offset,
+        array $facilityFilter
+    ): array {
+        unset($facilityFilter);
+        $rows = QueryUtils::fetchRecords(
+            "SELECT l.id, l.date AS occurred_at, l.groupname, l.comments,
+                    u.fname, u.lname
+             FROM log l
+             LEFT JOIN users u ON u.username = l.groupname
+             WHERE l.category = 'new_clinic'
+               AND l.user = 'encounter_note_signed'
+               AND l.patient_id = ?
+               AND l.date >= ?
+             ORDER BY l.date DESC, l.id DESC
+             LIMIT " . (int) $limit . ' OFFSET ' . (int) $offset,
+            [$pid, $since]
+        ) ?: [];
+
+        return array_map(fn (array $row): array => $this->mapEncounterNoteSignedItem($row), $rows);
     }
 
     /**
@@ -335,6 +379,72 @@ class PatientActivityFeedService
                 'visit_date' => $row['visit_date'] ?? null,
             ],
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private function mapEncounterNoteSignedItem(array $row): array
+    {
+        $payload = $this->parseJsonPayloadFromLogComments((string) ($row['comments'] ?? ''));
+        $problemCount = (int) ($payload['problem_count'] ?? 0);
+        $visitId = (int) ($payload['visit_id'] ?? 0);
+        $variant = trim((string) ($payload['variant'] ?? ''));
+        $actor = trim(((string) ($row['fname'] ?? '')) . ' ' . ((string) ($row['lname'] ?? '')));
+        if ($actor === '') {
+            $actor = trim((string) ($row['groupname'] ?? 'System'));
+        }
+        if ($actor === '') {
+            $actor = 'System';
+        }
+
+        $createdAt = (string) ($row['occurred_at'] ?? '');
+        $problemLabel = $problemCount === 1 ? xl('problem') : xl('problems');
+        $subtitle = $actor . ' · ' . $problemCount . ' ' . $problemLabel . ' · ' . $this->relativeTime($createdAt);
+
+        return [
+            'event_type' => 'encounter_note_signed',
+            'title' => xl('Consult note signed'),
+            'subtitle' => $subtitle,
+            'occurred_at' => $createdAt,
+            'visit_id' => $visitId,
+            'queue_number' => 0,
+            'expand' => [
+                'problem_count' => $problemCount,
+                'variant' => $variant !== '' ? $variant : null,
+                'forms_row_id' => isset($payload['forms_row_id']) ? (int) $payload['forms_row_id'] : null,
+                'encounter_id' => isset($payload['encounter_id']) ? (int) $payload['encounter_id'] : null,
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function parseJsonPayloadFromLogComments(string $comments): array
+    {
+        $decoded = $this->decodeLogComments($comments);
+        $payload = json_decode($decoded, true);
+
+        return is_array($payload) ? $payload : [];
+    }
+
+    private function decodeLogComments(string $raw): string
+    {
+        if ($raw === '') {
+            return '';
+        }
+        if (str_starts_with($raw, '{') || str_starts_with($raw, 'pid=')) {
+            return $raw;
+        }
+
+        $decoded = base64_decode($raw, true);
+        if (is_string($decoded) && $decoded !== '') {
+            return $decoded;
+        }
+
+        return $raw;
     }
 
     private function formatStateLabel(string $state): string

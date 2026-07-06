@@ -405,6 +405,90 @@ class EncounterNoteService
     }
 
     /**
+     * V1.2-DOC-HLF-4 — hub card + MRD summary preview for native consult note.
+     *
+     * @return array<string, mixed>
+     */
+    public function buildNotePreview(int $visitId, ?int $facilityId = null): array
+    {
+        if ($visitId <= 0) {
+            return $this->emptyNotePreview(false);
+        }
+
+        $visit = QueryUtils::querySingleRow(
+            'SELECT v.id, v.chief_complaint, v.visit_type_id, v.encounter, v.pid, v.facility_id,
+                    v.queue_number, CONCAT(pd.fname, " ", pd.lname) AS patient_name
+             FROM new_visit v
+             LEFT JOIN patient_data pd ON pd.pid = v.pid
+             WHERE v.id = ?
+             LIMIT 1',
+            [$visitId]
+        );
+        if (!is_array($visit)) {
+            return $this->emptyNotePreview(false);
+        }
+
+        if ($facilityId === null || $facilityId < 0) {
+            $facilityId = (int) ($visit['facility_id'] ?? 0);
+        }
+
+        if (!$this->isNativeEngineEnabled($facilityId)) {
+            return $this->emptyNotePreview(false);
+        }
+
+        $row = $this->loadNoteRow($visitId);
+        $sections = $row !== null
+            ? $this->decodeSections($row['payload'] ?? null)
+            : $this->emptySections();
+        $storedVariant = $row !== null ? (string) ($row['variant'] ?? '') : '';
+        $variant = $storedVariant !== ''
+            ? $this->normalizeVariant($storedVariant)
+            : $this->resolveVariantForVisit($visit, $facilityId);
+        $formsRowId = $row !== null ? (int) ($row['forms_row_id'] ?? 0) : 0;
+        $signed = $formsRowId > 0 && $this->isFormSigned($formsRowId);
+        $problemCount = $this->countActiveProblems($sections);
+        $incompleteProblemCount = $this->countIncompleteProblems($sections, $variant, $facilityId);
+        $ccPreview = $this->buildCcPreview($sections, $visit);
+        $validateReady = false;
+        if (!$signed && $row !== null) {
+            $prefill = $this->buildPrefill($visit);
+            $validation = $this->buildValidationResult(
+                $sections,
+                $prefill,
+                $variant,
+                $facilityId,
+                []
+            );
+            $validateReady = !empty($validation['valid']);
+        }
+
+        return [
+            'native_enabled' => true,
+            'started' => $row !== null,
+            'signed' => $signed,
+            'variant' => $variant,
+            'variant_label' => $this->variantDisplayLabel($variant),
+            'cc_preview' => $ccPreview !== '' ? $ccPreview : null,
+            'problem_count' => $problemCount,
+            'incomplete_problem_count' => $incompleteProblemCount,
+            'problem_labels' => $this->extractProblemLabels($sections),
+            'validate_ready' => $validateReady,
+            'updated_at' => $row['updated_at'] ?? null,
+            'open_url' => $this->buildPageUrl($visitId, ['return_to' => 'hub', 'tab' => 'consult']),
+        ];
+    }
+
+    public function variantDisplayLabel(string $variant): string
+    {
+        return match ($this->normalizeVariant($variant)) {
+            'referral_consult' => xl('Referral consult'),
+            'follow_up' => xl('Follow-up'),
+            'pre_procedure' => xl('Pre-procedure'),
+            default => xl('General OPD'),
+        };
+    }
+
+    /**
      * @param array<string, mixed> $visit
      * @return array<string, mixed>
      */
@@ -818,6 +902,126 @@ class EncounterNoteService
         }
 
         return $map;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function emptyNotePreview(bool $nativeEnabled = true): array
+    {
+        return [
+            'native_enabled' => $nativeEnabled,
+            'started' => false,
+            'signed' => false,
+            'variant' => self::DEFAULT_VARIANT,
+            'variant_label' => $this->variantDisplayLabel(self::DEFAULT_VARIANT),
+            'cc_preview' => null,
+            'problem_count' => 0,
+            'incomplete_problem_count' => 0,
+            'problem_labels' => [],
+            'validate_ready' => false,
+            'updated_at' => null,
+            'open_url' => null,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $visit
+     */
+    private function buildCcPreview(array $sections, array $visit): string
+    {
+        $cc = trim((string) ($sections['cc']['chief_complaint'] ?? ''));
+        if ($cc === '') {
+            $cc = trim((string) ($visit['chief_complaint'] ?? ''));
+        }
+
+        if ($cc === '') {
+            return '';
+        }
+
+        $firstLine = trim(strtok($cc, "\r\n"));
+        if (mb_strlen($firstLine) > 120) {
+            return mb_substr($firstLine, 0, 117) . '…';
+        }
+
+        return $firstLine;
+    }
+
+    /**
+     * @param array<string, mixed> $sections
+     * @return list<string>
+     */
+    private function extractProblemLabels(array $sections): array
+    {
+        $items = is_array($sections['problems']['items'] ?? null) ? $sections['problems']['items'] : [];
+        $labels = [];
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            if (strtolower(trim((string) ($item['status'] ?? ''))) === 'resolved') {
+                continue;
+            }
+            $label = trim((string) ($item['problem_label'] ?? ''));
+            if ($label !== '') {
+                $labels[] = $label;
+            }
+            if (count($labels) >= 5) {
+                break;
+            }
+        }
+
+        return $labels;
+    }
+
+    private function countIncompleteProblems(array $sections, string $variant, int $facilityId): int
+    {
+        $config = $this->getNoteConfig($facilityId);
+        $variant = $this->normalizeVariant($variant);
+        $items = is_array($sections['problems']['items'] ?? null) ? $sections['problems']['items'] : [];
+        $incomplete = 0;
+
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            if (strtolower(trim((string) ($item['status'] ?? ''))) === 'resolved') {
+                continue;
+            }
+
+            $label = trim((string) ($item['problem_label'] ?? ''));
+            if ($label === '') {
+                $incomplete++;
+                continue;
+            }
+
+            if (!empty($config['require_icd']) && trim((string) ($item['icd10_code'] ?? '')) === '') {
+                $incomplete++;
+                continue;
+            }
+
+            if ($variant === 'referral_consult' && trim((string) ($item['differential'] ?? '')) === '') {
+                $incomplete++;
+                continue;
+            }
+
+            $planItems = is_array($item['plan_items'] ?? null) ? $item['plan_items'] : [];
+            $hasPlan = false;
+            foreach ($planItems as $planItem) {
+                if (!is_array($planItem)) {
+                    continue;
+                }
+                if (trim((string) ($planItem['text'] ?? '')) !== '') {
+                    $hasPlan = true;
+                    break;
+                }
+            }
+            if (!$hasPlan) {
+                $incomplete++;
+            }
+        }
+
+        return $incomplete;
     }
 
     /**

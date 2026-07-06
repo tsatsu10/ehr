@@ -20,6 +20,7 @@ class ClinicalDocDocumentationStatusService
         private readonly ClinicalDocCatalogService $catalog = new ClinicalDocCatalogService(),
         private readonly EncounterSignService $signService = new EncounterSignService(),
         private readonly ClinicConfigService $config = new ClinicConfigService(),
+        private readonly EncounterNoteService $encounterNote = new EncounterNoteService(),
     ) {
     }
 
@@ -60,6 +61,9 @@ class ClinicalDocDocumentationStatusService
             'unsigned_required' => $unsignedRequired,
             'documentation_hub_url' => $hubEnabled && $visitId > 0
                 ? ClinicalDocHubLinkService::buildHubUrl($visitId)
+                : null,
+            'encounter_note_preview' => $visitId > 0
+                ? $this->encounterNote->buildNotePreview($visitId, $facilityId)
                 : null,
         ];
     }
