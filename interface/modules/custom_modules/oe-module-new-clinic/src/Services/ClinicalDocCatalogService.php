@@ -132,12 +132,21 @@ class ClinicalDocCatalogService
         return self::normalizeBundleKey($raw);
     }
 
+    private ?EncounterNoteService $encounterNote = null;
+
     public function __construct(
         private readonly ClinicalDocAccessService $access = new ClinicalDocAccessService(),
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
-        private readonly EncounterNoteService $encounterNote = new EncounterNoteService(),
     ) {
+    }
+
+    private function getEncounterNoteService(): EncounterNoteService
+    {
+        if ($this->encounterNote === null) {
+            $this->encounterNote = new EncounterNoteService();
+        }
+        return $this->encounterNote;
     }
 
     /**
@@ -272,7 +281,7 @@ class ClinicalDocCatalogService
             return false;
         }
 
-        if ($this->encounterNote->isNativeFormdir($formdir) && $this->encounterNote->isNativeEngineEnabled($facilityId)) {
+        if ($this->getEncounterNoteService()->isNativeFormdir($formdir) && $this->getEncounterNoteService()->isNativeEngineEnabled($facilityId)) {
             return true;
         }
 
@@ -296,7 +305,7 @@ class ClinicalDocCatalogService
             return $formdir === 'rx' ? 'orders' : null;
         }
 
-        if ($this->encounterNote->isNativeFormdir($formdir) && $this->encounterNote->isNativeEngineEnabled($facilityId)) {
+        if ($this->getEncounterNoteService()->isNativeFormdir($formdir) && $this->getEncounterNoteService()->isNativeEngineEnabled($facilityId)) {
             return 'consult';
         }
 
@@ -318,7 +327,7 @@ class ClinicalDocCatalogService
             return '';
         }
 
-        if ($this->encounterNote->isNativeFormdir($formdir)) {
+        if ($this->getEncounterNoteService()->isNativeFormdir($formdir)) {
             return EncounterNoteService::NATIVE_FORMDIR;
         }
 
@@ -509,7 +518,7 @@ class ClinicalDocCatalogService
         $formdir = strtolower(trim($canonical));
         $kind = $def['kind'];
         if ($kind === 'form') {
-            if ($this->encounterNote->isNativeFormdir($formdir) && $this->encounterNote->isNativeEngineEnabled($facilityId)) {
+            if ($this->getEncounterNoteService()->isNativeFormdir($formdir) && $this->getEncounterNoteService()->isNativeEngineEnabled($facilityId)) {
                 // Virtual native consult card — not in OpenEMR registry.
             } elseif (!$this->isRegistryFormActive($formdir)) {
                 return null;
@@ -533,7 +542,7 @@ class ClinicalDocCatalogService
 
     private function consultNoteFormdir(int $facilityId): string
     {
-        return $this->encounterNote->effectiveConsultFormdir($facilityId);
+        return $this->getEncounterNoteService()->effectiveConsultFormdir($facilityId);
     }
 
     /**
@@ -542,7 +551,7 @@ class ClinicalDocCatalogService
      */
     private function applyNativeConsultLens(array $defs, int $facilityId): array
     {
-        if (!$this->encounterNote->isNativeEngineEnabled($facilityId)) {
+        if (!$this->getEncounterNoteService()->isNativeEngineEnabled($facilityId)) {
             return $defs;
         }
 
