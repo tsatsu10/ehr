@@ -569,7 +569,7 @@ class DoctorService
      * @param int $actorUserId
      * @return array{supervisor_id: int|null, supervisor_display_name: string|null, supervisor_from_profile: bool}
      */
-    private function getSupervisorMeta(int $encounterId, int $actorUserId): array
+    public function getSupervisorMeta(int $encounterId, int $actorUserId): array
     {
         $encounter = sqlQuery(
             "SELECT supervisor_id FROM form_encounter WHERE encounter = ?",

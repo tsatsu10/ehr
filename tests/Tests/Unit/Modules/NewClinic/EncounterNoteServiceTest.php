@@ -14,6 +14,7 @@ require_once __DIR__ . '/ModuleAutoload.php';
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\EncounterNoteService;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 
 class EncounterNoteServiceTest extends TestCase
 {
@@ -74,5 +75,26 @@ class EncounterNoteServiceTest extends TestCase
         $this->assertFalse($service->isNativeEngineEnabled(0));
         $this->assertSame('ghana_opd_consult', $service->effectiveConsultFormdir(0));
         $this->assertFalse($service->shouldOpenNativeForm('soap', 0));
+    }
+
+    public function testNormalizeVariantFallsBackToGeneralOpd(): void
+    {
+        $service = new EncounterNoteService();
+        $method = (new ReflectionClass($service))->getMethod('normalizeVariant');
+        $method->setAccessible(true);
+
+        $this->assertSame('general_opd', $method->invoke($service, 'unknown_variant'));
+        $this->assertSame('referral_consult', $method->invoke($service, 'referral_consult'));
+    }
+
+    public function testVisibleSectionsForReferralConsultIncludesReferralHeader(): void
+    {
+        $service = new EncounterNoteService();
+        $method = (new ReflectionClass($service))->getMethod('visibleSectionsForVariant');
+        $method->setAccessible(true);
+
+        $sections = $method->invoke($service, 'referral_consult');
+        $this->assertContains('referral', $sections);
+        $this->assertContains('problems', $sections);
     }
 }

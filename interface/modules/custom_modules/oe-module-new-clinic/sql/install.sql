@@ -1047,6 +1047,9 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'clinical_doc_specialty_pack', '[]'),
 (0, 'consult_note_formdir', 'soap'),
 (0, 'encounter_note_engine', 'legacy'),
+(0, 'encounter_note_variant_map', '{}'),
+(0, 'encounter_note_require_icd', '0'),
+(0, 'encounter_note_supervisor_required', '0'),
 (0, 'enable_react_clinical_doc_hub', '1');
 #EndIf
 
@@ -1076,7 +1079,13 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'encounter_note_engine', 'legacy');
 #EndIf
 
-#IfNotRow2D new_clinic_config facility_id 0 config_key enable_ancillary_services
+#IfNotRow2D new_clinic_config facility_id 0 config_key encounter_note_supervisor_required
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'encounter_note_variant_map', '{}'),
+(0, 'encounter_note_require_icd', '0'),
+(0, 'encounter_note_supervisor_required', '0');
+#EndIf
+
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_ancillary_services', '0'),
 (0, 'ancillary_refer_window_hours', '4'),

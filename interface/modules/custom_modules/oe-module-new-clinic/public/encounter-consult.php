@@ -22,6 +22,7 @@ $visitScope = new VisitScopeService();
 $sessionFacility = !empty($_SESSION['facilityId']) ? (int) $_SESSION['facilityId'] : null;
 $facilityId = $visitScope->resolveDeskFacilityId($sessionFacility);
 
+
 if (!$config->isEnabled('enable_clinical_doc_hub', 0, $facilityId)) {
     $webroot = $GLOBALS['webroot'] ?? '';
     header('Location: ' . $webroot . '/interface/patient_file/encounter/encounter_top.php', true, 302);
@@ -74,6 +75,7 @@ $returnUrl = $returnTo === 'doctor'
         'shell_minimal' => true,
         'module_url' => $moduleUrl,
         'visit_id' => $visitId,
+        'facility_id' => $facilityId,
         'return_url' => $returnUrl,
         'return_to' => $returnTo,
         'return_tab' => $returnTab,

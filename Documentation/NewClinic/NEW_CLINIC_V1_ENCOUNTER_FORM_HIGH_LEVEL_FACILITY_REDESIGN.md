@@ -471,7 +471,8 @@ Align with New Clinic tokens (`--oe-nc-*`, Figtree + Noto Sans) and admin/chart 
 | 0.1.0 | 2026-07-06 | Initial draft — current-state analysis, external research, high-level facility target model, UX/data phasing |
 | 0.1.1 | 2026-07-06 | V1.2-DOC-HLF-2 implemented — native `encounter-consult` island, `nc_encounter_note` storage, vitals prefill API |
 | 0.1.2 | 2026-07-06 | V1.2-DOC-HLF-1 implemented — `referral_hospital_v1` bundle, `LBFreferral_opd_consult` LBF wizard + admin import |
+| 0.1.3 | 2026-07-06 | V1.2-DOC-HLF-3 implemented — referral/source sections, problem-plan model, variant validation, supervisor attestation, admin config keys |
 
 ---
 
-**Next engineering step:** ~~Implement **V1.2-DOC-HLF-2**~~ — **V1.2-DOC-HLF-2 shipped** (`encounter-consult` island + `encounter_note.*` APIs behind `encounter_note_engine=native`). ~~**V1.2-DOC-HLF-1**~~ — **V1.2-DOC-HLF-1 shipped** (`referral_hospital_v1` bundle + `LBFreferral_opd_consult` admin import). Next: **V1.2-DOC-HLF-3** (referral header, problem-plan linkage, validate/sign).
+**Next engineering step:** ~~Implement **V1.2-DOC-HLF-2**~~ — **V1.2-DOC-HLF-2 shipped** (`encounter-consult` island + `encounter_note.*` APIs behind `encounter_note_engine=native`). ~~**V1.2-DOC-HLF-1**~~ — **V1.2-DOC-HLF-1 shipped** (`referral_hospital_v1` bundle + `LBFreferral_opd_consult` admin import). ~~**V1.2-DOC-HLF-3**~~ — **V1.2-DOC-HLF-3 shipped** (referral header, problem-plan linkage, variant-aware validate/sign, supervisor attestation). Next: **V1.2-DOC-HLF-4** (hub card preview + Clinical tab summary).

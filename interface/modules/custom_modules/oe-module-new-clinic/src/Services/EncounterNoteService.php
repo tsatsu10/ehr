@@ -1,7 +1,7 @@
 <?php
 
 /**
- * V1.2-DOC-HLF-2 — native encounter consult note (get / save / prefill)
+ * V1.2-DOC-HLF-2/3 — native encounter consult note (get / save / prefill / validate / sign)
  *
  * @package   OpenEMR
  * @link      https://www.open-emr.org
@@ -23,6 +23,14 @@ class EncounterNoteService
     public const ENGINE_NATIVE = 'native';
     public const DEFAULT_VARIANT = 'general_opd';
 
+    /** @var list<string> */
+    public const VALID_VARIANTS = [
+        'general_opd',
+        'referral_consult',
+        'follow_up',
+        'pre_procedure',
+    ];
+
     private static bool $schemaEnsured = false;
 
     public function __construct(
@@ -33,6 +41,7 @@ class EncounterNoteService
         private readonly VitalsPreviewBuilder $vitalsPreview = new VitalsPreviewBuilder(),
         private readonly EncounterSessionService $encounterSession = new EncounterSessionService(),
         private readonly PatientCompletionService $completionService = new PatientCompletionService(),
+        private readonly DoctorService $doctorService = new DoctorService(),
     ) {
     }
 
@@ -89,12 +98,16 @@ class EncounterNoteService
         $facilityId = (int) ($visit['facility_id'] ?? $this->visitScope->resolveDeskFacilityId());
         $row = $this->loadNoteRow($visitId);
         $formsRowId = isset($row['forms_row_id']) ? (int) $row['forms_row_id'] : 0;
+        $storedVariant = (string) ($row['variant'] ?? '');
+        $variant = $storedVariant !== ''
+            ? $this->normalizeVariant($storedVariant)
+            : $this->resolveVariantForVisit($visit, $facilityId);
 
         return [
             'visit_id' => $visitId,
             'encounter' => (int) ($visit['encounter'] ?? 0),
             'pid' => (int) ($visit['pid'] ?? 0),
-            'variant' => (string) ($row['variant'] ?? self::DEFAULT_VARIANT),
+            'variant' => $variant,
             'sections' => $this->decodeSections($row['payload'] ?? null),
             'forms_row_id' => $formsRowId > 0 ? $formsRowId : null,
             'form_id' => $formsRowId > 0 ? $formsRowId : null,
@@ -105,6 +118,11 @@ class EncounterNoteService
             'engine' => self::ENGINE_NATIVE,
             'native_formdir' => self::NATIVE_FORMDIR,
             'facility_id' => $facilityId,
+            'note_config' => $this->getNoteConfig($facilityId),
+            'supervisor' => $this->doctorService->getSupervisorMeta(
+                (int) ($visit['encounter'] ?? 0),
+                $actorUserId
+            ),
         ];
     }
 
@@ -121,13 +139,22 @@ class EncounterNoteService
         }
 
         $visit = $this->loadClinicalVisit($visitId, $actorUserId);
+        $facilityId = (int) ($visit['facility_id'] ?? $this->visitScope->resolveDeskFacilityId());
         $sections = $body['sections'] ?? null;
         if (!is_array($sections)) {
             $row = $this->loadNoteRow($visitId);
             $sections = $this->decodeSections($row['payload'] ?? null);
         }
 
-        return $this->buildValidationResult($sections, $this->buildPrefill($visit));
+        $variant = $this->resolveVariantFromBody($body, $visit, $facilityId);
+
+        return $this->buildValidationResult(
+            $sections,
+            $this->buildPrefill($visit),
+            $variant,
+            $facilityId,
+            $this->doctorService->getSupervisorMeta((int) ($visit['encounter'] ?? 0), $actorUserId)
+        );
     }
 
     /**
@@ -181,13 +208,22 @@ class EncounterNoteService
         }
 
         $decodedSections = $this->decodeSections($row['payload'] ?? null);
-        $validation = $this->buildValidationResult($decodedSections, $this->buildPrefill($visit));
+        $facilityId = (int) ($visit['facility_id'] ?? $this->visitScope->resolveDeskFacilityId());
+        $variant = $this->resolveVariantFromBody($body, $visit, $facilityId, (string) ($row['variant'] ?? ''));
+        $validation = $this->buildValidationResult(
+            $decodedSections,
+            $this->buildPrefill($visit),
+            $variant,
+            $facilityId,
+            $this->doctorService->getSupervisorMeta((int) ($visit['encounter'] ?? 0), $actorUserId)
+        );
         if (!$validation['valid']) {
             throw new \InvalidArgumentException('Consult note is incomplete — run Validate and fix required fields');
         }
 
         $this->insertFormSignature($row, $actorUserId, trim((string) ($body['amendment'] ?? '')));
 
+        $problemCount = $this->countActiveProblems($decodedSections);
         EventAuditLogger::getInstance()->newEvent(
             'new_clinic',
             'encounter_note_signed',
@@ -197,6 +233,8 @@ class EncounterNoteService
                 'visit_id' => $visitId,
                 'encounter_id' => (int) ($row['encounter'] ?? 0),
                 'forms_row_id' => $formsRowId,
+                'variant' => $variant,
+                'problem_count' => $problemCount,
             ]),
             (int) ($row['pid'] ?? 0)
         );
@@ -269,7 +307,7 @@ class EncounterNoteService
             throw new \RuntimeException('No encounter on visit', 409);
         }
 
-        $variant = trim((string) ($body['variant'] ?? self::DEFAULT_VARIANT));
+        $variant = $this->resolveVariantFromBody($body, $visit, $facilityId);
         if ($variant === '') {
             $variant = self::DEFAULT_VARIANT;
         }
@@ -488,34 +526,65 @@ class EncounterNoteService
     /**
      * @param array<string, mixed> $sections
      * @param array<string, mixed> $prefill
+     * @param array<string, mixed> $supervisor
      * @return array<string, mixed>
      */
-    private function buildValidationResult(array $sections, array $prefill): array
-    {
+    private function buildValidationResult(
+        array $sections,
+        array $prefill,
+        string $variant,
+        int $facilityId,
+        array $supervisor = []
+    ): array {
         $errors = [];
-        $cc = trim((string) ($sections['cc']['chief_complaint'] ?? ''));
-        if ($cc === '') {
+        $variant = $this->normalizeVariant($variant);
+        $config = $this->getNoteConfig($facilityId);
+        $visible = $this->visibleSectionsForVariant($variant);
+
+        if (trim((string) ($sections['cc']['chief_complaint'] ?? '')) === '') {
             $errors[] = ['section' => 'cc', 'field' => 'chief_complaint', 'message' => xl('Chief complaint is required')];
         }
 
-        $hpi = trim((string) ($sections['hpi']['narrative'] ?? ''));
-        if ($hpi === '') {
-            $errors[] = ['section' => 'hpi', 'field' => 'narrative', 'message' => xl('History of present illness is required')];
+        $hpiMessage = $variant === 'follow_up'
+            ? xl('Interval history is required for follow-up visits')
+            : xl('History of present illness is required');
+        if (trim((string) ($sections['hpi']['narrative'] ?? '')) === '') {
+            $errors[] = ['section' => 'hpi', 'field' => 'narrative', 'message' => $hpiMessage];
         }
 
-        $pe = trim((string) ($sections['pe']['general'] ?? ''));
-        if ($pe === '') {
+        if (trim((string) ($sections['pe']['general'] ?? '')) === '') {
             $errors[] = ['section' => 'pe', 'field' => 'general', 'message' => xl('Physical examination is required')];
         }
 
-        $assessment = trim((string) ($sections['assessment']['narrative'] ?? ''));
-        if ($assessment === '') {
-            $errors[] = ['section' => 'assessment', 'field' => 'narrative', 'message' => xl('Assessment is required')];
+        if (in_array('referral', $visible, true)) {
+            if (trim((string) ($sections['referral']['requesting_clinician'] ?? '')) === '') {
+                $errors[] = ['section' => 'referral', 'field' => 'requesting_clinician', 'message' => xl('Requesting clinician is required')];
+            }
+            if (trim((string) ($sections['referral']['requesting_service'] ?? '')) === '') {
+                $errors[] = ['section' => 'referral', 'field' => 'requesting_service', 'message' => xl('Requesting service is required')];
+            }
+            if (trim((string) ($sections['referral']['clinical_question'] ?? '')) === '') {
+                $errors[] = ['section' => 'referral', 'field' => 'clinical_question', 'message' => xl('Clinical question is required for referral consults')];
+            }
         }
 
-        $plan = trim((string) ($sections['plan']['narrative'] ?? ''));
-        if ($plan === '') {
-            $errors[] = ['section' => 'plan', 'field' => 'narrative', 'message' => xl('Plan is required')];
+        if (in_array('source', $visible, true)) {
+            $sources = $sections['source']['sources'] ?? [];
+            $sourceNarrative = trim((string) ($sections['source']['narrative'] ?? ''));
+            if ((!is_array($sources) || $sources === []) && $sourceNarrative === '') {
+                $errors[] = ['section' => 'source', 'field' => 'sources', 'message' => xl('Select at least one source of information or add a narrative')];
+            }
+        }
+
+        $this->appendProblemValidationErrors($sections, $variant, $config, $errors);
+
+        if (in_array('attestation', $visible, true) && !empty($config['supervisor_required'])) {
+            if (empty($supervisor['supervisor_id'])) {
+                $errors[] = ['section' => 'attestation', 'field' => 'supervisor_id', 'message' => xl('Select a supervising provider before signing')];
+            }
+            if (empty($sections['attestation']['supervisor_attested'])) {
+                $errors[] = ['section' => 'attestation', 'field' => 'supervisor_attested', 'message' => xl('Supervisor attestation is required before signing')];
+            }
         }
 
         $allergies = is_array($prefill['allergies'] ?? null) ? $prefill['allergies'] : [];
@@ -543,6 +612,234 @@ class EncounterNoteService
             'valid' => $errors === [],
             'errors' => $errors,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $sections
+     * @param array<string, mixed> $config
+     * @param list<array{section: string, field: string, message: string}> $errors
+     */
+    private function appendProblemValidationErrors(array $sections, string $variant, array $config, array &$errors): void
+    {
+        $items = is_array($sections['problems']['items'] ?? null) ? $sections['problems']['items'] : [];
+        $active = [];
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            if (strtolower(trim((string) ($item['status'] ?? ''))) === 'resolved') {
+                continue;
+            }
+            $active[] = $item;
+        }
+
+        $legacyAssessment = trim((string) ($sections['assessment']['narrative'] ?? ''));
+        $legacyPlan = trim((string) ($sections['plan']['narrative'] ?? ''));
+        if ($active === [] && ($legacyAssessment === '' || $legacyPlan === '')) {
+            $errors[] = ['section' => 'problems', 'field' => 'items', 'message' => xl('Add at least one active problem with assessment and plan')];
+            return;
+        }
+
+        if ($active === []) {
+            return;
+        }
+
+        foreach ($active as $index => $problem) {
+            $label = trim((string) ($problem['problem_label'] ?? ''));
+            if ($label === '') {
+                $errors[] = [
+                    'section' => 'problems',
+                    'field' => 'problem_' . $index . '_label',
+                    'message' => xl('Problem') . ' ' . ($index + 1) . ': ' . xl('label is required'),
+                ];
+            }
+
+            if (!empty($config['require_icd']) && trim((string) ($problem['icd10_code'] ?? '')) === '') {
+                $errors[] = [
+                    'section' => 'problems',
+                    'field' => 'problem_' . $index . '_icd10_code',
+                    'message' => xl('Problem') . ' ' . ($index + 1) . ': ' . xl('ICD-10 code is required'),
+                ];
+            }
+
+            if ($variant === 'referral_consult' && trim((string) ($problem['differential'] ?? '')) === '') {
+                $errors[] = [
+                    'section' => 'problems',
+                    'field' => 'problem_' . $index . '_differential',
+                    'message' => xl('Problem') . ' ' . ($index + 1) . ': ' . xl('differential diagnosis is required for referral consults'),
+                ];
+            }
+
+            $planItems = is_array($problem['plan_items'] ?? null) ? $problem['plan_items'] : [];
+            $hasPlan = false;
+            foreach ($planItems as $planItem) {
+                if (!is_array($planItem)) {
+                    continue;
+                }
+                if (trim((string) ($planItem['text'] ?? '')) !== '') {
+                    $hasPlan = true;
+                    break;
+                }
+            }
+            if (!$hasPlan) {
+                $errors[] = [
+                    'section' => 'problems',
+                    'field' => 'problem_' . $index . '_plan_items',
+                    'message' => xl('Problem') . ' ' . ($index + 1) . ': ' . xl('add at least one plan item'),
+                ];
+            }
+        }
+
+        if ($variant === 'pre_procedure') {
+            $hasClearance = false;
+            foreach ($active as $problem) {
+                $planItems = is_array($problem['plan_items'] ?? null) ? $problem['plan_items'] : [];
+                foreach ($planItems as $planItem) {
+                    if (!is_array($planItem)) {
+                        continue;
+                    }
+                    $text = strtolower(trim((string) ($planItem['text'] ?? '')));
+                    if (str_contains($text, 'clearance') || str_contains($text, 'cleared')) {
+                        $hasClearance = true;
+                        break 2;
+                    }
+                }
+            }
+            if (!$hasClearance) {
+                $errors[] = [
+                    'section' => 'problems',
+                    'field' => 'clearance',
+                    'message' => xl('Pre-procedure visit requires a clearance statement in the plan'),
+                ];
+            }
+        }
+    }
+
+    /**
+     * @return array{require_icd: bool, supervisor_required: bool}
+     */
+    private function getNoteConfig(int $facilityId): array
+    {
+        return [
+            'require_icd' => $this->config->getInt('encounter_note_require_icd', 0, $facilityId) === 1,
+            'supervisor_required' => $this->config->getInt('encounter_note_supervisor_required', 0, $facilityId) === 1,
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function visibleSectionsForVariant(string $variant): array
+    {
+        $variant = $this->normalizeVariant($variant);
+
+        return match ($variant) {
+            'referral_consult' => ['referral', 'source', 'cc', 'hpi', 'vitals', 'pe', 'problems', 'attestation'],
+            'follow_up' => ['cc', 'hpi', 'vitals', 'pe', 'problems'],
+            'pre_procedure' => ['source', 'cc', 'hpi', 'vitals', 'pe', 'problems', 'attestation'],
+            default => ['cc', 'hpi', 'vitals', 'pe', 'problems'],
+        };
+    }
+
+    private function normalizeVariant(string $variant): string
+    {
+        $variant = strtolower(trim($variant));
+
+        return in_array($variant, self::VALID_VARIANTS, true) ? $variant : self::DEFAULT_VARIANT;
+    }
+
+    /**
+     * @param array<string, mixed> $visit
+     */
+    private function resolveVariantForVisit(array $visit, int $facilityId): string
+    {
+        $visitTypeId = (int) ($visit['visit_type_id'] ?? 0);
+        if ($visitTypeId <= 0) {
+            return self::DEFAULT_VARIANT;
+        }
+
+        $visitType = QueryUtils::querySingleRow(
+            'SELECT label, referral_required FROM new_visit_type WHERE id = ? LIMIT 1',
+            [$visitTypeId]
+        );
+        if (!is_array($visitType)) {
+            return self::DEFAULT_VARIANT;
+        }
+
+        $label = trim((string) ($visitType['label'] ?? ''));
+        $map = $this->loadVariantMap($facilityId);
+        if ($label !== '' && isset($map[$label])) {
+            return $this->normalizeVariant((string) $map[$label]);
+        }
+
+        if (!empty($visitType['referral_required'])) {
+            return 'referral_consult';
+        }
+
+        return self::DEFAULT_VARIANT;
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     * @param array<string, mixed> $visit
+     */
+    private function resolveVariantFromBody(array $body, array $visit, int $facilityId, string $storedVariant = ''): string
+    {
+        $requested = trim((string) ($body['variant'] ?? ''));
+        if ($requested !== '') {
+            return $this->normalizeVariant($requested);
+        }
+
+        if ($storedVariant !== '') {
+            return $this->normalizeVariant($storedVariant);
+        }
+
+        return $this->resolveVariantForVisit($visit, $facilityId);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function loadVariantMap(int $facilityId): array
+    {
+        $raw = trim((string) ($this->config->get('encounter_note_variant_map', '{}', $facilityId) ?? '{}'));
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $map = [];
+        foreach ($decoded as $visitTypeLabel => $variant) {
+            $label = trim((string) $visitTypeLabel);
+            if ($label === '') {
+                continue;
+            }
+            $map[$label] = $this->normalizeVariant((string) $variant);
+        }
+
+        return $map;
+    }
+
+    /**
+     * @param array<string, mixed> $sections
+     */
+    private function countActiveProblems(array $sections): int
+    {
+        $items = is_array($sections['problems']['items'] ?? null) ? $sections['problems']['items'] : [];
+        $count = 0;
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            if (strtolower(trim((string) ($item['status'] ?? ''))) === 'resolved') {
+                continue;
+            }
+            if (trim((string) ($item['problem_label'] ?? '')) !== '') {
+                $count++;
+            }
+        }
+
+        return $count;
     }
 
     private function isFormSigned(int $formsRowId): bool
@@ -666,11 +963,15 @@ class EncounterNoteService
         }
 
         $merged = array_merge($this->emptySections(), $sections);
-        if (isset($sections['hpi']) && is_array($sections['hpi'])) {
-            $merged['hpi'] = array_merge($this->emptySections()['hpi'], $sections['hpi']);
+        foreach (['hpi', 'referral', 'source', 'context', 'attestation'] as $nestedKey) {
+            if (isset($sections[$nestedKey]) && is_array($sections[$nestedKey])) {
+                $merged[$nestedKey] = array_merge($this->emptySections()[$nestedKey], $sections[$nestedKey]);
+            }
         }
-        if (isset($sections['context']) && is_array($sections['context'])) {
-            $merged['context'] = array_merge($this->emptySections()['context'], $sections['context']);
+        if (isset($sections['problems']) && is_array($sections['problems'])) {
+            $merged['problems'] = [
+                'items' => is_array($sections['problems']['items'] ?? null) ? $sections['problems']['items'] : [],
+            ];
         }
 
         return $merged;
@@ -682,6 +983,16 @@ class EncounterNoteService
     private function emptySections(): array
     {
         return [
+            'referral' => [
+                'requesting_clinician' => '',
+                'requesting_service' => '',
+                'clinical_question' => '',
+                'urgency' => '',
+            ],
+            'source' => [
+                'sources' => [],
+                'narrative' => '',
+            ],
             'cc' => ['chief_complaint' => ''],
             'hpi' => [
                 'narrative' => '',
@@ -692,8 +1003,12 @@ class EncounterNoteService
                 'relieving' => '',
             ],
             'pe' => ['general' => ''],
+            'problems' => ['items' => []],
             'assessment' => ['narrative' => ''],
             'plan' => ['narrative' => ''],
+            'attestation' => [
+                'supervisor_attested' => false,
+            ],
             'context' => [
                 'allergies_acknowledged' => false,
                 'meds_acknowledged' => false,

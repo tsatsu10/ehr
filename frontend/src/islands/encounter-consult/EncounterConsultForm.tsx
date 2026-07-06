@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
+import { Checkbox } from '@components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -11,6 +13,9 @@ import {
 import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
 import { Textarea } from '@components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@components/ui/select';
+import { EncounterAttestationSection } from './EncounterAttestationSection';
+import { EncounterProblemsSection } from './EncounterProblemsSection';
 import {
   fetchEncounterNote,
   saveEncounterNote,
@@ -24,8 +29,10 @@ import {
   mergeSections,
   type EncounterConsultProps,
   type EncounterConsultSectionId,
+  type EncounterNoteConfig,
   type EncounterNotePrefill,
   type EncounterNoteSections,
+  type EncounterSupervisorMeta,
 } from './encounterConsultTypes';
 import {
   validateEncounterNote as validateEncounterNoteLocal,
@@ -41,11 +48,34 @@ import {
   EncounterStickyFooter,
   VitalsMetricTile,
 } from './encounterUi';
+import {
+  SOURCE_OF_INFORMATION_OPTIONS,
+  URGENCY_OPTIONS,
+  isEncounterNoteVariant,
+  variantLabel,
+  visibleSectionIds,
+  type EncounterNoteVariant,
+} from './encounterVariants';
 
 const AUTOSAVE_MS = 30_000;
 
-function sectionComplete(id: EncounterConsultSectionId, sections: EncounterNoteSections): boolean {
+const DEFAULT_NOTE_CONFIG: EncounterNoteConfig = {
+  require_icd: false,
+  supervisor_required: false,
+};
+
+function sectionComplete(
+  id: EncounterConsultSectionId,
+  sections: EncounterNoteSections,
+  variant: EncounterNoteVariant,
+): boolean {
   switch (id) {
+    case 'referral':
+      return sections.referral.clinical_question.trim().length > 0
+        && sections.referral.requesting_clinician.trim().length > 0
+        && sections.referral.requesting_service.trim().length > 0;
+    case 'source':
+      return sections.source.sources.length > 0 || sections.source.narrative.trim().length > 0;
     case 'cc':
       return sections.cc.chief_complaint.trim().length > 0;
     case 'hpi':
@@ -54,10 +84,13 @@ function sectionComplete(id: EncounterConsultSectionId, sections: EncounterNoteS
       return true;
     case 'pe':
       return sections.pe.general.trim().length > 0;
-    case 'assessment':
-      return sections.assessment.narrative.trim().length > 0;
-    case 'plan':
-      return sections.plan.narrative.trim().length > 0;
+    case 'problems':
+      return sections.problems.items.some((problem) => (
+        problem.problem_label.trim().length > 0
+        && problem.plan_items.some((item) => item.text.trim().length > 0)
+      ));
+    case 'attestation':
+      return !variant || sections.attestation.supervisor_attested;
     default: {
       const never: never = id;
       return Boolean(never);
@@ -131,13 +164,20 @@ export function EncounterConsultForm({
   ajaxUrl,
   csrfToken,
   visitId,
+  facilityId,
   returnUrl,
 }: EncounterConsultProps) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sections, setSections] = useState<EncounterNoteSections>(emptySections());
   const [prefill, setPrefill] = useState<EncounterNotePrefill | null>(null);
-  const [variant, setVariant] = useState('general_opd');
+  const [variant, setVariant] = useState<EncounterNoteVariant>('general_opd');
+  const [encounterId, setEncounterId] = useState(0);
+  const [noteConfig, setNoteConfig] = useState<EncounterNoteConfig>(DEFAULT_NOTE_CONFIG);
+  const [supervisor, setSupervisor] = useState<EncounterSupervisorMeta>({
+    supervisor_id: null,
+    supervisor_display_name: null,
+  });
   const [activeSection, setActiveSection] = useState<EncounterConsultSectionId>('cc');
   const [saving, setSaving] = useState(false);
   const [validating, setValidating] = useState(false);
@@ -162,14 +202,30 @@ export function EncounterConsultForm({
   signedRef.current = signed;
 
   const readOnly = signed;
+  const visibleIds = useMemo(() => visibleSectionIds(variant), [variant]);
   const navSections = useMemo(
-    () => ENCOUNTER_SECTIONS.map((section) => ({
-      id: section.id,
-      label: section.label,
-      complete: sectionComplete(section.id, sections),
-    })),
-    [sections],
+    () => ENCOUNTER_SECTIONS
+      .filter((section) => visibleIds.includes(section.id))
+      .map((section) => ({
+        id: section.id,
+        label: section.label,
+        complete: sectionComplete(section.id, sections, variant),
+      })),
+    [sections, variant, visibleIds],
   );
+
+  const validationContext = useMemo(() => ({
+    variant,
+    config: noteConfig,
+    prefill: prefill ?? {
+      chief_complaint: '',
+      vitals: { latest: {}, summary: null, warnings: [], abnormal: false, missing: true },
+      allergies: { items: [], undocumented: false, nkda: false, summary: null, edit_url: null },
+      medications: { items: [], summary: null, edit_url: null },
+      patient: { display_name: '', queue_number: 0 },
+    },
+    supervisor,
+  }), [noteConfig, prefill, supervisor, variant]);
 
   const loadNote = useCallback(async () => {
     setLoading(true);
@@ -177,11 +233,18 @@ export function EncounterConsultForm({
     try {
       const payload = await fetchEncounterNote(ajaxUrl, csrfToken, visitId);
       setPrefill(payload.prefill);
-      setVariant(payload.variant || 'general_opd');
+      setEncounterId(payload.encounter);
+      const resolvedVariant = isEncounterNoteVariant(payload.variant)
+        ? payload.variant
+        : 'general_opd';
+      setVariant(resolvedVariant);
+      setNoteConfig(payload.note_config ?? DEFAULT_NOTE_CONFIG);
+      setSupervisor(payload.supervisor ?? { supervisor_id: null, supervisor_display_name: null });
       setSections(mergeSections(payload.sections, payload.prefill));
       setLastSavedAt(payload.updated_at);
       setSigned(Boolean(payload.signed));
       setValidationErrors([]);
+      setActiveSection(visibleSectionIds(resolvedVariant)[0] ?? 'cc');
       setStatusMessage(
         payload.signed
           ? 'Consult note signed'
@@ -267,6 +330,13 @@ export function EncounterConsultForm({
     updateSection('context', { ...sections.context, ...patch });
   };
 
+  const toggleSource = (source: string, checked: boolean) => {
+    const next = checked
+      ? [...sections.source.sources, source]
+      : sections.source.sources.filter((value) => value !== source);
+    updateSection('source', { ...sections.source, sources: next });
+  };
+
   const scrollToSection = (id: EncounterConsultSectionId) => {
     setActiveSection(id);
     document.getElementById(`encounter-section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -287,7 +357,7 @@ export function EncounterConsultForm({
         }
       }
 
-      const local = validateEncounterNoteLocal(sectionsRef.current, prefill);
+      const local = validateEncounterNoteLocal(sectionsRef.current, validationContext);
       const remote = await validateEncounterNote(
         ajaxUrl,
         csrfToken,
@@ -311,7 +381,7 @@ export function EncounterConsultForm({
     } finally {
       setValidating(false);
     }
-  }, [ajaxUrl, csrfToken, persist, prefill, readOnly, visitId]);
+  }, [ajaxUrl, csrfToken, persist, prefill, readOnly, validationContext, visitId]);
 
   const handleSign = useCallback(async () => {
     if (!prefill || readOnly) {
@@ -366,7 +436,16 @@ export function EncounterConsultForm({
 
   return (
     <EncounterShell id="nc-encounter-consult-root">
-      <EncounterStatusBar message={statusMessage} tone={statusTone} saving={saving || validating || signing} />
+      <EncounterStatusBar
+        message={(
+          <span className="flex flex-wrap items-center gap-2">
+            <span>{statusMessage}</span>
+            <Badge variant="neutral">{variantLabel(variant)}</Badge>
+          </span>
+        )}
+        tone={statusTone}
+        saving={saving || validating || signing}
+      />
 
       <EncounterContextStrip
         prefill={prefill}
@@ -387,13 +466,107 @@ export function EncounterConsultForm({
         )}
         content={(
           <div className="space-y-4">
-            {ENCOUNTER_SECTIONS.map((meta) => (
+            {ENCOUNTER_SECTIONS.filter((meta) => visibleIds.includes(meta.id)).map((meta) => (
               <EncounterSectionCard
                 key={meta.id}
                 id={meta.id}
                 title={meta.label}
                 description={meta.description}
               >
+                {meta.id === 'referral' && (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="encounter-referring-clinician">Requesting clinician</Label>
+                      <Input
+                        id="encounter-referring-clinician"
+                        value={sections.referral.requesting_clinician}
+                        disabled={readOnly}
+                        onChange={(event) => updateSection('referral', {
+                          ...sections.referral,
+                          requesting_clinician: event.target.value,
+                        })}
+                        onFocus={() => setActiveSection('referral')}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="encounter-referring-service">Requesting service</Label>
+                      <Input
+                        id="encounter-referring-service"
+                        value={sections.referral.requesting_service}
+                        disabled={readOnly}
+                        onChange={(event) => updateSection('referral', {
+                          ...sections.referral,
+                          requesting_service: event.target.value,
+                        })}
+                        onFocus={() => setActiveSection('referral')}
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="encounter-clinical-question">Clinical question</Label>
+                      <Textarea
+                        id="encounter-clinical-question"
+                        rows={4}
+                        value={sections.referral.clinical_question}
+                        disabled={readOnly}
+                        onChange={(event) => updateSection('referral', {
+                          ...sections.referral,
+                          clinical_question: event.target.value,
+                        })}
+                        onFocus={() => setActiveSection('referral')}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="encounter-urgency">Urgency</Label>
+                      <Select
+                        value={sections.referral.urgency || 'routine'}
+                        disabled={readOnly}
+                        onValueChange={(value) => updateSection('referral', {
+                          ...sections.referral,
+                          urgency: value as EncounterNoteSections['referral']['urgency'],
+                        })}
+                      >
+                        <SelectTrigger id="encounter-urgency">
+                          <SelectValue placeholder="Select urgency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {URGENCY_OPTIONS.map((option) => (
+                            <SelectItem key={option} value={option}>{option}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+                {meta.id === 'source' && (
+                  <div className="space-y-4">
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {SOURCE_OF_INFORMATION_OPTIONS.map((source) => (
+                        <label key={source} className="flex items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={sections.source.sources.includes(source)}
+                            disabled={readOnly}
+                            onCheckedChange={(checked) => toggleSource(source, checked === true)}
+                          />
+                          <span>{source}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="encounter-source-narrative">Additional narrative</Label>
+                      <Textarea
+                        id="encounter-source-narrative"
+                        rows={4}
+                        value={sections.source.narrative}
+                        disabled={readOnly}
+                        onChange={(event) => updateSection('source', {
+                          ...sections.source,
+                          narrative: event.target.value,
+                        })}
+                        onFocus={() => setActiveSection('source')}
+                      />
+                    </div>
+                  </div>
+                )}
                 {meta.id === 'cc' && (
                   <div className="space-y-2">
                     <Label htmlFor="encounter-cc">Chief complaint</Label>
@@ -458,31 +631,34 @@ export function EncounterConsultForm({
                     />
                   </div>
                 )}
-                {meta.id === 'assessment' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="encounter-assessment">Assessment</Label>
-                    <Textarea
-                      id="encounter-assessment"
-                      rows={8}
-                      value={sections.assessment.narrative}
-                      disabled={readOnly}
-                      onChange={(event) => updateSection('assessment', { narrative: event.target.value })}
-                      onFocus={() => setActiveSection('assessment')}
-                    />
-                  </div>
+                {meta.id === 'problems' && (
+                  <EncounterProblemsSection
+                    sections={sections}
+                    readOnly={readOnly}
+                    requireIcd={noteConfig.require_icd}
+                    onChange={(problems) => updateSection('problems', problems)}
+                    onFocus={() => setActiveSection('problems')}
+                  />
                 )}
-                {meta.id === 'plan' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="encounter-plan">Plan</Label>
-                    <Textarea
-                      id="encounter-plan"
-                      rows={8}
-                      value={sections.plan.narrative}
-                      disabled={readOnly}
-                      onChange={(event) => updateSection('plan', { narrative: event.target.value })}
-                      onFocus={() => setActiveSection('plan')}
-                    />
-                  </div>
+                {meta.id === 'attestation' && (
+                  <EncounterAttestationSection
+                    sections={sections}
+                    supervisor={supervisor}
+                    encounterId={encounterId}
+                    facilityId={facilityId}
+                    ajaxUrl={ajaxUrl}
+                    csrfToken={csrfToken}
+                    supervisorRequired={noteConfig.supervisor_required}
+                    readOnly={readOnly}
+                    onAttestationChange={(attested) => updateSection('attestation', {
+                      supervisor_attested: attested,
+                    })}
+                    onSupervisorUpdated={setSupervisor}
+                    onNotice={(message, tone) => {
+                      setStatusMessage(message);
+                      setStatusTone(tone === 'success' ? 'success' : 'danger');
+                    }}
+                  />
                 )}
               </EncounterSectionCard>
             ))}
@@ -512,7 +688,7 @@ export function EncounterConsultForm({
                   <Button
                     type="button"
                     onClick={() => {
-                      const local = validateEncounterNoteLocal(sections, prefill);
+                      const local = validateEncounterNoteLocal(sections, validationContext);
                       if (!local.valid) {
                         setValidationErrors(local.errors);
                         setStatusMessage(`${local.errors.length} item${local.errors.length === 1 ? '' : 's'} need attention before signing`);

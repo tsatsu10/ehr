@@ -215,6 +215,17 @@
       "_badge-DwdCdshN.js"
     ]
   },
+  "_SupervisorCombobox-J2uerUha.js": {
+    "file": "chunks/SupervisorCombobox-J2uerUha.js",
+    "name": "SupervisorCombobox",
+    "imports": [
+      "_button-Ajb20jbY.js",
+      "_badge-DwdCdshN.js",
+      "_x-rfPnBjvZ.js",
+      "_input-DqF_RKsB.js",
+      "_label-BVQ047yg.js"
+    ]
+  },
   "_WidgetCard-BopiM-hI.js": {
     "file": "chunks/WidgetCard-BopiM-hI.js",
     "name": "WidgetCard",
@@ -377,21 +388,9 @@
     "file": "assets/main-B4EINF2r.css",
     "src": "_main-B4EINF2r.css"
   },
-  "_main-CY99Wjno.css": {
-    "file": "assets/main-CY99Wjno.css",
-    "src": "_main-CY99Wjno.css"
-  },
-  "_main-DfVBt3E6.js": {
-    "file": "chunks/main-DfVBt3E6.js",
-    "name": "main",
-    "imports": [
-      "_button-Ajb20jbY.js",
-      "_deskCalloutStyles-DBOuf-r4.js",
-      "_native-select-C7jh-Pdt.js"
-    ],
-    "css": [
-      "assets/main-CY99Wjno.css"
-    ]
+  "_main-CWvoarmN.css": {
+    "file": "assets/main-CWvoarmN.css",
+    "src": "_main-CWvoarmN.css"
   },
   "_main-Dq-TCZzP.css": {
     "file": "assets/main-Dq-TCZzP.css",
@@ -414,6 +413,18 @@
     ],
     "css": [
       "assets/main-B4EINF2r.css"
+    ]
+  },
+  "_main-TmX6afCS.js": {
+    "file": "chunks/main-TmX6afCS.js",
+    "name": "main",
+    "imports": [
+      "_button-Ajb20jbY.js",
+      "_deskCalloutStyles-DBOuf-r4.js",
+      "_native-select-C7jh-Pdt.js"
+    ],
+    "css": [
+      "assets/main-CWvoarmN.css"
     ]
   },
   "_main-aq4LTN4r.js": {
@@ -833,10 +844,8 @@
       "_card-rbnVZtjh.js",
       "_PatientContextBanner-D1bHNPKm.js",
       "_checkbox-oQNgDOMJ.js",
-      "_x-rfPnBjvZ.js",
       "_DeskQueueStatusBar-CL1Nz_Yp.js",
       "_deskCalloutStyles-DBOuf-r4.js",
-      "_input-DqF_RKsB.js",
       "_dialog-CW1z66Zk.js",
       "_useModalDismiss-DOPWycYt.js",
       "_SlideOver-Bo8LMSwQ.js",
@@ -848,6 +857,7 @@
       "_textarea-CpwoyvF7.js",
       "_ConfirmModal-DYDhCqMt.js",
       "_native-select-C7jh-Pdt.js",
+      "_SupervisorCombobox-J2uerUha.js",
       "_pharmOpsPrintRx-B7h31ll2.js",
       "_PharmacyPrescriptionsTable-DVvxDHly.js",
       "_deskToast-BN2ZTliE.js",
@@ -866,11 +876,16 @@
     "isEntry": true,
     "imports": [
       "_button-Ajb20jbY.js",
+      "_badge-DwdCdshN.js",
+      "_createLucideIcon-p4f8Fv_H.js",
       "_loader-circle-DdcPDs6V.js",
+      "_checkbox-oQNgDOMJ.js",
+      "_select-DOMEooB0.js",
       "_input-DqF_RKsB.js",
       "_dialog-CW1z66Zk.js",
       "_label-BVQ047yg.js",
-      "_textarea-CpwoyvF7.js"
+      "_textarea-CpwoyvF7.js",
+      "_SupervisorCombobox-J2uerUha.js"
     ],
     "css": [
       "encounter-consult.css"
@@ -1077,7 +1092,7 @@
       "_preload-helper-DYl5dUZ5.js",
       "_usePageHeadingDateInput-zvdbw-2c.js",
       "_reportsFormatters-Cl5Kncev.js",
-      "_main-DfVBt3E6.js"
+      "_main-TmX6afCS.js"
     ],
     "dynamicImports": [
       "src/islands/pharm-ops/PharmOpsDispenseDrawer.tsx",
@@ -1163,7 +1178,7 @@
       "_DataTable-BCQMkZId.js",
       "_PaginationBar-DgSluHBB.js",
       "_reportsFormatters-Cl5Kncev.js",
-      "_main-DfVBt3E6.js",
+      "_main-TmX6afCS.js",
       "_main-IZSxjF0U.js",
       "_BillOpsHub-Ce8ycG2k.js"
     ],
