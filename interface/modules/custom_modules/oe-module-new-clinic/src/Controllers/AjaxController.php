@@ -2228,6 +2228,38 @@ class AjaxController
                         $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
                     }
                     break;
+                case 'encounter_note.validate':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $payload = $this->encounterNoteService->validate($body, $userId);
+                        $this->respond(true, 'ok', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
+                    break;
+                case 'encounter_note.sign':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    try {
+                        $payload = $this->encounterNoteService->sign($body, $userId);
+                        $this->respond(true, 'Signed', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
+                    break;
                 case 'clinical_doc.favorites':
                     $this->clinicalDocAccessService->assertHubAccess();
                     $visitId = (int) ($_REQUEST['visit_id'] ?? 0);

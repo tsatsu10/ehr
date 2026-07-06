@@ -100,10 +100,11 @@ class ClinicalDocFormOpenService
                 ? $modulePublic . 'doctor.php'
                 : $modulePublic . 'clinical-doc/index.php?visit_id=' . urlencode((string) $visitId)
                     . '&tab=' . urlencode($returnTab);
-            $redirectUrl = $this->encounterNote->buildPageUrl($visitId, [
+            $redirectUrl = $this->encounterNote->buildPageUrl($visitId, array_filter([
                 'return_to' => $returnTo,
                 'tab' => $returnTab,
-            ]);
+                'form_id' => ($action === 'edit' && $formId > 0) ? (string) $formId : null,
+            ]));
             $this->markIdentityStripForNativeOpen($visitId, $returnTo, $sourceLens, $returnUrl);
             $this->recordFormOpen(
                 $facilityId,

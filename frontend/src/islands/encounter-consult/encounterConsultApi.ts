@@ -1,5 +1,10 @@
 import { oeFetch } from '@core/oeFetch';
-import type { EncounterNotePayload, EncounterNotePrefill, EncounterNoteSections } from './encounterConsultTypes';
+import type {
+  EncounterNotePayload,
+  EncounterNotePrefill,
+  EncounterNoteSections,
+} from './encounterConsultTypes';
+import type { EncounterValidationResult } from './encounterNoteValidation';
 
 export async function fetchEncounterNote(
   ajaxUrl: string,
@@ -28,6 +33,46 @@ export async function saveEncounterNote(
       visit_id: visitId,
       variant,
       sections,
+    },
+  });
+}
+
+export async function validateEncounterNote(
+  ajaxUrl: string,
+  csrfToken: string,
+  visitId: number,
+  variant: string,
+  sections: EncounterNoteSections,
+): Promise<EncounterValidationResult> {
+  return oeFetch<EncounterValidationResult>('encounter_note.validate', {
+    ajaxUrl,
+    csrfToken,
+    method: 'POST',
+    json: {
+      visit_id: visitId,
+      variant,
+      sections,
+    },
+  });
+}
+
+export async function signEncounterNote(
+  ajaxUrl: string,
+  csrfToken: string,
+  visitId: number,
+  variant: string,
+  sections: EncounterNoteSections,
+  password: string,
+): Promise<{ signed: boolean; already_signed?: boolean }> {
+  return oeFetch<{ signed: boolean; already_signed?: boolean }>('encounter_note.sign', {
+    ajaxUrl,
+    csrfToken,
+    method: 'POST',
+    json: {
+      visit_id: visitId,
+      variant,
+      sections,
+      password,
     },
   });
 }

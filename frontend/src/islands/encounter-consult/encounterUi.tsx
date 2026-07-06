@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+import type { EncounterNoteContextSection, EncounterNotePrefill } from './encounterConsultTypes';
 
 export function EncounterShell({
   children,
@@ -166,5 +167,104 @@ export function VitalsMetricTile({
       <div className="text-xs font-medium uppercase tracking-wide text-[var(--oe-nc-text-muted)]">{label}</div>
       <div className="mt-1 text-base font-semibold text-[var(--oe-nc-text)]">{value}</div>
     </div>
+  );
+}
+
+export function EncounterContextStrip({
+  prefill,
+  acknowledged,
+  onAcknowledge,
+  readOnly,
+}: {
+  prefill: EncounterNotePrefill;
+  acknowledged: EncounterNoteContextSection;
+  onAcknowledge: (patch: Partial<EncounterNoteContextSection>) => void;
+  readOnly?: boolean;
+}) {
+  const showAllergies = prefill.allergies.undocumented
+    || prefill.allergies.items.length > 0
+    || prefill.allergies.nkda;
+  const showMeds = prefill.medications.items.length > 0;
+
+  if (!showAllergies && !showMeds) {
+    return null;
+  }
+
+  return (
+    <section
+      className="nc-encounter-context-strip rounded-xl border border-[color-mix(in_srgb,var(--color-oe-warning,#d97706)_28%,var(--oe-nc-border))] bg-[color-mix(in_srgb,var(--color-oe-warning,#d97706)_6%,var(--oe-nc-surface,#fff))] p-4"
+      aria-label="Clinical context review"
+    >
+      <h2 className="text-sm font-semibold text-[var(--oe-nc-text)]">Review before documenting</h2>
+      <p className="mt-1 text-sm text-[var(--oe-nc-text-muted)]">
+        Confirm allergies and medications shown on the chart before signing this consult note.
+      </p>
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        {showAllergies && (
+          <div className="rounded-lg border border-[var(--oe-nc-border)] bg-[var(--oe-nc-surface,#fff)] p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-medium text-[var(--oe-nc-text)]">Allergies</h3>
+                <p className="mt-1 text-sm text-[var(--oe-nc-text-muted)]">
+                  {prefill.allergies.summary ?? 'Review allergy list'}
+                </p>
+              </div>
+              {prefill.allergies.edit_url && (
+                <a
+                  className="text-xs font-medium text-[var(--color-oe-primary,#0369a1)] hover:underline"
+                  href={prefill.allergies.edit_url}
+                  target="_top"
+                  rel="noreferrer"
+                >
+                  Edit
+                </a>
+              )}
+            </div>
+            <label className="mt-3 flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={acknowledged.allergies_acknowledged}
+                disabled={readOnly}
+                onChange={(event) => onAcknowledge({ allergies_acknowledged: event.target.checked })}
+              />
+              <span>I reviewed the allergy information for this patient</span>
+            </label>
+          </div>
+        )}
+        {showMeds && (
+          <div className="rounded-lg border border-[var(--oe-nc-border)] bg-[var(--oe-nc-surface,#fff)] p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-medium text-[var(--oe-nc-text)]">Medications</h3>
+                <p className="mt-1 text-sm text-[var(--oe-nc-text-muted)]">
+                  {prefill.medications.summary ?? 'Review medication list'}
+                </p>
+              </div>
+              {prefill.medications.edit_url && (
+                <a
+                  className="text-xs font-medium text-[var(--color-oe-primary,#0369a1)] hover:underline"
+                  href={prefill.medications.edit_url}
+                  target="_top"
+                  rel="noreferrer"
+                >
+                  Edit
+                </a>
+              )}
+            </div>
+            <label className="mt-3 flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={acknowledged.meds_acknowledged}
+                disabled={readOnly}
+                onChange={(event) => onAcknowledge({ meds_acknowledged: event.target.checked })}
+              />
+              <span>I reviewed the medication list for this patient</span>
+            </label>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

@@ -304,6 +304,8 @@ class AjaxActionPolicy
     private const CLINICAL_DOC_WRITE_ACTIONS = [
         'clinical_doc.open_form',
         'encounter_note.save',
+        'encounter_note.validate',
+        'encounter_note.sign',
     ];
 
     /** @var array<int, string> */

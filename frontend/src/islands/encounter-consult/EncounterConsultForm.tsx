@@ -1,11 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@components/ui/dialog';
 import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
 import { Textarea } from '@components/ui/textarea';
-import { fetchEncounterNote, saveEncounterNote } from './encounterConsultApi';
+import {
+  fetchEncounterNote,
+  saveEncounterNote,
+  signEncounterNote,
+  validateEncounterNote,
+} from './encounterConsultApi';
 import {
   ENCOUNTER_SECTIONS,
+  HPI_PROMPTS,
   emptySections,
   mergeSections,
   type EncounterConsultProps,
@@ -14,6 +28,11 @@ import {
   type EncounterNoteSections,
 } from './encounterConsultTypes';
 import {
+  validateEncounterNote as validateEncounterNoteLocal,
+  type EncounterValidationIssue,
+} from './encounterNoteValidation';
+import {
+  EncounterContextStrip,
   EncounterLayout,
   EncounterSectionCard,
   EncounterSectionNav,
@@ -94,6 +113,20 @@ function VitalsSection({ prefill }: { prefill: EncounterNotePrefill }) {
   );
 }
 
+function ValidationList({ errors }: { errors: EncounterValidationIssue[] }) {
+  if (errors.length === 0) {
+    return null;
+  }
+
+  return (
+    <ul className="mt-3 space-y-1 rounded-lg border border-[color-mix(in_srgb,var(--color-oe-danger,#b91c1c)_30%,var(--oe-nc-border))] bg-[color-mix(in_srgb,var(--color-oe-danger,#b91c1c)_6%,var(--oe-nc-surface,#fff))] p-3 text-sm text-[var(--color-oe-danger,#b91c1c)]">
+      {errors.map((error) => (
+        <li key={`${error.section}-${error.field}`}>{error.message}</li>
+      ))}
+    </ul>
+  );
+}
+
 export function EncounterConsultForm({
   ajaxUrl,
   csrfToken,
@@ -107,18 +140,28 @@ export function EncounterConsultForm({
   const [variant, setVariant] = useState('general_opd');
   const [activeSection, setActiveSection] = useState<EncounterConsultSectionId>('cc');
   const [saving, setSaving] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [signing, setSigning] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [signed, setSigned] = useState(false);
   const [statusMessage, setStatusMessage] = useState('Loading consult note…');
   const [statusTone, setStatusTone] = useState<'default' | 'success' | 'danger'>('default');
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<EncounterValidationIssue[]>([]);
+  const [signOpen, setSignOpen] = useState(false);
+  const [signPassword, setSignPassword] = useState('');
+  const [signError, setSignError] = useState<string | null>(null);
   const sectionsRef = useRef(sections);
   const variantRef = useRef(variant);
   const dirtyRef = useRef(false);
+  const signedRef = useRef(false);
 
   sectionsRef.current = sections;
   variantRef.current = variant;
   dirtyRef.current = dirty;
+  signedRef.current = signed;
 
+  const readOnly = signed;
   const navSections = useMemo(
     () => ENCOUNTER_SECTIONS.map((section) => ({
       id: section.id,
@@ -137,8 +180,16 @@ export function EncounterConsultForm({
       setVariant(payload.variant || 'general_opd');
       setSections(mergeSections(payload.sections, payload.prefill));
       setLastSavedAt(payload.updated_at);
-      setStatusMessage(payload.updated_at ? `Draft saved ${payload.updated_at}` : 'New draft — not saved yet');
-      setStatusTone('default');
+      setSigned(Boolean(payload.signed));
+      setValidationErrors([]);
+      setStatusMessage(
+        payload.signed
+          ? 'Consult note signed'
+          : payload.updated_at
+            ? `Draft saved ${payload.updated_at}`
+            : 'New draft — not saved yet',
+      );
+      setStatusTone(payload.signed ? 'success' : 'default');
       setDirty(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Could not load consult note';
@@ -155,12 +206,12 @@ export function EncounterConsultForm({
   }, [loadNote]);
 
   const persist = useCallback(async (manual = false) => {
-    if (saving) {
-      return;
+    if (saving || signedRef.current) {
+      return false;
     }
 
     if (!manual && !dirtyRef.current) {
-      return;
+      return true;
     }
 
     setSaving(true);
@@ -178,10 +229,12 @@ export function EncounterConsultForm({
       setLastSavedAt(result.updated_at);
       setStatusMessage(result.updated_at ? `Saved ${result.updated_at}` : 'Saved');
       setStatusTone('success');
+      return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Save failed';
       setStatusMessage(message);
       setStatusTone('danger');
+      return false;
     } finally {
       setSaving(false);
     }
@@ -199,16 +252,98 @@ export function EncounterConsultForm({
     key: K,
     value: EncounterNoteSections[K],
   ) => {
+    if (readOnly) {
+      return;
+    }
+
     setSections((prev) => ({ ...prev, [key]: value }));
     setDirty(true);
+    setValidationErrors([]);
     setStatusTone('default');
     setStatusMessage('Unsaved changes');
+  };
+
+  const updateContext = (patch: Partial<EncounterNoteSections['context']>) => {
+    updateSection('context', { ...sections.context, ...patch });
   };
 
   const scrollToSection = (id: EncounterConsultSectionId) => {
     setActiveSection(id);
     document.getElementById(`encounter-section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+
+  const runValidate = useCallback(async () => {
+    if (!prefill || readOnly) {
+      return;
+    }
+
+    setValidating(true);
+    setSignError(null);
+    try {
+      if (dirtyRef.current) {
+        const saved = await persist(true);
+        if (!saved) {
+          return;
+        }
+      }
+
+      const local = validateEncounterNoteLocal(sectionsRef.current, prefill);
+      const remote = await validateEncounterNote(
+        ajaxUrl,
+        csrfToken,
+        visitId,
+        variantRef.current,
+        sectionsRef.current,
+      );
+      const errors = remote.errors.length > 0 ? remote.errors : local.errors;
+      setValidationErrors(errors);
+      if (errors.length === 0) {
+        setStatusMessage('Validation passed — ready to sign');
+        setStatusTone('success');
+      } else {
+        setStatusMessage(`${errors.length} item${errors.length === 1 ? '' : 's'} need attention before signing`);
+        setStatusTone('danger');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Validation failed';
+      setStatusMessage(message);
+      setStatusTone('danger');
+    } finally {
+      setValidating(false);
+    }
+  }, [ajaxUrl, csrfToken, persist, prefill, readOnly, visitId]);
+
+  const handleSign = useCallback(async () => {
+    if (!prefill || readOnly) {
+      return;
+    }
+
+    setSigning(true);
+    setSignError(null);
+    try {
+      const result = await signEncounterNote(
+        ajaxUrl,
+        csrfToken,
+        visitId,
+        variantRef.current,
+        sectionsRef.current,
+        signPassword,
+      );
+      if (result.signed) {
+        setSigned(true);
+        setDirty(false);
+        setSignOpen(false);
+        setSignPassword('');
+        setValidationErrors([]);
+        setStatusMessage(result.already_signed ? 'Consult note already signed' : 'Consult note signed');
+        setStatusTone('success');
+      }
+    } catch (err) {
+      setSignError(err instanceof Error ? err.message : 'Sign failed');
+    } finally {
+      setSigning(false);
+    }
+  }, [ajaxUrl, csrfToken, prefill, readOnly, signPassword, visitId]);
 
   if (loading) {
     return (
@@ -231,7 +366,16 @@ export function EncounterConsultForm({
 
   return (
     <EncounterShell id="nc-encounter-consult-root">
-      <EncounterStatusBar message={statusMessage} tone={statusTone} saving={saving} />
+      <EncounterStatusBar message={statusMessage} tone={statusTone} saving={saving || validating || signing} />
+
+      <EncounterContextStrip
+        prefill={prefill}
+        acknowledged={sections.context}
+        onAcknowledge={updateContext}
+        readOnly={readOnly}
+      />
+
+      <ValidationList errors={validationErrors} />
 
       <EncounterLayout
         nav={(
@@ -257,21 +401,47 @@ export function EncounterConsultForm({
                       id="encounter-cc"
                       maxLength={500}
                       value={sections.cc.chief_complaint}
+                      disabled={readOnly}
                       onChange={(event) => updateSection('cc', { chief_complaint: event.target.value })}
                       onFocus={() => setActiveSection('cc')}
                     />
                   </div>
                 )}
                 {meta.id === 'hpi' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="encounter-hpi">History of present illness</Label>
-                    <Textarea
-                      id="encounter-hpi"
-                      rows={8}
-                      value={sections.hpi.narrative}
-                      onChange={(event) => updateSection('hpi', { narrative: event.target.value })}
-                      onFocus={() => setActiveSection('hpi')}
-                    />
+                  <div className="space-y-4">
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      {HPI_PROMPTS.map((prompt) => (
+                        <div className="space-y-2" key={prompt.key}>
+                          <Label htmlFor={`encounter-hpi-${prompt.key}`}>{prompt.label}</Label>
+                          <Input
+                            id={`encounter-hpi-${prompt.key}`}
+                            placeholder={prompt.placeholder}
+                            value={sections.hpi[prompt.key]}
+                            disabled={readOnly}
+                            onChange={(event) => updateSection('hpi', {
+                              ...sections.hpi,
+                              [prompt.key]: event.target.value,
+                            })}
+                            onFocus={() => setActiveSection('hpi')}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="encounter-hpi">History of present illness</Label>
+                      <Textarea
+                        id="encounter-hpi"
+                        rows={8}
+                        placeholder="Summarize the interval history and clinical reasoning…"
+                        value={sections.hpi.narrative}
+                        disabled={readOnly}
+                        onChange={(event) => updateSection('hpi', {
+                          ...sections.hpi,
+                          narrative: event.target.value,
+                        })}
+                        onFocus={() => setActiveSection('hpi')}
+                      />
+                    </div>
                   </div>
                 )}
                 {meta.id === 'vitals' && <VitalsSection prefill={prefill} />}
@@ -282,6 +452,7 @@ export function EncounterConsultForm({
                       id="encounter-pe"
                       rows={8}
                       value={sections.pe.general}
+                      disabled={readOnly}
                       onChange={(event) => updateSection('pe', { general: event.target.value })}
                       onFocus={() => setActiveSection('pe')}
                     />
@@ -294,6 +465,7 @@ export function EncounterConsultForm({
                       id="encounter-assessment"
                       rows={8}
                       value={sections.assessment.narrative}
+                      disabled={readOnly}
                       onChange={(event) => updateSection('assessment', { narrative: event.target.value })}
                       onFocus={() => setActiveSection('assessment')}
                     />
@@ -306,6 +478,7 @@ export function EncounterConsultForm({
                       id="encounter-plan"
                       rows={8}
                       value={sections.plan.narrative}
+                      disabled={readOnly}
                       onChange={(event) => updateSection('plan', { narrative: event.target.value })}
                       onFocus={() => setActiveSection('plan')}
                     />
@@ -318,19 +491,83 @@ export function EncounterConsultForm({
         footer={(
           <EncounterStickyFooter>
             <div className="text-sm text-[var(--oe-nc-text-muted)]">
-              {lastSavedAt ? `Last saved ${lastSavedAt}` : 'Draft not saved yet'}
+              {signed
+                ? 'Signed — read only'
+                : lastSavedAt
+                  ? `Last saved ${lastSavedAt}`
+                  : 'Draft not saved yet'}
             </div>
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="outline" asChild>
                 <a href={returnUrl}>Back to hub</a>
               </Button>
-              <Button type="button" onClick={() => void persist(true)} disabled={saving}>
-                Save draft
-              </Button>
+              {!readOnly && (
+                <>
+                  <Button type="button" variant="outline" onClick={() => void persist(true)} disabled={saving}>
+                    Save draft
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={() => void runValidate()} disabled={validating || saving}>
+                    Validate
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      const local = validateEncounterNoteLocal(sections, prefill);
+                      if (!local.valid) {
+                        setValidationErrors(local.errors);
+                        setStatusMessage(`${local.errors.length} item${local.errors.length === 1 ? '' : 's'} need attention before signing`);
+                        setStatusTone('danger');
+                        return;
+                      }
+                      setSignError(null);
+                      setSignOpen(true);
+                    }}
+                    disabled={saving}
+                  >
+                    Sign
+                  </Button>
+                </>
+              )}
             </div>
           </EncounterStickyFooter>
         )}
       />
+
+      <Dialog open={signOpen} onOpenChange={setSignOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sign consultation note</DialogTitle>
+            <DialogDescription>
+              Your OpenEMR password is your electronic signature. The note will lock after signing.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="encounter-sign-password">Password</Label>
+            <Input
+              id="encounter-sign-password"
+              type="password"
+              autoComplete="current-password"
+              value={signPassword}
+              onChange={(event) => setSignPassword(event.target.value)}
+            />
+            {signError && (
+              <p className="text-sm text-[var(--color-oe-danger,#b91c1c)]">{signError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setSignOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleSign()}
+              disabled={signing || signPassword.trim() === ''}
+            >
+              Sign note
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </EncounterShell>
   );
 }

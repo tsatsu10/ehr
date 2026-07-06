@@ -44,6 +44,11 @@ try {
 }
 
 $visitId = (int) ($_GET['visit_id'] ?? 0);
+$formId = (int) ($_GET['form_id'] ?? 0);
+$encounterNote = new EncounterNoteService();
+if ($visitId <= 0 && $formId > 0) {
+    $visitId = $encounterNote->resolveVisitIdFromFormsRow($formId);
+}
 if ($visitId <= 0) {
     http_response_code(400);
     echo xlt('visit_id is required');
