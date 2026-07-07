@@ -40,6 +40,12 @@ Read in this order for a full picture:
 | [NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) | Patient clinical export / Reports (M11-F11 wrapper · V1.1-CDc presets) | Draft v0.1.1 |
 | [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) | T1 legacy chart overlay (stock `patient_file` visit context) | Draft v0.1.2 |
 
+## Business & market
+
+| Document | Purpose |
+|----------|---------|
+| [NEW_CLINIC_V1_MARKET_RESEARCH.md](./NEW_CLINIC_V1_MARKET_RESEARCH.md) | West Africa market research — competitors, pricing, regulations, SWOT, gap analysis (v1.0.0) |
+
 ## Platform
 
 | Document | Purpose |
