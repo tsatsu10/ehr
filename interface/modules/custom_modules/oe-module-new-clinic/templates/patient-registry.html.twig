@@ -15,7 +15,13 @@
         ajaxUrl: ajax_url,
         csrfToken: csrf_token,
         chartUrlBase: chart_url_base,
-        billingThreshold: billing_threshold
+        billingThreshold: billing_threshold,
+        visitBoardUrl: visit_board_url,
+        frontDeskUrl: front_desk_url,
+        moduleUrl: module_url,
+        facilityId: facility_id|default(0)|number_format(0, '', ''),
+        scheduledIntegrationEnabled: scheduled_integration_enabled ? true : false,
+        canStartVisit: can_start_visit ? true : false
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}

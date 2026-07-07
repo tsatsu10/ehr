@@ -11,8 +11,10 @@
 
 require_once __DIR__ . '/bootstrap.php';
 
+use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Modules\NewClinic\Controllers\PageController;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
+use OpenEMR\Modules\NewClinic\Services\SchedulingAccessService;
 use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 
 $config = new ClinicConfigService();
@@ -28,6 +30,7 @@ if (!$config->isEnabled('enable_patient_registry', 0, $facilityId)) {
 
 $moduleUrl = $GLOBALS['webroot'] . '/interface/modules/custom_modules/oe-module-new-clinic/public';
 $reactPatientRegistry = $config->get('enable_react_patient_registry', '1') === '1';
+$schedulingEnabled = (new SchedulingAccessService())->isHubEnabled($facilityId);
 
 (new PageController())->renderForAnyClinicRole('patient-registry.html.twig', 'Patient Registry', [
     'new_doctor',
@@ -38,6 +41,11 @@ $reactPatientRegistry = $config->get('enable_react_patient_registry', '1') === '
     'island_entry' => 'patient-registry',
     'shell_nav_id' => 'clinicreg',
     'module_url' => $moduleUrl,
+    'visit_board_url' => $moduleUrl . '/visit-board.php',
+    'front_desk_url' => $moduleUrl . '/front-desk.php',
+    'facility_id' => $facilityId,
+    'scheduled_integration_enabled' => $schedulingEnabled,
+    'can_start_visit' => AclMain::aclCheckCore('new_clinic', 'new_reception'),
     'chart_url_base' => $moduleUrl . '/patient-chart.php',
     'billing_threshold' => (new \OpenEMR\Modules\NewClinic\Services\PatientCompletionService())->getBillingThreshold(),
     'enable_react_patient_registry' => $reactPatientRegistry,

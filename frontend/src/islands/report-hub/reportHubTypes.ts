@@ -45,6 +45,7 @@ export interface ReportHubEmbedContext {
   webroot: string;
   facilityId: number;
   visitBoardUrl: string;
+  frontDeskUrl: string;
   moduleUrl: string;
   cashierUrl: string;
   reportsUrl: string;
@@ -55,6 +56,7 @@ export interface ReportHubEmbedContext {
   canMarkUnpaid: boolean;
   canRunReconciliation: boolean;
   scheduledIntegrationEnabled: boolean;
+  canStartVisit: boolean;
   billOps: ReportHubBillOpsEmbedProps;
   currencyFormat?: {
     currency_code?: string;
@@ -70,6 +72,7 @@ export interface ReportHubProps {
   moduleUrl: string;
   reportsUrl: string;
   visitBoardUrl: string;
+  frontDeskUrl: string;
   billOpsUrl: string;
   pharmOpsUrl: string;
   cashierUrl: string;
@@ -89,6 +92,7 @@ export interface ReportHubProps {
   canMarkUnpaid: boolean;
   canRunReconciliation: boolean;
   scheduledIntegrationEnabled: boolean;
+  canStartVisit: boolean;
   canBillOpsCorrect: boolean;
   canBillOpsPayment: boolean;
   canBillOpsClose: boolean;

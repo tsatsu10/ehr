@@ -1,10 +1,12 @@
 import type { ApiRegistryFilters } from './registryTypes';
+import type { RegistrySortKey } from './registryQueryOptions';
 
 /** POST cohort.export and trigger a CSV download (non-JSON response). */
 export async function exportRegistryCsv(
   ajaxUrl: string,
   csrfToken: string,
-  filters: ApiRegistryFilters
+  filters: ApiRegistryFilters,
+  sort: RegistrySortKey = 'name_asc',
 ): Promise<void> {
   const response = await fetch(`${ajaxUrl}?action=cohort.export`, {
     method: 'POST',
@@ -15,7 +17,7 @@ export async function exportRegistryCsv(
     credentials: 'same-origin',
     body: JSON.stringify({
       csrf_token_form: csrfToken,
-      sort: 'name_asc',
+      sort,
       filters,
     }),
   });
