@@ -67,6 +67,7 @@ On http://localhost/openemr/ (hard-refresh / Ctrl+Shift+R):
 
 - [ ] CI green
 - [ ] `composer verify:new-clinic` pass (if any PHP under `oe-module-new-clinic/src/` changed)
+- [ ] Patient Registry sign-off: `composer registry-signoff` (if M10 / registry touched)
 - [ ] Smoke test pass (if any UI changed)
 
 ## Remote preview from phone (optional)

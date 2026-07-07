@@ -280,6 +280,10 @@
         "rector-fix": "php -d memory_limit=4g ./vendor/bin/rector process",
         "test:new-clinic-mandatory": "php -d memory_limit=512M vendor/bin/phpunit -c phpunit.xml --group new-clinic-mandatory tests/Tests/Unit/Modules/NewClinic/NewClinicMandatoryContractTest.php tests/Tests/Unit/Modules/NewClinic/WrongPatientPreventionMandatoryTest.php tests/Tests/Unit/Modules/NewClinic/VisitBoardAuditTimelineMandatoryTest.php",
         "verify:new-clinic": "php interface/modules/custom_modules/oe-module-new-clinic/scripts/verify-module.php --bootstrap",
+        "registry-signoff": [
+            "php interface/modules/custom_modules/oe-module-new-clinic/scripts/registry-signoff-smoke.php",
+            "php interface/modules/custom_modules/oe-module-new-clinic/scripts/smoke-patient-registry-http.php"
+        ],
         "require-checker": "php -d memory_limit=4g ./vendor/bin/composer-require-checker check --config-file=.composer-require-checker.json"
     }
 }
