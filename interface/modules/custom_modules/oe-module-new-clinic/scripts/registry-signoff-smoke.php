@@ -72,6 +72,23 @@ function registryBootstrapAdminSession(): int
     return (int) $row['id'];
 }
 
+function registryImpersonateUser(string $username): ?int
+{
+    $row = QueryUtils::querySingleRow(
+        'SELECT id, username FROM users WHERE username = ? AND active = 1 LIMIT 1',
+        [$username]
+    );
+    if (!$row) {
+        return null;
+    }
+
+    $_SESSION['authUser'] = (string) $row['username'];
+    $_SESSION['authUserID'] = (int) $row['id'];
+    $_SESSION['authProvider'] = $_SESSION['authProvider'] ?? 'Default';
+
+    return (int) $row['id'];
+}
+
 echo "Patient Registry sign-off smoke\n";
 echo str_repeat('-', 48) . "\n";
 
@@ -227,9 +244,30 @@ if ($menuRestrict->shouldHideFinderForCurrentUser($facilityId) === false) {
 } else {
     regFail('REG-5-admin', 'admin incorrectly hides Finder');
 }
-regManual('REG-5-reception', 'Log in as reception-only (no clinical Finder ACL) — fin0 must be hidden');
-regManual('REG-4-chart', 'Row action Open chart opens correct MRD pid');
-regManual('REG-4-board', 'Row action Filter Visit Board opens ?pid=');
+
+if (registryImpersonateUser('reception_user') !== null) {
+    if ($menuRestrict->shouldHideFinderForCurrentUser($facilityId)) {
+        regPass('REG-5-reception', 'reception_user hides Finder when registry ON');
+    } else {
+        regFail('REG-5-reception', 'reception_user should hide Finder (fin0)');
+    }
+} else {
+    regManual('REG-5-reception', 'Seed reception_user — run acl/seed_pilot_users.php');
+}
+
+if (registryImpersonateUser('doctor_user') !== null) {
+    if ($menuRestrict->shouldHideFinderForCurrentUser($facilityId) === false) {
+        regPass('REG-5-clinical', 'doctor_user keeps Finder (clinical desk ACL)');
+    } else {
+        regFail('REG-5-clinical', 'doctor_user incorrectly hides Finder');
+    }
+} else {
+    regManual('REG-5-clinical', 'Seed doctor_user — run acl/seed_pilot_users.php');
+}
+
+registryBootstrapAdminSession();
+regManual('REG-4-chart', 'Row action Open chart opens correct MRD pid (browser: patient-chart.php?pid=*)');
+regManual('REG-4-board', 'Row action Filter Visit Board opens visit-board.php?pid=*');
 regManual('REG-4-start', 'Row action Start visit opens Front Desk when allowed');
 regManual('REG-7-export', 'Export CSV from UI; confirm download + audit export row');
 
