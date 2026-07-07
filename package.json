@@ -111,7 +111,7 @@
     "jquery-validation": "1.21.0",
     "jspdf": "4.0.0",
     "jszip": "3.10.1",
-    "knockout": "3.5.1",
+    "knockout": "3.5.3",
     "konva": "9.3.22",
     "magic-wand-js": "1.0.0",
     "moment": "2.30.1",
