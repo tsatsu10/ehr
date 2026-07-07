@@ -26,6 +26,7 @@ const embedContext: ReportHubEmbedContext = {
   webroot: '/openemr',
   facilityId: 1,
   visitBoardUrl: '/visit-board.php',
+  frontDeskUrl: '/front-desk.php',
   moduleUrl: '/module',
   cashierUrl: '/cashier.php',
   reportsUrl: '/reports.php',
@@ -36,6 +37,7 @@ const embedContext: ReportHubEmbedContext = {
   canMarkUnpaid: false,
   canRunReconciliation: false,
   scheduledIntegrationEnabled: false,
+  canStartVisit: false,
   billOps: {
     canCorrect: false,
     canPayment: false,

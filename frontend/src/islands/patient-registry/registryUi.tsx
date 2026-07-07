@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Button } from '@components/ui/button';
 import { SlidersHorizontal, Table2 } from 'lucide-react';
 
@@ -65,10 +66,14 @@ export function RegistryOutputPanel({
   children,
   summaryText,
   status,
+  largeSetWarning = false,
+  toolbar,
 }: {
   children: ReactNode;
   summaryText: string;
   status: 'idle' | 'loading' | 'success' | 'error';
+  largeSetWarning?: boolean;
+  toolbar?: ReactNode;
 }) {
   return (
     <div className="nc-registry-output-panel">
@@ -88,7 +93,13 @@ export function RegistryOutputPanel({
             </p>
           </div>
         </div>
+        {toolbar}
       </header>
+      {largeSetWarning ? (
+        <div className={deskCalloutClass('warn', 'nc-registry-large-set-warning py-2 text-sm')} role="status">
+          Large result set — refine filters or export may be capped at 5,000 rows.
+        </div>
+      ) : null}
       <div className="nc-registry-output-panel__body">{children}</div>
     </div>
   );

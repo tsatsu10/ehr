@@ -84,11 +84,21 @@ describe('PatientRegistry', () => {
     expect(mockFetch).toHaveBeenCalledWith(
       'cohort.search',
       expect.objectContaining({
-        json: expect.objectContaining({ page: 1, page_size: 25 }),
+        json: expect.objectContaining({ page: 1, page_size: 25, sort: 'name_asc' }),
       })
     );
     expect(await screen.findByText('Jane Doe')).toBeInTheDocument();
     expect(screen.getByText(/1 patient\(s\) match/i)).toBeInTheDocument();
+  });
+
+  it('shows sort and page size controls', async () => {
+    render(<PatientRegistry {...props} />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.getByLabelText(/Sort by/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Rows per page/i)).toBeInTheDocument();
   });
 
   it('clears filters and resets table', async () => {

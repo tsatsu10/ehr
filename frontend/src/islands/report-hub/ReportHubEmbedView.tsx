@@ -107,6 +107,12 @@ export function ReportHubEmbedView({
             csrfToken={context.csrfToken}
             chartUrlBase={context.chartUrlBase}
             billingThreshold={context.billingThreshold}
+            visitBoardUrl={context.visitBoardUrl}
+            frontDeskUrl={context.frontDeskUrl}
+            moduleUrl={context.moduleUrl}
+            facilityId={context.facilityId}
+            scheduledIntegrationEnabled={context.scheduledIntegrationEnabled}
+            canStartVisit={context.canStartVisit}
           />
         ) : null}
 

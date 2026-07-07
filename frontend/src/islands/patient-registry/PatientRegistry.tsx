@@ -6,6 +6,7 @@ import { Checkbox } from '@components/ui/checkbox';
 import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
 import { usePageHeadingRefresh } from '@core/usePageHeadingToolbar';
+import { localDateString } from '@islands/daily-reports/reportsFormatters';
 import { emptyRegistryFilters } from './registryDefaults';
 import {
   applyPresetToFilters,
@@ -15,8 +16,19 @@ import {
 import { exportRegistryCsv } from './registryExport';
 import { RegistryFilterPanel } from './RegistryFilterPanel';
 import { RegistryResultsTable } from './RegistryResultsTable';
+import { RegistryResultsToolbar } from './RegistryResultsToolbar';
 import { RegistryLayout, RegistryOutputPanel, RegistryVarsPanel } from './registryUi';
 import { NativeSelect } from '@components/ui/native-select';
+import {
+  REGISTRY_DEFAULT_PAGE_SIZE,
+  REGISTRY_DEFAULT_SORT,
+  REGISTRY_LARGE_MATCH_THRESHOLD,
+  isRegistryPageSize,
+  isRegistrySortKey,
+  type RegistryPageSize,
+  type RegistrySortKey,
+} from './registryQueryOptions';
+import type { RegistryRowActionContext } from './registryRowActions';
 import type {
   PatientRegistryProps,
   RegistryFilters,
@@ -25,8 +37,6 @@ import type {
   RegistryRow,
   RegistrySearchStatus,
 } from './registryTypes';
-
-const PAGE_SIZE = 25;
 
 function usePageHeadingButton(
   buttonId: string,
@@ -54,8 +64,24 @@ export function PatientRegistry({
   csrfToken,
   chartUrlBase,
   billingThreshold = 70,
+  visitBoardUrl,
+  frontDeskUrl,
+  moduleUrl,
+  facilityId = 0,
+  scheduledIntegrationEnabled = false,
+  canStartVisit = false,
 }: PatientRegistryProps) {
+  const moduleUrlBase = useMemo(
+    () => moduleUrl ?? ajaxUrl.replace(/ajax\.php(?:\?.*)?$/, ''),
+    [ajaxUrl, moduleUrl]
+  );
+  const resolvedVisitBoardUrl = visitBoardUrl ?? `${moduleUrlBase}visit-board.php`;
+  const resolvedFrontDeskUrl = frontDeskUrl ?? `${moduleUrlBase}front-desk.php`;
+  const visitDate = useMemo(() => localDateString(), []);
+
   const [filters, setFilters] = useState<RegistryFilters>(emptyRegistryFilters);
+  const [sort, setSort] = useState<RegistrySortKey>(REGISTRY_DEFAULT_SORT);
+  const [pageSize, setPageSize] = useState<RegistryPageSize>(REGISTRY_DEFAULT_PAGE_SIZE);
   const [presets, setPresets] = useState<RegistryPreset[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState('');
   const [selectedSavedId, setSelectedSavedId] = useState(0);
@@ -78,6 +104,27 @@ export function PatientRegistry({
   const [filterName, setFilterName] = useState('');
   const [shareFilter, setShareFilter] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [presetsError, setPresetsError] = useState<string | null>(null);
+
+  const rowActionContext = useMemo<RegistryRowActionContext>(() => ({
+    chartUrlBase,
+    visitBoardUrl: resolvedVisitBoardUrl,
+    frontDeskUrl: resolvedFrontDeskUrl,
+    moduleUrl: moduleUrlBase,
+    facilityId,
+    visitDate,
+    scheduledIntegrationEnabled,
+    canStartVisit,
+  }), [
+    chartUrlBase,
+    resolvedVisitBoardUrl,
+    resolvedFrontDeskUrl,
+    moduleUrlBase,
+    facilityId,
+    visitDate,
+    scheduledIntegrationEnabled,
+    canStartVisit,
+  ]);
 
   const fetchOptions = useMemo(
     () => ({ ajaxUrl, csrfToken }),
@@ -93,11 +140,12 @@ export function PatientRegistry({
     setVisitTypes(data.visit_types ?? []);
     setConfirmationSources(data.confirmation_sources ?? []);
     setConditionMap(data.condition_map ?? []);
+    setPresetsError(null);
   }, [fetchOptions]);
 
   useEffect(() => {
-    void loadPresets().catch(() => {
-      /* presets are optional on first paint */
+    void loadPresets().catch((err: unknown) => {
+      setPresetsError(err instanceof Error ? err.message : 'Could not load presets');
     });
   }, [loadPresets]);
 
@@ -111,7 +159,12 @@ export function PatientRegistry({
   }, [confirmationSources]);
 
   const runSearch = useCallback(
-    async (pageNum: number, currentFilters: RegistryFilters) => {
+    async (
+      pageNum: number,
+      currentFilters: RegistryFilters,
+      currentSort: RegistrySortKey,
+      currentPageSize: RegistryPageSize,
+    ) => {
       setStatus('loading');
       setErrorMessage(null);
       try {
@@ -125,8 +178,8 @@ export function PatientRegistry({
           ...fetchOptions,
           json: {
             page: pageNum,
-            page_size: PAGE_SIZE,
-            sort: 'name_asc',
+            page_size: currentPageSize,
+            sort: currentSort,
             filters: filtersToApiPayload(currentFilters),
           },
         });
@@ -146,13 +199,13 @@ export function PatientRegistry({
 
   const handleApply = useCallback(() => {
     setPage(1);
-    void runSearch(1, filters);
-  }, [filters, runSearch]);
+    void runSearch(1, filters, sort, pageSize);
+  }, [filters, pageSize, runSearch, sort]);
 
   const handleRefresh = useCallback(() => {
     if (status === 'idle') return;
-    void runSearch(page, filters);
-  }, [status, page, filters, runSearch]);
+    void runSearch(page, filters, sort, pageSize);
+  }, [status, page, filters, pageSize, runSearch, sort]);
 
   const handleClear = useCallback(() => {
     setFilters({
@@ -183,18 +236,34 @@ export function PatientRegistry({
       const nextFilters = applyPresetToFilters(preset.filters ?? {});
       setFilters(nextFilters);
       setPage(1);
-      void runSearch(1, nextFilters);
+      void runSearch(1, nextFilters, sort, pageSize);
     },
-    [presets, runSearch]
+    [presets, pageSize, runSearch, sort]
   );
 
   const handlePageChange = useCallback(
     (nextPage: number) => {
       setPage(nextPage);
-      void runSearch(nextPage, filters);
+      void runSearch(nextPage, filters, sort, pageSize);
     },
-    [filters, runSearch]
+    [filters, pageSize, runSearch, sort]
   );
+
+  const handleSortChange = useCallback((nextSort: RegistrySortKey) => {
+    if (!isRegistrySortKey(nextSort)) return;
+    setSort(nextSort);
+    if (status === 'idle') return;
+    setPage(1);
+    void runSearch(1, filters, nextSort, pageSize);
+  }, [filters, pageSize, runSearch, status]);
+
+  const handlePageSizeChange = useCallback((nextPageSize: RegistryPageSize) => {
+    if (!isRegistryPageSize(nextPageSize)) return;
+    setPageSize(nextPageSize);
+    if (status === 'idle') return;
+    setPage(1);
+    void runSearch(1, filters, sort, nextPageSize);
+  }, [filters, runSearch, sort, status]);
 
   const handleExport = useCallback(() => {
     setPendingConfirm('export');
@@ -202,12 +271,12 @@ export function PatientRegistry({
 
   const runExport = useCallback(async () => {
     try {
-      await exportRegistryCsv(ajaxUrl, csrfToken, filtersToApiPayload(filters));
+      await exportRegistryCsv(ajaxUrl, csrfToken, filtersToApiPayload(filters), sort);
       setActionError(null);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Export failed');
     }
-  }, [ajaxUrl, csrfToken, filters]);
+  }, [ajaxUrl, csrfToken, filters, sort]);
 
   const handleSaveFilter = useCallback(() => {
     const owned =
@@ -319,6 +388,11 @@ export function PatientRegistry({
           <div className={deskCalloutClass('error', 'py-2')} role="alert">{actionError}</div>
         </div>
       )}
+      {presetsError && (
+        <div className="nc-registry-alert">
+          <div className={deskCalloutClass('warn', 'py-2')} role="status">{presetsError}</div>
+        </div>
+      )}
       <RegistryLayout
         variables={(
           <RegistryVarsPanel
@@ -337,14 +411,27 @@ export function PatientRegistry({
           </RegistryVarsPanel>
         )}
         output={(
-          <RegistryOutputPanel summaryText={summaryText} status={status}>
+          <RegistryOutputPanel
+            summaryText={summaryText}
+            status={status}
+            largeSetWarning={status === 'success' && total >= REGISTRY_LARGE_MATCH_THRESHOLD}
+            toolbar={(
+              <RegistryResultsToolbar
+                sort={sort}
+                pageSize={pageSize}
+                onSortChange={handleSortChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            )}
+          >
             <RegistryResultsTable
               rows={rows}
               chartUrlBase={chartUrlBase}
+              rowActionContext={rowActionContext}
               status={status}
               errorMessage={errorMessage}
               page={page}
-              pageSize={PAGE_SIZE}
+              pageSize={pageSize}
               total={total}
               billingThreshold={billingThreshold}
               onPageChange={handlePageChange}

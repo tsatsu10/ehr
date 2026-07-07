@@ -88,6 +88,17 @@ export function VisitBoard({
   const [drawerData, setDrawerData] = useState<VisitDetailData | null>(null);
 
   const seqRef = useRef(0);
+  const deepLinkPidRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const raw = new URL(window.location.href).searchParams.get('pid');
+    if (!raw) return;
+    const pid = Number.parseInt(raw, 10);
+    if (Number.isFinite(pid) && pid > 0) {
+      deepLinkPidRef.current = pid;
+    }
+  }, []);
 
   const fetchBoard = useCallback(async () => {
     seqRef.current += 1;
@@ -115,6 +126,21 @@ export function VisitBoard({
   useEffect(() => {
     void fetchBoard();
   }, [fetchBoard]);
+
+  useEffect(() => {
+    const pid = deepLinkPidRef.current;
+    if (!data || pid == null) return;
+
+    for (const key of COLUMN_ORDER) {
+      const cards = data.columns[key] ?? [];
+      const match = cards.find((card) => card.pid === pid);
+      if (match) {
+        setSearch(match.pubpid || match.display_name);
+        deepLinkPidRef.current = null;
+        break;
+      }
+    }
+  }, [data]);
 
   useQueueVisibilityRefresh(() => {
     void fetchBoard();

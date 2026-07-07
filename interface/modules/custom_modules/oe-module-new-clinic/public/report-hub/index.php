@@ -16,6 +16,7 @@
 require_once dirname(__DIR__) . '/bootstrap.php';
 
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Modules\NewClinic\Controllers\PageController;
 use OpenEMR\Modules\NewClinic\Services\BillOpsAccessService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
@@ -67,6 +68,7 @@ if (!in_array($tabParam, $allowedTabs, true)) {
         'module_url' => $moduleUrl,
         'reports_url' => $moduleUrl . '/reports.php',
         'visit_board_url' => $moduleUrl . '/visit-board.php',
+        'front_desk_url' => $moduleUrl . '/front-desk.php',
         'cashier_url' => $moduleUrl . '/cashier.php',
         'chart_url_base' => $moduleUrl . '/patient-chart.php',
         'billing_threshold' => (new \OpenEMR\Modules\NewClinic\Services\PatientCompletionService())->getBillingThreshold(),
@@ -85,6 +87,7 @@ if (!in_array($tabParam, $allowedTabs, true)) {
         'can_mark_unpaid' => AclMain::aclCheckCore('new_clinic', 'new_visit_mark_outstanding'),
         'can_run_reconciliation' => AclMain::aclCheckCore('new_clinic', 'new_admin'),
         'scheduled_integration_enabled' => $scheduledIntegration->isEnabled($facilityId),
+        'can_start_visit' => AclMain::aclCheckCore('new_clinic', 'new_reception'),
         'can_bill_ops_correct' => $billOpsLinked && $billOpsAccess->canCorrectCharges(),
         'can_bill_ops_payment' => $billOpsLinked && $billOpsAccess->canManagePayments(),
         'can_bill_ops_close' => $billOpsLinked && $billOpsAccess->canCloseDay(),

@@ -5,6 +5,12 @@ export interface PatientRegistryProps {
   csrfToken: string;
   chartUrlBase: string;
   billingThreshold?: number;
+  visitBoardUrl?: string;
+  frontDeskUrl?: string;
+  moduleUrl?: string;
+  facilityId?: number;
+  scheduledIntegrationEnabled?: boolean;
+  canStartVisit?: boolean;
 }
 
 /** Form state — all fields are strings (or string[]) for controlled inputs. */

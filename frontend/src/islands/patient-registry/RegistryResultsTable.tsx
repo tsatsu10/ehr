@@ -1,5 +1,6 @@
 import type { RegistryRow, RegistrySearchStatus } from './registryTypes';
 import { formatRegistryDate } from './registryFormat';
+import { buildRegistryRowActions, type RegistryRowActionContext } from './registryRowActions';
 import { DataTable, DataTableStatusRow } from '@components/DataTable';
 import { PaginationBar } from '@components/PaginationBar';
 import { RowActionsMenu } from '@components/RowActionsMenu';
@@ -9,6 +10,7 @@ import { CompletionScorePill } from '@components/CompletionScorePill';
 interface RegistryResultsTableProps {
   rows: RegistryRow[];
   chartUrlBase: string;
+  rowActionContext: RegistryRowActionContext;
   status: RegistrySearchStatus;
   errorMessage: string | null;
   page: number;
@@ -23,6 +25,7 @@ const COL_SPAN = 11;
 export function RegistryResultsTable({
   rows,
   chartUrlBase,
+  rowActionContext,
   status,
   errorMessage,
   page,
@@ -66,6 +69,8 @@ export function RegistryResultsTable({
       const ageLabel = row.age_today != null
         ? `${row.age_today}${row.dob_estimated ? '*' : ''}`
         : '—';
+      const actionContext = { ...rowActionContext, chartUrlBase };
+      const rowActions = buildRegistryRowActions({ ...row, chart_url: chartUrl }, actionContext);
 
       return (
         <tr key={row.pid}>
@@ -99,7 +104,7 @@ export function RegistryResultsTable({
           <td className="text-right nc-registry-col-actions">
             <RowActionsMenu
               label={`Actions for ${row.name}`}
-              items={[{ id: 'chart', label: 'Open chart', href: chartUrl }]}
+              items={rowActions}
             />
           </td>
         </tr>

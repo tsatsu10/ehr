@@ -1426,18 +1426,30 @@ class PatientCohortSearchService
             'age_desc' => 'age_desc',
             'completion_asc' => 'completion_asc',
             'completion_desc' => 'completion_desc',
+            'last_visit_asc' => 'last_visit_asc',
+            'last_visit_desc' => 'last_visit_desc',
+            'dx_date_asc' => 'dx_date_asc',
+            'dx_date_desc' => 'dx_date_desc',
             default => 'name_asc',
         };
     }
 
     private function sortSql(string $sort): string
     {
+        $lastVisitExpr = '(SELECT MAX(fe.date) FROM form_encounter fe WHERE fe.pid = pd.pid)';
+        $dxDateExpr = "(SELECT MIN(l.begdate) FROM lists l
+                        WHERE l.pid = pd.pid AND l.type = 'medical_problem' AND l.activity = '1')";
+
         return match ($sort) {
             'name_desc' => 'pd.lname DESC, pd.fname DESC',
             'age_asc' => 'pd.DOB DESC',
             'age_desc' => 'pd.DOB ASC',
             'completion_asc' => 'completion_pct ASC, pd.lname ASC',
             'completion_desc' => 'completion_pct DESC, pd.lname ASC',
+            'last_visit_asc' => "{$lastVisitExpr} ASC, pd.lname ASC",
+            'last_visit_desc' => "{$lastVisitExpr} DESC, pd.lname ASC",
+            'dx_date_asc' => "{$dxDateExpr} ASC, pd.lname ASC",
+            'dx_date_desc' => "{$dxDateExpr} DESC, pd.lname ASC",
             default => 'pd.lname ASC, pd.fname ASC',
         };
     }

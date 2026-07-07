@@ -132,6 +132,14 @@ export function useFrontDesk({
       : '',
   []);
 
+  const initialPid = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const raw = new URL(window.location.href).searchParams.get('pid');
+    if (!raw) return null;
+    const pid = Number.parseInt(raw, 10);
+    return Number.isFinite(pid) && pid > 0 ? pid : null;
+  }, []);
+
   const setStartVisitDirty = useCallback((dirty: boolean) => {
     startVisitDirtyRef.current = dirty;
   }, []);
@@ -235,6 +243,10 @@ export function useFrontDesk({
   useEffect(() => { selectedPidRef.current = selectedPid; }, [selectedPid]);
   useEffect(() => { void loadDeskStats(); }, [loadDeskStats]);
   useEffect(() => { void loadTodaysAppointments(); }, [loadTodaysAppointments]);
+  useEffect(() => {
+    if (initialPid == null) return;
+    void loadPreview(initialPid);
+  }, [initialPid, loadPreview]);
 
   useEffect(() => {
     if (viewport === 'mobile' && mode !== 'empty') setMobileSheetOpen(true);

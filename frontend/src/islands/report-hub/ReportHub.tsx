@@ -32,6 +32,7 @@ function buildEmbedContext(
     webroot: props.webroot,
     facilityId: props.facilityId,
     visitBoardUrl: props.visitBoardUrl,
+    frontDeskUrl: props.frontDeskUrl,
     moduleUrl: props.moduleUrl,
     cashierUrl: props.cashierUrl,
     reportsUrl: props.reportsUrl,
@@ -42,6 +43,7 @@ function buildEmbedContext(
     canMarkUnpaid: props.canMarkUnpaid,
     canRunReconciliation: props.canRunReconciliation,
     scheduledIntegrationEnabled: props.scheduledIntegrationEnabled,
+    canStartVisit: props.canStartVisit,
     billOps: {
       canCorrect: props.canBillOpsCorrect,
       canPayment: props.canBillOpsPayment,
