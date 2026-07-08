@@ -1,0 +1,2 @@
+import{d as e}from"./button-CnSZFKEu.js";var t=e();function n({enabled:e,href:n,className:r,children:i}){return e&&n?(0,t.jsx)(`a`,{href:n,target:`_blank`,rel:`noopener noreferrer`,className:r,children:i}):(0,t.jsx)(`span`,{className:r,children:i})}export{n as t};
+//# sourceMappingURL=BannerClinicalLink-Ch3o6blD.js.map
