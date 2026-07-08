@@ -55,4 +55,61 @@ class AjaxActionPolicyTest extends TestCase
         $this->assertSame('encounter_note_acl', $policy->describe('encounter_note.save')['type']);
         $this->assertSame('encounter_note_acl', $policy->describe('encounter_note.unlock')['type']);
     }
+
+    public function testDeferredAuthorizationLayersMatchInlineHandlerGates(): void
+    {
+        $policy = new AjaxActionPolicy();
+
+        $this->assertSame(
+            [AjaxActionPolicy::CHART_READ_ACLS],
+            $policy->deferredAuthorizationLayers('patients.chart.visits')
+        );
+
+        $this->assertSame(
+            [
+                ['new_chart_depth_finance'],
+                AjaxActionPolicy::CHART_READ_ACLS,
+            ],
+            $policy->deferredAuthorizationLayers('chart_depth.payments_list')
+        );
+
+        $this->assertSame(
+            [
+                ['new_receipt_reprint', 'new_chart_depth_finance'],
+                AjaxActionPolicy::CHART_READ_ACLS,
+            ],
+            $policy->deferredAuthorizationLayers('chart_depth.receipt_reprint')
+        );
+
+        $this->assertSame(
+            [
+                ['new_chart_depth_referral', 'new_chart_depth'],
+                AjaxActionPolicy::CHART_READ_ACLS,
+            ],
+            $policy->deferredAuthorizationLayers('chart_depth.referrals_list')
+        );
+
+        $exportAcls = $policy->describe('chart_depth.export_builder')['acls'];
+
+        $this->assertSame(
+            [
+                $exportAcls,
+                AjaxActionPolicy::CHART_READ_ACLS,
+            ],
+            $policy->deferredAuthorizationLayers('chart_depth.export_builder')
+        );
+        $this->assertSame(
+            $policy->deferredAuthorizationLayers('chart_depth.export_builder'),
+            $policy->deferredAuthorizationLayers('chart_depth.export_generate')
+        );
+    }
+
+    public function testDeferredActionsSkipTopLevelAuthorizeAction(): void
+    {
+        $policy = new AjaxActionPolicy();
+
+        $this->assertTrue($policy->defersAuthorizationToHandler('patients.preview'));
+        $this->assertTrue($policy->defersAuthorizationToHandler('chart_depth.export_generate'));
+        $this->assertFalse($policy->defersAuthorizationToHandler('visit.board'));
+    }
 }

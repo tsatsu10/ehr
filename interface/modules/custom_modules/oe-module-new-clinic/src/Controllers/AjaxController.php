@@ -294,7 +294,7 @@ class AjaxController
                     $body = $this->readJsonBody();
                     $this->verifyCsrf($body);
                     $pid = (int) ($body['pid'] ?? 0);
-                    $this->authorizeChartRead($pid);
+                    $this->authorizeDeferredHandler('patients.preview', $pid);
                     $this->assertPatientChartPid($pid);
                     $preview = $this->patientContextService->previewPayload(
                         $pid,
@@ -305,7 +305,7 @@ class AjaxController
                     break;
                 case 'patients.chart.visits':
                     $pid = (int) ($_REQUEST['pid'] ?? 0);
-                    $this->authorizeChartRead($pid);
+                    $this->authorizeDeferredHandler('patients.chart.visits', $pid);
                     $this->assertPatientChartPid($pid);
                     $offset = max(0, (int) ($_REQUEST['offset'] ?? 0));
                     $limit = (int) ($_REQUEST['limit'] ?? PatientChartService::PAST_VISITS_PAGE_SIZE);
@@ -314,14 +314,14 @@ class AjaxController
                     break;
                 case 'patients.chart.clinical':
                     $pid = (int) ($_REQUEST['pid'] ?? 0);
-                    $this->authorizeChartRead($pid);
+                    $this->authorizeDeferredHandler('patients.chart.clinical', $pid);
                     $this->assertPatientChartPid($pid);
                     $clinical = $this->patientChartClinicalService->getClinicalPayload($pid);
                     $this->respond(true, 'ok', $clinical);
                     break;
                 case 'patients.chart.activity_feed':
                     $pid = (int) ($_REQUEST['pid'] ?? 0);
-                    $this->authorizeChartRead($pid);
+                    $this->authorizeDeferredHandler('patients.chart.activity_feed', $pid);
                     $this->assertPatientChartPid($pid);
                     $offset = max(0, (int) ($_REQUEST['offset'] ?? 0));
                     $limit = (int) ($_REQUEST['limit'] ?? PatientActivityFeedService::PAGE_SIZE);
@@ -339,7 +339,7 @@ class AjaxController
                     break;
                 case 'patients.chart.messages':
                     $pid = (int) ($_REQUEST['pid'] ?? 0);
-                    $this->authorizeChartRead($pid);
+                    $this->authorizeDeferredHandler('patients.chart.messages', $pid);
                     $this->assertPatientChartPid($pid);
                     $offset = max(0, (int) ($_REQUEST['offset'] ?? 0));
                     $limit = (int) ($_REQUEST['limit'] ?? PatientChartMessagesService::PAGE_SIZE);
@@ -348,7 +348,7 @@ class AjaxController
                     break;
                 case 'patients.chart.search':
                     $pid = (int) ($_REQUEST['pid'] ?? 0);
-                    $this->authorizeChartRead($pid);
+                    $this->authorizeDeferredHandler('patients.chart.search', $pid);
                     $this->assertPatientChartPid($pid);
                     $config = new ClinicConfigService();
                     if ($config->getInt('enable_in_chart_patient_search', 0) !== 1) {
@@ -361,7 +361,7 @@ class AjaxController
                     break;
                 case 'mrd.profile_payments_summary':
                     $pid = (int) ($_REQUEST['pid'] ?? 0);
-                    $this->authorizeChartRead($pid);
+                    $this->authorizeDeferredHandler('mrd.profile_payments_summary', $pid);
                     $this->assertPatientChartPid($pid);
                     $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
                     $summary = $this->profilePaymentsSummaryService->getSummary(
@@ -373,7 +373,7 @@ class AjaxController
                 case 'chart_depth.payments_list':
                     $pid = (int) ($_REQUEST['pid'] ?? 0);
                     $this->assertPatientChartPid($pid);
-                    $this->authorizePaymentHistory($pid);
+                    $this->authorizeDeferredHandler('chart_depth.payments_list', $pid);
                     $offset = max(0, (int) ($_REQUEST['offset'] ?? 0));
                     $limit = (int) ($_REQUEST['limit'] ?? PaymentHistoryService::PAGE_SIZE);
                     $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
@@ -400,13 +400,13 @@ class AjaxController
                     $this->verifyCsrf($body);
                     $pid = (int) ($body['pid'] ?? 0);
                     $receiptId = (int) ($body['receipt_id'] ?? 0);
-                    $this->authorizeReceiptReprint($pid);
+                    $this->authorizeDeferredHandler('chart_depth.receipt_reprint', $pid);
                     $payload = $this->paymentHistoryService->getReceiptReprintPayload($receiptId, $pid, $userId);
                     $this->respond(true, 'ok', $payload);
                     break;
                 case 'mrd.clinical_referrals_strip':
                     $pid = (int) ($_REQUEST['pid'] ?? 0);
-                    $this->authorizeChartRead($pid);
+                    $this->authorizeDeferredHandler('mrd.clinical_referrals_strip', $pid);
                     $this->assertPatientChartPid($pid);
                     $encounterId = (int) ($_REQUEST['encounter_id'] ?? 0);
                     $strip = $this->referralCorrespondenceService->getClinicalStrip(
@@ -417,7 +417,7 @@ class AjaxController
                     break;
                 case 'mrd.clinical_labs_summary':
                     $pid = (int) ($_REQUEST['pid'] ?? 0);
-                    $this->authorizeChartRead($pid);
+                    $this->authorizeDeferredHandler('mrd.clinical_labs_summary', $pid);
                     $this->assertPatientChartPid($pid);
                     $encounterId = (int) ($_REQUEST['encounter_id'] ?? 0);
                     $strip = $this->clinicalLabsSummaryService->getClinicalStrip(
@@ -428,7 +428,7 @@ class AjaxController
                     break;
                 case 'mrd.clinical_meds_summary':
                     $pid = (int) ($_REQUEST['pid'] ?? 0);
-                    $this->authorizeChartRead($pid);
+                    $this->authorizeDeferredHandler('mrd.clinical_meds_summary', $pid);
                     $this->assertPatientChartPid($pid);
                     $encounterId = (int) ($_REQUEST['encounter_id'] ?? 0);
                     $strip = $this->clinicalMedsSummaryService->getClinicalStrip(
@@ -439,7 +439,7 @@ class AjaxController
                     break;
                 case 'chart_depth.export_builder':
                     $pid = (int) ($_REQUEST['pid'] ?? 0);
-                    $this->authorizeClinicalExport($pid);
+                    $this->authorizeDeferredHandler('chart_depth.export_builder', $pid);
                     $preset = trim((string) ($_REQUEST['preset'] ?? ''));
                     $encounterId = (int) ($_REQUEST['encounter_id'] ?? 0);
                     $payload = $this->clinicalExportService->getBuilderPayload(
@@ -456,7 +456,7 @@ class AjaxController
                     $body = $this->readJsonBody();
                     $this->verifyCsrf($body);
                     $pid = (int) ($body['pid'] ?? 0);
-                    $this->authorizeClinicalExport($pid);
+                    $this->authorizeDeferredHandler('chart_depth.export_generate', $pid);
                     $this->assertPatientChartPid($pid);
                     $preset = trim((string) ($body['preset'] ?? ClinicalExportService::PRESET_VISIT_SUMMARY));
                     $encounterId = (int) ($body['encounter_id'] ?? 0);
@@ -476,7 +476,7 @@ class AjaxController
                     break;
                 case 'chart_depth.referrals_list':
                     $pid = (int) ($_REQUEST['pid'] ?? 0);
-                    $this->authorizeReferralHub($pid);
+                    $this->authorizeDeferredHandler('chart_depth.referrals_list', $pid);
                     $offset = max(0, (int) ($_REQUEST['offset'] ?? 0));
                     $limit = (int) ($_REQUEST['limit'] ?? ReferralCorrespondenceService::PAGE_SIZE);
                     $encounterId = (int) ($_REQUEST['encounter_id'] ?? 0);
@@ -540,7 +540,7 @@ class AjaxController
                     $body = $this->readJsonBody();
                     $this->verifyCsrf($body);
                     $pid = (int) ($body['pid'] ?? 0);
-                    $this->authorizeChartRead($pid);
+                    $this->authorizeDeferredHandler('patients.registration.get', $pid);
                     $this->assertPatientChartPid($pid);
                     $form = $this->registrationService->getFormData($pid);
                     $this->respond(true, 'ok', $form);
@@ -3854,9 +3854,19 @@ class AjaxController
         return $_REQUEST;
     }
 
-    private function authorizeChartRead(int $pid = 0): void
+    private function authorizeDeferredHandler(string $action, int $pid = 0): void
     {
-        foreach (AjaxActionPolicy::CHART_READ_ACLS as $aco) {
+        foreach ($this->actionPolicy->deferredAuthorizationLayers($action) as $acls) {
+            $this->authorizeAnyAclOrNotFound($acls, $pid);
+        }
+    }
+
+    /**
+     * @param array<int, string> $acls
+     */
+    private function authorizeAnyAclOrNotFound(array $acls, int $pid = 0): void
+    {
+        foreach ($acls as $aco) {
             if (AclMain::aclCheckCore('new_clinic', $aco)) {
                 return;
             }
@@ -3867,58 +3877,6 @@ class AjaxController
         }
 
         $this->respond(false, 'Forbidden', ['code' => 'forbidden'], 403);
-    }
-
-    private function authorizePaymentHistory(int $pid = 0): void
-    {
-        if (!AclMain::aclCheckCore('new_clinic', 'new_chart_depth_finance')) {
-            if ($pid > 0) {
-                $this->respond(false, 'Patient not found', ['code' => 'not_found'], 404);
-            }
-            $this->respond(false, 'Forbidden', ['code' => 'forbidden'], 403);
-        }
-
-        $this->authorizeChartRead($pid);
-    }
-
-    private function authorizeReceiptReprint(int $pid = 0): void
-    {
-        if (!AclMain::aclCheckCore('new_clinic', 'new_receipt_reprint')
-            && !AclMain::aclCheckCore('new_clinic', 'new_chart_depth_finance')) {
-            if ($pid > 0) {
-                $this->respond(false, 'Patient not found', ['code' => 'not_found'], 404);
-            }
-            $this->respond(false, 'Forbidden', ['code' => 'forbidden'], 403);
-        }
-
-        $this->authorizeChartRead($pid);
-    }
-
-    private function authorizeReferralHub(int $pid = 0): void
-    {
-        if (!AclMain::aclCheckCore('new_clinic', 'new_chart_depth_referral')
-            && !AclMain::aclCheckCore('new_clinic', 'new_chart_depth')) {
-            if ($pid > 0) {
-                $this->respond(false, 'Patient not found', ['code' => 'not_found'], 404);
-            }
-            $this->respond(false, 'Forbidden', ['code' => 'forbidden'], 403);
-        }
-
-        $this->authorizeChartRead($pid);
-    }
-
-    private function authorizeClinicalExport(int $pid = 0): void
-    {
-        if (!AclMain::aclCheckCore('new_clinic', 'new_chart_depth_export')
-            && !AclMain::aclCheckCore('new_clinic', 'new_chart_depth_export_full')
-            && !AclMain::aclCheckCore('new_clinic', 'new_admin')) {
-            if ($pid > 0) {
-                $this->respond(false, 'Patient not found', ['code' => 'not_found'], 404);
-            }
-            $this->respond(false, 'Forbidden', ['code' => 'forbidden'], 403);
-        }
-
-        $this->authorizeChartRead($pid);
     }
 
     private function assertPatientChartPid(int $pid): void

@@ -457,6 +457,18 @@ class AjaxActionPolicy
         'chart_depth.referrals_list',
     ];
 
+    /**
+     * Extra ACL gate(s) applied in AjaxController before chart-read for deferred handlers.
+     * Values must stay aligned with inline handler checks (AUDIT-6).
+     *
+     * @var array<string, array<int, string>>
+     */
+    private const DEFERRED_PRIMARY_ACLS = [
+        'chart_depth.payments_list' => ['new_chart_depth_finance'],
+        'chart_depth.receipt_reprint' => ['new_receipt_reprint', 'new_chart_depth_finance'],
+        'chart_depth.referrals_list' => ['new_chart_depth_referral', 'new_chart_depth'],
+    ];
+
     /** @var array<string, true> */
     private const DEPRECATED = [
         'visit.transition' => true,
@@ -652,6 +664,31 @@ class AjaxActionPolicy
     public function defersAuthorizationToHandler(string $action): bool
     {
         return $this->isChartReadAction($action) || in_array($action, self::EXPORT_ACTIONS, true);
+    }
+
+    /**
+     * Ordered ACL layers for actions that skip top-level authorizeAction().
+     *
+     * @return array<int, array<int, string>>
+     */
+    public function deferredAuthorizationLayers(string $action): array
+    {
+        $action = $this->normalizeAction($action);
+        $layers = [];
+
+        if (isset(self::DEFERRED_PRIMARY_ACLS[$action])) {
+            $layers[] = self::DEFERRED_PRIMARY_ACLS[$action];
+        } elseif (in_array($action, self::EXPORT_ACTIONS, true)) {
+            $layers[] = self::EXPORT_ACL_ANY;
+        }
+
+        if ($this->isChartReadAction($action)
+            || in_array($action, self::EXPORT_ACTIONS, true)
+            || in_array($action, self::RECEIPT_REPRINT_ACTIONS, true)) {
+            $layers[] = self::CHART_READ_ACLS;
+        }
+
+        return $layers;
     }
 
     public function isExportAction(string $action): bool
