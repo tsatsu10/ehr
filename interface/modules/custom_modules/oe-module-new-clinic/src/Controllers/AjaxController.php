@@ -26,6 +26,7 @@ use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\FrontDeskActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\LabOpsActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PatientActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PharmacyActionHandler;
+use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PharmOpsActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ProfileActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\QueueBridgeActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ReportsActionHandler;
@@ -47,18 +48,7 @@ use OpenEMR\Modules\NewClinic\Services\BillOpsDaysheetService;
 use OpenEMR\Modules\NewClinic\Services\BillOpsOutstandingService;
 use OpenEMR\Modules\NewClinic\Services\BillOpsPaymentsSearchService;
 use OpenEMR\Modules\NewClinic\Services\LabOpsAccessService;
-use OpenEMR\Modules\NewClinic\Services\PharmDrugMetaService;
 use OpenEMR\Modules\NewClinic\Services\PharmOpsAccessService;
-use OpenEMR\Modules\NewClinic\Services\PharmOpsControlledRegisterService;
-use OpenEMR\Modules\NewClinic\Services\PharmOpsDestroyService;
-use OpenEMR\Modules\NewClinic\Services\PharmOpsDispenseService;
-use OpenEMR\Modules\NewClinic\Services\PharmOpsDispenseLabelService;
-use OpenEMR\Modules\NewClinic\Services\PharmOpsOtcSaleService;
-use OpenEMR\Modules\NewClinic\Services\PharmOpsReceiveService;
-use OpenEMR\Modules\NewClinic\Services\PharmOpsSetupService;
-use OpenEMR\Modules\NewClinic\Services\PharmOpsRxPrintService;
-use OpenEMR\Modules\NewClinic\Services\PharmOpsReportsService;
-use OpenEMR\Modules\NewClinic\Services\PharmOpsWorklistService;
 use OpenEMR\Modules\NewClinic\Services\PaymentHistoryService;
 use OpenEMR\Modules\NewClinic\Services\ReportHubAccessService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocAccessService;
@@ -130,171 +120,6 @@ class AjaxController
             switch ($action) {
                 case 'health':
                     $this->respond(true, 'ok', ['module' => 'oe-module-new-clinic']);
-                    break;
-                case 'pharm_ops.worklist':
-                    $body = $this->readRequestParams($method);
-                    $pharmWorklist = $this->svc(PharmOpsWorklistService::class)->worklist([
-                        'tab' => $body['tab'] ?? PharmOpsWorklistService::TAB_PENDING_DISPENSE,
-                        'date' => $body['date'] ?? '',
-                        'facility_id' => $body['facility_id'] ?? 0,
-                        'filters' => is_array($body['filters'] ?? null) ? $body['filters'] : [],
-                        'urgent_first' => $body['urgent_first'] ?? true,
-                    ], $userId);
-                    $this->respond(true, 'ok', $pharmWorklist);
-                    break;
-                case 'pharm_ops.dispense_get':
-                    $body = $this->readRequestParams($method);
-                    $prescriptionId = (int) ($body['prescription_id'] ?? $_REQUEST['prescription_id'] ?? 0);
-                    $form = $this->svc(PharmOpsDispenseService::class)->getDispenseForm($prescriptionId);
-                    $this->respond(true, 'ok', $form);
-                    break;
-                case 'pharm_ops.dispense_confirm':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $confirmed = $this->svc(PharmOpsDispenseService::class)->confirmDispense(
-                        (int) ($body['prescription_id'] ?? 0),
-                        $body,
-                        $userId
-                    );
-                    $this->respond(true, 'ok', $confirmed);
-                    break;
-                case 'pharm_ops.otc_drugs_search':
-                    $body = $this->readRequestParams($method);
-                    $drugSearch = $this->svc(PharmOpsOtcSaleService::class)->searchDrugs(
-                        (string) ($body['q'] ?? $_REQUEST['q'] ?? ''),
-                        (int) ($body['limit'] ?? 20)
-                    );
-                    $this->respond(true, 'ok', $drugSearch);
-                    break;
-                case 'pharm_ops.otc_sale_get':
-                    $body = $this->readRequestParams($method);
-                    $otcForm = $this->svc(PharmOpsOtcSaleService::class)->getSaleForm(
-                        (int) ($body['pid'] ?? 0),
-                        (int) ($body['drug_id'] ?? 0),
-                        isset($body['encounter_id']) ? (int) $body['encounter_id'] : null
-                    );
-                    $this->respond(true, 'ok', $otcForm);
-                    break;
-                case 'pharm_ops.otc_sale_confirm':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $otcSale = $this->svc(PharmOpsOtcSaleService::class)->confirmSale($body, $userId);
-                    $this->respond(true, 'ok', $otcSale);
-                    break;
-                case 'pharm_ops.receive_get':
-                    $body = $this->readRequestParams($method);
-                    $receiveForm = $this->svc(PharmOpsReceiveService::class)->getReceiveForm(
-                        isset($body['drug_id']) ? (int) $body['drug_id'] : null
-                    );
-                    $this->respond(true, 'ok', $receiveForm);
-                    break;
-                case 'pharm_ops.receive_save':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $received = $this->svc(PharmOpsReceiveService::class)->saveReceive($body, $userId);
-                    $this->respond(true, 'ok', $received);
-                    break;
-                case 'pharm_ops.setup_status':
-                    $setupStatus = $this->svc(PharmOpsSetupService::class)->getSetupStatus();
-                    $this->respond(true, 'ok', $setupStatus);
-                    break;
-                case 'pharm_ops.reports_embed':
-                    $reportsEmbed = $this->svc(PharmOpsReportsService::class)->embedCatalog();
-                    $this->respond(true, 'ok', $reportsEmbed);
-                    break;
-                case 'pharm_ops.controlled_catalog':
-                    (new PharmOpsAccessService())->assertCatalogAccess();
-                    $controlledCatalog = [
-                        'drugs' => $this->svc(PharmDrugMetaService::class)->listActiveCatalogFlags(),
-                    ];
-                    $this->respond(true, 'ok', $controlledCatalog);
-                    break;
-                case 'pharm_ops.controlled_catalog_save':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    (new PharmOpsAccessService())->assertCatalogAccess();
-                    $saved = $this->svc(PharmDrugMetaService::class)->saveControlledFlags($body['drugs'] ?? []);
-                    $this->respond(true, 'ok', [
-                        'saved' => $saved,
-                        'drugs' => $this->svc(PharmDrugMetaService::class)->listActiveCatalogFlags(),
-                    ]);
-                    break;
-                case 'pharm_ops.destroy_get':
-                    $body = $this->readRequestParams($method);
-                    $destroyForm = $this->svc(PharmOpsDestroyService::class)->getDestroyForm(
-                        (int) ($body['drug_id'] ?? 0),
-                        (int) ($body['inventory_id'] ?? 0)
-                    );
-                    $this->respond(true, 'ok', $destroyForm);
-                    break;
-                case 'pharm_ops.destroy_confirm':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $destroyed = $this->svc(PharmOpsDestroyService::class)->confirmDestroy($body, $userId);
-                    $this->respond(true, 'ok', $destroyed);
-                    break;
-                case 'pharm_ops.rx_print_pdf':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $rxPrint = $this->svc(PharmOpsRxPrintService::class)->preparePrint(
-                        (int) ($body['prescription_id'] ?? 0),
-                        $userId
-                    );
-                    $this->respond(true, 'ok', $rxPrint);
-                    break;
-                case 'pharm_ops.dispense_label_pdf':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $labelPrint = $this->svc(PharmOpsDispenseLabelService::class)->preparePrint(
-                        (int) ($body['sale_id'] ?? 0),
-                        $userId
-                    );
-                    $this->respond(true, 'ok', $labelPrint);
-                    break;
-                case 'pharm_ops.warehouse_create':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $warehouse = $this->svc(PharmOpsSetupService::class)->createDefaultWarehouse(
-                        (string) ($body['warehouse_title'] ?? ''),
-                        $userId
-                    );
-                    $this->respond(true, 'ok', $warehouse);
-                    break;
-                case 'pharm_ops.formulary_import':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $imported = $this->svc(PharmOpsSetupService::class)->importStarterFormulary(
-                        !empty($body['use_starter']) ? null : (string) ($body['csv'] ?? ''),
-                        $userId
-                    );
-                    $this->respond(true, 'ok', $imported);
                     break;
                 case 'bill_ops.visit_charges':
                     $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
@@ -471,6 +296,7 @@ class AjaxController
             new CommunicationsActionHandler($this),
             new CohortActionHandler($this),
             new LabOpsActionHandler($this),
+            new PharmOpsActionHandler($this),
             new LabActionHandler($this),
             new PharmacyActionHandler($this),
             new FrontDeskActionHandler($this),
