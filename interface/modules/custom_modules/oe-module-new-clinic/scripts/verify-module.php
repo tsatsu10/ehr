@@ -17,6 +17,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/lib/module-verify.php';
+require_once __DIR__ . '/lib/ajax-action-crosscheck.php';
 
 $withBootstrap = in_array('--bootstrap', $argv, true);
 $failures = 0;
@@ -97,6 +98,17 @@ if ($withBootstrap) {
     }
 } else {
     echo "[SKIP] bootstrap (pass --bootstrap to enable)\n";
+}
+
+$ajaxCrosscheckErrors = moduleVerifyAjaxActionCrosscheckErrors();
+if ($ajaxCrosscheckErrors === []) {
+    echo '[PASS] ajax action crosscheck (' . count(moduleVerifyExtractControllerActions()) . " controller actions)\n";
+} else {
+    echo '[FAIL] ajax action crosscheck (' . count($ajaxCrosscheckErrors) . " issue(s))\n";
+    foreach ($ajaxCrosscheckErrors as $error) {
+        echo "  - $error\n";
+    }
+    $failures++;
 }
 
 echo str_repeat('-', 40) . "\n";
