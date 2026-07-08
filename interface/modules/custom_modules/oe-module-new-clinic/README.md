@@ -307,10 +307,9 @@ composer rector-check   # Modernization suggestions
 **Single entry point:** `public/ajax.php` → `AjaxController`
 
 **40+ AJAX actions**, including:
-- `visit.start`, `visit.start_from_appointment`
+- `visit.start`, `visit.start_from_appointment` (queue slip URL returned inline on start)
 - `doctor.take_patient`, `doctor.complete_consult`, `doctor.reopen`
 - `cashier.assess_payment`, `cashier.record_payment`
-- `visit.queue_slip`
 - `admin.reconciliation.run`, `reports.reconciliation`
 
 **Request format:**

@@ -13,7 +13,6 @@ namespace OpenEMR\Modules\NewClinic\Controllers;
 
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Csrf\CsrfUtils;
-use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Modules\NewClinic\Exceptions\EncounterSessionMismatchException;
 use OpenEMR\Modules\NewClinic\Exceptions\StaleVisitException;
 use OpenEMR\Modules\NewClinic\Exceptions\AllergiesUndocumentedException;
@@ -561,20 +560,6 @@ class AjaxController
                     $types = $this->visitTypeAdminService->listForDesk($facilityId);
                     $this->respond(true, 'ok', ['visit_types' => $types]);
                     break;
-                case 'fees.list':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $fees = $this->feeScheduleAdminService->listForDesk($facilityId);
-                    $this->respond(true, 'ok', ['fee_schedule' => $fees]);
-                    break;
-                case 'queue.list':
-                    $visitDate = trim((string) ($_REQUEST['visit_date'] ?? ''));
-                    $visits = $this->visitQueueService->getQueue([
-                        'facility_id' => $this->resolveRequestFacilityId(),
-                        'visit_date' => $visitDate !== '' ? $visitDate : null,
-                        'state' => $_REQUEST['state'] ?? null,
-                    ]);
-                    $this->respond(true, 'ok', ['visits' => $visits]);
-                    break;
                 case 'visit.board':
                     $facilityId = $this->resolveRequestFacilityId();
                     $board = $this->visitBoardService->getBoard(
@@ -785,26 +770,6 @@ class AjaxController
                         'Visit started from appointment',
                         array_merge($result, $this->enrichStartVisitResponse($visit, $userId))
                     );
-                    break;
-                case 'visit.queue_slip':
-                    $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
-                    if ($visitId <= 0) {
-                        $this->respond(false, 'visit_id required', [], 400);
-                    }
-                    $payload = $this->queueSlipService->buildPrintPayload($visitId, $userId);
-                    $this->respond(true, 'ok', ['queue_slip' => $payload]);
-                    break;
-                case 'session.bind':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $session = $this->encounterSessionService->bindForVisitWithDeskAcl(
-                        (int) ($body['visit_id'] ?? 0),
-                        $userId
-                    );
-                    $this->respond(true, 'Session bound', ['session' => $session->toArray()]);
                     break;
                 case 'desk.shared_session_probe':
                     $probe = $this->sharedDeviceSessionService->probe(
@@ -1981,17 +1946,6 @@ class AjaxController
                     $page = max(1, (int) ($_REQUEST['page'] ?? 1));
                     $this->respond(true, 'ok', $this->queueBridgeService->listExceptions($facilityId, $lens, $page));
                     break;
-                case 'queue_bridge.eod_summary':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $this->respond(true, 'ok', $this->queueBridgeService->eodSummary($facilityId));
-                    break;
-                case 'queue_bridge.flow_board_flags':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $this->respond(true, 'ok', [
-                        'enabled' => $this->queueBridgeSurfaceService->isSurfaceEnabled($facilityId),
-                        'chips' => $this->queueBridgeSurfaceService->flowBoardChips($facilityId),
-                    ] + $this->queueBridgeSurfaceService->hubUrlPayload($facilityId));
-                    break;
                 case 'queue_bridge.eod_export':
                     $facilityId = $this->resolveRequestFacilityId();
                     try {
@@ -2159,19 +2113,6 @@ class AjaxController
                         $this->respond(true, 'ok', $config);
                     } catch (\InvalidArgumentException $e) {
                         $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.calendar.day':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    try {
-                        $day = $this->schedulingCalendarService->getDayView(
-                            $facilityId,
-                            (string) ($_REQUEST['date'] ?? date('Y-m-d')),
-                            $this->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null),
-                        );
-                        $this->respond(true, 'ok', $day);
                     } catch (\RuntimeException $e) {
                         $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
                     }
@@ -2562,20 +2503,6 @@ class AjaxController
                         $code = (int) ($e->getCode() ?: 400);
                         $this->respond(false, $e->getMessage(), ['code' => $code === 409 ? 'no_encounter_on_visit' : 'error'], $code);
                     }
-                    break;
-                case 'clinical_doc.ghana_pack_status':
-                    if ($method !== 'GET') {
-                        $this->respond(false, 'GET required', [], 405);
-                    }
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $this->respond(true, 'ok', (new ClinicalDocLbfWizardService())->getPackStatus($facilityId));
-                    break;
-                case 'clinical_doc.referral_hospital_pack_status':
-                    if ($method !== 'GET') {
-                        $this->respond(false, 'GET required', [], 405);
-                    }
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $this->respond(true, 'ok', (new ClinicalDocReferralHospitalLbfWizardService())->getPackStatus($facilityId));
                     break;
                 case 'clinical_doc.import_ghana_pack':
                     if ($method !== 'POST') {

@@ -28,7 +28,6 @@ class AjaxActionPolicy
         'visit.start' => 'new_reception',
         'visit.start_from_appointment' => 'new_reception',
         'visit.skip_triage' => 'new_skip_triage',
-        'visit.queue_slip' => 'new_reception',
         'front_desk.revisit_awaiting_documents' => 'new_reception',
         'front_desk.upload_referral' => 'new_reception',
         'doctor.take' => 'new_doctor',
@@ -112,8 +111,6 @@ class AjaxActionPolicy
         'admin.config.export' => 'new_admin',
         'admin.config.import' => 'new_admin',
         'admin.completion_weights.save' => 'new_admin',
-        'clinical_doc.ghana_pack_status' => 'new_admin',
-        'clinical_doc.referral_hospital_pack_status' => 'new_admin',
         'clinical_doc.import_ghana_pack' => 'new_admin',
         'clinical_doc.import_referral_hospital_pack' => 'new_admin',
         'clinical_doc.import_ancillary_pack' => 'new_admin',
@@ -266,7 +263,6 @@ class AjaxActionPolicy
         'scheduling.flow_board.poll',
         'scheduling.flow_board.prefs',
         'scheduling.flow_board.lane_map',
-        'scheduling.calendar.day',
         'scheduling.calendar.range',
         'scheduling.calendar.poll',
         'scheduling.recalls.list',
@@ -291,8 +287,6 @@ class AjaxActionPolicy
     /** @var array<int, string> */
     private const QUEUE_BRIDGE_READ_ACTIONS = [
         'queue_bridge.list',
-        'queue_bridge.eod_summary',
-        'queue_bridge.flow_board_flags',
         'queue_bridge.eod_export',
     ];
 
@@ -628,12 +622,8 @@ class AjaxActionPolicy
             return ['type' => 'any_acl', 'acls' => self::PROFILE_EDIT_ACL_ANY];
         }
 
-        if ($action === 'fees.list') {
-            return ['type' => 'any_acl', 'acls' => ['new_cashier', 'new_admin', 'new_fee_schedule_admin']];
-        }
-
         if (in_array($action, [
-            'queue.list', 'visit.board', 'visit.detail', 'queue.counts',
+            'visit.board', 'visit.detail', 'queue.counts',
             'triage.queue', 'doctor.queue', 'doctor.roster', 'cashier.queue', 'lab.queue', 'pharmacy.queue',
             'desk.shared_session_probe', 'front_desk.desk_stats', 'front_desk.todays_appointments',
             'front_desk.flow_charts',
@@ -649,10 +639,6 @@ class AjaxActionPolicy
 
         if ($action === 'switch_role') {
             return ['type' => 'desk_acl'];
-        }
-
-        if ($action === 'session.bind') {
-            return ['type' => 'desk_acl', 'note' => 'plus visit-state desk ACL at bind time'];
         }
 
         return ['type' => 'unknown'];
