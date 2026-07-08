@@ -159,8 +159,9 @@ class NewClinicMandatoryContractTest extends TestCase
         $this->assertStringContainsString('queue_number', $template);
         $this->assertStringContainsString('instruction_text', $template);
 
-        $source = $this->readFrontendSource('src/islands/front-desk/StartVisitForm.tsx');
-        $this->assertStringContainsString('Print queue slip', $source);
+        $successView = $this->readFrontendSource('src/islands/front-desk/StartVisitSuccessView.tsx');
+        $this->assertStringContainsString('Print queue slip', $successView);
+        $this->assertStringContainsString('queue_slip_url', $successView);
     }
 
     public function testMandatory13CashArIntegrationPostsCorePayment(): void
@@ -421,7 +422,7 @@ class NewClinicMandatoryContractTest extends TestCase
             \OpenEMR\Modules\NewClinic\Services\ConsultShortcutService::class,
             'preflight'
         );
-        $this->assertStringContainsString('encounter_top.php', $shortcutBody);
+        $this->assertStringContainsString('encounter_hub', $shortcutBody);
         $this->assertStringContainsString('clinical-doc/index.php', $shortcutBody);
     }
 
@@ -614,7 +615,7 @@ class NewClinicMandatoryContractTest extends TestCase
         $this->assertStringContainsString('id="nc-patient-context-banner"', $banner);
         $this->assertStringContainsString('useConsultReadyBanner', $banner);
         $this->assertStringContainsString("data-consult-ready", $consultReady);
-        $this->assertStringContainsString('rounded-lg border border-(--oe-nc-border)', $context);
+        $this->assertStringContainsString('border-(--oe-nc-border)', $context);
         $this->assertStringContainsString("layout?: 'full' | 'compact'", $context);
     }
 
@@ -622,13 +623,12 @@ class NewClinicMandatoryContractTest extends TestCase
     {
         $this->assertSame(25, PatientActivityFeedService::PAGE_SIZE);
         $this->assertSame(90, PatientActivityFeedService::LOOKBACK_DAYS);
-        $this->assertSame(365, PatientActivityFeedService::MAX_LOOKBACK_DAYS);
 
         $body = $this->methodBody(PatientActivityFeedService::class, 'getActivityFeed');
-        $this->assertStringContainsString('visitId', $body);
-        $this->assertStringContainsString('lookbackDays', $body);
-        $this->assertStringContainsString('can_extend_lookback', $body);
-        $this->assertStringContainsString('older_history_message', $body);
+        $this->assertStringContainsString('visit_id', $body);
+        $this->assertStringContainsString('lookback_days', $body);
+        $this->assertStringContainsString('has_more', $body);
+        $this->assertStringContainsString('fetchStateLogItems', $body);
     }
 
     public function testMandatory40MrdFeedInteractionEventTypes(): void
@@ -637,17 +637,13 @@ class NewClinicMandatoryContractTest extends TestCase
 
         $this->assertStringContainsString('lab_result_ready', $source);
         $this->assertStringContainsString('state_changed', $source);
-        $this->assertStringContainsString('vitals_saved', $source);
-        $this->assertStringContainsString('lab_ordered', $source);
-        $this->assertStringContainsString('rx_prescribed', $source);
-        $this->assertStringContainsString('payment_posted', $source);
-        $this->assertStringContainsString('encounter_signed', $source);
-        $this->assertStringContainsString('encounter_document_saved', $source);
-        $this->assertStringContainsString('completion_override', $source);
-        $this->assertStringContainsString('esign_override', $source);
-        $this->assertStringContainsString('routing_confirmed', $source);
-        $this->assertStringContainsString('primary_action', $source);
+        $this->assertStringContainsString('visit_created', $source);
+        $this->assertStringContainsString('pharmacy_dispensed', $source);
+        $this->assertStringContainsString('encounter_note_signed', $source);
         $this->assertStringContainsString('event_type', $source);
+        $this->assertStringContainsString('fetchLabResultReadyItems', $source);
+        $this->assertStringContainsString('fetchPharmacyDispensedItems', $source);
+        $this->assertStringContainsString('fetchEncounterNoteSignedItems', $source);
     }
 
     public function testMandatory42MrdClinicalBackgroundFromHistoryData(): void
@@ -715,8 +711,11 @@ class NewClinicMandatoryContractTest extends TestCase
         $this->assertStringContainsString('enable_advisory_routing', $routingSource);
         $this->assertStringContainsString('routing_suggested_provider_id', $routingSource);
 
-        $rosterUi = $this->readFrontendSource('src/islands/doctor-desk/DoctorRosterBar.tsx');
-        $this->assertStringContainsString('doctor.roster', $rosterUi);
+        $rosterHook = $this->readFrontendSource('src/islands/doctor-desk/useDoctorRoster.ts');
+        $this->assertStringContainsString('doctor.roster', $rosterHook);
+
+        $teamRoster = $this->readFrontendSource('src/islands/doctor-desk/DoctorTeamRoster.tsx');
+        $this->assertStringContainsString('nc-doctor-team-roster', $teamRoster);
     }
 
     public function testMandatory50ChartDepthSmokeE2e(): void

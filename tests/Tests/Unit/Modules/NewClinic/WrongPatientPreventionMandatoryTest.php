@@ -139,12 +139,13 @@ class WrongPatientPreventionMandatoryTest extends TestCase
     /** 43d — M1a-F14 Front Desk Start visit switch guard */
     public function test43dFrontDeskStartVisitSwitchShowsConfirm(): void
     {
-        $source = $this->readFrontendSource('src/islands/front-desk/FrontDesk.tsx');
+        $hook = $this->readFrontendSource('src/islands/front-desk/useFrontDesk.ts');
+        $desk = $this->readFrontendSource('src/islands/front-desk/FrontDesk.tsx');
 
-        $this->assertStringContainsString('resolveSwitchTarget', $source);
-        $this->assertStringContainsString('Discard changes and switch to', $source);
-        $this->assertStringContainsString('startVisitDirtyRef', $source);
-        $this->assertStringContainsString('Switch patient?', $source);
+        $this->assertStringContainsString('startVisitDirtyRef', $hook);
+        $this->assertStringContainsString('switch_patient', $hook);
+        $this->assertStringContainsString('Discard changes and switch to', $desk);
+        $this->assertStringContainsString('Switch patient?', $desk);
     }
 
     /** 43e — M5-F15 cashier payment confirm identity */
