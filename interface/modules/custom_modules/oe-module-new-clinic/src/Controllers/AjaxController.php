@@ -23,6 +23,7 @@ use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ChartDepthActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\DoctorActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\LabActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\FrontDeskActionHandler;
+use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\LabOpsActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PatientActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PharmacyActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ProfileActionHandler;
@@ -46,10 +47,6 @@ use OpenEMR\Modules\NewClinic\Services\BillOpsDaysheetService;
 use OpenEMR\Modules\NewClinic\Services\BillOpsOutstandingService;
 use OpenEMR\Modules\NewClinic\Services\BillOpsPaymentsSearchService;
 use OpenEMR\Modules\NewClinic\Services\LabOpsAccessService;
-use OpenEMR\Modules\NewClinic\Services\LabOpsOrderMetaService;
-use OpenEMR\Modules\NewClinic\Services\LabOpsResultService;
-use OpenEMR\Modules\NewClinic\Services\LabOpsSetupService;
-use OpenEMR\Modules\NewClinic\Services\LabOpsWorklistService;
 use OpenEMR\Modules\NewClinic\Services\PharmDrugMetaService;
 use OpenEMR\Modules\NewClinic\Services\PharmOpsAccessService;
 use OpenEMR\Modules\NewClinic\Services\PharmOpsControlledRegisterService;
@@ -133,17 +130,6 @@ class AjaxController
             switch ($action) {
                 case 'health':
                     $this->respond(true, 'ok', ['module' => 'oe-module-new-clinic']);
-                    break;
-                case 'lab_ops.worklist':
-                    $body = $this->readRequestParams($method);
-                    $worklist = $this->svc(LabOpsWorklistService::class)->worklist([
-                        'tab' => $body['tab'] ?? LabOpsWorklistService::TAB_PENDING,
-                        'date' => $body['date'] ?? '',
-                        'facility_id' => $body['facility_id'] ?? 0,
-                        'fulfillment' => $body['fulfillment'] ?? 'all',
-                        'urgent_first' => $body['urgent_first'] ?? true,
-                    ], $userId);
-                    $this->respond(true, 'ok', $worklist);
                     break;
                 case 'pharm_ops.worklist':
                     $body = $this->readRequestParams($method);
@@ -309,151 +295,6 @@ class AjaxController
                         $userId
                     );
                     $this->respond(true, 'ok', $imported);
-                    break;
-                case 'lab_ops.result_get':
-                    $orderId = (int) ($_REQUEST['procedure_order_id'] ?? 0);
-                    if ($method === 'POST') {
-                        $body = $this->readRequestParams($method);
-                        $orderId = (int) ($body['procedure_order_id'] ?? $orderId);
-                    }
-                    $form = $this->svc(LabOpsResultService::class)->getEntryForm($orderId);
-                    $this->respond(true, 'ok', $form);
-                    break;
-                case 'lab_ops.result_save':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $saved = $this->svc(LabOpsResultService::class)->saveEntry(
-                        (int) ($body['procedure_order_id'] ?? 0),
-                        $body,
-                        $userId
-                    );
-                    $this->respond(true, 'ok', $saved);
-                    break;
-                case 'lab_ops.result_release':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $released = $this->svc(LabOpsResultService::class)->releaseReport(
-                        (int) ($body['procedure_report_id'] ?? 0),
-                        $userId
-                    );
-                    $this->respond(true, 'ok', $released);
-                    break;
-                case 'lab_ops.specimen_collect':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $collected = $this->svc(LabOpsOrderMetaService::class)->collectSpecimen(
-                        (int) ($body['procedure_order_id'] ?? 0),
-                        isset($body['accession_no']) ? (string) $body['accession_no'] : null,
-                        $userId
-                    );
-                    $this->respond(true, 'ok', $collected);
-                    break;
-                case 'lab_ops.setup_status':
-                    $status = $this->svc(LabOpsSetupService::class)->getSetupStatus();
-                    $this->respond(true, 'ok', $status);
-                    break;
-                case 'lab_ops.setup_model':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $modelResult = $this->svc(LabOpsSetupService::class)->setSetupModel(
-                        (string) ($body['setup_model'] ?? ''),
-                        $userId
-                    );
-                    $this->respond(true, 'ok', $modelResult);
-                    break;
-                case 'lab_ops.provider_create':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $providerResult = $this->svc(LabOpsSetupService::class)->createInHouseProvider(
-                        isset($body['clinic_name']) ? (string) $body['clinic_name'] : '',
-                        $userId
-                    );
-                    $this->respond(true, 'ok', $providerResult);
-                    break;
-                case 'lab_ops.sendout_provider_create':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $sendOutResult = $this->svc(LabOpsSetupService::class)->createSendOutProvider(
-                        (string) ($body['lab_name'] ?? ''),
-                        $userId
-                    );
-                    $this->respond(true, 'ok', $sendOutResult);
-                    break;
-                case 'lab_ops.panel_import':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $providerId = $this->parseOptionalPositiveInt($body['provider_id'] ?? null);
-                    if (!empty($body['use_starter'])) {
-                        $importResult = $this->svc(LabOpsSetupService::class)->importStarterPanel(
-                            $providerId > 0 ? $providerId : null,
-                            $userId
-                        );
-                    } else {
-                        $importResult = $this->svc(LabOpsSetupService::class)->importPanelCsv(
-                            $providerId > 0 ? $providerId : null,
-                            (string) ($body['csv'] ?? ''),
-                            $userId
-                        );
-                    }
-                    $this->respond(true, 'ok', $importResult);
-                    break;
-                case 'lab_ops.fee_map_list':
-                    $providerId = $this->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null);
-                    $unmapped = $this->svc(LabOpsSetupService::class)->listUnmappedFees(
-                        $providerId > 0 ? $providerId : null
-                    );
-                    $this->respond(true, 'ok', ['rows' => $unmapped]);
-                    break;
-                case 'lab_ops.fee_map_save':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    if (!empty($body['use_starter_defaults'])) {
-                        $providerId = $this->parseOptionalPositiveInt($body['provider_id'] ?? null);
-                        $feeResult = $this->svc(LabOpsSetupService::class)->applyStarterFeeDefaults(
-                            $providerId > 0 ? $providerId : null,
-                            $userId
-                        );
-                    } else {
-                        $rows = is_array($body['rows'] ?? null) ? $body['rows'] : [];
-                        $feeResult = $this->svc(LabOpsSetupService::class)->saveFeeMappings($rows, $userId);
-                    }
-                    $this->respond(true, 'ok', $feeResult);
-                    break;
-                case 'lab_ops.mark_send_out':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $sendOut = $this->svc(LabOpsOrderMetaService::class)->markAsSendOut(
-                        (int) ($body['procedure_order_id'] ?? 0),
-                        $userId
-                    );
-                    $this->respond(true, 'ok', $sendOut);
                     break;
                 case 'bill_ops.visit_charges':
                     $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
@@ -629,6 +470,7 @@ class AjaxController
             new ClinicalDocActionHandler($this),
             new CommunicationsActionHandler($this),
             new CohortActionHandler($this),
+            new LabOpsActionHandler($this),
             new LabActionHandler($this),
             new PharmacyActionHandler($this),
             new FrontDeskActionHandler($this),
