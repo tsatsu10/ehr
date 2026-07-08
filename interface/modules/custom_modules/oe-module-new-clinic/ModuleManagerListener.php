@@ -11,14 +11,13 @@
 
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Core\AbstractModuleActionListener;
+use OpenEMR\Modules\NewClinic\AclVersion;
 use OpenEMR\Modules\NewClinic\Services\ClinicAdminService;
 use OpenEMR\Modules\NewClinic\Services\ModuleService;
 use OpenEMR\Modules\NewClinic\Services\PhoneBackfillService;
 
 class ModuleManagerListener extends AbstractModuleActionListener
 {
-    private const ACL_VERSION = '0.2.3';
-
     public function moduleManagerAction($methodName, $modId, string $currentActionStatus = 'Success'): string
     {
         if (method_exists(self::class, $methodName)) {
@@ -220,7 +219,7 @@ class ModuleManagerListener extends AbstractModuleActionListener
             [$modId, $modId]
         );
         $installedVersion = (string) ($row['acl_version'] ?? '');
-        if ($installedVersion !== '' && version_compare($installedVersion, self::ACL_VERSION, '>=')) {
+        if (AclVersion::isSatisfiedBy($installedVersion)) {
             return;
         }
 
@@ -236,7 +235,7 @@ class ModuleManagerListener extends AbstractModuleActionListener
 
         QueryUtils::querySingleRow(
             "UPDATE modules SET acl_version = ? WHERE mod_id = ? OR mod_directory = ?",
-            [self::ACL_VERSION, $modId, $modId]
+            [AclVersion::VERSION, $modId, $modId]
         );
     }
 

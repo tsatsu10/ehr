@@ -28,6 +28,7 @@ require_once dirname(__DIR__, 4) . '/globals.php';
 
 use OpenEMR\Common\Acl\AclExtended;
 use OpenEMR\Common\Database\QueryUtils;
+use OpenEMR\Modules\NewClinic\AclVersion;
 
 $aclSection = QueryUtils::querySingleRow(
     "SELECT section_value FROM gacl_aco WHERE section_value = 'new_clinic' LIMIT 1"
@@ -39,7 +40,8 @@ if (empty($aclSection)) {
     echo "Installed new_clinic ACL section and groups.\n";
 
     QueryUtils::querySingleRow(
-        "UPDATE modules SET acl_version = '0.1.0' WHERE mod_directory = 'oe-module-new-clinic'"
+        "UPDATE modules SET acl_version = ? WHERE mod_directory = 'oe-module-new-clinic'",
+        [AclVersion::VERSION]
     );
 } else {
     echo "new_clinic ACL section already present — skipping acl_setup.\n";
