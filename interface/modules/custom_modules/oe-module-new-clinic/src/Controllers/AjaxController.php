@@ -24,6 +24,7 @@ use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PatientActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PharmacyActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ProfileActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ReportsActionHandler;
+use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\SchedulingActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\TriageActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\VisitActionHandler;
 use OpenEMR\Modules\NewClinic\Exceptions\EncounterSessionMismatchException;
@@ -80,11 +81,6 @@ use OpenEMR\Modules\NewClinic\Services\QueueBridgeAccessService;
 use OpenEMR\Modules\NewClinic\Services\QueueBridgeService;
 use OpenEMR\Modules\NewClinic\Services\QueueBridgeSurfaceService;
 use OpenEMR\Modules\NewClinic\Services\SchedulingAccessService;
-use OpenEMR\Modules\NewClinic\Services\SchedulingCalendarService;
-use OpenEMR\Modules\NewClinic\Services\SchedulingFlowBoardLaneMapService;
-use OpenEMR\Modules\NewClinic\Services\SchedulingFlowBoardService;
-use OpenEMR\Modules\NewClinic\Services\SchedulingFlowBoardPrefsService;
-use OpenEMR\Modules\NewClinic\Services\SchedulingRecallsService;
 use OpenEMR\Modules\NewClinic\Services\VisitBoardService;
 use OpenEMR\Modules\NewClinic\Services\VisitQueueService;
 use OpenEMR\Modules\NewClinic\Services\VisitClaimLostService;
@@ -187,338 +183,6 @@ class AjaxController
                             isset($body['appt_date']) ? (string) $body['appt_date'] : null,
                             isset($body['visit_type_id']) ? (int) $body['visit_type_id'] : null,
                             isset($body['cancel_reason']) ? (string) $body['cancel_reason'] : null,
-                        );
-                        $this->respond(true, 'ok', $result);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.flow_board.list':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    try {
-                        $board = $this->svc(SchedulingFlowBoardService::class)->getBoard(
-                            $facilityId,
-                            (string) ($_REQUEST['date'] ?? date('Y-m-d')),
-                            $this->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null),
-                        );
-                        $this->respond(true, 'ok', $board);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.flow_board.poll':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    try {
-                        $board = $this->svc(SchedulingFlowBoardService::class)->pollBoard(
-                            $facilityId,
-                            (string) ($_REQUEST['date'] ?? date('Y-m-d')),
-                            $this->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null),
-                            (string) ($_REQUEST['revision'] ?? ''),
-                        );
-                        $this->respond(true, 'ok', $board);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.flow_board.advance':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $facilityId = $this->resolveRequestFacilityId();
-                        $this->svc(SchedulingFlowBoardService::class)->advanceStatus(
-                            $facilityId,
-                            (int) ($body['pc_eid'] ?? 0),
-                            (string) ($body['status'] ?? ''),
-                            $userId
-                        );
-                        $board = $this->svc(SchedulingFlowBoardService::class)->getBoard(
-                            $facilityId,
-                            (string) ($body['date'] ?? date('Y-m-d')),
-                            $this->parseOptionalPositiveInt($body['provider_id'] ?? null),
-                        );
-                        $this->respond(true, 'ok', $board);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.flow_board.room':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $facilityId = $this->resolveRequestFacilityId();
-                        $this->svc(SchedulingFlowBoardService::class)->updateRoom(
-                            $facilityId,
-                            (int) ($body['pc_eid'] ?? 0),
-                            (string) ($body['room'] ?? ''),
-                            $userId
-                        );
-                        $board = $this->svc(SchedulingFlowBoardService::class)->getBoard(
-                            $facilityId,
-                            (string) ($body['date'] ?? date('Y-m-d')),
-                            $this->parseOptionalPositiveInt($body['provider_id'] ?? null),
-                        );
-                        $this->respond(true, 'ok', $board);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.flow_board.prefs':
-                    try {
-                        $prefs = $this->svc(SchedulingFlowBoardPrefsService::class)->getPrefs($userId);
-                        $this->respond(true, 'ok', $prefs);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.flow_board.prefs.save':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $collapsed = is_array($body['collapsed'] ?? null) ? $body['collapsed'] : [];
-                        $order = is_array($body['order'] ?? null) ? $body['order'] : [];
-                        $prefs = $this->svc(SchedulingFlowBoardPrefsService::class)->savePrefs($userId, $collapsed, $order);
-                        $this->respond(true, 'ok', $prefs);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.flow_board.lane_map':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    try {
-                        $config = $this->svc(SchedulingFlowBoardLaneMapService::class)->getAdminConfig($facilityId);
-                        $this->respond(true, 'ok', $config);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.flow_board.lane_map.save':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $facilityId = $this->resolveRequestFacilityId();
-                    try {
-                        $rows = is_array($body['rows'] ?? null) ? $body['rows'] : [];
-                        $config = $this->svc(SchedulingFlowBoardLaneMapService::class)->saveAdminConfig($facilityId, $rows);
-                        $this->respond(true, 'ok', $config);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.calendar.range':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    try {
-                        $view = (string) ($_REQUEST['view'] ?? 'day');
-                        $range = $this->svc(SchedulingCalendarService::class)->getRangeView(
-                            $facilityId,
-                            (string) ($_REQUEST['date'] ?? date('Y-m-d')),
-                            $view,
-                            $this->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null),
-                        );
-                        $this->respond(true, 'ok', $range);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.calendar.poll':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    try {
-                        $view = (string) ($_REQUEST['view'] ?? 'day');
-                        $range = $this->svc(SchedulingCalendarService::class)->pollRangeView(
-                            $facilityId,
-                            (string) ($_REQUEST['date'] ?? date('Y-m-d')),
-                            $view,
-                            $this->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null),
-                            (string) ($_REQUEST['revision'] ?? ''),
-                        );
-                        $this->respond(true, 'ok', $range);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.calendar.move':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $facilityId = $this->resolveRequestFacilityId();
-                        $payload = $this->svc(SchedulingCalendarService::class)->moveAppointment($facilityId, $body, $userId);
-                        $this->respond(true, 'ok', $payload);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.calendar.resize':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $facilityId = $this->resolveRequestFacilityId();
-                        $payload = $this->svc(SchedulingCalendarService::class)->resizeAppointment($facilityId, $body, $userId);
-                        $this->respond(true, 'ok', $payload);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.calendar.book':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $facilityId = $this->resolveRequestFacilityId();
-                        $day = $this->svc(SchedulingCalendarService::class)->bookAppointment($facilityId, $body, $userId);
-                        $this->respond(true, 'ok', $day);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.recalls.list':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    try {
-                        $worklist = $this->svc(SchedulingRecallsService::class)->getWorklist(
-                            $facilityId,
-                            $this->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null),
-                            (string) ($_REQUEST['bucket'] ?? 'due'),
-                            $this->parseOptionalPositiveInt($_REQUEST['pid'] ?? null),
-                            trim((string) ($_REQUEST['q'] ?? '')),
-                        );
-                        $this->respond(true, 'ok', $worklist);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.recalls.save':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $facilityId = $this->resolveRequestFacilityId();
-                        $worklist = $this->svc(SchedulingRecallsService::class)->saveRecall($facilityId, $body, $userId);
-                        $this->respond(true, 'ok', $worklist);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.recalls.delete':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $this->svc(SchedulingRecallsService::class)->deleteRecall((int) ($body['recall_id'] ?? 0), $userId);
-                        $facilityId = $this->resolveRequestFacilityId();
-                        $worklist = $this->svc(SchedulingRecallsService::class)->getWorklist(
-                            $facilityId,
-                            $this->parseOptionalPositiveInt($body['provider_id'] ?? null),
-                            (string) ($body['bucket'] ?? 'due'),
-                        );
-                        $this->respond(true, 'ok', $worklist);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.recalls.update_status':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $result = $this->svc(SchedulingRecallsService::class)->updateStatus(
-                            (int) ($body['recall_id'] ?? 0),
-                            (string) ($body['status'] ?? ''),
-                            isset($body['note']) ? (string) $body['note'] : null,
-                            $userId,
-                        );
-                        $facilityId = $this->resolveRequestFacilityId();
-                        $worklist = $this->svc(SchedulingRecallsService::class)->getWorklist(
-                            $facilityId,
-                            $this->parseOptionalPositiveInt($body['provider_id'] ?? null),
-                            (string) ($body['bucket'] ?? 'due'),
-                        );
-                        $this->respond(true, 'ok', ['status' => $result, 'worklist' => $worklist]);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.recalls.snooze':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $this->svc(SchedulingRecallsService::class)->snoozeRecall(
-                            (int) ($body['recall_id'] ?? 0),
-                            (int) ($body['days'] ?? 7),
-                            $userId,
-                            isset($body['note']) ? (string) $body['note'] : '',
-                        );
-                        $facilityId = $this->resolveRequestFacilityId();
-                        $worklist = $this->svc(SchedulingRecallsService::class)->getWorklist(
-                            $facilityId,
-                            $this->parseOptionalPositiveInt($body['provider_id'] ?? null),
-                            (string) ($body['bucket'] ?? 'due'),
-                            $this->parseOptionalPositiveInt($body['pid'] ?? null),
-                        );
-                        $this->respond(true, 'ok', $worklist);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'scheduling.recalls.send_reminder':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $result = $this->svc(SchedulingRecallsService::class)->sendRecallReminder(
-                            (int) ($body['recall_id'] ?? 0),
-                            $userId,
                         );
                         $this->respond(true, 'ok', $result);
                     } catch (\InvalidArgumentException $e) {
@@ -1487,6 +1151,7 @@ class AjaxController
             new AdminActionHandler($this),
             new ProfileActionHandler($this),
             new ReportsActionHandler($this),
+            new SchedulingActionHandler($this),
         ];
     }
 
@@ -1921,7 +1586,7 @@ class AjaxController
     /**
      * Treat missing, blank, or JS "undefined"/"null" query values as absent optional ints.
      */
-    private function parseOptionalPositiveInt(mixed $value): ?int
+    public function parseOptionalPositiveInt(mixed $value): ?int
     {
         if ($value === null) {
             return null;
