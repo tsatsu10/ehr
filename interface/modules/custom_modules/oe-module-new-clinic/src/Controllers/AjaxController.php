@@ -16,6 +16,7 @@ use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\AjaxActionHandlerInterface;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\AdminActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\CashierActionHandler;
+use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ClinicalDocActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ChartDepthActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\DoctorActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\LabActionHandler;
@@ -66,14 +67,7 @@ use OpenEMR\Modules\NewClinic\Services\PharmOpsWorklistService;
 use OpenEMR\Modules\NewClinic\Services\PaymentHistoryService;
 use OpenEMR\Modules\NewClinic\Services\ReportHubAccessService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocAccessService;
-use OpenEMR\Modules\NewClinic\Services\ClinicalDocCatalogService;
-use OpenEMR\Modules\NewClinic\Services\ClinicalDocFormOpenService;
-use OpenEMR\Modules\NewClinic\Services\ClinicalDocLbfWizardService;
-use OpenEMR\Modules\NewClinic\Services\ClinicalDocReferralHospitalLbfWizardService;
-use OpenEMR\Modules\NewClinic\Services\ClinicalDocVisitSummaryService;
-use OpenEMR\Modules\NewClinic\Services\ClinicAdminService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
-use OpenEMR\Modules\NewClinic\Services\EncounterNoteService;
 use OpenEMR\Modules\NewClinic\Services\PatientRegistrationService;
 use OpenEMR\Modules\NewClinic\Services\FacilityScopeService;
 use OpenEMR\Modules\NewClinic\Services\QuickAddService;
@@ -141,237 +135,6 @@ class AjaxController
             switch ($action) {
                 case 'health':
                     $this->respond(true, 'ok', ['module' => 'oe-module-new-clinic']);
-                    break;
-                case 'clinical_doc.visit_summary':
-                    $this->svc(ClinicalDocAccessService::class)->assertHubAccess();
-                    $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
-                    $lens = isset($_REQUEST['lens']) ? (string) $_REQUEST['lens'] : null;
-                    if ($lens === '') {
-                        $lens = null;
-                    }
-                    try {
-                        $summary = $this->svc(ClinicalDocVisitSummaryService::class)->getVisitSummary($visitId, $userId, $lens);
-                        $this->respond(true, 'ok', $summary);
-                    } catch (\RuntimeException $e) {
-                        $code = (int) ($e->getCode() ?: 400);
-                        $this->respond(false, $e->getMessage(), ['code' => $code === 409 ? 'no_encounter_on_visit' : 'error'], $code);
-                    }
-                    break;
-                case 'clinical_doc.catalog':
-                    $this->svc(ClinicalDocAccessService::class)->assertHubAccess();
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $lens = isset($_REQUEST['lens']) ? (string) $_REQUEST['lens'] : null;
-                    if ($lens === '') {
-                        $lens = null;
-                    }
-                    $this->respond(true, 'ok', $this->svc(ClinicalDocCatalogService::class)->getCatalog($lens, $facilityId));
-                    break;
-                case 'clinical_doc.sign_status':
-                    $this->svc(ClinicalDocAccessService::class)->assertHubAccess();
-                    $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
-                    try {
-                        $status = $this->svc(ClinicalDocVisitSummaryService::class)->getSignStatus($visitId);
-                        $this->respond(true, 'ok', $status);
-                    } catch (\RuntimeException $e) {
-                        $code = (int) ($e->getCode() ?: 400);
-                        $this->respond(false, $e->getMessage(), ['code' => $code === 409 ? 'no_encounter_on_visit' : 'error'], $code);
-                    }
-                    break;
-                case 'clinical_doc.open_form':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $result = $this->svc(ClinicalDocFormOpenService::class)->openForm($body, $userId);
-                        $this->respond(true, 'ok', $result);
-                    } catch (EncounterSessionMismatchException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'session_mismatch'], 409);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $code = (int) ($e->getCode() ?: 403);
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
-                    }
-                    break;
-                case 'encounter_note.get':
-                    $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
-                    if ($visitId <= 0) {
-                        $this->respond(false, 'visit_id required', [], 400);
-                    }
-                    try {
-                        $payload = $this->svc(EncounterNoteService::class)->get($visitId, $userId);
-                        $this->respond(true, 'ok', $payload);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $code = (int) ($e->getCode() ?: 403);
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
-                    }
-                    break;
-                case 'encounter_note.save':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $payload = $this->svc(EncounterNoteService::class)->save($body, $userId);
-                        $this->respond(true, 'Saved', $payload);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $code = (int) ($e->getCode() ?: 403);
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
-                    }
-                    break;
-                case 'encounter_note.prefill':
-                    $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
-                    if ($visitId <= 0) {
-                        $this->respond(false, 'visit_id required', [], 400);
-                    }
-                    try {
-                        $payload = $this->svc(EncounterNoteService::class)->prefill($visitId, $userId);
-                        $this->respond(true, 'ok', $payload);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $code = (int) ($e->getCode() ?: 403);
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
-                    }
-                    break;
-                case 'encounter_note.validate':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $payload = $this->svc(EncounterNoteService::class)->validate($body, $userId);
-                        $this->respond(true, 'ok', $payload);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $code = (int) ($e->getCode() ?: 403);
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
-                    }
-                    break;
-                case 'encounter_note.sign':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $payload = $this->svc(EncounterNoteService::class)->sign($body, $userId);
-                        $this->respond(true, 'Signed', $payload);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $code = (int) ($e->getCode() ?: 403);
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
-                    }
-                    break;
-                case 'encounter_note.unlock':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $payload = $this->svc(EncounterNoteService::class)->unlockForClinicalCorrection($body, $userId);
-                        $this->respond(true, 'Unlocked', $payload);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $code = (int) ($e->getCode() ?: 403);
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
-                    }
-                    break;
-                case 'clinical_doc.favorites':
-                    $this->svc(ClinicalDocAccessService::class)->assertHubAccess();
-                    $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
-                    if ($visitId <= 0) {
-                        $this->respond(false, 'visit_id required', [], 400);
-                    }
-                    try {
-                        $favorites = $this->svc(ClinicalDocVisitSummaryService::class)->getFavorites($visitId, $userId);
-                        $this->respond(true, 'ok', $favorites);
-                    } catch (\RuntimeException $e) {
-                        $code = (int) ($e->getCode() ?: 400);
-                        $this->respond(false, $e->getMessage(), ['code' => $code === 409 ? 'no_encounter_on_visit' : 'error'], $code);
-                    }
-                    break;
-                case 'clinical_doc.import_ghana_pack':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $this->requireSuperAdmin();
-                    $scope = strtolower(trim((string) ($body['scope'] ?? 'facility')));
-                    if ($scope !== 'global') {
-                        $scope = 'facility';
-                    }
-                    $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
-                    $setAsConsultNote = !empty($body['set_as_consult_note']);
-                    $payload = $this->svc(ClinicAdminService::class)->importGhanaOpdLbfPack(
-                        $scope,
-                        $userId,
-                        $setAsConsultNote,
-                        $requestedFacilityId > 0 ? $requestedFacilityId : null
-                    );
-                    $this->respond(true, 'Ghana OPD LBF pack imported', $payload);
-                    break;
-                case 'clinical_doc.import_referral_hospital_pack':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $this->requireSuperAdmin();
-                    $scope = strtolower(trim((string) ($body['scope'] ?? 'facility')));
-                    if ($scope !== 'global') {
-                        $scope = 'facility';
-                    }
-                    $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
-                    $setAsConsultNote = !empty($body['set_as_consult_note']);
-                    $payload = $this->svc(ClinicAdminService::class)->importReferralHospitalLbfPack(
-                        $scope,
-                        $userId,
-                        $setAsConsultNote,
-                        $requestedFacilityId > 0 ? $requestedFacilityId : null
-                    );
-                    $this->respond(true, 'Referral hospital LBF pack imported', $payload);
-                    break;
-                case 'clinical_doc.import_ancillary_pack':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $this->requireSuperAdmin();
-                    $scope = strtolower(trim((string) ($body['scope'] ?? 'facility')));
-                    if ($scope !== 'global') {
-                        $scope = 'facility';
-                    }
-                    $packKey = strtolower(trim((string) ($body['pack_key'] ?? '')));
-                    if ($packKey === '') {
-                        $this->respond(false, 'pack_key required', [], 400);
-                    }
-                    $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
-                    try {
-                        $payload = $this->svc(ClinicAdminService::class)->importAncillaryLbfPack(
-                            $scope,
-                            $userId,
-                            $packKey,
-                            $requestedFacilityId > 0 ? $requestedFacilityId : null
-                        );
-                        $this->respond(true, 'Ancillary LBF pack imported', $payload);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_pack'], 400);
-                    }
                     break;
                 case 'communications.hub_counts':
                     $authUser = (string) ($_SESSION['authUser'] ?? '');
@@ -1062,6 +825,7 @@ class AjaxController
             new TriageActionHandler($this),
             new DoctorActionHandler($this),
             new CashierActionHandler($this),
+            new ClinicalDocActionHandler($this),
             new LabActionHandler($this),
             new PharmacyActionHandler($this),
             new FrontDeskActionHandler($this),
