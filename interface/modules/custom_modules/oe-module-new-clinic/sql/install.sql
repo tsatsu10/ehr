@@ -1012,14 +1012,11 @@ CREATE TABLE IF NOT EXISTS `new_clinic_flowboard_lane_map` (
 ) ENGINE=InnoDB COMMENT='S1 admin apptstat → flow board lane mapping (§10.3)';
 #EndIf
 
-#IfMissingColumn new_clinic_recall_meta recall_type
-ALTER TABLE `new_clinic_recall_meta` ADD COLUMN `recall_type` VARCHAR(32) NOT NULL DEFAULT 'general' AFTER `status`;
-#EndIf
-
 #IfNotTable new_clinic_recall_meta
 CREATE TABLE IF NOT EXISTS `new_clinic_recall_meta` (
     `recall_id` INT NOT NULL COMMENT 'medex_recalls.r_ID',
     `status` VARCHAR(32) NOT NULL DEFAULT 'open',
+    `recall_type` VARCHAR(32) NOT NULL DEFAULT 'general',
     `produced_eid` INT UNSIGNED NULL,
     `outcome_note` TEXT NULL,
     `updated_by` INT NULL,
@@ -1028,6 +1025,10 @@ CREATE TABLE IF NOT EXISTS `new_clinic_recall_meta` (
     KEY `idx_status` (`status`),
     KEY `idx_produced_eid` (`produced_eid`)
 ) ENGINE=InnoDB COMMENT='S1 recall status and loop link (H1-safe extension)';
+#EndIf
+
+#IfMissingColumn new_clinic_recall_meta recall_type
+ALTER TABLE `new_clinic_recall_meta` ADD COLUMN `recall_type` VARCHAR(32) NOT NULL DEFAULT 'general' AFTER `status`;
 #EndIf
 
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_admin_hub
