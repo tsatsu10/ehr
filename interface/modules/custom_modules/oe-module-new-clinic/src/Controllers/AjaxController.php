@@ -17,6 +17,7 @@ use OpenEMR\Modules\NewClinic\Controllers\Ajax\AjaxActionHandlerInterface;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\AdminActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\CashierActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ClinicalDocActionHandler;
+use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\CommunicationsActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ChartDepthActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\DoctorActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\LabActionHandler;
@@ -37,8 +38,6 @@ use OpenEMR\Modules\NewClinic\Exceptions\UndispensedRxException;
 use OpenEMR\Modules\NewClinic\Exceptions\UnsignedEncounterException;
 use OpenEMR\Modules\NewClinic\Exceptions\VisitNotTakeableException;
 use OpenEMR\Modules\NewClinic\Services\AjaxActionPolicy;
-use OpenEMR\Modules\NewClinic\Services\CommunicationsHubService;
-use OpenEMR\Modules\NewClinic\Services\CommHubUserSettingsService;
 use OpenEMR\Modules\NewClinic\Services\CohortSavedFilterService;
 use OpenEMR\Modules\NewClinic\Services\PatientCohortSearchService;
 use OpenEMR\Modules\NewClinic\Services\RegistryAuditService;
@@ -135,148 +134,6 @@ class AjaxController
             switch ($action) {
                 case 'health':
                     $this->respond(true, 'ok', ['module' => 'oe-module-new-clinic']);
-                    break;
-                case 'communications.hub_counts':
-                    $authUser = (string) ($_SESSION['authUser'] ?? '');
-                    $counts = $this->svc(CommunicationsHubService::class)->hubCounts($authUser, $userId);
-                    $this->respond(true, 'ok', $counts);
-                    break;
-                case 'communications.messages_list':
-                    $authUser = (string) ($_SESSION['authUser'] ?? '');
-                    $list = $this->svc(CommunicationsHubService::class)->listMessages($authUser, [
-                        'activity' => $_REQUEST['activity'] ?? '1',
-                        'show_all' => $_REQUEST['show_all'] ?? '',
-                        'sortby' => $_REQUEST['sortby'] ?? 'pnotes.date',
-                        'sortorder' => $_REQUEST['sortorder'] ?? 'desc',
-                        'begin' => $_REQUEST['begin'] ?? 0,
-                        'limit' => $_REQUEST['limit'] ?? 25,
-                        'q' => $_REQUEST['q'] ?? '',
-                    ]);
-                    $this->respond(true, 'ok', $list);
-                    break;
-                case 'communications.message_detail':
-                    $noteId = (int) ($_REQUEST['id'] ?? 0);
-                    $authUser = (string) ($_SESSION['authUser'] ?? '');
-                    $detail = $this->svc(CommunicationsHubService::class)->getMessageDetail($noteId, $authUser);
-                    $this->respond(true, 'ok', $detail);
-                    break;
-                case 'communications.reminders_list':
-                    $days = (int) ($_REQUEST['days'] ?? 30);
-                    $list = $this->svc(CommunicationsHubService::class)->listReminders($userId, $days);
-                    $this->respond(true, 'ok', $list);
-                    break;
-                case 'communications.message_done':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $noteId = (int) ($body['noteid'] ?? $body['id'] ?? 0);
-                    $authUser = (string) ($_SESSION['authUser'] ?? '');
-                    $this->svc(CommunicationsHubService::class)->markMessageDone($noteId, $authUser);
-                    $this->respond(true, 'ok', ['id' => $noteId]);
-                    break;
-                case 'communications.message_status':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $noteId = (int) ($body['noteid'] ?? $body['id'] ?? 0);
-                    $messageStatus = trim((string) ($body['message_status'] ?? ''));
-                    $authUser = (string) ($_SESSION['authUser'] ?? '');
-                    $this->svc(CommunicationsHubService::class)->setMessageStatus($noteId, $messageStatus, $authUser);
-                    $this->respond(true, 'ok', ['id' => $noteId, 'message_status' => $messageStatus]);
-                    break;
-                case 'communications.assign_patient':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $noteId = (int) ($body['noteid'] ?? $body['id'] ?? 0);
-                    $pid = (int) ($body['pid'] ?? 0);
-                    $authUser = (string) ($_SESSION['authUser'] ?? '');
-                    $result = $this->svc(CommunicationsHubService::class)->assignMessagePatient($noteId, $pid, $authUser);
-                    $this->respond(true, 'ok', $result);
-                    break;
-                case 'communications.message_delete':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $noteId = (int) ($body['noteid'] ?? $body['id'] ?? 0);
-                    $authUser = (string) ($_SESSION['authUser'] ?? '');
-                    $this->svc(CommunicationsHubService::class)->deleteMessage($noteId, $authUser);
-                    $this->respond(true, 'ok', ['id' => $noteId]);
-                    break;
-                case 'communications.reminder_done':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $reminderId = (int) ($body['dr_id'] ?? $body['id'] ?? 0);
-                    $this->svc(CommunicationsHubService::class)->markReminderProcessed($reminderId, $userId);
-                    $this->respond(true, 'ok', ['id' => $reminderId]);
-                    break;
-                case 'communications.compose_options':
-                    $authUser = (string) ($_SESSION['authUser'] ?? '');
-                    $replyNoteId = (int) ($_REQUEST['reply_note_id'] ?? 0);
-                    $options = $this->svc(CommunicationsHubService::class)->getComposeOptions(
-                        $replyNoteId > 0 ? $replyNoteId : null,
-                        $authUser
-                    );
-                    $this->respond(true, 'ok', $options);
-                    break;
-                case 'communications.message_send':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $authUser = (string) ($_SESSION['authUser'] ?? '');
-                    $result = $this->svc(CommunicationsHubService::class)->sendMessage($body, $authUser, $userId);
-                    $this->respond(true, 'ok', $result);
-                    break;
-                case 'communications.reminder_create_options':
-                    $forwardReminderId = (int) ($_REQUEST['forward_reminder_id'] ?? 0);
-                    $options = $this->svc(CommunicationsHubService::class)->getReminderCreateOptions(
-                        $userId,
-                        $forwardReminderId > 0 ? $forwardReminderId : null
-                    );
-                    $this->respond(true, 'ok', $options);
-                    break;
-                case 'communications.reminder_create':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $result = $this->svc(CommunicationsHubService::class)->createReminder($body, $userId);
-                    $this->respond(true, 'ok', $result);
-                    break;
-                case 'communications.reminder_log':
-                    $filters = [
-                        'sent_by' => $_REQUEST['sent_by'] ?? null,
-                        'sent_to' => $_REQUEST['sent_to'] ?? null,
-                        'processed' => $_REQUEST['processed'] ?? null,
-                        'date_from' => $_REQUEST['date_from'] ?? null,
-                        'date_to' => $_REQUEST['date_to'] ?? null,
-                    ];
-                    $log = $this->svc(CommunicationsHubService::class)->listReminderLog($userId, $filters);
-                    $this->respond(true, 'ok', $log);
-                    break;
-                case 'communications.save_preferences':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $canViewAll = AclMain::aclCheckCore('admin', 'super');
-                    $prefs = $this->svc(CommHubUserSettingsService::class)->savePreferences($body, $canViewAll);
-                    $this->respond(true, 'ok', $prefs);
                     break;
                 case 'cohort.presets':
                     $this->svc(PatientCohortSearchService::class)->assertRegistryAccess();
@@ -826,6 +683,7 @@ class AjaxController
             new DoctorActionHandler($this),
             new CashierActionHandler($this),
             new ClinicalDocActionHandler($this),
+            new CommunicationsActionHandler($this),
             new LabActionHandler($this),
             new PharmacyActionHandler($this),
             new FrontDeskActionHandler($this),
