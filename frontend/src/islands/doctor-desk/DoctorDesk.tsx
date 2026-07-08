@@ -6,24 +6,20 @@
  * doctor.set_supervisor, doctor.lab_panel_place
  */
 
-import { useState, useCallback, useEffect, useRef, useMemo, type MutableRefObject } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { oeFetch, OeFetchError } from '@core/oeFetch';
 import { resolveActionConflict, type DeskInterrupt } from '@core/deskConflict';
-import { useInterval } from '@core/useInterval';
-import { useQueueVisibilityRefresh } from '@core/useQueueVisibilityRefresh';
-import { usePageHeadingToolbar } from '@core/usePageHeadingToolbar';
 import { getDeskActiveVisitId } from '@core/deskSessionStorage';
 import { useSharedDeviceSession } from '@core/useSharedDeviceSession';
 import type {
   DoctorConsultPayload,
   DoctorDeskProps,
-  DoctorDoneTodayRow,
   DoctorQueueCard,
   DoctorQueueData,
   DoctorReopenableRow,
   DoctorSupervisorMeta,
-  LabPanelPlaceResult,
   FormularyRxPlaceResult,
+  LabPanelPlaceResult,
   PharmacyPrescriptionLine,
   RoutingPreview,
 } from '@core/types';
@@ -38,91 +34,24 @@ import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import { NativeSelect } from '@components/ui/native-select';
 import { showDeskNotice, showDeskToast } from '@components/deskToast';
-import { RoutingModal } from './RoutingModal';
-import { RoutingOverrideModal } from './RoutingOverrideModal';
-import { HardAssignOverrideModal } from './HardAssignOverrideModal';
-import { ReopenModal } from './ReopenModal';
-import { LabPanelModal, labPanelPlaceNotice, labReturnNotice } from './LabPanelModal';
-import { FormularyRxModal, formularyRxPlaceNotice } from './FormularyRxModal';
-import { DocFavoritesDrawer } from './DocFavoritesDrawer';
+import { labPanelPlaceNotice, labReturnNotice } from './LabPanelModal';
+import { formularyRxPlaceNotice } from './FormularyRxModal';
 import { rxReturnNotice } from './doctorDeskUtils';
 import {
   buildLabResultsReadyNotice,
-  scanQueueCardsForLabResultsToast,
-  seedResultsReadyState,
 } from './labResultsToast';
-import { pickDoctorReadyNotice } from './doctorReadyToast';
 import { printRxWithNotice } from '../pharm-ops/pharmOpsPrintRx';
-import { RxAllergyOverrideModal } from '@components/RxAllergyOverrideModal';
 import { useDoctorShortcutNav } from './useDoctorShortcutNav';
 import { DOCTOR_LEFT_VIA_KEY } from './doctorShortcutNav';
 import { setDoctorDeskCurrencyFormat } from './doctorDeskUtils';
 import type { DoctorSignMeta } from './DoctorPatientBanner';
 import { DoctorDeskLayout } from './doctorDeskUi';
+import { applyConsultPayload } from './doctorDeskPayload';
+import { useNarrowDoctorDesk } from './useNarrowDoctorDesk';
+import { useDoctorDeskQueue } from './useDoctorDeskQueue';
+import { DoctorDeskModals } from './DoctorDeskModals';
 
 const STORAGE_KEY = 'doctor_desk_active_visit_id';
-const NARROW_DESK_QUERY = '(max-width: 1023px)';
-
-function useNarrowDoctorDesk(): boolean {
-  const [narrow, setNarrow] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia(NARROW_DESK_QUERY).matches,
-  );
-
-  useEffect(() => {
-    const mq = window.matchMedia(NARROW_DESK_QUERY);
-    const update = () => setNarrow(mq.matches);
-    mq.addEventListener('change', update);
-    return () => mq.removeEventListener('change', update);
-  }, []);
-
-  return narrow;
-}
-
-function payloadToSignMeta(data: DoctorConsultPayload): DoctorSignMeta {
-  return {
-    encounter_signed: !!data.encounter_signed,
-    require_esign_before_complete_consult: !!data.require_esign_before_complete_consult,
-    encounter_url: data.encounter_url,
-    routing_chips: data.routing_chips,
-    supervisor_id: data.supervisor_id,
-    supervisor_display_name: data.supervisor_display_name,
-    supervisor_from_profile: data.supervisor_from_profile,
-    documentation_status: data.documentation_status ?? null,
-  };
-}
-
-function applyConsultPayload(
-  data: DoctorConsultPayload,
-  setActiveVisit: (v: DoctorConsultPayload['visit']) => void,
-  setActivePreview: (p: DoctorConsultPayload['preview']) => void,
-  setRoutingPreview: (r: RoutingPreview | null) => void,
-  setSignMeta: (s: DoctorSignMeta) => void,
-  setActiveVisitId: (id: number) => void,
-  setPharmOpsConsult: (value: {
-    pharm_ops_enabled?: boolean;
-    rx_print_enabled?: boolean;
-    can_print_rx?: boolean;
-    prescriptions?: PharmacyPrescriptionLine[];
-    rx_list_url?: string;
-  }) => void,
-  activeVisitRef?: MutableRefObject<DoctorConsultPayload['visit'] | null>,
-) {
-  setActiveVisit(data.visit);
-  if (activeVisitRef) {
-    activeVisitRef.current = data.visit;
-  }
-  setActivePreview(data.preview);
-  setRoutingPreview(data.routing_preview ?? null);
-  setSignMeta(payloadToSignMeta(data));
-  setActiveVisitId(data.visit.id);
-  setPharmOpsConsult({
-    pharm_ops_enabled: data.pharm_ops_enabled,
-    rx_print_enabled: data.rx_print_enabled,
-    can_print_rx: data.can_print_rx,
-    prescriptions: data.prescriptions,
-    rx_list_url: data.rx_list_url,
-  });
-}
 
 export function DoctorDesk({
   ajaxUrl,
@@ -149,43 +78,17 @@ export function DoctorDesk({
       });
     }
   }, [currencyFormat]);
+
   const [scope, setScope] = useState<'me' | 'all'>(multiDoctorFilters ? 'me' : 'all');
   const [mobileQueueOpen, setMobileQueueOpen] = useState(false);
   const narrowDesk = useNarrowDoctorDesk();
-  const [cards, setCards] = useState<DoctorQueueCard[]>([]);
-  const [counts, setCounts] = useState<DoctorQueueData['counts'] | null>(null);
-  const [visitDate, setVisitDate] = useState<string | null>(null);
-  const [doneToday, setDoneToday] = useState<DoctorDoneTodayRow[]>([]);
-  const [reopenableToday, setReopenableToday] = useState<DoctorReopenableRow[]>([]);
-  const [canReopenConsult, setCanReopenConsult] = useState(false);
-  const [hasActiveConsult, setHasActiveConsult] = useState(false);
-  const [queueLoading, setQueueLoading] = useState(true);
-  const [queueError, setQueueError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [queueRefreshToken, setQueueRefreshToken] = useState(0);
-
-  const roster = useDoctorRoster({
-    ajaxUrl,
-    csrfToken,
-    facilityId,
-    visitDate,
-    refreshToken: queueRefreshToken,
-    enabled: doctorRosterEnabled,
-  });
-
-  const teamRosterExtra = doctorRosterEnabled ? (
-    <DoctorTeamRoster
-      doctors={roster.doctors}
-      myUserId={roster.myUserId}
-      loading={roster.loading}
-    />
-  ) : null;
 
   const [mode, setMode] = useState<ActiveMode>('idle');
   const modeRef = useRef(mode);
   useEffect(() => {
     modeRef.current = mode;
   }, [mode]);
+
   const [activeVisit, setActiveVisit] = useState<DoctorConsultPayload['visit'] | null>(null);
   const [activePreview, setActivePreview] = useState<DoctorConsultPayload['preview'] | null>(null);
   const [routingPreview, setRoutingPreview] = useState<RoutingPreview | null>(null);
@@ -207,15 +110,7 @@ export function DoctorDesk({
   const [overrideCard, setOverrideCard] = useState<DoctorQueueCard | null>(null);
   const [overrideSubmitting, setOverrideSubmitting] = useState(false);
   const [hardAssignOverrideCard, setHardAssignOverrideCard] = useState<DoctorQueueCard | null>(null);
-  const [myUserId, setMyUserId] = useState(0);
-  const [requireOverrideReason, setRequireOverrideReason] = useState(false);
-  const [advisoryEnabled, setAdvisoryEnabled] = useState(advisoryRoutingEnabled);
-  const [canTakeAssignedOverride, setCanTakeAssignedOverride] = useState(false);
-  const [, setDoctorReadyNotifyEnabled] = useState(false);
 
-  const queueSeq = useRef(0);
-  const resultsReadyRef = useRef<Record<number, boolean>>({});
-  const resultsReadyBaselinedRef = useRef(false);
   const activeVisitRef = useRef(activeVisit);
   useEffect(() => {
     activeVisitRef.current = activeVisit;
@@ -231,15 +126,6 @@ export function DoctorDesk({
     [facilityId],
   );
 
-  const shortcutNav = useDoctorShortcutNav({
-    ajaxUrl,
-    csrfToken,
-    canRxAllergyOverride,
-    preview: activePreview,
-    visit: activeVisit,
-    onError: (message) => showDeskToast(message, 'danger'),
-  });
-
   const resetActivePane = useCallback(() => {
     setMode('idle');
     activeVisitRef.current = null;
@@ -252,6 +138,8 @@ export function DoctorDesk({
     setLabPanelOpen(false);
     setFormularyRxOpen(false);
   }, []);
+
+  const loadActiveConsultRef = useRef<(visitId: number) => Promise<DoctorConsultPayload | null>>(async () => null);
 
   const sharedSession = useSharedDeviceSession({
     enabled: sharedDeviceWarning,
@@ -266,6 +154,56 @@ export function DoctorDesk({
       const storedId = getDeskActiveVisitId(STORAGE_KEY);
       if (storedId > 0) void loadActiveConsultRef.current(storedId);
     },
+  });
+
+  const queue = useDoctorDeskQueue({
+    ajaxUrl,
+    csrfToken,
+    scope,
+    facilityParams,
+    advisoryRoutingEnabled,
+    labResultsToastEnabled,
+    pollMs,
+    resetActivePane,
+    clearActiveVisitId: sharedSession.clearActiveVisitId,
+    setActiveVisit,
+    modeRef,
+    activeVisitRef,
+    modalOpenRef,
+    loadActiveConsultRef,
+  });
+
+  const {
+    resultsReadyRef,
+    resultsReadyBaselinedRef,
+    fetchQueue,
+    fetchQueueRef,
+  } = queue;
+
+  const roster = useDoctorRoster({
+    ajaxUrl,
+    csrfToken,
+    facilityId,
+    visitDate: queue.visitDate,
+    refreshToken: queue.queueRefreshToken,
+    enabled: doctorRosterEnabled,
+  });
+
+  const teamRosterExtra = doctorRosterEnabled ? (
+    <DoctorTeamRoster
+      doctors={roster.doctors}
+      myUserId={roster.myUserId}
+      loading={roster.loading}
+    />
+  ) : null;
+
+  const shortcutNav = useDoctorShortcutNav({
+    ajaxUrl,
+    csrfToken,
+    canRxAllergyOverride,
+    preview: activePreview,
+    visit: activeVisit,
+    onError: (message) => showDeskToast(message, 'danger'),
   });
 
   const loadActiveConsult = useCallback(async (visitId: number): Promise<DoctorConsultPayload | null> => {
@@ -320,158 +258,17 @@ export function DoctorDesk({
         sharedSession.clearActiveVisitId();
         return null;
       }
-      // Stale stored visit (e.g. consult completed elsewhere) — stop retrying on every mount.
       if (err instanceof OeFetchError && err.status === 400) {
         sharedSession.clearActiveVisitId();
       }
       setMode('error');
       return null;
     }
-  }, [ajaxUrl, csrfToken, resetActivePane, sharedSession, labResultsToastEnabled]);
+  }, [ajaxUrl, csrfToken, resetActivePane, sharedSession, labResultsToastEnabled, resultsReadyRef, resultsReadyBaselinedRef]);
 
-  const loadActiveConsultRef = useRef(loadActiveConsult);
   useEffect(() => {
     loadActiveConsultRef.current = loadActiveConsult;
   }, [loadActiveConsult]);
-
-  const fetchQueue = useCallback(async () => {
-    queueSeq.current += 1;
-    const token = queueSeq.current;
-
-    try {
-      const data = await oeFetch<DoctorQueueData>('doctor.queue', {
-        ajaxUrl,
-        csrfToken,
-        params: { scope, ...(facilityParams ?? {}) },
-      });
-
-      if (token !== queueSeq.current) return;
-
-      const merged = [
-        ...(data.visits ?? []),
-        ...(data.claim_lost_cards ?? []).filter((c) => c.claim_lost),
-      ];
-      setCards(merged);
-      setCounts(data.counts ?? null);
-      setVisitDate(data.visit_date ?? null);
-      setDoneToday(data.done_today ?? []);
-      setReopenableToday(data.reopenable_today ?? []);
-      setCanReopenConsult(!!data.can_reopen_consult);
-      setHasActiveConsult(!!data.has_active_consult);
-      setMyUserId(data.my_user_id ?? 0);
-      setRequireOverrideReason(!!data.require_override_reason);
-      setAdvisoryEnabled(data.advisory_routing_enabled ?? advisoryRoutingEnabled);
-      setCanTakeAssignedOverride(!!data.can_take_assigned_override);
-      setDoctorReadyNotifyEnabled(!!data.doctor_ready_notify_enabled);
-      const readyNotice = pickDoctorReadyNotice(
-        data.ready_notify_pending ?? [],
-        !!data.doctor_ready_notify_enabled,
-      );
-      if (readyNotice) {
-        showDeskNotice(readyNotice);
-      }
-      setQueueError(null);
-      setLastUpdated(new Date());
-      setQueueRefreshToken((token) => token + 1);
-
-      const activeConsult = data.active_consult;
-
-      if (!resultsReadyBaselinedRef.current) {
-        resultsReadyRef.current = seedResultsReadyState(
-          merged,
-          activeConsult,
-          resultsReadyRef.current,
-        );
-        resultsReadyBaselinedRef.current = true;
-      } else {
-        let toastScan = scanQueueCardsForLabResultsToast(
-          merged,
-          resultsReadyRef.current,
-          labResultsToastEnabled,
-        );
-        resultsReadyRef.current = toastScan.nextState;
-
-        if (!toastScan.notice && activeConsult) {
-          const isReady = !!activeConsult.routing_chips?.results_ready;
-          const activeNotice = buildLabResultsReadyNotice(
-            activeConsult.id,
-            activeConsult.display_name,
-            activeConsult.queue_number,
-            resultsReadyRef.current[activeConsult.id] ?? false,
-            isReady,
-            labResultsToastEnabled,
-          );
-          resultsReadyRef.current[activeConsult.id] = isReady;
-          if (activeNotice) {
-            toastScan = { ...toastScan, notice: activeNotice };
-          }
-        }
-
-        if (toastScan.notice) {
-          showDeskNotice(toastScan.notice);
-        }
-      }
-
-      const current = activeVisitRef.current;
-
-      if (data.active_consult && !current && modeRef.current !== 'consult' && modeRef.current !== 'loading') {
-        void loadActiveConsultRef.current(data.active_consult.id);
-      }
-
-      if (current) {
-        const activeId = current.id;
-        const queueMatch = merged.find((c) => c.id === activeId);
-        if (queueMatch?.row_version != null) {
-          setActiveVisit((v) => (v ? { ...v, row_version: queueMatch.row_version } : v));
-        } else if (data.active_consult?.id === activeId && data.active_consult.row_version != null) {
-          setActiveVisit((v) =>
-            v ? { ...v, row_version: data.active_consult!.row_version } : v
-          );
-        }
-
-        const onQueue = !!queueMatch;
-        const stillMine = data.active_consult?.id === activeId;
-        const consultLocallyActive = current.state === 'with_doctor';
-        if (!onQueue && !stillMine && !consultLocallyActive && !modalOpenRef.current) {
-          resetActivePane();
-          sharedSession.clearActiveVisitId();
-          setHasActiveConsult(!!data.has_active_consult);
-        }
-      }
-    } catch (err) {
-      if (token !== queueSeq.current) return;
-      setQueueError(err instanceof Error ? err.message : 'Queue load failed');
-    } finally {
-      if (token === queueSeq.current) setQueueLoading(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ajaxUrl, csrfToken, scope, facilityId, labResultsToastEnabled]);
-
-  const fetchQueueRef = useRef(fetchQueue);
-  useEffect(() => {
-    fetchQueueRef.current = fetchQueue;
-  }, [fetchQueue]);
-
-  useEffect(() => {
-    void fetchQueue();
-  }, [fetchQueue]);
-
-  useQueueVisibilityRefresh(() => {
-    void fetchQueue();
-  });
-
-  useInterval(() => {
-    if (!document.hidden) void fetchQueue();
-  }, pollMs);
-
-  usePageHeadingToolbar({
-    dateElementId: 'nc-doctor-date',
-    updatedElementId: 'nc-doctor-updated',
-    refreshButtonId: 'nc-doctor-refresh',
-    visitDate,
-    lastUpdated,
-    onRefresh: fetchQueue,
-  });
 
   useEffect(() => {
     const storedId = getDeskActiveVisitId(STORAGE_KEY);
@@ -510,10 +307,10 @@ export function DoctorDesk({
 
     window.addEventListener('pageshow', onPageShow);
     return () => window.removeEventListener('pageshow', onPageShow);
-  }, []);
+  }, [fetchQueueRef]);
 
   const executeTakePatient = useCallback(async (card: DoctorQueueCard, overrideReason?: string) => {
-    if (sharedSession.blocked || hasActiveConsult) return;
+    if (sharedSession.blocked || queue.hasActiveConsult) return;
 
     setMode('loading');
     setInterrupt(null);
@@ -574,7 +371,7 @@ export function DoctorDesk({
     csrfToken,
     facilityParams,
     fetchQueue,
-    hasActiveConsult,
+    queue.hasActiveConsult,
     resetActivePane,
     scope,
     sharedSession,
@@ -583,9 +380,9 @@ export function DoctorDesk({
   const handleTakePatient = useCallback((card: DoctorQueueCard) => {
     const hardAssignedId = card.hard_assigned_provider_id ?? 0;
     const needsHardOverride = hardAssignedId > 0
-      && myUserId > 0
-      && hardAssignedId !== myUserId
-      && canTakeAssignedOverride;
+      && queue.myUserId > 0
+      && hardAssignedId !== queue.myUserId
+      && queue.canTakeAssignedOverride;
 
     if (needsHardOverride) {
       setHardAssignOverrideCard(card);
@@ -593,11 +390,11 @@ export function DoctorDesk({
     }
 
     const suggestedId = card.routing_suggested_provider_id ?? 0;
-    const needsRoutingOverride = advisoryEnabled
-      && requireOverrideReason
+    const needsRoutingOverride = queue.advisoryEnabled
+      && queue.requireOverrideReason
       && suggestedId > 0
-      && myUserId > 0
-      && suggestedId !== myUserId;
+      && queue.myUserId > 0
+      && suggestedId !== queue.myUserId;
 
     if (needsRoutingOverride) {
       setOverrideCard(card);
@@ -605,13 +402,7 @@ export function DoctorDesk({
     }
 
     void executeTakePatient(card);
-  }, [
-    advisoryEnabled,
-    canTakeAssignedOverride,
-    executeTakePatient,
-    myUserId,
-    requireOverrideReason,
-  ]);
+  }, [executeTakePatient, queue]);
 
   const handleInterruptDismiss = useCallback(() => {
     setInterrupt(null);
@@ -756,15 +547,15 @@ export function DoctorDesk({
         items={[
           {
             label: 'Waiting',
-            value: counts?.waiting ?? 0,
-            href: (counts?.waiting ?? 0) > 0 ? visitBoardUrl : undefined,
+            value: queue.counts?.waiting ?? 0,
+            href: (queue.counts?.waiting ?? 0) > 0 ? visitBoardUrl : undefined,
           },
-          { label: 'Done today', value: counts?.done_today ?? 0 },
-          ...(canReopenConsult
-            ? [{ label: 'Reopenable', value: counts?.reopenable_today ?? 0 }]
+          { label: 'Done today', value: queue.counts?.done_today ?? 0 },
+          ...(queue.canReopenConsult
+            ? [{ label: 'Reopenable', value: queue.counts?.reopenable_today ?? 0 }]
             : []),
         ]}
-        loading={queueLoading}
+        loading={queue.queueLoading}
         trailing={statusBarTrailing}
       />
 
@@ -797,13 +588,13 @@ export function DoctorDesk({
           )}
           queue={(
             <DoctorQueue
-              cards={cards}
-              doneToday={doneToday}
-              reopenableToday={reopenableToday}
-              canReopenConsult={canReopenConsult}
-              hasActiveConsult={hasActiveConsult}
-              loading={queueLoading}
-              error={queueError}
+              cards={queue.cards}
+              doneToday={queue.doneToday ?? []}
+              reopenableToday={queue.reopenableToday ?? []}
+              canReopenConsult={queue.canReopenConsult}
+              hasActiveConsult={queue.hasActiveConsult}
+              loading={queue.queueLoading}
+              error={queue.queueError}
               queueHeaderExtra={teamRosterExtra}
               onTakePatient={(card) => void handleTakePatient(card)}
               onReopenClick={setReopenTarget}
@@ -812,24 +603,24 @@ export function DoctorDesk({
         />
       </div>
 
-      {narrowDesk && !hasActiveConsult && (
+      {narrowDesk && !queue.hasActiveConsult && (
         <>
           <DoctorMobileQueueBar
-            waitingCount={counts?.waiting ?? cards.length}
-            hasActiveConsult={hasActiveConsult}
+            waitingCount={queue.counts?.waiting ?? queue.cards.length}
+            hasActiveConsult={queue.hasActiveConsult}
             onOpen={() => setMobileQueueOpen(true)}
           />
           <DoctorMobileQueueSheet
             open={mobileQueueOpen}
             onClose={() => setMobileQueueOpen(false)}
-            waitingCount={counts?.waiting ?? cards.length}
-            cards={cards}
-            doneToday={doneToday}
-            reopenableToday={reopenableToday}
-            canReopenConsult={canReopenConsult}
-            hasActiveConsult={hasActiveConsult}
-            loading={queueLoading}
-            error={queueError}
+            waitingCount={queue.counts?.waiting ?? queue.cards.length}
+            cards={queue.cards}
+            doneToday={queue.doneToday ?? []}
+            reopenableToday={queue.reopenableToday ?? []}
+            canReopenConsult={queue.canReopenConsult}
+            hasActiveConsult={queue.hasActiveConsult}
+            loading={queue.queueLoading}
+            error={queue.queueError}
             onTakePatient={(card) => void handleTakePatient(card)}
             onReopenClick={setReopenTarget}
             queueHeaderExtra={teamRosterExtra}
@@ -837,42 +628,36 @@ export function DoctorDesk({
         </>
       )}
 
-      <RoutingModal
-        open={routingOpen}
-        visit={activeVisit}
-        preview={activePreview}
-        routingPreview={routingPreview}
+      <DoctorDeskModals
         ajaxUrl={ajaxUrl}
         csrfToken={csrfToken}
         facilityId={facilityId}
         blocked={sharedSession.blocked}
-        onClose={() => setRoutingOpen(false)}
-        onCompleted={handleRoutingCompleted}
-      />
-
-      <ReopenModal
-        open={reopenTarget !== null}
-        target={reopenTarget}
-        ajaxUrl={ajaxUrl}
-        csrfToken={csrfToken}
-        facilityId={facilityId}
-        blocked={sharedSession.blocked}
-        onClose={() => setReopenTarget(null)}
+        activeVisit={activeVisit}
+        activePreview={activePreview}
+        routingPreview={routingPreview ?? null}
+        routingOpen={routingOpen}
+        labPanelOpen={labPanelOpen}
+        formularyRxOpen={formularyRxOpen}
+        docFavoritesOpen={docFavoritesOpen}
+        reopenTarget={reopenTarget}
+        overrideCard={overrideCard}
+        overrideSubmitting={overrideSubmitting}
+        hardAssignOverrideCard={hardAssignOverrideCard}
+        shortcutNav={shortcutNav}
+        onRoutingClose={() => setRoutingOpen(false)}
+        onRoutingCompleted={handleRoutingCompleted}
+        onReopenClose={() => setReopenTarget(null)}
         onReopened={handleReopened}
-        onConflict={(msg) => {
+        onReopenConflict={(msg) => {
           setInterrupt({ type: 'generic', message: msg });
           resetActivePane();
           void fetchQueue();
         }}
-      />
-
-      <RoutingOverrideModal
-        card={overrideCard}
-        submitting={overrideSubmitting}
-        onClose={() => {
+        onOverrideClose={() => {
           if (!overrideSubmitting) setOverrideCard(null);
         }}
-        onConfirm={(reason) => {
+        onOverrideConfirm={(reason) => {
           if (!overrideCard) return;
           setOverrideSubmitting(true);
           void executeTakePatient(overrideCard, reason).finally(() => {
@@ -880,15 +665,10 @@ export function DoctorDesk({
             setOverrideCard(null);
           });
         }}
-      />
-
-      <HardAssignOverrideModal
-        card={hardAssignOverrideCard}
-        submitting={overrideSubmitting}
-        onClose={() => {
+        onHardAssignClose={() => {
           if (!overrideSubmitting) setHardAssignOverrideCard(null);
         }}
-        onConfirm={(reason) => {
+        onHardAssignConfirm={(reason) => {
           if (!hardAssignOverrideCard) return;
           setOverrideSubmitting(true);
           void executeTakePatient(hardAssignOverrideCard, reason).finally(() => {
@@ -896,60 +676,24 @@ export function DoctorDesk({
             setHardAssignOverrideCard(null);
           });
         }}
-      />
-
-      <LabPanelModal
-        open={labPanelOpen}
-        visit={activeVisit}
-        ajaxUrl={ajaxUrl}
-        csrfToken={csrfToken}
-        facilityId={facilityId}
-        blocked={sharedSession.blocked}
-        onClose={() => setLabPanelOpen(false)}
-        onPlaced={handleLabPlaced}
-        onFullLabForm={() => {
+        onLabPanelClose={() => setLabPanelOpen(false)}
+        onLabPlaced={handleLabPlaced}
+        onLabFullForm={() => {
           setLabPanelOpen(false);
           if (activeVisit) {
             void shortcutNav.runShortcut('lab');
           }
         }}
-      />
-
-      <FormularyRxModal
-        open={formularyRxOpen}
-        visit={activeVisit}
-        ajaxUrl={ajaxUrl}
-        csrfToken={csrfToken}
-        facilityId={facilityId}
-        blocked={sharedSession.blocked}
-        onClose={() => setFormularyRxOpen(false)}
-        onPlaced={handleFormularyRxPlaced}
-        onFullRxForm={() => {
+        onFormularyRxClose={() => setFormularyRxOpen(false)}
+        onFormularyRxPlaced={handleFormularyRxPlaced}
+        onFormularyRxFullForm={() => {
           setFormularyRxOpen(false);
           if (activeVisit) {
             void shortcutNav.runShortcut('rx');
           }
         }}
-      />
-
-      <DocFavoritesDrawer
-        open={docFavoritesOpen}
-        visit={activeVisit}
-        ajaxUrl={ajaxUrl}
-        csrfToken={csrfToken}
-        blocked={sharedSession.blocked}
-        onClose={() => setDocFavoritesOpen(false)}
-        onError={(msg) => showDeskToast(msg, 'danger')}
-      />
-
-      <RxAllergyOverrideModal
-        open={shortcutNav.rxOverrideOpen}
-        preview={shortcutNav.rxOverridePreview}
-        visit={shortcutNav.rxOverrideVisit}
-        submitting={shortcutNav.rxOverrideSubmitting}
-        error={shortcutNav.rxOverrideError}
-        onClose={shortcutNav.closeRxOverride}
-        onConfirm={(reason) => { void shortcutNav.confirmRxOverride(reason); }}
+        onDocFavoritesClose={() => setDocFavoritesOpen(false)}
+        onDocFavoritesError={(msg) => showDeskToast(msg, 'danger')}
       />
     </div>
   );

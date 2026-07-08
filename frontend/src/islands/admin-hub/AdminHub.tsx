@@ -9,7 +9,6 @@ import {
   SelectValue,
 } from '@components/ui/select';
 import { oeFetch } from '@core/oeFetch';
-import { ConfirmModal } from '@components/ConfirmModal';
 import { SegmentedControl } from '@components/SegmentedControl';
 import { collectAdminSettings } from './adminFieldDefs';
 import { applyAdminSettingCoupling } from './adminSettingCoupling';
@@ -45,36 +44,21 @@ import { ADMIN_TABS } from './adminTypes';
 import { initialAdminTab, localDateString } from './adminUtils';
 import { FeeModal } from './modals/FeeModal';
 import { VisitTypeModal } from './modals/VisitTypeModal';
-import { ClinicTab } from './tabs/ClinicTab';
-import { CompletionTab } from './tabs/CompletionTab';
-import { FeesTab } from './tabs/FeesTab';
-import { FormsTab } from './tabs/FormsTab';
-import { SystemTab } from './tabs/SystemTab';
-import { QueueRolesTab } from './tabs/QueueRolesTab';
-import { PeopleAccessTab } from './tabs/PeopleAccessTab';
-import { VisitTypesTab } from './tabs/VisitTypesTab';
+import { AdminHubConfirmModal } from './AdminHubConfirmModal';
+import { AdminHubTabPanels } from './AdminHubTabPanels';
+import type { AdminConfirm } from './adminHubConfirm';
 import { useAdminPageHeading } from './useAdminPageHeading';
 import {
-  AdminEmptyState,
   AdminLoadingState,
   AdminMetricChip,
   AdminScopeBar,
   AdminShell,
   AdminStickyTabs,
-  AdminTabPanel,
 } from './adminUi';
 
 function isAdminTabId(value: string): value is AdminTabId {
   return ADMIN_TABS.some((tab) => tab.id === value);
 }
-
-type AdminConfirm =
-  | { type: 'scope_switch'; nextScope: AdminScope }
-  | { type: 'archive_visit_type'; row: VisitTypeRow }
-  | { type: 'archive_fee'; row: FeeScheduleRow }
-  | { type: 'grant_roles' }
-  | { type: 'cash_profile' }
-  | { type: 'catalog_enable'; item: FormsCatalogItem };
 
 export function AdminHub({
   ajaxUrl,
@@ -1011,148 +995,81 @@ export function AdminHub({
         <AdminLoadingState />
       ) : (
         <>
-          <AdminTabPanel tabId="queue" active={activeTab === 'queue'}>
-            <QueueRolesTab
-                ajaxUrl={ajaxUrl}
-                csrfToken={csrfToken}
-                facilityId={facilityId}
-                settings={settings}
-                ghanaLbfPack={ghanaLbfPack}
-                ghanaLbfImporting={ghanaLbfImporting}
-                referralHospitalLbfPack={referralHospitalLbfPack}
-                referralHospitalLbfImporting={referralHospitalLbfImporting}
-                ancillaryLbfPacks={ancillaryLbfPacks}
-                ancillaryLbfImporting={ancillaryLbfImporting}
-                onFieldChange={handleFieldChange}
-                onImportGhanaLbfPack={(setAsConsultNote) => { void importGhanaLbfPack(setAsConsultNote); }}
-                onImportReferralHospitalLbfPack={(setAsConsultNote) => { void importReferralHospitalLbfPack(setAsConsultNote); }}
-                onImportAncillaryLbfPack={(packKey) => { void importAncillaryLbfPack(packKey); }}
-            />
-          </AdminTabPanel>
-
-          <AdminTabPanel tabId="people" active={activeTab === 'people'}>
-            <PeopleAccessTab
-              webroot={webroot}
-              ajaxUrl={ajaxUrl}
-              csrfToken={csrfToken}
-              facilityId={facilityId > 0 ? facilityId : clinicFacilityId}
-              roleGroups={roles.role_groups ?? []}
-              sensitivePermissions={roles.sensitive_permissions ?? []}
-              aclInventory={roles.acl_inventory ?? []}
-              onGrantSelf={() => setPendingConfirm({ type: 'grant_roles' })}
-              granting={grantingRoles}
-              onGoQueueTab={() => handleTabChange('queue')}
-            />
-          </AdminTabPanel>
-
-          <AdminTabPanel tabId="completion" active={activeTab === 'completion'}>
-            <CompletionTab
-              settings={settings}
-              completionFieldWeights={completionFieldWeights}
-              weightsSaving={weightsSaving}
-              weightsError={weightsError}
-              onFieldChange={handleFieldChange}
-              onSaveWeights={(items) => {
-                void saveCompletionWeights(items);
-              }}
-            />
-          </AdminTabPanel>
-
-          <AdminTabPanel tabId="clinic" active={activeTab === 'clinic'}>
-            <ClinicTab
-              settings={settings}
-              cashProfile={cashProfile}
-              cashProfileApplying={cashProfileApplying}
-              reconciliationStatus={reconciliationStatus}
-              reconciliationRunning={reconciliationRunning}
-              onFieldChange={handleFieldChange}
-              onApplyCashProfile={() => setPendingConfirm({ type: 'cash_profile' })}
-              onRunReconciliation={() => { void runReconciliation(); }}
-            />
-          </AdminTabPanel>
-
-          <AdminTabPanel tabId="forms" active={activeTab === 'forms'}>
-            {formBundleBoard && formsCatalog ? (
-              <FormsTab
-                board={formBundleBoard}
-                catalog={formsCatalog}
-                ancillaryLbfPacks={ancillaryLbfPacks}
-                importingPackKey={ancillaryLbfImporting}
-                installingAll={installingAllAncillary}
-                catalogTogglingId={catalogTogglingId}
-                onImportPack={(packKey) => { void importAncillaryLbfPack(packKey); }}
-                onInstallAllMissing={() => { void installAllMissingAncillary(); }}
-                onToggleCatalogForm={(item, enabled) => { void toggleCatalogForm(item, enabled); }}
-              />
-            ) : (
-              <AdminEmptyState
-                title="Forms configuration unavailable"
-                description="Enable the Admin Operations Hub or reload settings to manage form bundles."
-              />
-            )}
-          </AdminTabPanel>
-
-          <AdminTabPanel tabId="system" active={activeTab === 'system'}>
-            {systemHealth && runbooks && setupProgress ? (
-              <SystemTab
-                health={systemHealth}
-                runbooks={runbooks}
-                setupProgress={setupProgress}
-                configExport={configExport}
-                scopeLabel={scopeLabel}
-                configExporting={configExporting}
-                onExportConfig={() => { void exportConfig(); }}
-                configImportPreview={configImportPreview}
-                configImportPreviewing={configImportPreviewing}
-                configImporting={configImporting}
-                onConfigImportPreview={(snapshot) => { void previewConfigImport(snapshot); }}
-                onConfigImportConfirm={() => { void confirmConfigImport(); }}
-                onConfigImportClearPreview={clearConfigImportPreview}
-                reconciliationRunning={reconciliationRunning}
-                backupRunning={backupRunning}
-                backupCompleting={backupCompleting}
-                setupMarkingKey={setupMarkingKey}
-                setupCompleting={setupCompleting}
-                onRunReconciliation={() => { void runReconciliation(); }}
-                onRunBackup={() => { void runBackup(); }}
-                onCompleteBackup={() => { void completeBackup(); }}
-                onRefreshHealth={() => { void refreshSystemHealth(); }}
-                healthRefreshing={healthRefreshing}
-                onMarkSetupItem={(key) => { void markSetupItem(key); }}
-                onMarkSetupComplete={() => { void markSetupComplete(); }}
-              />
-            ) : (
-              <AdminEmptyState
-                title="System configuration unavailable"
-                description="Reload the page or confirm Admin Operations Hub is enabled for this clinic."
-              />
-            )}
-          </AdminTabPanel>
-
-          <AdminTabPanel tabId="types" active={activeTab === 'types'}>
-            <VisitTypesTab
-              visitTypes={visitTypes}
-              calendarCategories={calendarCategories ?? []}
-              onAdd={() => openVisitTypeModal(null)}
-              onEdit={(row) => openVisitTypeModal(row)}
-              onArchive={(row) => setPendingConfirm({ type: 'archive_visit_type', row })}
-            />
-          </AdminTabPanel>
-
-          <AdminTabPanel tabId="fees" active={activeTab === 'fees'}>
-            <FeesTab
-              feeSchedule={feeSchedule}
-              settings={settings}
-              webroot={webroot}
-              csv={feeCsv}
-              importing={feeImporting}
-              onCsvChange={setFeeCsv}
-              onAdd={() => { void openFeeModal(null); }}
-              onEdit={(row) => { void openFeeModal(row); }}
-              onArchive={(row) => setPendingConfirm({ type: 'archive_fee', row })}
-              onImport={() => { void importFees(); }}
-            />
-          </AdminTabPanel>
+          <AdminHubTabPanels
+            activeTab={activeTab}
+            ajaxUrl={ajaxUrl}
+            csrfToken={csrfToken}
+            webroot={webroot}
+            facilityId={facilityId}
+            clinicFacilityId={clinicFacilityId}
+            settings={settings}
+            ghanaLbfPack={ghanaLbfPack}
+            ghanaLbfImporting={ghanaLbfImporting}
+            referralHospitalLbfPack={referralHospitalLbfPack}
+            referralHospitalLbfImporting={referralHospitalLbfImporting}
+            ancillaryLbfPacks={ancillaryLbfPacks}
+            ancillaryLbfImporting={ancillaryLbfImporting}
+            roleGroups={roles}
+            grantingRoles={grantingRoles}
+            completionFieldWeights={completionFieldWeights}
+            weightsSaving={weightsSaving}
+            weightsError={weightsError}
+            cashProfile={cashProfile}
+            cashProfileApplying={cashProfileApplying}
+            reconciliationStatus={reconciliationStatus}
+            reconciliationRunning={reconciliationRunning}
+            formBundleBoard={formBundleBoard}
+            formsCatalog={formsCatalog}
+            installingAllAncillary={installingAllAncillary}
+            catalogTogglingId={catalogTogglingId}
+            systemHealth={systemHealth}
+            runbooks={runbooks}
+            setupProgress={setupProgress}
+            configExport={configExport}
+            scopeLabel={scopeLabel}
+            configExporting={configExporting}
+            configImportPreview={configImportPreview}
+            configImportPreviewing={configImportPreviewing}
+            configImporting={configImporting}
+            backupRunning={backupRunning}
+            backupCompleting={backupCompleting}
+            setupMarkingKey={setupMarkingKey}
+            setupCompleting={setupCompleting}
+            healthRefreshing={healthRefreshing}
+            visitTypes={visitTypes}
+            calendarCategories={calendarCategories}
+            feeSchedule={feeSchedule}
+            feeCsv={feeCsv}
+            feeImporting={feeImporting}
+            onFieldChange={handleFieldChange}
+            onImportGhanaLbfPack={(setAsConsultNote) => { void importGhanaLbfPack(setAsConsultNote); }}
+            onImportReferralHospitalLbfPack={(setAsConsultNote) => { void importReferralHospitalLbfPack(setAsConsultNote); }}
+            onImportAncillaryLbfPack={(packKey) => { void importAncillaryLbfPack(packKey); }}
+            onGrantSelf={() => setPendingConfirm({ type: 'grant_roles' })}
+            onGoQueueTab={() => handleTabChange('queue')}
+            onSaveWeights={(items) => { void saveCompletionWeights(items); }}
+            onApplyCashProfile={() => setPendingConfirm({ type: 'cash_profile' })}
+            onRunReconciliation={() => { void runReconciliation(); }}
+            onInstallAllMissing={() => { void installAllMissingAncillary(); }}
+            onToggleCatalogForm={(item, enabled) => { void toggleCatalogForm(item, enabled); }}
+            onExportConfig={() => { void exportConfig(); }}
+            onConfigImportPreview={(snapshot) => { void previewConfigImport(snapshot); }}
+            onConfigImportConfirm={() => { void confirmConfigImport(); }}
+            onConfigImportClearPreview={clearConfigImportPreview}
+            onRunBackup={() => { void runBackup(); }}
+            onCompleteBackup={() => { void completeBackup(); }}
+            onRefreshHealth={() => { void refreshSystemHealth(); }}
+            onMarkSetupItem={(key) => { void markSetupItem(key); }}
+            onMarkSetupComplete={() => { void markSetupComplete(); }}
+            onAddVisitType={() => openVisitTypeModal(null)}
+            onEditVisitType={(row) => openVisitTypeModal(row)}
+            onArchiveVisitType={(row) => setPendingConfirm({ type: 'archive_visit_type', row })}
+            onFeeCsvChange={setFeeCsv}
+            onAddFee={() => { void openFeeModal(null); }}
+            onEditFee={(row) => { void openFeeModal(row); }}
+            onArchiveFee={(row) => setPendingConfirm({ type: 'archive_fee', row })}
+            onImportFees={() => { void importFees(); }}
+          />
         </>
       )}
 
@@ -1184,76 +1101,29 @@ export function AdminHub({
         onSave={(payload) => { void saveFee(payload); }}
       />
 
-      <ConfirmModal
-        open={!!pendingConfirm}
+      <AdminHubConfirmModal
+        pendingConfirm={pendingConfirm}
         onClose={() => setPendingConfirm(null)}
-        title={
-          pendingConfirm?.type === 'scope_switch' ? 'Switch settings scope?'
-            : pendingConfirm?.type === 'archive_visit_type' ? 'Archive visit type?'
-              : pendingConfirm?.type === 'archive_fee' ? 'Archive fee line?'
-                : pendingConfirm?.type === 'grant_roles' ? 'Grant desk roles?'
-                  : pendingConfirm?.type === 'catalog_enable' ? 'Enable billing form?'
-                    : 'Apply cash clinic profile?'
-        }
-        modalId="nc-admin-confirm-modal"
-        cancelLabel="Cancel"
-        confirmLabel={
-          pendingConfirm?.type === 'scope_switch' ? 'Switch'
-            : pendingConfirm?.type === 'grant_roles' ? 'Grant roles'
-              : pendingConfirm?.type === 'cash_profile' ? 'Apply profile'
-                : pendingConfirm?.type === 'catalog_enable' ? 'Enable anyway'
-                  : 'Archive'
-        }
-        confirmVariant={
-          pendingConfirm?.type === 'archive_visit_type' || pendingConfirm?.type === 'archive_fee'
-            ? 'danger'
-            : 'warning'
-        }
-        onConfirm={() => {
-          if (!pendingConfirm) return;
-          if (pendingConfirm.type === 'scope_switch') {
-            setScope(pendingConfirm.nextScope);
+        onConfirm={(confirm) => {
+          if (confirm.type === 'scope_switch') {
+            setScope(confirm.nextScope);
             setDirty(false);
             setSuccessMessage(null);
             setErrorMessage(null);
-          } else if (pendingConfirm.type === 'archive_visit_type') {
-            void archiveVisitType(pendingConfirm.row);
-          } else if (pendingConfirm.type === 'archive_fee') {
-            void archiveFee(pendingConfirm.row);
-          } else if (pendingConfirm.type === 'grant_roles') {
+          } else if (confirm.type === 'archive_visit_type') {
+            void archiveVisitType(confirm.row);
+          } else if (confirm.type === 'archive_fee') {
+            void archiveFee(confirm.row);
+          } else if (confirm.type === 'grant_roles') {
             void grantSelfRoles();
-          } else if (pendingConfirm.type === 'cash_profile') {
+          } else if (confirm.type === 'cash_profile') {
             void applyCashProfile();
-          } else if (pendingConfirm.type === 'catalog_enable') {
-            void applyCatalogEnable(pendingConfirm.item);
+          } else if (confirm.type === 'catalog_enable') {
+            void applyCatalogEnable(confirm.item);
           }
           setPendingConfirm(null);
         }}
-      >
-        {pendingConfirm?.type === 'scope_switch' && (
-          <p className="mb-0">Discard unsaved changes and switch settings scope?</p>
-        )}
-        {pendingConfirm?.type === 'archive_visit_type' && (
-          <p className="mb-0">Archive visit type &quot;{pendingConfirm.row.label}&quot;?</p>
-        )}
-        {pendingConfirm?.type === 'archive_fee' && (
-          <p className="mb-0">Archive fee line &quot;{pendingConfirm.row.name}&quot;?</p>
-        )}
-        {pendingConfirm?.type === 'grant_roles' && (
-          <p className="mb-0">
-            Grant all New Clinic desk groups to your account? Log out and back in afterward.
-          </p>
-        )}
-        {pendingConfirm?.type === 'cash_profile' && (
-          <p className="mb-0">
-            Apply the cash clinic profile? This updates OpenEMR globals (E-Sign, currency symbol,
-            eligibility, search UI) and enables pinned reception preview. Changes are logged.
-          </p>
-        )}
-        {pendingConfirm?.type === 'catalog_enable' && (
-          <p className="mb-0">{pendingConfirm.item.enable_warning}</p>
-        )}
-      </ConfirmModal>
+      />
     </AdminShell>
   );
 }
