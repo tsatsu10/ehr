@@ -22,6 +22,7 @@ use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\LabActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\FrontDeskActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PatientActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PharmacyActionHandler;
+use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ProfileActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\TriageActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\VisitActionHandler;
 use OpenEMR\Modules\NewClinic\Exceptions\EncounterSessionMismatchException;
@@ -75,9 +76,7 @@ use OpenEMR\Modules\NewClinic\Services\ClinicalDocReferralHospitalLbfWizardServi
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocVisitSummaryService;
 use OpenEMR\Modules\NewClinic\Services\ClinicAdminService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
-use OpenEMR\Modules\NewClinic\Services\SessionRoleService;
 use OpenEMR\Modules\NewClinic\Services\EncounterNoteService;
-use OpenEMR\Modules\NewClinic\Services\MyProfileService;
 use OpenEMR\Modules\NewClinic\Services\PatientRegistrationService;
 use OpenEMR\Modules\NewClinic\Services\FacilityScopeService;
 use OpenEMR\Modules\NewClinic\Services\QuickAddService;
@@ -154,30 +153,6 @@ class AjaxController
             switch ($action) {
                 case 'health':
                     $this->respond(true, 'ok', ['module' => 'oe-module-new-clinic']);
-                    break;
-                case 'profile.get':
-                    $this->respond(true, 'ok', $this->svc(MyProfileService::class)->getProfile($userId));
-                    break;
-                case 'profile.update':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $this->respond(true, 'Profile updated', $this->svc(MyProfileService::class)->updateProfile($userId, $body));
-                    break;
-                case 'profile.change_password':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $this->svc(MyProfileService::class)->changePassword(
-                        $userId,
-                        (string) ($body['current_password'] ?? ''),
-                        (string) ($body['new_password'] ?? '')
-                    );
-                    $this->respond(true, 'Password updated');
                     break;
                 case 'reports.daily':
                     $facilityId = $this->resolveRequestFacilityId();
@@ -985,16 +960,6 @@ class AjaxController
                         'last_updated' => date('c'),
                     ]);
                     break;
-                case 'switch_role':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $role = (string) ($body['role'] ?? '');
-                    $result = $this->svc(SessionRoleService::class)->switchRole($role, $userId);
-                    $this->respond(true, 'ok', $result);
-                    break;
                 case 'communications.hub_counts':
                     $authUser = (string) ($_SESSION['authUser'] ?? '');
                     $counts = $this->svc(CommunicationsHubService::class)->hubCounts($authUser, $userId);
@@ -1690,6 +1655,7 @@ class AjaxController
             new PatientActionHandler($this),
             new ChartDepthActionHandler($this),
             new AdminActionHandler($this),
+            new ProfileActionHandler($this),
         ];
     }
 
