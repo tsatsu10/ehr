@@ -119,7 +119,7 @@ class NewClinicMandatoryContractTest extends TestCase
         $logBody = $this->methodBody(VisitQueueService::class, 'logStateChange');
         $this->assertStringContainsString('is_reverse', $logBody);
 
-        $source = $this->readModuleSource('src/Controllers/AjaxController.php');
+        $source = $this->readAjaxDispatchSource();
         $this->assertStringContainsString('doctor.reopen', $source);
     }
 
@@ -543,8 +543,8 @@ class NewClinicMandatoryContractTest extends TestCase
         $this->assertStringContainsString('setSupervisor', $supervisorUi);
         $this->assertStringContainsString('DoctorProviderSearchResult', $supervisorUi);
 
-        // AjaxController endpoints
-        $ajaxSource = $this->readModuleSource('src/Controllers/AjaxController.php');
+        // Ajax dispatch (controller + domain handlers)
+        $ajaxSource = $this->readAjaxDispatchSource();
         $this->assertStringContainsString('doctor.set_supervisor', $ajaxSource);
         $this->assertStringContainsString('doctor.search_providers', $ajaxSource);
     }
@@ -827,10 +827,7 @@ class NewClinicMandatoryContractTest extends TestCase
         $this->assertFileExists($servicePath, 'LabPanelOrderService must exist');
         $serviceBody = file_get_contents($servicePath);
         $this->assertStringContainsString('enable_lab_panel_order', $serviceBody);
-        $this->assertStringContainsString('doctor.lab_panel_catalog', file_get_contents(
-            dirname(__DIR__, 5)
-            . '/interface/modules/custom_modules/oe-module-new-clinic/src/Controllers/AjaxController.php'
-        ));
+        $this->assertStringContainsString('doctor.lab_panel_catalog', $this->readAjaxDispatchSource());
 
         $modalPath = dirname(__DIR__, 5) . '/frontend/src/islands/doctor-desk/LabPanelModal.tsx';
         $this->assertFileExists($modalPath, 'LabPanelModal React component must exist');

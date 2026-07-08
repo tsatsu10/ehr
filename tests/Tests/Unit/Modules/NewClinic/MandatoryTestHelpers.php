@@ -34,6 +34,17 @@ trait MandatoryTestHelpers
         return dirname(__DIR__, 5) . '/frontend';
     }
 
+    protected function readAjaxDispatchSource(): string
+    {
+        $parts = [$this->readModuleSource('src/Controllers/AjaxController.php')];
+        $handlerDir = $this->moduleRoot() . '/src/Controllers/Ajax/Handlers';
+        foreach (glob($handlerDir . '/*.php') ?: [] as $handlerFile) {
+            $parts[] = (string) file_get_contents($handlerFile);
+        }
+
+        return implode("\n", $parts);
+    }
+
     protected function readFrontendSource(string $relativePath): string
     {
         $path = $this->frontendRoot() . '/' . ltrim($relativePath, '/');
