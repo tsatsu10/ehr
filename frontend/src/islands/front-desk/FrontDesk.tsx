@@ -65,9 +65,9 @@ export function FrontDesk({
   // Announce preview state changes to screen readers
   React.useEffect(() => {
     if (mode === 'loading' && preview) {
-      announce(`Loading ${preview.display_name}`, { politeness: 'polite' });
+      announce(`Loading ${preview.identity.display_name}`, { politeness: 'polite' });
     } else if (mode === 'preview' && preview) {
-      announce(`Viewing ${preview.display_name}`, { politeness: 'polite' });
+      announce(`Viewing ${preview.identity.display_name}`, { politeness: 'polite' });
     } else if (mode === 'registration' && registrationDraft.pid) {
       announce('Editing patient registration', { politeness: 'polite' });
     } else if (mode === 'registration' && !registrationDraft.pid) {

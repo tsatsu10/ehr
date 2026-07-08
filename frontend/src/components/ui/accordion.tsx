@@ -16,8 +16,8 @@ export const AccordionItem = forwardRef<
   <AccordionPrimitive.Item
     ref={ref}
     className={cn(
-      'mb-2 overflow-hidden rounded-[0.625rem] border border-[var(--oe-nc-border,#e2e8f0)] bg-white',
-      'data-[state=open]:border-[var(--oe-nc-primary,#2563eb)] data-[state=open]:shadow-[0_0_0_3px_rgba(37,99,235,0.08)]',
+      'mb-2 overflow-hidden rounded-[0.25rem] border border-[var(--oe-nc-border,#d3dce3)] bg-white',
+      'data-[state=open]:border-[var(--oe-nc-primary,#1b3a5f)] data-[state=open]:shadow-[0_0_0_3px_rgba(27,58,95,0.08)]',
       className,
     )}
     {...props}

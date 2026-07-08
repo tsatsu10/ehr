@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PatientSearchDropdown } from '@components/PatientSearchDropdown';
 import { SlideOver } from '@components/SlideOver';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
@@ -48,8 +48,8 @@ export function CalendarBookingSheet({
   const [error, setError] = useState<string | null>(null);
 
   const interval = payload?.interval_minutes ?? 15;
-  const providers = payload?.providers ?? [];
-  const categories = payload?.categories ?? [];
+  const providers = useMemo(() => payload?.providers ?? [], [payload?.providers]);
+  const categories = useMemo(() => payload?.categories ?? [], [payload?.categories]);
 
   useEffect(() => {
     if (!open) {
@@ -69,6 +69,7 @@ export function CalendarBookingSheet({
   }, [open, draft, filters.providerId, providers, categories, interval]);
 
   const canSave = pid > 0 && providerId > 0 && categoryId > 0 && time !== '';
+  const draftRecallId = draft?.recallId;
 
   const handleSave = useCallback(async () => {
     if (!canSave) {
@@ -86,7 +87,7 @@ export function CalendarBookingSheet({
         time,
         duration_minutes: durationMinutes,
         comments,
-        recall_id: recallId > 0 ? recallId : draft?.recallId,
+        recall_id: recallId > 0 ? recallId : draftRecallId,
       });
       onBooked(day);
       onClose();
@@ -110,7 +111,7 @@ export function CalendarBookingSheet({
     pid,
     providerId,
     recallId,
-    draft?.recallId,
+    draftRecallId,
     time,
   ]);
 

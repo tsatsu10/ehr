@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
 import { badgeVariants } from './ui/badge';
 
@@ -10,17 +11,18 @@ export interface ChipItem {
 interface ChipCloudProps {
   chips: ChipItem[];
   className?: string;
+  style?: CSSProperties;
 }
 
 function chipBadgeVariant(variant: ChipItem['variant']): 'danger' | 'warning' {
   return variant === 'severe' ? 'danger' : 'warning';
 }
 
-export function ChipCloud({ chips, className }: ChipCloudProps) {
+export function ChipCloud({ chips, className, style }: ChipCloudProps) {
   if (!chips.length) return null;
 
   return (
-    <div className={cn('flex flex-wrap gap-1.5', className)}>
+    <div className={cn('flex flex-wrap gap-1.5', className)} style={style}>
       {chips.map((chip) => {
         const badgeClass = badgeVariants({ variant: chipBadgeVariant(chip.variant) });
         if (chip.href) {

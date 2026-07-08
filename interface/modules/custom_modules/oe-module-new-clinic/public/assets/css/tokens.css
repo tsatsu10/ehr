@@ -1,30 +1,46 @@
 /**
- * New Clinic design tokens — clean clinical dashboard (MedTrackr-inspired)
+ * New Clinic design tokens — "Clinical Console" identity (2026-07-08)
+ * ============================================================
+ * Deep clinical navy + department wayfinding colors, squared corners,
+ * hairline borders, minimal shadows. An instrument, not an app.
+ *
+ * MUST stay in sync with frontend/src/core/tokens.css (React islands).
  */
 :root {
-    --oe-nc-primary: #2563eb;
-    --oe-nc-primary-hover: #1d4ed8;
-    --oe-nc-secondary: #3b82f6;
-    --oe-nc-cta: #059669;
-    --oe-nc-bg: #eff6ff;
-    --oe-nc-bg-tint: #f9fafb;
-    --oe-nc-bg-muted: #f3f4f6;
-    --oe-nc-text: #111827;
-    --oe-nc-text-muted: #6b7280;
-    --oe-nc-border: #e5e7eb;
+    /* Core palette */
+    --oe-nc-primary: #1b3a5f;         /* Clinical navy — 10.9:1 on white */
+    --oe-nc-primary-hover: #142c49;
+    --oe-nc-primary-tint: #e8eef5;    /* Navy 8% surface tint */
+    --oe-nc-secondary: #46647f;       /* Steel slate */
+    --oe-nc-cta: #047857;             /* Medical green */
+    --oe-nc-bg: #f4f6f8;              /* Slate paper */
+    --oe-nc-bg-tint: #eef1f4;
+    --oe-nc-bg-muted: #e2e8ed;
+    --oe-nc-text: #1c2733;            /* Ink navy */
+    --oe-nc-text-muted: #5b6b7b;
+    --oe-nc-border: #d3dce3;          /* Hairline */
+    --oe-nc-border-strong: #9fb0be;
     --oe-nc-surface: #ffffff;
-    --oe-nc-radius: 0.5rem;
+    --oe-nc-danger: #b42318;
+    --oe-nc-warning: #b54708;
+
+    /* Shape — squared, instrument-like */
+    --oe-nc-radius: 0.25rem;          /* 4px default */
+    --oe-nc-radius-sm: 0.125rem;      /* 2px chips/badges */
+    --oe-nc-radius-lg: 0.375rem;      /* 6px modals */
     --oe-nc-transition: 150ms ease;
-    --oe-nc-focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.25);
+    --oe-nc-focus-ring: 0 0 0 3px rgba(27, 58, 95, 0.28);
 
-    --oe-nc-role-reception: #2563eb;
-    --oe-nc-role-nurse: #2563eb;
-    --oe-nc-role-doctor: #059669;
-    --oe-nc-role-lab: #d97706;
-    --oe-nc-role-pharmacy: #7c3aed;
-    --oe-nc-role-cashier: #ea580c;
-    --oe-nc-role-admin: #64748b;
+    /* Department (role) wayfinding colors — single source of truth */
+    --oe-nc-role-reception: #1d4ed8;
+    --oe-nc-role-nurse: #0e7490;
+    --oe-nc-role-doctor: #047857;
+    --oe-nc-role-lab: #b45309;
+    --oe-nc-role-pharmacy: #6d28d9;
+    --oe-nc-role-cashier: #c2410c;
+    --oe-nc-role-admin: #475569;
 
+    /* Layout */
     --oe-nc-content-gutter: 1.25rem;
     --oe-nc-content-max: 90rem;
 
@@ -32,8 +48,18 @@
     --oe-nc-sidebar-width-collapsed: 72px;
     --oe-nc-sidebar-z: 1040;
     --oe-nc-sidebar-backdrop-z: 1035;
-    --shadow-md: 0 1px 2px rgba(15, 23, 42, 0.04);
-    --shadow-lg: 0 4px 12px rgba(15, 23, 42, 0.06);
+
+    /* Sidebar — dark console chrome */
+    --oe-nc-sidebar-bg: #14212e;
+    --oe-nc-sidebar-text: #c7d3de;
+    --oe-nc-sidebar-text-strong: #f2f6f9;
+    --oe-nc-sidebar-hover: rgba(255, 255, 255, 0.06);
+    --oe-nc-sidebar-active: rgba(255, 255, 255, 0.10);
+    --oe-nc-sidebar-border: rgba(255, 255, 255, 0.08);
+
+    /* Depth — hairline first, shadows minimal */
+    --shadow-md: 0 1px 2px rgba(20, 33, 46, 0.05);
+    --shadow-lg: 0 4px 12px rgba(20, 33, 46, 0.08);
 }
 
 @media (prefers-reduced-motion: reduce) {

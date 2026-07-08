@@ -2,7 +2,7 @@
  * Auto-save hook for registration form
  * Periodically saves form state to localStorage to prevent data loss
  */
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 
 export interface AutoSaveOptions {
     /** Unique key for localStorage */
@@ -45,10 +45,12 @@ export function useAutoSave<T extends Record<string, unknown>>(
         enabled = true,
     } = options;
 
-    const lastSavedRef = useRef<number | null>(null);
-    const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const periodicTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const isAutoSavingRef = useRef(false);
+    /* lastSaved/isAutoSaving are rendered by callers — state, not refs
+       (react-hooks/refs forbids reading ref.current during render) */
+    const [lastSaved, setLastSaved] = useState<number | null>(null);
+    const [isAutoSaving, setIsAutoSaving] = useState(false);
+    const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const periodicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Check if draft exists in localStorage
     const hasDraft = useCallback((): boolean => {
@@ -76,7 +78,7 @@ export function useAutoSave<T extends Record<string, unknown>>(
     const clearDraft = useCallback(() => {
         try {
             localStorage.removeItem(storageKey);
-            lastSavedRef.current = null;
+            setLastSaved(null);
         } catch {
             // Ignore localStorage errors
         }
@@ -87,7 +89,7 @@ export function useAutoSave<T extends Record<string, unknown>>(
         if (!enabled || !isDirty) return;
 
         try {
-            isAutoSavingRef.current = true;
+            setIsAutoSaving(true);
             const timestamp = Date.now();
             const draft = {
                 data,
@@ -95,12 +97,12 @@ export function useAutoSave<T extends Record<string, unknown>>(
                 version: 1,
             };
             localStorage.setItem(storageKey, JSON.stringify(draft));
-            lastSavedRef.current = timestamp;
+            setLastSaved(timestamp);
             onAutoSave?.(timestamp);
         } catch (error) {
             console.warn('Auto-save failed:', error);
         } finally {
-            isAutoSavingRef.current = false;
+            setIsAutoSaving(false);
         }
     }, [enabled, isDirty, data, storageKey, onAutoSave]);
 
@@ -168,8 +170,8 @@ export function useAutoSave<T extends Record<string, unknown>>(
 
     return {
         autoSaveState: {
-            lastSaved: lastSavedRef.current,
-            isAutoSaving: isAutoSavingRef.current,
+            lastSaved,
+            isAutoSaving,
             hasDraft: hasDraft(),
         },
         getDraft,

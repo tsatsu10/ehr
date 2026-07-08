@@ -42,7 +42,7 @@ Code on mobile; **verify on desktop or CI**.
 4. **Desktop smoke (UI touched)** — hard-refresh, open one desk, confirm `ajax.php` actions return **200**.
 5. **Asset version** — if frontend islands changed, bump `ModuleAssetVersion.php` once per batch.
 
-Full checklist: `Documentation/NewClinic/MOBILE_IOS_CURSOR_CHECKLIST.md`
+Full checklist: `Documentation/NewClinic/new/MOBILE_IOS_CURSOR_CHECKLIST.md`
 
 ## When CI is red
 

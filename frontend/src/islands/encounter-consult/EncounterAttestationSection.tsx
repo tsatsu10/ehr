@@ -85,7 +85,11 @@ export function EncounterAttestationSection({
           csrfToken={csrfToken}
           facilityId={facilityId}
           blocked={readOnly}
-          onUpdated={onSupervisorUpdated}
+          onUpdated={(meta) => onSupervisorUpdated({
+            supervisor_id: meta.supervisor_id ?? null,
+            supervisor_display_name: meta.supervisor_display_name ?? null,
+            supervisor_from_profile: meta.supervisor_from_profile,
+          })}
           onNotice={onNotice}
         />
       )}

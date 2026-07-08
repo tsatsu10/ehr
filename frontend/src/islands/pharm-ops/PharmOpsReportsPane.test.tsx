@@ -39,7 +39,7 @@ describe('PharmOpsReportsPane', () => {
     vi.resetAllMocks();
   });
 
-  it('loads catalog and renders iframe for default report', async () => {
+  it('loads catalog and renders external link for default report', async () => {
     render(<PharmOpsReportsPane {...props} />);
 
     await act(async () => {
@@ -48,7 +48,8 @@ describe('PharmOpsReportsPane', () => {
 
     expect(mockFetch).toHaveBeenCalledWith('pharm_ops.reports_embed', expect.any(Object));
     expect(screen.getByLabelText('Report')).toBeInTheDocument();
-    const frame = screen.getByTitle('Reorder / low stock');
-    expect(frame).toHaveAttribute('src', '/openemr/interface/reports/inventory_list.php');
+    const link = screen.getByRole('link', { name: /open report/i });
+    expect(link).toHaveAttribute('href', '/openemr/interface/reports/inventory_list.php');
+    expect(link).toHaveAttribute('target', '_blank');
   });
 });

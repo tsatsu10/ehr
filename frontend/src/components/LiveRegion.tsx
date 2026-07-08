@@ -37,7 +37,7 @@ export function LiveRegion({
   clearAfter = 5000,
   className,
 }: LiveRegionProps) {
-  const timeoutRef = useRef<number>();
+  const timeoutRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     // Clear any existing timeout
@@ -88,7 +88,7 @@ export function LiveRegion({
 export function useLiveAnnounce() {
   const [message, setMessage] = React.useState('');
   const [politeness, setPoliteness] = React.useState<Politeness>('polite');
-  const timeoutRef = useRef<number>();
+  const timeoutRef = useRef<number | undefined>(undefined);
 
   const announce = React.useCallback((
     text: string,

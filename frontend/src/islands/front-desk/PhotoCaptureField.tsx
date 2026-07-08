@@ -126,7 +126,7 @@ export function PhotoCaptureField({
       {/* Camera stream */}
       {captureState === 'streaming' && (
         <div className="nc-photo-capture-viewport mb-2">
-          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+          {/* live camera preview — captions not applicable */}
           <video
             ref={videoRef}
             className="nc-photo-capture-video"

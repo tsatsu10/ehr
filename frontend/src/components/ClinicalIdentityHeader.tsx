@@ -23,7 +23,6 @@ import { ChipCloud } from './ChipCloud';
 import { cn } from '@/lib/utils';
 import {
   buildAllergyChips,
-  formatIdentityInline,
   initialsFromName,
   type PatientIdentityLine,
   type PatientSafetyChips,
@@ -87,21 +86,6 @@ function getRelativeTime(isoDate: string): string {
   return `${Math.floor(diffDays / 365)} years ago`;
 }
 
-/**
- * Calculate age from DOB
- */
-function calculateAge(dob: string): number | null {
-  if (!dob) return null;
-  const birthDate = new Date(dob);
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age;
-}
-
 export function ClinicalIdentityHeader({
   identity,
   safety,
@@ -121,7 +105,9 @@ export function ClinicalIdentityHeader({
     showAllergyCountChip: false,
   });
   
-  const age = identity.dob ? calculateAge(identity.dob) : null;
+  const ageLabel = identity.age_years != null && identity.age_years !== ''
+    ? String(identity.age_years)
+    : null;
   const lastVisitRelative = visitHistory?.last_visit_date 
     ? getRelativeTime(visitHistory.last_visit_date)
     : visitHistory?.last_visit_relative;
@@ -176,17 +162,11 @@ export function ClinicalIdentityHeader({
               'font-feature-settings-["tnum"]' // Tabular figures
             )}>
               <span className="font-mono">MRN: {identity.pubpid || identity.pid}</span>
-              {identity.dob && (
+              {ageLabel !== null && (
                 <>
                   <span className="text-[var(--oe-clinical-border-strong)]">·</span>
-                  <span>DOB: {identity.dob}</span>
-                </>
-              )}
-              {age !== null && (
-                <>
-                  <span className="text-[var(--oe-clinical-border-strong)]">·</span>
-                  <Badge variant="secondary" className="font-medium">
-                    Age {age}
+                  <Badge variant="neutral" className="font-medium">
+                    Age {ageLabel}
                   </Badge>
                 </>
               )}

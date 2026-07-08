@@ -91,7 +91,7 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
     const [discardProceed, setDiscardProceed] = useState<(() => void) | null>(null);
     const [allergyNoneConfirmOpen, setAllergyNoneConfirmOpen] = useState(false);
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-    const [touchedFields, setTouchedFields] = useState<Set<keyof RegistrationFormValues>>(new Set());
+    const [, setTouchedFields] = useState<Set<keyof RegistrationFormValues>>(new Set());
     const [draftRestoreOpen, setDraftRestoreOpen] = useState(false);
     const [autoSaveTimestamp, setAutoSaveTimestamp] = useState<number | null>(null);
     const prefillAppliedRef = useRef(false);
@@ -102,8 +102,8 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
     }), [dirty]);
 
     // Auto-save hook
-    const { autoSaveState, getDraft, clearDraft, forceSave } = useAutoSave(
-        form,
+    const { autoSaveState, getDraft, clearDraft } = useAutoSave(
+        form as RegistrationFormValues & Record<string, unknown>,
         dirty && !currentPid, // Only auto-save for new registrations (not edits)
         {
             storageKey: `nc_reg_draft_${registrationMode}`,
@@ -416,7 +416,7 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
     const handleRestoreDraft = () => {
         const draft = getDraft();
         if (draft) {
-            setForm(draft);
+            setForm(draft as RegistrationFormValues);
             setDirty(true);
             showDeskToast('Draft restored', 'success');
         }
@@ -555,14 +555,13 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
 
             <ConfirmModal
                 open={draftRestoreOpen}
-                onClose={() => setDraftRestoreOpen(false)}
+                onClose={handleDiscardDraft}
                 title="Resume unsaved registration?"
                 modalId="nc-reg-draft-restore-modal"
                 cancelLabel="Start fresh"
                 confirmLabel="Resume"
-                confirmVariant="default"
+                confirmVariant="primary"
                 onConfirm={handleRestoreDraft}
-                onCancel={handleDiscardDraft}
             >
                 <p className="mb-0">
                     You have unsaved registration data from a previous session. Would you like to resume where you left off?

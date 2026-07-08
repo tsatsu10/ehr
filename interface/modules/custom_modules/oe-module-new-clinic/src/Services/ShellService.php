@@ -14,6 +14,7 @@ namespace OpenEMR\Modules\NewClinic\Services;
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Modules\NewClinic\Bootstrap;
+use OpenEMR\Modules\NewClinic\Services\PersonalizedDeskLabelService;
 
 class ShellService
 {
@@ -215,6 +216,17 @@ class ShellService
     ];
 
     /** @var array<string, string> */
+    private const NAV_DESK_ACCENTS = [
+        'clinicfd' => 'reception',
+        'clinictg' => 'nurse',
+        'clinicdr' => 'doctor',
+        'clinicl' => 'lab',
+        'clinicph' => 'pharmacy',
+        'cliniccs' => 'cashier',
+        'clinicad' => 'admin',
+    ];
+
+    /** @var array<string, string> */
     private const NAV_GROUP_LABELS = [
         'desks' => 'Desks',
         'operations' => 'Operations',
@@ -227,6 +239,7 @@ class ShellService
         private readonly VisitQueueService $queueService = new VisitQueueService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
         private readonly ScheduledIntegrationService $scheduledIntegration = new ScheduledIntegrationService(),
+        private readonly PersonalizedDeskLabelService $deskLabels = new PersonalizedDeskLabelService(),
     ) {
     }
 
@@ -268,16 +281,24 @@ class ShellService
                 'role' => [
                     'aco' => $activeRole,
                     'label' => xlt($roleMeta['label']),
-                    'desk_label' => xlt($roleMeta['desk_label']),
+                    'desk_label' => $this->deskLabels->ownedDeskLabelForAco(
+                        $activeRole,
+                        (string) ($user['fname'] ?? ''),
+                        (string) ($user['username'] ?? '')
+                    ),
                     'accent' => $roleMeta['accent'],
-                    'available' => $this->buildAvailableRoles($activeRole),
+                    'available' => $this->buildAvailableRoles(
+                        $activeRole,
+                        (string) ($user['fname'] ?? ''),
+                        (string) ($user['username'] ?? '')
+                    ),
                 ],
                 'nav_groups' => $this->buildNavGroups($publicBase, $activeNavId, $counts),
                 'queue_stats' => $this->buildQueueStats($facilityId, $counts),
                 'queue_active_total' => $this->sumActiveQueueCounts($counts),
                 'today_label' => $this->formatTodayLabel(),
                 'logout_url' => $GLOBALS['webroot'] . '/interface/logout.php',
-                'profile_url' => $GLOBALS['webroot'] . '/interface/usergroup/user_info.php',
+                'profile_url' => $publicBase . 'my-profile.php',
             ],
         ];
     }
@@ -360,6 +381,7 @@ class ShellService
                 'icon' => $item['icon'],
                 'badge_key' => $badgeKey,
                 'badge_count' => $badgeCount,
+                'accent' => self::NAV_DESK_ACCENTS[$item['id']] ?? null,
             ];
         }
 
@@ -446,7 +468,7 @@ class ShellService
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function buildAvailableRoles(string $activeRole): array
+    private function buildAvailableRoles(string $activeRole, string $fname, string $username): array
     {
         $roles = [];
         foreach ($this->sessionRole->listAvailableRoles() as $role) {
@@ -458,7 +480,7 @@ class ShellService
             $roles[] = [
                 'aco' => $aco,
                 'label' => xlt((string) ($role['label'] ?? $aco)),
-                'desk_label' => xlt((string) ($role['desk_label'] ?? $aco)),
+                'desk_label' => $this->deskLabels->ownedDeskLabelForAco($aco, $fname, $username),
                 'icon' => (string) ($role['icon'] ?? 'fa-user'),
                 'accent' => (string) ($role['accent'] ?? 'admin'),
                 'is_active' => $aco === $activeRole,

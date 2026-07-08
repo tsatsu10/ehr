@@ -57,6 +57,7 @@ const islands: Record<string, string> = {
   'scheduling':          resolve(here, 'src/islands/scheduling/index.tsx'),
   'clinical-doc':        resolve(here, 'src/islands/clinical-doc/index.tsx'),
   'encounter-consult':   resolve(here, 'src/islands/encounter-consult/index.tsx'),
+  'my-profile':          resolve(here, 'src/islands/my-profile/index.tsx'),
 };
 
 export default defineConfig({

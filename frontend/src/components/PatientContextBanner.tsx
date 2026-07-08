@@ -73,7 +73,7 @@ export function PatientContextBanner({
         )}
         <div
           className={cn(
-            'flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-(--oe-nc-border) bg-(--oe-nc-bg-tint) mb-3',
+            'flex items-center justify-between gap-3 px-4 py-3 rounded-[0.25rem] border border-(--oe-nc-border) border-l-4 border-l-(--oe-nc-primary) bg-white mb-3',
             className
           )}
           id={id}
@@ -109,7 +109,7 @@ export function PatientContextBanner({
 
       <div
         className={cn(
-          'flex flex-col gap-3 rounded-lg border border-(--oe-nc-border) bg-(--oe-nc-bg-tint) px-4 py-3.5 mb-3',
+          'flex flex-col gap-3 rounded-[0.25rem] border border-(--oe-nc-border) border-l-4 border-l-(--oe-nc-primary) bg-white px-4 py-3.5 mb-3',
           className
         )}
         id={id}

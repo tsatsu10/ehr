@@ -395,7 +395,6 @@ export function mergeSections(
   saved: Partial<EncounterNoteSections> | undefined,
   prefill: EncounterNotePrefill,
 ): EncounterNoteSections {
-  const base = emptySections();
   const cc = saved?.cc?.chief_complaint?.trim()
     ? saved.cc.chief_complaint
     : prefill.chief_complaint;

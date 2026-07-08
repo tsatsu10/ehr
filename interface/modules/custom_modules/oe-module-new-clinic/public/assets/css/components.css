@@ -1228,6 +1228,15 @@ button.nc-list-group-item-action + button.nc-list-group-item-action {
     left: auto;
 }
 
+/* Sidebar profile menu sits at the bottom — open upward (must follow base .nc-dropdown-menu) */
+.nc-dropdown-menu.nc-profile-card-menu,
+.nc-dropdown-menu.nc-dropdown-menu-up {
+    top: auto;
+    bottom: 100%;
+    margin-top: 0;
+    margin-bottom: 0.125rem;
+}
+
 .nc-dropdown.is-open > .nc-dropdown-menu {
     display: block;
 }
@@ -1400,6 +1409,113 @@ body.nc-modal-open {
     background: var(--oe-nc-bg-tint);
     color: var(--oe-nc-text);
     outline: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Clinical Console component overrides (2026-07-08)
+   Squared instrument shapes, hairline depth, tabular numerals, zebra rows.
+   Keep AFTER the base component rules; the utilities below carry !important
+   so their position is unaffected.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Tabular numerals everywhere numbers align in columns */
+.nc-t1,
+.nc-t1 table,
+.nc-t1 input,
+.nc-t1 select {
+    font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Status pills → squared clinical chips (keep dot; drop the SaaS pill shape) */
+.nc-status-pill {
+    border-radius: var(--oe-nc-radius-sm, 0.125rem);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.16rem 0.45rem;
+}
+
+.nc-status-pill-info {
+    background: var(--oe-nc-primary-tint, #e8eef5);
+    color: var(--oe-nc-primary, #1b3a5f);
+    border-color: #b9c9da;
+}
+
+.nc-status-pill-info .nc-status-pill-dot {
+    background: var(--oe-nc-primary, #1b3a5f);
+}
+
+/* Badges match */
+.nc-badge {
+    border-radius: var(--oe-nc-radius-sm, 0.125rem);
+}
+
+/* Cards: squared, hairline, no floaty shadow */
+.nc-widget-card,
+.nc-queue-card,
+.nc-modal-content,
+.nc-list-group,
+.nc-desk-status-bar {
+    border-radius: var(--oe-nc-radius, 0.25rem);
+    box-shadow: none;
+    border-color: var(--oe-nc-border);
+}
+
+.nc-widget-card-header {
+    background: var(--oe-nc-bg-tint);
+    border-bottom: 1px solid var(--oe-nc-border);
+}
+
+.nc-widget-card-title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--oe-nc-text-muted);
+}
+
+/* Queue cards: department rail on the left (wayfinding) */
+.nc-queue-card {
+    border-left: 3px solid var(--oe-nc-role-accent, var(--oe-nc-primary));
+}
+
+.nc-queue-card-urgent {
+    border-left-color: var(--oe-nc-danger, #b42318);
+}
+
+/* Zebra striping for registers (tables + flush list groups) */
+.nc-t1 .nc-list-group-flush > .nc-list-group-item:nth-child(even),
+.nc-t1 .nc-widget-card table tbody tr:nth-child(even) > td {
+    background: var(--oe-nc-bg-tint);
+}
+
+.nc-t1 .nc-widget-card table tbody tr:hover > td {
+    background: var(--oe-nc-primary-tint, #e8eef5);
+}
+
+/* Buttons and inputs: squared */
+.nc-btn,
+.nc-input,
+.nc-select {
+    border-radius: var(--oe-nc-radius, 0.25rem);
+}
+
+.nc-btn-primary {
+    background: var(--oe-nc-primary);
+    border-color: var(--oe-nc-primary);
+}
+
+.nc-btn-primary:hover {
+    background: var(--oe-nc-primary-hover);
+    border-color: var(--oe-nc-primary-hover);
+}
+
+/* Dropdown + modal chrome: squared, hairline */
+.nc-dropdown-menu {
+    border-radius: var(--oe-nc-radius, 0.25rem);
+    border: 1px solid var(--oe-nc-border);
+    box-shadow: var(--shadow-lg);
 }
 
 /* —— nc layout utilities (Twig SSR + legacy JS; replaces Bootstrap utilities) —— */

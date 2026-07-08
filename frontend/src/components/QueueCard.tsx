@@ -18,7 +18,6 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { cn } from '@/lib/utils';
 import { Clock } from 'lucide-react';
 import {
-  queueCardAvatarClass,
   queueCardBodyClass,
   queueCardCcClass,
   queueCardFooterClass,

@@ -21,17 +21,17 @@
    * All colors tested for WCAG 2.1 AA compliance on white backgrounds
    */
   
-  /* Primary — Trust Blue (medical authority) */
-  --oe-clinical-primary:       #1e40af;  /* 7.2:1 contrast on white */
-  --oe-clinical-primary-hover: #1e3a8a;  /* Darker on hover */
-  --oe-clinical-primary-light: #3b82f6;  /* Lighter variant for backgrounds */
-  --oe-clinical-primary-bg:    rgba(30, 64, 175, 0.08); /* 8% opacity for surfaces */
-  
-  /* Secondary — Clinical Teal (subdued accent) */
-  --oe-clinical-secondary:       #0e7490;  /* 5.8:1 contrast */
-  --oe-clinical-secondary-hover: #0c5f75;
-  --oe-clinical-secondary-light: #06b6d4;
-  --oe-clinical-secondary-bg:    rgba(14, 116, 144, 0.08);
+  /* Primary — Clinical Navy (Clinical Console 2026-07-08) */
+  --oe-clinical-primary:       #1b3a5f;  /* 10.9:1 contrast on white */
+  --oe-clinical-primary-hover: #142c49;  /* Darker on hover */
+  --oe-clinical-primary-light: #46647f;  /* Lighter variant for backgrounds */
+  --oe-clinical-primary-bg:    rgba(27, 58, 95, 0.08); /* 8% opacity for surfaces */
+
+  /* Secondary — Steel Slate (subdued accent) */
+  --oe-clinical-secondary:       #46647f;  /* 5.6:1 contrast */
+  --oe-clinical-secondary-hover: #3a5266;
+  --oe-clinical-secondary-light: #7b93a8;
+  --oe-clinical-secondary-bg:    rgba(70, 100, 127, 0.08);
   
   /* Success — Medical Green (confirmation, health status) */
   --oe-clinical-success:       #047857;  /* 5.1:1 contrast */
@@ -40,33 +40,33 @@
   --oe-clinical-success-bg:    rgba(4, 120, 87, 0.08);
   
   /* Danger — Clinical Red (critical, allergies, serious warnings) */
-  --oe-clinical-danger:       #b91c1c;  /* 6.5:1 contrast */
-  --oe-clinical-danger-hover: #991b1b;
-  --oe-clinical-danger-light: #dc2626;
-  --oe-clinical-danger-bg:    rgba(185, 28, 28, 0.08);
-  
+  --oe-clinical-danger:       #b42318;  /* 6.9:1 contrast */
+  --oe-clinical-danger-hover: #931d13;
+  --oe-clinical-danger-light: #d92d20;
+  --oe-clinical-danger-bg:    rgba(180, 35, 24, 0.08);
+
   /* Warning — Clinical Amber (alerts, incomplete, pending) */
-  --oe-clinical-warning:       #d97706;  /* 5.8:1 contrast */
-  --oe-clinical-warning-hover: #b45309;
+  --oe-clinical-warning:       #b54708;  /* 5.9:1 contrast */
+  --oe-clinical-warning-hover: #93400f;
   --oe-clinical-warning-light: #f59e0b;
-  --oe-clinical-warning-bg:    rgba(217, 119, 6, 0.08);
+  --oe-clinical-warning-bg:    rgba(181, 71, 8, 0.08);
   
-  /* Surface & Background — Clinical White/Silver */
+  /* Surface & Background — Slate Paper */
   --oe-clinical-surface:       #ffffff;  /* Pure white for cards */
-  --oe-clinical-bg:            #fafaf9;  /* Warm white background */
-  --oe-clinical-bg-tint:       #f5f5f4;  /* Subtle stone tint */
-  --oe-clinical-bg-muted:      #e7e5e4;  /* Muted background for inactive */
-  
-  /* Text — Authority Gray (maximum readability) */
-  --oe-clinical-text:          #1e293b;  /* 13.5:1 contrast — near black */
-  --oe-clinical-text-secondary: #475569; /* 7.8:1 contrast — secondary text */
-  --oe-clinical-text-muted:    #64748b;  /* 5.1:1 contrast — metadata */
-  --oe-clinical-text-disabled: #94a3b8;  /* 3.2:1 contrast — disabled states */
-  
-  /* Borders — Clinical Silver (soft, professional) */
-  --oe-clinical-border:        #cbd5e1;  /* Soft gray borders */
-  --oe-clinical-border-light:  #e2e8f0;  /* Lighter variant */
-  --oe-clinical-border-strong: #94a3b8;  /* Stronger for emphasis */
+  --oe-clinical-bg:            #f4f6f8;  /* Slate paper background */
+  --oe-clinical-bg-tint:       #eef1f4;  /* Paper tint */
+  --oe-clinical-bg-muted:      #e2e8ed;  /* Muted background for inactive */
+
+  /* Text — Ink Navy (maximum readability) */
+  --oe-clinical-text:          #1c2733;  /* 14.6:1 contrast — near black */
+  --oe-clinical-text-secondary: #42525f; /* 8.4:1 contrast — secondary text */
+  --oe-clinical-text-muted:    #5b6b7b;  /* 5.6:1 contrast — metadata */
+  --oe-clinical-text-disabled: #93a3b1;  /* disabled states */
+
+  /* Borders — Hairline */
+  --oe-clinical-border:        #d3dce3;  /* Hairline borders */
+  --oe-clinical-border-light:  #e4eaef;  /* Lighter variant */
+  --oe-clinical-border-strong: #9fb0be;  /* Stronger for emphasis */
   
   /* ── Clinical Typography Scale ─────────────────────────────────────────
    * Increased weights for medical authority
@@ -129,8 +129,8 @@
   --oe-clinical-shadow-lg:  0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
   --oe-clinical-shadow-xl:  0 8px 24px rgba(0, 0, 0, 0.10), 0 4px 12px rgba(0, 0, 0, 0.05);
   
-  /* Focus shadows — clinical blue glow */
-  --oe-clinical-shadow-focus: 0 0 0 3px rgba(30, 64, 175, 0.15);
+  /* Focus shadows — clinical navy glow */
+  --oe-clinical-shadow-focus: 0 0 0 3px rgba(27, 58, 95, 0.22);
   
   /* Inner shadows for inputs */
   --oe-clinical-shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -140,10 +140,10 @@
    */
   
   --oe-clinical-radius-none: 0;
-  --oe-clinical-radius-sm:   0.25rem;  /* 4px — buttons, badges */
-  --oe-clinical-radius-md:   0.375rem; /* 6px — cards, inputs */
-  --oe-clinical-radius-lg:   0.5rem;   /* 8px — larger cards */
-  --oe-clinical-radius-xl:   0.75rem;  /* 12px — modals */
+  --oe-clinical-radius-sm:   0.125rem; /* 2px — chips, badges */
+  --oe-clinical-radius-md:   0.25rem;  /* 4px — cards, inputs, buttons */
+  --oe-clinical-radius-lg:   0.25rem;  /* 4px — larger cards */
+  --oe-clinical-radius-xl:   0.375rem; /* 6px — modals */
   --oe-clinical-radius-full: 9999px;   /* Pills, avatars */
   
   /* ── Clinical Motion ───────────────────────────────────────────────────

@@ -202,9 +202,9 @@ export function useFrontDesk({
           pid,
           display_name: recentPatient?.display_name ?? searchResult?.display_name ?? 'Loading...',
           pubpid: recentPatient?.pubpid ?? searchResult?.pubpid ?? '...',
-          age_display: searchResult?.age_display,
-          sex: searchResult?.sex,
-          phone_formatted: searchResult?.phone_formatted,
+          sex: searchResult?.sex ?? '',
+          age_years: searchResult?.age_years != null ? String(searchResult.age_years) : '',
+          phone_masked: searchResult?.phone_masked,
         },
         // Other fields will be loaded from server
       };

@@ -39,6 +39,7 @@ class ClinicRolesService
         'new_doctor' => 'Doctor Desk',
         'new_lab' => 'Lab Desk',
         'new_pharmacy' => 'Pharmacy Desk',
+        'new_pharmacy_lead' => 'Pharmacy Lead',
         'new_cashier' => 'Cashier Desk',
         'new_admin' => 'Clinic Admin',
         'new_create_despite_dup' => 'Create Despite Duplicate',
@@ -60,7 +61,17 @@ class ClinicRolesService
         'new_chart_depth_referral' => 'Chart Depth Referrals',
         'new_chart_depth_export' => 'Chart Depth Export',
         'new_chart_depth_export_full' => 'Chart Depth Full Export',
+        'new_registry' => 'Patient Registry',
+        'new_registry_export' => 'Patient Registry Export',
+        'new_cohort_share_filter' => 'Patient Registry Share Filter',
+        'new_lab_ops' => 'Lab Operations Hub',
+        'new_pharm_ops' => 'Pharmacy Operations Hub',
+        'new_bill_ops' => 'Billing Back Office Hub',
         'reports' => 'Daily Reports',
+        'new_reports_hub' => 'Reporting Operations Hub',
+        'new_admin_hub_system' => 'Admin Hub System Health',
+        'new_admin_hub_forms' => 'Admin Hub Forms Bundle',
+        'new_admin_hub_people' => 'Admin Hub People & Access',
     ];
 
     /** @var array<string, string> */
@@ -282,5 +293,189 @@ class ClinicRolesService
         }
 
         return AclExtended::aclGetGroupTitles($username) ?: [];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public static function roleTemplates(): array
+    {
+        return [
+            [
+                'id' => 'reception',
+                'label' => 'Reception',
+                'desk_app' => 'front_desk',
+                'desks' => ['Front Desk'],
+                'supports_lead' => true,
+            ],
+            [
+                'id' => 'nurse',
+                'label' => 'Nurse',
+                'desk_app' => 'triage',
+                'desks' => ['Triage'],
+                'supports_lead' => true,
+            ],
+            [
+                'id' => 'doctor',
+                'label' => 'Doctor',
+                'desk_app' => 'doctor',
+                'desks' => ['Doctor'],
+                'supports_lead' => false,
+            ],
+            [
+                'id' => 'lab',
+                'label' => 'Lab technician',
+                'desk_app' => 'lab',
+                'desks' => ['Lab'],
+                'supports_lead' => true,
+            ],
+            [
+                'id' => 'pharmacy',
+                'label' => 'Pharmacist',
+                'desk_app' => 'pharmacy',
+                'desks' => ['Pharmacy'],
+                'supports_lead' => true,
+            ],
+            [
+                'id' => 'cashier',
+                'label' => 'Cashier',
+                'desk_app' => 'cashier',
+                'desks' => ['Cashier'],
+                'supports_lead' => true,
+            ],
+            [
+                'id' => 'admin',
+                'label' => 'Clinic owner / admin',
+                'desk_app' => 'clinic_admin',
+                'desks' => ['Clinic Setup'],
+                'supports_lead' => false,
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public static function getTemplate(string $templateId): ?array
+    {
+        foreach (self::roleTemplates() as $template) {
+            if (($template['id'] ?? '') === $templateId) {
+                return $template;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function groupsForTemplate(string $templateId, bool $isLead = false): array
+    {
+        $map = [
+            'reception' => ['Clinicians', 'New Clinic Reception'],
+            'nurse' => ['Clinicians', 'New Clinic Nurse'],
+            'doctor' => ['Clinicians', 'New Clinic Doctor'],
+            'lab' => ['Clinicians', 'New Clinic Lab'],
+            'pharmacy' => ['Clinicians', 'New Clinic Pharmacy'],
+            'cashier' => ['Clinicians', 'New Clinic Cashier'],
+            'admin' => ['Clinicians', 'New Clinic Admin'],
+        ];
+        $leadMap = [
+            'reception' => 'New Clinic Reception Lead',
+            'nurse' => 'New Clinic Nurse Lead',
+            'lab' => 'New Clinic Lab Lead',
+            'pharmacy' => 'New Clinic Pharmacy Lead',
+            'cashier' => 'New Clinic Cashier Lead',
+        ];
+
+        $groups = $map[$templateId] ?? [];
+        if ($isLead && isset($leadMap[$templateId])) {
+            $groups[] = $leadMap[$templateId];
+        }
+
+        return $groups;
+    }
+
+    /**
+     * @param list<string> $groups
+     * @return array<string, mixed>
+     */
+    public static function inferTemplateFromGroups(array $groups): array
+    {
+        $checks = [
+            'admin' => 'New Clinic Admin',
+            'doctor' => 'New Clinic Doctor',
+            'nurse' => 'New Clinic Nurse',
+            'reception' => 'New Clinic Reception',
+            'lab' => 'New Clinic Lab',
+            'pharmacy' => 'New Clinic Pharmacy',
+            'cashier' => 'New Clinic Cashier',
+        ];
+        foreach ($checks as $id => $groupTitle) {
+            if (in_array($groupTitle, $groups, true)) {
+                $template = self::getTemplate($id);
+
+                return [
+                    'id' => $id,
+                    'label' => (string) ($template['label'] ?? $id),
+                    'desks' => $template['desks'] ?? [],
+                ];
+            }
+        }
+
+        return ['id' => null, 'label' => null, 'desks' => []];
+    }
+
+    /**
+     * @return list<array{kind: string, text: string, allowed: bool}>
+     */
+    public static function buildTemplateReview(string $templateId, bool $isLead = false): array
+    {
+        $template = self::getTemplate($templateId);
+        if ($template === null) {
+            return [];
+        }
+
+        $desk = (string) (($template['desks'][0] ?? 'Clinic desk'));
+        $items = [
+            ['kind' => 'desk', 'text' => 'Land on ' . $desk . ' after login', 'allowed' => true],
+        ];
+
+        $canMap = [
+            'reception' => [
+                ['text' => 'Create patients and start visits', 'allowed' => true],
+                ['text' => 'Post payments at Cashier', 'allowed' => false],
+                ['text' => 'Change fee schedule', 'allowed' => false],
+            ],
+            'cashier' => [
+                ['text' => 'Post payments and print receipts', 'allowed' => true],
+                ['text' => 'Change fee schedule', 'allowed' => false],
+            ],
+            'admin' => [
+                ['text' => 'Configure clinic setup and fees', 'allowed' => true],
+                ['text' => 'Manage all desk queues', 'allowed' => true],
+            ],
+        ];
+
+        foreach ($canMap[$templateId] ?? [] as $row) {
+            $items[] = array_merge(['kind' => 'capability'], $row);
+        }
+
+        if ($isLead) {
+            $items[] = [
+                'kind' => 'lead',
+                'text' => 'Lead permissions for this desk are included',
+                'allowed' => true,
+            ];
+        }
+
+        $items[] = [
+            'kind' => 'groups',
+            'text' => 'Groups: ' . implode(', ', self::groupsForTemplate($templateId, $isLead)),
+            'allowed' => true,
+        ];
+
+        return $items;
     }
 }

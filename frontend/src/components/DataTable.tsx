@@ -111,6 +111,8 @@ export function MatrixDataTable({
     [columns]
   );
 
+  // TanStack Table returns unstable function refs — safe to use here; React Compiler skips memoization.
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table API
   const table = useReactTable({
     data: rows,
     columns: columnDefs,

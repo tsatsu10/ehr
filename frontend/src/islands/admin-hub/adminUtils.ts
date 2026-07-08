@@ -36,6 +36,9 @@ export function formatPrice(
 
 export function initialAdminTab(): string {
   const fromUrl = new URL(window.location.href).searchParams.get('tab');
+  if (fromUrl === 'roles') {
+    return 'people';
+  }
   return fromUrl ?? 'queue';
 }
 

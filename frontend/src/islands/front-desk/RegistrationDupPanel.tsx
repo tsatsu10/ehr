@@ -62,10 +62,10 @@ export function RegistrationDupPanel({
               </div>
               {hasMatchReasons && (
                 <div className="text-xs text-[var(--oe-nc-text-muted)] space-x-2">
-                  {candidate.match_reasons.map((reason: string, idx: number) => (
+                  {(candidate.match_reasons ?? []).map((reason: string, idx: number) => (
                     <span key={idx} className="inline-block">
                       {reason}
-                      {idx < candidate.match_reasons.length - 1 && ' •'}
+                      {idx < (candidate.match_reasons?.length ?? 0) - 1 && ' •'}
                     </span>
                   ))}
                 </div>

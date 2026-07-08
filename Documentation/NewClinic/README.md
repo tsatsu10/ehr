@@ -32,7 +32,7 @@ Read in this order for a full picture:
 | [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) | M6 + M15 Admin Hub | Draft v0.1.4 |
 | [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) | M7 + M16 Reporting Hub | Draft v0.1.2 |
 | [NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md](./NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) | M4 + M17 Clinical Documentation Hub | Draft v0.1.2 |
-| [NEW_CLINIC_V1_ENCOUNTER_FORM_HIGH_LEVEL_FACILITY_REDESIGN.md](./NEW_CLINIC_V1_ENCOUNTER_FORM_HIGH_LEVEL_FACILITY_REDESIGN.md) | **Encounter consult form** — high-level / referral-hospital tier (native React target) | Draft v0.1.7 |
+| [NEW_CLINIC_V1_ENCOUNTER_FORM_HIGH_LEVEL_FACILITY_REDESIGN.md](./new/NEW_CLINIC_V1_ENCOUNTER_FORM_HIGH_LEVEL_FACILITY_REDESIGN.md) | **Encounter consult form** — high-level / referral-hospital tier (native React target) | Draft v0.1.7 |
 | [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) | M18 Queue Bridge Hub (scheduling ↔ visit queue) | Draft v0.1.3 |
 | [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) | Clinical → Background / History & Lifestyle (T1-F20 read · stock edit) | Draft v0.1.1 |
 | [NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) | Patient payment history / Ledger (M11-F11 wrapper · V1.1-CDa) | Audit closure v0.1.1 |
@@ -44,10 +44,28 @@ Read in this order for a full picture:
 
 | Document | Purpose |
 |----------|---------|
+| [NEW_CLINIC_OPENEMR_GAP_ANALYSIS_AND_REDESIGN_PLAN.md](./new/NEW_CLINIC_OPENEMR_GAP_ANALYSIS_AND_REDESIGN_PLAN.md) | Coverage audit vs stock OpenEMR menu tree + phased GAP-A–D React redesign plan for unaddressed areas (v0.1.1) |
+| [NEW_CLINIC_MARKET_EXPANSION_MASTER_PLAN.md](./new/NEW_CLINIC_MARKET_EXPANSION_MASTER_PLAN.md) | Market segments T0–T8, MKT-* feature roadmap merged with GAP/SCALE waves, pilot playbook, project-management operating model, and business plan (pricing, hosting, support, GTM, legal, risks) (v0.1.2) |
 | [NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) | UI/UX master — §0 TL;DR · §1 architectural model · §2 design principles · §3 visual system · §4 component reference · §5 interaction states · §6 IA + module map · §9 shadcn migration plan · §10 governance (v2.0.0) |
 | [FRONTEND_2026_MODERNIZATION_PLAN.md](./FRONTEND_2026_MODERNIZATION_PLAN.md) | OpenEMR-wide modernization strategy; **New Clinic React islands shipped** |
 | [FRONTEND_MODULE_GUIDE.md](../FRONTEND_MODULE_GUIDE.md) | How to build and wire React islands (Vite, `oeFetch`, tokens) |
-| [MOBILE_IOS_CURSOR_CHECKLIST.md](./MOBILE_IOS_CURSOR_CHECKLIST.md) | Post-session verify checklist when coding from **Cursor iOS** (CI + desktop gates) |
+| [MOBILE_IOS_CURSOR_CHECKLIST.md](./new/MOBILE_IOS_CURSOR_CHECKLIST.md) | Post-session verify checklist when coding from **Cursor iOS** (CI + desktop gates) |
+| [NEW_CLINIC_V1_SCALABILITY_HARDENING_PLAN.md](./new/NEW_CLINIC_V1_SCALABILITY_HARDENING_PLAN.md) | SCALE-* performance hardening tasks + R1–R8 rules (v1.0.0) |
+| [NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md](./NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md) | Full-codebase audit 2026-07-07 — verified endpoint/feature inventory, gap analysis, file dispositions, AUDIT-1..15 refactoring roadmap (v0.1.0) |
+
+## User personas
+
+Composite role personas grounding design/copy decisions in a real working day; companions to USER_WORKFLOWS §4 + §8.x role playbooks. Audited against code 2026-07-07.
+
+| Persona | Role / product mapping | Status |
+|---------|------------------------|--------|
+| [NEW_CLINIC_PERSONA_NURSE_AKUA.md](./NEW_CLINIC_PERSONA_NURSE_AKUA.md) | Nurse — Triage desk, read-only Visit Board (§8.2) | v1.1.0 |
+| [NEW_CLINIC_PERSONA_DOCTOR_MENSAH.md](./NEW_CLINIC_PERSONA_DOCTOR_MENSAH.md) | Doctor — Doctor Desk, routing, E-Sign (§8.3–8.3.4) | v1.1.0 |
+| [NEW_CLINIC_PERSONA_LAB_TECH_LABIK.md](./NEW_CLINIC_PERSONA_LAB_TECH_LABIK.md) | Lab — Lab Desk, Lab Ops Hub, lab-direct intake (§8.4/.4a/.4b) | v1.1.0 |
+| [NEW_CLINIC_PERSONA_PHARMACIST_ESI.md](./NEW_CLINIC_PERSONA_PHARMACIST_ESI.md) | Pharmacy — Pharmacy Desk, Pharm Ops Hub, OTC, walk-in triage (§8.5/.5a/.5b) | v1.1.0 |
+| [NEW_CLINIC_PERSONA_RECEPTIONIST_AMA.md](./NEW_CLINIC_PERSONA_RECEPTIONIST_AMA.md) | Reception — Front Desk search/registration, booking, recalls, check-in (§8.1/.1a–d, §9, §10) | v1.0.0 |
+| [NEW_CLINIC_PERSONA_CASHIER_KOFI.md](./NEW_CLINIC_PERSONA_CASHIER_KOFI.md) | Cashier — payment queue, gates, receipts, closure paths, daily cash discipline (§8.6, D-BILL-2) | v1.0.0 |
+| [NEW_CLINIC_PERSONA_ADMIN_SELORM.md](./NEW_CLINIC_PERSONA_ADMIN_SELORM.md) | Clinic Admin (IT-confident) — Admin Hub config, People & Access, flags, backups, day-2 runbooks (§14, RB-01–RB-20) | v1.0.0 |
 
 ## Relationship map
 

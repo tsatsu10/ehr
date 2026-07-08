@@ -1,0 +1,54 @@
+body.nc-people-legacy-wrap {
+    margin: 0;
+    background: var(--oe-nc-bg, #f1f5f9);
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+.nc-people-legacy-wrap__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.nc-people-legacy-wrap__breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.875rem;
+    color: #64748b;
+}
+
+.nc-people-legacy-wrap__breadcrumb a {
+    color: #047857;
+    text-decoration: none;
+}
+
+.nc-people-legacy-wrap__breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.nc-people-legacy-wrap__banner {
+    padding: 0.65rem 1rem;
+    background: #fffbeb;
+    border-bottom: 1px solid #fcd34d;
+    color: #92400e;
+    font-size: 0.875rem;
+}
+
+.nc-people-legacy-wrap__frame {
+    display: block;
+    width: 100%;
+    height: calc(100vh - 56px);
+    border: 0;
+    background: #fff;
+}
+
+body.nc-people-legacy-wrap:has(.nc-people-legacy-wrap__banner) .nc-people-legacy-wrap__frame {
+    height: calc(100vh - 96px);
+}

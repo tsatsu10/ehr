@@ -86,7 +86,7 @@
   display: block;
   width: 100%;
   border: 1px solid var(--oe-nc-border, #cbd5e1);
-  border-radius: 1rem;
+  border-radius: var(--oe-nc-radius-lg, 0.375rem);
   background: var(--oe-nc-surface, #fff);
   box-shadow: var(--oe-nc-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
   overflow: hidden;
@@ -133,7 +133,7 @@
   justify-content: center;
   width: 3.5rem;
   height: 3.5rem;
-  border-radius: 1rem;
+  border-radius: var(--oe-nc-radius-lg, 0.375rem);
   background: color-mix(in srgb, var(--color-oe-primary, #1e40af) 10%, white);
   color: var(--color-oe-primary, #1e40af);
 }
@@ -250,7 +250,7 @@
 .nc-cashier-queue-panel,
 .nc-triage-queue-panel {
   border: 1px solid var(--oe-nc-border, #cbd5e1);
-  border-radius: 1rem;
+  border-radius: var(--oe-nc-radius-lg, 0.375rem);
   background: var(--oe-nc-surface, #fff);
   box-shadow: var(--oe-nc-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
 }
@@ -327,7 +327,7 @@
   width: 100%;
   padding: 0.65rem 0.75rem;
   border: 1px solid var(--oe-nc-border, #cbd5e1);
-  border-radius: 0.75rem;
+  border-radius: var(--oe-nc-radius-lg, 0.375rem);
   background: var(--oe-nc-surface, #fff);
   text-align: left;
   cursor: pointer;
@@ -376,7 +376,7 @@
   justify-content: center;
   min-width: 2rem;
   height: 2rem;
-  border-radius: 0.5rem;
+  border-radius: var(--oe-nc-radius, 0.25rem);
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--color-oe-primary, #1e40af);

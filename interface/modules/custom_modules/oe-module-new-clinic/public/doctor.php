@@ -23,7 +23,7 @@ $deskFacilityId = (new VisitScopeService())->resolveDeskFacilityId();
 $reactDoctorDesk = $config->get('enable_react_doctor_desk', '1') === '1';
 $labResultsToast = $config->isEnabled('enable_lab_results_toast', 0);
 
-(new PageController())->render('doctor.html.twig', 'Doctor Desk', 'new_doctor', [
+(new PageController())->renderDesk('doctor.html.twig', 'new_doctor', [
     'desk_id' => 'doctor',
     'module_url' => $moduleUrl,
     'visit_board_url' => $moduleUrl . '/visit-board.php',

@@ -78,6 +78,29 @@ class AjaxActionPolicy
         'admin.fee.billing_codes' => 'new_fee_schedule_admin',
         'admin.fee.import' => 'new_fee_schedule_admin',
         'admin.roles.grant_self' => 'new_admin',
+        'admin.roles.templates' => 'new_admin',
+        'admin.staff.list' => 'new_admin',
+        'admin.staff.create' => 'new_admin',
+        'admin.staff.deactivate' => 'new_admin',
+        'admin.staff.access_summary' => 'new_admin',
+        'admin.facility_user.list' => 'new_admin',
+        'admin.facility_user.get' => 'new_admin',
+        'admin.facility_user.save' => 'new_admin',
+        'admin.facility_user.matrix' => 'new_admin',
+        'admin.acl.users' => 'new_admin',
+        'admin.acl.membership' => 'new_admin',
+        'admin.acl.membership_add' => 'new_admin',
+        'admin.acl.membership_remove' => 'new_admin',
+        'admin.acl.groups' => 'new_admin',
+        'admin.acl.group_permissions' => 'new_admin',
+        'admin.acl.group_permissions_add' => 'new_admin',
+        'admin.acl.group_permissions_remove' => 'new_admin',
+        'admin.acl.return_values' => 'new_admin',
+        'admin.acl.group_create' => 'new_admin',
+        'admin.acl.group_remove' => 'new_admin',
+        'admin.staff.get' => 'new_admin',
+        'admin.staff.update' => 'new_admin',
+        'admin.staff.reset_password' => 'new_admin',
         'admin.reconciliation.run' => 'new_admin',
         'admin.profile.apply_cash_clinic' => 'new_admin',
         'admin.forms_catalog.set_state' => 'new_admin',
@@ -115,6 +138,13 @@ class AjaxActionPolicy
     /** @var array<int, string> */
     private const PROFILE_EDIT_ACL_ANY = [
         'new_reception', 'new_nurse', 'new_doctor', 'new_cashier', 'new_admin',
+    ];
+
+    /** @var array<int, string> */
+    private const PROFILE_ACTIONS = [
+        'profile.get',
+        'profile.update',
+        'profile.change_password',
     ];
 
     /** @var array<int, string> */
@@ -568,6 +598,10 @@ class AjaxActionPolicy
 
         if (in_array($action, self::CLINICAL_DOC_WRITE_ACTIONS, true)) {
             return ['type' => 'clinical_doc_write_acl'];
+        }
+
+        if (in_array($action, self::PROFILE_ACTIONS, true)) {
+            return ['type' => 'desk_acl'];
         }
 
         if (in_array($action, self::COHORT_ACTIONS, true)) {

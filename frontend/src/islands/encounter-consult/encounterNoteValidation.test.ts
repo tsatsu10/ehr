@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { emptySections, mergeSections } from './encounterConsultTypes';
+import { emptySections, mergeSections, type EncounterNotePrefill } from './encounterConsultTypes';
 import { validateEncounterNote } from './encounterNoteValidation';
 
-const basePrefill = {
+const basePrefill: EncounterNotePrefill = {
   chief_complaint: 'Headache',
   vitals: {
     latest: {},

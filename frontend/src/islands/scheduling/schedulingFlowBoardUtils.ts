@@ -140,7 +140,7 @@ export function moveLaneInOrder(
   delta: -1 | 1,
   allStatuses: string[],
 ): string[] {
-  let base = order.length > 0 ? [...order] : [...allStatuses];
+  const base = order.length > 0 ? [...order] : [...allStatuses];
   for (const laneStatus of allStatuses) {
     if (!base.includes(laneStatus)) {
       base.push(laneStatus);
@@ -168,7 +168,7 @@ export function reorderLanes(
   if (fromStatus === '' || fromStatus === toStatus) {
     return order;
   }
-  let base = order.length > 0 ? [...order] : [...allStatuses];
+  const base = order.length > 0 ? [...order] : [...allStatuses];
   for (const laneStatus of allStatuses) {
     if (!base.includes(laneStatus)) {
       base.push(laneStatus);

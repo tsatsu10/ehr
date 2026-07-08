@@ -16,7 +16,6 @@
 require_once dirname(__DIR__) . '/bootstrap.php';
 
 use OpenEMR\Common\Acl\AclMain;
-use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Modules\NewClinic\Controllers\PageController;
 use OpenEMR\Modules\NewClinic\Services\BillOpsAccessService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;

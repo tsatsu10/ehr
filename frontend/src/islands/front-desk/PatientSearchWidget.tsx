@@ -23,7 +23,7 @@ import { RecentlyViewed } from './RecentlyViewed';
 import { TodaysAppointmentsList } from './TodaysAppointmentsList';
 import type { RecentPatient } from '@core/useRecentlyViewedPatients';
 import type { TodaysAppointmentRow } from '@core/types';
-import { UserPlus, X, Check, CalendarCheck, Search, BellRing, Sparkles, Zap } from 'lucide-react';
+import { UserPlus, X, Check, CalendarCheck, Search, BellRing, Zap } from 'lucide-react';
 
 // Virtual scrolling threshold: use virtualization for result sets > 50
 const VIRTUALIZATION_THRESHOLD = 50;
@@ -414,7 +414,7 @@ export function PatientSearchWidget({
 
                   <div className="ml-auto flex shrink-0 items-center gap-1.5">
                     <Badge 
-                      variant={suggestion.source === 'recent' ? 'neutral' : suggestion.source === 'appointment' ? 'info' : 'ghost'}
+                      variant={suggestion.source === 'recent' ? 'neutral' : suggestion.source === 'appointment' ? 'info' : 'outline'}
                       className="text-[0.6875rem]"
                     >
                       {suggestion.source === 'recent' ? 'Recent' : suggestion.source === 'appointment' ? 'Today' : 'Cached'}
@@ -483,7 +483,7 @@ export function PatientSearchWidget({
                 selectedPid={selectedPid}
                 onSelectPatient={onSelectPatient}
                 estimatedRowHeight={72}
-                renderRow={(patient, isSelected) => (
+                renderRow={(patient, _isSelected) => (
                   <SearchResultRow
                     patient={patient}
                     selectedPid={selectedPid}

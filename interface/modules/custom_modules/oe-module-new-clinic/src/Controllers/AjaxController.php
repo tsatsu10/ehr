@@ -21,6 +21,7 @@ use OpenEMR\Modules\NewClinic\Exceptions\ExternalRxIncompleteException;
 use OpenEMR\Modules\NewClinic\Exceptions\UndispensedRxException;
 use OpenEMR\Modules\NewClinic\Exceptions\UnsignedEncounterException;
 use OpenEMR\Modules\NewClinic\Exceptions\VisitNotTakeableException;
+use OpenEMR\Modules\NewClinic\Services\AclAdminService;
 use OpenEMR\Modules\NewClinic\Services\AjaxActionPolicy;
 use OpenEMR\Modules\NewClinic\Services\ClinicalExportService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalLabsSummaryService;
@@ -67,6 +68,9 @@ use OpenEMR\Modules\NewClinic\Services\PaymentHistoryService;
 use OpenEMR\Modules\NewClinic\Services\ProfilePaymentsSummaryService;
 use OpenEMR\Modules\NewClinic\Services\ReferralCorrespondenceService;
 use OpenEMR\Modules\NewClinic\Services\ReferralDocumentService;
+use OpenEMR\Modules\NewClinic\Services\StaffAdminService;
+use OpenEMR\Modules\NewClinic\Services\StaffAccessSummaryService;
+use OpenEMR\Modules\NewClinic\Services\FacilityUserAdminService;
 use OpenEMR\Modules\NewClinic\Services\ReportsService;
 use OpenEMR\Modules\NewClinic\Services\ReportsSchedulingService;
 use OpenEMR\Modules\NewClinic\Services\ReportsAncillaryService;
@@ -86,6 +90,7 @@ use OpenEMR\Modules\NewClinic\Services\SessionRoleService;
 use OpenEMR\Modules\NewClinic\Services\EncounterNoteService;
 use OpenEMR\Modules\NewClinic\Services\EncounterSessionService;
 use OpenEMR\Modules\NewClinic\Services\SharedDeviceSessionService;
+use OpenEMR\Modules\NewClinic\Services\MyProfileService;
 use OpenEMR\Modules\NewClinic\Services\PatientActivityFeedService;
 use OpenEMR\Modules\NewClinic\Services\PatientChartClinicalService;
 use OpenEMR\Modules\NewClinic\Services\PatientChartMessagesService;
@@ -231,6 +236,11 @@ class AjaxController
         private readonly ReportsAncillaryService $reportsAncillaryService = new ReportsAncillaryService(),
         private readonly ReportsDocumentationIntegrityService $reportsDocumentationIntegrityService = new ReportsDocumentationIntegrityService(),
         private readonly ReferralDocumentService $referralDocumentService = new ReferralDocumentService(),
+        private readonly StaffAdminService $staffAdminService = new StaffAdminService(),
+        private readonly StaffAccessSummaryService $staffAccessSummaryService = new StaffAccessSummaryService(),
+        private readonly FacilityUserAdminService $facilityUserAdminService = new FacilityUserAdminService(),
+        private readonly AclAdminService $aclAdminService = new AclAdminService(),
+        private readonly MyProfileService $myProfileService = new MyProfileService(),
     ) {
     }
 
@@ -1558,6 +1568,248 @@ class AjaxController
                     }
                     $payload = $this->clinicAdminService->grantDeskRolesToCurrentUser($username, $userId);
                     $this->respond(true, 'Roles granted — log out and back in for ACL to take effect', $payload);
+                    break;
+                case 'admin.roles.templates':
+                    $facilityId = $this->resolveRequestFacilityId();
+                    $this->respond(true, 'ok', $this->staffAdminService->getTemplatesPayload($facilityId));
+                    break;
+                case 'admin.staff.list':
+                    $page = max(1, (int) ($_REQUEST['page'] ?? 1));
+                    $pageSize = max(1, min(100, (int) ($_REQUEST['page_size'] ?? 25)));
+                    $search = (string) ($_REQUEST['search'] ?? '');
+                    $status = (string) ($_REQUEST['status'] ?? 'active');
+                    $this->respond(true, 'ok', $this->staffAdminService->listStaff($page, $pageSize, $search, $status));
+                    break;
+                case 'admin.staff.create':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $body['facility_id'] = (int) ($body['facility_id'] ?? $this->resolveRequestFacilityId());
+                    $payload = $this->staffAdminService->createFromTemplate($body, $userId);
+                    $this->respond(true, 'Staff created', $payload);
+                    break;
+                case 'admin.staff.deactivate':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $targetUserId = (int) ($body['user_id'] ?? 0);
+                    if ($targetUserId <= 0) {
+                        $this->respond(false, 'user_id required', [], 400);
+                    }
+                    $this->staffAdminService->deactivateUser($targetUserId, $userId);
+                    $this->respond(true, 'Staff deactivated');
+                    break;
+                case 'admin.staff.access_summary':
+                    $targetUserId = (int) ($_REQUEST['user_id'] ?? 0);
+                    if ($targetUserId <= 0) {
+                        $this->respond(false, 'user_id required', [], 400);
+                    }
+                    $this->respond(true, 'ok', $this->staffAccessSummaryService->getSummary($targetUserId));
+                    break;
+                case 'admin.facility_user.list':
+                    $this->respond(true, 'ok', $this->facilityUserAdminService->listMatrix());
+                    break;
+                case 'admin.facility_user.get':
+                    $targetUserId = (int) ($_REQUEST['user_id'] ?? 0);
+                    $facId = (int) ($_REQUEST['facility_id'] ?? $this->resolveRequestFacilityId());
+                    if ($targetUserId <= 0 || $facId <= 0) {
+                        $this->respond(false, 'user_id and facility_id required', [], 400);
+                    }
+                    $this->respond(true, 'ok', $this->facilityUserAdminService->getForUserFacility($targetUserId, $facId));
+                    break;
+                case 'admin.facility_user.save':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $targetUserId = (int) ($body['user_id'] ?? 0);
+                    $facId = (int) ($body['facility_id'] ?? 0);
+                    $values = is_array($body['values'] ?? null) ? $body['values'] : [];
+                    if ($targetUserId <= 0 || $facId <= 0) {
+                        $this->respond(false, 'user_id and facility_id required', [], 400);
+                    }
+                    $this->facilityUserAdminService->saveForUserFacility($targetUserId, $facId, $values);
+                    $this->respond(true, 'Facility user fields saved');
+                    break;
+                case 'admin.facility_user.matrix':
+                    $facilityFilter = (int) ($_REQUEST['facility_id'] ?? 0);
+                    $search = (string) ($_REQUEST['search'] ?? '');
+                    $this->respond(
+                        true,
+                        'ok',
+                        $this->facilityUserAdminService->getMatrixGrid(
+                            $facilityFilter > 0 ? $facilityFilter : null,
+                            $search
+                        )
+                    );
+                    break;
+                case 'admin.staff.get':
+                    $targetUserId = (int) ($_REQUEST['user_id'] ?? 0);
+                    if ($targetUserId <= 0) {
+                        $this->respond(false, 'user_id required', [], 400);
+                    }
+                    $this->respond(true, 'ok', $this->staffAdminService->getUserDetail($targetUserId));
+                    break;
+                case 'admin.staff.update':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $targetUserId = (int) ($body['user_id'] ?? 0);
+                    if ($targetUserId <= 0) {
+                        $this->respond(false, 'user_id required', [], 400);
+                    }
+                    $this->respond(true, 'Staff updated', $this->staffAdminService->updateUser($targetUserId, $body, $userId));
+                    break;
+                case 'admin.staff.reset_password':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $targetUserId = (int) ($body['user_id'] ?? 0);
+                    if ($targetUserId <= 0) {
+                        $this->respond(false, 'user_id required', [], 400);
+                    }
+                    $this->staffAdminService->resetPassword(
+                        $targetUserId,
+                        (string) ($body['admin_password'] ?? ''),
+                        (string) ($body['new_password'] ?? ''),
+                        $userId
+                    );
+                    $this->respond(true, 'Password reset');
+                    break;
+                case 'profile.get':
+                    $this->respond(true, 'ok', $this->myProfileService->getProfile($userId));
+                    break;
+                case 'profile.update':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $this->respond(true, 'Profile updated', $this->myProfileService->updateProfile($userId, $body));
+                    break;
+                case 'profile.change_password':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $this->myProfileService->changePassword(
+                        $userId,
+                        (string) ($body['current_password'] ?? ''),
+                        (string) ($body['new_password'] ?? '')
+                    );
+                    $this->respond(true, 'Password updated');
+                    break;
+                case 'admin.acl.users':
+                    $this->respond(true, 'ok', $this->aclAdminService->listUsers());
+                    break;
+                case 'admin.acl.membership':
+                    $username = (string) ($_REQUEST['username'] ?? '');
+                    $this->respond(true, 'ok', $this->aclAdminService->getMembership($username));
+                    break;
+                case 'admin.acl.membership_add':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $username = (string) ($body['username'] ?? '');
+                    $groups = is_array($body['groups'] ?? null) ? $body['groups'] : [];
+                    $this->respond(true, 'Membership updated', $this->aclAdminService->addMembership($username, $groups));
+                    break;
+                case 'admin.acl.membership_remove':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $username = (string) ($body['username'] ?? '');
+                    $groups = is_array($body['groups'] ?? null) ? $body['groups'] : [];
+                    $this->respond(true, 'Membership updated', $this->aclAdminService->removeMembership($username, $groups));
+                    break;
+                case 'admin.acl.groups':
+                    $this->respond(true, 'ok', $this->aclAdminService->listGroups());
+                    break;
+                case 'admin.acl.group_permissions':
+                    $group = (string) ($_REQUEST['group'] ?? '');
+                    $returnValue = (string) ($_REQUEST['return_value'] ?? '');
+                    $this->respond(true, 'ok', $this->aclAdminService->getGroupPermissions($group, $returnValue));
+                    break;
+                case 'admin.acl.group_permissions_add':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $this->respond(
+                        true,
+                        'Permissions updated',
+                        $this->aclAdminService->addGroupPermissions(
+                            (string) ($body['group'] ?? ''),
+                            (string) ($body['return_value'] ?? ''),
+                            is_array($body['aco_ids'] ?? null) ? $body['aco_ids'] : []
+                        )
+                    );
+                    break;
+                case 'admin.acl.group_permissions_remove':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $this->respond(
+                        true,
+                        'Permissions updated',
+                        $this->aclAdminService->removeGroupPermissions(
+                            (string) ($body['group'] ?? ''),
+                            (string) ($body['return_value'] ?? ''),
+                            is_array($body['aco_ids'] ?? null) ? $body['aco_ids'] : []
+                        )
+                    );
+                    break;
+                case 'admin.acl.return_values':
+                    $this->respond(true, 'ok', $this->aclAdminService->listReturnValues());
+                    break;
+                case 'admin.acl.group_create':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $this->respond(
+                        true,
+                        'ACL group created',
+                        $this->aclAdminService->createGroup(
+                            (string) ($body['title'] ?? ''),
+                            (string) ($body['identifier'] ?? ''),
+                            (string) ($body['return_value'] ?? ''),
+                            (string) ($body['description'] ?? '')
+                        )
+                    );
+                    break;
+                case 'admin.acl.group_remove':
+                    if ($method !== 'POST') {
+                        $this->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->readJsonBody();
+                    $this->verifyCsrf($body);
+                    $this->respond(
+                        true,
+                        'ACL group removed',
+                        $this->aclAdminService->removeGroup(
+                            (string) ($body['title'] ?? ''),
+                            (string) ($body['return_value'] ?? '')
+                        )
+                    );
                     break;
                 case 'reports.daily':
                     $facilityId = $this->resolveRequestFacilityId();

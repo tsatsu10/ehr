@@ -51,7 +51,7 @@ import { FeesTab } from './tabs/FeesTab';
 import { FormsTab } from './tabs/FormsTab';
 import { SystemTab } from './tabs/SystemTab';
 import { QueueRolesTab } from './tabs/QueueRolesTab';
-import { RolesTab } from './tabs/RolesTab';
+import { PeopleAccessTab } from './tabs/PeopleAccessTab';
 import { VisitTypesTab } from './tabs/VisitTypesTab';
 import { useAdminPageHeading } from './useAdminPageHeading';
 import {
@@ -333,8 +333,12 @@ export function AdminHub({
     const url = new URL(window.location.href);
     if (tab !== 'queue') {
       url.searchParams.set('tab', tab);
+      if (tab !== 'people') {
+        url.searchParams.delete('sub');
+      }
     } else {
       url.searchParams.delete('tab');
+      url.searchParams.delete('sub');
     }
     window.history.replaceState({}, '', url.toString());
   }, []);
@@ -580,6 +584,7 @@ export function AdminHub({
     }
   }, [applyPayload, facilityId, fetchOptions, scope]);
 
+  const systemHealthBackupRunId = systemHealth?.backup_run_id;
   const completeBackup = useCallback(async (runId?: number | null) => {
     setBackupCompleting(true);
     setErrorMessage(null);
@@ -589,7 +594,7 @@ export function AdminHub({
         json: {
           scope,
           facility_id: facilityId,
-          run_id: runId ?? systemHealth?.backup_run_id ?? 0,
+          run_id: runId ?? systemHealthBackupRunId ?? 0,
         },
       });
       applyPayload(data);
@@ -599,7 +604,7 @@ export function AdminHub({
     } finally {
       setBackupCompleting(false);
     }
-  }, [applyPayload, facilityId, fetchOptions, scope, systemHealth?.backup_run_id]);
+  }, [applyPayload, facilityId, fetchOptions, scope, systemHealthBackupRunId]);
 
   const markSetupItem = useCallback(async (checklistKey: string) => {
     setSetupMarkingKey(checklistKey);
@@ -934,7 +939,7 @@ export function AdminHub({
 
   const healthTone = systemHealth?.overall_status === 'ok'
     ? 'success'
-    : systemHealth?.overall_status === 'warn'
+    : systemHealth?.overall_status === 'warning'
       ? 'warning'
       : systemHealth?.overall_status === 'critical'
         ? 'danger'
@@ -1025,14 +1030,18 @@ export function AdminHub({
             />
           </AdminTabPanel>
 
-          <AdminTabPanel tabId="roles" active={activeTab === 'roles'}>
-            <RolesTab
+          <AdminTabPanel tabId="people" active={activeTab === 'people'}>
+            <PeopleAccessTab
               webroot={webroot}
+              ajaxUrl={ajaxUrl}
+              csrfToken={csrfToken}
+              facilityId={facilityId > 0 ? facilityId : clinicFacilityId}
               roleGroups={roles.role_groups ?? []}
               sensitivePermissions={roles.sensitive_permissions ?? []}
               aclInventory={roles.acl_inventory ?? []}
               onGrantSelf={() => setPendingConfirm({ type: 'grant_roles' })}
               granting={grantingRoles}
+              onGoQueueTab={() => handleTabChange('queue')}
             />
           </AdminTabPanel>
 

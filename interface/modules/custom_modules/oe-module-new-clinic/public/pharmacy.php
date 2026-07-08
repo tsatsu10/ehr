@@ -31,7 +31,7 @@ $canSellOtc = $canDispense;
 $canUndispensedOverride = AclMain::aclCheckCore('new_clinic', 'new_pharmacy_undispensed_override');
 $canExternalRxOverride = AclMain::aclCheckCore('new_clinic', 'new_pharmacy_external_rx_override');
 
-(new PageController())->render('pharmacy.html.twig', 'Pharmacy Desk', 'new_pharmacy', [
+(new PageController())->renderDesk('pharmacy.html.twig', 'new_pharmacy', [
     'island_entry' => 'pharmacy-desk',
     'desk_id' => 'pharmacy',
     'module_url' => $moduleUrl,

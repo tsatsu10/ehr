@@ -20,7 +20,8 @@ class AdminRunbookService
     {
         $webroot = (string) ($GLOBALS['webroot'] ?? '');
         $modulePublic = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
-        $adminHub = $modulePublic . 'admin-hub/';
+        $adminHub = $modulePublic . 'admin.php';
+        $peopleLegacy = $modulePublic . 'admin-people-legacy.php';
 
         $cards = [
             $this->card(
@@ -60,8 +61,8 @@ class AdminRunbookService
                 'Any',
                 'Add new receptionist',
                 'People',
-                'Create user, assign Reception template — not Administrators.',
-                $webroot . '/interface/usergroup/usergroup_admin.php'
+                'Create user with Reception template — People → Add staff.',
+                $adminHub . '?tab=people&sub=staff'
             ),
             $this->card(
                 'RB-06',
@@ -69,7 +70,7 @@ class AdminRunbookService
                 'Doctor locum account',
                 'People',
                 'Doctor template + license field; land on Doctor Desk.',
-                $webroot . '/interface/usergroup/usergroup_admin.php'
+                $adminHub . '?tab=people&sub=staff'
             ),
             $this->card(
                 'RB-07',
@@ -77,15 +78,15 @@ class AdminRunbookService
                 'Deactivate leaving staff',
                 'People',
                 'Disable login; do not delete audit history.',
-                $webroot . '/interface/usergroup/usergroup_admin.php'
+                $adminHub . '?tab=people&sub=staff'
             ),
             $this->card(
                 'RB-08',
                 'Any',
                 'Reset forgotten password',
                 'People',
-                'Use stock user admin — require manager approval.',
-                $webroot . '/interface/usergroup/usergroup_admin_add.php'
+                'Use Reset password on the Staff tab — require manager approval.',
+                $adminHub . '?tab=people&sub=staff&view=reset-password'
             ),
             $this->card(
                 'RB-09',
@@ -157,7 +158,7 @@ class AdminRunbookService
                 'Review user access',
                 'People',
                 'Confirm each active user still needs their desk ACLs.',
-                $webroot . '/interface/usergroup/usergroup_admin.php'
+                $adminHub . '?tab=people&sub=access'
             ),
             $this->card(
                 'RB-18',

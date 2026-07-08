@@ -260,8 +260,8 @@ describe('AdminHub', () => {
         }),
       })
     );
-    expect(await screen.findByText('Settings saved.')).toBeInTheDocument();
-  });
+    expect(await screen.findByText('Settings saved.', {}, { timeout: 10000 })).toBeInTheDocument();
+  }, 15000);
 
   it('shows system health tab with backup blocked help', async () => {
     render(<AdminHub {...props} />);

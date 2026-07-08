@@ -64,6 +64,7 @@ export function RecallFormSheet({
   }, [open, draft, filters.date, filters.facilityId, providers, recallTypes]);
 
   const canSave = pid > 0 && dueDate !== '' && providerId > 0 && facilityId > 0;
+  const draftRecallId = draft?.recallId;
 
   const handleSave = useCallback(async () => {
     if (!canSave) {
@@ -74,7 +75,7 @@ export function RecallFormSheet({
     setError(null);
     try {
       await saveRecall(ajaxUrl, csrfToken, filters, bucket, {
-        recall_id: draft?.recallId,
+        recall_id: draftRecallId,
         pid,
         due_date: dueDate,
         reason,
@@ -94,7 +95,7 @@ export function RecallFormSheet({
     bucket,
     canSave,
     csrfToken,
-    draft?.recallId,
+    draftRecallId,
     dueDate,
     facilityId,
     filters,

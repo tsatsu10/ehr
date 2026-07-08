@@ -284,6 +284,7 @@
             "php interface/modules/custom_modules/oe-module-new-clinic/scripts/registry-signoff-smoke.php",
             "php interface/modules/custom_modules/oe-module-new-clinic/scripts/smoke-patient-registry-http.php"
         ],
+        "people-signoff": "php interface/modules/custom_modules/oe-module-new-clinic/scripts/smoke-admin-people-http.php",
         "require-checker": "php -d memory_limit=4g ./vendor/bin/composer-require-checker check --config-file=.composer-require-checker.json"
     }
 }

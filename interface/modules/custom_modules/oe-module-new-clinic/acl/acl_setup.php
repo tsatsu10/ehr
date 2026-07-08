@@ -88,6 +88,7 @@ $acos = [
     'new_clinical_doc_specialty' => 'Clinical Documentation Specialty Lens',
     'new_admin_hub_system' => 'Admin Hub System Health & Backup',
     'new_admin_hub_forms' => 'Admin Hub Forms Bundle',
+    'new_admin_hub_people' => 'Admin Hub People & Access',
     'new_queue_bridge' => 'Queue Bridge Hub',
     'new_queue_bridge_resolve' => 'Queue Bridge Resolve Actions',
     'new_queue_bridge_dismiss' => 'Queue Bridge Dismiss Exceptions',

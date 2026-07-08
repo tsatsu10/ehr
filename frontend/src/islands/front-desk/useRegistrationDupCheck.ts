@@ -39,8 +39,8 @@ export function useRegistrationDupCheck(
             const matches = findFuzzyDuplicates(
                 {
                     name: `${payload.fname} ${payload.lname}`.trim(),
-                    dob: payload.dob,
-                    phone: payload.phone_cell || payload.phone_home,
+                    dob: payload.DOB,
+                    phone: payload.phone,
                     threshold: 60, // Medium confidence minimum
                 },
                 localPatients.filter((p) => p.pid !== currentPid)

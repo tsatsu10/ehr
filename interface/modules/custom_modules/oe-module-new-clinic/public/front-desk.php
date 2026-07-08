@@ -34,7 +34,7 @@ $config = $deskConfig;
 $reactFrontDesk = $config->get('enable_react_front_desk', '1') === '1';
 $moduleUrl = $GLOBALS['webroot'] . '/interface/modules/custom_modules/oe-module-new-clinic/public';
 
-(new PageController())->render('front-desk.html.twig', 'Front Desk', 'new_reception', [
+(new PageController())->renderDesk('front-desk.html.twig', 'new_reception', [
     'island_entry' => 'front-desk',
     'desk_id' => 'front-desk',
     'registration_mode' => $deskConfig->get('registration_mode', 'desk_full_form') ?? 'desk_full_form',

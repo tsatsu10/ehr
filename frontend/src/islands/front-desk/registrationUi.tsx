@@ -109,7 +109,7 @@ export function RegistrationHeader({
           {completionScore == null ? '—' : `${completionScore}% complete`}
         </Badge>
         {showAutoSave && autoSaveLabel ? (
-          <Badge variant="ghost" className="text-xs gap-1.5" id="nc-reg-autosave">
+          <Badge variant="outline" className="text-xs gap-1.5" id="nc-reg-autosave">
             <Clock className="h-3 w-3" aria-hidden />
             {autoSaveLabel}
           </Badge>

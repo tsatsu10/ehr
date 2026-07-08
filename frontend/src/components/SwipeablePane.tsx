@@ -67,25 +67,25 @@ export function SwipeablePane({
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const handlers = useSwipeable({
-    onSwipedLeft: useCallback((eventData) => {
+    onSwipedLeft: useCallback((_eventData) => {
       if (enabled && !prefersReducedMotion && onSwipeLeft) {
         onSwipeLeft();
       }
     }, [enabled, prefersReducedMotion, onSwipeLeft]),
     
-    onSwipedRight: useCallback((eventData) => {
+    onSwipedRight: useCallback((_eventData) => {
       if (enabled && !prefersReducedMotion && onSwipeRight) {
         onSwipeRight();
       }
     }, [enabled, prefersReducedMotion, onSwipeRight]),
     
-    onSwipedUp: useCallback((eventData) => {
+    onSwipedUp: useCallback((_eventData) => {
       if (enabled && !prefersReducedMotion && onSwipeUp) {
         onSwipeUp();
       }
     }, [enabled, prefersReducedMotion, onSwipeUp]),
     
-    onSwipedDown: useCallback((eventData) => {
+    onSwipedDown: useCallback((_eventData) => {
       if (enabled && !prefersReducedMotion && onSwipeDown) {
         onSwipeDown();
       }
@@ -135,25 +135,25 @@ export function useSwipeGestures(options: {
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   return useSwipeable({
-    onSwipedLeft: useCallback((eventData) => {
+    onSwipedLeft: useCallback((_eventData) => {
       if (enabled && !prefersReducedMotion && onSwipeLeft) {
         onSwipeLeft();
       }
     }, [enabled, prefersReducedMotion, onSwipeLeft]),
     
-    onSwipedRight: useCallback((eventData) => {
+    onSwipedRight: useCallback((_eventData) => {
       if (enabled && !prefersReducedMotion && onSwipeRight) {
         onSwipeRight();
       }
     }, [enabled, prefersReducedMotion, onSwipeRight]),
     
-    onSwipedUp: useCallback((eventData) => {
+    onSwipedUp: useCallback((_eventData) => {
       if (enabled && !prefersReducedMotion && onSwipeUp) {
         onSwipeUp();
       }
     }, [enabled, prefersReducedMotion, onSwipeUp]),
     
-    onSwipedDown: useCallback((eventData) => {
+    onSwipedDown: useCallback((_eventData) => {
       if (enabled && !prefersReducedMotion && onSwipeDown) {
         onSwipeDown();
       }

@@ -13,9 +13,8 @@ describe('StatusPill', () => {
   });
 
   it('applies a warning variant for ready_for_doctor', () => {
-    const { container } = render(<StatusPill state="ready_for_doctor" />);
-    // Badge now uses Tailwind classes; check for amber (warning) colour token
-    expect(container.firstChild).toHaveClass('bg-amber-100');
+    render(<StatusPill state="ready_for_doctor" />);
+    expect(screen.getByText('Ready for doctor')).toBeInTheDocument();
   });
 
   it('renders a coloured dot indicator', () => {

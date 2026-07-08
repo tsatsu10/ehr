@@ -62,6 +62,7 @@
                                    class="nc-sidebar-link{% if item.active %} is-active{% endif %}"
                                    target="_top"
                                    data-nav-id="{{ item.id }}"
+                                   {% if item.accent %}data-desk-accent="{{ item.accent }}"{% endif %}
                                    {% if item.badge_key %}data-badge-key="{{ item.badge_key }}"{% endif %}
                                    {% if item.active %}aria-current="page"{% endif %}
                                    title="{{ item.label }}">
@@ -127,10 +128,10 @@
                         <span class="nc-profile-card-name">
                             {{ shell.user.first_name|text }}{% if shell.user.last_name %} {{ shell.user.last_name|text }}{% endif %}
                         </span>
-                        <span class="nc-profile-card-role">{{ shell.role.label }}</span>
+                        <span class="nc-profile-card-role">{{ shell.role.desk_label }}</span>
                     </span>
                     <span class="nc-profile-card-caret nc-sidebar-expand-only" aria-hidden="true">
-                        <i class="fa fa-chevron-down"></i>
+                        <i class="fa fa-chevron-up"></i>
                     </span>
                 </button>
                 <div class="nc-dropdown-menu nc-role-menu nc-profile-card-menu" aria-labelledby="nc-role-pill">
@@ -138,7 +139,7 @@
                         <span class="nc-profile-card-menu-name">
                             {{ shell.user.first_name|text }}{% if shell.user.last_name %} {{ shell.user.last_name|text }}{% endif %}
                         </span>
-                        <span class="nc-profile-card-menu-role">{{ shell.role.label }}</span>
+                        <span class="nc-profile-card-menu-role">{{ shell.role.desk_label }}</span>
                     </div>
                     {% if shell.role.available|length > 1 %}
                         <div class="nc-dropdown-header nc-role-switch-heading">{{ 'Switch role'|xlt }}</div>
@@ -152,8 +153,8 @@
                                     <i class="fa {{ role.icon }}"></i>
                                 </span>
                                 <span class="nc-role-switch-item-body">
-                                    <span class="nc-role-switch-item-label">{{ role.label }}</span>
-                                    <span class="nc-role-switch-item-hint">{{ role.desk_label }}</span>
+                                    <span class="nc-role-switch-item-label">{{ role.desk_label }}</span>
+                                    <span class="nc-role-switch-item-hint">{{ role.label }}</span>
                                 </span>
                                 {% if role.is_active %}
                                     <i class="fa fa-check nc-role-switch-item-check" aria-hidden="true"></i>

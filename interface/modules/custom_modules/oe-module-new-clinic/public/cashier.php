@@ -15,7 +15,7 @@ $config = new ClinicConfigService();
 
 $reactCashierDesk = $config->get('enable_react_cashier_desk', '1') === '1';
 
-(new PageController())->render('cashier.html.twig', 'Cashier', 'new_cashier', [
+(new PageController())->renderDesk('cashier.html.twig', 'new_cashier', [
     'island_entry' => 'cashier-desk',
     'desk_id' => 'cashier',
     'module_url' => $moduleUrl,

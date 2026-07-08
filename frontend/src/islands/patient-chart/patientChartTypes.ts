@@ -148,6 +148,9 @@ export interface PaymentsStripData {
   payments_strip_label?: string;
   can_view_history?: boolean;
   payment_history_url?: string;
+  balance_due_amount?: number | null;
+  currency_symbol?: string;
+  last_receipt?: string | null;
 }
 
 export interface ChartVisitRow {

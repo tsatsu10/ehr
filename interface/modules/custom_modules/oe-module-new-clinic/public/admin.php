@@ -13,7 +13,7 @@ $moduleUrl = $GLOBALS['webroot'] . '/interface/modules/custom_modules/oe-module-
 $config = new ClinicConfigService();
 $reactAdminHub = $config->get('enable_react_admin_hub', '1') === '1';
 
-(new PageController())->render('admin.html.twig', 'Clinic Setup', 'new_admin', [
+(new PageController())->renderDesk('admin.html.twig', 'new_admin', [
     'island_entry' => 'admin-hub',
     'module_url' => $moduleUrl,
     'visit_board_url' => $moduleUrl . '/visit-board.php',

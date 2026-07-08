@@ -733,7 +733,7 @@ export function DoctorDesk({
         )}
       </>
     );
-  }, [doctorRosterEnabled, roster.self, roster.saving, roster.toggleTaking, multiDoctorFilters, scope]);
+  }, [doctorRosterEnabled, roster, multiDoctorFilters, scope]);
 
   return (
     <div id="nc-doctor-desk" className="nc-doctor-react-active">

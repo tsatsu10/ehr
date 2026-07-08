@@ -31,7 +31,7 @@ export interface EncounterConsultSectionBodyProps {
   facilityId: number;
   ajaxUrl: string;
   csrfToken: string;
-  rosSystems: RosSystemName[];
+  rosSystems: readonly RosSystemName[];
   readOnly: boolean;
   onSectionChange: <K extends keyof EncounterNoteSections>(
     key: K,

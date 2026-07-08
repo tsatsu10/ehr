@@ -22,7 +22,7 @@ class ReportHubRunbookService
         $modulePublic = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
         $reports = $modulePublic . 'reports.php';
         $hub = $modulePublic . 'report-hub/index.php';
-        $adminHub = $modulePublic . 'admin-hub/';
+        $adminHub = $modulePublic . 'admin.php';
 
         $cards = [
             $this->card('RR-01', 'Daily', 'Manager EOD close', 'M7', 'Cash, EOD open, reconciliation.', $reports . '?tab=cash'),

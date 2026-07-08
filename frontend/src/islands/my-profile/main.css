@@ -1,0 +1,187 @@
+.nc-my-profile {
+  width: 100%;
+  max-width: 56rem;
+  margin-inline: auto;
+}
+
+.nc-my-profile-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.25rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--oe-nc-border);
+  border-radius: 1rem;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--oe-nc-role-accent, var(--oe-nc-primary)) 8%, #fff) 0%,
+    var(--oe-nc-surface, #fff) 55%
+  );
+  box-shadow: var(--oe-nc-shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.05));
+}
+
+.nc-my-profile-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 999px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--oe-nc-text);
+  background: var(--oe-nc-bg-muted);
+  box-shadow: 0 0 0 3px var(--oe-nc-role-accent, var(--oe-nc-primary));
+}
+
+.nc-my-profile-hero-main {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.nc-my-profile-hero-name {
+  margin: 0;
+  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--oe-nc-text);
+}
+
+.nc-my-profile-hero-meta {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  color: var(--oe-nc-text-muted);
+}
+
+.nc-my-profile-role-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: 1px solid color-mix(in srgb, var(--role-color) 35%, var(--oe-nc-border));
+  background: color-mix(in srgb, var(--role-color) 10%, #fff);
+  color: var(--role-color);
+}
+
+.nc-my-profile-accent-reception { --role-color: var(--oe-nc-role-reception); }
+.nc-my-profile-accent-nurse { --role-color: var(--oe-nc-role-nurse); }
+.nc-my-profile-accent-doctor { --role-color: var(--oe-nc-role-doctor); }
+.nc-my-profile-accent-lab { --role-color: var(--oe-nc-role-lab); }
+.nc-my-profile-accent-pharmacy { --role-color: var(--oe-nc-role-pharmacy); }
+.nc-my-profile-accent-cashier { --role-color: var(--oe-nc-role-cashier); }
+.nc-my-profile-accent-admin { --role-color: var(--oe-nc-role-admin); }
+
+.nc-my-profile-grid {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 900px) {
+  .nc-my-profile-grid {
+    grid-template-columns: 1.2fr 0.8fr;
+    align-items: start;
+  }
+}
+
+.nc-my-profile-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.nc-my-profile-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid var(--oe-nc-border);
+  background: var(--oe-nc-bg-tint);
+  color: var(--oe-nc-text);
+}
+
+.nc-my-profile-role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nc-my-profile-role-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--oe-nc-border);
+  border-radius: 0.625rem;
+  background: var(--oe-nc-surface);
+}
+
+.nc-my-profile-role-row.is-active {
+  border-color: color-mix(in srgb, var(--role-color) 40%, var(--oe-nc-border));
+  background: color-mix(in srgb, var(--role-color) 8%, #fff);
+}
+
+.nc-my-profile-form-grid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+@media (min-width: 640px) {
+  .nc-my-profile-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .nc-my-profile-form-grid .nc-my-profile-span-2 {
+    grid-column: span 2;
+  }
+}
+
+.nc-my-profile-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--oe-nc-text-muted);
+}
+
+.nc-my-profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.nc-my-profile-message {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.nc-my-profile-message--ok {
+  color: var(--color-oe-cta, #047857);
+}
+
+.nc-my-profile-message--error {
+  color: var(--color-oe-danger, #b91c1c);
+}
+
+.nc-my-profile-password-block {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--oe-nc-border);
+}
+
+.nc-my-profile-subheading {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--oe-nc-text);
+}

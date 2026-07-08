@@ -1,10 +1,10 @@
 /**
- * New Clinic module scoped styles (B0)
+ * New Clinic module scoped styles (B0) — Clinical Console palette (2026-07-08)
  */
 .nc-search-row.active,
 .nc-search-row:focus {
-    background-color: #eff6ff;
-    border-left-color: #2563eb;
+    background-color: var(--oe-nc-primary-tint, #e8eef5);
+    border-left-color: var(--oe-nc-primary, #1b3a5f);
 }
 
 .nc-patient-context-banner .nc-badge {
@@ -20,28 +20,32 @@
 }
 
 .nc-board-column {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.5rem;
+    background: var(--oe-nc-bg-tint, #eef1f4);
+    border: 1px solid var(--oe-nc-border, #d3dce3);
+    border-radius: var(--oe-nc-radius, 0.25rem);
     padding: 0.75rem;
     min-height: 200px;
 }
 
 .nc-board-column-title {
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--oe-nc-text-muted, #5b6b7b);
     margin-bottom: 0.75rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--oe-nc-border, #d3dce3);
 }
 
 .nc-queue-card {
-    border: 1px solid #cbd5e1 !important;
-    border-left: 3px solid #2563eb !important;
+    border: 1px solid var(--oe-nc-border, #d3dce3) !important;
+    border-left: 3px solid var(--oe-nc-role-accent, var(--oe-nc-primary, #1b3a5f)) !important;
     box-shadow: none;
 }
 
 .nc-queue-card:hover {
-    background: #eff6ff !important;
+    background: var(--oe-nc-primary-tint, #e8eef5) !important;
 }
 
 .nc-board-stats .nc-badge {
@@ -62,20 +66,20 @@
 }
 
 .nc-triage-queue-panel {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.5rem;
+    background: var(--oe-nc-bg-tint, #eef1f4);
+    border: 1px solid var(--oe-nc-border, #d3dce3);
+    border-radius: var(--oe-nc-radius, 0.25rem);
     padding: 0.75rem;
     min-height: 320px;
 }
 
 .nc-queue-card-active {
-    border-color: #2563eb !important;
-    background: #eff6ff !important;
+    border-color: var(--oe-nc-primary, #1b3a5f) !important;
+    background: var(--oe-nc-primary-tint, #e8eef5) !important;
 }
 
 .nc-queue-card-mine {
-    border-left-color: #2563eb !important;
+    border-left-color: var(--oe-nc-primary, #1b3a5f) !important;
     border-left-width: 4px !important;
 }
 
@@ -84,8 +88,8 @@
 }
 
 .nc-queue-card-urgent {
-    background: #fffbeb !important;
-    border-left-color: #f59e0b !important;
+    background: #f9ecea !important;
+    border-left-color: var(--oe-nc-danger, #b42318) !important;
 }
 
 .nc-triage-drawer {
@@ -115,9 +119,9 @@
 }
 
 .nc-doctor-queue-panel {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.5rem;
+    background: var(--oe-nc-bg-tint, #eef1f4);
+    border: 1px solid var(--oe-nc-border, #d3dce3);
+    border-radius: var(--oe-nc-radius, 0.25rem);
     padding: 0.75rem;
     min-height: 320px;
 }
@@ -128,9 +132,9 @@
 }
 
 .nc-cashier-queue-panel {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.5rem;
+    background: var(--oe-nc-bg-tint, #eef1f4);
+    border: 1px solid var(--oe-nc-border, #d3dce3);
+    border-radius: var(--oe-nc-radius, 0.25rem);
     padding: 0.75rem;
     min-height: 320px;
 }

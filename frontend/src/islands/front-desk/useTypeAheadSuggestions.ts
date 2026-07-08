@@ -129,10 +129,10 @@ export function useTypeAheadSuggestions({
     for (const appt of todaysAppointments) {
       tryAddSuggestion(
         appt.pid,
-        appt.patient_name,
+        appt.display_name,
         appt.pubpid || '',
         'appointment',
-        appt.phone_formatted
+        undefined
       );
     }
 
@@ -143,7 +143,7 @@ export function useTypeAheadSuggestions({
         result.display_name,
         result.pubpid || '',
         'search',
-        result.phone_formatted
+        result.phone_masked
       );
     }
 

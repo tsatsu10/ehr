@@ -22,7 +22,7 @@ if (!$config->isEnabled('enable_triage', 1)) {
 
 $reactTriageDesk = $config->get('enable_react_triage_desk', '1') === '1';
 
-(new PageController())->render('triage.html.twig', 'Triage', 'new_nurse', [
+(new PageController())->renderDesk('triage.html.twig', 'new_nurse', [
     'island_entry' => 'triage-desk',
     'desk_id' => 'triage',
     'module_url' => $moduleUrl,

@@ -21,6 +21,8 @@ use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\MoneyFormatService;
 use OpenEMR\Modules\NewClinic\Services\OpenEmrProductRegistrationDismissService;
 use OpenEMR\Modules\NewClinic\Services\PageAccessService;
+use OpenEMR\Modules\NewClinic\Services\PersonalizedDeskLabelService;
+use OpenEMR\Modules\NewClinic\Services\SessionRoleService;
 use OpenEMR\Modules\NewClinic\Services\ShellService;
 use OpenEMR\Modules\NewClinic\Services\ViteManifestService;
 use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
@@ -43,6 +45,17 @@ class PageController
     }
 
     /**
+     * Desk page with a personalized title (e.g. "Doctor Ada's desk").
+     *
+     * @param array<string, mixed> $context
+     */
+    public function renderDesk(string $template, string $aco, array $context = []): void
+    {
+        $title = (new PersonalizedDeskLabelService())->ownedDeskLabelForSessionUser($aco);
+        $this->render($template, $title, $aco, $context);
+    }
+
+    /**
      * Render for users with core patients/notes ACL (Communications Hub).
      */
     public function renderForCoreNotesAcl(string $template, string $title, array $context = []): void
@@ -58,6 +71,21 @@ class PageController
         }
 
         $shellAco = $this->resolveShellAcoForNotesUser();
+        $this->emitPage($template, $title, $shellAco, $context);
+    }
+
+    /**
+     * Render for any authenticated OpenEMR user (e.g. My profile).
+     *
+     * @param array<string, mixed> $context
+     */
+    public function renderForAuthenticatedUser(string $template, string $title, array $context = []): void
+    {
+        if (empty($_SESSION['authUserID'])) {
+            authLoginScreen();
+        }
+
+        $shellAco = (new SessionRoleService())->getActiveRole(null);
         $this->emitPage($template, $title, $shellAco, $context);
     }
 

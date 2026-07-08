@@ -16,17 +16,12 @@
 
 import React from 'react';
 import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { Card } from './ui/card';
 import { cn } from '@/lib/utils';
 import {
   CheckCircle2,
   Clock,
   AlertCircle,
   Activity,
-  FileText,
-  DollarSign,
-  Thermometer,
 } from 'lucide-react';
 
 export type PatientStatus = 
@@ -44,7 +39,7 @@ export interface TaskAction {
   label: string;
   
   /** Button icon component */
-  icon?: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+  icon?: React.ComponentType<{ className?: string }>;
   
   /** Button variant (primary, secondary, tertiary) */
   variant?: 'default' | 'secondary' | 'outline' | 'ghost';
@@ -73,7 +68,7 @@ export interface QuickStat {
   value: string | number;
   
   /** Icon component */
-  icon?: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+  icon?: React.ComponentType<{ className?: string }>;
   
   /** Value color variant */
   variant?: 'default' | 'success' | 'warning' | 'danger';
@@ -131,7 +126,7 @@ export interface ClinicalTaskPanelProps {
 const STATUS_CONFIG: Record<PatientStatus, {
   label: string;
   color: string;
-  icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+  icon: React.ComponentType<{ className?: string }>;
 }> = {
   not_checked_in: {
     label: 'Not checked in',
@@ -172,7 +167,7 @@ function QuickStatCard({ stat }: { stat: QuickStat }) {
   
   return (
     <div className="flex items-center gap-2 p-2 rounded-md bg-[var(--oe-clinical-bg-tint)]">
-      {Icon && <Icon className="h-4 w-4 text-[var(--oe-clinical-text-muted)] shrink-0" aria-hidden="true" />}
+      {Icon && <Icon className="h-4 w-4 text-[var(--oe-clinical-text-muted)] shrink-0" aria-hidden={true} />}
       <div className="flex-1 min-w-0">
         <div className="text-xs text-[var(--oe-clinical-text-muted)] truncate">
           {stat.label}
@@ -204,7 +199,7 @@ function AlertBanner({ alert }: { alert: TaskAlert }) {
       'flex items-start gap-2 p-3 rounded-lg border text-sm',
       colorClass
     )}>
-      <Icon className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
+      <Icon className="h-4 w-4 shrink-0 mt-0.5" aria-hidden={true} />
       <div className="flex-1 min-w-0">
         <p className="font-medium">{alert.message}</p>
         {alert.action && (
@@ -250,7 +245,7 @@ export function ClinicalTaskPanel({
       {/* Status Badge */}
       <div className="mb-4">
         <div className="flex items-center gap-2">
-          <StatusIcon className={cn('h-5 w-5', statusConfig.color)} aria-hidden="true" />
+          <StatusIcon className={cn('h-5 w-5', statusConfig.color)} aria-hidden={true} />
           <span className={cn('text-sm font-semibold', statusConfig.color)}>
             {statusConfig.label}
           </span>
@@ -274,12 +269,12 @@ export function ClinicalTaskPanel({
             <Button
               key={action.id}
               variant={action.variant || 'default'}
-              size={action.size || 'lg'}
+              size={action.size === 'md' ? 'default' : (action.size || 'lg')}
               className="w-full justify-start gap-2 h-[var(--oe-clinical-btn-lg)]"
               onClick={action.onClick}
               disabled={action.disabled || action.loading}
             >
-              {Icon && <Icon className="h-5 w-5" aria-hidden="true" />}
+              {Icon && <Icon className="h-5 w-5" aria-hidden={true} />}
               <span className="flex-1 text-left">{action.label}</span>
               {action.shortcut && (
                 <kbd className="text-xs bg-white/20 px-1.5 py-0.5 rounded">

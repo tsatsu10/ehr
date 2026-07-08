@@ -54,7 +54,7 @@ export function TriageMobileQueueSheet({
   queueCount,
   cards,
   activeVisitId,
-  inActiveWork,
+  inActiveWork: _inActiveWork,
   loading,
   error,
   queueDateFilter,

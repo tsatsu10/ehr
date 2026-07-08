@@ -38,28 +38,28 @@
 @import 'tailwindcss/utilities.css' layer(utilities);
 
 @theme {
-  /* Core palette — professional clinical aesthetic (updated 2026-07-05) */
-  --color-oe-primary:   #1e40af;  /* Clinical trust blue — 7.2:1 contrast */
-  --color-oe-secondary: #0e7490;  /* Clinical teal — 5.8:1 contrast */
+  /* Core palette — "Clinical Console" identity (updated 2026-07-08) */
+  --color-oe-primary:   #1b3a5f;  /* Clinical navy — 10.9:1 contrast */
+  --color-oe-secondary: #46647f;  /* Steel slate — 5.6:1 contrast */
   --color-oe-cta:       #047857;  /* Medical green — 5.1:1 contrast */
-  --color-oe-bg:        #fafaf9;  /* Warm clinical white */
-  --color-oe-text:      #1e293b;  /* Authority gray — 13.5:1 contrast */
-  --color-oe-muted:     #64748b;  /* Clinical muted — 5.1:1 contrast */
-  --color-oe-border:    #cbd5e1;  /* Clinical silver */
+  --color-oe-bg:        #f4f6f8;  /* Slate paper */
+  --color-oe-text:      #1c2733;  /* Ink navy — 14.6:1 contrast */
+  --color-oe-muted:     #5b6b7b;  /* Muted slate — 5.6:1 contrast */
+  --color-oe-border:    #d3dce3;  /* Hairline */
   --color-oe-surface:   #ffffff;
 
   /* Danger / Warning — clinical severity indicators */
-  --color-oe-danger:    #b91c1c;  /* Clinical red — 6.5:1 contrast */
-  --color-oe-warning:   #d97706;  /* Clinical amber — 5.8:1 contrast */
+  --color-oe-danger:    #b42318;  /* Clinical red — 6.9:1 contrast */
+  --color-oe-warning:   #b54708;  /* Clinical amber — 5.9:1 contrast */
 
-  /* Role accent colors (§6 shell) */
-  --color-oe-role-reception: #2563eb;
-  --color-oe-role-nurse:     #2563eb;
-  --color-oe-role-doctor:    #059669;
-  --color-oe-role-lab:       #f59e0b;
-  --color-oe-role-pharmacy:  #7c3aed;
-  --color-oe-role-cashier:   #ea580c;
-  --color-oe-role-admin:     #64748b;
+  /* Department (role) wayfinding colors (§6 shell) */
+  --color-oe-role-reception: #1d4ed8;
+  --color-oe-role-nurse:     #0e7490;
+  --color-oe-role-doctor:    #047857;
+  --color-oe-role-lab:       #b45309;
+  --color-oe-role-pharmacy:  #6d28d9;
+  --color-oe-role-cashier:   #c2410c;
+  --color-oe-role-admin:     #475569;
 
   /* Typography — MASTER.md §Typography */
   --font-sans:    'Noto Sans', system-ui, sans-serif;
@@ -80,10 +80,21 @@
   --shadow-oe-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
   --shadow-oe-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
 
-  /* Radius — §3 "0.25rem to match Bootstrap 4 cards" */
-  --radius-oe-sm: 0.25rem;   /* Bootstrap default card radius */
-  --radius-oe-md: 0.5rem;    /* Inputs, badges */
-  --radius-oe-lg: 0.75rem;   /* Modals, slide-overs */
+  /* Radius — Clinical Console: squared, instrument-like */
+  --radius-oe-sm: 0.125rem;  /* 2px — chips, badges */
+  --radius-oe-md: 0.25rem;   /* 4px — cards, inputs, buttons */
+  --radius-oe-lg: 0.375rem;  /* 6px — modals, slide-overs */
+
+  /* Override Tailwind's default radius scale so every rounded-* utility in
+     island markup squares up without touching 22 islands (rounded-full is
+     untouched — avatars/dots stay circular). */
+  --radius-xs: 0.125rem;
+  --radius-sm: 0.125rem;
+  --radius-md: 0.25rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.375rem;
+  --radius-2xl: 0.375rem;
+  --radius-3xl: 0.5rem;
 
   /* Motion */
   --duration-oe-fast:   150ms;
@@ -101,18 +112,30 @@
  * for components that quote the spec directly.
  */
 :root {
-  /* Primary palette — --oe-nc-* (clinical redesign 2026-07-05) */
-  --oe-nc-primary:       #1e40af;  /* Clinical trust blue */
-  --oe-nc-primary-hover: #1e3a8a;  /* Darker trust blue */
-  --oe-nc-secondary:  #0e7490;     /* Clinical teal */
+  /* Primary palette — --oe-nc-* ("Clinical Console" 2026-07-08) */
+  --oe-nc-primary:       #1b3a5f;  /* Clinical navy */
+  --oe-nc-primary-hover: #142c49;  /* Darker navy */
+  --oe-nc-primary-tint:  #e8eef5;  /* Navy surface tint */
+  --oe-nc-secondary:  #46647f;     /* Steel slate */
   --oe-nc-cta:        #047857;     /* Medical green */
-  --oe-nc-bg:         #fafaf9;     /* Warm clinical white */
-  --oe-nc-bg-tint:    #f5f5f4;     /* Stone tint */
-  --oe-nc-bg-muted:   #e7e5e4;     /* Muted stone */
-  --oe-nc-text:       #1e293b;     /* Authority gray */
-  --oe-nc-text-muted: #64748b;     /* Clinical muted */
-  --oe-nc-border:     #cbd5e1;     /* Clinical silver */
+  --oe-nc-bg:         #f4f6f8;     /* Slate paper */
+  --oe-nc-bg-tint:    #eef1f4;     /* Paper tint */
+  --oe-nc-bg-muted:   #e2e8ed;     /* Muted paper */
+  --oe-nc-text:       #1c2733;     /* Ink navy */
+  --oe-nc-text-muted: #5b6b7b;     /* Muted slate */
+  --oe-nc-border:     #d3dce3;     /* Hairline */
+  --oe-nc-border-strong: #9fb0be;
   --oe-nc-surface:    #ffffff;
+  --oe-nc-danger:     #b42318;
+  --oe-nc-warning:    #b54708;
+
+  /* Sidebar — dark console chrome (mirrors module tokens.css) */
+  --oe-nc-sidebar-bg: #14212e;
+  --oe-nc-sidebar-text: #c7d3de;
+  --oe-nc-sidebar-text-strong: #f2f6f9;
+  --oe-nc-sidebar-hover: rgba(255, 255, 255, 0.06);
+  --oe-nc-sidebar-active: rgba(255, 255, 255, 0.10);
+  --oe-nc-sidebar-border: rgba(255, 255, 255, 0.08);
 
   /* MASTER.md short-form aliases */
   --color-primary:    var(--oe-nc-primary);
@@ -130,18 +153,20 @@
   --oe-nc-sidebar-backdrop-z: 1035;
 
   /* Interaction tokens */
-  --oe-nc-radius:     0.5rem;
+  --oe-nc-radius:     0.25rem;
+  --oe-nc-radius-sm:  0.125rem;
+  --oe-nc-radius-lg:  0.375rem;
   --oe-nc-transition: 150ms ease;
-  --oe-nc-focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.25);
+  --oe-nc-focus-ring: 0 0 0 3px rgba(27, 58, 95, 0.28);
 
-  /* Role accents */
-  --oe-nc-role-reception: #2563eb;
-  --oe-nc-role-nurse:     #2563eb;
-  --oe-nc-role-doctor:    #059669;
-  --oe-nc-role-lab:       #f59e0b;
-  --oe-nc-role-pharmacy:  #7c3aed;
-  --oe-nc-role-cashier:   #ea580c;
-  --oe-nc-role-admin:     #64748b;
+  /* Department (role) wayfinding colors */
+  --oe-nc-role-reception: #1d4ed8;
+  --oe-nc-role-nurse:     #0e7490;
+  --oe-nc-role-doctor:    #047857;
+  --oe-nc-role-lab:       #b45309;
+  --oe-nc-role-pharmacy:  #6d28d9;
+  --oe-nc-role-cashier:   #c2410c;
+  --oe-nc-role-admin:     #475569;
 
   /* Spacing — aligns with MASTER.md --space-* */
   --space-xs:  0.25rem;

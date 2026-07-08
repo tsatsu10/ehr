@@ -4,7 +4,7 @@
  */
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useRef } from 'react';
-import { CommandGroup, CommandItem } from '@components/ui/command';
+import { CommandItem } from '@components/ui/command';
 import { cn } from '@/lib/utils';
 import type { PatientSearchRow } from '@core/types';
 
@@ -57,6 +57,7 @@ export function VirtualizedSearchResults({
 }: VirtualizedSearchResultsProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual API
   const virtualizer = useVirtualizer({
     count: results.length,
     getScrollElement: () => parentRef.current,

@@ -108,29 +108,29 @@ export function useEncounterConsultForm({
   const viewport = useDeskViewport();
   const mobileStepper = viewport === 'mobile';
 
-  sectionsRef.current = sections;
-  variantRef.current = variant;
-  dirtyRef.current = dirty;
-  signedRef.current = signed;
+  /* Latest-value refs for async handlers — synced in an effect, never during
+     render (react-hooks/refs). */
+  useEffect(() => {
+    sectionsRef.current = sections;
+    variantRef.current = variant;
+    dirtyRef.current = dirty;
+    signedRef.current = signed;
+  }, [sections, variant, dirty, signed]);
 
   const readOnly = signed;
   const visibleIds = useMemo(() => visibleSectionIds(variant), [variant]);
-  const navSections = useMemo((): EncounterNavSection[] => {
-    let step = 0;
-    return ENCOUNTER_SECTIONS
+  const navSections = useMemo((): EncounterNavSection[] => (
+    ENCOUNTER_SECTIONS
       .filter((section) => visibleIds.includes(section.id))
-      .map((section) => {
-        step += 1;
-        return {
-          id: section.id,
-          label: section.label,
-          shortLabel: section.shortLabel,
-          phase: section.phase,
-          step,
-          complete: isEncounterSectionComplete(section.id, sections, variant),
-        };
-      });
-  }, [sections, variant, visibleIds]);
+      .map((section, index) => ({
+        id: section.id,
+        label: section.label,
+        shortLabel: section.shortLabel,
+        phase: section.phase,
+        step: index + 1,
+        complete: isEncounterSectionComplete(section.id, sections, variant),
+      }))
+  ), [sections, variant, visibleIds]);
   const activeSectionIndex = useMemo(
     () => Math.max(0, navSections.findIndex((section) => section.id === activeSection)),
     [activeSection, navSections],

@@ -159,9 +159,10 @@ export function CalendarWeekGrid({
 }: Omit<GridProps, 'onResizeEvent'>) {
   const dates = useMemo(() => weekDates(data.anchor_date ?? data.date), [data.anchor_date, data.date]);
   const slots = useMemo(() => buildTimeSlots(data.interval_minutes), [data.interval_minutes]);
-  const providers = visibleProviders.length > 0
-    ? visibleProviders
-    : [{ id: 0, label: 'All' }];
+  const providers = useMemo(
+    () => (visibleProviders.length > 0 ? visibleProviders : [{ id: 0, label: 'All' }]),
+    [visibleProviders],
+  );
   const weekColumns = useMemo(
     () => dates.flatMap((date) => providers.map((provider) => ({ date, provider }))),
     [dates, providers],

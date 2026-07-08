@@ -10,12 +10,24 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@components/ui/select';
 import { Play, CalendarCheck, AlertCircle, Loader2, Clock, User, Flag } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import type { FrontDeskPreviewData } from '@core/types';
 import { RevisitGatePanel } from './RevisitGatePanel';
 import { ReferralUploadField } from './ReferralUploadField';
 import { HardAssignDoctorSelect } from '@components/HardAssignDoctorSelect';
 import { StartVisitSuccessView } from './StartVisitSuccessView';
 import { useStartVisit, type PriorityFlag } from './useStartVisit';
+
+/** "Arrived N min ago" label — clock state kept out of render for purity (react-hooks/purity). */
+function ArrivedAgo({ arrivedAtMs }: { arrivedAtMs: number }) {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const mins = Math.max(0, Math.round((nowMs - arrivedAtMs) / 60_000));
+  return <>{mins === 0 ? 'just now' : `${mins} min ago`}</>;
+}
 
 const PRIORITY_OPTIONS: { value: PriorityFlag; label: string; title: string }[] = [
   { value: 'standard', label: 'Standard',  title: 'Normal priority' },
@@ -302,10 +314,7 @@ export function StartVisitForm(props: StartVisitFormProps) {
         {typeof arrivedAtMs === 'number' && (
           <p className="nc-arrival-pill text-xs m-0" id="nc-arrival-time">
             <Clock className="h-3 w-3 inline mr-1" aria-hidden="true" />
-            Arrived{' '}
-            {Math.max(0, Math.round((Date.now() - arrivedAtMs) / 60_000)) === 0
-              ? 'just now'
-              : `${Math.max(0, Math.round((Date.now() - arrivedAtMs) / 60_000))} min ago`}
+            Arrived <ArrivedAgo arrivedAtMs={arrivedAtMs} />
           </p>
         )}
         {typeof deskWaitingCount === 'number' && (

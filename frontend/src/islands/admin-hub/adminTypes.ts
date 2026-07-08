@@ -1,10 +1,10 @@
 export type AdminScope = 'facility' | 'global';
 
-export type AdminTabId = 'queue' | 'roles' | 'completion' | 'clinic' | 'forms' | 'system' | 'types' | 'fees';
+export type AdminTabId = 'queue' | 'people' | 'completion' | 'clinic' | 'forms' | 'system' | 'types' | 'fees';
 
 export const ADMIN_TABS: { id: AdminTabId; label: string }[] = [
   { id: 'queue', label: 'Queue & roles' },
-  { id: 'roles', label: 'Roles & ACL' },
+  { id: 'people', label: 'People & access' },
   { id: 'completion', label: 'Completion' },
   { id: 'clinic', label: 'Clinic' },
   { id: 'forms', label: 'Forms' },

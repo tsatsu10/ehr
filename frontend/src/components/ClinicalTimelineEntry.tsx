@@ -60,7 +60,7 @@ export interface BaseTimelineEntry {
   actions?: Array<{
     label: string;
     onClick: () => void;
-    icon?: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+    icon?: React.ComponentType<{ className?: string }>;
   }>;
   
   /** Status badge */
@@ -130,7 +130,7 @@ export interface ClinicalTimelineEntryProps {
  * Entry type config (icon, color, label)
  */
 const ENTRY_TYPE_CONFIG: Record<TimelineEntryType, {
-  icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+  icon: React.ComponentType<{ className?: string }>;
   color: string;
   bgColor: string;
 }> = {
@@ -209,7 +209,7 @@ export function ClinicalTimelineEntry({
           'shrink-0 rounded-full p-2',
           config.bgColor
         )}>
-          <Icon className={cn('h-5 w-5', config.color)} aria-hidden="true" />
+          <Icon className={cn('h-5 w-5', config.color)} aria-hidden={true} />
         </div>
         
         {/* Content */}
@@ -221,7 +221,7 @@ export function ClinicalTimelineEntry({
             </h4>
             {entry.status && (
               <Badge
-                variant={entry.status.variant === 'danger' ? 'destructive' : entry.status.variant}
+                variant={entry.status.variant}
                 className="shrink-0 text-xs"
               >
                 {entry.status.label}
@@ -231,7 +231,7 @@ export function ClinicalTimelineEntry({
           
           {/* Subtitle / Date */}
           <div className="flex items-center gap-2 text-xs text-[var(--oe-clinical-text-muted)] mb-2">
-            <Clock className="h-3 w-3" aria-hidden="true" />
+            <Clock className="h-3 w-3" aria-hidden={true} />
             <span>{formattedDate}</span>
             {entry.subtitle && (
               <>
@@ -244,7 +244,7 @@ export function ClinicalTimelineEntry({
           {/* Type-specific preview */}
           {entry.type === 'visit' && (entry as VisitEntry).provider && (
             <div className="flex items-center gap-1.5 text-xs text-[var(--oe-clinical-text-secondary)] mb-2">
-              <User className="h-3 w-3" aria-hidden="true" />
+              <User className="h-3 w-3" aria-hidden={true} />
               <span>{(entry as VisitEntry).provider}</span>
             </div>
           )}
@@ -252,7 +252,7 @@ export function ClinicalTimelineEntry({
           {entry.type === 'medication' && (
             <div className="flex items-center gap-2 text-xs mb-2">
               <Badge
-                variant={(entry as MedicationEntry).active ? 'default' : 'secondary'}
+                variant={(entry as MedicationEntry).active ? 'default' : 'neutral'}
                 className="text-xs"
               >
                 {(entry as MedicationEntry).active ? 'Active' : 'Discontinued'}
@@ -275,7 +275,7 @@ export function ClinicalTimelineEntry({
                 {(entry as LabEntry).result}
               </span>
               {(entry as LabEntry).abnormal && (
-                <Badge variant="destructive" className="ml-2 text-xs">
+                <Badge variant="danger" className="ml-2 text-xs">
                   Abnormal
                 </Badge>
               )}
@@ -295,7 +295,7 @@ export function ClinicalTimelineEntry({
                     className="h-7 px-2 text-xs"
                     onClick={action.onClick}
                   >
-                    {ActionIcon && <ActionIcon className="h-3 w-3 mr-1" aria-hidden="true" />}
+                    {ActionIcon && <ActionIcon className="h-3 w-3 mr-1" aria-hidden={true} />}
                     {action.label}
                   </Button>
                 );

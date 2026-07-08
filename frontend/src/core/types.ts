@@ -1205,6 +1205,7 @@ export interface RegistrationDupCandidate {
   display_name: string;
   pubpid: string;
   score: number;
+  match_reasons?: string[];
 }
 
 export interface RegistrationDupResult {
