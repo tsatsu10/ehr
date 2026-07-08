@@ -15,6 +15,7 @@ use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\AjaxActionHandlerInterface;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\AdminActionHandler;
+use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\BillOpsActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\CashierActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ClinicalDocActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\CohortActionHandler;
@@ -43,13 +44,8 @@ use OpenEMR\Modules\NewClinic\Exceptions\VisitNotTakeableException;
 use OpenEMR\Modules\NewClinic\Services\AjaxActionPolicy;
 use OpenEMR\Modules\NewClinic\Services\PatientCohortSearchService;
 use OpenEMR\Modules\NewClinic\Services\BillOpsAccessService;
-use OpenEMR\Modules\NewClinic\Services\BillOpsChargeCorrectionService;
-use OpenEMR\Modules\NewClinic\Services\BillOpsDaysheetService;
-use OpenEMR\Modules\NewClinic\Services\BillOpsOutstandingService;
-use OpenEMR\Modules\NewClinic\Services\BillOpsPaymentsSearchService;
 use OpenEMR\Modules\NewClinic\Services\LabOpsAccessService;
 use OpenEMR\Modules\NewClinic\Services\PharmOpsAccessService;
-use OpenEMR\Modules\NewClinic\Services\PaymentHistoryService;
 use OpenEMR\Modules\NewClinic\Services\ReportHubAccessService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocAccessService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
@@ -59,7 +55,6 @@ use OpenEMR\Modules\NewClinic\Services\QuickAddService;
 use OpenEMR\Modules\NewClinic\Services\QueueSlipService;
 use OpenEMR\Modules\NewClinic\Services\QueueBridgeAccessService;
 use OpenEMR\Modules\NewClinic\Services\SchedulingAccessService;
-use OpenEMR\Modules\NewClinic\Services\VisitBoardService;
 use OpenEMR\Modules\NewClinic\Services\VisitClaimLostService;
 use OpenEMR\Modules\NewClinic\Services\SimilarSurnameQueueService;
 use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
@@ -120,95 +115,6 @@ class AjaxController
             switch ($action) {
                 case 'health':
                     $this->respond(true, 'ok', ['module' => 'oe-module-new-clinic']);
-                    break;
-                case 'bill_ops.visit_charges':
-                    $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
-                    if ($method === 'POST') {
-                        $body = $this->readRequestParams($method);
-                        $visitId = (int) ($body['visit_id'] ?? $visitId);
-                    }
-                    $charges = $this->svc(BillOpsChargeCorrectionService::class)->getVisitCharges($visitId, $userId);
-                    $this->respond(true, 'ok', $charges);
-                    break;
-                case 'bill_ops.charge_correct':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $corrected = $this->svc(BillOpsChargeCorrectionService::class)->applyCorrection(
-                        (int) ($body['visit_id'] ?? 0),
-                        is_array($body['add'] ?? null) ? $body['add'] : [],
-                        is_array($body['remove'] ?? null) ? array_map('intval', $body['remove']) : [],
-                        (string) ($body['reason'] ?? ''),
-                        $userId
-                    );
-                    $this->respond(true, 'ok', $corrected);
-                    break;
-                case 'bill_ops.payments_search':
-                    $params = $this->readRequestParams($method);
-                    $search = $this->svc(BillOpsPaymentsSearchService::class)->search(
-                        (string) ($params['q'] ?? ''),
-                        isset($params['date_from']) ? (string) $params['date_from'] : null,
-                        isset($params['date_to']) ? (string) $params['date_to'] : null,
-                        (int) ($params['offset'] ?? 0),
-                        (int) ($params['limit'] ?? BillOpsPaymentsSearchService::PAGE_SIZE)
-                    );
-                    $this->respond(true, 'ok', $search);
-                    break;
-                case 'bill_ops.payment_reverse':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $reversed = $this->svc(BillOpsPaymentsSearchService::class)->reverse(
-                        (int) ($body['payment_id'] ?? $body['receipt_id'] ?? 0),
-                        (string) ($body['reason'] ?? ''),
-                        $userId
-                    );
-                    $this->respond(true, 'ok', $reversed);
-                    break;
-                case 'bill_ops.receipt_reprint':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $pid = (int) ($body['pid'] ?? 0);
-                    $receiptId = (int) ($body['receipt_id'] ?? 0);
-                    $payload = $this->svc(PaymentHistoryService::class)->getReceiptReprintForBillOps($receiptId, $pid, $userId);
-                    $this->respond(true, 'ok', $payload);
-                    break;
-                case 'bill_ops.daysheet':
-                    $params = $this->readRequestParams($method);
-                    $daysheet = $this->svc(BillOpsDaysheetService::class)->getDaysheet(
-                        (int) ($params['facility_id'] ?? 0),
-                        (string) ($params['date'] ?? '')
-                    );
-                    $this->respond(true, 'ok', $daysheet);
-                    break;
-                case 'bill_ops.daysheet_export':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $exported = $this->svc(BillOpsDaysheetService::class)->recordExport(
-                        (int) ($body['facility_id'] ?? 0),
-                        (string) ($body['date'] ?? ''),
-                        $userId
-                    );
-                    $this->respond(true, 'ok', $exported);
-                    break;
-                case 'bill_ops.outstanding_list':
-                    $params = $this->readRequestParams($method);
-                    $list = $this->svc(BillOpsOutstandingService::class)->listOutstanding(
-                        isset($params['bucket']) ? (string) $params['bucket'] : null,
-                        (int) ($params['offset'] ?? 0),
-                        (int) ($params['limit'] ?? BillOpsOutstandingService::PAGE_SIZE)
-                    );
-                    $this->respond(true, 'ok', $list);
                     break;
                 default:
                     $this->respond(false, 'Unknown action', [], 400);
@@ -297,6 +203,7 @@ class AjaxController
             new CohortActionHandler($this),
             new LabOpsActionHandler($this),
             new PharmOpsActionHandler($this),
+            new BillOpsActionHandler($this),
             new LabActionHandler($this),
             new PharmacyActionHandler($this),
             new FrontDeskActionHandler($this),
