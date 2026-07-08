@@ -13,6 +13,8 @@ namespace OpenEMR\Modules\NewClinic\Controllers;
 
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Csrf\CsrfUtils;
+use OpenEMR\Modules\NewClinic\Controllers\Ajax\AjaxActionHandlerInterface;
+use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\VisitActionHandler;
 use OpenEMR\Modules\NewClinic\Exceptions\EncounterSessionMismatchException;
 use OpenEMR\Modules\NewClinic\Exceptions\StaleVisitException;
 use OpenEMR\Modules\NewClinic\Exceptions\AllergiesUndocumentedException;
@@ -141,7 +143,7 @@ class AjaxController
      * @param class-string<T> $class
      * @return T
      */
-    private function svc(string $class): object
+    public function svc(string $class): object
     {
         if (!isset($this->services[$class])) {
             $this->services[$class] = new $class();
@@ -176,6 +178,10 @@ class AjaxController
         }
 
         try {
+            if ($this->dispatchToActionHandler($action, $method, $userId)) {
+                return;
+            }
+
             switch ($action) {
                 case 'health':
                     $this->respond(true, 'ok', ['module' => 'oe-module-new-clinic']);
@@ -462,108 +468,6 @@ class AjaxController
                         'districts' => $this->svc(GeoService::class)->listDistricts($regionCode),
                     ]);
                     break;
-                case 'visit.types':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $types = $this->svc(VisitTypeAdminService::class)->listForDesk($facilityId);
-                    $this->respond(true, 'ok', ['visit_types' => $types]);
-                    break;
-                case 'visit.board':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $board = $this->svc(VisitBoardService::class)->getBoard(
-                        $facilityId,
-                        $_REQUEST['visit_date'] ?? date('Y-m-d')
-                    );
-                    $board = $this->svc(SimilarSurnameQueueService::class)->annotateBoard($board, $facilityId);
-                    $this->respond(true, 'ok', $board);
-                    break;
-                case 'visit.detail':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $visitId = (int) ($body['visit_id'] ?? 0);
-                    $visit = $this->svc(VisitBoardService::class)->getVisitDetail($visitId, $userId);
-                    $preview = $this->svc(PatientContextService::class)->previewPayload(
-                        (int) ($visit['visit']['pid'] ?? 0),
-                        $userId,
-                        'visit_board'
-                    );
-                    $this->respond(true, 'ok', array_merge($visit, ['preview' => $preview]));
-                    break;
-                case 'visit.cancel':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $visit = $this->svc(VisitQueueService::class)->cancelVisit(
-                        (int) ($body['visit_id'] ?? 0),
-                        $userId,
-                        (int) ($body['row_version'] ?? 0),
-                        (string) ($body['reason'] ?? '')
-                    );
-                    $this->respond(true, 'Visit cancelled', ['visit' => $visit]);
-                    break;
-                case 'visit.hard_assign':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $facilityId = $this->resolveDeskFacilityFromBody($body);
-                    $providerRaw = $body['hard_assigned_provider_id'] ?? null;
-                    $providerId = ($providerRaw === null || $providerRaw === '')
-                        ? null
-                        : (int) $providerRaw;
-                    if ($providerId !== null && $providerId <= 0) {
-                        $providerId = null;
-                    }
-                    $visit = $this->svc(VisitQueueService::class)->hardAssignProvider(
-                        (int) ($body['visit_id'] ?? 0),
-                        $facilityId,
-                        $providerId,
-                        $userId,
-                        (int) ($body['row_version'] ?? 0)
-                    );
-                    $this->respond(true, 'Doctor assignment updated', ['visit' => $visit]);
-                    break;
-                case 'visit.start':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $visit = $this->svc(VisitQueueService::class)->startVisit(
-                        (int) ($body['pid'] ?? 0),
-                        (int) ($body['visit_type_id'] ?? 0),
-                        $userId,
-                        $this->resolveDeskFacilityFromBody($body),
-                        isset($body['chief_complaint']) ? (string) $body['chief_complaint'] : null,
-                        !empty($body['is_urgent']),
-                        isset($body['revisit_override_reason'])
-                            ? (string) $body['revisit_override_reason']
-                            : null,
-                        isset($body['referral_document_id'])
-                            ? (int) $body['referral_document_id']
-                            : null,
-                    );
-                    $this->respond(true, 'Visit started', $this->enrichStartVisitResponse($visit, $userId));
-                    break;
-                case 'visit.skip_triage':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $visit = $this->svc(VisitQueueService::class)->skipTriage(
-                        (int) ($body['visit_id'] ?? 0),
-                        $userId,
-                        (int) ($body['row_version'] ?? 0),
-                        isset($body['reason']) ? (string) $body['reason'] : null
-                    );
-                    $this->respond(true, 'Skipped triage', ['visit' => $visit]);
-                    break;
                 case 'front_desk.desk_stats':
                     $facilityId = $this->resolveRequestFacilityId();
                     $stats = $this->svc(FrontDeskStatsService::class)->getDeskStats($userId, $facilityId);
@@ -646,37 +550,6 @@ class AjaxController
                         isset($body['note']) ? (string) $body['note'] : null
                     );
                     $this->respond(true, 'Patient noted as awaiting documents');
-                    break;
-                case 'visit.start_from_appointment':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $result = $this->svc(VisitQueueService::class)->startVisitFromAppointment(
-                        (int) ($body['pid'] ?? 0),
-                        (int) ($body['pc_eid'] ?? 0),
-                        (string) ($body['appt_date'] ?? ''),
-                        $userId,
-                        isset($body['visit_type_id']) ? (int) $body['visit_type_id'] : null,
-                        $this->resolveRequestFacilityId(),
-                        isset($body['chief_complaint']) ? (string) $body['chief_complaint'] : null,
-                        !empty($body['is_urgent']),
-                        isset($body['revisit_override_reason'])
-                            ? (string) $body['revisit_override_reason']
-                            : null
-                    );
-                    $visit = (array) ($result['visit'] ?? []);
-                    $this->svc(SchedulingRecallsService::class)->completeLinkedRecallOnCheckIn(
-                        (int) ($body['pc_eid'] ?? 0),
-                        (int) ($body['pid'] ?? 0),
-                        $userId,
-                    );
-                    $this->respond(
-                        true,
-                        'Visit started from appointment',
-                        array_merge($result, $this->enrichStartVisitResponse($visit, $userId))
-                    );
                     break;
                 case 'desk.shared_session_probe':
                     $probe = $this->svc(SharedDeviceSessionService::class)->probe(
@@ -3381,6 +3254,28 @@ class AjaxController
         }
     }
 
+    private function dispatchToActionHandler(string $action, string $method, int $userId): bool
+    {
+        foreach ($this->ajaxActionHandlers() as $handler) {
+            if ($handler->supports($action)) {
+                $handler->handle($action, $method, $userId);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return list<AjaxActionHandlerInterface>
+     */
+    private function ajaxActionHandlers(): array
+    {
+        return [
+            new VisitActionHandler($this),
+        ];
+    }
+
     private function esignOverrideReason(array $body): ?string
     {
         $reason = trim((string) ($body['esign_override_reason'] ?? ''));
@@ -3799,7 +3694,7 @@ class AjaxController
         }
     }
 
-    private function resolveRequestFacilityId(): int
+    public function resolveRequestFacilityId(): int
     {
         $requested = (int) ($_REQUEST['facility_id'] ?? 0);
         $sessionFacility = !empty($_SESSION['facilityId']) ? (int) $_SESSION['facilityId'] : null;
@@ -3838,7 +3733,7 @@ class AjaxController
      * @param array<string, mixed> $visit
      * @return array<string, mixed>
      */
-    private function enrichStartVisitResponse(array $visit, int $userId): array
+    public function enrichStartVisitResponse(array $visit, int $userId): array
     {
         $facilityId = (int) ($visit['facility_id'] ?? 0);
         $visitId = (int) ($visit['id'] ?? 0);
@@ -3867,7 +3762,7 @@ class AjaxController
      *
      * @param array<string, mixed> $body
      */
-    private function resolveDeskFacilityFromBody(array $body): int
+    public function resolveDeskFacilityFromBody(array $body): int
     {
         $fromBody = (int) ($body['facility_id'] ?? 0);
         if ($fromBody > 0) {
@@ -3884,7 +3779,7 @@ class AjaxController
         }
     }
 
-    private function verifyCsrf(array $body): void
+    public function verifyCsrf(array $body): void
     {
         $headerToken = trim((string) ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? ''));
         $bodyToken = trim((string) (
@@ -3918,7 +3813,7 @@ class AjaxController
         return '';
     }
 
-    private function readJsonBody(): array
+    public function readJsonBody(): array
     {
         if ($this->jsonBodyCache !== null) {
             return $this->jsonBodyCache;
@@ -4026,7 +3921,7 @@ class AjaxController
     }
 
 
-    private function respond(bool $success, string $message, array $data = [], int $status = 200): void
+    public function respond(bool $success, string $message, array $data = [], int $status = 200): void
     {
         http_response_code($status);
         echo json_encode([
