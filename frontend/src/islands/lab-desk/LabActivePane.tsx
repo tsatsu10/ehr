@@ -20,12 +20,14 @@ interface LabActivePaneProps {
   data: LabSelectData | null;
   hasActiveWork: boolean;
   labOpsEnabled?: boolean;
+  canSkipToPayment?: boolean;
   visitBoardUrl?: string;
   blocked: boolean;
   actionError: string | null;
   submitting: boolean;
   onTakePatient: () => void;
   onComplete: () => void;
+  onSkip: () => void;
   onOpenOrders: () => void;
   onOpenResults: (orderId?: number) => void;
   onOpenLabIntake?: () => void;
@@ -37,12 +39,14 @@ export function LabActivePane({
   data,
   hasActiveWork,
   labOpsEnabled = false,
+  canSkipToPayment = false,
   visitBoardUrl,
   blocked,
   actionError,
   submitting,
   onTakePatient,
   onComplete,
+  onSkip,
   onOpenOrders,
   onOpenResults,
   onOpenLabIntake,
@@ -70,6 +74,8 @@ export function LabActivePane({
 
   const inLab = data.visit.state === 'in_lab';
   const canTake = data.visit.state === 'ready_for_lab' && !hasActiveWork;
+  const canSkip = (canSkipToPayment || data.can_skip_to_payment)
+    && (data.visit.state === 'ready_for_lab' || inLab);
   const labDirectIntake = data.lab_direct_intake;
   const showCoreOrders = !labDirectIntake?.enabled || !labDirectIntake.can_create_orders;
   const firstOrderId = data.lab_orders[0]?.id;
@@ -144,6 +150,18 @@ export function LabActivePane({
             onClick={onComplete}
           >
             {submitting ? 'Completing…' : 'Lab complete'}
+          </Button>
+        )}
+        {canSkip && (
+          <Button
+            type="button"
+            variant="outline"
+            className="border-amber-400 text-amber-800 hover:bg-amber-50"
+            id="nc-lab-skip-btn"
+            disabled={blocked || submitting}
+            onClick={onSkip}
+          >
+            Skip to payment
           </Button>
         )}
         {visitBoardUrl && (

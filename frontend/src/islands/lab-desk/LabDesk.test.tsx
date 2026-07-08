@@ -136,4 +136,48 @@ describe('LabDesk', () => {
     });
     expect(screen.getByRole('button', { name: /Lab complete/i })).toBeInTheDocument();
   });
+
+  it('shows skip to payment when permitted and submits skip action', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [{ ...waitingVisit, state: 'in_lab' as const }],
+        counts: { waiting: 0, in_lab: 1, total: 1 },
+        has_active_work: true,
+      })
+      .mockResolvedValueOnce({
+        ...selectData,
+        can_skip_to_payment: true,
+      })
+      .mockResolvedValueOnce(emptyQueue)
+      .mockResolvedValueOnce(emptyQueue);
+
+    render(<LabDesk {...props} canSkipToPayment />);
+
+    await waitFor(() => screen.getByText(/Kofi Asante/));
+    fireEvent.click(screen.getByText(/Kofi Asante/));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Skip to payment/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Skip to payment/i }));
+    fireEvent.change(screen.getByLabelText(/Reason/i), {
+      target: { value: 'External lab — patient pays elsewhere' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^Skip to payment$/i }));
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        'lab.skip_to_payment',
+        expect.objectContaining({
+          method: 'POST',
+          json: expect.objectContaining({
+            visit_id: 11,
+            reason: 'External lab — patient pays elsewhere',
+          }),
+        }),
+      );
+    });
+  });
 });

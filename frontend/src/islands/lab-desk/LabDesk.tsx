@@ -14,6 +14,7 @@ import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
 import { EsignOverrideModal } from '@components/EsignOverrideModal';
+import { SkipToPaymentModal } from '@components/SkipToPaymentModal';
 import { handleDeskCompleteResult } from '@core/deskCompleteAction';
 import { postDeskAction } from '@core/postDeskAction';
 import type {
@@ -58,6 +59,7 @@ export function LabDesk({
   labOpsEnabled = false,
   canEnterResults = false,
   canReleaseResults = false,
+  canSkipToPayment = false,
   sharedDeviceWarning = false,
   canEsignOverride = false,
 }: LabDeskProps) {
@@ -75,6 +77,8 @@ export function LabDesk({
   const [actionError, setActionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const [skipOpen, setSkipOpen] = useState(false);
+  const [skipError, setSkipError] = useState<string | null>(null);
   const [esignOpen, setEsignOpen] = useState(false);
   const [labOpsDrawerOpen, setLabOpsDrawerOpen] = useState(false);
   const [labOpsOrderId, setLabOpsOrderId] = useState<number | null>(null);
@@ -132,8 +136,8 @@ export function LabDesk({
   }, [sharedSession]);
 
   useEffect(() => {
-    modalOpenRef.current = esignOpen || labOpsDrawerOpen || mobileQueueOpen;
-  }, [esignOpen, labOpsDrawerOpen, mobileQueueOpen]);
+    modalOpenRef.current = esignOpen || skipOpen || labOpsDrawerOpen || mobileQueueOpen;
+  }, [esignOpen, skipOpen, labOpsDrawerOpen, mobileQueueOpen]);
 
   const fetchQueue = useCallback(async () => {
     queueSeq.current += 1;
@@ -334,6 +338,43 @@ export function LabDesk({
     });
   }, [ajaxUrl, canEsignOverride, csrfToken, facilityId, resetActivePane, selectData, sharedSession, submitting]);
 
+  const handleSkip = useCallback(async (reason: string) => {
+    if (!selectData || submitting) return;
+
+    setSubmitting(true);
+    setSkipError(null);
+
+    try {
+      await oeFetch('lab.skip_to_payment', {
+        ajaxUrl,
+        csrfToken,
+        method: 'POST',
+        json: {
+          visit_id: selectData.visit.id,
+          row_version: selectData.visit.row_version ?? 0,
+          reason,
+        },
+      });
+      setSkipOpen(false);
+      resetActivePane();
+      setHasActiveWork(false);
+      hasActiveWorkRef.current = false;
+      void fetchQueueRef.current();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Skip failed';
+      setSkipError(msg);
+      if (msg.toLowerCase().includes('not on the lab queue')) {
+        setSkipOpen(false);
+        resetActivePane();
+        setHasActiveWork(false);
+        hasActiveWorkRef.current = false;
+        void fetchQueueRef.current();
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }, [ajaxUrl, csrfToken, resetActivePane, selectData, submitting]);
+
   const runShortcut = useCallback(async (shortcut: string) => {
     if (!selectData || sharedSession.blocked) return;
 
@@ -447,6 +488,7 @@ export function LabDesk({
               data={selectData}
               hasActiveWork={hasActiveWork}
               labOpsEnabled={labOpsEnabled}
+              canSkipToPayment={canSkipToPayment}
               visitBoardUrl={visitBoardUrl}
               blocked={sharedSession.blocked}
               actionError={actionError}
@@ -455,6 +497,7 @@ export function LabDesk({
                 if (selectData) void takePatient(selectData.visit.id, selectData.visit.row_version ?? 0);
               }}
               onComplete={() => void handleComplete()}
+              onSkip={() => setSkipOpen(true)}
               onOpenOrders={() => void runShortcut('orders')}
               onOpenResults={handleOpenResults}
               onOpenLabIntake={() => void handleOpenLabIntake()}
@@ -492,6 +535,20 @@ export function LabDesk({
           />
         </>
       )}
+
+      <SkipToPaymentModal
+        open={skipOpen}
+        preview={selectData?.preview ?? null}
+        visit={selectData?.visit ?? null}
+        deskLabel="lab"
+        submitting={submitting}
+        error={skipError}
+        onClose={() => {
+          setSkipOpen(false);
+          setSkipError(null);
+        }}
+        onConfirm={(reason) => void handleSkip(reason)}
+      />
 
       <EsignOverrideModal
         open={esignOpen}

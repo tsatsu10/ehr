@@ -13,5 +13,5 @@ namespace OpenEMR\Modules\NewClinic;
 
 class ModuleAssetVersion
 {
-    public const VERSION = '20260708clinicalconsole1';
+    public const VERSION = '20260708skipdesk1';
 }

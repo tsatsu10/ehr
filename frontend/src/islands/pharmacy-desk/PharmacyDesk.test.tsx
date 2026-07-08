@@ -137,4 +137,48 @@ describe('PharmacyDesk', () => {
     expect(screen.getByRole('button', { name: /Pharmacy complete/i })).toBeInTheDocument();
     expect(screen.getByText(/Paracetamol 500mg/)).toBeInTheDocument();
   });
+
+  it('shows skip to payment when permitted and submits skip action', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [{ ...waitingVisit, state: 'in_pharmacy' as const }],
+        counts: { waiting: 0, in_pharmacy: 1, total: 1 },
+        has_active_work: true,
+      })
+      .mockResolvedValueOnce({
+        ...selectData,
+        can_skip_to_payment: true,
+      })
+      .mockResolvedValueOnce(emptyQueue)
+      .mockResolvedValueOnce(emptyQueue);
+
+    render(<PharmacyDesk {...props} canSkipToPayment />);
+
+    await waitFor(() => screen.getByText(/Ama Mensah/));
+    fireEvent.click(screen.getByText(/Ama Mensah/));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Skip to payment/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Skip to payment/i }));
+    fireEvent.change(screen.getByLabelText(/Reason/i), {
+      target: { value: 'Patient declined all prescriptions' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^Skip to payment$/i }));
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        'pharmacy.skip_to_payment',
+        expect.objectContaining({
+          method: 'POST',
+          json: expect.objectContaining({
+            visit_id: 21,
+            reason: 'Patient declined all prescriptions',
+          }),
+        }),
+      );
+    });
+  });
 });

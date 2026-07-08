@@ -20,6 +20,7 @@ interface PharmacyActivePaneProps {
   mode: PharmacyActiveMode;
   data: PharmacySelectData | null;
   hasActiveWork: boolean;
+  canSkipToPayment?: boolean;
   visitBoardUrl?: string;
   blocked: boolean;
   actionError: string | null;
@@ -28,6 +29,7 @@ interface PharmacyActivePaneProps {
   canDispense?: boolean;
   onTakePatient: () => void;
   onComplete: () => void;
+  onSkip: () => void;
   onOpenDispense: () => void;
   onOpenRxEdit: () => void;
   onDispenseRx?: (prescriptionId: number) => void;
@@ -42,6 +44,7 @@ export function PharmacyActivePane({
   mode,
   data,
   hasActiveWork,
+  canSkipToPayment = false,
   visitBoardUrl,
   blocked,
   actionError,
@@ -50,6 +53,7 @@ export function PharmacyActivePane({
   canDispense = false,
   onTakePatient,
   onComplete,
+  onSkip,
   onOpenDispense,
   onOpenRxEdit,
   onDispenseRx,
@@ -81,6 +85,8 @@ export function PharmacyActivePane({
 
   const inPharmacy = data.visit.state === 'in_pharmacy';
   const canTake = data.visit.state === 'ready_for_pharmacy' && !hasActiveWork;
+  const canSkip = (canSkipToPayment || data.can_skip_to_payment)
+    && (data.visit.state === 'ready_for_pharmacy' || inPharmacy);
   const walkinTriage = data.walkin_triage;
   const needsWalkinOutcome = !!walkinTriage?.enabled;
   const completeBlocked = needsWalkinOutcome && !walkinOutcome;
@@ -192,6 +198,18 @@ export function PharmacyActivePane({
             onClick={onComplete}
           >
             {submitting ? 'Completing…' : 'Pharmacy complete'}
+          </Button>
+        )}
+        {canSkip && (
+          <Button
+            type="button"
+            variant="outline"
+            className="border-amber-400 text-amber-800 hover:bg-amber-50"
+            id="nc-pharmacy-skip-btn"
+            disabled={blocked || submitting}
+            onClick={onSkip}
+          >
+            Skip to payment
           </Button>
         )}
         {visitBoardUrl && (

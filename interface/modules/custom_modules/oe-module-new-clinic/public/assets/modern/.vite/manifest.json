@@ -417,9 +417,16 @@
       "_button-C-jl72kd.js"
     ]
   },
-  "_deskCompleteAction-DZjzVpmc.js": {
-    "file": "chunks/deskCompleteAction-DZjzVpmc.js",
-    "name": "deskCompleteAction"
+  "_deskCompleteAction-P_B2R1OP.js": {
+    "file": "chunks/deskCompleteAction-P_B2R1OP.js",
+    "name": "deskCompleteAction",
+    "imports": [
+      "_button-C-jl72kd.js",
+      "_deskCalloutStyles-BEkO9owT.js",
+      "_label-BFRJwxOi.js",
+      "_textarea-YRkb04um.js",
+      "_ConfirmModal-8qSNvzxZ.js"
+    ]
   },
   "_deskConflict-DbzhVAn8.js": {
     "file": "chunks/deskConflict-DbzhVAn8.js",
@@ -1213,7 +1220,7 @@
       "_postDeskAction-mg6TkMBf.js",
       "_clinicalDocApi-Zy00RSwJ.js",
       "_EsignOverrideModal-BTJJp5YM.js",
-      "_deskCompleteAction-DZjzVpmc.js",
+      "_deskCompleteAction-P_B2R1OP.js",
       "_LabOpsResultDrawer-Dd8j-wNh.js"
     ],
     "css": [
@@ -1435,7 +1442,7 @@
       "_postDeskAction-mg6TkMBf.js",
       "_clinicalDocApi-Zy00RSwJ.js",
       "_EsignOverrideModal-BTJJp5YM.js",
-      "_deskCompleteAction-DZjzVpmc.js",
+      "_deskCompleteAction-P_B2R1OP.js",
       "_preload-helper-DYl5dUZ5.js"
     ],
     "dynamicImports": [

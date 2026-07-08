@@ -17,6 +17,7 @@ import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
 import { UndispensedRxModal } from '@components/UndispensedRxModal';
 import { ExternalRxIncompleteModal } from '@components/ExternalRxIncompleteModal';
 import { EsignOverrideModal } from '@components/EsignOverrideModal';
+import { SkipToPaymentModal } from '@components/SkipToPaymentModal';
 import { handleDeskCompleteResult } from '@core/deskCompleteAction';
 import { postDeskAction } from '@core/postDeskAction';
 import type {
@@ -69,6 +70,7 @@ export function PharmacyDesk({
   facilityId,
   pollMs = 30_000,
   visitBoardUrl,
+  canSkipToPayment = false,
   sharedDeviceWarning = false,
   canEsignOverride = false,
   canSellOtc = false,
@@ -91,6 +93,8 @@ export function PharmacyDesk({
   const [actionError, setActionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const [skipOpen, setSkipOpen] = useState(false);
+  const [skipError, setSkipError] = useState<string | null>(null);
   const [esignOpen, setEsignOpen] = useState(false);
   const [otcOpen, setOtcOpen] = useState(false);
   const [dispenseRxId, setDispenseRxId] = useState<number | null>(null);
@@ -186,8 +190,8 @@ export function PharmacyDesk({
   }, [sharedSession]);
 
   useEffect(() => {
-    modalOpenRef.current = esignOpen || otcOpen || undispensedOpen || externalRxOpen || mobileQueueOpen;
-  }, [esignOpen, otcOpen, undispensedOpen, externalRxOpen, mobileQueueOpen]);
+    modalOpenRef.current = esignOpen || skipOpen || otcOpen || undispensedOpen || externalRxOpen || mobileQueueOpen;
+  }, [esignOpen, skipOpen, otcOpen, undispensedOpen, externalRxOpen, mobileQueueOpen]);
 
   const fetchQueue = useCallback(async () => {
     queueSeq.current += 1;
@@ -427,6 +431,43 @@ export function PharmacyDesk({
     });
   }, [ajaxUrl, canEsignOverride, csrfToken, facilityId, resetActivePane, selectData, sharedSession, submitting, walkinOutcome]);
 
+  const handleSkip = useCallback(async (reason: string) => {
+    if (!selectData || submitting) return;
+
+    setSubmitting(true);
+    setSkipError(null);
+
+    try {
+      await oeFetch('pharmacy.skip_to_payment', {
+        ajaxUrl,
+        csrfToken,
+        method: 'POST',
+        json: {
+          visit_id: selectData.visit.id,
+          row_version: selectData.visit.row_version ?? 0,
+          reason,
+        },
+      });
+      setSkipOpen(false);
+      resetActivePane();
+      setHasActiveWork(false);
+      hasActiveWorkRef.current = false;
+      void fetchQueueRef.current();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Skip failed';
+      setSkipError(msg);
+      if (msg.toLowerCase().includes('not on the pharmacy queue')) {
+        setSkipOpen(false);
+        resetActivePane();
+        setHasActiveWork(false);
+        hasActiveWorkRef.current = false;
+        void fetchQueueRef.current();
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }, [ajaxUrl, csrfToken, resetActivePane, selectData, submitting]);
+
   const handleWalkinClose = useCallback(async (
     outcome: string,
     options?: { esignOverrideReason?: string },
@@ -618,6 +659,7 @@ export function PharmacyDesk({
               mode={mode}
               data={selectData}
               hasActiveWork={hasActiveWork}
+              canSkipToPayment={canSkipToPayment}
               visitBoardUrl={visitBoardUrl}
               blocked={sharedSession.blocked}
               actionError={actionError}
@@ -628,6 +670,7 @@ export function PharmacyDesk({
                 if (selectData) void takePatient(selectData.visit.id, selectData.visit.row_version ?? 0);
               }}
               onComplete={() => void handleComplete()}
+              onSkip={() => setSkipOpen(true)}
               onOpenDispense={() => void runShortcut('dispense')}
               onOpenRxEdit={() => void runShortcut('rx_edit')}
               onDispenseRx={(prescriptionId) => setDispenseRxId(prescriptionId)}
@@ -669,6 +712,20 @@ export function PharmacyDesk({
           />
         </>
       )}
+
+      <SkipToPaymentModal
+        open={skipOpen}
+        preview={selectData?.preview ?? null}
+        visit={selectData?.visit ?? null}
+        deskLabel="pharmacy"
+        submitting={submitting}
+        error={skipError}
+        onClose={() => {
+          setSkipOpen(false);
+          setSkipError(null);
+        }}
+        onConfirm={(reason) => void handleSkip(reason)}
+      />
 
       <EsignOverrideModal
         open={esignOpen}

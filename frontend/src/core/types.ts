@@ -893,6 +893,7 @@ export interface LabDeskProps {
   labOpsEnabled?: boolean;
   canEnterResults?: boolean;
   canReleaseResults?: boolean;
+  canSkipToPayment?: boolean;
   sharedDeviceWarning?: boolean;
   canEsignOverride?: boolean;
 }
@@ -1015,6 +1016,7 @@ export interface PharmacyDeskProps {
   facilityId: number;
   pollMs?: number;
   visitBoardUrl?: string;
+  canSkipToPayment?: boolean;
   sharedDeviceWarning?: boolean;
   canEsignOverride?: boolean;
   canSellOtc?: boolean;
