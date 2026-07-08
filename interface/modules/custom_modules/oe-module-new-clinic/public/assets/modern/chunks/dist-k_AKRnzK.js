@@ -1,0 +1,2 @@
+import{d as e,h as t,m as n,n as r,p as i}from"./button-CnSZFKEu.js";var a=t(n(),1),o=t(i(),1),s=e(),c=[`a`,`button`,`div`,`form`,`h2`,`h3`,`img`,`input`,`label`,`li`,`nav`,`ol`,`p`,`select`,`span`,`svg`,`ul`].reduce((e,t)=>{let n=r(`Primitive.${t}`),i=a.forwardRef((e,r)=>{let{asChild:i,...a}=e,o=i?n:t;return typeof window<`u`&&(window[Symbol.for(`radix-ui`)]=!0),(0,s.jsx)(o,{...a,ref:r})});return i.displayName=`Primitive.${t}`,{...e,[t]:i}},{});function l(e,t){e&&o.flushSync(()=>e.dispatchEvent(t))}export{l as n,c as t};
+//# sourceMappingURL=dist-k_AKRnzK.js.map
