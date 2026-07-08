@@ -23,6 +23,7 @@ use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\FrontDeskActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PatientActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PharmacyActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ProfileActionHandler;
+use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\QueueBridgeActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ReportsActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\SchedulingActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\TriageActionHandler;
@@ -78,11 +79,8 @@ use OpenEMR\Modules\NewClinic\Services\FacilityScopeService;
 use OpenEMR\Modules\NewClinic\Services\QuickAddService;
 use OpenEMR\Modules\NewClinic\Services\QueueSlipService;
 use OpenEMR\Modules\NewClinic\Services\QueueBridgeAccessService;
-use OpenEMR\Modules\NewClinic\Services\QueueBridgeService;
-use OpenEMR\Modules\NewClinic\Services\QueueBridgeSurfaceService;
 use OpenEMR\Modules\NewClinic\Services\SchedulingAccessService;
 use OpenEMR\Modules\NewClinic\Services\VisitBoardService;
-use OpenEMR\Modules\NewClinic\Services\VisitQueueService;
 use OpenEMR\Modules\NewClinic\Services\VisitClaimLostService;
 use OpenEMR\Modules\NewClinic\Services\SimilarSurnameQueueService;
 use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
@@ -143,77 +141,6 @@ class AjaxController
             switch ($action) {
                 case 'health':
                     $this->respond(true, 'ok', ['module' => 'oe-module-new-clinic']);
-                    break;
-                case 'queue_bridge.list':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $lens = (string) ($_REQUEST['lens'] ?? 'action');
-                    $page = max(1, (int) ($_REQUEST['page'] ?? 1));
-                    $this->respond(true, 'ok', $this->svc(QueueBridgeService::class)->listExceptions($facilityId, $lens, $page));
-                    break;
-                case 'queue_bridge.eod_export':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    try {
-                        $this->svc(QueueBridgeAccessService::class)->assertHubAccess();
-                        $export = $this->svc(QueueBridgeService::class)->exportEodCsv($facilityId);
-                        $this->respondCsv($export['filename'], $export['content']);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
-                    }
-                    break;
-                case 'queue_bridge.resolve':
-                case 'queue_bridge.link_appointment':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $resolveAction = $action === 'queue_bridge.link_appointment'
-                        ? 'link_appointment'
-                        : (string) ($body['action'] ?? '');
-                    try {
-                        $result = $this->svc(QueueBridgeService::class)->resolve(
-                            (string) ($body['exception_code'] ?? ''),
-                            $resolveAction,
-                            (int) ($body['pid'] ?? 0),
-                            $facilityId,
-                            $userId,
-                            isset($body['pc_eid']) ? (int) $body['pc_eid'] : null,
-                            isset($body['visit_id']) ? (int) $body['visit_id'] : null,
-                            isset($body['appt_date']) ? (string) $body['appt_date'] : null,
-                            isset($body['visit_type_id']) ? (int) $body['visit_type_id'] : null,
-                            isset($body['cancel_reason']) ? (string) $body['cancel_reason'] : null,
-                        );
-                        $this->respond(true, 'ok', $result);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'queue_bridge.dismiss':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $facilityId = $this->resolveRequestFacilityId();
-                    try {
-                        $result = $this->svc(QueueBridgeService::class)->dismiss(
-                            (string) ($body['exception_code'] ?? ''),
-                            (int) ($body['pid'] ?? 0),
-                            $facilityId,
-                            $userId,
-                            (string) ($body['reason'] ?? ''),
-                            isset($body['pc_eid']) ? (int) $body['pc_eid'] : null,
-                            isset($body['visit_id']) ? (int) $body['visit_id'] : null,
-                        );
-                        $this->respond(true, 'ok', $result);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
                     break;
                 case 'clinical_doc.visit_summary':
                     $this->svc(ClinicalDocAccessService::class)->assertHubAccess();
@@ -445,14 +372,6 @@ class AjaxController
                     } catch (\InvalidArgumentException $e) {
                         $this->respond(false, $e->getMessage(), ['code' => 'invalid_pack'], 400);
                     }
-                    break;
-                case 'queue.counts':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $counts = $this->svc(VisitQueueService::class)->getCounts($facilityId);
-                    $this->respond(true, 'ok', [
-                        'counts' => $counts,
-                        'last_updated' => date('c'),
-                    ]);
                     break;
                 case 'communications.hub_counts':
                     $authUser = (string) ($_SESSION['authUser'] ?? '');
@@ -1152,6 +1071,7 @@ class AjaxController
             new ProfileActionHandler($this),
             new ReportsActionHandler($this),
             new SchedulingActionHandler($this),
+            new QueueBridgeActionHandler($this),
         ];
     }
 
