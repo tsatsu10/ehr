@@ -52,11 +52,14 @@ if ($cycles === []) {
 }
 
 $importFailures = [];
-$controllersDir = dirname(__DIR__) . '/src/Controllers';
-foreach (glob($controllersDir . '/*.php') ?: [] as $controllerFile) {
-    $missing = moduleVerifyMissingImports($controllerFile);
+$controllersDir = str_replace('\\', '/', dirname(__DIR__)) . '/src/Controllers';
+foreach ($files as $moduleFile) {
+    if (!str_starts_with($moduleFile, $controllersDir . '/')) {
+        continue;
+    }
+    $missing = moduleVerifyMissingImports($moduleFile);
     if ($missing !== []) {
-        $importFailures[basename($controllerFile)] = $missing;
+        $importFailures[basename($moduleFile)] = $missing;
     }
 }
 if ($importFailures === []) {

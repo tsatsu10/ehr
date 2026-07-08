@@ -10,33 +10,25 @@
 declare(strict_types=1);
 
 /**
- * @return list<string>
- */
-function moduleVerifyRootDirs(): array
-{
-    $moduleRoot = dirname(__DIR__, 2);
-
-    return [
-        $moduleRoot . '/src/Services',
-        $moduleRoot . '/src/Controllers',
-        $moduleRoot . '/src/Support',
-        $moduleRoot . '/src',
-    ];
-}
-
-/**
+ * All module PHP files under src/, recursive — subdirectories like
+ * Controllers/Ajax/Handlers and Exceptions must not escape the scans.
+ *
  * @return list<string>
  */
 function moduleVerifyPhpFiles(): array
 {
+    $srcDir = dirname(__DIR__, 2) . '/src';
+    if (!is_dir($srcDir)) {
+        return [];
+    }
+
     $files = [];
-    foreach (moduleVerifyRootDirs() as $dir) {
-        if (!is_dir($dir)) {
-            continue;
-        }
-        $glob = glob($dir . '/*.php') ?: [];
-        foreach ($glob as $file) {
-            $files[] = $file;
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($srcDir, FilesystemIterator::SKIP_DOTS)
+    );
+    foreach ($iterator as $fileInfo) {
+        if ($fileInfo->isFile() && strtolower($fileInfo->getExtension()) === 'php') {
+            $files[] = str_replace('\\', '/', $fileInfo->getPathname());
         }
     }
 
