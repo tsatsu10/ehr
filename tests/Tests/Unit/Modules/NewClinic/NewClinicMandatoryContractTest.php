@@ -351,14 +351,14 @@ class NewClinicMandatoryContractTest extends TestCase
         $this->assertStringContainsString('Immunizations given', $spec);
         $this->assertStringContainsString('Run report', $spec);
         $this->assertStringContainsString('Export CSV', $spec);
-        $this->assertStringContainsString('pilot-enable-report-hub.php', $spec);
+        $this->assertStringContainsString('pilot-enable-v11-rep.php', $spec);
         $this->assertStringContainsString('embed=1', file_get_contents(
             dirname(__DIR__, 5)
             . '/interface/modules/custom_modules/oe-module-new-clinic/public/report-hub/index.php'
         ));
 
         $pilotScript = dirname(__DIR__, 5)
-            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-report-hub.php';
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-v11-rep.php';
         $this->assertFileExists($pilotScript, 'Pilot report hub enable script must exist');
 
         $commonSeed = dirname(__DIR__, 5)
@@ -415,7 +415,7 @@ class NewClinicMandatoryContractTest extends TestCase
         $this->assertFileExists($menuTest, 'Clinical doc menu restrict test must exist');
 
         $pilotScript = dirname(__DIR__, 5)
-            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-clinical-doc.php';
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-v11-doc.php';
         $this->assertFileExists($pilotScript, 'Pilot clinical doc enable script must exist');
 
         $shortcutBody = $this->methodBody(

@@ -27,7 +27,7 @@ let fixtureProviderId = 0;
 
 test.describe('Scheduling recurring move', () => {
   test.beforeAll(() => {
-    runPhpScript('scripts/pilot-enable-scheduling-redesign.php');
+    runPhpScript('scripts/pilot-enable-v11-scheduling.php');
     runPhpScript('scripts/scheduling-recurring-fixture-seed.php', '--cleanup');
     const out = runPhpScript('scripts/scheduling-recurring-fixture-seed.php');
     const parsed = parseRecurringFixtureOutput(out);

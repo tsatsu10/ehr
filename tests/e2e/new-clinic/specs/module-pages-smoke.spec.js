@@ -48,7 +48,7 @@ test.describe('New Clinic module pages (authenticated)', () => {
   test.beforeAll(() => {
     const script = path.join(
       __dirname,
-      '../../../../interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-queue-bridge.php',
+      '../../../../interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-v11-bridge.php',
     );
     const php = process.env.PHP_BIN || 'C:\\xampp\\php\\php.exe';
     execSync(`"${php}" "${script}"`, { stdio: 'inherit' });
