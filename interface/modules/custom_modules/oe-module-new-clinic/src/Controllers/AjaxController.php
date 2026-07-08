@@ -23,6 +23,7 @@ use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\FrontDeskActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PatientActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PharmacyActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ProfileActionHandler;
+use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ReportsActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\TriageActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\VisitActionHandler;
 use OpenEMR\Modules\NewClinic\Exceptions\EncounterSessionMismatchException;
@@ -61,13 +62,7 @@ use OpenEMR\Modules\NewClinic\Services\PharmOpsRxPrintService;
 use OpenEMR\Modules\NewClinic\Services\PharmOpsReportsService;
 use OpenEMR\Modules\NewClinic\Services\PharmOpsWorklistService;
 use OpenEMR\Modules\NewClinic\Services\PaymentHistoryService;
-use OpenEMR\Modules\NewClinic\Services\ReportsService;
-use OpenEMR\Modules\NewClinic\Services\ReportsSchedulingService;
-use OpenEMR\Modules\NewClinic\Services\ReportsAncillaryService;
-use OpenEMR\Modules\NewClinic\Services\ReportsDocumentationIntegrityService;
 use OpenEMR\Modules\NewClinic\Services\ReportHubAccessService;
-use OpenEMR\Modules\NewClinic\Services\ReportHubCatalogService;
-use OpenEMR\Modules\NewClinic\Services\ReportHubExportService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocAccessService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocCatalogService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocFormOpenService;
@@ -90,7 +85,6 @@ use OpenEMR\Modules\NewClinic\Services\SchedulingFlowBoardLaneMapService;
 use OpenEMR\Modules\NewClinic\Services\SchedulingFlowBoardService;
 use OpenEMR\Modules\NewClinic\Services\SchedulingFlowBoardPrefsService;
 use OpenEMR\Modules\NewClinic\Services\SchedulingRecallsService;
-use OpenEMR\Modules\NewClinic\Services\ReconciliationService;
 use OpenEMR\Modules\NewClinic\Services\VisitBoardService;
 use OpenEMR\Modules\NewClinic\Services\VisitQueueService;
 use OpenEMR\Modules\NewClinic\Services\VisitClaimLostService;
@@ -153,170 +147,6 @@ class AjaxController
             switch ($action) {
                 case 'health':
                     $this->respond(true, 'ok', ['module' => 'oe-module-new-clinic']);
-                    break;
-                case 'reports.daily':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $report = $this->svc(ReportsService::class)->getDailyReport(
-                        $facilityId,
-                        $_REQUEST['visit_date'] ?? date('Y-m-d')
-                    );
-                    $this->respond(true, 'ok', $report);
-                    break;
-                case 'reports.scheduling':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $visitDate = (string) ($_REQUEST['visit_date'] ?? date('Y-m-d'));
-                    $this->respond(true, 'ok', $this->svc(ReportsSchedulingService::class)->getReport($facilityId, $visitDate));
-                    break;
-                case 'reports.ancillary':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $startDate = (string) ($_REQUEST['start_date'] ?? $_REQUEST['visit_date'] ?? date('Y-m-d'));
-                    $endDate = (string) ($_REQUEST['end_date'] ?? $startDate);
-                    try {
-                        $this->respond(true, 'ok', $this->svc(ReportsAncillaryService::class)->getReport($facilityId, $startDate, $endDate));
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_date'], 400);
-                    }
-                    break;
-                case 'reports.ancillary_export':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $startDate = (string) ($_REQUEST['start_date'] ?? $_REQUEST['visit_date'] ?? date('Y-m-d'));
-                    $endDate = (string) ($_REQUEST['end_date'] ?? $startDate);
-                    try {
-                        $export = $this->svc(ReportsAncillaryService::class)->exportCsv($facilityId, $startDate, $endDate);
-                        $this->respondCsv($export['filename'], $export['content']);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_date'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
-                    }
-                    break;
-                case 'reports.documentation_integrity':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $startDate = (string) ($_REQUEST['start_date'] ?? $_REQUEST['visit_date'] ?? date('Y-m-d'));
-                    $endDate = (string) ($_REQUEST['end_date'] ?? $startDate);
-                    try {
-                        $this->respond(true, 'ok', $this->svc(ReportsDocumentationIntegrityService::class)->getReport(
-                            $facilityId,
-                            $startDate,
-                            $endDate
-                        ));
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_date'], 400);
-                    }
-                    break;
-                case 'reports.documentation_integrity_export':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $startDate = (string) ($_REQUEST['start_date'] ?? $_REQUEST['visit_date'] ?? date('Y-m-d'));
-                    $endDate = (string) ($_REQUEST['end_date'] ?? $startDate);
-                    try {
-                        $export = $this->svc(ReportsDocumentationIntegrityService::class)->exportCsv($facilityId, $startDate, $endDate);
-                        $this->respondCsv($export['filename'], $export['content']);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_date'], 400);
-                    }
-                    break;
-                case 'reports.reconciliation':
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $runDate = (string) ($_REQUEST['run_date'] ?? date('Y-m-d'));
-                    $this->respond(true, 'ok', [
-                        'latest_run' => $this->svc(ReconciliationService::class)->getLatestRun($facilityId),
-                        'totals' => $this->svc(ReconciliationService::class)->fetchTotals($facilityId, $runDate),
-                    ]);
-                    break;
-                case 'reports.hub_summary':
-                    $this->svc(ReportHubAccessService::class)->assertHubAccess();
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $visitDate = (string) ($_REQUEST['visit_date'] ?? date('Y-m-d'));
-                    $daily = $this->svc(ReportsService::class)->getDailyReport($facilityId, $visitDate);
-                    $visits = is_array($daily['visits'] ?? null) ? $daily['visits'] : [];
-                    $cash = is_array($daily['cash'] ?? null) ? $daily['cash'] : [];
-                    $currency = is_array($daily['currency'] ?? null)
-                        ? (string) ($daily['currency']['currency_symbol'] ?? 'GH₵')
-                        : 'GH₵';
-                    $this->respond(true, 'ok', [
-                        'visit_date' => (string) ($daily['visit_date'] ?? $visitDate),
-                        'visits_started' => (int) ($visits['started'] ?? 0),
-                        'cash_total' => (float) ($cash['total_collected'] ?? 0),
-                        'receipt_count' => (int) ($cash['receipt_count'] ?? 0),
-                        'currency_symbol' => $currency,
-                    ]);
-                    break;
-                case 'reports.catalog':
-                    $this->svc(ReportHubAccessService::class)->assertHubAccess();
-                    $facilityId = $this->resolveRequestFacilityId();
-                    $lens = isset($_REQUEST['lens']) ? (string) $_REQUEST['lens'] : null;
-                    if ($lens === '') {
-                        $lens = null;
-                    }
-                    $this->respond(true, 'ok', $this->svc(ReportHubCatalogService::class)->getCatalog($lens, $facilityId));
-                    break;
-                case 'reports.run':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $preview = $this->svc(ReportHubExportService::class)->runReportPreview($body, $userId);
-                        $this->respond(true, 'ok', $preview);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'reports.export':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $export = $this->svc(ReportHubExportService::class)->requestExport($body, $userId);
-                        if (($export['mode'] ?? '') === 'sync') {
-                            $this->respondCsv((string) $export['filename'], (string) $export['content']);
-                        }
-                        $this->respond(true, 'ok', $export);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
-                    }
-                    break;
-                case 'reports.export_status':
-                    $this->requireReportHubExportAcl();
-                    $jobId = (int) ($_REQUEST['job_id'] ?? 0);
-                    try {
-                        $status = $this->svc(ReportHubExportService::class)->pollExportStatus($jobId, $userId);
-                        $this->respond(true, 'ok', $status);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'export_status'], (int) ($e->getCode() ?: 400));
-                    }
-                    break;
-                case 'reports.export_download':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $jobId = (int) ($body['job_id'] ?? 0);
-                    try {
-                        $download = $this->svc(ReportHubExportService::class)->readExportDownload($jobId, $userId);
-                        $this->respondCsv($download['filename'], $download['content']);
-                    } catch (\RuntimeException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'export_download'], (int) ($e->getCode() ?: 400));
-                    }
-                    break;
-                case 'reports.export_run':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $recorded = $this->svc(ReportHubExportService::class)->recordExportRun($body, $userId);
-                    $this->respond(true, 'ok', $recorded);
                     break;
                 case 'queue_bridge.list':
                     $facilityId = $this->resolveRequestFacilityId();
@@ -1656,6 +1486,7 @@ class AjaxController
             new ChartDepthActionHandler($this),
             new AdminActionHandler($this),
             new ProfileActionHandler($this),
+            new ReportsActionHandler($this),
         ];
     }
 
@@ -1927,7 +1758,7 @@ class AjaxController
         }
     }
 
-    private function requireReportHubExportAcl(): void
+    public function requireReportHubExportAcl(): void
     {
         try {
             $this->svc(ReportHubAccessService::class)->assertHubAccess();
@@ -2315,7 +2146,7 @@ class AjaxController
         exit;
     }
 
-    private function respondCsv(string $filename, string $content): void
+    public function respondCsv(string $filename, string $content): void
     {
         http_response_code(200);
         header('Content-Type: text/csv; charset=utf-8');
