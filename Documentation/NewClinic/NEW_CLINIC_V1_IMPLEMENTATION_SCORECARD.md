@@ -4,8 +4,8 @@
 
 | Field | Value |
 |-------|-------|
-| **Last audited** | 2026-07-05 |
-| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260705sp183aria` |
+| **Last audited** | 2026-07-08 |
+| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260708auditmerged1` |
 | **Maintainer** | Engineering lead updates after each sprint; Product owns pilot sign-off |
 | **How to update** | Change `%` and `Status` cells; bump **Last audited**; sync PRD §5.6 row if shell status changes |
 
@@ -46,8 +46,8 @@
 | M5 | Cashier | Done | **92** | Yes | Eng | Done | MoMo receipt label (V1.1-OPS) |
 | M6 | Clinic Admin | Done | **88** | Yes | Eng | Partial | T2 globals profile automation incomplete |
 | M7 | Daily Reports | Done | **92** | Yes | Eng | Done | M7-F18 ancillary section; scheduling tab bridge flag at some sites |
-| M8 | Lab Desk | Done | **90** | Yes | Eng | Done | Role-gated |
-| M9 | Pharmacy Desk | Done | **90** | Yes | Eng | Done | Role-gated |
+| M8 | Lab Desk | Done | **90** | Yes | Eng | Done | Role-gated; M8-F07 skip-to-payment restored (AUDIT-1) |
+| M9 | Pharmacy Desk | Done | **90** | Yes | Eng | Done | Role-gated; M9-F06 skip-to-payment restored (AUDIT-1) |
 | M10 | Patient Registry | Done | **82** | Post-pilot | Eng | Partial | PR-4 allergy/med/comms filters shipped; REG sign-off |
 | M11 | Chart Depth | Done | **82** | Post-pilot | Eng | Partial | CDa/b/c panels; external care (V1.2) not built |
 | M12 | Lab Operations Hub | Done | **78** | Post-pilot | Eng | Partial | LIS/DORN (V1.2-LIS) not built |
@@ -117,7 +117,7 @@ Formal PRD checkboxes. **QA** updates `Signed` when E2E + pilot worksheet row pa
 | COM | Communications hub | 3 | 0 | **yes** | Product |
 | V1.2 | Notify, PHARM-RX, hard assign | 3 | 0 | **yes** | Product |
 
-**Automated evidence:** PHPUnit NewClinic **62/62** · Playwright golden-path **11/11** · hub smokes **57/57** · [§21 E2E map](./NEW_CLINIC_V1_SECTION21_E2E_MAP.md).
+**Automated evidence:** PHPUnit NewClinic **62/62** · Playwright golden-path **11/11** (re-verify on desktop after desk batches) · hub smokes **57/57** · [§21 E2E map](./NEW_CLINIC_V1_SECTION21_E2E_MAP.md).
 
 **Estimated CI coverage of §21:** **~85** (engineering estimate; normative PRD checkboxes mostly open for Product)
 
@@ -158,6 +158,21 @@ Prioritized from lowest module/slice %.
 ## Per-module feature ID samples
 
 Use PRD §8 tables as source of truth. Below: **representative** IDs for spot audits (not exhaustive).
+
+### M8 Lab Desk (sample)
+
+| Feature | P | % | Status | Notes |
+|---------|---|----|--------|-------|
+| M8-F07 Skip to payment | P1 | 100 | Done | `SkipToPaymentModal`, `lab.skip_to_payment`, `#nc-lab-skip-btn` |
+| M8-F08 lab-direct intake | P1 | 100 | Done | `LabDirectPanel` |
+
+### M9 Pharmacy Desk (sample)
+
+| Feature | P | % | Status | Notes |
+|---------|---|----|--------|-------|
+| M9-F06 Skip to payment | P1 | 100 | Done | `SkipToPaymentModal`, `pharmacy.skip_to_payment`, `#nc-pharmacy-skip-btn` |
+| M9-F08 pharmacy walk-in triage | P1 | 100 | Done | `PharmacyWalkinPanel` |
+| M9-F15 external Rx validation | P1 | 100 | Done | `ExternalRxValidationService` |
 
 ### M4 Doctor Desk (sample)
 
@@ -282,6 +297,7 @@ Completed comprehensive Front Desk UX overhaul (sp182touch → sp191fuzzydup):
 | 2026-07-04 | Engineering | §21 QA sign-off: golden path 11/11 E2E, PHPUnit 62/62, hub smokes 47/57; PRD §21.1/§21.1b/§21.5 CI signed; `NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md`; asset `sp76qasignoff` |
 | 2026-07-04 | Engineering | S1 scheduling smoke (`testMandatory60`); V1.2-BILL depth (`61`); V1.1-COM (`62`); §21 golden path rollout (`63`) + `NEW_CLINIC_V1_SECTION21_E2E_MAP.md`; asset `sp75goldenpath` |
 | 2026-07-05 | Engineering | M1 Front Desk UX enhancements: touch target optimization (WCAG AA); keyboard shortcuts help (`?` overlay); field-level validation with inline errors; auto-save with draft recovery; ARIA landmarks & labels (screen reader A11y); asset `sp179touchopt` → `sp183aria`; session doc `FRONT_DESK_UX_IMPROVEMENTS_SESSION_20260705.md` |
+| 2026-07-08 | Engineering | **AUDIT-13 doc-sync:** M8-F07/M9-F06 skip-to-payment confirmed restored (AUDIT-1); scorecard samples added; PRD §12.4 flag matrix reconciled with `install.sql`; CLAUDE.md island/cashier wording fixed; `new/` index consolidated |
 
 ---
 
@@ -293,4 +309,4 @@ Completed comprehensive Front Desk UX overhaul (sp182touch → sp191fuzzydup):
 - [§21 E2E evidence map](./NEW_CLINIC_V1_SECTION21_E2E_MAP.md)
 - [§21 QA sign-off record](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md)
 - [NEXT_STEPS.md](../../interface/modules/custom_modules/oe-module-new-clinic/NEXT_STEPS.md) — deploy / pilot commands
-- [CODE_AUDIT React migration](../../interface/modules/custom_modules/oe-module-new-clinic/CODE_AUDIT_2026-06-27-REACT-MIGRATION.md)
+- [CODE_AUDIT React migration](../../interface/modules/custom_modules/oe-module-new-clinic/CODE_AUDIT_2026-06-27-REACT-MIGRATION.md) — superseded for open items by [audit roadmap](./NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md)

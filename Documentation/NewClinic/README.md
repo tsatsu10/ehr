@@ -6,13 +6,15 @@ Private outpatient clinic layer for OpenEMR. **Primary market:** West Africa. **
 
 Read in this order for a full picture:
 
-1. **[NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md)** — What we build (requirements, modules M0–M18, ACL, data model) — **v1.20.50**
+1. **[NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md)** — What we build (requirements, modules M0–M18, ACL, data model) — **v1.20.51**
 2. **[NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md)** — How staff work day-to-day (v1.9.50)
 3. **[NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md)** — What each screen looks like (wireframes, AJAX) (v0.6.51)
 
 **UI/UX entry point:** **[NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md)** (v2.0.0) — start at **§0 TL;DR** for 60-second orientation. Full rewrite: trunk-test IA, single component reference with contract template, interaction-state taxonomy, scoring rubric, and phased **shadcn/ui migration plan (§9)**. PAGE_DESIGNS remains normative for per-page build detail.
 
-**Implementation tracking:** **[NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md](./NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md)** — living module × slice × % tracker synced to PRD §5.6 and §20.1 (last audited 2026-07-04). **§21 E2E map:** [NEW_CLINIC_V1_SECTION21_E2E_MAP.md](./NEW_CLINIC_V1_SECTION21_E2E_MAP.md) · **§21 QA sign-off:** [NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md) · **Pilot readiness:** [worksheets/NEW_CLINIC_V1_PILOT_READINESS_PACK.md](./worksheets/NEW_CLINIC_V1_PILOT_READINESS_PACK.md)
+**Implementation tracking:** **[NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md](./NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md)** — living module × slice × % tracker synced to PRD §5.6 and §20.1 (last audited 2026-07-08). **§21 E2E map:** [NEW_CLINIC_V1_SECTION21_E2E_MAP.md](./NEW_CLINIC_V1_SECTION21_E2E_MAP.md) · **§21 QA sign-off:** [NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md) · **Pilot readiness:** [worksheets/NEW_CLINIC_V1_PILOT_READINESS_PACK.md](./worksheets/NEW_CLINIC_V1_PILOT_READINESS_PACK.md)
+
+**Doc upkeep:** When editing any spec, bump its document version + history row and update this index (see repo root `CLAUDE.md` §12).
 
 ## Feature redesign specs
 
@@ -46,12 +48,13 @@ Read in this order for a full picture:
 |----------|---------|
 | [NEW_CLINIC_OPENEMR_GAP_ANALYSIS_AND_REDESIGN_PLAN.md](./new/NEW_CLINIC_OPENEMR_GAP_ANALYSIS_AND_REDESIGN_PLAN.md) | Coverage audit vs stock OpenEMR menu tree + phased GAP-A–D React redesign plan for unaddressed areas (v0.1.1) |
 | [NEW_CLINIC_MARKET_EXPANSION_MASTER_PLAN.md](./new/NEW_CLINIC_MARKET_EXPANSION_MASTER_PLAN.md) | Market segments T0–T8, MKT-* feature roadmap merged with GAP/SCALE waves, pilot playbook, project-management operating model, and business plan (pricing, hosting, support, GTM, legal, risks) (v0.1.2) |
+| [NEW_CLINIC_USER_RESEARCH_COMPETITIVE_ANALYSIS.md](./new/NEW_CLINIC_USER_RESEARCH_COMPETITIVE_ANALYSIS.md) | User research + competitive positioning (West Africa private clinic segment) (v0.1.0) |
 | [NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) | UI/UX master — §0 TL;DR · §1 architectural model · §2 design principles · §3 visual system · §4 component reference · §5 interaction states · §6 IA + module map · §9 shadcn migration plan · §10 governance (v2.0.0) |
 | [FRONTEND_2026_MODERNIZATION_PLAN.md](./FRONTEND_2026_MODERNIZATION_PLAN.md) | OpenEMR-wide modernization strategy; **New Clinic React islands shipped** |
 | [FRONTEND_MODULE_GUIDE.md](../FRONTEND_MODULE_GUIDE.md) | How to build and wire React islands (Vite, `oeFetch`, tokens) |
 | [MOBILE_IOS_CURSOR_CHECKLIST.md](./new/MOBILE_IOS_CURSOR_CHECKLIST.md) | Post-session verify checklist when coding from **Cursor iOS** (CI + desktop gates) |
 | [NEW_CLINIC_V1_SCALABILITY_HARDENING_PLAN.md](./new/NEW_CLINIC_V1_SCALABILITY_HARDENING_PLAN.md) | SCALE-* performance hardening tasks + R1–R8 rules (v1.0.0) |
-| [NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md](./NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md) | Full-codebase audit 2026-07-07 — verified endpoint/feature inventory, gap analysis, file dispositions, AUDIT-1..15 refactoring roadmap (v0.1.0) |
+| [NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md](./NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md) | Full-codebase audit 2026-07-07 — verified endpoint/feature inventory, gap analysis, file dispositions, AUDIT-1..15 refactoring roadmap (v0.1.1) |
 
 ## User personas
 
@@ -61,8 +64,8 @@ Composite role personas grounding design/copy decisions in a real working day; c
 |---------|------------------------|--------|
 | [NEW_CLINIC_PERSONA_NURSE_AKUA.md](./NEW_CLINIC_PERSONA_NURSE_AKUA.md) | Nurse — Triage desk, read-only Visit Board (§8.2) | v1.1.0 |
 | [NEW_CLINIC_PERSONA_DOCTOR_MENSAH.md](./NEW_CLINIC_PERSONA_DOCTOR_MENSAH.md) | Doctor — Doctor Desk, routing, E-Sign (§8.3–8.3.4) | v1.1.0 |
-| [NEW_CLINIC_PERSONA_LAB_TECH_LABIK.md](./NEW_CLINIC_PERSONA_LAB_TECH_LABIK.md) | Lab — Lab Desk, Lab Ops Hub, lab-direct intake (§8.4/.4a/.4b) | v1.1.0 |
-| [NEW_CLINIC_PERSONA_PHARMACIST_ESI.md](./NEW_CLINIC_PERSONA_PHARMACIST_ESI.md) | Pharmacy — Pharmacy Desk, Pharm Ops Hub, OTC, walk-in triage (§8.5/.5a/.5b) | v1.1.0 |
+| [NEW_CLINIC_PERSONA_LAB_TECH_LABIK.md](./NEW_CLINIC_PERSONA_LAB_TECH_LABIK.md) | Lab — Lab Desk, Lab Ops Hub, lab-direct intake (§8.4/.4a/.4b) | v1.1.1 |
+| [NEW_CLINIC_PERSONA_PHARMACIST_ESI.md](./NEW_CLINIC_PERSONA_PHARMACIST_ESI.md) | Pharmacy — Pharmacy Desk, Pharm Ops Hub, OTC, walk-in triage (§8.5/.5a/.5b) | v1.1.1 |
 | [NEW_CLINIC_PERSONA_RECEPTIONIST_AMA.md](./NEW_CLINIC_PERSONA_RECEPTIONIST_AMA.md) | Reception — Front Desk search/registration, booking, recalls, check-in (§8.1/.1a–d, §9, §10) | v1.0.0 |
 | [NEW_CLINIC_PERSONA_CASHIER_KOFI.md](./NEW_CLINIC_PERSONA_CASHIER_KOFI.md) | Cashier — payment queue, gates, receipts, closure paths, daily cash discipline (§8.6, D-BILL-2) | v1.0.0 |
 | [NEW_CLINIC_PERSONA_ADMIN_SELORM.md](./NEW_CLINIC_PERSONA_ADMIN_SELORM.md) | Clinic Admin (IT-confident) — Admin Hub config, People & Access, flags, backups, day-2 runbooks (§14, RB-01–RB-20) | v1.0.0 |

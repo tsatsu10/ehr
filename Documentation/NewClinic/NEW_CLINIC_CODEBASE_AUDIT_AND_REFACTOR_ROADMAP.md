@@ -1,6 +1,6 @@
 # New Clinic — Codebase Audit & Refactoring Roadmap
 
-**Version:** v0.1.0 · **Date:** 2026-07-07 · **Status:** Draft for review
+**Version:** v0.1.1 · **Date:** 2026-07-08 · **Status:** Draft for review
 **Scope:** Full evidence-based audit of the New Clinic module (PHP + React + SQL + docs) as of the working tree on 2026-07-07
 **Audience:** Lead dev (desktop + Cursor iOS sessions); roadmap tasks are written to be executable by a smaller model
 
@@ -36,7 +36,7 @@ The module is in genuinely good shape for a ~92%-built V1: the domain model (vis
 | 7 | Medium | 9 truly dead ajax actions (§4.3.2) + 2 "dead because caller regressed" (`lab.skip_to_payment`, `pharmacy.skip_to_payment` — restore, don't remove) | Repo-wide caller search: frontend/src, legacy JS, Twig, module PHP, scripts, tests | AUDIT-5 |
 | 8 | Medium | Orphan files: 4 unimported React components + 1 unused hook, 3 unreferenced Twig templates, empty `visit-board-hello/` island dir, empty `src/EventSubscriber/`, 6 `@deprecated` script wrappers, stale `tools/migrate_registration.php` | §5 disposition tables | AUDIT-7, AUDIT-12 |
 | 9 | Medium | 49 of 181 services have no name-matched unit test (module `tests/` dir inside the module is empty; real tests live in `tests/Tests/Unit/Modules/NewClinic/` — 162 files) | Data/ops inventory sweep | AUDIT-15 |
-| 10 | Low | Doc drift batch: scorecard % overstated for M8/M9; PRD §12.4 flag matrix vs code (3 PRD-only flags, ~24 code-only); CLAUDE.md errors (island count, "Two-Step Cash" model line, `visit-board-hello` demo claim); `acl_version` drift (0.2.3 / 0.2.0 / 0.1.0 across files) | §4.6 | AUDIT-13, AUDIT-11 |
+| 10 | Low | Doc drift batch: scorecard % overstated for M8/M9; PRD §12.4 flag matrix vs code (3 PRD-only flags, ~24 code-only); CLAUDE.md errors (island count, "Two-Step Cash" model line, `visit-board-hello` demo claim); `acl_version` drift (0.2.3 / 0.2.0 / 0.1.0 across files) | §4.6 | **AUDIT-13 done** · AUDIT-11 done |
 
 ### 1.3 Audit baseline caveat
 
@@ -99,15 +99,15 @@ Legacy iframe wrappers; Bootstrap-4 shell coexisting with non-layered BEM island
 
 ### 3.3 Scorecard corrections (Hygiene — do not edit specs in this session)
 
-The scorecard (`NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md`, overall 81%, last audited 2026-07-04) predates the 2026-07-06 desk redesign. Corrections needed in a later doc-sync pass:
+The scorecard (`NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md`, overall 81%, last audited 2026-07-08) predates the 2026-07-06 desk redesign. Corrections applied in AUDIT-13 (2026-07-08):
 
-| Scorecard claim | Reality (verified 2026-07-07) |
+| Scorecard claim | Reality (verified 2026-07-08) |
 |---|---|
-| M8 Lab desk % includes M8-F07 skip-to-payment | **Regressed** — no UI caller exists; deduct until AUDIT-1 lands |
-| M9 Pharmacy desk % includes M9-F06 | Same regression |
-| §21.1d ops-exceptions E2E "covered by golden-path specs" | Both specs now fail on missing skip-button selectors |
+| M8 Lab desk % includes M8-F07 skip-to-payment | **Restored** — `SkipToPaymentModal` + `lab.skip_to_payment` live in `LabDesk.tsx` (AUDIT-1 landed) |
+| M9 Pharmacy desk % includes M9-F06 | **Restored** — same pattern in `PharmacyDesk.tsx` |
+| §21.1d ops-exceptions E2E "covered by golden-path specs" | Skip-button selectors present; **re-run golden-path E2E on desktop** to confirm green |
 | §21 QA sign-off: 15 flows signed, 57/57 hub smokes | Product §21 sign-off still **PENDING** (Q-24 carried from prior audit) |
-| CLAUDE.md: "22 production islands... plus a visit-board-hello Phase 0 demo" | `visit-board-hello/` is an empty dir, not a demo island |
+| CLAUDE.md: "22 production islands... plus a visit-board-hello Phase 0 demo" | **Fixed in AUDIT-13** — `visit-board-hello/` removed; 22 bundles + `encounter-consult` documented |
 | SCALE-* status | All 31 tasks pending — **consistent** with the plan; verified absent in code (no `session_write_close` in ajax path, unbounded desk queries remain) |
 
 ---
@@ -184,9 +184,9 @@ Verified across frontend/src, legacy JS (`public/assets/js/`), Twig templates, m
 |---|---|
 | Conflict | CLAUDE.md "Two-Step Cash payment (REG fee at waiting...)" vs code + specs (§4.1) |
 | Conflict | CLAUDE.md "plus a `visit-board-hello` Phase 0 demo" — empty directory |
-| Gap (spec→code) | PRD §12.4 lists flags absent from code: `enable_chart_depth_external`, `enable_lab_lis`, `enable_legacy_strip_terminal_chip` |
-| Gap (code→spec) | ~18 `enable_react_*` cutover flags + 6 operational flags exist in code/install.sql but not in PRD §12.4 |
-| Hygiene | Scorecard corrections (§3.3); doc relocation into `new/` is half-done in the uncommitted batch — top-level copies of MOBILE_IOS_CURSOR_CHECKLIST and SCALABILITY plan are deleted in the working tree while `new/README.md` remains an **older** divergent duplicate of the top-level README |
+| Gap (spec→code) | PRD §12.4 lists flags absent from code: `enable_chart_depth_external`, `enable_lab_lis`, `enable_legacy_strip_terminal_chip` — documented in PRD §12.4.3 (AUDIT-13) |
+| Gap (code→spec) | ~20 `enable_react_*` cutover flags + 9 operational flags — documented in PRD §12.4.1–12.4.2 (AUDIT-13) |
+| Hygiene | Scorecard corrections (§3.3) — **AUDIT-13 applied 2026-07-08**; doc relocation into `new/` complete (`new/README.md` absent; top-level README is canonical index) |
 | Hygiene | Module `README.md:313` documents dead `visit.queue_slip`; prior living audit (`CODE_AUDIT_2026-06-27-REACT-MIGRATION.md`) carries open items Q-12/Q-24/Q-29/Q-30/R-11 that this report supersedes with AUDIT-* IDs |
 
 ### 4.7 Test-gate health
@@ -419,4 +419,5 @@ Do NOT: write source-text "contract" tests (see §9.2); assert behavior.
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
+| v0.1.1 | 2026-07-08 | Engineering | AUDIT-13 doc-sync landed: scorecard, PRD §12.4 flag matrix, CLAUDE.md, README index; AUDIT-1 skip-to-payment confirmed in tree |
 | v0.1.0 | 2026-07-07 | Codebase audit session (Claude) | Initial audit: 6-phase evidence-based review; 10 sections; AUDIT-1..15 roadmap |

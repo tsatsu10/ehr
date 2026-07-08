@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 1.20.50 |
+| **Document version** | 1.20.51 |
 | **Minimum OpenEMR** | 7.0.3+ (PHP 8.2+; see Q7 closed §24.1) |
 | **V1 product name (user-facing)** | New Clinic |
 | **Status** | Draft for review — **§5.6 implementation status matrix**; **[Implementation scorecard](./NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md)** (living % tracker); Phase 1 companion specs approved for COM and M1a |
@@ -4169,7 +4169,7 @@ Inserted on module install and applied by M6 “Apply cash clinic profile.” Cl
 | `lab_panel_pack_json` | `[]` | M12, M6 | OPD starter panel test codes for wizard import + doctor quick order (M4-F36) |
 | `enable_lab_panel_order` | `0` | M4, V1.1-LAB-ORD | Doctor Desk panel quick order drawer; requires `enable_lab_ops` = 1 and imported panels (D-LAB-2) |
 | `enable_pharm_ops` | `0` | M13, §20.1 | Master gate — M13 Pharmacy Operations Hub (dispense worklist, façades, formulary) |
-| `enable_rx_print` | `1` | M4-F38, M9-F20, M13-F10, §20.1 | Print Rx PDF for Type A / community pharmacy — **not** hub-gated (D-PHARM-4); cash clinic profile default ON |
+| `enable_rx_print` | `1` | M4-F38, M9-F20, M13-F10, §20.1 | Print Rx PDF for Type A / community pharmacy — **not** hub-gated (D-PHARM-4); cash clinic profile default ON. **`install.sql` seeds `0`**; M6 “Apply cash clinic profile” sets `1` |
 | `pharm_formulary_pack_json` | `[]` | M13, M6 | OPD starter formulary seeds for wizard import |
 | `enable_pharm_rx_favorites` | `0` | M4, V1.2-PHARM-RX | Doctor Desk formulary quick prescribe; requires `enable_pharm_ops` = 1 and imported formulary |
 | `pharm_expiry_warn_days` | `90` | M9-F19, M13-F11 | Days before lot expiry to show warning |
@@ -4195,6 +4195,57 @@ Inserted on module install and applied by M6 “Apply cash clinic profile.” Cl
 | `enable_queue_bridge` | `0` | M18, §20.1 | Master gate — M18 Queue Bridge Hub; default OFF until V1.1-BRIDGE ships; requires `enable_scheduled_integration` = 1 |
 | `queue_bridge_show_recurring_info` | `1` | M18-F05 | Show EX-04 informational tab |
 | `queue_bridge_eod_block` | `0` | M18-F10 | When `1`, **M7-F16 Scheduling tab footer** warns if open EX-01 action rows remain (not M7-F15) |
+
+#### 12.4.1 Operational flags in `install.sql` (not listed above)
+
+These keys are seeded in `install.sql` and honored by code but were omitted from the original §12.4 table. They are **not** new normative requirements — documentation catch-up only (AUDIT-13, 2026-07-08).
+
+| Config key | V1 default | Source | Behavior |
+|------------|------------|--------|----------|
+| `enable_triage` | `1` | M3, Q5 | When `0`, triage desk hidden and triage workflow disabled |
+| `enable_scheduling_redesign` | `0` | S1, §5.6 | When `1`, native scheduling island replaces legacy calendar for clinic roles |
+| `enable_insurance` | `0` | M14-F05, T1-F14 | When `1`, insurance capture fields and billing paths enabled (post-pilot) |
+| `enable_aggressive_orphan_facility_repair` | `0` | M6 ops | When `1`, auto-repair visits with missing facility on queue poll (support tool) |
+| `enable_momo_payment` | `0` | V1.1-OPS | When `1`, MoMo tender type on cashier receipt |
+| `enable_dispense_label` | `0` | M13 | When `1`, print dispense labels from Pharm Ops |
+| `enable_lab_results_toast` | `0` | V1.1-OPS | When `1`, in-app toast when lab results arrive for active visit |
+| `enable_visit_board_kiosk_chrome` | `0` | V1.1-OPS | When `1`, kiosk-style chrome on Visit Board wall display |
+| `enable_allergy_count_chip` | `0` | V1.1-OPS | When `1`, allergy count chip on role-desk banner |
+
+#### 12.4.2 React cutover flags (`enable_react_*`)
+
+Internal migration gates paired with each React island. Seeded **`1`** in `install.sql`; bulk-enabled by `react_migration_cutover_v1`. Not product toggles for pilot operators — use the matching `enable_*` hub/desk gate in §12.4 for post-pilot surfaces.
+
+| Config key | Paired surface |
+|------------|----------------|
+| `enable_react_visit_board` | Visit Board (M2) |
+| `enable_react_triage_desk` | Triage desk (M3) |
+| `enable_react_doctor_desk` | Doctor desk (M4) |
+| `enable_react_cashier_desk` | Cashier desk (M5) |
+| `enable_react_lab_desk` | Lab desk (M8) |
+| `enable_react_pharmacy_desk` | Pharmacy desk (M9) |
+| `enable_react_front_desk` | Front desk (M1) |
+| `enable_react_patient_registry` | Patient Registry (M10) |
+| `enable_react_daily_reports` | Daily Reports (M7) |
+| `enable_react_communications_hub` | Communications Hub (COM) |
+| `enable_react_admin_hub` | Admin Hub shell (M15) |
+| `enable_react_patient_chart` | Patient chart / MRD (B7) |
+| `enable_react_lab_ops` | Lab Ops Hub (M12) |
+| `enable_react_pharm_ops` | Pharm Ops Hub (M13) |
+| `enable_react_chart_depth` | Chart Depth panels (M11) |
+| `enable_react_bill_ops` | Billing Back Office (M14) |
+| `enable_react_report_hub` | Reporting Hub (M16) |
+| `enable_react_queue_bridge` | Queue Bridge Hub (M18) |
+| `enable_react_scheduling` | Scheduling (S1) |
+| `enable_react_clinical_doc_hub` | Clinical Documentation Hub (M17) |
+
+#### 12.4.3 Planned flags (documented, not yet in `install.sql`)
+
+| Config key | Planned release | Notes |
+|------------|-----------------|-------|
+| `enable_chart_depth_external` | V1.2 | Care-elsewhere manual entry (M11) — row in §12.4 above |
+| `enable_lab_lis` | V1.2-LIS | HL7 poll + DORN/LIS dashboard (M12) — row in §12.4 above |
+| `enable_legacy_strip_terminal_chip` | V1.2.1 | Deferred per §6.1j / PRD 1.20.38 — not seeded until ship |
 
 **What 70% means in practice:** L1 complete + all L2 contact/identity fields + at least one L3 clinical safety field (typically allergies, including “none known”). Insurance (L4) and background history (L3b) remain optional at checkout unless clinic enables L3b weights.
 
@@ -6441,6 +6492,7 @@ The "Apply cash clinic profile" button in M6-F07 sets the following OpenEMR `glo
 |---------|------|---------|
 | Version | Date | Scope | Summary |
 |---------|------|-------|---------|
+| 1.20.51 | 2026-07-08 | **AUDIT-13 doc-sync** — §12.4.1 operational flags from `install.sql`; §12.4.2 `enable_react_*` cutover matrix; §12.4.3 planned flags; `enable_rx_print` install vs profile note; no normative behavior change |
 | 1.20.50 | 2026-06-25 | **Q46 desk registration form** — supersedes Q10 Quick Add; [FRONT_DESK_REGISTRATION](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md); M1b/M1c rewrite; `registration_mode=desk_full_form`; region+district weights; §24.3 updated; companions v1.9.50 / v0.6.51 / FRONT_DESK_REGISTRATION v1.0.0 |
 | 1.20.49 | 2026-06-24 | **M10 audit closure (V1.1-REG)** — D-COHORT-5 reception-only `fin0` hide + D-CTX-10; §4.4 `new_registry*` ACL; M10-F03/F10/F11 phasing; audit events + §12.1 DDL; `cohort.saved_filter`; SEC06 rate limits; **§19.8** menu cutover; **§20.1** V1.1-REG row; §24.4 row 13; REG-8; `@new-clinic-v11-registry-pr1`; companion [PATIENT_REGISTRY](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) v0.2.1 / PAGE_DESIGNS §7.32 v0.6.49 |
 | 1.20.48 | 2026-06-24 | **Patient Registry comprehensive redesign** — D-COHORT-1–10; §21.1ae; REG-1–7 + `@new-clinic-v11-registry`; §13.1 `cohort.*`; companion [PATIENT_REGISTRY](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) v0.2.0 / PAGE_DESIGNS §7.32 |

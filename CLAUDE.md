@@ -10,12 +10,12 @@ upstream OpenEMR and is mostly left alone.
 - **Module PHP:** `interface/modules/custom_modules/oe-module-new-clinic/` (services, `public/ajax.php`, Twig shell pages)
 - **Module React:** `frontend/` at repo root (React 19 + TS + Vite 8) → builds into the module's `public/assets/modern/`
 - **Specs:** `Documentation/NewClinic/` — PRD is canonical; ~20 companion redesign specs; living scorecard
-- **Status (July 2026):** V1 pilot path ~92% built and QA-signed. 22 production React islands
-  shipped (all role desks M1–M9, Visit Board, patient chart/MRD, scheduling, registry, comms,
-  admin hub, report hub, post-pilot ops hubs M11–M18, my-profile; plus a `visit-board-hello`
-  Phase 0 demo). Current work: Admin Hub People & Access (native ACL UI
-  replacing stock user/group screens), gap-closure plan (`Documentation/NewClinic/new/NEW_CLINIC_OPENEMR_GAP_ANALYSIS_AND_REDESIGN_PLAN.md`),
-  scalability hardening plan (SCALE-* tasks).
+- **Status (July 2026):** V1 pilot path ~92% built and QA-signed. **22 production React island bundles** in
+  `frontend/vite.config.ts` (23 Vite entries including the `bill-ops-correct` build variant; **`encounter-consult`**
+  for the native consult form). Surfaces: all role desks M1–M9, Visit Board, patient chart/MRD, scheduling,
+  registry, comms, admin hub, report hub, post-pilot ops hubs M11–M18, my-profile. Current work: gap-closure plan
+  (`Documentation/NewClinic/new/NEW_CLINIC_OPENEMR_GAP_ANALYSIS_AND_REDESIGN_PLAN.md`), scalability hardening
+  plan (SCALE-* tasks).
 - **Governing invariant (PRD §5.6):** every post-pilot surface sits behind an `enable_*` flag in
   `new_clinic_config`, **default OFF**. Flag OFF = 100% legacy behavior, no half-new chrome. The
   legacy stock screen stays reachable until the replacement passes parity sign-off.
@@ -68,10 +68,10 @@ until desktop verification*. See `.cursor/rules/new-clinic-mobile-scope.mdc` and
   deskToast…), `frontend/src/components/ui/` (shadcn primitives), `frontend/src/lib/utils.ts` (`cn()`).
   Import via `@core/*`, `@components/*`. Don't inline what a shared component already does.
 - **Encounter lifecycle (central domain model):** queue FSM on `new_visit`; encounter is created
-  at **Start visit** (Take patient = queue claim only); complete-consult ≠ signed ≠ paid; Two-Step
-  Cash payment (REG fee at waiting, final at ready_for_payment); e-sign is compliance, never
-  optional. Deep links into core set `$_SESSION['pid']`/`$_SESSION['encounter']` (wrong-patient
-  prevention, G12).
+  at **Start visit** (Take patient = queue claim only); complete-consult ≠ signed ≠ paid; **cash checkout
+  at `ready_for_payment` only** (M5 cashier gate — no separate registration fee at `waiting` in V1); e-sign
+  is compliance, never optional. Deep links into core set `$_SESSION['pid']`/`$_SESSION['encounter']`
+  (wrong-patient prevention, G12).
 - **Two search surfaces:** M1a Front Desk search (fast single-patient) ≠ M10 Patient Registry
   (cohort filters). Legacy Finder hides for reception roles only.
 - **Multi-doctor:** shared `ready_for_doctor` pool; advisory routing (V1.1) suggests only; hard
