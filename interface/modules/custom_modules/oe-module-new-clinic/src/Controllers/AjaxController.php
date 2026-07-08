@@ -17,6 +17,7 @@ use OpenEMR\Modules\NewClinic\Controllers\Ajax\AjaxActionHandlerInterface;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\AdminActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\CashierActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ClinicalDocActionHandler;
+use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\CohortActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\CommunicationsActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ChartDepthActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\DoctorActionHandler;
@@ -38,9 +39,7 @@ use OpenEMR\Modules\NewClinic\Exceptions\UndispensedRxException;
 use OpenEMR\Modules\NewClinic\Exceptions\UnsignedEncounterException;
 use OpenEMR\Modules\NewClinic\Exceptions\VisitNotTakeableException;
 use OpenEMR\Modules\NewClinic\Services\AjaxActionPolicy;
-use OpenEMR\Modules\NewClinic\Services\CohortSavedFilterService;
 use OpenEMR\Modules\NewClinic\Services\PatientCohortSearchService;
-use OpenEMR\Modules\NewClinic\Services\RegistryAuditService;
 use OpenEMR\Modules\NewClinic\Services\BillOpsAccessService;
 use OpenEMR\Modules\NewClinic\Services\BillOpsChargeCorrectionService;
 use OpenEMR\Modules\NewClinic\Services\BillOpsDaysheetService;
@@ -134,61 +133,6 @@ class AjaxController
             switch ($action) {
                 case 'health':
                     $this->respond(true, 'ok', ['module' => 'oe-module-new-clinic']);
-                    break;
-                case 'cohort.presets':
-                    $this->svc(PatientCohortSearchService::class)->assertRegistryAccess();
-                    $this->respond(true, 'ok', $this->svc(PatientCohortSearchService::class)->presets());
-                    break;
-                case 'cohort.search':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $result = $this->svc(PatientCohortSearchService::class)->search($body);
-                    $this->svc(RegistryAuditService::class)->logSearch(
-                        (string) ($result['meta']['filter_summary'] ?? ''),
-                        (int) ($result['total'] ?? 0),
-                        $userId
-                    );
-                    $this->respond(true, 'ok', $result);
-                    break;
-                case 'cohort.export':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    try {
-                        $export = $this->svc(PatientCohortSearchService::class)->export($body);
-                        $filters = is_array($body['filters'] ?? null) ? $body['filters'] : [];
-                        $this->svc(RegistryAuditService::class)->logExport(
-                            $this->svc(PatientCohortSearchService::class)->explainCriteria($filters),
-                            (int) $export['row_count'],
-                            $userId
-                        );
-                        $this->respondCsv($export['filename'], $export['content']);
-                    } catch (\InvalidArgumentException $e) {
-                        $this->respond(false, $e->getMessage(), ['code' => 'export_limit'], 400);
-                    }
-                    break;
-                case 'cohort.saved_filter':
-                    if ($method !== 'POST') {
-                        $this->respond(false, 'POST required', [], 405);
-                    }
-                    $body = $this->readJsonBody();
-                    $this->verifyCsrf($body);
-                    $operation = strtolower(trim((string) ($body['operation'] ?? 'save')));
-                    if ($operation === 'delete') {
-                        $this->svc(CohortSavedFilterService::class)->delete(
-                            $userId,
-                            (int) ($body['id'] ?? 0)
-                        );
-                        $this->respond(true, 'ok', ['deleted' => true]);
-                        break;
-                    }
-                    $saved = $this->svc(CohortSavedFilterService::class)->save($userId, $body);
-                    $this->respond(true, 'ok', $saved);
                     break;
                 case 'lab_ops.worklist':
                     $body = $this->readRequestParams($method);
@@ -684,6 +628,7 @@ class AjaxController
             new CashierActionHandler($this),
             new ClinicalDocActionHandler($this),
             new CommunicationsActionHandler($this),
+            new CohortActionHandler($this),
             new LabActionHandler($this),
             new PharmacyActionHandler($this),
             new FrontDeskActionHandler($this),
