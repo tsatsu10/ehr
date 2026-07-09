@@ -1,12 +1,15 @@
 # New Clinic — Market Expansion Master Plan (Product · Delivery · Business)
 
-**Version:** v0.1.2 · **Date:** 2026-07-07 · **Status:** Draft for review
+**Version:** v0.1.3 · **Date:** 2026-07-09 · **Status:** Draft for review
 **v0.1.1:** T4 broadened from corporate-only to all third-party payers — adds private health
 insurance / HMO billing (MKT-PHI-*), Ghana PHIS and Nigeria HMO market numbers.
 **v0.1.2:** second-pass audit — §3.0 cross-segment realities (mobile money tender, Ghana Card
 identity, WhatsApp patient channel, offline posture, data-rescue kit), §6.4 upstream OpenEMR
 patch policy, fleet operations in §7.3, migration offering in §7.4, indemnity/trademark/grants
 in §7.5, new risk rows, new open questions.
+**v0.1.3:** hosting posture decided — on-prem primary with bundled one-way VPS read-replica;
+cloud-hosted (VPS-primary) is a secondary flavor, never the default; same subscription price
+either way; §7.1/§7.2/TL;DR synced; replication deployment prompt doc added.
 **Owner:** Product/Founder · **Scope:** everything from first pilot to multi-market operation
 
 This is the end-to-end plan for taking New Clinic from "built" to "in business": which
@@ -40,7 +43,10 @@ Read alongside: [PRD](../NEW_CLINIC_V1_PRD.md) ·
   required]**, (5) the SCALE-* hardening tasks before any multi-tenant hosting.
 - **Business model:** subscription per facility per month, three tiers, sold with data
   ownership as the lead pitch (the LHIMS collapse is our best marketing story). Local-first
-  deployment (clinic server or managed VPS), never a foreign cloud dependency we can't defend.
+  deployment: on-prem clinic server as the default brain, with a bundled one-way VPS
+  read-replica (owner remote reports + off-site backup); VPS-primary offered only where
+  internet is reliably good. Never a foreign cloud dependency we can't defend. Same
+  subscription price regardless of hosting flavor.
 - **Hard no's stay no:** government/national tenders, donor HIV/TB programs, inpatient ward
   management as a primary target, telehealth/portal. Section §4 exists so we stop re-debating
   these.
@@ -447,6 +453,10 @@ of one junior admin salary, not against enterprise software.
 Principles: price in local currency with quarterly FX review; annual prepay discount
 (cash-flow); pilot conversions grandfathered; **never** per-patient or per-record pricing
 (it punishes success and sours trust). Standalone lab/pharmacy (T5) prices as Core.
+**Hosting flavor does not change the monthly price** — subscription buys the service
+(support, upgrades, monitored backups), not the server location; on-prem hardware
+(mini-PC + UPS) is recovered in the setup fee, and the bundled VPS replica's hosting cost
+is absorbed in the subscription (it doubles as our off-site backup obligation anyway).
 
 ### 7.2 Deployment & hosting model
 
@@ -454,12 +464,31 @@ Data ownership is the lead pitch — the LHIMS fight (vendor-controlled system, 
 foreign jurisdiction, source-code standoff) is the cautionary tale every Ghanaian health
 administrator now knows. Our answer, in order of preference:
 
-1. **On-premise clinic server** (mini-PC + UPS + nightly encrypted off-site backup we
-   monitor). Clinic owns the box and the data. Best offline story for unstable internet.
-2. **Managed single-tenant VPS** (one VPS per customer, in-country or nearest region;
-   we operate it, customer holds an exportable full backup). No shared-tenant hosting until
+1. **On-premise clinic server + bundled VPS read-replica** (default — decided 2026-07-09).
+   Mini-PC + UPS in the clinic is the primary and the *only* place writes happen; internet
+   down = clinic keeps working on the local network. A managed single-tenant VPS receives a
+   **one-way** copy (MySQL replication or frequent pushed dumps, whenever internet is up)
+   and serves three jobs at once: owner checks reports from home (read-only), our remote
+   support/monitoring point, and the nightly encrypted off-site backup we already owe.
+   Clinic owns the box and the data. **Never two-way/master-master replication** between
+   clinic and VPS — merge conflicts on clinical + cash data are unacceptable; offline-first
+   sync clients are ruled out for V1 (an append-only offline *capture* app is a possible V2,
+   **[PRD amendment required]**).
+2. **Managed single-tenant VPS as primary** (secondary flavor, opt-in only). For clinics
+   with reliably good internet (fiber + backup link) or a chain's small satellite branch.
+   Sold with the honest caveat in writing: **no offline mode** — internet down means the
+   system is down; the Outage Runbook's paper-fallback + back-entry procedure is mandatory
+   pilot training for this flavor. One VPS per customer, in-country or nearest region; we
+   operate it, customer holds an exportable full backup. No shared-tenant hosting until
    SCALE-* work lands and a real multi-tenant isolation review is done.
 3. **Customer's own IT** (chains/corporates with IT staff) — we support, they operate.
+
+Both flavors cost the same per month (§7.1) — the choice is about the clinic's internet
+reliability, not budget. Don't let VPS-primary drift into being the default because it's
+operationally easier for us: a clinic frozen mid-queue during an outage is the churn event
+the §7.6 model can't absorb, and on-prem-first *is* the anti-LHIMS differentiation.
+Replication setup is specified in
+[NEW_CLINIC_VPS_REPLICA_DEPLOYMENT_PROMPT.md](./NEW_CLINIC_VPS_REPLICA_DEPLOYMENT_PROMPT.md).
 
 Every contract includes: customer owns their data; full export on demand (SQL dump +
 documents); source-escrow or license terms that survive vendor failure. This is a
@@ -642,3 +671,4 @@ tickets per facility per month (target <2 after onboarding) · onboarding cost p
 | v0.1.0 | 2026-07-07 | Initial draft: segments T0–T8, avoid-list, MKT-* feature roadmap merged with GAP/SCALE waves, PM operating model, pilot playbook, business plan (pricing, hosting, support, GTM, legal, financial model, risks), E0–E4 timeline, KPIs, open questions |
 | v0.1.1 | 2026-07-07 | Private health insurance added (was missing): T4 generalized to third-party payers — shared payer engine (MKT-PAYER-1..3) with corporate and PHI (MKT-PHI-1..3) flavours; Ghana PHIS (12 licensed schemes, ~500k+ lives) and Nigeria HMO (83 accredited, ~2.17M enrollees, 1.18M Lagos) numbers; T6 gated on MKT-PHI; W5, pricing, TL;DR synced |
 | v0.1.2 | 2026-07-07 | Second-pass blind-spot audit: §3.0 cross-segment realities (MKT-MOMO-1, MKT-GHCARD-1, MKT-WA-1, MKT-MIG-1, Outage Runbook); §6.4 upstream OpenEMR patch policy; §7.3 fleet ops; §7.4 migration offering + LHIMS-displaced leads; §7.5 E&O, trademark, grants; five new risks; MoMo in pilot KPIs; open questions 7–10 |
+| v0.1.3 | 2026-07-09 | Hosting posture decided: §7.2 option 1 becomes on-prem primary + bundled one-way VPS read-replica (owner remote reports, off-site backup, remote support); VPS-primary demoted to opt-in secondary flavor with written no-offline-mode caveat; master-master replication and V1 offline-sync clients explicitly ruled out (append-only capture app noted as V2, PRD amendment required); §7.1 same-price-both-flavors principle; TL;DR synced; companion replication deployment prompt doc added |
