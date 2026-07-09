@@ -124,6 +124,38 @@ class PaymentHistoryService
     }
 
     /**
+     * D-FIN-8 — active-visit charge totals for `new_chart_depth_finance_summary`.
+     * Charges only: no payment rows, no receipt numbers, no payment methods.
+     *
+     * @return array<string, mixed>
+     */
+    public function getVisitChargesSummary(int $pid, ?int $encounterId): array
+    {
+        $this->facilityScope->assertPatientAccessible($pid);
+        $this->assertFinanceEnabled();
+
+        $charges = 0.0;
+        if ($encounterId !== null && $encounterId > 0) {
+            $chargesRow = QueryUtils::querySingleRow(
+                'SELECT COALESCE(SUM(fee * GREATEST(units, 1)), 0) AS total
+                 FROM billing WHERE pid = ? AND encounter = ? AND activity = 1',
+                [$pid, $encounterId]
+            );
+            $charges = is_array($chargesRow) ? (float) ($chargesRow['total'] ?? 0) : 0.0;
+        }
+
+        $facilityId = $this->visitScope->resolveDefaultFacilityId();
+        $currencySymbol = (string) ($this->config->get('currency_symbol', 'GH₵', $facilityId) ?? 'GH₵');
+
+        return [
+            'pid' => $pid,
+            'encounter_id' => $encounterId !== null && $encounterId > 0 ? $encounterId : null,
+            'charges_amount' => round($charges, 2),
+            'currency_symbol' => $currencySymbol,
+        ];
+    }
+
+    /**
      * M14 — receipt reprint from Billing back office (no chart-depth finance gate).
      *
      * @return array<string, mixed>

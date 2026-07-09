@@ -143,6 +143,7 @@ export function CashierDesk({
 
   const [receiptPreview, setReceiptPreview] = useState<CashierSelectData['preview'] | null>(null);
   const [receipt, setReceipt] = useState<CashierPayResult['receipt'] | null>(null);
+  const [receiptHistoryUrl, setReceiptHistoryUrl] = useState<string | null>(null);
 
   const [closeZeroOpen, setCloseZeroOpen] = useState(false);
   const [closeZeroError, setCloseZeroError] = useState<string | null>(null);
@@ -479,6 +480,7 @@ export function CashierDesk({
 
     setReceiptPreview(selectData.preview);
     setReceipt(result.data.receipt);
+    setReceiptHistoryUrl(result.data.payment_history_url ?? null);
     resetActivePane();
     void fetchQueueRef.current();
   }, [
@@ -742,9 +744,11 @@ export function CashierDesk({
         open={receipt !== null}
         preview={receiptPreview}
         receipt={receipt}
+        historyUrl={receiptHistoryUrl}
         onClose={() => {
           setReceipt(null);
           setReceiptPreview(null);
+          setReceiptHistoryUrl(null);
         }}
       />
 

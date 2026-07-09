@@ -461,12 +461,44 @@ class CashierService
             'receipt_number' => '',
         ], $receiptMeta);
 
+        $historyUrl = $this->paymentHistoryUrl(
+            (int) ($visit['pid'] ?? 0),
+            (int) ($visit['id'] ?? 0),
+            (int) ($visit['facility_id'] ?? 0)
+        );
+
         return [
             'visit' => $this->rowEnricher->enrichVisitRow($updated),
             'amount_paid' => $totalDue,
             'change_due' => $changeDue,
             'receipt' => $receipt,
+            'payment_history_url' => $historyUrl,
         ];
+    }
+
+    /**
+     * M11-F12 — Cashier "History" link into chart-depth payment history.
+     * Null when Chart Depth finance is OFF or actor lacks the finance ACL.
+     */
+    private function paymentHistoryUrl(int $pid, int $visitId, int $facilityId): ?string
+    {
+        if ($pid <= 0 || $visitId <= 0) {
+            return null;
+        }
+
+        if ($this->configService->getInt('enable_chart_depth', 0, $facilityId) !== 1
+            || $this->configService->getInt('enable_chart_depth_finance', 0, $facilityId) !== 1) {
+            return null;
+        }
+
+        if (!AclMain::aclCheckCore('new_clinic', 'new_chart_depth_finance')) {
+            return null;
+        }
+
+        return ($GLOBALS['webroot'] ?? '')
+            . '/interface/modules/custom_modules/oe-module-new-clinic/public/chart-depth/payments.php?pid='
+            . urlencode((string) $pid)
+            . '&visit_id=' . urlencode((string) $visitId);
     }
 
     private function canCloseWithoutCharge(): bool
@@ -744,6 +776,14 @@ class CashierService
             if ($correction['visible']) {
                 $enriched['charge_correction_url'] = $correction['url'];
                 $enriched['charge_correction_label'] = $correction['label'];
+            }
+            $historyUrl = $this->paymentHistoryUrl(
+                (int) ($row['pid'] ?? 0),
+                (int) ($row['id'] ?? 0),
+                $facilityId
+            );
+            if ($historyUrl !== null) {
+                $enriched['payment_history_url'] = $historyUrl;
             }
 
             return $enriched;

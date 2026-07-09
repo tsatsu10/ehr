@@ -27,6 +27,13 @@ export function CashierPaidTodayList({ paidToday }: { paidToday: CashierPaidToda
                 <span>
                   #{row.queue_number} {row.display_name}
                 </span>
+                {row.payment_history_url && (
+                  <Button variant="link" size="sm" className="h-auto p-0" asChild>
+                    <a href={row.payment_history_url} target="_top">
+                      History
+                    </a>
+                  </Button>
+                )}
                 {row.charge_correction_url && (
                   <Button variant="link" size="sm" className="h-auto p-0" asChild>
                     <a href={row.charge_correction_url} target="_top">

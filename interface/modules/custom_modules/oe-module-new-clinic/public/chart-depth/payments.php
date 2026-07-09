@@ -27,8 +27,9 @@ if ($pid <= 0) {
 }
 
 if (!AclMain::aclCheckCore('new_clinic', 'new_chart_depth_finance')) {
+    // D-FIN-8 — finance-summary roles (doctor) never open the payment panel.
     http_response_code(403);
-    echo xlt('Access denied');
+    echo xlt('Payment history requires Cashier');
     exit;
 }
 

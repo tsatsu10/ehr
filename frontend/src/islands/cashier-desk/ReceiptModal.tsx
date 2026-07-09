@@ -17,10 +17,12 @@ interface ReceiptModalProps {
   open: boolean;
   preview: PatientPreview | null;
   receipt: CashierReceipt | null;
+  /** M11-F12 — chart-depth payment history for the paid visit */
+  historyUrl?: string | null;
   onClose: () => void;
 }
 
-export function ReceiptModal({ open, preview, receipt, onClose }: ReceiptModalProps) {
+export function ReceiptModal({ open, preview, receipt, historyUrl, onClose }: ReceiptModalProps) {
   const printRef = useRef<HTMLDivElement>(null);
 
   if (!preview || !receipt) return null;
@@ -82,6 +84,13 @@ export function ReceiptModal({ open, preview, receipt, onClose }: ReceiptModalPr
           </div>
         </DialogBody>
         <DialogFooter>
+          {historyUrl && (
+            <Button type="button" variant="outline" asChild>
+              <a href={historyUrl} target="_top">
+                History
+              </a>
+            </Button>
+          )}
           <Button type="button" variant="cta" id="nc-cashier-print-receipt" onClick={handlePrint}>
             Print
           </Button>

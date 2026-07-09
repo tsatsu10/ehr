@@ -71,6 +71,8 @@ class Bootstrap
         $this->registerEncounterIdentityStrip();
         $this->registerHistoryEditorWrap();
         $this->registerLegacyChartContextStrip();
+        $this->registerLedgerCashProfileWrap();
+        $this->registerStockChartWrap();
         $this->registerQueueBridgeFlowBoard();
         $this->registerDeepLinkRestoreSession();
 
@@ -121,6 +123,20 @@ class Bootstrap
     {
         (new \OpenEMR\Modules\NewClinic\Support\LegacyChartContextInjector(
             new LegacyChartContextService($this->twig)
+        ))->startIfNeeded();
+    }
+
+    private function registerLedgerCashProfileWrap(): void
+    {
+        (new \OpenEMR\Modules\NewClinic\Support\LedgerCashProfileInjector(
+            new \OpenEMR\Modules\NewClinic\Services\LedgerCashProfileService()
+        ))->startIfNeeded();
+    }
+
+    private function registerStockChartWrap(): void
+    {
+        (new \OpenEMR\Modules\NewClinic\Support\StockChartWrapInjector(
+            new \OpenEMR\Modules\NewClinic\Services\StockChartWrapService()
         ))->startIfNeeded();
     }
 

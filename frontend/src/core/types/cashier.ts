@@ -32,6 +32,8 @@ export interface CashierPaidTodayRow {
   display_name: string;
   charge_correction_url?: string;
   charge_correction_label?: string;
+  /** M11-F12 — chart-depth payment history for this visit */
+  payment_history_url?: string;
 }
 
 /** Response from ?action=cashier.queue */
@@ -129,6 +131,8 @@ export interface CashierPayResult {
   amount_paid: number;
   change_due: number;
   receipt: CashierReceipt;
+  /** M11-F12 — chart-depth payment history for the paid visit */
+  payment_history_url?: string | null;
 }
 
 /** Patient row from patients.search */
