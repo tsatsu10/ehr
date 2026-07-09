@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.1.9 |
 | **Status** | Draft for review — **Module M13** integrated in PRD v1.20.29; **D-PHARM-3/4/5/6** closed; **D-REG-3** clinic currency; **D-STAFF-1** lead groups; PAGE_DESIGNS §7.21–§7.24; M9 remains V1 queue |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.29), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.34), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.34), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.28), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.8) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.29), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.34), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.34), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.28), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.8) |
 | **Audience** | Product, design, pharmacy leads, clinical leads, implementers, QA |
 | **Scope** | Everything **beyond M9 queue + core Rx/inventory shortcuts** — drug master, lots, receiving, reorder, destruction, dispensing façade, clinic formulary starter packs, and (V3) supply-chain country packs |
 | **Implementation** | Design only — no code in this document |

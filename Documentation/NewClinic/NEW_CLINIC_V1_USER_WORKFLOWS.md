@@ -3,7 +3,7 @@
 | Field | Value |
 |-------|--------|
 | **Document version** | 1.9.50 |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.49), [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.1), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.35), [NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.15), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.5), [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) (v1.0.3), [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (v1.0.7), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md](./done/NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) (v0.1.2) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.49), [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.1), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.35), [NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.15), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.5), [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) (v1.0.3), [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (v1.0.7), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md](./done/NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) (v0.1.2) |
 | **Audience** | Product, clinical leads, trainers, implementers, QA |
 | **Purpose** | Explain **who does what, in what order**, with visual frameworks — without implementation detail |
 
@@ -57,7 +57,7 @@
 | **Clinical decision at the desk (30s context)** | [§17.0h Clinical decision at the desk](#170h-clinical-decision-at-the-desk) · PRD [§6.1g](./NEW_CLINIC_V1_PRD.md#61g-clinical-decision-at-the-desk) |
 | **Billing back office (post-pilot)** | [§17.0j Billing three-layer trainer](#170j-billing-back-office--trainer-one-liner) · PRD [§5.6.1](./NEW_CLINIC_V1_PRD.md#561-interim-full-chart-pilot-week-1--before-b7-mrd-ships) · [§17.4.7](./NEW_CLINIC_V1_PRD.md#1747-billing-back-office-runbook-v12-bill) |
 | **Billing back office (post-pilot)** | [§17.0j Billing back office layer](#170j-billing-back-office-layer) · PRD [§5.6.1](./NEW_CLINIC_V1_PRD.md#561-interim-full-chart-pilot-week-1--before-b7-mrd-ships) · [BILLING_AR](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) |
-| MRD layout, tabs, and zones (design) | [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) |
+| MRD layout, tabs, and zones (design) | [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) |
 | Technical/API detail | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) |
 
 **Relationship to the PRD:** This document is **behavioral and visual**. The PRD holds requirements, data model, ACL keys, and OpenEMR integration. When they differ, the PRD wins.
@@ -1807,7 +1807,7 @@ M7 REPORTS = archive & reconcile — same numbers, manager view.
 
 The **Medical Record Dashboard (MRD)** is OpenEMR’s full patient chart. In New Clinic V1 it is **redesigned** but remains a **secondary** screen — staff live on role desks and the Visit Board for daily OPD work.
 
-**Design detail:** [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md)
+**Design detail:** [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md)
 
 ### 17.1 When to open full chart
 
@@ -1820,7 +1820,7 @@ The **Medical Record Dashboard (MRD)** is OpenEMR’s full patient chart. In New
 | Check documents / ID photo | Reception | Profile → Documents & ID |
 | Verify completion before override | Cashier, Manager | Cashier block → **Open full chart** → Profile checklist |
 | Payment history / receipt reprint | Cashier, Manager | MRD Profile → **View payment history** (V1.1-CDa); or Cashier **History** on visit; pilot interim: **⋯ Classic menu → Ledger** (PRD §5.6.1) |
-| Referral letter / export PDF | Doctor, Reception lead | MRD Clinical → **Create referral** ([PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) — V1.1-CDb); Visits → **Export visit summary** ([PATIENT_CLINICAL_EXPORT](./done/NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) — V1.1-CDc); pilot interim: horizontal **Transactions** / **Report** (F11 wrapper) or **⋯ Classic menu** |
+| Referral letter / export PDF | Doctor, Reception lead | MRD Clinical → **Create referral** ([PATIENT_REFERRALS_LETTERS](./done/NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) — V1.1-CDb); Visits → **Export visit summary** ([PATIENT_CLINICAL_EXPORT](./done/NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) — V1.1-CDc); pilot interim: horizontal **Transactions** / **Report** (F11 wrapper) or **⋯ Classic menu** |
 | Admin compliance export | Admin | **Export chart** preset or **Full chart** (V1.1-CDc); Custom / Full via `new_chart_depth_export_full` |
 | Returning patient — deep history | Any authorized role | Search → Open full chart → **Visits** tab (attendance) + **Clinical** tab (medical picture) |
 
@@ -1852,7 +1852,7 @@ Classic menu         → power users only; Chart Depth replaces ledger when V1.1
 
 **V1.2-CTX note:** T1-F18/T1-F19 slice name is **V1.2-CTX** but may **ship during pilot** — recommended ON for shared PCs; not the same as “wait until post-pilot.”
 
-**Default landing (D-MRD-13):** **Open full chart** opens the redesigned MRD on the **role default tab** ([§17.3](#173-default-tab-by-role) / [MRD §10.1](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#101-default-tab-on-open)) — **never** the stock 25-card dashboard layout. Before B7 ships, the link still targets stock `demographics.php` (with optional T1-F18 strip); after B7, the same link opens the redesigned five-tab chart at the role default tab.
+**Default landing (D-MRD-13):** **Open full chart** opens the redesigned MRD on the **role default tab** ([§17.3](#173-default-tab-by-role) / [MRD §10.1](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#101-default-tab-on-open)) — **never** the stock 25-card dashboard layout. Before B7 ships, the link still targets stock `demographics.php` (with optional T1-F18 strip); after B7, the same link opens the redesigned five-tab chart at the role default tab.
 
 ### 17.2 Layout at a glance (redesigned)
 
@@ -1912,7 +1912,7 @@ Clicking the visit chip opens **Visit Board** filtered to that patient.
 
 **Do not** train staff to scroll one mega-timeline instead of using **Clinical**, **Profile**, or role desks.
 
-**Full spec:** [MRD §8.3–§8.9](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#83-overview-tab--layout-t1-f15) · PRD **§6.1h** / **D47** / **D48** · T1-F15 · tests **39–42**.
+**Full spec:** [MRD §8.3–§8.9](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#83-overview-tab--layout-t1-f15) · PRD **§6.1h** / **D47** / **D48** · T1-F15 · tests **39–42**.
 
 ### 17.5 Role playbooks — full chart only
 
@@ -2030,7 +2030,7 @@ flowchart LR
 | Chart Depth (M11) | Use MRD Profile/Clinical/Visits strips after **V1.1-CD**; pilot: **⋯ Classic menu → Ledger / Transactions / Report** | Hunt stock menus without training on interim path |
 | Payment reprint | MRD Profile **View payment history** or Cashier **History** (V1.1-CDa); pilot: Classic **Ledger** (F11 wrapper) — [PATIENT_PAYMENT_HISTORY](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) | Assume receipt only on Cashier desk forever |
 | Payment timeline / lost receipt | **View payment history** → **Reprint receipt** with confirm modal (FIN-3) | Open stock Ledger without wrapper in cash clinic |
-| Referral / export | MRD **Create referral** (V1.1-CDb — [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md)) or Visits **Export visit summary** (V1.1-CDc); pilot: stock **Transactions** / **Report** (F11 wrapper) or Classic menu | Use old LBF transaction editor without wrapper; confuse inbound upload with outbound letter |
+| Referral / export | MRD **Create referral** (V1.1-CDb — [PATIENT_REFERRALS_LETTERS](./done/NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md)) or Visits **Export visit summary** (V1.1-CDc); pilot: stock **Transactions** / **Report** (F11 wrapper) or Classic menu | Use old LBF transaction editor without wrapper; confuse inbound upload with outbound letter |
 | Visit summary PDF | **Export visit summary** on Visits row — confirm **Patient · MRN · Encounter date** before generate (EXP-2) | **Check All** on stock Report — over-prints unsigned notes |
 | Employer / school letter | Export preset → **letter composer** when CDb ON (EXP-6); base reception hand off to reception lead (D-REF-11) | Type fitness letters in Word outside EMR |
 | Cohort / registry search | **Clinic → Patient Registry** when M10 enabled — structured filters + export | Use legacy **Finder** or Front Desk search for program lists |
@@ -2110,7 +2110,7 @@ Attach completed [PRD §24.4 pilot worksheet](./NEW_CLINIC_V1_PRD.md#244-pilot-c
 | 1.8.1 | 2026-06-15 | §8.1 links FRONT_DESK_SEARCH v1.0.0; PAGE_DESIGNS v0.4.2 |
 | 1.0.0 | 2026-05-24 | Initial workflows guide derived from PRD v1.5.0 |
 | 1.1.0 | 2026-06-06 | Aligned with PRD v1.6.0: Doctor Desk = `ready_for_doctor`; confirm routing modal; queue bypass; `closed_unpaid` / no-charge close; EOD dashboard; shared-device role label; revisit three paths; pediatric DOB override |
-| 1.2.0 | 2026-06-07 | §17 Full chart (MRD) workflows; role landing table updated; §13 anti-patterns; glossary; companion [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md); PRD v1.7.0 |
+| 1.2.0 | 2026-06-07 | §17 Full chart (MRD) workflows; role landing table updated; §13 anti-patterns; glossary; companion [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md); PRD v1.7.0 |
 | 1.7.0 | 2026-06-11 | Pilot ops: §14.4 pilot worksheet; §12.3 recurring + wall display; doctor **Results ready**; PRD v1.13.0 D22–D27 |
 | 1.6.0 | 2026-06-11 | **D18–D21:** §8.1a Booking + §8.1b Recall outreach playbooks; §12.3 atomic **Start visit & check in**; §14.3 ~10h training; PRD v1.12.0 |
 | 1.5.0 | 2026-06-11 | §12.0 Two modes one clinic day (D17); §12.3 updated for full S1 build; PRD v1.11.0 dual-track plan |
@@ -2119,4 +2119,4 @@ Attach completed [PRD §24.4 pilot worksheet](./NEW_CLINIC_V1_PRD.md#244-pilot-c
 
 ---
 
-*For requirements, data model, ACL keys, and OpenEMR integration, see [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md). For MRD zones, tabs, and acceptance criteria, see [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md).*
+*For requirements, data model, ACL keys, and OpenEMR integration, see [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md). For MRD zones, tabs, and acceptance criteria, see [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md).*

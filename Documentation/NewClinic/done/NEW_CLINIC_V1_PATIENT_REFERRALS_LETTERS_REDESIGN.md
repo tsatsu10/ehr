@@ -2,9 +2,9 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 0.1.2 |
+| **Document version** | 0.1.3 |
 | **Status** | Audit closure — **pilot wrapper (M11-F11 transactions)** + **V1.1-CDb** referrals & letters hub |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.47), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.47), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.35), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.47) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.47), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.47), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.35), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.47) |
 | **Audience** | Product, design, clinical leads, doctors, reception, trainers, implementers, QA |
 | **Scope** | **Per-patient outbound** referral letters and general correspondence — stock **Transactions** menu rehosted via Chart Depth referral slice; **not** inbound referral scan (PRD D34) or clinic-wide reporting |
 | **Primary market** | Private outpatient clinics — **Ghana & West Africa** |
@@ -283,7 +283,7 @@ Pilot (referral flags OFF):
 
 ### 6.3 Wireframe — referrals hub (V1.1-CDb)
 
-Normative detail: [PAGE_DESIGNS §7.14](./NEW_CLINIC_V1_PAGE_DESIGNS.md#714-chart-depthreferralsphp--referrals--letters).
+Normative detail: [PAGE_DESIGNS §7.14](../NEW_CLINIC_V1_PAGE_DESIGNS.md#714-chart-depthreferralsphp--referrals--letters).
 
 ```text
 ┌─ Referrals & letters ─────────────────────────────────────────── [ × ] ─┐
@@ -321,11 +321,11 @@ Normative detail: [PAGE_DESIGNS §7.14](./NEW_CLINIC_V1_PAGE_DESIGNS.md#714-char
 
 ### 7.2 Pilot acceptance (F11 transactions — REF-1)
 
-- [ ] Stock Transactions reachable from horizontal nav with banner visible.
-- [ ] Heading reads **Referrals & letters** (REF-1).
-- [ ] Referral rows (`LBTref` / `lbt_data`) sorted to top; filter not tied to display title “Referral” alone (REF-1, D-REF-3).
-- [ ] No duplicate banner when T1-F18 + wrapper both eligible — D-CTX-5.
-- [ ] Ledger + Report halves of M11-F11 verified per sibling specs (combined F11 sign-off).
+- [x] Stock Transactions reachable from horizontal nav with banner visible — `StockChartWrapService` buffers `transactions.php`.
+- [x] Heading reads **Referrals & letters** (REF-1) — `StockChartWrapServiceTest`.
+- [x] Referral rows (`LBTref` / `lbt_data`) sorted to top; filter not tied to display title “Referral” alone (REF-1, D-REF-3) — wrapper sorts by `title=LBTref` in the edit link.
+- [x] No duplicate banner when T1-F18 + wrapper both eligible — D-CTX-5 (`LegacyChartContext` tests).
+- [x] Ledger + Report halves of M11-F11 verified per sibling specs (combined F11 sign-off) — `LedgerCashProfileServiceTest` + wrapper tests; sibling specs archived in `done/`.
 
 ---
 
@@ -425,13 +425,13 @@ Print referral for Regional Teaching Hospital?
 Patient: Akua Mensah · MRN 00042 · Encounter 18/06/2026
 ```
 
-Same family as Cashier confirm (M5-F15) and export confirm (D-EXP-8). Normative wireframe: [PAGE_DESIGNS §7.14.8](./NEW_CLINIC_V1_PAGE_DESIGNS.md#7148-wrong-patient-prevention-print--reprint).
+Same family as Cashier confirm (M5-F15) and export confirm (D-EXP-8). Normative wireframe: [PAGE_DESIGNS §7.14.8](../NEW_CLINIC_V1_PAGE_DESIGNS.md#7148-wrong-patient-prevention-print--reprint).
 
 ---
 
 ## 9. Legacy overlay on stock chart — transaction pages (plain English)
 
-When **Chart Depth referral is not yet enabled**, staff may open stock **Transactions** from horizontal nav. **Legacy patient context overlay** (T1-F18) applies per [LEGACY_CHART_CONTEXT](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md).
+When **Chart Depth referral is not yet enabled**, staff may open stock **Transactions** from horizontal nav. **Legacy patient context overlay** (T1-F18) applies per [LEGACY_CHART_CONTEXT](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md).
 
 ### 9.1 Transaction-specific behavior
 
@@ -479,33 +479,33 @@ Per **D-EXP-6**: horizontal nav **Transactions** hidden when `enable_chart_depth
 
 **Pilot wrapper (M11-F11 transactions — REF-1):**
 
-- [ ] Stock `transactions.php` shows T1 banner; heading **Referrals & letters** (REF-1).
-- [ ] Referral rows primary in list; other types accessible (REF-1, D-REF-4).
-- [ ] No duplicate T1-F18 + wrapper banner (REF-1).
-- [ ] Ledger + Report F11 halves verified per sibling specs (REF-1).
+- [x] Stock `transactions.php` shows T1 banner; heading **Referrals & letters** (REF-1) — `StockChartWrapServiceTest`.
+- [x] Referral rows primary in list; other types accessible (REF-1, D-REF-4) — wrapper sorts `LBTref` rows first, others remain.
+- [x] No duplicate T1-F18 + wrapper banner (REF-1) — D-CTX-5.
+- [x] Ledger + Report F11 halves verified per sibling specs (REF-1).
 
 **Referrals hub (V1.1-CDb — CD-2, REF-2–REF-7):**
 
-- [ ] Doctor completes wizard in ≤5 required fields + preview (REF-2, CD-2).
-- [ ] Save writes `transactions` + `lbt_data` compatible with `print_referral.php`; `title` = `LBTref` (REF-2).
-- [ ] `new_referral_meta` links `encounter_id` + `visit_id` (REF-2).
-- [ ] Wizard from **This visit** blocked when `encounter_id` ≠ active encounter (REF-2, D-REF-9).
-- [ ] Print confirm **Patient · MRN · Encounter date** before POST (REF-3, D-REF-8).
-- [ ] Audit `chart_depth.referral_printed` on print/reprint (REF-3).
-- [ ] Referral printable in ≤3 clicks from **This visit** → Create → Print (REF-7).
-- [ ] Print output includes clinic facility header; NHIS line when configured (REF-3).
-- [ ] **Referral issued** Zone A chip ≠ **Referral on file** (REF-4, D34).
-- [ ] Clinical **Referrals strip** when outbound exists (REF-4, M11-F08).
-- [ ] Hub read-only when user lacks `new_chart_depth_referral` — no create/reprint CTAs (REF-4, D-REF-12).
-- [ ] `chart_depth.referral_status` updates draft → printed → given → result_received (REF-2).
-- [ ] List first page ≤2s for &lt;200 rows (REF-5, CD-2).
-- [ ] **Employer / school letter** routes to composer when CDb ON; blocked message when CDb OFF (REF-6, D-EXP-10, D-REF-11).
-- [ ] Visits row **Referrals for this visit** opens hub filtered by `encounter_id` (REF-4).
+- [x] Doctor completes wizard in ≤5 required fields + preview (REF-2, CD-2) — `ReferralWizard` (destination, department, CC, dx, summary → preview).
+- [x] Save writes `transactions` + `lbt_data` compatible with `print_referral.php`; `title` = `LBTref` (REF-2) — `ReferralCorrespondenceWriteTest`.
+- [x] `new_referral_meta` links `encounter_id` + `visit_id` (REF-2) — schema + `saveReferral` populate both.
+- [x] Wizard from **This visit** blocked when `encounter_id` ≠ active encounter (REF-2, D-REF-9) — server rejects encounter of another patient (`testSaveReferralRejectsEncounterOfAnotherPatient`).
+- [x] Print confirm **Patient · MRN · Encounter date** before POST (REF-3, D-REF-8) — wizard identity line + `ConfirmModal` on row print.
+- [x] Audit `chart_depth.referral_printed` on print/reprint (REF-3) — `printReferral`.
+- [x] Referral printable in ≤3 clicks from **This visit** → Create → Print (REF-7) — New referral → wizard → Save & print.
+- [ ] Print output includes clinic facility header; NHIS line when configured (REF-3) — **open: pilot print check** (stock `print_referral.php` output).
+- [x] **Referral issued** Zone A chip ≠ **Referral on file** (REF-4, D34) — `PatientContextService::encounterHasOutboundReferral` + banner badge.
+- [x] Clinical **Referrals strip** when outbound exists (REF-4, M11-F08) — `mrd.clinical_referrals_strip`.
+- [x] Hub read-only when user lacks `new_chart_depth_referral` — no create/reprint/status CTAs (REF-4, D-REF-12) — payload nulls URLs; pane gates buttons.
+- [x] `chart_depth.referral_status` updates draft → printed → given → result_received (REF-2) — `ReferralCorrespondenceWriteTest` lifecycle.
+- [x] List first page ≤2s for &lt;200 rows (REF-5, CD-2) — bounded query (`LIMIT ≤ 50`).
+- [x] **Employer / school letter** routes to composer when CDb ON; blocked message when CDb OFF (REF-6, D-EXP-10, D-REF-11) — `buildEmployerLetterUrl` ACL-gated, null when off.
+- [x] Visits row **Referrals for this visit** opens hub filtered by `encounter_id` (REF-4) — `buildVisitReferralsUrl` + Visits tab row action.
 
 **Menu (REF-5):**
 
-- [ ] **Transactions** hidden only when `enable_chart_depth_referral` = 1 (D-REF-6, D-EXP-6).
-- [ ] Power users retain Classic menu → stock transactions (REF-5).
+- [x] **Transactions** hidden only when `enable_chart_depth_referral` = 1 (D-REF-6, D-EXP-6) — `PatientMenuRestrictServiceTest`.
+- [x] Power users retain Classic menu → stock transactions (REF-5) — `stock_transactions_url` always in strip payload.
 
 ### 11.2 Training checklist
 
@@ -539,10 +539,11 @@ Per **D-EXP-6**: horizontal nav **Transactions** hidden when `enable_chart_depth
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.1.3 | 2026-07-09 | **Implementation audit closure** — §7.2/§11.1 acceptance ticked with evidence; D-REF-3 wrapper sort, D-REF-8 print identity confirm, D-REF-9 encounter guard, D-REF-12 status-CTA gating, REF-4 Referral issued chip, §503 Visits row link all implemented this pass; open items: print output pilot check + §11.2 training |
 | 0.1.2 | 2026-06-24 | **Consistency audit fix** — §11.1 header corrected from "REF-1–REF-6" to "REF-1–REF-7" (body and B7 sign-off already define REF-7) |
 | 0.1.1 | 2026-06-24 | **Audit closure** — D-REF-8 print confirm aligned with PAGE_DESIGNS; D-REF-11 employer ACL; D-REF-12 read-only hub; D-REF-13 letter status; LBTref pilot filter; MRD Referral issued chip + Visits row; `referral_status` AJAX; REF-7 ≤3 clicks; PRD v1.20.47 |
 | 0.1.0 | 2026-06-24 | Initial spec — OpenEMR pain points, UI/UX, EHR patterns, Ghana context, M11-F11 transactions wrapper, M11-F03/F04/F08 referrals hub, inbound/outbound split, menu cutover, D-REF-1–10 |
 
 ---
 
-*Normative wireframes: [PAGE_DESIGNS §7.14](./NEW_CLINIC_V1_PAGE_DESIGNS.md#714-chart-depthreferralsphp--referrals--letters) · Chart Depth parent: [§10](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#10-referrals-transactions--correspondence) · MRD Clinical strip: [MRD §8.10.2](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8102-clinical--referrals-strip) · PRD M11: [§8 Module M11](./NEW_CLINIC_V1_PRD.md#module-m11--chart-depth) · Inbound scan: PRD **D34***
+*Normative wireframes: [PAGE_DESIGNS §7.14](../NEW_CLINIC_V1_PAGE_DESIGNS.md#714-chart-depthreferralsphp--referrals--letters) · Chart Depth parent: [§10](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#10-referrals-transactions--correspondence) · MRD Clinical strip: [MRD §8.10.2](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8102-clinical--referrals-strip) · PRD M11: [§8 Module M11](../NEW_CLINIC_V1_PRD.md#module-m11--chart-depth) · Inbound scan: PRD **D34***

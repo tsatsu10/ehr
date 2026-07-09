@@ -72,7 +72,7 @@ This document specifies a **Communications Hub** — a focused staff workspace f
 | Portal secure mail (`onsite_mail`) | **Out of scope** — remains separate Angular app |
 | PHI Direct (trusted messages) | **Preserved** — actions in Messages overflow, existing popups |
 | Patient chart notes (`pnotes.php`) | **Unchanged** — chart depth view stays separate |
-| **MRD Messages tab** | **Complementary** — patient-scoped notes/reminders inside full chart ([MRD §8](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8-zone-c--workspace-tabs-5-tabs)); use COM for clinic-wide inbox, MRD Messages for *this patient* ([USER_WORKFLOWS §17.3a](../NEW_CLINIC_V1_USER_WORKFLOWS.md#173a-com-hub-vs-mrd-messages-tab)) |
+| **MRD Messages tab** | **Complementary** — patient-scoped notes/reminders inside full chart ([MRD §8](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8-zone-c--workspace-tabs-5-tabs)); use COM for clinic-wide inbox, MRD Messages for *this patient* ([USER_WORKFLOWS §17.3a](../NEW_CLINIC_V1_USER_WORKFLOWS.md#173a-com-hub-vs-mrd-messages-tab)) |
 
 **Design-only for this file.** Wireframes are ASCII; components reference Bootstrap 4.6, Font Awesome, OpenEMR CSS variables, Twig partials, and `xl()`/`xlt()`/`xla()`.
 

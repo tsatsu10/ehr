@@ -561,7 +561,7 @@ Normative: [CHART_DEPTH §5.2](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN
 | **M8** Lab Desk | [LAB_OPS](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) v0.1.9 | §7.5 | **Shipped (flag)** | Desk | Visit queue + M12 slide-over link |
 | **M9** Pharmacy Desk | [PHARM_OPS](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) v0.1.9 | §7.6 | **Shipped (flag)** | Desk | Visit queue + undispensed gate |
 | **COM** Communications | [COM](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) v1.0.3 | §7.12 | **Shipped (flag)** | Hub | Split-pane Messages / Reminders |
-| **MRD** Medical record | [MRD](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) v0.2.36 | §4.11, MRD spec | **Shipped** · Polish | Chart | `patient-chart` island — 5-tab IA |
+| **MRD** Medical record | [MRD](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) v0.2.36 | §4.11, MRD spec | **Shipped** · Polish | Chart | `patient-chart` island — 5-tab IA |
 | **S1** Scheduling | [SCHEDULING](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) v0.2.6 | §7.11 | **Not started** | Desk | Legacy calendar / tracker |
 
 #### 6.6.2 Post-pilot hubs & chart depth
@@ -571,7 +571,7 @@ Normative: [CHART_DEPTH §5.2](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN
 | **M10** Patient Registry | [REGISTRY](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) v0.2.1 | V1.1-REG | **Shipped (flag)** | Hub: filter + cohort table |
 | **M11** Chart Depth | [CHART_DEPTH](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) v0.1.15 | V1.1-CDa/b/c | **Shipped (flag)** | Depth: SlideOver from MRD strips |
 | — Payment history | [PAYMENT_HISTORY](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) | V1.1-CDa | **Shipped (flag)** | `chart-depth` payments mode |
-| — Referrals & letters | [REFERRALS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) v0.1.2 | V1.1-CDb | **Shipped (flag)** | Wizard + print confirm |
+| — Referrals & letters | [REFERRALS](./done/NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) v0.1.2 | V1.1-CDb | **Shipped (flag)** | Wizard + print confirm |
 | — Clinical export | [CLINICAL_EXPORT](./done/NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) | V1.1-CDc | **Shipped (flag)** | Preset builder + confirm |
 | **M12** Lab Ops Hub | [LAB_OPS](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) | V1.1-LAB | **Shipped (flag)** | Hub: worklist + result slide-over |
 | **M13** Pharm Ops Hub | [PHARM_OPS](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) | V1.1-PHARM | **Not started** | Hub: dispense worklist |
@@ -585,7 +585,7 @@ Normative: [CHART_DEPTH §5.2](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN
 
 | Surface | Redesign spec | Status | Notes |
 |---------|---------------|--------|-------|
-| MRD primary (B7) | [B7_PRIMARY](./NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md) | **Shipped** · Polish | `patient-chart` island — cutover per PRD §5.6.1 |
+| MRD primary (B7) | [B7_PRIMARY](./done/NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md) | **Shipped** · Polish | `patient-chart` island — cutover per PRD §5.6.1 |
 | Background / History | [MEDICAL_HISTORY](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) | **Polish** | T1-F20 read summary in Clinical tab |
 | Legacy chart strip | [LEGACY_CHART_CONTEXT](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) | **Shipped** | T1-F18/F19 Twig strip on stock `patient_file/*` |
 

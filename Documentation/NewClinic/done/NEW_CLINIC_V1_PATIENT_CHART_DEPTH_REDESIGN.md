@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.1.15 |
 | **Status** | Draft for review — aligned to PRD **Module M11** (v1.20.47, decision **D61**; currency **D-REG-3** / M6-F27; M14 cross-link **D-BILL-1**) |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.47), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.35), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.47), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.47), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](../NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.47), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.35), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.47), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.47), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3) |
 | **Audience** | Product, design, clinical leads, billing leads, implementers, QA |
 | **Scope** | Legacy patient-chart surfaces **not fully absorbed** by the redesigned MRD — financial history, referrals & letters, clinical reports, PRO, external data, and overflow navigation |
 | **Implementation** | Design only — no code in this document |
@@ -45,7 +45,7 @@
 
 ### 1.1 What this document is for
 
-The [Medical Record Dashboard (MRD) redesign](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md) collapses stock OpenEMR’s 25+ dashboard cards into **five workspace tabs** (Overview · Clinical · Visits · Profile · Messages) plus a safety strip and banner-first actions. That is the right **daily full-chart** surface for New Clinic.
+The [Medical Record Dashboard (MRD) redesign](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) collapses stock OpenEMR’s 25+ dashboard cards into **five workspace tabs** (Overview · Clinical · Visits · Profile · Messages) plus a safety strip and banner-first actions. That is the right **daily full-chart** surface for New Clinic.
 
 However, several **high-value legacy surfaces** remain reachable only via:
 
@@ -479,7 +479,7 @@ Answer: *“What has this patient paid and owed — by visit — in clinic curre
 
 ## 10. Referrals, transactions & correspondence
 
-**Full spec:** [PATIENT_REFERRALS_LETTERS](../NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) — pilot **M11-F11** transactions wrapper + **V1.1-CDb** referral wizard + list (M11-F03/F04/F08). Wireframes: [PAGE_DESIGNS §7.14](../NEW_CLINIC_V1_PAGE_DESIGNS.md#714-chart-depthreferralsphp--referrals--letters).
+**Full spec:** [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) — pilot **M11-F11** transactions wrapper + **V1.1-CDb** referral wizard + list (M11-F03/F04/F08). Wireframes: [PAGE_DESIGNS §7.14](../NEW_CLINIC_V1_PAGE_DESIGNS.md#714-chart-depthreferralsphp--referrals--letters).
 
 ### 10.1 Purpose
 
@@ -796,7 +796,7 @@ Until M11 ships, T1 theme wraps stock pages:
 |-----------|------------------|
 | `pat_ledger.php` | Inject banner; hide insurance columns via CSS + cash profile |
 | `patient_report.php` | Banner + hide CCR/CCD when cash profile |
-| `transactions.php` | Banner + rename heading **Referrals & letters** — [PATIENT_REFERRALS_LETTERS §7](../NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md#7-pilot-interim--stock-transactions-wrapper-m11-f11) |
+| `transactions.php` | Banner + rename heading **Referrals & letters** — [PATIENT_REFERRALS_LETTERS §7](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md#7-pilot-interim--stock-transactions-wrapper-m11-f11) |
 
 ---
 
@@ -839,8 +839,8 @@ Maps to PRD **§21.1p** and post-V1 tests **CD-1–CD-5** (§16.1). Build is acc
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 0.1.15 | 2026-06-24 | **Referrals audit closure** — §16 `chart_depth.referral_status`; [PATIENT_REFERRALS_LETTERS](../NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) v0.1.1 |
-| 0.1.14 | 2026-06-24 | **Patient referrals & letters spec** — §10 cross-ref [PATIENT_REFERRALS_LETTERS](../NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md); §17.1 F11 transactions wrapper |
+| 0.1.15 | 2026-06-24 | **Referrals audit closure** — §16 `chart_depth.referral_status`; [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) v0.1.1 |
+| 0.1.14 | 2026-06-24 | **Patient referrals & letters spec** — §10 cross-ref [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md); §17.1 F11 transactions wrapper |
 | 0.1.13 | 2026-06-24 | **Payment history audit closure** — §9.2 cashier_lead + Amount confirm + D-FIN-11 adjustments; §9.6 CD-1 ≤2s + doctor UI; [PATIENT_PAYMENT_HISTORY](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) v0.1.1 |
 | 0.1.12 | 2026-06-24 | **Patient payment history spec** — §2 Ledger gap row; §9 cross-ref [PATIENT_PAYMENT_HISTORY](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) |
 | 0.1.11 | 2026-06-24 | **Export audit closure** — §15.1 per-sub-flag F09 (D-EXP-6); §17 phasing F09 split by slice; §18 CD-5; [PATIENT_CLINICAL_EXPORT](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) v0.1.1 |
@@ -871,7 +871,7 @@ Maps to PRD **§21.1p** and post-V1 tests **CD-1–CD-5** (§16.1). Build is acc
 | PRO | `interface/easipro/pro.php`, `library/ajax/easipro_util.php`, `src/Easipro/Easipro.php` |
 | External data | `interface/reports/external_data.php` |
 | SDOH | `interface/patient_file/history/history_sdoh_widget.php` |
-| MRD overflow spec | [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md) §8.10, §18 |
+| MRD overflow spec | [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) §8.10, §18 |
 
 ---
 
@@ -904,4 +904,4 @@ Maps to PRD **§21.1p** and post-V1 tests **CD-1–CD-5** (§16.1). Build is acc
 
 ---
 
-*For MRD tab layout and activity feed, see [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md). For cash posting rules, see [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) §M5.2. For inbound referral scan, see PRD §6.8 D34.*
+*For MRD tab layout and activity feed, see [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md). For cash posting rules, see [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) §M5.2. For inbound referral scan, see PRD §6.8 D34.*

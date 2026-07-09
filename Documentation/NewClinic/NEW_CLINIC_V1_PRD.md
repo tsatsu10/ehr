@@ -49,8 +49,8 @@
 
 - [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) — page wireframes and acceptance (v0.6.44).
 - [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) — role playbooks, visual frameworks, and exception paths (v1.9.44).
-- [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) — full chart (MRD) IA, zones, tabs, activity feed, Clinical layout, and locked UX decisions (v0.2.30); visit banner shows active `new_visit` state only — no doctor routing.
-- [NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md) — **B7** MRD primary redesign research + legacy chart boundary plain-English glossary (v0.1.1); audit synthesis companion to MRD + LEGACY_CHART_CONTEXT.
+- [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) — full chart (MRD) IA, zones, tabs, activity feed, Clinical layout, and locked UX decisions (v0.2.30); visit banner shows active `new_visit` state only — no doctor routing.
+- [NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md) — **B7** MRD primary redesign research + legacy chart boundary plain-English glossary (v0.1.1); audit synthesis companion to MRD + LEGACY_CHART_CONTEXT.
 - [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) — Calendar, Flow Board, and Recalls UI/UX redesign + alignment (v0.2.3); implements §6.7 hard rules.
 - [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) — Staff Messages + Dated Reminders hub (v1.0.3, **approved Phase 1**); replaces legacy Message Center tabs; recalls remain S1.
 - [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) — Patient Registry cohort search (**Module M10**, v0.2.1); [PAGE_DESIGNS §7.32](./NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry); replaces legacy Patient Finder; separate from Front Desk search.
@@ -64,7 +64,7 @@
 - [NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md](./done/NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) — **Module M4 + M17** Clinical Documentation Hub (v0.1.2); curated encounter forms façade over stock `interface/forms/` — [PAGE_DESIGNS §7.30](./NEW_CLINIC_V1_PAGE_DESIGNS.md#730-clinical-docindexphp--clinical-documentation-hub); **V1.1-DOC** (§20.1); day-2 runbooks **DR-01–DR-08** (§17.4.10); respects **NG5**.
 - [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) — **Module M18** Queue Bridge Hub (v0.1.2); scheduling ↔ visit queue exception detection & guided fixes — [PAGE_DESIGNS §7.31](./NEW_CLINIC_V1_PAGE_DESIGNS.md#731-queue-bridgeindexphp--queue-bridge-hub); **V1.1-BRIDGE** (§20.1); day-2 runbooks **SQ-01–SQ-08** (§17.4.11); **H3** stands (no bidirectional sync).
 - [NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) — **Patient payment history / Ledger** (v0.1.1); pilot **M11-F11** ledger wrapper · **V1.1-CDa** timeline + reprint · read-only core AR.
-- [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) — **Patient referrals & letters (Transactions)** (v0.1.1); pilot **M11-F11** transactions wrapper · **V1.1-CDb** wizard + list · inbound/outbound split (D34).
+- [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) — **Patient referrals & letters (Transactions)** (v0.1.1); pilot **M11-F11** transactions wrapper · **V1.1-CDb** wizard + list · inbound/outbound split (D34).
 - [NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) — **Patient clinical export / Reports** (v0.1.1); pilot **M11-F11** stock wrapper · **V1.1-CDc** preset builder · menu cutover · distinct from M16.
 - [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) — **Clinical → Background** / History & Lifestyle (v0.1.1); read summary **T1-F20** · edit stock V1 · **T1-F20b** editor wrap · Ghana HIS pack **M6-F28** · legacy overlay on history pages.
 - [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) — **T1-F18/F19** legacy chart patient context (v0.1.2); visit-aware strip on stock `patient_file` — **V1.2-CTX** (optional pilot per §5.6.1); pairs with T1-F17 encounter strip; enable checklist **§17.4.12** / acceptance **§21.1z**.
@@ -541,7 +541,7 @@ Clinics that want walk-in-only operation may set `enable_scheduled_integration` 
 | Patient Flow Board (existing) | `patient_tracker.php`, `PatientTrackerService` | **Replaced in daily use by S1** Flow Board lens; legacy screen behind toggle until parity |
 | Calendar (PostCalendar) | `openemr_postcalendar_events`, `AppointmentService` | **Replaced in daily use by S1** Calendar lens; legacy behind toggle |
 | Recalls | `medex_recalls`, MedEx | **Replaced in daily use by S1** Recall Worklist; legacy Recall Board behind toggle; H1 (no demographic writes from module) |
-| **Medical Record Dashboard** | `patient_file/summary/demographics.php` (`core.mrd`) | **Redesign** per [MRD spec](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) — secondary “full chart” path; visit-aware banner; 5-tab IA; not daily driver for Clinic roles |
+| **Medical Record Dashboard** | `patient_file/summary/demographics.php` (`core.mrd`) | **Redesign** per [MRD spec](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) — secondary “full chart” path; visit-aware banner; 5-tab IA; not daily driver for Clinic roles |
 
 ### 5.3 Out of scope (V1)
 
@@ -980,7 +980,7 @@ V1 optimizes **safe handoff and billing integrity** over fastest possible consul
 
 **Trainer one-liner:** *“**Background** is who they are over time; **assessments** are what we documented **this visit**.”* — complements §6.1g *desk vs chart* ([USER_WORKFLOWS §17.7](./NEW_CLINIC_V1_USER_WORKFLOWS.md#177-training-copy--rollout-guardrails)).
 
-**Normative MRD layout:** [MRD §8.9](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#89-clinical-tab--layout--anchors-d-mrd-10) · build spec [PAGE_DESIGNS §4.14](./NEW_CLINIC_V1_PAGE_DESIGNS.md#414-mrd-clinical-tab--build-spec-t1-f16-d-mrd-10) · Background detail [MEDICAL_HISTORY_BACKGROUND](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md).
+**Normative MRD layout:** [MRD §8.9](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#89-clinical-tab--layout--anchors-d-mrd-10) · build spec [PAGE_DESIGNS §4.14](./NEW_CLINIC_V1_PAGE_DESIGNS.md#414-mrd-clinical-tab--build-spec-t1-f16-d-mrd-10) · Background detail [MEDICAL_HISTORY_BACKGROUND](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md).
 
 #### Taxonomy (closed — D49)
 
@@ -2330,7 +2330,7 @@ Ship vertical slices in dependency order so patient context and queue state exis
 | M1a-F05 | Each result row shows: full name, sex, age, phone (masked last 4 visible), `pubpid`, completion badge, last visit date | P0 |
 | M1a-F06 | Right-panel preview when row hovered/focused: photo (if any), demographics summary, allergies (read-only), completion %, last vitals, last visit summary | P1 |
 | M1a-F07 | “Start visit” button on result row (primary CTA) | P0 |
-| M1a-F08 | “Open full chart” secondary link → redesigned MRD (`demographics.php?set_pid={pid}&tab=profile` default for reception; see [MRD spec](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) §16.3) | P1 |
+| M1a-F08 | “Open full chart” secondary link → redesigned MRD (`demographics.php?set_pid={pid}&tab=profile` default for reception; see [MRD spec](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) §16.3) | P1 |
 | M1a-F09 | When zero results after ≥ 2 chars: show **“Register patient”** primary CTA | P0 |
 | M1a-F10 | Recent-patients shortcut: last 10 patients touched by this user today | P2 |
 | M1a-F11 | Performance: first-paint of results ≤ 1.5s on 10k-patient DB (P95); ≤ 3s on 50k | P0 |
@@ -2682,7 +2682,7 @@ When **Register patient** clicked, the 4-section registration accordion opens in
 | ID | Requirement | Priority |
 |----|-------------|----------|
 | M4-F01 | Queue: **`ready_for_doctor` only** for waiting list; “Take patient” → `with_doctor`. Active consults in `with_doctor` shown separately (see §6.5 queue contract) | P0 |
-| M4-F02 | **Consult-ready active panel** (`patient-context-banner` Tier 1 + Tier 2, §6.1g): demographics, severe allergies, vitals snapshot (or **No vitals today**), **chief complaint when `new_visit.chief_complaint` set**, top 3 meds, problems count — **visible without scrolling** at 768px after Take patient (M4-F29, G11); MRD is depth target, not consult home ([MRD spec](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) §6–§8) | P0 |
+| M4-F02 | **Consult-ready active panel** (`patient-context-banner` Tier 1 + Tier 2, §6.1g): demographics, severe allergies, vitals snapshot (or **No vitals today**), **chief complaint when `new_visit.chief_complaint` set**, top 3 meds, problems count — **visible without scrolling** at 768px after Take patient (M4-F29, G11); MRD is depth target, not consult home ([MRD spec](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) §6–§8) | P0 |
 | M4-F03 | Deep links (core): Encounter (`encounter_top.php`), Problems, **Lab order** (`load_form.php?formname=procedure_order`), **Rx** (core Rx / `eRx.php` if enabled), Notes | P0 |
 | M4-F04 | “Complete consult” opens **Confirm routing** modal (pre-checked lab/Rx from M4-F08/F09); doctor confirms or overrides; then routes per §6.5 — **requires encounter**; E-Sign assert per `require_esign_before_complete_consult` (§6.1.1, M4-F26) | P0 |
 | M4-F10 | **Confirm routing modal:** shows detected lab/Rx flags, suggested next state, override checkboxes; shows **Documentation signed** status (green check or red **Unsigned — sign in encounter** with link); **Confirm and route** disabled until signed **when** `require_esign_before_complete_consult` = 1 (otherwise enabled with unsigned warning); persists `routing_method` (`auto_detected` \| `manual_overridden`); audit `new_visit.routing_confirmed` | P0 |
@@ -2772,7 +2772,7 @@ When **Register patient** clicked, the 4-section registration accordion opens in
 
 ### Module M12 — Lab Operations Hub
 
-**Purpose:** Clinic-wide **lab operations** — pending worklists, manual result entry façade, clinic panel packs, send-out requisitions, and (V1.2) LIS/HL7 status — without forking OpenEMR `procedure_*` tables. Full spec: [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.7). Wireframes: [PAGE_DESIGNS §7.17–§7.20](./NEW_CLINIC_V1_PAGE_DESIGNS.md#717-lab-opsindexphp--lab-operations-hub). MRD labs section: [MRD §8.9](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#89-clinical-tab--layout--anchors-d-mrd-10).
+**Purpose:** Clinic-wide **lab operations** — pending worklists, manual result entry façade, clinic panel packs, send-out requisitions, and (V1.2) LIS/HL7 status — without forking OpenEMR `procedure_*` tables. Full spec: [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.7). Wireframes: [PAGE_DESIGNS §7.17–§7.20](./NEW_CLINIC_V1_PAGE_DESIGNS.md#717-lab-opsindexphp--lab-operations-hub). MRD labs section: [MRD §8.9](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#89-clinical-tab--layout--anchors-d-mrd-10).
 
 **Type:** Submodule routes under `public/lab-ops/` — complements **M8** visit queue; does not replace it (D-LAB-1).
 
@@ -2865,7 +2865,7 @@ See lab spec [Appendix B](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md#append
 
 ### Module M13 — Pharmacy Operations Hub
 
-**Purpose:** Clinic-wide **pharmacy operations** — pending dispense worklists, dispense/receive façades, clinic formulary starter packs — without forking OpenEMR `drugs` / `drug_sales` tables. **Print Rx** for Type A clinics is **M13-F10** shared service under **V1.1-PRINT-RX** (D-PHARM-4), not hub-only. Full spec: [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.7). Wireframes: [PAGE_DESIGNS §7.21–§7.24](./NEW_CLINIC_V1_PAGE_DESIGNS.md#721-pharm-opsindexphp--pharmacy-operations-hub). MRD meds section: [MRD §8.10.5](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8105-clinical--meds-strip-m13-entry).
+**Purpose:** Clinic-wide **pharmacy operations** — pending dispense worklists, dispense/receive façades, clinic formulary starter packs — without forking OpenEMR `drugs` / `drug_sales` tables. **Print Rx** for Type A clinics is **M13-F10** shared service under **V1.1-PRINT-RX** (D-PHARM-4), not hub-only. Full spec: [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.7). Wireframes: [PAGE_DESIGNS §7.21–§7.24](./NEW_CLINIC_V1_PAGE_DESIGNS.md#721-pharm-opsindexphp--pharmacy-operations-hub). MRD meds section: [MRD §8.10.5](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8105-clinical--meds-strip-m13-entry).
 
 **Type:** Submodule routes under `public/pharm-ops/` — complements **M9** visit queue; does not replace it (D-PHARM-1).
 
@@ -2991,7 +2991,7 @@ See registry doc Appendix A (`REG-US-*`). P0: cohort filter, record status defau
 
 ### Module M11 — Chart Depth
 
-**Purpose:** In-chart **depth panels** for payment history, referrals & letters, clinical export, and (V1.2) external care — beyond the MRD five-tab IA. Full product spec: [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.15). Payment history: [PATIENT_PAYMENT_HISTORY](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md). Referrals & letters: [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.1). Wireframes: [PAGE_DESIGNS §7.13–§7.16](./NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history). MRD host strips: [MRD §8.10](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#810-mrd-host-summary-strips-chart-depth-entry).
+**Purpose:** In-chart **depth panels** for payment history, referrals & letters, clinical export, and (V1.2) external care — beyond the MRD five-tab IA. Full product spec: [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.15). Payment history: [PATIENT_PAYMENT_HISTORY](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md). Referrals & letters: [PATIENT_REFERRALS_LETTERS](./done/NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.1). Wireframes: [PAGE_DESIGNS §7.13–§7.16](./NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history). MRD host strips: [MRD §8.10](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#810-mrd-host-summary-strips-chart-depth-entry).
 
 **Type:** Submodule routes under `public/chart-depth/` — slide-over from MRD on desktop; full-page on mobile.
 
@@ -3458,7 +3458,7 @@ Full spec: [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./done/NEW_CLIN
 | T1-F06 | Patient chart: for Clinic roles, **de-emphasize stock horizontal patient nav**; when B7 MRD is chart host, **hide** **History** and **Assessments (SDOH)** from horizontal nav; daily navigation via redesigned MRD 5-tab IA; “Classic patient menu” under ⋯ overflow for power users (MRD §8.2) | P1 |
 | T1-F07 | Do not break core gulp build; module CSS loads additive | P0 |
 | T1-F08 | **Accessibility target: WCAG 2.1 AA** for all module pages. Specifically: visible focus states on all interactive elements; aria labels on icon-only buttons; minimum contrast 4.5:1 for body text and 3:1 for UI components; full keyboard navigation through queue cards, search input, Quick Add drawer, and cashier flow; completion banner uses **icon + text + color** (no color-only signalling); duplicate-match panel uses `role="alertdialog"` and traps focus until resolved; live regions (`aria-live="polite"`) announce queue state changes for screen readers | P1 |
-| T1-F09 | **MRD sticky banner**: identity, completion ring, active visit chip (`new_visit`), visit-scoped CC + vitals chips, primary actions + Actions ▾ (see [MRD spec](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) §6) | P1 |
+| T1-F09 | **MRD sticky banner**: identity, completion ring, active visit chip (`new_visit`), visit-scoped CC + vitals chips, primary actions + Actions ▾ (see [MRD spec](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) §6) | P1 |
 | T1-F10 | **MRD safety strip**: server-render allergies, problems, meds, alerts above fold — no initial AJAX (§7) | P1 |
 | T1-F11 | **MRD 5 tabs**: Overview · Clinical · Visits · Profile · Messages; Documents in Profile; Admin in ⋯ overflow (§8) | P1 |
 | T1-F12 | **MRD actions**: banner-first hybrid; optional rail ≥1200px; mobile bottom action sheet (§9) | P1 |
@@ -3595,11 +3595,11 @@ Full spec: [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./done/NEW_CLIN
 
 ### 10.5 Medical Record Dashboard (full chart) redesign
 
-Stock OpenEMR’s Medical Record Dashboard (`demographics.php`, page id `core.mrd`) is a **25+ card longitudinal chart** — unsuitable as the New Clinic daily driver (see [MRD spec §2](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md)). V1 **redesigns** it as the **secondary full-chart** surface while role desks remain primary.
+Stock OpenEMR’s Medical Record Dashboard (`demographics.php`, page id `core.mrd`) is a **25+ card longitudinal chart** — unsuitable as the New Clinic daily driver (see [MRD spec §2](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md)). V1 **redesigns** it as the **secondary full-chart** surface while role desks remain primary.
 
 | Aspect | V1 treatment |
 |--------|--------------|
-| **Positioning** | “Open full chart” from Front Desk (M1a-F08), Doctor Desk, and admin — not post-login landing. Lands on **role default tab** per [MRD §10.1](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#101-default-tab-on-open) (**D-MRD-13**) — never the stock 25-card dashboard layout. Hosts may pass explicit `?tab=` (e.g. reception → Profile per M1a-F08 / §16.3). |
+| **Positioning** | “Open full chart” from Front Desk (M1a-F08), Doctor Desk, and admin — not post-login landing. Lands on **role default tab** per [MRD §10.1](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#101-default-tab-on-open) (**D-MRD-13**) — never the stock 25-card dashboard layout. Hosts may pass explicit `?tab=` (e.g. reception → Profile per M1a-F08 / §16.3). |
 | **Training copy** | *“Desk for queue work; chart for history; depth panels for money, letters, and exports; ops hubs for bench/counter; billing back office after V1.2-BILL.”* — [USER_WORKFLOWS §17.0h](./NEW_CLINIC_V1_USER_WORKFLOWS.md#170h-clinical-decision-at-the-desk), [§17.0j](./NEW_CLINIC_V1_USER_WORKFLOWS.md#170j-billing-back-office--trainer-one-liner) |
 | **IA** | Four zones: sticky banner · safety strip · 5 workspace tabs · banner-first actions (optional rail ≥1200px) |
 | **Tabs** | Overview · Clinical · Visits · Profile · Messages — Documents in Profile; Chart Depth (ledger, referrals, export) via strips + [M11](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) slide-overs — not a 6th tab |
@@ -3607,9 +3607,9 @@ Stock OpenEMR’s Medical Record Dashboard (`demographics.php`, page id `core.mr
 | **Completion** | Completion ring in banner; Profile checklist; cashier block aligns with 70% gate |
 | **Cash clinic** | No insurance UI when disabled; balance due formatted in clinic currency on `ready_for_payment` |
 | **Performance** | Server-render banner + safety strip; lazy-load active tab only |
-| **Locked decisions** | D-MRD-1–13 in [MRD spec §4](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) |
+| **Locked decisions** | D-MRD-1–13 in [MRD spec §4](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) |
 
-**Acceptance:** [MRD spec §17](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) — doctor/cashier/reception scenarios without scroll on 768px.
+**Acceptance:** [MRD spec §17](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) — doctor/cashier/reception scenarios without scroll on 768px.
 
 ---
 
@@ -5316,7 +5316,7 @@ See **Module M7** for full specification. Summary:
 |------------------|--------|
 | Insurance tabs on demographics / MRD | Hide via menu/profile; **absent from MRD** when `enable_insurance = false` (T1-F14) |
 | MRD billing widget (insurance balance) | Replace with cash **balance due** in banner when visit `ready_for_payment`; full ledger under ⋯ only |
-| Stock MRD 25+ card layout | Replace with 5-tab IA + safety strip ([MRD spec](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md)) |
+| Stock MRD 25+ card layout | Replace with 5-tab IA + safety strip ([MRD spec](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md)) |
 | EDI, ERA, 270/271, UB-04 | Hide menus |
 | Billing Manager complex claims | Hide; **M14 Insurance vault** for admin when `enable_insurance` (V1.2-BILL); else Advanced link only |
 | Patient portal | Optional off |
@@ -5699,7 +5699,7 @@ Maps to **D-FIN-1–12** and tests **CD-1** / **FIN-1–FIN-6** / pilot **F11** 
 
 ### 21.1ad Patient referrals & letters / Transactions (M11 — V1.1-CDb + pilot F11 transactions)
 
-Maps to **D-REF-1–13** and tests **CD-2** / **REF-1–REF-7** / pilot **F11** transactions. Full spec: [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md). **Outbound** correspondence — inbound scan remains PRD **D34**.
+Maps to **D-REF-1–13** and tests **CD-2** / **REF-1–REF-7** / pilot **F11** transactions. Full spec: [PATIENT_REFERRALS_LETTERS](./done/NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md). **Outbound** correspondence — inbound scan remains PRD **D34**.
 
 **Pilot wrapper (M11-F11 transactions — REF-1):**
 
@@ -6095,7 +6095,7 @@ Registration, completion, and related engineering choices (defaults in [§12.4](
 | D13 | Staff API via `public/ajax.php` + CSRF; not core `/apis/` in V1 |
 | D14 | Login redirect via **`list_options` apps** (§11.3) — no core `main_screen.php` fork |
 | D15 | Cash checkout mirrors **`front_payment.php` cash** AR path (§M5.2) |
-| D16 | **MRD redesign locked (v0.2):** 5 tabs (Overview/Clinical/Visits/Profile/Messages); banner-first actions; visit-scoped vitals in banner; insurance hidden when off — full spec in [MRD doc](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) |
+| D16 | **MRD redesign locked (v0.2):** 5 tabs (Overview/Clinical/Visits/Profile/Messages); banner-first actions; visit-scoped vitals in banner; insurance hidden when off — full spec in [MRD doc](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) |
 | D17 | **V1 builds both systems fully:** walk-in (M0–M9, Visit Board) + schedule (S1 per [SCHEDULING_REDESIGN](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md)); one operational queue at the door; ~26-week dual-track plan (§20); `enable_scheduled_integration` default **ON**, OFF for walk-in-only profile |
 | D18 | **Tracker sync permanently closed (H3):** no bidirectional `new_visit` ↔ `patient_tracker` sync; sole tracker touch is one-way `updateAppointmentStatus()` at arrival (§6.6) |
 | D19 | **One encounter rule:** atomic `VisitQueueService::startVisitFromAppointment()` (M0-F16); single UI **Start visit & check in**; never `calendar_arrived()` (H2/H4) |
@@ -6137,7 +6137,7 @@ Registration, completion, and related engineering choices (defaults in [§12.4](
 | D-HIST-6 | **Ghana HIS pack (closed):** M6-F28 layout import — not hardcoded PHP |
 | D-HIST-7 | **L3b completion (closed):** optional — default OFF (§6.1h) |
 | D-HIST-8 | **Editor wrap (closed):** V1.1 **T1-F20b** via `enable_history_editor_wrap` — default OFF until parity tested |
-| D-REF-1 | **No parallel referral engine (closed):** CDb façade writes stock `transactions` + `lbt_data` + `new_referral_meta` — [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) |
+| D-REF-1 | **No parallel referral engine (closed):** CDb façade writes stock `transactions` + `lbt_data` + `new_referral_meta` — [PATIENT_REFERRALS_LETTERS](./done/NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) |
 | D-REF-2 | **V1.1-CDb (closed):** `chart-depth/referrals.php` primary when `enable_chart_depth_referral` = 1 |
 | D-REF-3 | **Pilot transactions wrapper (closed):** stock `transactions.php` + M11-F11 — heading **Referrals & letters** |
 | D-REF-4 | **Scope split (closed):** CDb = `LBTref` + general letters; other LBF types remain Classic menu for admin |
@@ -6183,7 +6183,7 @@ Registration, completion, and related engineering choices (defaults in [§12.4](
 | D-EXP-9 | **Full chart (closed):** M11-F06 — ACL `new_chart_depth_export_full`; confirm + audit; distinct from Custom |
 | D-EXP-10 | **Employer / school letter (closed):** export preset routes to CDb letter composer — ACL `new_chart_depth_referral` when CDb ON; base `new_reception` → reception lead per **D-REF-11** |
 | D-EXP-11 | **Pilot `pat_rep` (closed):** installer grants `pat_rep` to `new_reception` / `new_reception_lead` for F11 stock Report until CDc |
-| D-MRD-13 | **Open full chart landing tab (closed):** **Role default** per MRD §10.1 / §16.3 — never stock 25-card dashboard; explicit `?tab=` per host (e.g. M1a-F08 → Profile); see [MRD §19](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#19-open-questions) |
+| D-MRD-13 | **Open full chart landing tab (closed):** **Role default** per MRD §10.1 / §16.3 — never stock 25-card dashboard; explicit `?tab=` per host (e.g. M1a-F08 → Profile); see [MRD §19](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#19-open-questions) |
 | D50 | **Wrong patient prevention (closed):** **§6.1i** — three anchors; patient-switch + session re-bind; doctor single active consult; **`taken_elsewhere`** on concurrent claim loss; core identity strip (T1-F17); cashier payment confirm (M5-F15); mandatory test **43** |
 | D51 | **Wrong patient P0 hardening (closed):** **§6.1j** — T1-F17 **server-side** strip only; M1a-F15 cashier search **`visit_id`** resolution; reject payment by `pid` alone |
 | D52 | **Wrong patient P1 polish (closed):** M1a-F14b Quick Add switch; M5-F16 all cashier terminal modals; test **43h–k** |
@@ -6496,8 +6496,8 @@ The "Apply cash clinic profile" button in M6-F07 sets the following OpenEMR `glo
 | 1.20.50 | 2026-06-25 | **Q46 desk registration form** — supersedes Q10 Quick Add; [FRONT_DESK_REGISTRATION](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md); M1b/M1c rewrite; `registration_mode=desk_full_form`; region+district weights; §24.3 updated; companions v1.9.50 / v0.6.51 / FRONT_DESK_REGISTRATION v1.0.0 |
 | 1.20.49 | 2026-06-24 | **M10 audit closure (V1.1-REG)** — D-COHORT-5 reception-only `fin0` hide + D-CTX-10; §4.4 `new_registry*` ACL; M10-F03/F10/F11 phasing; audit events + §12.1 DDL; `cohort.saved_filter`; SEC06 rate limits; **§19.8** menu cutover; **§20.1** V1.1-REG row; §24.4 row 13; REG-8; `@new-clinic-v11-registry-pr1`; companion [PATIENT_REGISTRY](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) v0.2.1 / PAGE_DESIGNS §7.32 v0.6.49 |
 | 1.20.48 | 2026-06-24 | **Patient Registry comprehensive redesign** — D-COHORT-1–10; §21.1ae; REG-1–7 + `@new-clinic-v11-registry`; §13.1 `cohort.*`; companion [PATIENT_REGISTRY](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) v0.2.0 / PAGE_DESIGNS §7.32 |
-| 1.20.47 | 2026-06-24 | **Referrals audit closure** — D-REF-8 confirm aligned; D-REF-11–13; REF-7; `referral_status` AJAX; MRD Referral issued chip + Visits row; companion [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) v0.1.1 / MRD v0.2.35 |
-| 1.20.46 | 2026-06-24 | **Patient referrals & letters spec** — D-REF-1–10; §21.1ad; REF-1–6 + `@new-clinic-v11-cdb`; M11-F11 transactions wrapper; companion [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) v0.1.0 |
+| 1.20.47 | 2026-06-24 | **Referrals audit closure** — D-REF-8 confirm aligned; D-REF-11–13; REF-7; `referral_status` AJAX; MRD Referral issued chip + Visits row; companion [PATIENT_REFERRALS_LETTERS](./done/NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) v0.1.1 / MRD v0.2.35 |
+| 1.20.46 | 2026-06-24 | **Patient referrals & letters spec** — D-REF-1–10; §21.1ad; REF-1–6 + `@new-clinic-v11-cdb`; M11-F11 transactions wrapper; companion [PATIENT_REFERRALS_LETTERS](./done/NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) v0.1.0 |
 | 1.20.45 | 2026-06-24 | **Payment history audit closure** — D-FIN-5 Amount confirm; D-FIN-10–12 pilot `acct/rep`, adjustment ACL, overview feed gate; `new_cashier_lead` → `new_chart_depth_finance`; CD-1 ≤2s; §21.1ac expanded; companion [PATIENT_PAYMENT_HISTORY](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) v0.1.1 / Chart Depth v0.1.13 / MRD v0.2.34 |
 | 1.20.44 | 2026-06-24 | **Patient payment history spec** — D-FIN-1–9; §21.1ac; FIN-1–6 + `@new-clinic-v11-cda`; companion [PATIENT_PAYMENT_HISTORY](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) v0.1.0 |
 | 1.20.43 | 2026-06-24 | **Export audit closure** — D-EXP-6 per-sub-flag menu cutover; D-EXP-7/9/10/11; EXP-1–6 + `@new-clinic-v11-cdc`; CD-3/5 expanded; M11-F05/F09; mPDF; companion PATIENT_CLINICAL_EXPORT v0.1.1 |
@@ -6568,7 +6568,7 @@ The "Apply cash clinic profile" button in M6-F07 sets the following OpenEMR `glo
 | 1.4.1 | 2026-05-24 | Follow-up pass | Closed Q1 (product name **New Clinic**), Q3 (queue slip + receipt queue #); §16.2 scheduled jobs (reconciliation + phone backfill cron); §16.1.1 test traceability + tests 11–12; §21.5 acceptance; §M5.4 queue slip; M1d/M6-F12–F13/M0-F13; `new_reconciliation_run`, `new_visit_queue_counter`; Appendix E unchanged; §17.1 cron install steps |
 | 1.5.0 | 2026-05-24 | Codebase alignment | §7.1/§7.4 module packaging (per-screen `public/*.php`, `acl/acl_setup.php`); **§M5.2 rewritten** for real AR (`billing`, `ar_activity` PP, `payments`); §11.1–11.6 normative integration (ACL, login apps, IDs, multi-site, deep links); §13.1 `ajax.php` + CSRF; closed Q7 (7.0.3+); `updateDupScore`, `pc_catid`/`new_visit_type`, allergies→`lists`; V1 lab/Rx flag polling; no `patient_tracker` sync; §6.4b billing vs consult reopen; removed `fee_sheet_form_id`; test #13 Cash AR; §17.4 runbook |
 | 1.6.0 | 2026-06-06 | Workflow gaps pass | **Doctor Desk queue contract:** skip triage / minimal clinic → `ready_for_doctor` (not `with_doctor`); M4-F10 **Confirm routing** modal + `routing_method`; §6.4c queue bypass (`new_visit_skip_queue`); §6.4d `closed_unpaid` + close without charge (`new_close_without_charge`); §6.4e EOD open visits (M7-F15); shared-device active role in top bar; revisit gate three paths; pediatric DOB override via existing skip ACL + M7-F13; new ACLs + audit events; schema fields; M7-F12–F15; §21.1d acceptance; companion link to USER_WORKFLOWS v1.1.0 |
-| 1.7.0 | 2026-06-07 | MRD redesign pass | New companion [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md); §5.2 MRD row; §10.5 full-chart spec; T1-F06–F14; M1a-F08/M4-F02 cross-links; §19 MRD hide/replace; closed D16; USER_WORKFLOWS v1.2.0 §17 |
+| 1.7.0 | 2026-06-07 | MRD redesign pass | New companion [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md); §5.2 MRD row; §10.5 full-chart spec; T1-F06–F14; M1a-F08/M4-F02 cross-links; §19 MRD hide/replace; closed D16; USER_WORKFLOWS v1.2.0 §17 |
 | 1.8.0 | 2026-06-08 | Visit Board ↔ Triage coordination | §6.4f cross-screen rules; clarified urgent ≠ skip triage in §6.4; M0-F14/F15, M1d-F06/F07, M2-F09/F10, M3-F09–F11; §21.1e acceptance; USER_WORKFLOWS v1.3.0 §12.2 |
 | 1.9.0 | 2026-06-10 | Scheduled integration audit | New **§6.7 Calendar/Flow/Recalls coexistence** (audited): config gate `enable_scheduled_integration` (default OFF); phasing V1 chips → V1.1 check-in bridge; **hard rules H1–H3** (no `save_recall()` — rewrites demographics/consent + may dispatch SMS; no `calendar_arrived()` — hard-exits/double-encounter; no tracker sync); chip filters `pc_eventStatus=1` + not-cancelled + facility scope; check-in keyed on `pc_eid`+`appt_date` with recurring guard and one-way status write; §4.2 reception gains `patients appt`; §6.7 sequence diagram renumbered §6.8 |
 | 1.9.1 | 2026-06-10 | §6.7.8 edge cases closed | Audited all 8 residual areas against code and resolved them (all LOW): timezone alignment (`globals.php` PHP+MySQL TZ); reporting orthogonality (appointments_report `fetchAppointments` vs `new_visit`); PHI deep-links internal + `noreferrer`; no core audit on `updateAppointmentStatus` (no double-log); i18n via `xl_appt_category()`; idempotent concurrency; idempotent globals + no backfill; no-show is core `apptstat '?'`. §6.7.8 rewritten "Audited edge cases (resolved)" with evidence |

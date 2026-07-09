@@ -4,7 +4,7 @@
 |-------|-------|
 | Document version | 0.6.51 |
 | Status | Draft for review — aligned to PRD v1.20.50; **M1b Registration form** approved; companion specs COM + M1a **approved Phase 1**; Chart Depth §7.13–§7.16; Lab Ops §7.17–§7.20; Pharm Ops §7.21–§7.24; Bill Ops §7.25–§7.26; Admin Hub §7.27–§7.28; Report Hub §7.29; Clinical Doc Hub §7.30; Queue Bridge Hub §7.31; **Patient Registry** §7.32; **T1-F18 legacy strip** §4.11.8; M7 §7.10.18–7.10.20; **V1.1-PRINT-RX** §7.4.7 / §7.6.14 |
-| Companion to | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.49), [NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) (v1.0.0), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.36), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.6), [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) (v1.0.3), [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.1), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (v1.0.9), [NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) (v1.0.0), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.15), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.9), [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.9), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.4), [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.3) |
+| Companion to | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.49), [NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) (v1.0.0), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.36), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.6), [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) (v1.0.3), [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.1), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (v1.0.9), [NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) (v1.0.0), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.15), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.9), [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.9), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.4), [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.3) |
 | Audience | Product, design, frontend engineers, QA |
 | Purpose | Page-level build spec for New Clinic pages and chart-depth panels — wireframes, components, state behavior, AJAX contracts, acceptance — design only, no code |
 | Module status | `oe-module-new-clinic` not yet built. This document is the page-level build spec, complementing PRD §7.4 (module skeleton) and §M0–M7 (functional requirements) |
@@ -69,7 +69,7 @@ This document defines **what each New Clinic page looks like and how it behaves*
 | [PRD](./NEW_CLINIC_V1_PRD.md) | Modules, requirements (M-IDs), data model, ACL, integration |
 | [User Workflows](./NEW_CLINIC_V1_USER_WORKFLOWS.md) | Who does what in what order, frameworks, exceptions |
 | [UI/UX Design Plan](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) | Cross-cutting principles, tokens, component catalog, module map |
-| [MRD Redesign](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) | Full chart depth view |
+| [MRD Redesign](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) | Full chart depth view |
 | [Chart Depth](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) | Ledger, referrals, export — beyond MRD tabs |
 | **This doc** | Page-level UI, components, state behavior, AJAX, acceptance |
 
@@ -579,20 +579,20 @@ Added when `tier >= 2` or `dto instanceof ActiveConsultDto`.
 | Routing chips | Visit flags + core polls | Lab ordered, Rx pending, **Results ready** (M4-F11) |
 | **Documentation signed** | `EncounterSignService` via M0-F24 | When signed: green **Signed** + check icon. When unsigned **and** `require_esign_before_complete_consult` = 1: red **Unsigned — sign before complete** + icon. When unsigned **and** config = 0: amber **Unsigned — payment blocked** + icon (workflow — not clinical alarm). **Complete consult** disabled when unsigned **only if** config = 1 (M4-F25). After reopen on signed visit: chip **stays Signed** (§4.18, §6.1l) |
 | **Supervising provider** | `form_encounter.supervisor_id` | Chip **Supervising: Dr {name}** when set; absent when null (M4-F28) |
-| Primary banner action | Role + visit state | See [MRD §10.2](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#102-banner-primary-action-by-visit-state) / USER_WORKFLOWS §12.2.5 |
+| Primary banner action | Role + visit state | See [MRD §10.2](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#102-banner-primary-action-by-visit-state) / USER_WORKFLOWS §12.2.5 |
 
 #### 4.11.3 Open full chart link (all hosts)
 
 | Property | Value |
 |----------|-------|
 | Label | `Open full chart` (`xlt`) |
-| Target | Redesigned **full patient chart** (module route when T1 wraps MRD). **Default tab = role default** per [MRD §10.1](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#101-default-tab-on-open) (D-MRD-13): reception/cashier → Profile; nurse/doctor/admin → Overview; lab/pharmacy → Clinical. Hosts may pass explicit `?tab=` (e.g. M1a-F08 → `tab=profile`). **Never** the stock 25-card dashboard layout. |
+| Target | Redesigned **full patient chart** (module route when T1 wraps MRD). **Default tab = role default** per [MRD §10.1](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#101-default-tab-on-open) (D-MRD-13): reception/cashier → Profile; nurse/doctor/admin → Overview; lab/pharmacy → Clinical. Hosts may pass explicit `?tab=` (e.g. M1a-F08 → `tab=profile`). **Never** the stock 25-card dashboard layout. |
 | Window | **`target="_blank"`** `rel="noopener noreferrer"` — **required** (D-M4-NAV-1b) |
 | Session | `pid` only — **no** encounter session bind; desk tab stays on Doctor Desk |
 | Events | **Do not** fire `EVENT_LEFT_DOCTOR_DESK` on chart open |
 | Training | *“Desk answers what next? Chart answers what happened before?”* — [USER_WORKFLOWS §17.0h](./NEW_CLINIC_V1_USER_WORKFLOWS.md#170h-clinical-decision-at-the-desk) |
 
-**V1.1 (P1 — not pilot-blocking):** Banner chip taps deep-link to MRD tab anchors — allergies → `#clinical-allergies`, meds → `#clinical-meds`, problems → `#clinical-problems`, labs → `#clinical-labs`, background → `#clinical-background`, vitals → `#clinical-vitals` ([MRD §6.3](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#63-banner-deep-links-v11--p1), [§4.14](./NEW_CLINIC_V1_PAGE_DESIGNS.md#414-mrd-clinical-tab--build-spec-t1-f16-d-mrd-10)).
+**V1.1 (P1 — not pilot-blocking):** Banner chip taps deep-link to MRD tab anchors — allergies → `#clinical-allergies`, meds → `#clinical-meds`, problems → `#clinical-problems`, labs → `#clinical-labs`, background → `#clinical-background`, vitals → `#clinical-vitals` ([MRD §6.3](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#63-banner-deep-links-v11--p1), [§4.14](./NEW_CLINIC_V1_PAGE_DESIGNS.md#414-mrd-clinical-tab--build-spec-t1-f16-d-mrd-10)).
 
 **Doctor Desk:** Opening full chart while `with_doctor` must **not** replace the desk in the same tab.
 
@@ -778,7 +778,7 @@ On mismatch, show blocking banner — role shortcuts disabled until **`restore_e
 
 ### 4.14 MRD Clinical tab — build spec (T1-F16, D-MRD-10)
 
-**Host:** `demographics.php?tab=clinical` (MRD Zone C). Normative IA: [MRD §8.9](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#89-clinical-tab--layout--anchors-d-mrd-10) · taxonomy [PRD §6.1h](./NEW_CLINIC_V1_PRD.md#61h-longitudinal-chart-taxonomy--history-vs-assessments).
+**Host:** `demographics.php?tab=clinical` (MRD Zone C). Normative IA: [MRD §8.9](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#89-clinical-tab--layout--anchors-d-mrd-10) · taxonomy [PRD §6.1h](./NEW_CLINIC_V1_PRD.md#61h-longitudinal-chart-taxonomy--history-vs-assessments).
 
 **Purpose:** Single build spec for longitudinal **Background** + structured lists + **This visit** assessments — closes History vs Assessments gap. Full background spec: [MEDICAL_HISTORY_BACKGROUND](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md).
 
@@ -845,7 +845,7 @@ May batch sections 2–6 in one fetch V1; section 7 refetches when active visit 
 
 ### 4.19 MRD host summary strips (M11)
 
-**Host:** MRD Profile and Clinical tabs (`demographics.php?tab=profile|clinical`). Normative: [MRD §8.10](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#810-mrd-host-summary-strips-chart-depth-entry) · product [M11](./NEW_CLINIC_V1_PRD.md#module-m11--chart-depth).
+**Host:** MRD Profile and Clinical tabs (`demographics.php?tab=profile|clinical`). Normative: [MRD §8.10](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#810-mrd-host-summary-strips-chart-depth-entry) · product [M11](./NEW_CLINIC_V1_PRD.md#module-m11--chart-depth).
 
 #### Profile — Payments strip
 
@@ -884,7 +884,7 @@ Placed **above** §4.14 section 7 (**This visit**). **Create referral** button i
 | Shown when | `enable_lab_ops` = 1 AND (pending orders on active encounter OR recent results) |
 | CTAs | **Open in Lab Ops** → §7.17; **View trends** → `#clinical-labs` |
 
-Normative: [MRD §8.10.3](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8103-clinical--labs-strip-m12-entry) · [M12](./NEW_CLINIC_V1_PRD.md#module-m12--lab-operations-hub).
+Normative: [MRD §8.10.3](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8103-clinical--labs-strip-m12-entry) · [M12](./NEW_CLINIC_V1_PRD.md#module-m12--lab-operations-hub).
 
 ```text
 ┌─ Labs ──────────────────────────────────────────────────────────────────┐
@@ -908,7 +908,7 @@ Normative: [MRD §8.10.3](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8103-clinical--
 | Shown when | `enable_pharm_ops` = 1 AND (undispensed Rx on active encounter OR recent dispense) |
 | CTAs | **Open in Pharm Ops** → §7.21; **View meds** → `#clinical-meds` |
 
-Normative: [MRD §8.10.5](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8105-clinical--meds-strip-m13-entry) · [M13](./NEW_CLINIC_V1_PRD.md#module-m13--pharmacy-operations-hub).
+Normative: [MRD §8.10.5](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8105-clinical--meds-strip-m13-entry) · [M13](./NEW_CLINIC_V1_PRD.md#module-m13--pharmacy-operations-hub).
 
 ```text
 ┌─ Medications ───────────────────────────────────────────────────────────┐
@@ -3092,7 +3092,7 @@ Opens from the right side when user clicks **More details…** in the Visit deta
 | Badges | URGENT, Skipped triage, **Direct lab**, **Pharmacy walk-in**, **Referral on file**, Estimated DOB, Override flags |
 | Vitals chip (today) | If captured |
 | Chief complaint | If captured |
-| Audit timeline | Last **5** operational events per [MRD §8.6](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#86-audit-timeline--shared-contract-mrd--visit-board): `visit_created`, `state_changed` (incl. skip-triage subtitle), `routing_confirmed`, `visit_cancelled`, optional `hard_assigned` (V1.2). **Not** clinical note text — **View full history** → MRD Overview `?tab=overview&visit_id=` (M2-F12); payload `AuditTimelineItemDto[]` per [MRD §8.7](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#87-ajax--dto-contracts-t1-f15-m0-f27) |
+| Audit timeline | Last **5** operational events per [MRD §8.6](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#86-audit-timeline--shared-contract-mrd--visit-board): `visit_created`, `state_changed` (incl. skip-triage subtitle), `routing_confirmed`, `visit_cancelled`, optional `hard_assigned` (V1.2). **Not** clinical note text — **View full history** → MRD Overview `?tab=overview&visit_id=` (M2-F12); payload `AuditTimelineItemDto[]` per [MRD §8.7](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#87-ajax--dto-contracts-t1-f15-m0-f27) |
 | Actions | *(in modal footer — §4.16)* drawer shows **Close drawer** + **View full history** only |
 
 ### 7.8.8 Filters
@@ -3854,7 +3854,7 @@ Same pattern as Cashier Take payment (M5-F15, §7.7.4).
 
 ### 7.14.1 Purpose
 
-Create, list, and print **outbound referral letters** and general correspondence linked to an encounter. Distinct from **inbound** referral scan (`referral_document_id` at Start visit — PRD D34). Full spec: [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md). Normative summary: [CHART_DEPTH §10](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#10-referrals-transactions--correspondence).
+Create, list, and print **outbound referral letters** and general correspondence linked to an encounter. Distinct from **inbound** referral scan (`referral_document_id` at Start visit — PRD D34). Full spec: [PATIENT_REFERRALS_LETTERS](./done/NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md). Normative summary: [CHART_DEPTH §10](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#10-referrals-transactions--correspondence).
 
 **Staff question:** *“Write and print a referral for this consult.”*
 
@@ -5459,5 +5459,5 @@ This is the consolidated QA checklist mapping every page to PRD F-IDs.
 
 ---
 
-*For requirements, data model, ACL keys, and OpenEMR integration, see [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md). For staff behavior and exception flows, see [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md). For the redesigned full chart, see [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md).*
+*For requirements, data model, ACL keys, and OpenEMR integration, see [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md). For staff behavior and exception flows, see [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md). For the redesigned full chart, see [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md).*
 

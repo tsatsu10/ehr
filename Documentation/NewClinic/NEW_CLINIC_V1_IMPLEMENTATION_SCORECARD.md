@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | **Last audited** | 2026-07-09 |
-| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260709batch6` |
+| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260709batch7` |
 | **Maintainer** | Engineering lead updates after each sprint; Product owns pilot sign-off |
 | **How to update** | Change `%` and `Status` cells; bump **Last audited**; sync PRD §5.6 row if shell status changes |
 
@@ -60,7 +60,7 @@
 | COM | Communications Hub | Done | **80** | Post-pilot | Eng | Partial | Phase 1 approved; advanced comms TBD |
 | S1 | Scheduling & Flow | Done | **85** | Post-pilot | Eng | Partial | S-P12 lane prefs; some calendar edge cases |
 | T1 | Theme & shell | Done | **90** | Yes | Eng | Done | Twig shell + React islands |
-| MRD | Patient chart (B7) | Done | **88** | Yes | Eng | Done | Activity feed; role-default tab (D-MRD-13) |
+| MRD | Patient chart (B7) | Done | **92** | Yes | Eng | Done | §17 eng-closed (spec v0.2.37 incl. `hide_dashboard_cards`); pilot-scale perf + trainer drills |
 | T2 | Globals profile | Partial | **40** | Yes | Eng | Stub | Installer preset doc; not full automation |
 
 **§5.6 mean feature % (all modules):** **87**  
@@ -77,7 +77,7 @@
 | **V1.1-RTb** | `enable_advisory_routing` | **85** | Eng | Done | `VisitRoutingService`, queue chip, override modal |
 | **V1.1-OPS** | per-feature §23 | **30** | Eng | Partial | Faster poll, surname warning, MoMo label scattered |
 | **V1.1-CDa** | `enable_chart_depth_finance` | **85** | Eng | Done | payments island; menu cutover |
-| **V1.1-CDb** | `enable_chart_depth_referral` | **88** | Eng | Done | referrals island + 3-step wizard, print/status tracking, `new_referral_meta` |
+| **V1.1-CDb** | `enable_chart_depth_referral` | **92** | Eng | Done | wizard + D-REF-8 print confirm, D-REF-9 guard, D-REF-12 read-only, Referral issued chip, Visits-row link (spec v0.1.3) |
 | **V1.1-CDc** | `enable_chart_depth_export` | **80** | Eng | Done | export presets |
 | **V1.1-LAB** | `enable_lab_ops` | **78** | Eng | Partial | worklist, results, panels |
 | **V1.1-LAB-ORD** | `enable_lab_panel_order` | **70** | Eng | Partial | Doctor desk `LabPanelModal` |
@@ -300,6 +300,7 @@ Completed comprehensive Front Desk UX overhaul (sp182touch → sp191fuzzydup):
 | 2026-07-08 | Engineering | **AUDIT-13 doc-sync:** M8-F07/M9-F06 skip-to-payment confirmed restored (AUDIT-1); scorecard samples added; PRD §12.4 flag matrix reconciled with `install.sql`; CLAUDE.md island/cashier wording fixed; `new/` index consolidated |
 | 2026-07-08 | Engineering | **Spec-completion batches 1–5:** 19 companion specs audited against code, gaps fixed (payment-history quintet, enriched activity feed, role picker, admin menu cutover, CDb referral wizard + `new_referral_meta`, Ghana HIS pack, SDOH chips, pilot wrappers, core-ACL grants); 15 specs archived to `done/`; AUDIT-1–15 refactor roadmap complete; golden-path E2E 2/2; asset `20260708chartdepth1` |
 | 2026-07-09 | Engineering | **Spec-completion batch 6:** M1a/M16/M10 implementation-audit closure (spec v1.0.10 / v0.1.4 / v0.2.2); `reports.hub_advanced_open` distinct audit event (§16.3); `registry-signoff` + report-hub smoke re-verified green; scorecard rollup + stale cells refreshed; asset `20260709batch6` |
+| 2026-07-09 | Engineering | **Spec-completion batch 7:** MRD/B7/Referrals closure (spec v0.2.37 / v0.1.2 / v0.1.3) — `hide_dashboard_cards` §17.6 mapping, Referral issued chip (REF-4/D34), D-REF-8 print identity confirm, D-REF-9 encounter guard, D-REF-12 read-only status gating, D-REF-3 wrapper LBTref sort, §503 Visits-row referrals link; asset `20260709batch7` |
 
 ---
 

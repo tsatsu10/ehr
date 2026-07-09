@@ -20,8 +20,8 @@ Read in this order for a full picture:
 
 | Spec | Module | Status |
 |------|--------|--------|
-| [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) | MRD / `core.mrd` | Draft v0.2.36 |
-| [NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md) | **B7** MRD primary redesign + legacy chart boundary research | Draft v0.1.1 |
+| [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) | MRD / `core.mrd` | **Implementation-closed v0.2.37** (archived in done/) |
+| [NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md) | **B7** MRD primary redesign + legacy chart boundary research | **Implementation-closed v0.1.2** (archived in done/; trainer checklist open) |
 | [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) | M11 Chart Depth | Draft v0.1.15 |
 | [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) | M12 Lab Operations Hub | Draft v0.1.9 |
 | [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) | M13 Pharmacy Operations Hub | Draft v0.1.9 |
@@ -38,7 +38,7 @@ Read in this order for a full picture:
 | [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) | M18 Queue Bridge Hub (scheduling ↔ visit queue) | Draft v0.1.3 |
 | [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) | Clinical → Background / History & Lifestyle (T1-F20 read · stock edit) | Draft v0.1.1 |
 | [NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) | Patient payment history / Ledger (M11-F11 wrapper · V1.1-CDa) | Audit closure v0.1.1 |
-| [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) | Patient referrals & letters / Transactions (M11-F11 wrapper · V1.1-CDb) | Audit closure v0.1.2 |
+| [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) | Patient referrals & letters / Transactions (M11-F11 wrapper · V1.1-CDb) | **Implementation-closed v0.1.3** (archived in done/) |
 | [NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) | Patient clinical export / Reports (M11-F11 wrapper · V1.1-CDc presets) | Draft v0.1.1 |
 | [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) | T1 legacy chart overlay (stock `patient_file` visit context) | Draft v0.1.2 |
 

@@ -2,9 +2,9 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 0.1.1 |
+| **Document version** | 0.1.2 |
 | **Status** | Draft for review — **B7** build slice; integrates MRD v0.2.30 + Legacy Chart Context v0.1.2 |
-| **Companion to** | [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (normative MRD IA), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (stock chart boundary), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (T1-F20 Background), [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.41), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.45), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.9) |
+| **Companion to** | [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (normative MRD IA), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (stock chart boundary), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (T1-F20 Background), [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.41), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.45), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.9) |
 | **Audience** | Product, design, clinical leads, trainers, implementers, QA |
 | **Primary market** | Private outpatient clinics — **Ghana & West Africa** |
 | **Build milestone** | **B7** — redesigned full patient chart replaces stock Medical Record Dashboard for Clinic roles |
@@ -45,7 +45,7 @@ Interim / legacy: Stock chart pages → Legacy patient context strip (T1-F18)
 
 ### 1.2 Why this document exists
 
-Companion specs ([MRD](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md), [Legacy Chart Context](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md)) define **what to build**. This document adds:
+Companion specs ([MRD](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md), [Legacy Chart Context](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md)) define **what to build**. This document adds:
 
 - **Research synthesis** — validated pain points from stock OpenEMR, community feedback, and codebase audit
 - **UI/UX and competitive patterns** — how top EHRs and Africa-focused products solve the same problems
@@ -87,7 +87,7 @@ Evidence from stock codebase audit, OpenEMR community threads, and third-party U
 |------|----------|--------|
 | **Chatty first load** | Stock dashboard fires **multiple parallel AJAX fragment loads** when cards expand (`lbf_fragment.php`, card loaders) | Slow first paint on **shared clinic tablets** and 3G backup links |
 | **Monolithic controller** | Patient summary screen ~**2,000 lines** — demographics, billing, insurance, cards, events in one procedural file | Hard to extend without forking; New Clinic uses **module overlay + events** instead |
-| **Iframe shell** | Knockout tab + iframe pattern ([FRONTEND_2026 plan](./FRONTEND_2026_MODERNIZATION_PLAN.md)) | Multi-tab wrong-patient risk; no shared patient ribbon across legacy pages |
+| **Iframe shell** | Knockout tab + iframe pattern ([FRONTEND_2026 plan](../FRONTEND_2026_MODERNIZATION_PLAN.md)) | Multi-tab wrong-patient risk; no shared patient ribbon across legacy pages |
 | **Silent patient switch** | `set_pid` in URL changes session patient without confirm dialog | Reception opens Kwame’s ledger while doctor still thinks session is Akua |
 
 ### 2.3 US-centric and role-blind design
@@ -259,7 +259,7 @@ Normative detail: [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBO
 
 ### 6.3 What moves out of MRD (Chart Depth M11)
 
-Ledger detail, referral letters, clinical export PDF, external care panels — **slide-over depth panels** linked from summary strips, not a sixth tab. See [Chart Depth spec](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md).
+Ledger detail, referral letters, clinical export PDF, external care panels — **slide-over depth panels** linked from summary strips, not a sixth tab. See [Chart Depth spec](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md).
 
 ### 6.4 Visit-state reactive banner
 
@@ -299,7 +299,7 @@ Descriptions use **English names only** — no source code file references.
 
 | Capability | What it does (plain English) |
 |------------|------------------------------|
-| **Background section** | Family, social, and past medical history narrative — **T1-F20** read summary at `#clinical-background`; **Edit history** opens stock editor; detail [MEDICAL_HISTORY_BACKGROUND](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md). |
+| **Background section** | Family, social, and past medical history narrative — **T1-F20** read summary at `#clinical-background`; **Edit history** opens stock editor; detail [MEDICAL_HISTORY_BACKGROUND](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md). |
 | **Problems section** | Structured active and resolved problem list. |
 | **Allergies section** | Allergy list including valid “None known” documentation. |
 | **Medications section** | Active prescriptions and medication list. |
@@ -320,7 +320,7 @@ Descriptions use **English names only** — no source code file references.
 | **Past visits list** | 20 most recent finished visits; load more in pages of 20. |
 | **Inline audit expand** | Last five queue/audit events per visit row without opening full chart. |
 | **View documentation** | Opens encounter forms list for that visit’s clinical note — not just operational audit. |
-| **Export visit summary** | When chart depth export enabled: PDF summary for patient or employer — [PATIENT_CLINICAL_EXPORT](./done/NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) |
+| **Export visit summary** | When chart depth export enabled: PDF summary for patient or employer — [PATIENT_CLINICAL_EXPORT](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) |
 
 ### 7.5 Profile and Messages tab capabilities
 
@@ -331,7 +331,7 @@ Descriptions use **English names only** — no source code file references.
 | **Documents and ID** | Photos, scans, disclosures, amendments. |
 | **Payments strip** | Balance due and last receipt with link to full payment history panel. |
 | **Coverage subsection** | Insurance fields only when insurance feature enabled — collapsed by default. |
-| **Messages tab** | Staff notes, care team, patient reminders, e-prescribing panel when enabled — patient-scoped; clinic-wide inbox is [COM hub](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) |
+| **Messages tab** | Staff notes, care team, patient reminders, e-prescribing panel when enabled — patient-scoped; clinic-wide inbox is [COM hub](./NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) |
 
 ### 7.6 Backend services (plain English)
 
@@ -530,7 +530,7 @@ flowchart TB
 
 ### 11.1a Pilot interim chart surfaces (before B7)
 
-See also [USER_WORKFLOWS §17.1a](./NEW_CLINIC_V1_USER_WORKFLOWS.md#171a-pilot-interim--which-chart-surface-before-b7) and [PRD §5.6.1](./NEW_CLINIC_V1_PRD.md#561-interim-full-chart-pilot-week-1--before-b7-mrd-ships).
+See also [USER_WORKFLOWS §17.1a](../NEW_CLINIC_V1_USER_WORKFLOWS.md#171a-pilot-interim--which-chart-surface-before-b7) and [PRD §5.6.1](../NEW_CLINIC_V1_PRD.md#561-interim-full-chart-pilot-week-1--before-b7-mrd-ships).
 
 ```text
 Pilot week 1–4 (B7 pending):
@@ -568,7 +568,7 @@ After B7:
 6. Module absent: no JavaScript errors; generic chart still works.
 7. **Open full chart** lands on **role default tab** (reception → Profile, doctor → Overview) — D-MRD-13.
 
-Full normative checklists: [MRD §17](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#17-acceptance-criteria) · [LEGACY §16](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md#16-acceptance-criteria) · PRD **§21.1k**, **§21.1l**, **§21.1aa**, **§21.1z**.
+Full normative checklists: [MRD §17](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#17-acceptance-criteria) · [LEGACY §16](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md#16-acceptance-criteria) · PRD **§21.1k**, **§21.1l**, **§21.1aa**, **§21.1z**.
 
 ### 11.3 Trainer checklist (Ghana)
 
@@ -577,7 +577,7 @@ Full normative checklists: [MRD §17](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#17-
 - [ ] Saturday scenario: same PC, two doctors, T1-F19 restore
 - [ ] Pilot interim: know which surface for ledger vs profile ([§11.1a](#111a-pilot-interim-chart-surfaces-before-b7))
 - [ ] After B7: **Open full chart** lands on **role default tab** (not always Overview)
-- [ ] COM hub vs MRD Messages tab ([USER_WORKFLOWS §17.3a](./NEW_CLINIC_V1_USER_WORKFLOWS.md#173a-com-hub-vs-mrd-messages-tab))
+- [ ] COM hub vs MRD Messages tab ([USER_WORKFLOWS §17.3a](../NEW_CLINIC_V1_USER_WORKFLOWS.md#173a-com-hub-vs-mrd-messages-tab))
 - [ ] Paper queue # matches strip and Visit Board
 
 ---
@@ -586,9 +586,10 @@ Full normative checklists: [MRD §17](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#17-
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.1.2 | 2026-07-09 | **Implementation audit** — §11.2 engineering rows verified via MRD v0.2.37 + referrals v0.1.3 closures (tests 39–42 code paths, HIST/EXP/FIN/REF suites); §11.3 trainer checklist remains open (pilot activity) |
 | 0.1.1 | 2026-06-24 | **Audit closure** — D-MRD-13; tests 39–42 + §21.1k/l/z sign-off checklist; §11.1a pilot interim; M0 dependency; V1.2-CTX phasing note; companion sync |
 | 0.1.0 | 2026-06-24 | Initial comprehensive B7 research doc — OpenEMR pain points, UI/UX principles, EHR patterns, Ghana context, MRD + legacy overlay plain-English function glossary |
 
 ---
 
-*Normative IA and wireframes: [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) · Legacy boundary: [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) · Product requirements: [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) §5.6.1, §6.1g–§6.1j, B7, T1-F18/F19.*
+*Normative IA and wireframes: [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) · Legacy boundary: [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) · Product requirements: [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) §5.6.1, §6.1g–§6.1j, B7, T1-F18/F19.*
