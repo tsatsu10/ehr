@@ -48,17 +48,19 @@ function credentials() {
 function generatePatientName() {
   const timestamp = Date.now();
   const suffix = String(timestamp).slice(-8);
+  // Registration validates names as letters-only — map digits to letters.
+  const letterSuffix = suffix.replace(/\d/g, (d) => 'abcdefghij'[Number(d)]);
   return {
-    fname: `E2E${suffix.slice(0, 4)}`,
-    lname: `Doc${suffix}`,
-    fullName: `E2E${suffix.slice(0, 4)} Doc${suffix}`,
+    fname: `Etoe${letterSuffix.slice(0, 4)}`,
+    lname: `Doc${letterSuffix}`,
+    fullName: `Etoe${letterSuffix.slice(0, 4)} Doc${letterSuffix}`,
     phone: `0246${suffix.slice(-6).padStart(6, '0')}`,
     nationalId: `GHDOC${timestamp}`,
   };
 }
 
 async function waitForQueueCard(page, lname) {
-  const card = page.locator(`.nc-queue-card:has-text("${lname}")`).first();
+  const card = page.locator(`[class*="queue-card"]:has-text("${lname}")`).first();
   for (let attempt = 0; attempt < 15; attempt += 1) {
     if (await card.isVisible().catch(() => false) && await card.isEnabled().catch(() => false)) {
       return card;

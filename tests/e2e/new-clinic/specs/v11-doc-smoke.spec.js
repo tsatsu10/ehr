@@ -32,7 +32,7 @@ function readDocFixture() {
 }
 
 async function waitForQueueCard(page, lname) {
-  const card = page.locator(`.nc-queue-card:has-text("${lname}")`).first();
+  const card = page.locator(`[class*="queue-card"]:has-text("${lname}")`).first();
   for (let attempt = 0; attempt < 15; attempt += 1) {
     if (await card.isVisible().catch(() => false) && await card.isEnabled().catch(() => false)) {
       return card;

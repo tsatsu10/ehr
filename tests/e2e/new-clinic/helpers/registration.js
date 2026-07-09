@@ -85,10 +85,22 @@ async function registerAndStartVisit(page, patient) {
     throw new Error('Registration save did not complete');
   }
 
-  await page.waitForResponse(
-    (resp) => resp.url().includes('visit.start') && resp.ok(),
-    { timeout: 60000 },
-  ).catch(() => {});
+  // Save & start visit lands on the Start visit panel (M1b §10) — the visit
+  // itself starts from the explicit Start visit button on that panel.
+  const startVisitBtn = page.locator('#nc-start-visit-btn');
+  await Promise.race([
+    startVisitBtn.waitFor({ state: 'visible', timeout: 20000 }),
+    startSuccess.waitFor({ state: 'visible', timeout: 20000 }),
+  ]).catch(() => {});
+
+  if (await startVisitBtn.isVisible().catch(() => false)) {
+    const startResponse = page.waitForResponse(
+      (resp) => resp.url().includes('visit.start') && resp.ok(),
+      { timeout: 60000 },
+    );
+    await startVisitBtn.click();
+    await startResponse.catch(() => {});
+  }
 
   await expect(startSuccess).toBeVisible({ timeout: 30000 });
   if (await startError.isVisible().catch(() => false)) {

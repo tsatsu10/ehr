@@ -19,17 +19,19 @@ test.describe.configure({ timeout: 300_000 });
 function generatePatientName() {
   const timestamp = Date.now();
   const suffix = String(timestamp).slice(-8);
+  // Registration validates names as letters-only — map digits to letters.
+  const letterSuffix = suffix.replace(/\d/g, (d) => 'abcdefghij'[Number(d)]);
   return {
-    fname: `E2E${suffix.slice(0, 4)}`,
-    lname: `Pt${suffix}`,
-    fullName: `E2E${suffix.slice(0, 4)} Pt${suffix}`,
+    fname: `Etoe${letterSuffix.slice(0, 4)}`,
+    lname: `Pt${letterSuffix}`,
+    fullName: `Etoe${letterSuffix.slice(0, 4)} Pt${letterSuffix}`,
     phone: `0244${suffix.slice(-6).padStart(6, '0')}`,
     nationalId: `GHA${timestamp}`,
   };
 }
 
 async function waitForQueueCard(page, lname) {
-  const card = page.locator(`.nc-queue-card:has-text("${lname}")`).first();
+  const card = page.locator(`[class*="queue-card"]:has-text("${lname}")`).first();
   for (let attempt = 0; attempt < 8; attempt += 1) {
     if (await card.isVisible().catch(() => false) && await card.isEnabled().catch(() => false)) {
       return card;
@@ -216,7 +218,7 @@ test.describe('New Clinic Golden Path Workflow', () => {
       await page.fill('#nc-pharmacy-skip-reason', 'E2E golden path — skip pharmacy queue');
       await page.locator('#nc-pharmacy-skip-modal').getByRole('button', { name: 'Skip to payment' }).click();
       await expect(page.locator('#nc-pharmacy-skip-modal')).toBeHidden({ timeout: 15000 });
-      await expect(page.locator(`.nc-queue-card:has-text("${patient.lname}")`)).toHaveCount(0, {
+      await expect(page.locator(`[class*="queue-card"]:has-text("${patient.lname}")`)).toHaveCount(0, {
         timeout: 15000,
       });
     });

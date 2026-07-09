@@ -23,11 +23,11 @@ async function completeCashierVisit(page, patient, zeroReason) {
     await closeZeroBtn.click();
     await expect(page.getByRole('heading', { name: 'Close without charge' })).toBeVisible();
     await page.fill('#nc-cashier-close-zero-reason', zeroReason);
-    await page.locator('.modal.show').getByRole('button', { name: 'Confirm' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Confirm', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Close without charge' })).toBeHidden({
       timeout: 15000,
     });
-    await expect(page.locator(`.nc-queue-card:has-text("${patient.lname}")`)).toHaveCount(0, {
+    await expect(page.locator(`[class*="queue-card"]:has-text("${patient.lname}")`)).toHaveCount(0, {
       timeout: 15000,
     });
     return;
@@ -41,8 +41,11 @@ async function completeCashierVisit(page, patient, zeroReason) {
   await page.fill('#nc-cash-received', amount);
   await page.locator('#nc-cashier-pay-btn').click();
 
+  await page.locator('#nc-cashier-pay-confirm-modal')
+    .waitFor({ state: 'visible', timeout: 10000 })
+    .catch(() => {});
   if (await page.locator('#nc-cashier-pay-confirm-modal').isVisible().catch(() => false)) {
-    await page.locator('#nc-cashier-pay-confirm-btn').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Confirm payment' }).click();
   }
 
   await expect(page.locator('#nc-cashier-receipt-modal, .alert-success')).toBeVisible({ timeout: 15000 });

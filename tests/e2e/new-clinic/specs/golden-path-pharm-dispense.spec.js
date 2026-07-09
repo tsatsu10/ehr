@@ -21,17 +21,19 @@ test.describe.configure({ timeout: 300_000 });
 function generatePatientName() {
   const timestamp = Date.now();
   const suffix = String(timestamp).slice(-8);
+  // Registration validates names as letters-only — map digits to letters.
+  const letterSuffix = suffix.replace(/\d/g, (d) => 'abcdefghij'[Number(d)]);
   return {
-    fname: `E2E${suffix.slice(0, 4)}`,
-    lname: `Rx${suffix}`,
-    fullName: `E2E${suffix.slice(0, 4)} Rx${suffix}`,
+    fname: `Etoe${letterSuffix.slice(0, 4)}`,
+    lname: `Rx${letterSuffix}`,
+    fullName: `Etoe${letterSuffix.slice(0, 4)} Rx${letterSuffix}`,
     phone: `0245${suffix.slice(-6).padStart(6, '0')}`,
     nationalId: `GHRX${timestamp}`,
   };
 }
 
 async function waitForQueueCard(page, lname) {
-  const card = page.locator(`.nc-queue-card:has-text("${lname}")`).first();
+  const card = page.locator(`[class*="queue-card"]:has-text("${lname}")`).first();
   for (let attempt = 0; attempt < 8; attempt += 1) {
     if (await card.isVisible().catch(() => false) && await card.isEnabled().catch(() => false)) {
       return card;
@@ -301,7 +303,7 @@ test.describe('New Clinic Pharm Ops Golden Path', () => {
         }
       }
 
-      await expect(page.locator(`.nc-queue-card:has-text("${patient.lname}")`)).toHaveCount(0, {
+      await expect(page.locator(`[class*="queue-card"]:has-text("${patient.lname}")`)).toHaveCount(0, {
         timeout: 20000,
       });
     });
