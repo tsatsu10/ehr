@@ -23,6 +23,7 @@ import { FacilityUserMatrix } from './people/FacilityUserMatrix';
 import { GaclAdvancedPanel } from './people/GaclAdvancedPanel';
 import { PasswordResetPanel } from './people/PasswordResetPanel';
 import { PeopleHelpPanel } from './people/PeopleHelpPanel';
+import { LockedAccountsCard } from './people/LockedAccountsCard';
 import { StaffAccessSummaryDrawer } from './people/StaffAccessSummaryDrawer';
 import { StaffDirectory } from './people/StaffDirectory';
 
@@ -238,6 +239,7 @@ export function PeopleAccessTab({
         <>
           {subTab === 'staff' && (
             <>
+              <LockedAccountsCard ajaxUrl={ajaxUrl} csrfToken={csrfToken} refreshKey={staffRefresh} />
               <StaffDirectory
                 ajaxUrl={ajaxUrl}
                 csrfToken={csrfToken}
