@@ -28,6 +28,19 @@ class ReportHubExportService
     }
 
     /**
+     * §16.3 — opening a stock report from the Advanced menu is a distinct audit
+     * event from an export run, so inspectors can separate views from extracts.
+     *
+     * @param array<string, mixed> $body
+     */
+    public static function resolveAuditEventName(array $body): string
+    {
+        return ($body['source'] ?? '') === 'advanced_open'
+            ? 'reports.hub_advanced_open'
+            : 'reports.export_run';
+    }
+
+    /**
      * @param array<string, mixed> $body
      * @return array<string, mixed>
      */
@@ -55,6 +68,7 @@ class ReportHubExportService
             $status = 'ok';
         }
         $message = trim((string) ($body['message'] ?? ''));
+        $auditEvent = self::resolveAuditEventName($body);
 
         $this->ensureTableExists();
 
@@ -80,7 +94,7 @@ class ReportHubExportService
 
         EventAuditLogger::getInstance()->newEvent(
             'reports',
-            'reports.export_run',
+            $auditEvent,
             $actorUserId,
             1,
             'report_key=' . $reportKey

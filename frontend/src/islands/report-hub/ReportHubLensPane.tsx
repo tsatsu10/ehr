@@ -120,9 +120,12 @@ export async function logReportOpen(
   reportKey: string,
   dateFrom?: string,
   dateTo?: string,
+  source?: 'advanced_open',
 ): Promise<void> {
   try {
     const body: Record<string, string> = { report_key: reportKey, status: 'ok' };
+    // §16.3 — the Advanced escape hatch audits as reports.hub_advanced_open, not export_run.
+    if (source) body.source = source;
     if (dateFrom) body.date_from = dateFrom;
     if (dateTo) body.date_to = dateTo;
     await oeFetch<{ id: number }>('reports.export_run', {

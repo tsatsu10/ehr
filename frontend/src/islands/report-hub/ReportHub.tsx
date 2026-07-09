@@ -145,7 +145,7 @@ export function ReportHub(props: ReportHubProps) {
     const handler = (event: Event) => {
       const anchor = (event.target as HTMLElement | null)?.closest<HTMLAnchorElement>('a[data-report-key]');
       if (!anchor?.dataset.reportKey) return;
-      void logReportOpen(props.ajaxUrl, props.csrfToken, anchor.dataset.reportKey);
+      void logReportOpen(props.ajaxUrl, props.csrfToken, anchor.dataset.reportKey, undefined, undefined, 'advanced_open');
     };
 
     menu.addEventListener('click', handler);

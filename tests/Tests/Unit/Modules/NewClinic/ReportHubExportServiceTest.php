@@ -139,4 +139,27 @@ class ReportHubExportServiceTest extends TestCase
             $config->set('report_hub_async_export_threshold', (string) $prevThreshold, 0);
         }
     }
+
+    public function testAdvancedOpenAuditsAsDistinctEvent(): void
+    {
+        // §16.3 — Advanced escape-hatch opens must not be conflated with export runs.
+        $this->assertSame(
+            'reports.hub_advanced_open',
+            ReportHubExportService::resolveAuditEventName(['source' => 'advanced_open'])
+        );
+        $this->assertSame(
+            'reports.export_run',
+            ReportHubExportService::resolveAuditEventName([])
+        );
+        $this->assertSame(
+            'reports.export_run',
+            ReportHubExportService::resolveAuditEventName(['source' => 'card_open'])
+        );
+
+        $recorded = $this->service->recordExportRun([
+            'report_key' => 'clinical_cohort',
+            'source' => 'advanced_open',
+        ], 1);
+        $this->assertSame('ok', $recorded['status']);
+    }
 }
