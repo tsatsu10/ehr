@@ -109,6 +109,8 @@ export interface ReferralsListData {
   offset?: number;
   can_create_referral?: boolean;
   create_referral_url?: string;
+  /** D-REF-8 — "Name · MRN" identity line for the print confirm. */
+  patient_label?: string;
 }
 
 export interface ExportIncludeOption {

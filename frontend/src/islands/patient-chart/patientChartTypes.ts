@@ -43,6 +43,8 @@ export interface ChartActiveVisit {
   require_esign_before_complete_consult?: boolean;
   /** D-FIN-8 — read-only charge total chip for finance-summary ACL */
   visit_charges_label?: string;
+  /** REF-4/D34 — active encounter has an outbound referral (≠ inbound "Referral on file"). */
+  referral_issued?: boolean;
 }
 
 export interface ChartSafety {
@@ -170,6 +172,8 @@ export interface ChartVisitRow {
   ancillary_badges?: string[];
   documentation_url?: string;
   export_visit_summary_url?: string;
+  /** §503/REF-4 — hub deep link filtered by this visit's encounter; null when CDb off or no view ACL. */
+  referrals_url?: string | null;
 }
 
 export interface ChartVisitsData {
@@ -259,6 +263,8 @@ export interface ClinicalData {
   vitals?: ClinicalVitalsSection;
   this_visit?: ClinicalThisVisitSection;
   active_encounter_id?: number | null;
+  /** MRD §17.6 — sections hidden via the legacy hide_dashboard_cards global. */
+  hidden_sections?: string[];
 }
 
 export interface ClinicalReferralsStrip {

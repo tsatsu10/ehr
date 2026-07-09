@@ -93,8 +93,19 @@ class ReferralCorrespondenceService
         $webroot = $GLOBALS['webroot'] ?? '';
         $canManage = AclMain::aclCheckCore('new_clinic', 'new_chart_depth_referral');
 
+        // D-REF-8 — identity line for the print confirm (Patient · MRN).
+        $patientRow = QueryUtils::querySingleRow(
+            'SELECT fname, lname, pubpid FROM patient_data WHERE pid = ?',
+            [$pid]
+        );
+        $patientLabel = is_array($patientRow)
+            ? trim((string) ($patientRow['lname'] ?? '') . ', ' . (string) ($patientRow['fname'] ?? ''), ', ')
+                . ((string) ($patientRow['pubpid'] ?? '') !== '' ? ' · MRN ' . (string) $patientRow['pubpid'] : '')
+            : '';
+
         return [
             'pid' => $pid,
+            'patient_label' => $patientLabel,
             'encounter_id' => $encounterId,
             'items' => array_map(function (array $item) use ($webroot, $canManage): array {
                 $item['print_url'] = $canManage
@@ -151,6 +162,17 @@ class ReferralCorrespondenceService
         $chiefComplaint = trim((string) ($body['chief_complaint'] ?? ''));
         $encounterId = (int) ($body['encounter_id'] ?? 0);
         $visitId = (int) ($body['visit_id'] ?? 0);
+        // D-REF-9 / G12 — a wizard launched from "This visit" must reference an
+        // encounter that belongs to this patient; anything else is a wrong-patient risk.
+        if ($encounterId > 0) {
+            $owned = QueryUtils::querySingleRow(
+                'SELECT encounter FROM form_encounter WHERE encounter = ? AND pid = ?',
+                [$encounterId, $pid]
+            );
+            if (!is_array($owned)) {
+                throw new \InvalidArgumentException('Encounter does not belong to this patient');
+            }
+        }
         $referDate = date('Y-m-d');
 
         $referTo = $department !== '' ? $destination . ' — ' . $department : $destination;
@@ -330,6 +352,35 @@ class ReferralCorrespondenceService
                  result_document_id = COALESCE(VALUES(result_document_id), result_document_id)',
             [$transactionId, $pid, $status, $resultDocumentId, $actorUserId]
         );
+    }
+
+    /**
+     * §503 / REF-4 — Visits-row "Referrals for this visit" deep link into the
+     * hub filtered by encounter; null when CDb is off or the user cannot view.
+     */
+    public function buildVisitReferralsUrl(int $pid, int $encounterId): ?string
+    {
+        if ($encounterId <= 0) {
+            return null;
+        }
+        $facilityId = $this->visitScope->resolveDefaultFacilityId();
+        if (!$this->isReferralStripEnabled($facilityId)) {
+            return null;
+        }
+        if (
+            !AclMain::aclCheckCore('new_clinic', 'new_chart_depth_referral')
+            && !AclMain::aclCheckCore('new_clinic', 'new_chart_depth')
+        ) {
+            return null;
+        }
+
+        $webroot = $GLOBALS['webroot'] ?? '';
+
+        return $webroot
+            . '/interface/modules/custom_modules/oe-module-new-clinic/public/chart-depth/referrals.php?pid='
+            . urlencode((string) $pid)
+            . '&encounter_id='
+            . urlencode((string) $encounterId);
     }
 
     private function isReferralStripEnabled(int $facilityId): bool

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ConfirmModal } from '@components/ConfirmModal';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { ncShadcnTableClass } from '@components/ncTableStyles';
 import { Button } from '@components/ui/button';
@@ -24,11 +25,13 @@ interface ReferralsPaneProps {
 function ReferralRowView({
   item,
   busy,
+  canManage,
   onPrint,
   onStatus,
 }: {
   item: ReferralRow;
   busy: boolean;
+  canManage: boolean;
   onPrint: (item: ReferralRow) => void;
   onStatus: (item: ReferralRow, status: string) => void;
 }) {
@@ -57,7 +60,8 @@ function ReferralRowView({
             Print
           </Button>
         )}
-        {nextStatus && (
+        {/* D-REF-12 — read-only hub hides status transitions along with create/reprint. */}
+        {canManage && nextStatus && (
           <Button
             variant="outline"
             size="sm"
@@ -84,7 +88,9 @@ export function ReferralsPane({ ajaxUrl, csrfToken, pid, encounterId }: Referral
   const [rows, setRows] = useState<ReferralRow[]>([]);
   const [createUrl, setCreateUrl] = useState<string | null>(null);
   const [canCreate, setCanCreate] = useState(false);
+  const [patientLabel, setPatientLabel] = useState('');
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [printConfirm, setPrintConfirm] = useState<ReferralRow | null>(null);
   const [rowBusyId, setRowBusyId] = useState<number | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -112,6 +118,7 @@ export function ReferralsPane({ ajaxUrl, csrfToken, pid, encounterId }: Referral
         if (cancelled) return;
 
         setRows(data.items ?? []);
+        setPatientLabel(data.patient_label ?? '');
         setCanCreate(!!data.can_create_referral);
         setCreateUrl(
           data.can_create_referral && data.create_referral_url ? data.create_referral_url : null
@@ -228,12 +235,38 @@ export function ReferralsPane({ ajaxUrl, csrfToken, pid, encounterId }: Referral
         csrfToken={csrfToken}
         pid={pid}
         encounterId={encounterId}
+        patientLabel={patientLabel}
         onClose={() => setWizardOpen(false)}
         onSaved={() => {
           setWizardOpen(false);
           setReloadKey((k) => k + 1);
         }}
       />
+
+      {/* D-REF-8 — identity confirm (Patient · MRN · Encounter date) before print POST. */}
+      <ConfirmModal
+        open={printConfirm !== null}
+        onClose={() => setPrintConfirm(null)}
+        title="Print referral"
+        modalId="nc-referral-print-confirm"
+        identityBanner={
+          <>
+            {patientLabel || 'Patient'}
+            {printConfirm?.occurred_at ? ` · Encounter ${printConfirm.occurred_at}` : ''}
+          </>
+        }
+        confirmLabel="Print"
+        submitting={printConfirm !== null && rowBusyId === (printConfirm.transaction_id ?? -1)}
+        onConfirm={() => {
+          if (printConfirm) {
+            const item = printConfirm;
+            setPrintConfirm(null);
+            void handlePrint(item);
+          }
+        }}
+      >
+        Confirm the patient identity before printing the referral letter.
+      </ConfirmModal>
 
       {!rows.length ? (
         <p className="text-[var(--oe-nc-text-muted)] mb-0">No referrals for this filter.</p>
@@ -255,8 +288,9 @@ export function ReferralsPane({ ajaxUrl, csrfToken, pid, encounterId }: Referral
                     key={`${row.transaction_id ?? idx}-${row.occurred_at ?? ''}`}
                     item={row}
                     busy={rowBusyId === (row.transaction_id ?? -1)}
+                    canManage={canCreate}
                     onPrint={(item) => {
-                      void handlePrint(item);
+                      setPrintConfirm(item);
                     }}
                     onStatus={(item, status) => {
                       void handleStatus(item, status);

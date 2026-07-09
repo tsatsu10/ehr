@@ -22,6 +22,7 @@ class PatientChartService
         private readonly VisitRowEnricher $rowEnricher = new VisitRowEnricher(),
         private readonly ClinicalExportService $clinicalExportService = new ClinicalExportService(),
         private readonly ClinicalDocHubLinkService $docHubLinks = new ClinicalDocHubLinkService(),
+        private readonly ReferralCorrespondenceService $referrals = new ReferralCorrespondenceService(),
     ) {
     }
 
@@ -126,6 +127,7 @@ class PatientChartService
             'facility_id' => $facilityId,
             'documentation_url' => $documentationUrl,
             'export_visit_summary_url' => $this->clinicalExportService->buildVisitExportUrl($pid, $encounterId),
+            'referrals_url' => $this->referrals->buildVisitReferralsUrl($pid, $encounterId),
         ];
     }
 }

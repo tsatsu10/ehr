@@ -110,6 +110,50 @@ class ReferralCorrespondenceWriteTest extends TestCase
         }
     }
 
+    public function testSaveReferralRejectsEncounterOfAnotherPatient(): void
+    {
+        // D-REF-9 / G12 — encounter_id must belong to the referral's pid.
+        $service = $this->serviceWithOpenGates();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Encounter does not belong');
+        $service->saveReferral([
+            'pid' => 1,
+            'encounter_id' => 999999903,
+            'destination_facility' => 'X',
+            'summary' => 'Y',
+        ], 1);
+    }
+
+    public function testReferralIssuedChipDetectsOutboundReferralByEncounter(): void
+    {
+        // REF-4 / D34 — chip keyed on new_referral_meta.encounter_id.
+        $context = new class extends \OpenEMR\Modules\NewClinic\Services\PatientContextService {
+            public function exposeHasOutboundReferral(?array $activeVisit): bool
+            {
+                return $this->encounterHasOutboundReferral($activeVisit);
+            }
+        };
+
+        $this->assertFalse($context->exposeHasOutboundReferral(null));
+        $this->assertFalse($context->exposeHasOutboundReferral(['encounter_id' => 0]));
+
+        QueryUtils::sqlStatementThrowException(
+            "INSERT INTO new_referral_meta (transaction_id, pid, encounter_id, status)
+             VALUES (999999901, 1, 999999901, 'printed')",
+            []
+        );
+        try {
+            $this->assertTrue($context->exposeHasOutboundReferral(['encounter_id' => 999999901]));
+            $this->assertFalse($context->exposeHasOutboundReferral(['encounter_id' => 999999902]));
+        } finally {
+            QueryUtils::sqlStatementThrowException(
+                'DELETE FROM new_referral_meta WHERE transaction_id = 999999901',
+                []
+            );
+        }
+    }
+
     private function serviceWithOpenGates(): ReferralCorrespondenceService
     {
         return new class extends ReferralCorrespondenceService {

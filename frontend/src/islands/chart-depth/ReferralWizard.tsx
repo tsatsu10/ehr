@@ -27,6 +27,8 @@ interface ReferralWizardProps {
   csrfToken: string;
   pid: number;
   encounterId?: number;
+  /** D-REF-8 — "Name · MRN" identity line shown on the preview step before print. */
+  patientLabel?: string;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -39,6 +41,7 @@ export function ReferralWizard({
   csrfToken,
   pid,
   encounterId,
+  patientLabel,
   onClose,
   onSaved,
 }: ReferralWizardProps) {
@@ -200,6 +203,14 @@ export function ReferralWizard({
 
           {step === 2 && (
             <div className="space-y-2 text-sm">
+              {/* D-REF-8 — identity confirm before Save & print POSTs referral_print. */}
+              <p
+                id="nc-referral-identity"
+                className="mb-2 rounded border border-[var(--oe-nc-border)] bg-[var(--oe-nc-surface-muted,#f5f7f9)] px-2 py-1.5 font-medium"
+              >
+                {patientLabel || 'Patient'}
+                {encounterId && encounterId > 0 ? ` · Encounter #${encounterId}` : ''}
+              </p>
               <p className="mb-1">
                 <strong>To:</strong> {destination}
                 {department ? ` — ${department}` : ''}

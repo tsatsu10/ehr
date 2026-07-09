@@ -79,6 +79,13 @@ function VisitRow({
             </a>
           </Button>
         )}
+        {visit.referrals_url && (
+          <Button variant="outline" size="sm" asChild>
+            <a href={visit.referrals_url} target="_top">
+              Referrals for this visit
+            </a>
+          </Button>
+        )}
         {isToday && visitBoardUrl && (
           <Button variant="ghost" size="sm" asChild>
             <a href={visitBoardUrl}>

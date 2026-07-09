@@ -142,10 +142,32 @@ HTML;
             document.title = label;
         }
     }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', retitle);
-    } else {
+    // D-REF-3 — referral rows (title=LBTref in the edit link, not the display
+    // label) sort to the top of the stock list; relative order preserved.
+    function sortReferralsFirst() {
+        var anchors = document.querySelectorAll('a[href*="add_transaction.php"][href*="title=LBTref"]');
+        var rows = [];
+        for (var i = 0; i < anchors.length; i++) {
+            var tr = anchors[i].closest('tr');
+            if (tr && tr.parentElement && rows.indexOf(tr) === -1) {
+                rows.push(tr);
+            }
+        }
+        for (var j = rows.length - 1; j >= 0; j--) {
+            var body = rows[j].parentElement;
+            if (body && body.firstElementChild !== rows[j]) {
+                body.insertBefore(rows[j], body.firstElementChild);
+            }
+        }
+    }
+    function apply() {
         retitle();
+        sortReferralsFirst();
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', apply);
+    } else {
+        apply();
     }
 })();
 </script>

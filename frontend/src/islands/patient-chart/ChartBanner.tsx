@@ -20,7 +20,7 @@ export function ChartBanner({ preview }: ChartBannerProps) {
         safety={preview.safety}
         aside={<CompletionScorePill score={completion.score} threshold={completion.billing_threshold} />}
       >
-        {active && (active.encounter_signed === false || active.visit_charges_label) && (
+        {active && (active.encounter_signed === false || active.visit_charges_label || active.referral_issued) && (
           <div className="mt-2 flex flex-wrap gap-1">
             {active.encounter_signed === false && (
               <Badge variant={active.require_esign_before_complete_consult ? 'danger' : 'warning'}>
@@ -32,6 +32,7 @@ export function ChartBanner({ preview }: ChartBannerProps) {
             {active.visit_charges_label && (
               <Badge variant="neutral">{active.visit_charges_label}</Badge>
             )}
+            {active.referral_issued && <Badge variant="success">Referral issued</Badge>}
           </div>
         )}
       </PatientContextBanner>

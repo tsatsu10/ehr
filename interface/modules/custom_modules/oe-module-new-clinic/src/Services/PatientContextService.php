@@ -36,6 +36,27 @@ class PatientContextService
     }
 
     /**
+     * REF-4 / D34 — Zone A "Referral issued" chip when the active encounter has
+     * an outbound referral (distinct from inbound "Referral on file", D-REF-5).
+     *
+     * @param array<string, mixed>|null $activeVisit
+     */
+    protected function encounterHasOutboundReferral(?array $activeVisit): bool
+    {
+        $encounterId = (int) (is_array($activeVisit) ? ($activeVisit['encounter_id'] ?? 0) : 0);
+        if ($encounterId <= 0) {
+            return false;
+        }
+
+        $row = \OpenEMR\Common\Database\QueryUtils::querySingleRow(
+            'SELECT id FROM new_referral_meta WHERE encounter_id = ? LIMIT 1',
+            [$encounterId]
+        );
+
+        return is_array($row) && (int) ($row['id'] ?? 0) > 0;
+    }
+
+    /**
      * D-FIN-8 — MRD Zone A "Visit charges" chip for `new_chart_depth_finance_summary`.
      * Clinical states only; charge total only (no receipt #, no payment method).
      *
@@ -257,6 +278,10 @@ class PatientContextService
             $chargesLabel = $this->buildVisitChargesChip($pid, $activeVisit);
             if ($chargesLabel !== null && is_array($payload['active_visit'])) {
                 $payload['active_visit']['visit_charges_label'] = $chargesLabel;
+            }
+
+            if (is_array($payload['active_visit']) && $this->encounterHasOutboundReferral($activeVisit)) {
+                $payload['active_visit']['referral_issued'] = true;
             }
         }
 
