@@ -100,6 +100,8 @@ class AjaxActionPolicy
         'admin.staff.get' => 'new_admin',
         'admin.staff.update' => 'new_admin',
         'admin.staff.reset_password' => 'new_admin',
+        'admin.staff.locked_list' => 'new_admin',
+        'admin.staff.unlock' => 'new_admin',
         'admin.reconciliation.run' => 'new_admin',
         'admin.profile.apply_cash_clinic' => 'new_admin',
         'admin.forms_catalog.set_state' => 'new_admin',
@@ -123,6 +125,12 @@ class AjaxActionPolicy
         'reports.reconciliation' => 'reports',
         'reports.ancillary_export' => 'reports',
         'reports.documentation_integrity_export' => 'reports',
+        // SEC-1: report reads must match their export siblings (reports-gated),
+        // not any-desk-role — they return cross-patient operational/clinical
+        // status (e.g. documentation_integrity lists unsigned encounters).
+        'reports.ancillary' => 'reports',
+        'reports.documentation_integrity' => 'reports',
+        'reports.scheduling' => 'reports',
     ];
 
     /** @var array<int, string> */
@@ -647,11 +655,6 @@ class AjaxActionPolicy
             'desk.shared_session_probe', 'front_desk.desk_stats', 'front_desk.todays_appointments',
             'front_desk.flow_charts',
             'front_desk.recently_viewed', 'front_desk.recently_viewed.remember', 'front_desk.recently_viewed.clear',
-            'reports.scheduling',
-            'reports.ancillary',
-            'reports.ancillary_export',
-            'reports.documentation_integrity',
-            'reports.documentation_integrity_export',
         ], true)) {
             return ['type' => 'desk_acl'];
         }
