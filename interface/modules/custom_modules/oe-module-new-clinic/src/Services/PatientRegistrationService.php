@@ -308,12 +308,21 @@ class PatientRegistrationService
      */
     private function saveSectionTwo(int $pid, array $input): void
     {
+        $v = new InputValidator();
         $regionCode = strtoupper(trim((string) ($input['region_code'] ?? '')));
         $districtCode = strtoupper(trim((string) ($input['district_code'] ?? '')));
-        $street = trim((string) ($input['street'] ?? ''));
-        $landmark = trim((string) ($input['landmark'] ?? ''));
-        $email = trim((string) ($input['email'] ?? ''));
-        $nationalId = trim((string) ($input['national_id'] ?? ''));
+        $street = $v->freeText('street', $input['street'] ?? '');
+        $landmark = $v->freeText('landmark', $input['landmark'] ?? '');
+        $email = $v->email('email', $input['email'] ?? '');
+        $nationalId = $v->nationalId('national_id', $input['national_id'] ?? '');
+        $v->phone('phone_home', $input['phone_home'] ?? '');
+        $v->phone('emergency_contact_phone', $input['emergency_contact_phone'] ?? '');
+        $v->freeText('nationality', $input['nationality'] ?? '', false, InputValidator::NAME_MAX);
+        $v->freeText('place_of_birth', $input['place_of_birth'] ?? '');
+        $v->freeText('tribe', $input['tribe'] ?? '', false, InputValidator::NAME_MAX);
+        $v->name('emergency_contact_name', $input['emergency_contact_name'] ?? '');
+        $v->throwIfInvalid();
+
         $phoneHome = $this->phoneNormalizer->normalize((string) ($input['phone_home'] ?? ''));
         $emergencyPhone = $this->phoneNormalizer->normalize((string) ($input['emergency_contact_phone'] ?? ''));
 
@@ -492,17 +501,26 @@ class PatientRegistrationService
      */
     private function parseSectionOneFields(array $input): array
     {
-        $fname = trim((string) ($input['fname'] ?? ''));
-        $lname = trim((string) ($input['lname'] ?? ''));
-        $mname = trim((string) ($input['mname'] ?? ''));
+        // Server-side field validation — the island's inline checks are UX only.
+        $v = new InputValidator();
+        $fname = $v->name('fname', $input['fname'] ?? '', true);
+        $lname = $v->name('lname', $input['lname'] ?? '', true);
+        $mname = $v->name('mname', $input['mname'] ?? '');
         $sex = $this->normalizeSex((string) ($input['sex'] ?? ''));
-        $phone = trim((string) ($input['phone'] ?? ''));
-        $dob = trim((string) ($input['DOB'] ?? ''));
-        $ageYears = isset($input['age_years']) && $input['age_years'] !== '' ? (int) $input['age_years'] : null;
+        $phone = $v->phone('phone', $input['phone'] ?? '');
+        $dob = $v->dob('DOB', $input['DOB'] ?? '');
+        $ageYears = $v->ageYears('age_years', $input['age_years'] ?? null);
         $noPhone = !empty($input['no_phone']);
-        $reachContactName = trim((string) ($input['reach_contact_name'] ?? ''));
-        $reachContactPhone = trim((string) ($input['reach_contact_phone'] ?? ''));
-        $reachContactRelationship = trim((string) ($input['reach_contact_relationship'] ?? ''));
+        $reachContactName = $v->name('reach_contact_name', $input['reach_contact_name'] ?? '');
+        $reachContactPhone = $v->phone('reach_contact_phone', $input['reach_contact_phone'] ?? '');
+        $reachContactRelationship = $v->freeText(
+            'reach_contact_relationship',
+            $input['reach_contact_relationship'] ?? '',
+            false,
+            InputValidator::NAME_MAX
+        );
+        $nationalId = $v->nationalId('national_id', $input['national_id'] ?? '');
+        $v->throwIfInvalid();
         $dobEstimated = 0;
 
         if ($dob === '' && $ageYears !== null) {
@@ -529,7 +547,7 @@ class PatientRegistrationService
             'dob_estimated' => $dobEstimated,
             'normalized_phone' => $normalizedPhone,
             'normalized_reach_phone' => $normalizedReachPhone,
-            'national_id' => trim((string) ($input['national_id'] ?? '')),
+            'national_id' => $nationalId,
         ];
     }
 
