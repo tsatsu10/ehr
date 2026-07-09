@@ -800,7 +800,7 @@ Touch targets ≥ 44px. No hover-only interactions (T1-F08).
 | Track anything | Clinical |
 | Delete patient | ⋯ overflow (Admin) |
 
-Legacy `hide_dashboard_cards` keys (e.g. `card_allergies`, `card_lab`) continue to hide the corresponding content in its new home.
+Legacy `hide_dashboard_cards` keys (e.g. `card_allergies`, `card_lab`) continue to hide the corresponding content in its new home — **Clinical-tab sections only**. The Zone B safety strip is deliberately exempt: it is a patient-safety feature (D-MRD-2), and an admin display preference must not remove allergy/problem visibility from the point of care.
 
 ---
 

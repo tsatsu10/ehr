@@ -354,6 +354,9 @@ class ReferralCorrespondenceService
         );
     }
 
+    /** Memoized per request — the gate is identical for every visit row. */
+    private ?bool $canLinkVisitReferrals = null;
+
     /**
      * §503 / REF-4 — Visits-row "Referrals for this visit" deep link into the
      * hub filtered by encounter; null when CDb is off or the user cannot view.
@@ -363,14 +366,15 @@ class ReferralCorrespondenceService
         if ($encounterId <= 0) {
             return null;
         }
-        $facilityId = $this->visitScope->resolveDefaultFacilityId();
-        if (!$this->isReferralStripEnabled($facilityId)) {
-            return null;
+        if ($this->canLinkVisitReferrals === null) {
+            $facilityId = $this->visitScope->resolveDefaultFacilityId();
+            $this->canLinkVisitReferrals = $this->isReferralStripEnabled($facilityId)
+                && (
+                    AclMain::aclCheckCore('new_clinic', 'new_chart_depth_referral')
+                    || AclMain::aclCheckCore('new_clinic', 'new_chart_depth')
+                );
         }
-        if (
-            !AclMain::aclCheckCore('new_clinic', 'new_chart_depth_referral')
-            && !AclMain::aclCheckCore('new_clinic', 'new_chart_depth')
-        ) {
+        if (!$this->canLinkVisitReferrals) {
             return null;
         }
 
