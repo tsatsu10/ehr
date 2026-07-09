@@ -470,25 +470,34 @@ export function ClinicalTab({
   if (!data) return null;
 
   const immunizations = data.immunizations;
+  // MRD §17.6 — legacy hide_dashboard_cards keys hide the section that absorbed the stock card.
+  const hiddenSections = data.hidden_sections ?? [];
+  const isHidden = (name: string) => hiddenSections.includes(name);
 
   return (
     <ChartStack>
       <ClinicalBackground section={data.background ?? {}} />
-      <ClinicalListSectionBlock
-        title="Problems"
-        section={data.problems ?? {}}
-        emptyLabel="No active problems."
-      />
-      <ClinicalListSectionBlock
-        title="Allergies"
-        section={data.allergies ?? {}}
-        emptyLabel="No allergies on file."
-      />
-      <ClinicalListSectionBlock
-        title="Medications"
-        section={data.medications ?? {}}
-        emptyLabel="No active medications."
-      />
+      {!isHidden('problems') && (
+        <ClinicalListSectionBlock
+          title="Problems"
+          section={data.problems ?? {}}
+          emptyLabel="No active problems."
+        />
+      )}
+      {!isHidden('allergies') && (
+        <ClinicalListSectionBlock
+          title="Allergies"
+          section={data.allergies ?? {}}
+          emptyLabel="No allergies on file."
+        />
+      )}
+      {!isHidden('medications') && (
+        <ClinicalListSectionBlock
+          title="Medications"
+          section={data.medications ?? {}}
+          emptyLabel="No active medications."
+        />
+      )}
       {!immunizations?.hidden && (
         <ClinicalListSectionBlock
           title="Immunizations"
@@ -498,7 +507,9 @@ export function ClinicalTab({
       )}
       {referralsStrip && <ReferralsStrip strip={referralsStrip} />}
       {labsStrip && <LabsStrip strip={labsStrip} onScrollToAnchor={onScrollToAnchor} />}
-      <ClinicalListSectionBlock title="Labs" section={data.labs ?? {}} emptyLabel="No lab orders on file." />
+      {!isHidden('labs') && (
+        <ClinicalListSectionBlock title="Labs" section={data.labs ?? {}} emptyLabel="No lab orders on file." />
+      )}
       {medsStrip && <MedsStrip strip={medsStrip} onScrollToAnchor={onScrollToAnchor} />}
       <ClinicalVitals section={data.vitals ?? {}} />
       <ClinicalThisVisit section={data.this_visit ?? {}} />

@@ -68,4 +68,43 @@ class PatientChartClinicalServiceIntegrationTest extends TestCase
 
         return is_array($row) ? (int) ($row['pid'] ?? 0) : 0;
     }
+
+    public function testHiddenDashboardCardsMapToClinicalSections(): void
+    {
+        // MRD §17.6 — legacy hide_dashboard_cards keys hide the section that
+        // absorbed the stock dashboard card; unknown keys are ignored.
+        $service = new class extends PatientChartClinicalService {
+            /** @return string[] */
+            public function exposeHiddenSections(): array
+            {
+                return $this->resolveHiddenSections();
+            }
+        };
+
+        QueryUtils::sqlStatementThrowException(
+            "INSERT INTO globals (gl_name, gl_index, gl_value) VALUES ('hide_dashboard_cards', 990, 'card_allergies')",
+            []
+        );
+        QueryUtils::sqlStatementThrowException(
+            "INSERT INTO globals (gl_name, gl_index, gl_value) VALUES ('hide_dashboard_cards', 991, 'card_prescriptions')",
+            []
+        );
+        QueryUtils::sqlStatementThrowException(
+            "INSERT INTO globals (gl_name, gl_index, gl_value) VALUES ('hide_dashboard_cards', 992, 'card_not_a_real_card')",
+            []
+        );
+
+        try {
+            $hidden = $service->exposeHiddenSections();
+            $this->assertContains('allergies', $hidden);
+            $this->assertContains('medications', $hidden);
+            $this->assertNotContains('card_not_a_real_card', $hidden);
+            $this->assertNotContains('problems', $hidden);
+        } finally {
+            QueryUtils::sqlStatementThrowException(
+                "DELETE FROM globals WHERE gl_name = 'hide_dashboard_cards' AND gl_index IN (990, 991, 992)",
+                []
+            );
+        }
+    }
 }

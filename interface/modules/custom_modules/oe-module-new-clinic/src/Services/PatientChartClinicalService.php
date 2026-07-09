@@ -49,7 +49,40 @@ class PatientChartClinicalService
             'labs' => $this->buildLabsSection($pid, $webroot, $encounterId),
             'vitals' => $this->buildVitalsSection($pid, $encounterId),
             'this_visit' => $this->buildThisVisitSection($pid, $encounterId, $webroot, $facilityId),
+            'hidden_sections' => $this->resolveHiddenSections(),
         ];
+    }
+
+    /**
+     * MRD §15/§17.6 — legacy hide_dashboard_cards keys keep hiding the
+     * corresponding content in its new MRD home. Card keys map to the
+     * Clinical-tab section that absorbed the stock dashboard card.
+     *
+     * @return string[]
+     */
+    protected function resolveHiddenSections(): array
+    {
+        $map = [
+            'card_allergies' => 'allergies',
+            'card_medicalproblems' => 'problems',
+            'card_medication' => 'medications',
+            'card_prescriptions' => 'medications',
+            'card_lab' => 'labs',
+        ];
+
+        $hidden = [];
+        $rows = QueryUtils::fetchRecords(
+            "SELECT gl_value FROM globals WHERE gl_name = 'hide_dashboard_cards'",
+            []
+        ) ?: [];
+        foreach ($rows as $row) {
+            $key = (string) ($row['gl_value'] ?? '');
+            if (isset($map[$key]) && !in_array($map[$key], $hidden, true)) {
+                $hidden[] = $map[$key];
+            }
+        }
+
+        return $hidden;
     }
 
     /**
