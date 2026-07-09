@@ -53,6 +53,7 @@ Read in this order for a full picture:
 | [AJAX_ACTION_ACL_MATRIX.md](./new/AJAX_ACTION_ACL_MATRIX.md) | SEC-1 living control: every dispatchable ajax action → policy type → required ACL → deferred re-auth (249 rows) |
 | [NEW_CLINIC_LOGIN_RECOVERY_QUICK_CARD.md](./new/NEW_CLINIC_LOGIN_RECOVERY_QUICK_CARD.md) | SEC-5 printable card: "Can't log in?" — 3 steps for staff, 3 for the admin (unlock + temporary password) |
 | [NEW_CLINIC_SEC6_DATA_AT_REST_RUNBOOK.md](./new/NEW_CLINIC_SEC6_DATA_AT_REST_RUNBOOK.md) | SEC-6 runbook: identifier-only logging, export retention/perms, display_errors off, log rotation, backup encryption + key custody |
+| [NEW_CLINIC_SEC7_TLS_NETWORK_RUNBOOK.md](./new/NEW_CLINIC_SEC7_TLS_NETWORK_RUNBOOK.md) | SEC-7 runbook: tunnel-only default + public-exposure variant, TLS/HSTS, session-cookie notes, MySQL binding, fleet healthcheck, outage additions |
 | [NEW_CLINIC_USER_RESEARCH_COMPETITIVE_ANALYSIS.md](./new/NEW_CLINIC_USER_RESEARCH_COMPETITIVE_ANALYSIS.md) | User research + competitive positioning (West Africa private clinic segment) (v0.1.0) |
 | [NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) | UI/UX master — §0 TL;DR · §1 architectural model · §2 design principles · §3 visual system · §4 component reference · §5 interaction states · §6 IA + module map · §9 shadcn migration plan · §10 governance (v2.0.0) |
 | [FRONTEND_2026_MODERNIZATION_PLAN.md](./FRONTEND_2026_MODERNIZATION_PLAN.md) | OpenEMR-wide modernization strategy; **New Clinic React islands shipped** |
