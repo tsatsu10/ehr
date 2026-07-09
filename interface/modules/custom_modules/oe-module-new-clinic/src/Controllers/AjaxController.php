@@ -153,11 +153,16 @@ class AjaxController
         } catch (EncounterSessionMismatchException $e) {
             $this->respond(false, $e->getMessage(), ['code' => 'session_mismatch'], 409);
         } catch (InputValidationException $e) {
-            // Field names only — the rejected values may contain PHI or a password.
-            error_log(
-                'nc-validation: action=' . $action
-                . ' user=' . $userId
-                . ' fields=' . implode(',', array_keys($e->getFieldErrors()))
+            // SEC-3: audit to the queryable trail with action + user + the field
+            // NAMES that failed — never the rejected values (may hold PHI/password).
+            EventAuditLogger::getInstance()->newEvent(
+                'new-clinic-validation',
+                (string) ($_SESSION['authUser'] ?? ''),
+                (string) ($_SESSION['authProvider'] ?? ''),
+                0,
+                'Input validation failed: action=' . $action
+                    . ' user=' . $userId
+                    . ' fields=' . implode(',', array_keys($e->getFieldErrors()))
             );
             $this->respond(false, $e->getMessage(), [
                 'code' => 'validation',
