@@ -114,6 +114,20 @@ class SessionRoleService
     }
 
     /**
+     * Stored role for this session without side effects (role picker
+     * "last used" marker — must not auto-select, PRD §4.3.1).
+     */
+    public function getStoredRole(): ?string
+    {
+        $stored = $_SESSION[self::SESSION_KEY] ?? null;
+        if (is_string($stored) && $this->hasRole($stored) && $this->isRoleNavEnabled($stored)) {
+            return $stored;
+        }
+
+        return null;
+    }
+
+    /**
      * @return array<int, array<string, mixed>>
      */
     public function listAvailableRoles(): array

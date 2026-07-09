@@ -1,0 +1,125 @@
+{% extends 'base.html.twig' %}
+
+{# Role picker — session role choice for multi-role users (PAGE_DESIGNS §7.1) #}
+
+{% block page_heading %}{% endblock %}
+
+{% block content %}
+<div class="nc-role-picker" id="nc-role-picker">
+    <div class="nc-role-picker-head">
+        <p class="nc-role-picker-clinic nc-mb-0">
+            {{ shell.brand.clinic_name|text }}
+            {%- if shell.brand.show_facility %} — {{ shell.brand.facility_name|text }}{% endif %}
+            · {{ shell.today_label|text }}
+        </p>
+        <h1 class="nc-role-picker-title">
+            {% if picker_first_name %}
+                {{ 'Welcome'|xlt }}, {{ picker_first_name|text }}.
+            {% else %}
+                {{ 'Welcome'|xlt }}.
+            {% endif %}
+            {{ 'Pick your role for this session.'|xlt }}
+        </h1>
+    </div>
+
+    {% if picker_roles|length == 0 %}
+        <div class="nc-callout nc-callout-warn" role="status">
+            {{ 'No clinic role assigned — contact your clinic administrator.'|xlt }}
+        </div>
+    {% else %}
+        <div class="nc-role-picker-grid" role="list">
+            {% for role in picker_roles %}
+                <button type="button"
+                        role="listitem"
+                        class="nc-role-picker-tile{% if role.aco == picker_last_used %} is-last-used{% endif %}"
+                        data-picker-role="{{ role.aco|attr }}">
+                    <span class="nc-role-switch-item-icon-wrap nc-role-switch-item-icon-wrap--{{ role.accent }}" aria-hidden="true">
+                        <i class="fa {{ role.icon }}"></i>
+                    </span>
+                    <span class="nc-role-picker-tile-label">{{ role.label|text }}</span>
+                    <span class="nc-role-picker-tile-desk">{{ role.desk_label|text }}</span>
+                    {% if role.aco == picker_last_used %}
+                        <span class="nc-role-picker-tile-badge">{{ 'Last used'|xlt }}</span>
+                    {% endif %}
+                </button>
+            {% endfor %}
+        </div>
+
+        <div class="nc-callout nc-callout-error nc-hidden nc-mt-3" id="nc-role-picker-error" role="alert"></div>
+
+        <p class="nc-role-picker-tip">
+            {{ 'Tip: the top bar always shows your active role. Use Switch role to change it later.'|xlt }}
+        </p>
+    {% endif %}
+
+    <div class="nc-role-picker-footer">
+        <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary" href="{{ shell.logout_url|attr }}" target="_top">
+            {{ 'Logout'|xlt }}
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var root = document.getElementById('nc-role-picker');
+    if (!root) {
+        return;
+    }
+    var errorEl = document.getElementById('nc-role-picker-error');
+    var tiles = root.querySelectorAll('.nc-role-picker-tile[data-picker-role]');
+    var ajaxUrl = {{ ajax_url|json_encode|raw }};
+    var csrfToken = {{ csrf_token|json_encode|raw }};
+
+    function showError(message) {
+        if (!errorEl) {
+            window.alert(message);
+            return;
+        }
+        errorEl.textContent = message;
+        errorEl.classList.remove('nc-hidden');
+    }
+
+    function setBusy(busy) {
+        tiles.forEach(function (tile) {
+            tile.disabled = busy;
+        });
+    }
+
+    tiles.forEach(function (tile) {
+        tile.addEventListener('click', function () {
+            var role = tile.getAttribute('data-picker-role');
+            if (!role || tile.disabled) {
+                return;
+            }
+            if (errorEl) {
+                errorEl.classList.add('nc-hidden');
+            }
+            setBusy(true);
+            tile.classList.add('is-switching');
+
+            window.NewClinicUI.postJson(ajaxUrl + '?action=switch_role', {
+                csrf_token_form: csrfToken,
+                role: role
+            })
+                .then(function (result) {
+                    var payload = result.payload;
+                    if (payload.success && payload.data && payload.data.redirect_url) {
+                        window.location.href = payload.data.redirect_url;
+                        return;
+                    }
+                    setBusy(false);
+                    tile.classList.remove('is-switching');
+                    showError(payload.message || {{ 'Could not switch role'|xlj }});
+                })
+                .catch(function () {
+                    setBusy(false);
+                    tile.classList.remove('is-switching');
+                    showError({{ 'Network error — try again'|xlj }});
+                });
+        });
+    });
+})();
+</script>
+{% endblock %}

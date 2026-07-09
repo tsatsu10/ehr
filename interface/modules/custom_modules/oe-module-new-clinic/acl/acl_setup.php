@@ -45,6 +45,7 @@ $acos = [
     'new_esign_skip_complete' => 'Skip E-Sign Gate',
     'new_chart_depth' => 'Chart Depth Read',
     'new_chart_depth_finance' => 'Chart Depth Payment History',
+    'new_chart_depth_finance_summary' => 'Chart Depth Visit Charge Summary',
     'new_chart_depth_referral' => 'Chart Depth Referrals',
     'new_chart_depth_export' => 'Chart Depth Export',
     'new_chart_depth_export_full' => 'Chart Depth Full Export',
@@ -164,7 +165,7 @@ $extraGrants = [
     'new_pharmacy_lead' => ['new_pharmacy', 'new_pharm_ops', 'new_pharm_ops_dispense', 'new_pharm_ops_receive', 'new_pharm_ops_destroy', 'new_pharmacy_undispensed_override', 'new_pharmacy_external_rx_override', 'new_pharmacy_walkin_dispense', 'new_pharmacy_refer_to_opd', 'new_reports_pharmacy'],
     'new_cashier_lead' => ['new_cashier', 'new_billing_skip_completion', 'new_discount', 'new_visit_mark_outstanding', 'new_close_without_charge', 'new_receipt_reprint', 'new_esign_skip_complete', 'new_chart_depth', 'new_chart_depth_finance', 'new_chart_depth_referral', 'new_bill_ops', 'new_bill_ops_correct', 'new_bill_ops_payment', 'new_bill_ops_close', 'new_bill_ops_outstanding', 'new_reports_financial'],
     'new_admin' => array_keys($acos),
-    'new_doctor' => ['new_doctor', 'new_visit_reopen', 'new_visit_skip_queue', 'new_chart_depth', 'new_chart_depth_referral', 'new_chart_depth_export', 'new_registry', 'new_registry_export', 'new_lab_ops', 'new_lab_order_intake', 'new_clinical_doc_hub', 'new_clinical_doc_consult', 'new_clinical_doc_screening', 'new_clinical_doc_orders', 'new_clinical_doc_specialty', 'new_take_assigned_override'],
+    'new_doctor' => ['new_doctor', 'new_visit_reopen', 'new_visit_skip_queue', 'new_chart_depth', 'new_chart_depth_finance_summary', 'new_chart_depth_referral', 'new_chart_depth_export', 'new_registry', 'new_registry_export', 'new_lab_ops', 'new_lab_order_intake', 'new_clinical_doc_hub', 'new_clinical_doc_consult', 'new_clinical_doc_screening', 'new_clinical_doc_orders', 'new_clinical_doc_specialty', 'new_take_assigned_override'],
     'new_nurse' => ['new_nurse', 'new_registry', 'new_registry_export', 'new_clinical_doc_hub', 'new_clinical_doc_nursing'],
     'new_cashier' => ['new_cashier', 'new_receipt_reprint', 'new_chart_depth', 'new_chart_depth_finance'],
 ];
@@ -210,6 +211,34 @@ foreach ($extraGrants as $group => $keys) {
             $sectionTitle,
             $aco,
             $acos[$aco],
+            'write'
+        );
+    }
+}
+
+// D-FIN-10 — pilot stock Ledger path: cashier groups need core acct/rep so the
+// wrapped pat_ledger.php stays reachable until Chart Depth finance replaces it.
+// D-EXP-11 — pilot stock Report path: reception groups need patients/pat_rep so
+// the wrapped patient_report.php stays reachable until Chart Depth export ships.
+$coreGrants = [
+    'new_cashier' => [['acct', 'Accounting', 'rep', 'Financial Reporting - my encounters']],
+    'new_cashier_lead' => [['acct', 'Accounting', 'rep', 'Financial Reporting - my encounters']],
+    'new_reception' => [['patients', 'Patients', 'pat_rep', 'Patient Report']],
+    'new_reception_lead' => [['patients', 'Patients', 'pat_rep', 'Patient Report']],
+];
+
+foreach ($coreGrants as $group => $grants) {
+    if (empty($groupAcls[$group])) {
+        continue;
+    }
+    foreach ($grants as [$coreSection, $coreSectionTitle, $coreAco, $coreAcoTitle]) {
+        AclExtended::updateAcl(
+            $groupAcls[$group],
+            $groups[$group],
+            $coreSection,
+            $coreSectionTitle,
+            $coreAco,
+            $coreAcoTitle,
             'write'
         );
     }

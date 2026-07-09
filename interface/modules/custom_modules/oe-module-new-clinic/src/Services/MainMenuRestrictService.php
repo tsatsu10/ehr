@@ -41,6 +41,11 @@ class MainMenuRestrictService
         'cal0',
     ];
 
+    /** @var array<int, string> Stock Admin top menu hidden when M15 hub is ON (ADMIN §16.1) */
+    public const STOCK_ADMIN_MENU_IDS = [
+        'admimg',
+    ];
+
     /** @var array<int, string> Stock scheduling URLs hidden when S1 redesign is ON (S-P6) */
     public const STOCK_SCHEDULING_MENU_URLS = [
         '/interface/main/main_info.php',
@@ -127,6 +132,10 @@ class MainMenuRestrictService
         if ($this->shouldHideStockSchedulingMenusForCurrentUser()) {
             $menu = $this->filterMainMenu($menu, self::STOCK_SCHEDULING_MENU_IDS);
             $menu = $this->filterMainMenuByUrl($menu, self::STOCK_SCHEDULING_MENU_URLS);
+        }
+
+        if ($this->shouldHideStockAdminMenusForCurrentUser()) {
+            $menu = $this->filterMainMenu($menu, self::STOCK_ADMIN_MENU_IDS);
         }
 
         $menu = $this->pruneEmptyMenuBranches($menu);
@@ -231,6 +240,25 @@ class MainMenuRestrictService
         $facilityId = $facilityId ?? $this->visitScope->resolveDefaultFacilityId();
 
         return $this->config->isEnabled('enable_clinical_doc_hub', 0, $facilityId);
+    }
+
+    /**
+     * ADMIN §16.1 — clinic admins use the M15 hub (admin.php) instead of the
+     * stock Admin menu; core super keeps full Admin plus the hub.
+     */
+    public function shouldHideStockAdminMenusForCurrentUser(?int $facilityId = null): bool
+    {
+        if (AclMain::aclCheckCore('admin', 'super')) {
+            return false;
+        }
+
+        if (!AclMain::aclCheckCore('new_clinic', 'new_admin')) {
+            return false;
+        }
+
+        $facilityId = $facilityId ?? $this->visitScope->resolveDefaultFacilityId();
+
+        return $this->config->isEnabled('enable_admin_hub', 0, $facilityId);
     }
 
     public function shouldHideStockSchedulingMenusForCurrentUser(?int $facilityId = null): bool

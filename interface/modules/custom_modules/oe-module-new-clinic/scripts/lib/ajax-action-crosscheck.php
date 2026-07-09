@@ -26,6 +26,7 @@ function moduleVerifyAjaxActionCallerAllowlist(): array
         'clinical_doc.sign_status' => 'poll API in PRD; hub reads sign_status via visit_summary until poll ships',
         'doctor.routing.reassign' => 'visit-board reassignment API; V1 desks use visit.hard_assign instead',
         'lab_ops.fee_map_list' => 'fee-map read API; setup panel uses fee_map_save starter path only',
+        'chart_depth.visit_charges_summary' => 'D-FIN-8 summary API in PRD §13.1; chart embeds label server-side via clinical payload',
     ];
 }
 
