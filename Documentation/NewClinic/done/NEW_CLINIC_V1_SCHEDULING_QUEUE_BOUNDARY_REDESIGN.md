@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.1.3 |
 | **Status** | Draft for review — **S1** + **M0/M2** boundary locked (D18, H3); **M18 Queue Bridge Hub** integrated in PRD v1.20.39; **Appendix E audit closure**; **trilogy integrated** |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.39), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.5), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.43), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.43), [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.2) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.39), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.5), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.43), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.43), [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.2) |
 | **Audience** | Product, design, reception leads, clinic managers, implementers, QA |
 | **Scope** | The **intentional split** between **Mode 2 — Scheduling & Flow** (`openemr_postcalendar_events`, `patient_tracker`) and **Mode 1 — Today's clinical queue** (`new_visit`, Visit Board, role desks); pain points, exception taxonomy, reconciliation UX, Ghana/West Africa practice |
 | **Implementation** | Design spec only — no code in this document |
@@ -615,7 +615,7 @@ queue_bridge_exception_snapshot (
 
 ## 20. Day-2 queue bridge runbook (SQ-01–SQ-08)
 
-**Normative in PRD:** [§17.4.11](./NEW_CLINIC_V1_PRD.md#17411-day-2-queue-bridge-runbook-m18). Trainer workflows: [USER_WORKFLOWS §14.11](./NEW_CLINIC_V1_USER_WORKFLOWS.md#1411-queue-bridge--scheduling-boundary-workflows). Wireframes: [PAGE_DESIGNS §7.31](./NEW_CLINIC_V1_PAGE_DESIGNS.md#731-queue-bridgeindexphp--queue-bridge-hub).
+**Normative in PRD:** [§17.4.11](../NEW_CLINIC_V1_PRD.md#17411-day-2-queue-bridge-runbook-m18). Trainer workflows: [USER_WORKFLOWS §14.11](../NEW_CLINIC_V1_USER_WORKFLOWS.md#1411-queue-bridge--scheduling-boundary-workflows). Wireframes: [PAGE_DESIGNS §7.31](../NEW_CLINIC_V1_PAGE_DESIGNS.md#731-queue-bridgeindexphp--queue-bridge-hub).
 
 | ID | When | Task | Verify |
 |----|------|------|--------|

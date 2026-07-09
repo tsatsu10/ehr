@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.2.36 |
 | **Status** | Draft for review |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.47), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.47), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.47), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.3), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.15), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.47), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.47), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.47), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.3), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.15), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3) |
 | **Audience** | Product, design, clinical leads, implementers, QA |
 | **Core target** | `interface/patient_file/summary/demographics.php` (page id `core.mrd`) |
 | **Implementation** | Design only — no code in this document |
@@ -69,7 +69,7 @@ Full chart (depth):   Open full chart → Redesigned MRD
 ### 1.3 What this redesign does not replace
 
 - Visit Board (M2)
-- Front Desk search / Registration form (M1b) — [FRONT_DESK_REGISTRATION](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md)
+- Front Desk search / Registration form (M1b) — [FRONT_DESK_REGISTRATION](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md)
 - Doctor Desk queue (M4)
 - Cashier payment queue (M5)
 - Core encounter editor, procedure order, Rx UI, fee sheet
@@ -136,7 +136,7 @@ Decisions confirmed in product review (2026-06-07):
 | D-MRD-9 | Event enum (closed) | Single canonical `event_type` vocabulary in **§8.6** — audit drawer, Visits expand, and activity feed share IDs; display titles differ per surface. **No** parallel names (`visit_started` vs `visit_created`). |
 | D-MRD-10 | Clinical tab layout (closed) | **§8.9** — **seven core sections (1–7)** with stable anchor IDs; sections **8–10** conditional (LBF, external care, PRO); stock **History & Lifestyle** → **Background**; encounter forms → **This visit**; past visit **View documentation** → core encounter forms; PMH duplication rule in PRD **§6.1h** (D49) |
 | D-MRD-11 | Wrong patient on chart (closed) | Zone A sticky identity per PRD **§6.1i**; cancel while chart open → blocking banner (same as desks); chart navigation to new `pid` = full reload — no silent pid swap |
-| D-MRD-12 | Legacy chart overlay (V1.2-CTX) | When `enable_legacy_patient_context_overlay` = 1 — mini identity strip on stock `patient_file/*` per T1-F18 ([LEGACY_CHART_CONTEXT](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md)); does not replace Zone A on redesigned MRD |
+| D-MRD-12 | Legacy chart overlay (V1.2-CTX) | When `enable_legacy_patient_context_overlay` = 1 — mini identity strip on stock `patient_file/*` per T1-F18 ([LEGACY_CHART_CONTEXT](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md)); does not replace Zone A on redesigned MRD |
 | D-MRD-13 | Open full chart landing tab (closed) | **Role default tab** per **§10.1** / **§16.3** — never the stock 25-card dashboard layout. Hosts may pass explicit `?tab=` (e.g. reception → Profile). Generic **Open full chart** without `?tab=` resolves role default server-side. |
 
 ---
@@ -193,7 +193,7 @@ flowchart TB
 
 ## 6. Zone A — Patient + visit banner
 
-**Component:** Reuse module [`patient-context-banner` Tier 1](../NEW_CLINIC_V1_PAGE_DESIGNS.md#411-patient-context-banner-component-patient-context-banner) via `PatientPreviewDto` (M0-F20). MRD adds Zone B safety strip (four cards) below the banner — not embedded in the Twig partial.
+**Component:** Reuse module [`patient-context-banner` Tier 1](./NEW_CLINIC_V1_PAGE_DESIGNS.md#411-patient-context-banner-component-patient-context-banner) via `PatientPreviewDto` (M0-F20). MRD adds Zone B safety strip (four cards) below the banner — not embedded in the Twig partial.
 
 Sticky full-width banner. Replaces today’s scattered header, horizontal patient nav emphasis, and inline alerts.
 
@@ -281,10 +281,10 @@ Only the **active tab** loads content (lazy fetch, cache in DOM). Tab choice per
 | **Overview** | “What’s going on *today*?” | Encounter summary, open orders, recent activity (90d), **unsigned encounters (action required)**, clinical reminders detail | Nurse, Doctor |
 | **Clinical** | “What’s their medical picture?” | **§8.9** — Background, problems, allergies, meds, immunizations, labs, vitals trends, **This visit** forms, LBF/tracks; **Referrals strip** when outbound letters exist (§8.10) | Lab, Pharmacy (scroll to section) |
 | **Visits** | “When have they been here?” | Future / recurring / past appointments, **today’s visit timeline (all encounters/queue #s when multiple same day)**, recalls, advance directives | Reception (secondary) |
-| **Profile** | “Who are they — are they complete?” | Demographics, **completion checklist** (L1–L4, aligned with [FRONT_DESK_REGISTRATION](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md)), NHIS/ID, region+district, portal, **Documents & ID** (photos, scans, amendments, disclosures), **Payments strip** (§8.10) | Reception, Cashier |
-| **Messages** | “Who said what?” | Care team, patient-scoped `pnotes`, patient reminders, eRx panel (if enabled) — **not** the clinic-wide [COM hub](./NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) inbox | Doctor (secondary) |
+| **Profile** | “Who are they — are they complete?” | Demographics, **completion checklist** (L1–L4, aligned with [FRONT_DESK_REGISTRATION](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md)), NHIS/ID, region+district, portal, **Documents & ID** (photos, scans, amendments, disclosures), **Payments strip** (§8.10) | Reception, Cashier |
+| **Messages** | “Who said what?” | Care team, patient-scoped `pnotes`, patient reminders, eRx panel (if enabled) — **not** the clinic-wide [COM hub](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) inbox | Doctor (secondary) |
 
-**COM vs MRD Messages (closed):** Use **Communications Hub** for staff inbox across all patients; use **MRD Messages tab** for this patient’s chart-scoped notes and reminders. See [COMMUNICATIONS §1](./NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md#1-purpose--positioning).
+**COM vs MRD Messages (closed):** Use **Communications Hub** for staff inbox across all patients; use **MRD Messages tab** for this patient’s chart-scoped notes and reminders. See [COMMUNICATIONS §1](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md#1-purpose--positioning).
 
 **Navigation rule (D-MRD-8):** Staff land on a **tab** (or role desk), not an infinite chart timeline. Chronological feeds are **sections within tabs** — see §8.3–§8.5.
 
@@ -476,7 +476,7 @@ Each past visit row: date · type · provider · terminal state · queue # (if m
 
 ### 8.7 AJAX / DTO contracts (T1-F15, M0-F27)
 
-Normative envelope: [PAGE_DESIGNS §6](../NEW_CLINIC_V1_PAGE_DESIGNS.md#6-ajax-response-envelope).
+Normative envelope: [PAGE_DESIGNS §6](./NEW_CLINIC_V1_PAGE_DESIGNS.md#6-ajax-response-envelope).
 
 | Action | Request | Response |
 |--------|---------|----------|
@@ -530,7 +530,7 @@ Normative envelope: [PAGE_DESIGNS §6](../NEW_CLINIC_V1_PAGE_DESIGNS.md#6-ajax-r
 
 ### 8.9 Clinical tab — layout & anchors (D-MRD-10)
 
-**Purpose:** Answer *“What’s their medical picture?”* — longitudinal lists + background history + encounter assessments. Normative taxonomy: PRD **§6.1h** (D49). Build spec: [PAGE_DESIGNS §4.14](./NEW_CLINIC_V1_PAGE_DESIGNS.md#414-mrd-clinical-tab--build-spec-t1-f16-d-mrd-10). **Background detail:** [MEDICAL_HISTORY_BACKGROUND](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md).
+**Purpose:** Answer *“What’s their medical picture?”* — longitudinal lists + background history + encounter assessments. Normative taxonomy: PRD **§6.1h** (D49). Build spec: [PAGE_DESIGNS §4.14](./NEW_CLINIC_V1_PAGE_DESIGNS.md#414-mrd-clinical-tab--build-spec-t1-f16-d-mrd-10). **Background detail:** [MEDICAL_HISTORY_BACKGROUND](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md).
 
 **Section count:** **Seven core sections (1–7)** always specced for B7; sections **8–10** render when clinic config enables LBF/tracks, external care (V1.2), or Easipro PRO.
 
@@ -553,12 +553,12 @@ Lazy-loaded on first activation of **Clinical** tab; sections may stream indepen
 
 | # | Section | Anchor | Data source | Notes |
 |---|---------|--------|-------------|-------|
-| 1 | **Background** | `#clinical-background` | **`history_data`** via **T1-F20** read summary service (not stock `history.php` iframe); SDOH chips when enabled | Family, social, PMH narrative — **not** visit assessments. **Edit** opens stock **History editor** `history_full.php` (ACL `patients` med); **Back to chart** when `return=clinical-background`. Build: [MEDICAL_HISTORY_BACKGROUND](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) |
+| 1 | **Background** | `#clinical-background` | **`history_data`** via **T1-F20** read summary service (not stock `history.php` iframe); SDOH chips when enabled | Family, social, PMH narrative — **not** visit assessments. **Edit** opens stock **History editor** `history_full.php` (ACL `patients` med); **Back to chart** when `return=clinical-background`. Build: [MEDICAL_HISTORY_BACKGROUND](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) |
 | 2 | **Problems** | `#clinical-problems` | `PatientIssuesService` / `lists` `medical_problem` | Structured active + resolved; links to core issue editor |
 | 3 | **Allergies** | `#clinical-allergies` | `AllergyIntoleranceService` | Includes **None known** row |
 | 4 | **Medications** | `#clinical-meds` | Rx / `lists` | eRx-aware; when `enable_pharm_ops` = 1: **Meds strip** §8.10.5 |
 | 5 | **Immunizations** | `#clinical-immunizations` | Core immunization API | Not on safety strip V1 |
-| 6 | **Labs & vitals** | `#clinical-labs`, `#clinical-vitals` | Core lab + vitals history (`labdata.php`) | Trends; today’s vitals on banner when visit active. When `enable_lab_ops` = 1: **Labs strip** §8.10.3. When `enable_pharm_ops` = 1: **Meds strip** §8.10.5. [LAB_OPERATIONS](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) · [PHARMACY_OPERATIONS](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md). |
+| 6 | **Labs & vitals** | `#clinical-labs`, `#clinical-vitals` | Core lab + vitals history (`labdata.php`) | Trends; today’s vitals on banner when visit active. When `enable_lab_ops` = 1: **Labs strip** §8.10.3. When `enable_pharm_ops` = 1: **Meds strip** §8.10.5. [LAB_OPERATIONS](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) · [PHARMACY_OPERATIONS](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md). |
 | 7 | **This visit** | `#clinical-encounter-forms` | `forms` for active `encounter_id` | SOAP, vitals form row, procedure orders, LBF, `questionnaire_assessments` — **encounter-scoped only**. Hidden when no active visit today. When ACL `new_chart_depth_finance_summary`: read-only **Charges total** line above forms (D-FIN-8). Primary action: **Open encounter** → M17 hub when `enable_clinical_doc_hub` = 1; else `encounter_top.php` (PAGE_DESIGNS §7.30, DOC-6) |
 | 8 | **LBF & tracks** | `#clinical-lbf` | Layout-based forms, Track anything | Clinic-configured; preserve `SectionEvent('primary')` hooks |
 | 9 | **Care elsewhere** | `#clinical-external` | `new_external_care` + stock `external_*` import (M11-F10) | Hidden unless `enable_chart_depth_external = 1` (V1.2). Build spec: [PAGE_DESIGNS §7.16](./NEW_CLINIC_V1_PAGE_DESIGNS.md#716-chart-depthexternalphp--care-elsewhere). |
@@ -570,7 +570,7 @@ Lazy-loaded on first activation of **Clinical** tab; sections may stream indepen
 
 ### 8.10 MRD host summary strips (Chart Depth entry)
 
-**Purpose:** Surface Chart Depth ([M11](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md)) from MRD tabs without a sixth tab (D-CD-1). Build spec: [PAGE_DESIGNS §4.19](./NEW_CLINIC_V1_PAGE_DESIGNS.md#419-mrd-host-summary-strips-m11). Full panels: [§7.13–§7.16](./NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history).
+**Purpose:** Surface Chart Depth ([M11](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md)) from MRD tabs without a sixth tab (D-CD-1). Build spec: [PAGE_DESIGNS §4.19](./NEW_CLINIC_V1_PAGE_DESIGNS.md#419-mrd-host-summary-strips-m11). Full panels: [§7.13–§7.16](./NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history).
 
 #### 8.10.1 Profile — Payments strip
 
@@ -604,7 +604,7 @@ Shown when `enable_chart_depth_referral` = 1 **and** ≥1 outbound referral (`LB
 
 #### 8.10.3 Clinical — Labs strip (M12 entry)
 
-When `enable_lab_ops` = 1. Lazy-fetch: `mrd.clinical_labs_summary`. Product: [M12](./NEW_CLINIC_V1_PRD.md#module-m12--lab-operations-hub) · [LAB_OPERATIONS](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md).
+When `enable_lab_ops` = 1. Lazy-fetch: `mrd.clinical_labs_summary`. Product: [M12](./NEW_CLINIC_V1_PRD.md#module-m12--lab-operations-hub) · [LAB_OPERATIONS](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md).
 
 ```text
 ┌─ Labs ──────────────────────────────────────────────────────────────────┐
@@ -630,7 +630,7 @@ Past/today visit row expand shows applicable secondary actions; requires `new_ch
 
 #### 8.10.5 Clinical — Meds strip (M13 entry)
 
-When `enable_pharm_ops` = 1. Lazy-fetch: `mrd.clinical_meds_summary`. Product: [M13](./NEW_CLINIC_V1_PRD.md#module-m13--pharmacy-operations-hub) · [PHARMACY_OPERATIONS](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md).
+When `enable_pharm_ops` = 1. Lazy-fetch: `mrd.clinical_meds_summary`. Product: [M13](./NEW_CLINIC_V1_PRD.md#module-m13--pharmacy-operations-hub) · [PHARMACY_OPERATIONS](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md).
 
 ```text
 ┌─ Medications ──────────────────────────────────────────────────────────────────┐
@@ -718,7 +718,7 @@ When a visit is **`cancelled`** while full chart is open, Zone A shows a blockin
 
 ## 11. Completion, duplicates, pediatric DOB
 
-Aligned with PRD §10, USER_WORKFLOWS §10, and [FRONT_DESK_REGISTRATION](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) four-section form.
+Aligned with PRD §10, USER_WORKFLOWS §10, and [FRONT_DESK_REGISTRATION](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) four-section form.
 
 | Signal | UI | Behavior |
 |--------|-----|----------|
@@ -877,15 +877,15 @@ Build is acceptable when:
 - Patient portal redesign
 - Offline / PWA chart
 
-**Chart depth (separate spec — not built inside MRD tabs):** The following remain **out of MRD v0.2** by design (D-CD-1). They are specified in [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.7) with wireframes in [PAGE_DESIGNS §7.13–§7.16](./NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history):
+**Chart depth (separate spec — not built inside MRD tabs):** The following remain **out of MRD v0.2** by design (D-CD-1). They are specified in [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.7) with wireframes in [PAGE_DESIGNS §7.13–§7.16](./NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history):
 
 | Capability | Chart Depth section | PAGE_DESIGNS |
 |------------|---------------------|--------------|
-| Patient ledger / payment history & receipt reprint | [PATIENT_PAYMENT_HISTORY](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) · [CHART_DEPTH §9](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#9-financial--visit-charges--patient-ledger) | [§7.13](./NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history) |
-| Referrals & letters (outbound) | [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) · [CHART_DEPTH §10](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#10-referrals-transactions--correspondence) | [§7.14](./NEW_CLINIC_V1_PAGE_DESIGNS.md#714-chart-depthreferralsphp--referrals--letters) |
-| Clinical export / visit summary PDF | [§11 Reports](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#11-clinical-reports--record-export) | [§7.15](./NEW_CLINIC_V1_PAGE_DESIGNS.md#715-chart-depthexportphp--clinical-export) |
-| PRO / Easipro | [§12 PRO](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#12-patient-reported-outcomes-pro) | Clinical `#clinical-assessments` (§8.9 #10) |
-| External care / outside encounters | [§13 External data](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#13-external-data--care-outside-the-clinic) | [§7.16](./NEW_CLINIC_V1_PAGE_DESIGNS.md#716-chart-depthexternalphp--care-elsewhere) · `#clinical-external` |
+| Patient ledger / payment history & receipt reprint | [PATIENT_PAYMENT_HISTORY](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) · [CHART_DEPTH §9](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#9-financial--visit-charges--patient-ledger) | [§7.13](./NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history) |
+| Referrals & letters (outbound) | [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) · [CHART_DEPTH §10](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#10-referrals-transactions--correspondence) | [§7.14](./NEW_CLINIC_V1_PAGE_DESIGNS.md#714-chart-depthreferralsphp--referrals--letters) |
+| Clinical export / visit summary PDF | [§11 Reports](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#11-clinical-reports--record-export) | [§7.15](./NEW_CLINIC_V1_PAGE_DESIGNS.md#715-chart-depthexportphp--clinical-export) |
+| PRO / Easipro | [§12 PRO](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#12-patient-reported-outcomes-pro) | Clinical `#clinical-assessments` (§8.9 #10) |
+| External care / outside encounters | [§13 External data](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#13-external-data--care-outside-the-clinic) | [§7.16](./NEW_CLINIC_V1_PAGE_DESIGNS.md#716-chart-depthexternalphp--care-elsewhere) · `#clinical-external` |
 
 MRD provides **summary strips** (Profile payments, Clinical referrals) and **⋯ overflow** routes into Chart Depth — not full implementations.
 

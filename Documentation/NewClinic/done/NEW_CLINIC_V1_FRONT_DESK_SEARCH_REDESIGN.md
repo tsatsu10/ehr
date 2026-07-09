@@ -2,9 +2,9 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 1.0.9 |
+| **Document version** | 1.0.10 |
 | **Status** | **Approved for Phase 1 implementation** — design complete; PRD **M1a-F***, PAGE_DESIGNS §4.1, USER_WORKFLOWS §8.1 trace here |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.48), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.48), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.48), [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.1) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.48), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.48), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.48), [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.2) |
 | **Audience** | Product, design, backend engineers, frontend engineers, QA |
 | **Scope** | **M1a** — unified patient search component + `PatientSearchService` + AJAX API |
 | **Implementation** | Design spec; no code in this document |
@@ -326,7 +326,7 @@ Front Desk search does **not** route patients to a specific doctor. Reception on
 | Preview pane | When `appointment_today` chip active, show **Suggested provider** line (informational; not a reservation) |
 | Active visit chip | Shows FSM state only — no doctor picker on search UI |
 
-Nurse **Send to doctor** and Doctor Desk **All / Me** filter are specified in [USER_WORKFLOWS §8.3.1](./NEW_CLINIC_V1_USER_WORKFLOWS.md#831-multi-doctor-clinics), [§8.3.2](./NEW_CLINIC_V1_USER_WORKFLOWS.md#832-advisory-routing-v11), and [SCHEDULING §9.1a](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md#91a-front-desk-arrival-bridge-multi-doctor).
+Nurse **Send to doctor** and Doctor Desk **All / Me** filter are specified in [USER_WORKFLOWS §8.3.1](../NEW_CLINIC_V1_USER_WORKFLOWS.md#831-multi-doctor-clinics), [§8.3.2](../NEW_CLINIC_V1_USER_WORKFLOWS.md#832-advisory-routing-v11), and [SCHEDULING §9.1a](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md#91a-front-desk-arrival-bridge-multi-doctor).
 
 When `enable_advisory_routing` = 1, `routing_suggested_provider_id` is computed after triage — **not** at Front Desk search time.
 
@@ -607,11 +607,11 @@ flowchart LR
 - [x] Phone format parity (M1a-F04, test #5)
 - [x] Row shows F05 fields (name, sex/age, phone, MRN, completion, last visit, active-visit CC)
 - [x] Zero results → Add new patient CTA on Front Desk (M1a-F09)
-- [ ] P95 ≤ 1.5s @ 10k (M1a-F11) — **needs live G7 benchmark**
+- [ ] P95 ≤ 1.5s @ 10k (M1a-F11) — **open: needs pilot-scale G7 benchmark** (dev DB too small for a meaningful run; only remaining M1a item)
 - [x] Facility scope (M1a-F12)
 - [x] No `dynamic_finder.php` usage
 - [x] POST-only query string (SEC04)
-- [ ] Rate limit 429 (SEC06) — **needs live smoke with rate-limit header**
+- [x] Rate limit 429 (SEC06) — `RateLimitService` (`rate_limit_patients_search`, default 30/min) + `RateLimitServiceTest`; `AjaxController` maps 429 → `rate_limited` envelope
 
 ### 17.2 Preview & embed (P1)
 
@@ -647,6 +647,7 @@ flowchart LR
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.0.10 | 2026-07-09 | **Implementation audit closure** — §17 SEC06 rate-limit ticked (`RateLimitService` + test, 429 → `rate_limited` envelope); M1a-F10 recent patients confirmed shipped (`front_desk.recently_viewed*` actions); sole open item: pilot-scale P95 benchmark (M1a-F11) |
 | 1.0.9 | 2026-06-25 | **Q46** — cross-refs to Registration form (M1b); §9.7b Registration switch; replaces Quick Add terminology |
 | 1.0.7 | 2026-06-17 | **§9.7b** Quick Add switch; **§9.8** cashier visit_id (M1a-F15); PRD v1.20.7 §6.1j |
 | 1.0.6 | 2026-06-17 | **§9.7** search switch guard (M1a-F14); PRD v1.20.6 §6.1i |

@@ -6,7 +6,7 @@
 | **Companion to** | [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) §4 (Roles and landing screens), §8.6 (Cashier — Cashier), §10 (Profile completion framework), §12 (Exceptions); PRD D-BILL-2 (no partial payments), §6.1.1 (payment E-Sign gate) |
 | **Audience** | Product, design, trainers, QA, implementers |
 | **Purpose** | Ground design and copy decisions for the Cashier Desk, payment confirmation, and end-of-day cash discipline in the day of the person whose drawer has to balance |
-| **Last audited** | 2026-07-07 — created from spec anchors and code verified during the [codebase audit](./NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md) |
+| **Last audited** | 2026-07-07 — created from spec anchors and code verified during the [codebase audit](./done/NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md) |
 
 > Composite persona for design purposes — no real name, facility, or patient data is used. He is
 > the "Kofi" named in the PRD's role table (workflows §4). Claims about Ghanaian cash-handling
@@ -112,7 +112,7 @@ Direct implications for the Cashier Desk and payment flow, cross-referenced to e
 - **The empty-charge guard is a feature; keep it server-side** — refusing payment on a visit with no fee lines protects reconciliation; the UI should pair it with a fast path to add the suggested lines rather than a dead end.
 - **Cash tendered / change due must be the biggest numbers on the screen** — they are read aloud across a counter to a patient; this is a shared display, not a form field.
 - **Left-without-paying and Close-without-charge must be visible, ACL-gated, reason-required, and slightly ceremonial** — their weight in the UI is what lets him deflect pressure ("it's recorded properly") while the audit trail (M7-F14, override reports) protects him at review time.
-- **Skip-to-payment arrivals need their context visible on the payment screen** — a patient who bypassed pharmacy with reason "Patient declined Rx today" should not get charged for a dispense; the skip reason on the card is billing-relevant information, not just workflow trivia. *(Note: the skip UI upstream is currently regressed — AUDIT-1 in the [audit roadmap](./NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md) — but skip-state visits still reach his queue via the FSM, so this display requirement stands.)*
+- **Skip-to-payment arrivals need their context visible on the payment screen** — a patient who bypassed pharmacy with reason "Patient declined Rx today" should not get charged for a dispense; the skip reason on the card is billing-relevant information, not just workflow trivia. *(Note: the skip UI upstream is currently regressed — AUDIT-1 in the [audit roadmap](./done/NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md) — but skip-state visits still reach his queue via the FSM, so this display requirement stands.)*
 - **Receipt reprint must exist and never re-post** — printer failures are routine; the recovery path has to be one click from the completed visit.
 - **The daily cash summary is his scoreboard** — it must match core AR posting to the pesewa, because the manager's morning reconciliation (RB-02) is, from Kofi's seat, a daily performance review he intends to pass forever.
 - **Confirm modals repeat the active role before money moves** (shared-device rule, §8.6) — hold this pattern permanently; it is the product's promise that nobody spends money on his name but him.

@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.1.9 |
 | **Status** | Draft for review — **Module M13** integrated in PRD v1.20.29; **D-PHARM-3/4/5/6** closed; **D-REG-3** clinic currency; **D-STAFF-1** lead groups; PAGE_DESIGNS §7.21–§7.24; M9 remains V1 queue |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.29), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.34), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.34), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.28), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.8) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.29), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.34), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.34), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.28), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.8) |
 | **Audience** | Product, design, pharmacy leads, clinical leads, implementers, QA |
 | **Scope** | Everything **beyond M9 queue + core Rx/inventory shortcuts** — drug master, lots, receiving, reorder, destruction, dispensing façade, clinic formulary starter packs, and (V3) supply-chain country packs |
 | **Implementation** | Design only — no code in this document |
@@ -405,7 +405,7 @@ Not a clinical authority — **installer seed** for wizard; clinician lead must 
 | **Topicals** | Chlorhexidine, hydrocortisone cream |
 | **Chronic staples** | Metformin, amlodipine, losartan (when clinic manages chronic OPD) |
 
-Sample CSV path: [samples/opd_formulary_starter.csv](./samples/opd_formulary_starter.csv) — mirrors lab panel CSV pattern.
+Sample CSV path: [samples/opd_formulary_starter.csv](../samples/opd_formulary_starter.csv) — mirrors lab panel CSV pattern.
 
 ### 7.4 West Africa expansion (V3 country packs)
 
@@ -612,7 +612,7 @@ V1.1-PHARM uses **Model B** — pharmacist verifies drug, dose, and patient iden
 |------|--------|
 | 1 | Confirm `inhouse_pharmacy` level (drugs vs products) |
 | 2 | Create default **warehouse** tied to facility |
-| 3 | Import [samples/opd_formulary_starter.csv](./samples/opd_formulary_starter.csv) — creates `drugs` + `drug_templates` + `prices` |
+| 3 | Import [samples/opd_formulary_starter.csv](../samples/opd_formulary_starter.csv) — creates `drugs` + `drug_templates` + `prices` |
 | 4 | Map to `new_fee_schedule` fee schedule lines (M6) |
 | 5 | Set reorder points in **units** (override `gbl_min_max_months` OFF for New Clinic sites — **M6-F26**) |
 
@@ -800,7 +800,7 @@ Existing M9 keys unchanged (`new_pharmacy`, `new_pharmacy_allergy_ack`, etc.).
 2. Leave `inhouse_pharmacy` = 0 and `enable_pharm_ops` = 0.
 3. Set `enable_rx_print` = 1 (cash clinic profile default).
 4. Train: document Rx in encounter → **Print Rx** (M4-F38) or paper pad; patient buys outside.
-5. Runbook: [PRD §17.4.6](./NEW_CLINIC_V1_PRD.md#1746-print-rx-checklist-v11-print-rx--type-a).
+5. Runbook: [PRD §17.4.6](../NEW_CLINIC_V1_PRD.md#1746-print-rx-checklist-v11-print-rx--type-a).
 
 **Type B — in-house dispensary (post-pilot hub):**
 

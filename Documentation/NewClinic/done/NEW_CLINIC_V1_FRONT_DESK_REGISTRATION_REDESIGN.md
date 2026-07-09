@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 1.1.0 |
 | **Status** | **Approved for implementation** — supersedes L1-only Quick Add as primary registration path |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md), [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (M1a), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) §4.1.3 / §7.2, [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) §8.1 / §9 |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md), [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (M1a), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) §4.1.3 / §7.2, [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) §8.1 / §9 |
 | **Audience** | Product, design, backend, frontend, QA |
 | **Scope** | **M1b** full registration form + **M1c** completion scoring alignment at Front Desk |
 | **Replaces** | PRD M1b “Quick Add drawer” (L1-only, ≤10s) as **primary** path — retained only as legacy alias in code until removed |
@@ -339,7 +339,7 @@ B7 Profile tab checklist (L1–L4) must mirror section completion state from thi
 - [x] NHIS expiry -> display as Cash (PatientInsuranceUtil::effectiveType; preview badge sp168)
 - [x] Allergies "None known" sets NKDA list entry (replaceListEntries + NKDA check aligned sp168)
 - [x] Pregnancy field visible only for Female
-- [ ] `ghana_regions_districts` seeded in M6 — **admin M6 setup step, not registration form**
+- [x] `ghana_regions_districts` seeded in M6 — **admin M6 setup step, not registration form** (shipped: `data/ghana_regions_districts.json`, 16 regions / 103 districts, `GeoService` + `admin.geo.*`)
 
 ---
 

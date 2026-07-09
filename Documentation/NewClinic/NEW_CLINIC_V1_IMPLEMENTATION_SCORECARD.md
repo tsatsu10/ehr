@@ -4,8 +4,8 @@
 
 | Field | Value |
 |-------|-------|
-| **Last audited** | 2026-07-08 |
-| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260708auditmerged1` |
+| **Last audited** | 2026-07-09 |
+| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260709batch6` |
 | **Maintainer** | Engineering lead updates after each sprint; Product owns pilot sign-off |
 | **How to update** | Change `%` and `Status` cells; bump **Last audited**; sync PRD §5.6 row if shell status changes |
 
@@ -18,17 +18,17 @@
 | **Post-pilot slice %** | Mean of §20.1 release slices |
 | **Overall product %** | `0.50 × pilot_path + 0.35 × post_pilot_slices + 0.10 × v12_advanced + 0.05 × ui_shadcn` |
 
-### Executive rollup (2026-07-04)
+### Executive rollup (2026-07-09)
 
 | Lens | % | Notes |
 |------|---|-------|
-| Specs written | **95** | PRD v1.20.50 + companions; §21 E2E map added |
+| Specs written | **96** | PRD v1.20.50 + companions; 15 companion specs implementation-closed in `done/` |
 | Module shells (§5.6) | **96** | 22 Shipped + T2 Partial / 24 packages |
 | **V1 pilot path** | **92** code · **90** QA | B0–B7 signed; §21.1 + §21.1b + hub smokes 57/57 |
-| Post-pilot slices (§20.1) | **82** | Mandatory contracts through **63** |
+| Post-pilot slices (§20.1) | **81** | Mandatory contracts through **80/80**; AUDIT-1–15 refactor roadmap complete |
 | §21 acceptance (documented) | **15** signed · **19** hub smokes · **~235** open | [QA sign-off](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md) 2026-07-04 |
 | shadcn §9 | **97** | Calendar + Pharm Ops on nc-* hooks; Phase C wrappers complete |
-| **Overall product** | **81** | Weighted blend |
+| **Overall product** | **82** | Weighted blend |
 
 ---
 
@@ -39,7 +39,7 @@
 | ID | Module | Shell | Feature % | Pilot-ready | Owner | Status | Top gaps |
 |----|--------|-------|-----------|-------------|-------|--------|----------|
 | M0 | Core (queue, FSM, ACL, install) | Done | **95** | Yes | Eng | Done | M0-F07 REST queue API; M0-F18 advisory routing |
-| M1 | Front Desk (M1a–M1d) | Done | **100** | Yes | Eng | Done | M6 `ghana_regions_districts` seed (admin setup) |
+| M1 | Front Desk (M1a–M1d) | Done | **100** | Yes | Eng | Done | M1a-F11 P95 benchmark at pilot scale (geo seed ships via `GeoService` JSON) |
 | M2 | Visit Board | Done | **92** | Yes | Eng | Done | M2-F11 cancelled collapsible; wall profile privacy hardening |
 | M3 | Triage | Done | **95** | Yes | Eng | Done | — |
 | M4 | Doctor Desk | Done | **96** | Yes | Eng | Done | V1.2b Web Push notify deferred |
@@ -48,14 +48,14 @@
 | M7 | Daily Reports | Done | **92** | Yes | Eng | Done | M7-F18 ancillary section; scheduling tab bridge flag at some sites |
 | M8 | Lab Desk | Done | **90** | Yes | Eng | Done | Role-gated; M8-F07 skip-to-payment restored (AUDIT-1) |
 | M9 | Pharmacy Desk | Done | **90** | Yes | Eng | Done | Role-gated; M9-F06 skip-to-payment restored (AUDIT-1) |
-| M10 | Patient Registry | Done | **82** | Post-pilot | Eng | Partial | PR-4 allergy/med/comms filters shipped; REG sign-off |
-| M11 | Chart Depth | Done | **82** | Post-pilot | Eng | Partial | CDa/b/c panels; external care (V1.2) not built |
+| M10 | Patient Registry | Done | **88** | Post-pilot | Eng | Partial | §22 acceptance eng-closed (spec v0.2.2); Product pilot sign-off + REG-4 browser UAT |
+| M11 | Chart Depth | Done | **85** | Post-pilot | Eng | Partial | CDb referral wizard + status tracking shipped; external care (V1.2) not built |
 | M12 | Lab Operations Hub | Done | **78** | Post-pilot | Eng | Partial | LIS/DORN (V1.2-LIS) not built |
 | M13 | Pharmacy Operations Hub | Done | **80** | Post-pilot | Eng | Partial | V1.2 destruction reports polish |
 | M14 | Billing Back Office | Done | **72** | Post-pilot | Eng | Partial | F04 outstanding done; insurance vault partial |
 | M15 | Admin Operations Hub | Done | **85** | Post-pilot | Eng | Done | RB-01–RB-20; config import/export |
-| M16 | Reporting Operations Hub | Done | **85** | Post-pilot | Eng | Partial | RR-07 OPD attendance native; RR-01–RR-12 footer |
-| M17 | Clinical Documentation Hub | Done | **85** | Post-pilot | Eng | Done | DR runbooks in spec; Ghana pack wizard |
+| M16 | Reporting Operations Hub | Done | **88** | Post-pilot | Eng | Partial | §19 acceptance eng-closed (spec v0.1.4, incl. `hub_advanced_open` audit); OPD attendance pilot review (Product) |
+| M17 | Clinical Documentation Hub | Done | **88** | Post-pilot | Eng | Done | Ghana HIS pack shipped (`HisPackImportService` + admin card); DR runbooks in spec |
 | M18 | Queue Bridge Hub | Done | **85** | Post-pilot | Eng | Done | SQ-01–SQ-08 E2E matrix thin |
 | COM | Communications Hub | Done | **80** | Post-pilot | Eng | Partial | Phase 1 approved; advanced comms TBD |
 | S1 | Scheduling & Flow | Done | **85** | Post-pilot | Eng | Partial | S-P12 lane prefs; some calendar edge cases |
@@ -63,7 +63,7 @@
 | MRD | Patient chart (B7) | Done | **88** | Yes | Eng | Done | Activity feed; role-default tab (D-MRD-13) |
 | T2 | Globals profile | Partial | **40** | Yes | Eng | Stub | Installer preset doc; not full automation |
 
-**§5.6 mean feature % (all modules):** **86**  
+**§5.6 mean feature % (all modules):** **87**  
 **Pilot-ready modules only (12):** **93**
 
 ---
@@ -77,24 +77,24 @@
 | **V1.1-RTb** | `enable_advisory_routing` | **85** | Eng | Done | `VisitRoutingService`, queue chip, override modal |
 | **V1.1-OPS** | per-feature §23 | **30** | Eng | Partial | Faster poll, surname warning, MoMo label scattered |
 | **V1.1-CDa** | `enable_chart_depth_finance` | **85** | Eng | Done | payments island; menu cutover |
-| **V1.1-CDb** | `enable_chart_depth_referral` | **85** | Eng | Done | referrals island |
+| **V1.1-CDb** | `enable_chart_depth_referral` | **88** | Eng | Done | referrals island + 3-step wizard, print/status tracking, `new_referral_meta` |
 | **V1.1-CDc** | `enable_chart_depth_export` | **80** | Eng | Done | export presets |
 | **V1.1-LAB** | `enable_lab_ops` | **78** | Eng | Partial | worklist, results, panels |
 | **V1.1-LAB-ORD** | `enable_lab_panel_order` | **70** | Eng | Partial | Doctor desk `LabPanelModal` |
 | **V1.1-PRINT-RX** | `enable_rx_print` | **80** | Eng | Done | `pharmOpsPrintRx`, desk integration |
 | **V1.1-PHARM** | `enable_pharm_ops` | **80** | Eng | Done | dispense, receive, OTC, controlled register |
 | **V1.1-ADMIN** | `enable_admin_hub` | **85** | Eng | Done | runbooks, health, export |
-| **V1.1-REP** | `enable_report_hub` | **82** | Eng | Partial | native reports + RR runbooks; RR-07 OPD attendance |
+| **V1.1-REP** | `enable_report_hub` | **86** | Eng | Done | native reports + RR runbooks + async export + `hub_advanced_open` audit; OPD attendance pilot review open (Product) |
 | **V1.1-DOC** | `enable_clinical_doc_hub` | **85** | Eng | Done | catalog, form bridge, visit summary |
 | **V1.1-BRIDGE** | `enable_queue_bridge` | **85** | Eng | Done | hub, EX chips, Front Desk guard |
-| **V1.1-REG** | `enable_patient_registry` | **82** | Eng | Partial | cohort search + saved filters + PR-4 filters |
+| **V1.1-REG** | `enable_patient_registry` | **86** | Eng | Partial | cohort search + saved filters + PR-4 filters; `registry-signoff` PASS; Product pilot sign-off open |
 | **V1.2-BILL** | `enable_bill_ops` | **72** | Eng | Partial | correct, payments, close, outstanding |
 | **V1.2-CTX** | `enable_legacy_patient_context_overlay` | **90** | Eng | Done | strip inject + shared-device warning |
 | **V1.2-PHARM** | OPS policy | **50** | Eng | Partial | destroy reports; expiry alerts |
 | **V1.2-PHARM-RX** | `enable_pharm_rx_favorites` | **75** | Eng | Partial | `FormularyRxModal`; `v12-pharm-rx-smoke` green |
 | **V1.2** | hard assign, notify, LIS | **75** | Eng | Partial | §6.5.3–4 shipped; `v12-doctor-ready-notify-smoke` + `v12-hard-assign-smoke` green |
 
-**§20.1 mean:** **80**
+**§20.1 mean:** **81**
 
 ---
 
@@ -117,7 +117,7 @@ Formal PRD checkboxes. **QA** updates `Signed` when E2E + pilot worksheet row pa
 | COM | Communications hub | 3 | 0 | **yes** | Product |
 | V1.2 | Notify, PHARM-RX, hard assign | 3 | 0 | **yes** | Product |
 
-**Automated evidence:** PHPUnit NewClinic **62/62** · Playwright golden-path **11/11** (re-verify on desktop after desk batches) · hub smokes **57/57** · [§21 E2E map](./NEW_CLINIC_V1_SECTION21_E2E_MAP.md).
+**Automated evidence (2026-07-09):** PHPUnit NewClinic **839** tests · mandatory contracts **80/80** · frontend Vitest **393** · Playwright golden-path specs **2/2** green (incl. lab close-day) · hub smokes **57/57** · `composer registry-signoff` PASS · [§21 E2E map](./NEW_CLINIC_V1_SECTION21_E2E_MAP.md).
 
 **Estimated CI coverage of §21:** **~85** (engineering estimate; normative PRD checkboxes mostly open for Product)
 
@@ -148,7 +148,7 @@ Prioritized from lowest module/slice %.
 | P1 | — | V1.2-LIS | Lab LIS / DORN integration | 0 | Eng |
 | P1 | — | V1.1-ANC | §21.1i Product normative sign-off | 88 | Product |
 | P1 | — | V1.1-OPS | Bundle MoMo label, faster poll, surname warn | 30 | Eng |
-| P1 | M10 | M10 | Patient Registry product sign-off | 82 | Product |
+| P1 | M10 | M10 | Patient Registry product sign-off | 88 | Product |
 | P2 | M0-F07 | M0 | REST `GET /api/new/visits` | 0 | Eng |
 | P2 | T2 | Platform | Globals installer profile | 40 | Eng |
 | P2 | §9-B | UI | shadcn Phase B component swap | 100 | Done |
@@ -298,6 +298,8 @@ Completed comprehensive Front Desk UX overhaul (sp182touch → sp191fuzzydup):
 | 2026-07-04 | Engineering | S1 scheduling smoke (`testMandatory60`); V1.2-BILL depth (`61`); V1.1-COM (`62`); §21 golden path rollout (`63`) + `NEW_CLINIC_V1_SECTION21_E2E_MAP.md`; asset `sp75goldenpath` |
 | 2026-07-05 | Engineering | M1 Front Desk UX enhancements: touch target optimization (WCAG AA); keyboard shortcuts help (`?` overlay); field-level validation with inline errors; auto-save with draft recovery; ARIA landmarks & labels (screen reader A11y); asset `sp179touchopt` → `sp183aria`; session doc `FRONT_DESK_UX_IMPROVEMENTS_SESSION_20260705.md` |
 | 2026-07-08 | Engineering | **AUDIT-13 doc-sync:** M8-F07/M9-F06 skip-to-payment confirmed restored (AUDIT-1); scorecard samples added; PRD §12.4 flag matrix reconciled with `install.sql`; CLAUDE.md island/cashier wording fixed; `new/` index consolidated |
+| 2026-07-08 | Engineering | **Spec-completion batches 1–5:** 19 companion specs audited against code, gaps fixed (payment-history quintet, enriched activity feed, role picker, admin menu cutover, CDb referral wizard + `new_referral_meta`, Ghana HIS pack, SDOH chips, pilot wrappers, core-ACL grants); 15 specs archived to `done/`; AUDIT-1–15 refactor roadmap complete; golden-path E2E 2/2; asset `20260708chartdepth1` |
+| 2026-07-09 | Engineering | **Spec-completion batch 6:** M1a/M16/M10 implementation-audit closure (spec v1.0.10 / v0.1.4 / v0.2.2); `reports.hub_advanced_open` distinct audit event (§16.3); `registry-signoff` + report-hub smoke re-verified green; scorecard rollup + stale cells refreshed; asset `20260709batch6` |
 
 ---
 
@@ -309,4 +311,4 @@ Completed comprehensive Front Desk UX overhaul (sp182touch → sp191fuzzydup):
 - [§21 E2E evidence map](./NEW_CLINIC_V1_SECTION21_E2E_MAP.md)
 - [§21 QA sign-off record](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md)
 - [NEXT_STEPS.md](../../interface/modules/custom_modules/oe-module-new-clinic/NEXT_STEPS.md) — deploy / pilot commands
-- [CODE_AUDIT React migration](../../interface/modules/custom_modules/oe-module-new-clinic/CODE_AUDIT_2026-06-27-REACT-MIGRATION.md) — superseded for open items by [audit roadmap](./NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md)
+- [CODE_AUDIT React migration](../../interface/modules/custom_modules/oe-module-new-clinic/CODE_AUDIT_2026-06-27-REACT-MIGRATION.md) — superseded for open items by [audit roadmap](./done/NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md)

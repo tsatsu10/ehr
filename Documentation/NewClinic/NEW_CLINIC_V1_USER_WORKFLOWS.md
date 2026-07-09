@@ -3,7 +3,7 @@
 | Field | Value |
 |-------|--------|
 | **Document version** | 1.9.50 |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.49), [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.1), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.35), [NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.15), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.5), [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) (v1.0.3), [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (v1.0.7), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md](./NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) (v0.1.2) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.49), [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.1), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.35), [NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.15), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.5), [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) (v1.0.3), [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (v1.0.7), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md](./done/NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) (v0.1.2) |
 | **Audience** | Product, clinical leads, trainers, implementers, QA |
 | **Purpose** | Explain **who does what, in what order**, with visual frameworks — without implementation detail |
 
@@ -56,7 +56,7 @@
 | **Chief complaint on banner** | [§17.0g Chief complaint](#170g-chief-complaint) · PRD [§6.1f](./NEW_CLINIC_V1_PRD.md#61f-chief-complaint) |
 | **Clinical decision at the desk (30s context)** | [§17.0h Clinical decision at the desk](#170h-clinical-decision-at-the-desk) · PRD [§6.1g](./NEW_CLINIC_V1_PRD.md#61g-clinical-decision-at-the-desk) |
 | **Billing back office (post-pilot)** | [§17.0j Billing three-layer trainer](#170j-billing-back-office--trainer-one-liner) · PRD [§5.6.1](./NEW_CLINIC_V1_PRD.md#561-interim-full-chart-pilot-week-1--before-b7-mrd-ships) · [§17.4.7](./NEW_CLINIC_V1_PRD.md#1747-billing-back-office-runbook-v12-bill) |
-| **Billing back office (post-pilot)** | [§17.0j Billing back office layer](#170j-billing-back-office-layer) · PRD [§5.6.1](./NEW_CLINIC_V1_PRD.md#561-interim-full-chart-pilot-week-1--before-b7-mrd-ships) · [BILLING_AR](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) |
+| **Billing back office (post-pilot)** | [§17.0j Billing back office layer](#170j-billing-back-office-layer) · PRD [§5.6.1](./NEW_CLINIC_V1_PRD.md#561-interim-full-chart-pilot-week-1--before-b7-mrd-ships) · [BILLING_AR](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) |
 | MRD layout, tabs, and zones (design) | [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) |
 | Technical/API detail | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) |
 
@@ -377,7 +377,7 @@ Reception starts **Pharmacy walk-in** only — **does not** ask OTC vs prescript
 
 **Goal:** Find or create the patient in seconds, start the visit, give them a queue number.
 
-**Search detail:** M1a algorithm, API, and acceptance — [FRONT_DESK_SEARCH_REDESIGN](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md).
+**Search detail:** M1a algorithm, API, and acceptance — [FRONT_DESK_SEARCH_REDESIGN](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md).
 
 | Step | Action | System result |
 |------|--------|---------------|
@@ -477,7 +477,7 @@ This is **not** a hard turn-away — staff pick the path that fits the situation
 - Expect **Portal Mail** here — use Portal dropdown (`onsite_mail` is separate).
 - Use Message Center for cohort searches — use **Patient Registry** (§8.1d).
 
-Full spec: [COMMUNICATIONS_HUB_REDESIGN](./NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md).
+Full spec: [COMMUNICATIONS_HUB_REDESIGN](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md).
 
 ---
 
@@ -494,7 +494,7 @@ Full spec: [COMMUNICATIONS_HUB_REDESIGN](./NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDE
 
 **Do not:** Use Front Desk search or legacy Finder for registry-style queries.
 
-Full spec: [PATIENT_REGISTRY_REDESIGN](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md).
+Full spec: [PATIENT_REGISTRY_REDESIGN](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md).
 
 ---
 
@@ -835,7 +835,7 @@ flowchart TD
 
 ### 9.1 Section 1 — Basic info (minimum to create)
 
-Normative field list: [FRONT_DESK_REGISTRATION §5](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md#5-section-1--basic-info).
+Normative field list: [FRONT_DESK_REGISTRATION §5](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md#5-section-1--basic-info).
 
 | Field | Required |
 |-------|----------|
@@ -855,7 +855,7 @@ Progressive registration: **fast at the door, complete before money leaves.**
 
 ### 10.1 Four levels (weights → 100%)
 
-Aligned with [FRONT_DESK_REGISTRATION](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) four-section form.
+Aligned with [FRONT_DESK_REGISTRATION](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) four-section form.
 
 | Level | When captured | Weight | Examples |
 |-------|---------------|--------|----------|
@@ -1079,7 +1079,7 @@ Walk-in-only clinics: admin sets `enable_scheduled_integration` OFF — Mode 2 h
 
 ### 12.3 Scheduled patient arrives (Calendar & Recalls coexistence)
 
-V1 ships the full **Scheduling & Flow** system (S1 — PRD §5.5, [SCHEDULING_REDESIGN](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md)). Book on **Calendar**, work **Recalls** on the worklist, watch **appointment arrivals** on Flow Board. At the door, reception uses **Start visit & check in** (one button, one encounter — D19) → same Visit Board as walk-ins. Hidden only if admin sets `enable_scheduled_integration` OFF (walk-in-only profile).
+V1 ships the full **Scheduling & Flow** system (S1 — PRD §5.5, [SCHEDULING_REDESIGN](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md)). Book on **Calendar**, work **Recalls** on the worklist, watch **appointment arrivals** on Flow Board. At the door, reception uses **Start visit & check in** (one button, one encounter — D19) → same Visit Board as walk-ins. Hidden only if admin sets `enable_scheduled_integration` OFF (walk-in-only profile).
 
 **What reception sees (V1):**
 
@@ -1180,7 +1180,7 @@ See [PRD §17.4](./NEW_CLINIC_V1_PRD.md) for technical runbook.
 | **Unsigned consult documentation** | Unsigned encounters report (M7-F17) |
 | AR reconciliation ok/warning | Reconciliation report + M6 |
 | **Unpaid visits** (`closed_unpaid`) | M7-F14 — who left without paying at checkout (not AR aging) |
-| **Billing back office** (post-pilot) | M14 — corrections, payment search, **Close day** operator tab; M7 cash/reconciliation reports **remain** (D-BILL-3) — [BILLING_AR spec](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md); runbook PRD **§17.4.7**; acceptance **§21.1u** |
+| **Billing back office** (post-pilot) | M14 — corrections, payment search, **Close day** operator tab; M7 cash/reconciliation reports **remain** (D-BILL-3) — [BILLING_AR spec](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md); runbook PRD **§17.4.7**; acceptance **§21.1u** |
 | **Outstanding / credit list** (optional) | M14-F04 when `enable_bill_ops_outstanding` = 1 — distinct from M7-F14 (D-BILL-4) |
 | EOD open visits | Stuck non-terminal visits — cancel or resolve; **unsigned cross-cut** rows (`with_doctor` + unsigned, `ready_for_payment` + unsigned) — §6.4e PRD |
 | Queues skipped / unpaid / pediatric DOB follow-up | Exception reports (M7-F12–F14) |
@@ -1264,7 +1264,7 @@ See [PRD §17.4](./NEW_CLINIC_V1_PRD.md) for technical runbook.
 
 ### 14.8 Day-2 admin workflows
 
-**When:** After pilot go-live — ongoing tasks **not** covered by install runbook [PRD §17.4](./NEW_CLINIC_V1_PRD.md#174-module-manager-runbook) or worksheet [§14.4](./NEW_CLINIC_V1_USER_WORKFLOWS.md#144-pilot-config-worksheet-close-q4q9). Normative index: [PRD §17.4.8](./NEW_CLINIC_V1_PRD.md#1748-day-2-admin-runbook-m15) · [ADMIN_CONFIGURATION §14](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md#14-day-2-admin-runbook-operational). In-product: M15 **Runbooks** lens when `enable_admin_hub` = 1; until then use this section as printed runbook.
+**When:** After pilot go-live — ongoing tasks **not** covered by install runbook [PRD §17.4](./NEW_CLINIC_V1_PRD.md#174-module-manager-runbook) or worksheet [§14.4](./NEW_CLINIC_V1_USER_WORKFLOWS.md#144-pilot-config-worksheet-close-q4q9). Normative index: [PRD §17.4.8](./NEW_CLINIC_V1_PRD.md#1748-day-2-admin-runbook-m15) · [ADMIN_CONFIGURATION §14](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md#14-day-2-admin-runbook-operational). In-product: M15 **Runbooks** lens when `enable_admin_hub` = 1; until then use this section as printed runbook.
 
 **Training one-liner:** *Install week = worksheet + §17.4. Day 2+ = this section.*
 
@@ -1286,7 +1286,7 @@ See [PRD §17.4](./NEW_CLINIC_V1_PRD.md) for technical runbook.
 | Staff left | RB-07 | Owner | Deactivate user — never delete |
 | Forgot password | RB-08 | Owner | People → Reset password |
 
-Full RB-05 steps: [ADMIN_CONFIGURATION §14.2](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md#142-rb-05--add-new-receptionist-canonical).
+Full RB-05 steps: [ADMIN_CONFIGURATION §14.2](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md#142-rb-05--add-new-receptionist-canonical).
 
 **Ghana note:** Document Pattern A/B/C from [§14.1.1](./NEW_CLINIC_V1_USER_WORKFLOWS.md#1411-staff-accounts--acl-groups-d-staff-1) on training log when bench staffing changes.
 
@@ -1339,11 +1339,11 @@ Trainer drill: [PRD §17.2.4](./NEW_CLINIC_V1_PRD.md#1724-documentation-integrit
 | RB-11 | Rare | Unlock signed note (manager) |
 | RB-16 | Monthly | Audit overrides in M7 |
 
-Full list RB-01–RB-20: [ADMIN_CONFIGURATION §14.1](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md#141-runbook-index).
+Full list RB-01–RB-20: [ADMIN_CONFIGURATION §14.1](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md#141-runbook-index).
 
 ### 14.9 Periodic reporting workflows
 
-**When:** After **M7 P0** for daily close; after **V1.1-REP** (`enable_report_hub` = 1) for monthly/quarterly extracts. Normative spec: [REPORTING_OPERATIONS](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) · PRD [§17.4.9](./NEW_CLINIC_V1_PRD.md#1749-day-2-reporting-runbook-m16) · PAGE_DESIGNS [§7.10](./NEW_CLINIC_V1_PAGE_DESIGNS.md#710-reportsphp--daily-reports) + [§7.29](./NEW_CLINIC_V1_PAGE_DESIGNS.md#729-report-hubindexphp--reporting-operations-hub).
+**When:** After **M7 P0** for daily close; after **V1.1-REP** (`enable_report_hub` = 1) for monthly/quarterly extracts. Normative spec: [REPORTING_OPERATIONS](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) · PRD [§17.4.9](./NEW_CLINIC_V1_PRD.md#1749-day-2-reporting-runbook-m16) · PAGE_DESIGNS [§7.10](./NEW_CLINIC_V1_PAGE_DESIGNS.md#710-reportsphp--daily-reports) + [§7.29](./NEW_CLINIC_V1_PAGE_DESIGNS.md#729-report-hubindexphp--reporting-operations-hub).
 
 **Training one-liner:** *Daily Reports for tonight's close; Reporting Hub for monthly extracts and inspection binders.*
 
@@ -1388,7 +1388,7 @@ DHIMS2 electronic submit remains **V2.2** (NG8) — paper exports satisfy most p
 
 ### 14.10 Clinical documentation workflows
 
-**When:** V1 pilot uses **M4 shortcuts** + stock `encounter_top.php`; after **V1.1-DOC** (`enable_clinical_doc_hub` = 1) doctors use the **Clinical Documentation Hub**. Normative spec: [CLINICAL_DOCUMENTATION](./NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) · PRD [§17.4.10](./NEW_CLINIC_V1_PRD.md#17410-day-2-clinical-documentation-runbook-m17) · PAGE_DESIGNS [§7.30](./NEW_CLINIC_V1_PAGE_DESIGNS.md#730-clinical-docindexphp--clinical-documentation-hub).
+**When:** V1 pilot uses **M4 shortcuts** + stock `encounter_top.php`; after **V1.1-DOC** (`enable_clinical_doc_hub` = 1) doctors use the **Clinical Documentation Hub**. Normative spec: [CLINICAL_DOCUMENTATION](./done/NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) · PRD [§17.4.10](./NEW_CLINIC_V1_PRD.md#17410-day-2-clinical-documentation-runbook-m17) · PAGE_DESIGNS [§7.30](./NEW_CLINIC_V1_PAGE_DESIGNS.md#730-clinical-docindexphp--clinical-documentation-hub).
 
 **Training one-liner:** *Doctor Desk for who you're seeing; documentation hub for what to write; chart for what was written before.*
 
@@ -1437,7 +1437,7 @@ Follow **DR-08** / M15 §11.5 — manager unlock via stock encounter admin; **do
 
 ### 14.11 Queue bridge & scheduling boundary workflows
 
-**When:** V1 pilot trains on **two boards** (Visit Board + Scheduling & Flow) using **Start visit & check in**; after **V1.1-BRIDGE** (`enable_queue_bridge` = 1) reception lead and manager use the **Queue Bridge Hub** for mismatches. Normative spec: [SCHEDULING_QUEUE_BOUNDARY](./NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) · PRD [§17.4.11](./NEW_CLINIC_V1_PRD.md#17411-day-2-queue-bridge-runbook-m18) · PAGE_DESIGNS [§7.31](./NEW_CLINIC_V1_PAGE_DESIGNS.md#731-queue-bridgeindexphp--queue-bridge-hub).
+**When:** V1 pilot trains on **two boards** (Visit Board + Scheduling & Flow) using **Start visit & check in**; after **V1.1-BRIDGE** (`enable_queue_bridge` = 1) reception lead and manager use the **Queue Bridge Hub** for mismatches. Normative spec: [SCHEDULING_QUEUE_BOUNDARY](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) · PRD [§17.4.11](./NEW_CLINIC_V1_PRD.md#17411-day-2-queue-bridge-runbook-m18) · PAGE_DESIGNS [§7.31](./NEW_CLINIC_V1_PAGE_DESIGNS.md#731-queue-bridgeindexphp--queue-bridge-hub).
 
 **Training one-liner:** *Schedule for planning; Visit Board for treating; one button connects them — the exception list catches mistakes.*
 
@@ -1512,7 +1512,7 @@ Train staff to use these terms consistently — overloaded words cause most enco
 | **Clinical correction** | Changing **locked note text** after sign — manager unlock in core | Using **Reopen consult** to rewrite SOAP |
 | **Visit is done** | Cashier posted payment (or authorized close) — terminal queue state | Saying Complete consult = done |
 
-**Desk vs chart vs depth vs lab ops vs pharm ops vs billing:** *“Desk answers **what next?** Chart answers **what happened before?** Depth panels answer **money, letters, and exports.** Lab ops answers **what's still pending at the bench?** Pharm ops answers **what's still pending at the counter?** Billing back office answers **what needs correcting or closing after checkout?**”* — [§17.0h](./NEW_CLINIC_V1_USER_WORKFLOWS.md#170h-clinical-decision-at-the-desk) · [§17.0j](./NEW_CLINIC_V1_USER_WORKFLOWS.md#170j-billing-back-office--trainer-one-liner) • [LAB_OPERATIONS](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) • [PHARMACY_OPERATIONS](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) • [BILLING_AR](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) • PRD [§5.6.1](./NEW_CLINIC_V1_PRD.md#561-interim-full-chart-pilot-week-1--before-b7-mrd-ships).
+**Desk vs chart vs depth vs lab ops vs pharm ops vs billing:** *“Desk answers **what next?** Chart answers **what happened before?** Depth panels answer **money, letters, and exports.** Lab ops answers **what's still pending at the bench?** Pharm ops answers **what's still pending at the counter?** Billing back office answers **what needs correcting or closing after checkout?**”* — [§17.0h](./NEW_CLINIC_V1_USER_WORKFLOWS.md#170h-clinical-decision-at-the-desk) · [§17.0j](./NEW_CLINIC_V1_USER_WORKFLOWS.md#170j-billing-back-office--trainer-one-liner) • [LAB_OPERATIONS](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) • [PHARMACY_OPERATIONS](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) • [BILLING_AR](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) • PRD [§5.6.1](./NEW_CLINIC_V1_PRD.md#561-interim-full-chart-pilot-week-1--before-b7-mrd-ships).
 
 **Trainer poster:** [§17.0](#170-encounter-lifecycle--trainer-one-liner) · PRD [§6.1b](./NEW_CLINIC_V1_PRD.md#61b-encounter-lifecycle--anchor).
 
@@ -1525,7 +1525,7 @@ Train staff to use these terms consistently — overloaded words cause most enco
 | **Take patient** | Doctor, lab, or pharmacy **claims** patient in queue — **does not** create encounter; binds session before core screens (lab/pharmacy/doctor) |
 | **Queue number** | Daily ticket # for patient (reception slip + receipt) |
 | **Visit Board** | Kanban view of today’s visits by state |
-| **Registration form** | Four-section desk capture (M1b) — [FRONT_DESK_REGISTRATION](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) |
+| **Registration form** | Four-section desk capture (M1b) — [FRONT_DESK_REGISTRATION](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) |
 | **Completion %** | 0–100 profile completeness score |
 | **Chokepoint** | Step that blocks if profile too incomplete |
 | **Golden path** | Happy-path sequence with no errors |
@@ -1803,7 +1803,7 @@ M7 REPORTS = archive & reconcile — same numbers, manager view.
 | End-of-day cash close | **M14-F03** operator tab when hub ON; **M7** reconciliation report always (D-BILL-3) | Duplicate close in two UIs without training |
 | Who left without paying | **M7-F14** `closed_unpaid` | M14-F04 (optional credit list — D-BILL-4) |
 
-**Full spec:** [BILLING_AR spec](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) · PRD [§17.4.7](./NEW_CLINIC_V1_PRD.md#1747-billing-back-office-runbook-v12-bill) · acceptance [§21.1u](./NEW_CLINIC_V1_PRD.md#211u-billing-back-office-v12-bill).
+**Full spec:** [BILLING_AR spec](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) · PRD [§17.4.7](./NEW_CLINIC_V1_PRD.md#1747-billing-back-office-runbook-v12-bill) · acceptance [§21.1u](./NEW_CLINIC_V1_PRD.md#211u-billing-back-office-v12-bill).
 
 The **Medical Record Dashboard (MRD)** is OpenEMR’s full patient chart. In New Clinic V1 it is **redesigned** but remains a **secondary** screen — staff live on role desks and the Visit Board for daily OPD work.
 
@@ -1820,7 +1820,7 @@ The **Medical Record Dashboard (MRD)** is OpenEMR’s full patient chart. In New
 | Check documents / ID photo | Reception | Profile → Documents & ID |
 | Verify completion before override | Cashier, Manager | Cashier block → **Open full chart** → Profile checklist |
 | Payment history / receipt reprint | Cashier, Manager | MRD Profile → **View payment history** (V1.1-CDa); or Cashier **History** on visit; pilot interim: **⋯ Classic menu → Ledger** (PRD §5.6.1) |
-| Referral letter / export PDF | Doctor, Reception lead | MRD Clinical → **Create referral** ([PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) — V1.1-CDb); Visits → **Export visit summary** ([PATIENT_CLINICAL_EXPORT](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) — V1.1-CDc); pilot interim: horizontal **Transactions** / **Report** (F11 wrapper) or **⋯ Classic menu** |
+| Referral letter / export PDF | Doctor, Reception lead | MRD Clinical → **Create referral** ([PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) — V1.1-CDb); Visits → **Export visit summary** ([PATIENT_CLINICAL_EXPORT](./done/NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) — V1.1-CDc); pilot interim: horizontal **Transactions** / **Report** (F11 wrapper) or **⋯ Classic menu** |
 | Admin compliance export | Admin | **Export chart** preset or **Full chart** (V1.1-CDc); Custom / Full via `new_chart_depth_export_full` |
 | Returning patient — deep history | Any authorized role | Search → Open full chart → **Visits** tab (attendance) + **Clinical** tab (medical picture) |
 
@@ -1883,7 +1883,7 @@ Classic menu         → power users only; Chart Depth replaces ledger when V1.1
 | **Communications Hub (COM)** | Clinic-wide staff inbox — all patients | *“What messages need my attention across the clinic?”* — top menu / envelope |
 | **MRD Messages tab** | **This patient only** — chart-scoped `pnotes`, care team, reminders | *“What was said about Akua in her chart?”* — from **Open full chart** |
 
-**Train:** COM for inbox triage; MRD Messages for patient context while reviewing the chart. Full spec: [COMMUNICATIONS_HUB §1](./NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md#1-purpose--positioning).
+**Train:** COM for inbox triage; MRD Messages for patient context while reviewing the chart. Full spec: [COMMUNICATIONS_HUB §1](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md#1-purpose--positioning).
 
 ### 17.4 Visit-aware banner
 
@@ -2028,7 +2028,7 @@ flowchart LR
 | Module disabled | See **100% stock OpenEMR** — no partial New Clinic chrome | Assume banner or queue exists when module off |
 | Open full chart | Lands on MRD **Overview** tab in **new tab**; pilot week 1–4 may land on stock `demographics.php` + Classic menu until B7 (PRD §5.6.1) | Open chart in same tab during active consult |
 | Chart Depth (M11) | Use MRD Profile/Clinical/Visits strips after **V1.1-CD**; pilot: **⋯ Classic menu → Ledger / Transactions / Report** | Hunt stock menus without training on interim path |
-| Payment reprint | MRD Profile **View payment history** or Cashier **History** (V1.1-CDa); pilot: Classic **Ledger** (F11 wrapper) — [PATIENT_PAYMENT_HISTORY](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) | Assume receipt only on Cashier desk forever |
+| Payment reprint | MRD Profile **View payment history** or Cashier **History** (V1.1-CDa); pilot: Classic **Ledger** (F11 wrapper) — [PATIENT_PAYMENT_HISTORY](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) | Assume receipt only on Cashier desk forever |
 | Payment timeline / lost receipt | **View payment history** → **Reprint receipt** with confirm modal (FIN-3) | Open stock Ledger without wrapper in cash clinic |
 | Referral / export | MRD **Create referral** (V1.1-CDb — [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md)) or Visits **Export visit summary** (V1.1-CDc); pilot: stock **Transactions** / **Report** (F11 wrapper) or Classic menu | Use old LBF transaction editor without wrapper; confuse inbound upload with outbound letter |
 | Visit summary PDF | **Export visit summary** on Visits row — confirm **Patient · MRN · Encounter date** before generate (EXP-2) | **Check All** on stock Report — over-prints unsigned notes |
@@ -2065,7 +2065,7 @@ Attach completed [PRD §24.4 pilot worksheet](./NEW_CLINIC_V1_PRD.md#244-pilot-c
 | 1.9.35 | 2026-06-22 | **M15 day-2 admin** — §14.8 workflows (RB-01–RB-20 trainer index); PRD §17.4.8 / ADMIN_CONFIGURATION v0.1.1 / PAGE_DESIGNS §7.27 |
 | 1.9.34 | 2026-06-22 | **Hygiene pass** — §17.0j billing trainer one-liner; §12.4 M14 correction path; §14.4 V1.2-BILL + worksheet row 11; companion sync PRD v1.20.29 |
 | 1.9.33 | 2026-06-22 | Medium-gap pass — D-BILL-2 partial pay; M7-F14 vs M14-F04; M7↔M14 close-day; companion sync PRD v1.20.28 |
-| 1.9.50 | 2026-06-25 | **Q46** — §8.1 / §9 / §10 registration form; [FRONT_DESK_REGISTRATION](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md); PRD v1.20.50 |
+| 1.9.50 | 2026-06-25 | **Q46** — §8.1 / §9 / §10 registration form; [FRONT_DESK_REGISTRATION](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md); PRD v1.20.50 |
 | 1.9.31 | 2026-06-22 | **D-REG-3** — §14.4 clinic currency row; fee mapping in clinic currency; PRD v1.20.23 |
 | 1.9.30 | 2026-06-22 | Pharmacy audit pass — §8.4c reordered after §8.4b; §8.5b OTC counter (M13-F04); §8.5 M9-F21 undispensed gate; PRD v1.20.22 / Pharm v0.1.5 / PAGE_DESIGNS v0.6.30 |
 | 1.9.29 | 2026-06-22 | **D-PHARM-4** Type A — §8.3 M4-F38 print; §14.7 print-only setup; §8.4c / §14.6 print path; PRD v1.20.20 / Pharm v0.1.3 |

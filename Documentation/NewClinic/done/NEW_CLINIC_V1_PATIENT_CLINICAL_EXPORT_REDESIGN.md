@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.1.1 |
 | **Status** | Audit closure — **pilot wrapper (M11-F11)** + **V1.1-CDc** export builder |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.43), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.11), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.46), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.32), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.45), [NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md) (v0.1.1) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.43), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.11), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.46), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.32), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.45), [NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md](../NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md) (v0.1.1) |
 | **Audience** | Product, design, clinical leads, managers, trainers, implementers, QA |
 | **Scope** | **Per-patient** clinical record export — stock **Report** menu rehosted via Chart Depth; **not** clinic-wide M16 Reporting Hub |
 | **Primary market** | Private outpatient clinics — **Ghana & West Africa** |
@@ -240,7 +240,7 @@ Pilot (flags OFF):
 
 ### 6.3 Wireframe — export builder (V1.1-CDc)
 
-Normative detail: [PAGE_DESIGNS §7.15](./NEW_CLINIC_V1_PAGE_DESIGNS.md#715-chart-depthexportphp--clinical-export).
+Normative detail: [PAGE_DESIGNS §7.15](../NEW_CLINIC_V1_PAGE_DESIGNS.md#715-chart-depthexportphp--clinical-export).
 
 ```text
 ┌─ Export chart ────────────────────────────────────────────────── [ × ] ─┐
@@ -268,7 +268,7 @@ Normative detail: [PAGE_DESIGNS §7.15](./NEW_CLINIC_V1_PAGE_DESIGNS.md#715-char
 
 ## 7. Pilot interim — stock report wrapper (M11-F11)
 
-**M11-F11 split (closed):** PRD **M11-F11** is one pilot feature covering **three** stock URLs — ledger half (**FIN-1**), report half (**EXP-1**, this spec), and transactions half (**REF-1**, [PATIENT_REFERRALS_LETTERS §7](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md#7-pilot-interim--stock-transactions-wrapper-m11-f11)). Shared injection pattern; acceptance is **FIN-1 + EXP-1 + REF-1** together before pilot sign-off.
+**M11-F11 split (closed):** PRD **M11-F11** is one pilot feature covering **three** stock URLs — ledger half (**FIN-1**), report half (**EXP-1**, this spec), and transactions half (**REF-1**, [PATIENT_REFERRALS_LETTERS §7](../NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md#7-pilot-interim--stock-transactions-wrapper-m11-f11)). Shared injection pattern; acceptance is **FIN-1 + EXP-1 + REF-1** together before pilot sign-off.
 
 **Purpose:** Pilot week 1–4 when `enable_chart_depth_export` = 0 — staff still reach stock Report without US clutter or identity loss.
 
@@ -455,4 +455,4 @@ Until CDc ships, reception handoff PDFs use stock **Report** (F11 wrapper). **In
 
 ---
 
-*Normative wireframes: [PAGE_DESIGNS §7.15](./NEW_CLINIC_V1_PAGE_DESIGNS.md#715-chart-depthexportphp--clinical-export) · Chart Depth parent: [§11](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#11-clinical-reports--record-export) · MRD Visits action: [MRD §8.5.4](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#854-visits-tab--past-list-pagination) · PRD M11: [§8 Module M11](./NEW_CLINIC_V1_PRD.md#module-m11--chart-depth)*
+*Normative wireframes: [PAGE_DESIGNS §7.15](../NEW_CLINIC_V1_PAGE_DESIGNS.md#715-chart-depthexportphp--clinical-export) · Chart Depth parent: [§11](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#11-clinical-reports--record-export) · MRD Visits action: [MRD §8.5.4](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md#854-visits-tab--past-list-pagination) · PRD M11: [§8 Module M11](../NEW_CLINIC_V1_PRD.md#module-m11--chart-depth)*

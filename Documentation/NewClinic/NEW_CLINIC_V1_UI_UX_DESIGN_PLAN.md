@@ -227,7 +227,7 @@ Every shared component must define all four:
 
 ## 3. Visual design system
 
-Tokens align with [design-system/openemr-2026/MASTER.md](../../design-system/openemr-2026/MASTER.md) and [COM §15](./NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md#15-visual-design-system). Implemented in `frontend/src/core/tokens.css`.
+Tokens align with [design-system/openemr-2026/MASTER.md](../../design-system/openemr-2026/MASTER.md) and [COM §15](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md#15-visual-design-system). Implemented in `frontend/src/core/tokens.css`.
 
 ### 3.1 Color tokens
 
@@ -358,7 +358,7 @@ A component with no contract section in its file header doesn't pass code review
 | **2** | Tier 1 + allergies (max 3) + completion % | Active visit panels |
 | **3** | Tier 2 + visit state chip + queue # + primary action | Active visit on desks |
 
-Legacy overlay tiers (L0–L3) for stock chart pages: [LEGACY_CHART_CONTEXT §5.1](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md#51-strip-tier-definition-normative).
+Legacy overlay tiers (L0–L3) for stock chart pages: [LEGACY_CHART_CONTEXT §5.1](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md#51-strip-tier-definition-normative).
 
 ### 4.3 Queue & flow
 
@@ -530,7 +530,7 @@ MRD tab content
             └─ Mobile (<768px):  full-screen sheet + sticky Close
 ```
 
-Normative: [CHART_DEPTH §5.2](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#52-interaction-patterns-normative).
+Normative: [CHART_DEPTH §5.2](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#52-interaction-patterns-normative).
 
 ### 6.5 Hub pattern (list + lens)
 
@@ -550,44 +550,44 @@ Normative: [CHART_DEPTH §5.2](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#5
 | Module | Redesign spec | PAGE_DESIGNS | Status | Surface | Pattern |
 |--------|---------------|--------------|--------|---------|---------|
 | **T1** Shell | — | §2, §4 | **Shipped** · Polish | Shell | Twig + `shell.js`; hamburger drawer polish pending |
-| **M1a** Front Desk search | [FRONT_DESK_SEARCH](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) v1.0.8 | §4.1, §7.2 | **Shipped** · Polish | Desk | Search-first · idle appointments · split on select |
-| **M1b** Registration form | [FRONT_DESK_REGISTRATION](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) v1.0.0 | §4.1.3, §7.2.7 | **Shipped** | Desk | 4-section accordion |
+| **M1a** Front Desk search | [FRONT_DESK_SEARCH](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) v1.0.8 | §4.1, §7.2 | **Shipped** · Polish | Desk | Search-first · idle appointments · split on select |
+| **M1b** Registration form | [FRONT_DESK_REGISTRATION](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) v1.0.0 | §4.1.3, §7.2.7 | **Shipped** | Desk | 4-section accordion |
 | **M2** Visit Board | PRD §8 | §7.8 | **Shipped** | Desk | Kanban columns + wall profile |
 | **M3** Triage | PRD §8 | §7.3 | **Shipped** | Desk | Vitals steppers on mobile |
 | **M4** Doctor Desk | PRD §8 | §7.4 | **Shipped** · Polish | Desk | Consult queue + shortcuts |
 | **M5** Cashier | PRD §8 | §7.7 | **Shipped** | Desk | Payment confirm modal (G12) |
-| **M6** Clinic Admin | [ADMIN](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) v0.1.4 | §7.9 | **Shipped** | Hub | `admin-hub` island embeds M6 cards |
-| **M7** Daily Reports | [REPORTING](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) v0.1.3 | §7.10 | **Shipped** | Hub-lite | Today-first KPI sections |
-| **M8** Lab Desk | [LAB_OPS](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) v0.1.9 | §7.5 | **Shipped (flag)** | Desk | Visit queue + M12 slide-over link |
-| **M9** Pharmacy Desk | [PHARM_OPS](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) v0.1.9 | §7.6 | **Shipped (flag)** | Desk | Visit queue + undispensed gate |
-| **COM** Communications | [COM](./NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) v1.0.3 | §7.12 | **Shipped (flag)** | Hub | Split-pane Messages / Reminders |
+| **M6** Clinic Admin | [ADMIN](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) v0.1.4 | §7.9 | **Shipped** | Hub | `admin-hub` island embeds M6 cards |
+| **M7** Daily Reports | [REPORTING](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) v0.1.3 | §7.10 | **Shipped** | Hub-lite | Today-first KPI sections |
+| **M8** Lab Desk | [LAB_OPS](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) v0.1.9 | §7.5 | **Shipped (flag)** | Desk | Visit queue + M12 slide-over link |
+| **M9** Pharmacy Desk | [PHARM_OPS](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) v0.1.9 | §7.6 | **Shipped (flag)** | Desk | Visit queue + undispensed gate |
+| **COM** Communications | [COM](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) v1.0.3 | §7.12 | **Shipped (flag)** | Hub | Split-pane Messages / Reminders |
 | **MRD** Medical record | [MRD](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) v0.2.36 | §4.11, MRD spec | **Shipped** · Polish | Chart | `patient-chart` island — 5-tab IA |
-| **S1** Scheduling | [SCHEDULING](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) v0.2.6 | §7.11 | **Not started** | Desk | Legacy calendar / tracker |
+| **S1** Scheduling | [SCHEDULING](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) v0.2.6 | §7.11 | **Not started** | Desk | Legacy calendar / tracker |
 
 #### 6.6.2 Post-pilot hubs & chart depth
 
 | Module | Redesign spec | Slice | Status | Pattern |
 |--------|---------------|-------|--------|---------|
-| **M10** Patient Registry | [REGISTRY](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) v0.2.1 | V1.1-REG | **Shipped (flag)** | Hub: filter + cohort table |
-| **M11** Chart Depth | [CHART_DEPTH](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) v0.1.15 | V1.1-CDa/b/c | **Shipped (flag)** | Depth: SlideOver from MRD strips |
-| — Payment history | [PAYMENT_HISTORY](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) | V1.1-CDa | **Shipped (flag)** | `chart-depth` payments mode |
+| **M10** Patient Registry | [REGISTRY](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) v0.2.1 | V1.1-REG | **Shipped (flag)** | Hub: filter + cohort table |
+| **M11** Chart Depth | [CHART_DEPTH](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) v0.1.15 | V1.1-CDa/b/c | **Shipped (flag)** | Depth: SlideOver from MRD strips |
+| — Payment history | [PAYMENT_HISTORY](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) | V1.1-CDa | **Shipped (flag)** | `chart-depth` payments mode |
 | — Referrals & letters | [REFERRALS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) v0.1.2 | V1.1-CDb | **Shipped (flag)** | Wizard + print confirm |
-| — Clinical export | [CLINICAL_EXPORT](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) | V1.1-CDc | **Shipped (flag)** | Preset builder + confirm |
-| **M12** Lab Ops Hub | [LAB_OPS](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) | V1.1-LAB | **Shipped (flag)** | Hub: worklist + result slide-over |
-| **M13** Pharm Ops Hub | [PHARM_OPS](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) | V1.1-PHARM | **Not started** | Hub: dispense worklist |
-| **M14** Billing back office | [BILLING](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) v0.1.3 | V1.2-BILL | **Shipped (flag)** | Hub: corrections · payments · close day |
-| **M15** Admin hub | [ADMIN](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) | V1.1-ADMIN | **Shipped (flag)** | Hub: lens shell embedding M6 |
-| **M16** Reporting hub | [REPORTING](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) | V1.1-REP | **Not started** | Hub (pilot uses M7) |
-| **M17** Clinical doc hub | [CLINICAL_DOC](./NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) v0.1.2 | V1.1-DOC | **Not started** | Hub (pilot uses M4 shortcuts) |
-| **M18** Queue Bridge | [QUEUE_BOUNDARY](./NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) v0.1.3 | V1.1-BRIDGE | **Not started** | Hub: exception worklist |
+| — Clinical export | [CLINICAL_EXPORT](./done/NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) | V1.1-CDc | **Shipped (flag)** | Preset builder + confirm |
+| **M12** Lab Ops Hub | [LAB_OPS](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) | V1.1-LAB | **Shipped (flag)** | Hub: worklist + result slide-over |
+| **M13** Pharm Ops Hub | [PHARM_OPS](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) | V1.1-PHARM | **Not started** | Hub: dispense worklist |
+| **M14** Billing back office | [BILLING](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) v0.1.3 | V1.2-BILL | **Shipped (flag)** | Hub: corrections · payments · close day |
+| **M15** Admin hub | [ADMIN](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) | V1.1-ADMIN | **Shipped (flag)** | Hub: lens shell embedding M6 |
+| **M16** Reporting hub | [REPORTING](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) | V1.1-REP | **Not started** | Hub (pilot uses M7) |
+| **M17** Clinical doc hub | [CLINICAL_DOC](./done/NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) v0.1.2 | V1.1-DOC | **Not started** | Hub (pilot uses M4 shortcuts) |
+| **M18** Queue Bridge | [QUEUE_BOUNDARY](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) v0.1.3 | V1.1-BRIDGE | **Not started** | Hub: exception worklist |
 
 #### 6.6.3 Chart & legacy overlays
 
 | Surface | Redesign spec | Status | Notes |
 |---------|---------------|--------|-------|
 | MRD primary (B7) | [B7_PRIMARY](./NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md) | **Shipped** · Polish | `patient-chart` island — cutover per PRD §5.6.1 |
-| Background / History | [MEDICAL_HISTORY](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) | **Polish** | T1-F20 read summary in Clinical tab |
-| Legacy chart strip | [LEGACY_CHART_CONTEXT](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) | **Shipped** | T1-F18/F19 Twig strip on stock `patient_file/*` |
+| Background / History | [MEDICAL_HISTORY](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) | **Polish** | T1-F20 read summary in Clinical tab |
+| Legacy chart strip | [LEGACY_CHART_CONTEXT](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) | **Shipped** | T1-F18/F19 Twig strip on stock `patient_file/*` |
 
 ### 6.7 Domain-specific principle index
 

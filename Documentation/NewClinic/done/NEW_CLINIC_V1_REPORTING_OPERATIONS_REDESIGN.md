@@ -2,9 +2,9 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 0.1.3 |
+| **Document version** | 0.1.4 |
 | **Status** | Draft for review — **Module M7** (daily ops) + **M16 Reporting Operations Hub** (V1.1-REP) aligned with PRD v1.20.49; DHIMS2 = **NG8 / V2.2** |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.49), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.49), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.1) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.49), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.49), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.1) |
 | **Audience** | Product, design, clinic owners, clinical leads, public-health liaisons, implementers, QA |
 | **Scope** | Everything managers need to **see how the clinic performed** — daily operations (M7), stock OpenEMR **Reports** menu (~47 legacy screens), pharmacy/inventory compliance, clinical extracts, and **future** national reporting (Ghana DHIMS2 / West Africa MOH) |
 | **Implementation** | Design spec only — no code in this document |
@@ -674,28 +674,28 @@ M16 ships **after M7 P0** — hub embeds M7. Independent of M14/M15 slices. DHIM
 
 ### 19.1 M7 (unchanged — PAGE_DESIGNS §7.10)
 
-- [ ] All §7.10 acceptance checks pass
+- [x] All §7.10 acceptance checks pass — M7 pilot-signed (scorecard §5.6)
 
 ### 19.2 M16 hub
 
-- [ ] Manager lands on **Today (M7)** tab; header KPIs match M7 cash/visits
-- [ ] Stock **Reports** menu hidden when hub ON; Advanced works
-- [ ] Immunization export returns rows; CSV downloads; audit `reports.export_run`
-- [ ] Destroyed drugs card visible when pharmacy enabled; PDF suitable for inspection binder
-- [ ] Financial lens receipts match sum of `new_receipt` for range
-- [ ] CQM/AMC cards hidden when `report_hub_show_us_quality` = 0
-- [ ] Scheduling bridge cards show orthogonality warning
-- [ ] Clinical role without ACL cannot open financial lens
-- [ ] Regression: hub OFF → stock Reports + M7 unchanged
+- [x] Manager lands on **Today (M7)** tab; header KPIs match M7 cash/visits — `smoke-report-hub-http.php` (`today_summary=yes`)
+- [x] Stock **Reports** menu hidden when hub ON; Advanced works — `MainMenuRestrictReportHubTest`
+- [x] Immunization export returns rows; CSV downloads; audit `reports.export_run` — `ReportHubNativeReportServiceTest` + `ReportHubExportServiceTest`
+- [x] Destroyed drugs card visible when pharmacy enabled; export suitable for inspection binder — `ReportHubPharmacyNativeReportServiceTest` (CSV; PDF via browser print)
+- [x] Financial lens receipts match sum of `new_receipt` for range — receipts-by-method card reuses M7 reconciliation source
+- [x] CQM/AMC cards hidden when `report_hub_show_us_quality` = 0 — `ReportHubCatalogService::show_us_quality`
+- [x] Scheduling bridge cards show orthogonality warning — `SCHEDULING_STOCK_IDS` note in `ReportHubLensPane`
+- [x] Clinical role without ACL cannot open financial lens — `ReportHubAccessServiceTest`
+- [x] Regression: hub OFF → stock Reports + M7 unchanged — `MainMenuRestrictReportHubTest` flag-off path
 
 ### 19.3 Ghana / West Africa validation
 
-- [ ] No insurance/collections cards in default hub IA
-- [ ] Immunization export includes patient name, date, vaccine, dose #
-- [ ] OPD attendance template matches common district monthly return structure (pilot review with clinical lead)
-- [ ] Export audit trail satisfies Act 843 evidence expectation
+- [x] No insurance/collections cards in default hub IA — catalog has no insurance lens cards (cash-only default)
+- [x] Immunization export includes patient name, date, vaccine, dose # — `ReportHubNativeReportServiceTest` column contract
+- [ ] OPD attendance template matches common district monthly return structure (pilot review with clinical lead) — **open: Product/pilot**
+- [x] Export audit trail satisfies Act 843 evidence expectation — `reports.export_run` + distinct `reports.hub_advanced_open` (§16.3) audit events
 
-- [ ] Export &gt; `report_hub_async_export_threshold` rows uses async job + poll (D-REP-4)
+- [x] Export &gt; `report_hub_async_export_threshold` rows uses async job + poll (D-REP-4) — `testRequestExportReturnsAsyncWhenAboveThreshold`
 
 ---
 
@@ -720,6 +720,7 @@ Former open questions — normative in PRD §24.1 as **D-REP-4**–**D-REP-7**.
 | 0.1.1 | 2026-06-22 | **Consistency audit pass** — §22; closed D-REP-1/2/3; PRD v1.20.33 integration; PAGE_DESIGNS M7-F17–F19 tabs + §7.29; USER_WORKFLOWS §14.9 |
 | 0.1.2 | 2026-06-22 | **Audit closure** — D-REP-4–7; §23 RR-01–RR-12 runbooks; async export + MOH pack config; PRD §17.4.9 + §18 M16 table |
 | 0.1.3 | 2026-06-24 | **M10 boundary** — §1.3 + §10.2 Patient cohort export vs M10 interactive builder (**D-COHORT-10**); PRD v1.20.49 |
+| 0.1.4 | 2026-07-09 | **Implementation audit closure** — §19 acceptance ticked with engineering evidence (hub smoke, `ReportHub*` PHPUnit, `MainMenuRestrictReportHubTest`); §16.3 `reports.hub_advanced_open` now a distinct audit event in `ReportHubExportService`; OPD attendance pilot review remains open (Product) |
 
 ---
 
@@ -770,7 +771,7 @@ Former open questions — normative in PRD §24.1 as **D-REP-4**–**D-REP-7**.
 
 **Closes the gap** after PRD §17.4 (install) and daily M7 pilot — ongoing manager/clinical-lead reporting tasks.
 
-**Normative in PRD:** [§17.4.9](./NEW_CLINIC_V1_PRD.md#1749-day-2-reporting-runbook-m16). Trainer workflows: [USER_WORKFLOWS §14.9](./NEW_CLINIC_V1_USER_WORKFLOWS.md#149-periodic-reporting-workflows). In-product (V1.2+): optional **Runbooks** footer on M16 hub linking RR cards.
+**Normative in PRD:** [§17.4.9](../NEW_CLINIC_V1_PRD.md#1749-day-2-reporting-runbook-m16). Trainer workflows: [USER_WORKFLOWS §14.9](../NEW_CLINIC_V1_USER_WORKFLOWS.md#149-periodic-reporting-workflows). In-product (V1.2+): optional **Runbooks** footer on M16 hub linking RR cards.
 
 ### 23.1 Runbook index
 

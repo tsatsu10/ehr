@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.1.2 |
 | **Status** | Audit closure — **pilot wrapper (M11-F11 transactions)** + **V1.1-CDb** referrals & letters hub |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.47), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.47), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.35), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.47) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.47), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.47), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.35), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.47) |
 | **Audience** | Product, design, clinical leads, doctors, reception, trainers, implementers, QA |
 | **Scope** | **Per-patient outbound** referral letters and general correspondence — stock **Transactions** menu rehosted via Chart Depth referral slice; **not** inbound referral scan (PRD D34) or clinic-wide reporting |
 | **Primary market** | Private outpatient clinics — **Ghana & West Africa** |
@@ -431,7 +431,7 @@ Same family as Cashier confirm (M5-F15) and export confirm (D-EXP-8). Normative 
 
 ## 9. Legacy overlay on stock chart — transaction pages (plain English)
 
-When **Chart Depth referral is not yet enabled**, staff may open stock **Transactions** from horizontal nav. **Legacy patient context overlay** (T1-F18) applies per [LEGACY_CHART_CONTEXT](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md).
+When **Chart Depth referral is not yet enabled**, staff may open stock **Transactions** from horizontal nav. **Legacy patient context overlay** (T1-F18) applies per [LEGACY_CHART_CONTEXT](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md).
 
 ### 9.1 Transaction-specific behavior
 
@@ -545,4 +545,4 @@ Per **D-EXP-6**: horizontal nav **Transactions** hidden when `enable_chart_depth
 
 ---
 
-*Normative wireframes: [PAGE_DESIGNS §7.14](./NEW_CLINIC_V1_PAGE_DESIGNS.md#714-chart-depthreferralsphp--referrals--letters) · Chart Depth parent: [§10](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#10-referrals-transactions--correspondence) · MRD Clinical strip: [MRD §8.10.2](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8102-clinical--referrals-strip) · PRD M11: [§8 Module M11](./NEW_CLINIC_V1_PRD.md#module-m11--chart-depth) · Inbound scan: PRD **D34***
+*Normative wireframes: [PAGE_DESIGNS §7.14](./NEW_CLINIC_V1_PAGE_DESIGNS.md#714-chart-depthreferralsphp--referrals--letters) · Chart Depth parent: [§10](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#10-referrals-transactions--correspondence) · MRD Clinical strip: [MRD §8.10.2](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8102-clinical--referrals-strip) · PRD M11: [§8 Module M11](./NEW_CLINIC_V1_PRD.md#module-m11--chart-depth) · Inbound scan: PRD **D34***

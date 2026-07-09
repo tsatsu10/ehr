@@ -1,6 +1,6 @@
 # New Clinic — Codebase Audit & Refactoring Roadmap
 
-**Version:** v0.1.1 · **Date:** 2026-07-08 · **Status:** Draft for review
+**Version:** v0.1.2 · **Date:** 2026-07-08 · **Status:** Roadmap complete — all AUDIT-1..15 tasks verified done (§7.0)
 **Scope:** Full evidence-based audit of the New Clinic module (PHP + React + SQL + docs) as of the working tree on 2026-07-07
 **Audience:** Lead dev (desktop + Cursor iOS sessions); roadmap tasks are written to be executable by a smaller model
 
@@ -275,6 +275,27 @@ Golden path **register → vitals → consult → lab → Rx → cashier**, trac
 
 ## 7. Refactoring roadmap
 
+### 7.0 Task status (verified against the tree, 2026-07-08)
+
+| Task | Status | Evidence |
+|---|---|---|
+| AUDIT-1 | ✅ Done | `SkipToPaymentModal` imported + wired in `LabDesk.tsx` / `PharmacyDesk.tsx`; golden-path selectors present |
+| AUDIT-2 | ✅ Done | `composer test:new-clinic-mandatory` → 80/80 green (run 2026-07-08) |
+| AUDIT-3 | ✅ Done | `recall_type` in CREATE body (`install.sql:1019`); `#IfMissingColumn` moved after CREATE (`:1030`) |
+| AUDIT-4 | ✅ Done | People & Access batch landed (`d90e3fe`); note: keep landing session batches promptly (RK-4 recurs) |
+| AUDIT-5 | ✅ Done | All 9 dead actions absent from controller + policy |
+| AUDIT-6 | ✅ Done | `authorizeDeferredHandler()` reads ACL layers from `AjaxActionPolicy::deferredAuthorizationLayers()` — single truth |
+| AUDIT-7 | ✅ Done | All §5.1 orphan components/templates/dirs removed |
+| AUDIT-8 | ✅ Done | `@components/DeskUi.tsx` `createDeskUi` factory; six per-desk files are thin config wrappers |
+| AUDIT-9 | ✅ Done | `core/types/` domain modules (a); admin-hub `tabs/` split (b); doctor-desk pane subcomponents (c) |
+| AUDIT-10 | ✅ Done (target met) | `AjaxController.php` 4,258 → 886 lines; 20 domain handlers under `Controllers/Ajax/Handlers/`; lazy `svc()` accessor |
+| AUDIT-11 | ✅ Done | Single `AclVersion::VERSION` (0.2.4 as of 2026-07-08); installer paths pinned by `AclVersionTest` |
+| AUDIT-12 | ✅ Done | All deprecated wrappers + `tools/` removed; final `scripts/run_acl_upgrade.php` deleted 2026-07-08 |
+| AUDIT-13 | ✅ Done | v0.1.1 doc-sync landed |
+| AUDIT-14 | ✅ Done | `ajax-action-crosscheck.php` in `verify:new-clinic` (244 actions) and runs in CI static verify |
+| AUDIT-15 | ✅ Done | AUDIT-15a–d batches + final 7 services covered 2026-07-08 (ConfigLog, EncounterNoteExportRenderer, LabOpsRequisition, Module, PhoneBackfill, RegistryAudit, ReportHubPharmacyNativeReport) — every service now referenced by tests |
+| §3.3 / §9.3 E2E | ✅ **2/2 green** 2026-07-08 | Both golden-path specs pass end-to-end (registration → triage → doctor → lab skip-to-payment → cashier → close-day) after repairing E2E drift from the desk redesign: letters-only patient names, Start-visit panel click-through (M1b §10), per-desk `nc-<desk>-queue-card` selectors, Radix dialog confirm buttons |
+
 Rules: one task per PR; Conventional Commit subjects given; every task lists exact verification and a "Do NOT" line. Tags: **[iOS-safe]** per `.cursor/rules/new-clinic-mobile-scope.mdc`, **[desktop-only]** otherwise. Frontend tasks end with the standard gate — `cd frontend; npm test -- --run src/islands/<island>; npm run check; npm run build` — plus **one** `ModuleAssetVersion.php` bump per batch and a hard-refresh instruction. Backend tasks end with `composer verify:new-clinic` printing `RESULT: PASS`.
 
 ---
@@ -419,5 +440,6 @@ Do NOT: write source-text "contract" tests (see §9.2); assert behavior.
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
+| v0.1.2 | 2026-07-08 | Engineering | §7.0 status table — all AUDIT-1..15 verified done; AUDIT-12 tail (`run_acl_upgrade.php`) and AUDIT-15 tail (7 uncovered services) closed; golden-path E2E name-generator drift fixed (letters-only names) and specs re-run |
 | v0.1.1 | 2026-07-08 | Engineering | AUDIT-13 doc-sync landed: scorecard, PRD §12.4 flag matrix, CLAUDE.md, README index; AUDIT-1 skip-to-payment confirmed in tree |
 | v0.1.0 | 2026-07-07 | Codebase audit session (Claude) | Initial audit: 6-phase evidence-based review; 10 sections; AUDIT-1..15 roadmap |

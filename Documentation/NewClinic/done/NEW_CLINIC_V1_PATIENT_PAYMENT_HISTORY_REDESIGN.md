@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.1.1 |
 | **Status** | Audit closure — **pilot wrapper (M11-F11 ledger)** + **V1.1-CDa** payment history panel |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.45), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.13), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.46), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.33), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.46), [NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) (v0.1.1) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.45), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.13), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.46), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.33), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.46), [NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) (v0.1.1) |
 | **Audience** | Product, design, billing leads, cashiers, managers, trainers, implementers, QA |
 | **Scope** | **Per-patient** payment and charge history — stock **Ledger** menu rehosted via Chart Depth finance slice; **not** clinic-wide M7/M14 billing ops |
 | **Primary market** | Private outpatient clinics — **Ghana & West Africa** |
@@ -253,7 +253,7 @@ Pilot (finance flags OFF):
 
 ### 6.3 Wireframe — payment history (V1.1-CDa)
 
-Normative detail: [PAGE_DESIGNS §7.13](./NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history).
+Normative detail: [PAGE_DESIGNS §7.13](../NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history).
 
 ```text
 ┌─ Payment history ─────────────────────────────────────────────── [ × ] ─┐
@@ -276,7 +276,7 @@ Normative detail: [PAGE_DESIGNS §7.13](./NEW_CLINIC_V1_PAGE_DESIGNS.md#713-char
 
 **Purpose:** Pilot week 1–4 when `enable_chart_depth_finance` = 0 — staff still reach stock **Ledger** without insurance clutter or identity loss.
 
-**M11-F11 split (closed):** PRD **M11-F11** is one pilot feature covering **three** stock URLs — ledger half (**FIN-1**, this spec), report half (**EXP-1**, [PATIENT_CLINICAL_EXPORT §7](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md#7-pilot-interim--stock-report-wrapper-m11-f11)), and transactions half (**REF-1**, [PATIENT_REFERRALS_LETTERS §7](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md#7-pilot-interim--stock-transactions-wrapper-m11-f11)). Shared injection pattern; acceptance is **FIN-1 + EXP-1 + REF-1** together before pilot sign-off.
+**M11-F11 split (closed):** PRD **M11-F11** is one pilot feature covering **three** stock URLs — ledger half (**FIN-1**, this spec), report half (**EXP-1**, [PATIENT_CLINICAL_EXPORT §7](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md#7-pilot-interim--stock-report-wrapper-m11-f11)), and transactions half (**REF-1**, [PATIENT_REFERRALS_LETTERS §7](../NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md#7-pilot-interim--stock-transactions-wrapper-m11-f11)). Shared injection pattern; acceptance is **FIN-1 + EXP-1 + REF-1** together before pilot sign-off.
 
 ### 7.1 Wrapper behavior
 
@@ -342,7 +342,7 @@ On Cashier desk **active visit** card after payment: **History** opens payment p
 
 ### 8.6 M14 handoff (read → write)
 
-**Add correction** visible only when `enable_bill_ops` = 1 and ACL `new_bill_ops_correct` — opens [PAGE_DESIGNS §7.26](./NEW_CLINIC_V1_PAGE_DESIGNS.md#726-bill-opscorrectphp--charge-correction-slide-over) with `visit_id` pre-filled. M11 never posts corrections directly.
+**Add correction** visible only when `enable_bill_ops` = 1 and ACL `new_bill_ops_correct` — opens [PAGE_DESIGNS §7.26](../NEW_CLINIC_V1_PAGE_DESIGNS.md#726-bill-opscorrectphp--charge-correction-slide-over) with `visit_id` pre-filled. M11 never posts corrections directly.
 
 ### 8.7 Doctor active-visit charge summary (D-FIN-8)
 
@@ -473,4 +473,4 @@ Until CDa ships, cashiers reach payment history via stock **Ledger** (F11 wrappe
 
 ---
 
-*Normative wireframes: [PAGE_DESIGNS §7.13](./NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history) · Chart Depth parent: [§9](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#9-financial--visit-charges--patient-ledger) · MRD Profile strip: [MRD §8.10.1](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8101-profile--payments-strip) · PRD M11: [§8 Module M11](./NEW_CLINIC_V1_PRD.md#module-m11--chart-depth)*
+*Normative wireframes: [PAGE_DESIGNS §7.13](../NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history) · Chart Depth parent: [§9](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md#9-financial--visit-charges--patient-ledger) · MRD Profile strip: [MRD §8.10.1](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8101-profile--payments-strip) · PRD M11: [§8 Module M11](../NEW_CLINIC_V1_PRD.md#module-m11--chart-depth)*

@@ -3,10 +3,10 @@
 | Field | Value |
 |-------|--------|
 | **Document version** | 1.0.0 |
-| **Companion to** | [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) §4 (Roles and landing screens), §14 (Manager & admin workflows: §14.1 setup, §14.1.1 staff/ACL, §14.4 pilot worksheet, §14.8 day-2 runbooks RB-01–RB-20); [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (M6 + M15 Admin Hub); PRD §5.6 (flag invariant), §17.4 (technical runbooks) |
+| **Companion to** | [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) §4 (Roles and landing screens), §14 (Manager & admin workflows: §14.1 setup, §14.1.1 staff/ACL, §14.4 pilot worksheet, §14.8 day-2 runbooks RB-01–RB-20); [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (M6 + M15 Admin Hub); PRD §5.6 (flag invariant), §17.4 (technical runbooks) |
 | **Audience** | Product, design, trainers, QA, implementers |
 | **Purpose** | Ground design and copy decisions for the Admin Hub (config, People & Access, health/system), feature-flag enablement, and day-2 operations in the day of the clinic's only technical staff member |
-| **Last audited** | 2026-07-07 — created from spec anchors and code verified during the [codebase audit](./NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md) |
+| **Last audited** | 2026-07-07 — created from spec anchors and code verified during the [codebase audit](./done/NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md) |
 
 > Composite persona for design purposes — no real name, facility, or patient data is used. She is
 > the "Owner / IT" seat in the PRD's role table (workflows §4), given a face: a dedicated,
@@ -135,7 +135,7 @@ This persona does **not** drive requirements for: clinical workflows of any kind
 
 ---
 
-*Maintained alongside [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md), and the other role personas ([Ama](./NEW_CLINIC_PERSONA_RECEPTIONIST_AMA.md), [Akua](./NEW_CLINIC_PERSONA_NURSE_AKUA.md), [Dr. Mensah](./NEW_CLINIC_PERSONA_DOCTOR_MENSAH.md), [Labik](./NEW_CLINIC_PERSONA_LAB_TECH_LABIK.md), [Esi](./NEW_CLINIC_PERSONA_PHARMACIST_ESI.md), [Kofi](./NEW_CLINIC_PERSONA_CASHIER_KOFI.md)). If the Admin Hub, People & Access parity, flag registry, or day-2 runbooks change, revisit §3 and §8 of this persona for drift.*
+*Maintained alongside [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md), and the other role personas ([Ama](./NEW_CLINIC_PERSONA_RECEPTIONIST_AMA.md), [Akua](./NEW_CLINIC_PERSONA_NURSE_AKUA.md), [Dr. Mensah](./NEW_CLINIC_PERSONA_DOCTOR_MENSAH.md), [Labik](./NEW_CLINIC_PERSONA_LAB_TECH_LABIK.md), [Esi](./NEW_CLINIC_PERSONA_PHARMACIST_ESI.md), [Kofi](./NEW_CLINIC_PERSONA_CASHIER_KOFI.md)). If the Admin Hub, People & Access parity, flag registry, or day-2 runbooks change, revisit §3 and §8 of this persona for drift.*
 
 ---
 

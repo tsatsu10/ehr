@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.1.2 |
 | **Status** | Draft for review — **T1-F18/F19** (D54, D-CTX-1–10); **V1.2-CTX** slice; **trilogy integrated** PRD v1.20.38 |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.38), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.42), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.42), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.28), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.7), [FRONTEND_2026_MODERNIZATION_PLAN.md](./FRONTEND_2026_MODERNIZATION_PLAN.md) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.38), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.42), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.42), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.28), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.7), [FRONTEND_2026_MODERNIZATION_PLAN.md](../FRONTEND_2026_MODERNIZATION_PLAN.md) |
 | **Audience** | Product, design, clinical leads, implementers, QA, trainers |
 | **Scope** | **Visit-aware patient identity** on **stock OpenEMR chart surfaces** (`patient_file/*`, legacy ledger/report paths) when staff open chart outside module desks — Finder, horizontal patient nav, Classic menu overflow — until **MRD Zone A (B7)** replaces the stock dashboard for Clinic roles |
 | **Implementation** | Design spec only — no code in this document |
@@ -100,7 +100,7 @@ This spec **expands** the one-line PRD requirement into a implementable design: 
 
 ### 3.1 Application shell
 
-Source: [FRONTEND_2026_MODERNIZATION_PLAN.md](./FRONTEND_2026_MODERNIZATION_PLAN.md) §1.3.
+Source: [FRONTEND_2026_MODERNIZATION_PLAN.md](../FRONTEND_2026_MODERNIZATION_PLAN.md) §1.3.
 
 ```text
 interface/main/tabs/main.php

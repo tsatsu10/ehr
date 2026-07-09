@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.1.0 |
 | **Status** | Draft for review — analysis + external research + target design |
-| **Companion to** | [NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md](../NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) (M17), [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md) |
+| **Companion to** | [NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md](../done/NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) (M17), [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md) |
 | **Audience** | Product, clinical leads, subspecialty chiefs, design, engineering, QA |
 | **Scope** | The **primary consult / encounter note** and its surrounding documentation UX — not lab ops, billing, or full M17 hub IA (those remain in the clinical documentation spec) |
 | **Implementation** | Design spec — phased engineering below |

@@ -344,6 +344,8 @@ POST /openemr/interface/modules/custom_modules/oe-module-new-clinic/public/ajax.
 
 ### Feature-Specific Redesigns
 
+Implementation-closed specs are archived under `Documentation/NewClinic/done/`; the rest sit in `Documentation/NewClinic/`.
+
 - **Front Desk Search:** `NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md` (M1a)
 - **Registration:** `NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md` (M1b/M1c)
 - **Communications Hub:** `NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md` (COM)

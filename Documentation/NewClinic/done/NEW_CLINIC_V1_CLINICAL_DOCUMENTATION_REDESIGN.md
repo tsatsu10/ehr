@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.1.2 |
 | **Status** | Draft for review — **Doctor Desk shortcuts** spec’d in PRD M4 + PAGE_DESIGNS §4.13 / §7.4.7; **M17 Clinical Documentation Hub** integrated in PRD v1.20.35; **NG5** = no full form engine rewrite; **§22 audit pass** applied; **trilogy integrated** |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.35), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.40), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.40), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.29), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.8) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.35), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.40), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.40), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.29), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.8) |
 | **Audience** | Product, design, clinical leads, doctors, nurses, implementers, QA |
 | **Scope** | Everything about **documenting the visit** — stock OpenEMR encounter forms (~35 packaged + unlimited LBF), dynamic **Visit Forms** menu, Doctor Desk deep-links, MRD **This visit**, E-Sign gates, and clinic-specific bundles for Ghana/West Africa OPD |
 | **Implementation** | Design spec only — no code in this document |
@@ -710,7 +710,7 @@ clinical_doc_form_open (
 
 **Closes the gap** after PRD §17.3 (form install) and V1 pilot shortcuts — ongoing clinical-lead / owner documentation tasks.
 
-**Normative in PRD:** [§17.4.10](./NEW_CLINIC_V1_PRD.md#17410-day-2-clinical-documentation-runbook-m17). Trainer workflows: [USER_WORKFLOWS §14.10](./NEW_CLINIC_V1_USER_WORKFLOWS.md#1410-clinical-documentation-workflows). Wireframes: [PAGE_DESIGNS §7.30](./NEW_CLINIC_V1_PAGE_DESIGNS.md#730-clinical-docindexphp--clinical-documentation-hub).
+**Normative in PRD:** [§17.4.10](../NEW_CLINIC_V1_PRD.md#17410-day-2-clinical-documentation-runbook-m17). Trainer workflows: [USER_WORKFLOWS §14.10](../NEW_CLINIC_V1_USER_WORKFLOWS.md#1410-clinical-documentation-workflows). Wireframes: [PAGE_DESIGNS §7.30](../NEW_CLINIC_V1_PAGE_DESIGNS.md#730-clinical-docindexphp--clinical-documentation-hub).
 
 ### 23.1 Runbook index
 

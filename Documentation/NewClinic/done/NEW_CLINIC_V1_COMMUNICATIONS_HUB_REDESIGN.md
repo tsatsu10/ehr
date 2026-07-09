@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 1.0.3 |
 | **Status** | **Approved for Phase 1 implementation** — design complete; audit gaps A1–A13 addressed; PRD **COM-F***, PAGE_DESIGNS §7.12, USER_WORKFLOWS §8.1c trace here |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.14), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.25), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.3), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.25) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.14), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.25), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.3), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.25) |
 | **Audience** | Product, design, frontend engineers, QA |
 | **Scope** | Staff **Messages** (`pnotes`) and **Dated Reminders** — unified split-pane hub |
 | **Implementation** | Design spec for Phase 1 build; no code in this document |
@@ -52,7 +52,7 @@
 
 ## 1. Purpose & positioning
 
-OpenEMR's legacy **Message Center** (`interface/main/messages/messages.php`) bundles staff messaging, dated reminders, MedEx recalls, and SMS into a single ~1,100-line PHP page with Bootstrap pill tabs. It predates the New Clinic product direction and does not match the UX patterns defined in [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md).
+OpenEMR's legacy **Message Center** (`interface/main/messages/messages.php`) bundles staff messaging, dated reminders, MedEx recalls, and SMS into a single ~1,100-line PHP page with Bootstrap pill tabs. It predates the New Clinic product direction and does not match the UX patterns defined in [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md).
 
 This document specifies a **Communications Hub** — a focused staff workspace for:
 
@@ -72,7 +72,7 @@ This document specifies a **Communications Hub** — a focused staff workspace f
 | Portal secure mail (`onsite_mail`) | **Out of scope** — remains separate Angular app |
 | PHI Direct (trusted messages) | **Preserved** — actions in Messages overflow, existing popups |
 | Patient chart notes (`pnotes.php`) | **Unchanged** — chart depth view stays separate |
-| **MRD Messages tab** | **Complementary** — patient-scoped notes/reminders inside full chart ([MRD §8](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8-zone-c--workspace-tabs-5-tabs)); use COM for clinic-wide inbox, MRD Messages for *this patient* ([USER_WORKFLOWS §17.3a](./NEW_CLINIC_V1_USER_WORKFLOWS.md#173a-com-hub-vs-mrd-messages-tab)) |
+| **MRD Messages tab** | **Complementary** — patient-scoped notes/reminders inside full chart ([MRD §8](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8-zone-c--workspace-tabs-5-tabs)); use COM for clinic-wide inbox, MRD Messages for *this patient* ([USER_WORKFLOWS §17.3a](../NEW_CLINIC_V1_USER_WORKFLOWS.md#173a-com-hub-vs-mrd-messages-tab)) |
 
 **Design-only for this file.** Wireframes are ASCII; components reference Bootstrap 4.6, Font Awesome, OpenEMR CSS variables, Twig partials, and `xl()`/`xlt()`/`xla()`.
 
@@ -262,7 +262,7 @@ The Communications Hub is **role-agnostic** — any user with `patients` + `note
 | Reminders | Unchanged — assigned user on reminder row is existing `dated_reminders` semantics, not visit queue assignment |
 | Envelope badge | Unchanged — not split per doctor |
 
-See [PRD §6.5.1](./NEW_CLINIC_V1_PRD.md#651-multi-doctor-clinic-model-v1) through [§6.5.4](./NEW_CLINIC_V1_PRD.md#654-doctor-ready-notifications-v12), [USER_WORKFLOWS §8.3.1](./NEW_CLINIC_V1_USER_WORKFLOWS.md#831-multi-doctor-clinics)–[§8.3.4](./NEW_CLINIC_V1_USER_WORKFLOWS.md#834-doctor-ready-notifications-v12).
+See [PRD §6.5.1](../NEW_CLINIC_V1_PRD.md#651-multi-doctor-clinic-model-v1) through [§6.5.4](../NEW_CLINIC_V1_PRD.md#654-doctor-ready-notifications-v12), [USER_WORKFLOWS §8.3.1](../NEW_CLINIC_V1_USER_WORKFLOWS.md#831-multi-doctor-clinics)–[§8.3.4](../NEW_CLINIC_V1_USER_WORKFLOWS.md#834-doctor-ready-notifications-v12).
 
 ---
 
@@ -654,7 +654,7 @@ Phase 3 may consolidate into `OpenEMR\Services\CommunicationsHubService`.
 
 ## 11. AJAX API contracts
 
-Follow [PAGE_DESIGNS §6](./NEW_CLINIC_V1_PAGE_DESIGNS.md#6-ajax-response-envelope) envelope for all new endpoints.
+Follow [PAGE_DESIGNS §6](../NEW_CLINIC_V1_PAGE_DESIGNS.md#6-ajax-response-envelope) envelope for all new endpoints.
 
 ### 11.1 Common rules
 
@@ -1153,7 +1153,7 @@ Persist filters and sort via `prevSetting()` with `$uspfx = 'interface/main/mess
 
 ## 22. PRD Module COM — functional requirements
 
-Normative PRD copy lives in [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) **Module COM**. This section is the design-side mirror for traceability.
+Normative PRD copy lives in [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) **Module COM**. This section is the design-side mirror for traceability.
 
 **Purpose:** Unified staff workspace for internal patient-related messages (`pnotes`) and dated reminders — split-pane hub replacing legacy Message Center tabs (Messages + Reminders only).
 

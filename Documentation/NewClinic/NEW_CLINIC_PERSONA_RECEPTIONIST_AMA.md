@@ -6,7 +6,7 @@
 | **Companion to** | [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) §4 (Roles and landing screens), §8.1 (Reception — Front Desk), §8.1a–d (Booking, Recalls, Communications, Registry), §9 (Registration & duplicate decision tree), §10 (Profile completion framework) |
 | **Audience** | Product, design, trainers, QA, implementers |
 | **Purpose** | Ground design and copy decisions for the Front Desk, registration accordion, and check-in flows in the day of the clinic's single highest-frequency user |
-| **Last audited** | 2026-07-07 — created from spec anchors and code verified during the [codebase audit](./NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md) |
+| **Last audited** | 2026-07-07 — created from spec anchors and code verified during the [codebase audit](./done/NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md) |
 
 > Composite persona for design purposes — no real name, facility, or patient data is used. She is
 > the "Ama" named in the PRD's role table (workflows §4). Claims about Ghanaian front-office work

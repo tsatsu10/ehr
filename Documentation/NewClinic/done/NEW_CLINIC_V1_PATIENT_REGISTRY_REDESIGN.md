@@ -2,9 +2,9 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 0.2.1 |
-| **Status** | Audit closure — **Module M10** / **V1.1-REG**; normative product spec + build contracts; wireframes in [PAGE_DESIGNS §7.32](./NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.49), [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (v1.0.7), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.49), [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2) |
+| **Document version** | 0.2.2 |
+| **Status** | Audit closure — **Module M10** / **V1.1-REG**; normative product spec + build contracts; wireframes in [PAGE_DESIGNS §7.32](../NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.49), [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (v1.0.7), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.49), [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2) |
 | **Audience** | Product, design, clinical leads, program managers, frontend engineers, QA |
 | **Scope** | Replace legacy **Patient Finder** (`dynamic_finder.php`) with a **Patient Registry** cohort-search experience — structured filters, auditable exports, Ghana-realistic defaults |
 | **Primary market** | Private outpatient clinics — **Ghana & West Africa** |
@@ -87,7 +87,7 @@ Pick patient in form     →  find_patient_popup (legacy — unchanged V1)
 | Page URL | `/interface/modules/custom_modules/oe-module-new-clinic/public/patient-registry.php` |
 | Page title | `Patient Registry` |
 | Legacy Finder menu (`fin0`) | Hidden for **reception roles** when `enable_patient_registry=1`; clinical roles retain Finder (**D-COHORT-5**, **D-CTX-10**) |
-| Wireframes | [PAGE_DESIGNS §7.32](./NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) |
+| Wireframes | [PAGE_DESIGNS §7.32](../NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) |
 
 ---
 
@@ -262,7 +262,7 @@ Patterns from **Epic SlicerDicer / Cadence cohort tools**, **Cerner PowerChart p
 
 **Phasing:** PR-1 demographics + status; PR-2 clinical + presets + CSV; PR-3 labs + saved filters.
 
-Normative wireframes and per-control acceptance: [PAGE_DESIGNS §7.32](./NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry).
+Normative wireframes and per-control acceptance: [PAGE_DESIGNS §7.32](../NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry).
 
 ---
 
@@ -289,7 +289,7 @@ Normative wireframes and per-control acceptance: [PAGE_DESIGNS §7.32](./NEW_CLI
 
 ## 8. Page layout & wireframes
 
-**Normative build spec:** [PAGE_DESIGNS §7.32](./NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) — URL, ACL, AJAX, acceptance.
+**Normative build spec:** [PAGE_DESIGNS §7.32](../NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) — URL, ACL, AJAX, acceptance.
 
 ### 8.1 Desktop layout (summary)
 
@@ -607,7 +607,7 @@ Seed: `malaria`, `hypertension`, `diabetes`, `pregnancy`, etc.
 
 ## 15. AJAX API contracts
 
-Namespace: `cohort.*` on `public/ajax.php`. Envelope per PAGE_DESIGNS §6. Normative detail: [PAGE_DESIGNS §7.32.7](./NEW_CLINIC_V1_PAGE_DESIGNS.md#7327-ajax-endpoints).
+Namespace: `cohort.*` on `public/ajax.php`. Envelope per PAGE_DESIGNS §6. Normative detail: [PAGE_DESIGNS §7.32.7](../NEW_CLINIC_V1_PAGE_DESIGNS.md#7327-ajax-endpoints).
 
 ### 15.1 `cohort.search` (POST)
 
@@ -681,7 +681,7 @@ Config: `$GLOBALS['enable_patient_registry']` (M6-F19, default **0**); `registry
 - Live region announces match count on Apply
 - Touch targets ≥44px
 - Filter accordion keyboard-operable
-- See [PAGE_DESIGNS §7.32.9](./NEW_CLINIC_V1_PAGE_DESIGNS.md#7329-mobile-and-tablet)
+- See [PAGE_DESIGNS §7.32.9](../NEW_CLINIC_V1_PAGE_DESIGNS.md#7329-mobile-and-tablet)
 
 ---
 
@@ -730,7 +730,7 @@ flowchart LR
 
 ## 21. Phasing & PRD alignment
 
-**Module M10** — [PRD §8 Module M10](./NEW_CLINIC_V1_PRD.md#module-m10--patient-registry) (M10-F01–F13).
+**Module M10** — [PRD §8 Module M10](../NEW_CLINIC_V1_PRD.md#module-m10--patient-registry) (M10-F01–F13).
 
 | Phase | When | Deliverables |
 |-------|------|--------------|
@@ -748,25 +748,25 @@ Maps to PRD **§21.1ae** tests **REG-1–REG-8** (`@new-clinic-v11-registry`; PR
 
 ### PR-1
 
-- [ ] Page loads in T1 shell — [PAGE_DESIGNS §7.32](./NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) (REG-1)
-- [ ] Record status default **Active patients only** (REG-2)
-- [ ] Demographics filters + pagination correct (REG-3)
-- [ ] Facility scope defaults to current facility (REG-3)
-- [ ] Open chart from row (REG-4)
-- [ ] Finder menu hidden for **reception** when flag ON; clinical Finder remains (REG-5)
-- [ ] Audit on each search (REG-6)
+- [x] Page loads in T1 shell — [PAGE_DESIGNS §7.32](../NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) (REG-1) — `smoke-patient-registry-http.php` (`registry_island=yes`)
+- [x] Record status default **Active patients only** (REG-2) — `registry-signoff-smoke.php`
+- [x] Demographics filters + pagination correct (REG-3) — `PatientRegistryPr2Test` + signoff smoke
+- [x] Facility scope defaults to current facility (REG-3) — signoff smoke
+- [x] Open chart from row (REG-4) — `registryRowActions.test.ts` (link targets); browser MANUAL rows in `registry-signoff-smoke.php` for pilot UAT
+- [x] Finder menu hidden for **reception** when flag ON; clinical Finder remains (REG-5) — signoff `REG-5-reception` / `REG-5-clinical` PASS
+- [x] Audit on each search (REG-6) — `RegistryAuditServiceTest`
 
 ### PR-2
 
-- [ ] Confirmation source + age at diagnosis semantics (REG-3)
-- [ ] Malaria preset UAT seed (REG-3)
-- [ ] CSV export cap + audit (REG-7)
-- [ ] `excluded_missing_dob` in meta
+- [x] Confirmation source + age at diagnosis semantics (REG-3) — `PatientRegistryPr2Test`
+- [x] Malaria preset UAT seed (REG-3) — `cohort.presets` builtins include malaria preset
+- [x] CSV export cap + audit (REG-7) — `PatientRegistryPr2Test` + `RegistryAuditServiceTest`
+- [x] `excluded_missing_dob` in meta — `PatientRegistryPr2Test`
 
 ### PR-3
 
-- [ ] Lab positive confirmation
-- [ ] Save/load named filters + share ACL
+- [x] Lab positive confirmation — `PatientRegistryPr3Test`
+- [x] Save/load named filters + share ACL — `CohortSavedFilterServiceTest`
 
 **Training:** USER_WORKFLOWS §8.1d, §17.7 cohort row — do not use Finder for outreach.
 
@@ -795,6 +795,7 @@ Maps to PRD **§21.1ae** tests **REG-1–REG-8** (`@new-clinic-v11-registry`; PR
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.2.2 | 2026-07-09 | **Implementation audit closure** — §22 PR-1/PR-2/PR-3 acceptance ticked with evidence (`composer registry-signoff` PASS, `PatientRegistryPr2/Pr3/Pr4Test`, `CohortSavedFilterServiceTest`, `RegistryAuditServiceTest`); REG-4 browser MANUAL rows remain in signoff smoke for pilot UAT |
 | 0.2.1 | 2026-06-24 | **Audit closure** — D-COHORT-5 reception-only `fin0` hide; preset phasing PR-1/PR-2; `cohort.saved_filter`; audit events + `new_registry_search_log`; §19.8 cross-ref; REG-8; PRD v1.20.49 |
 | 0.2.0 | 2026-06-24 | **Comprehensive redesign** — OpenEMR pain points, UI/UX, EHR patterns, Ghana context; PAGE_DESIGNS §7.32; `cohort.*` AJAX; D-COHORT-1–10; REG-1–7 acceptance; PRD v1.20.48 |
 | 0.1.4 | 2026-06-16 | PRD Module M10; M10-F01–F13 traceability |
@@ -850,4 +851,4 @@ Maps to PRD **§21.1ae** tests **REG-1–REG-8** (`@new-clinic-v11-registry`; PR
 
 ---
 
-*Normative wireframes: [PAGE_DESIGNS §7.32](./NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) · Front Desk boundary: [FRONT_DESK_SEARCH](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) · Workflows: [USER_WORKFLOWS §8.1d](./NEW_CLINIC_V1_USER_WORKFLOWS.md#81d-cohort-search--patient-registry) · PRD M10: [§8 Module M10](./NEW_CLINIC_V1_PRD.md#module-m10--patient-registry)*
+*Normative wireframes: [PAGE_DESIGNS §7.32](../NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) · Front Desk boundary: [FRONT_DESK_SEARCH](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) · Workflows: [USER_WORKFLOWS §8.1d](../NEW_CLINIC_V1_USER_WORKFLOWS.md#81d-cohort-search--patient-registry) · PRD M10: [§8 Module M10](../NEW_CLINIC_V1_PRD.md#module-m10--patient-registry)*

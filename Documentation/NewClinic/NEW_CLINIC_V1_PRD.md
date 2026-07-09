@@ -51,23 +51,23 @@
 - [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) — role playbooks, visual frameworks, and exception paths (v1.9.44).
 - [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) — full chart (MRD) IA, zones, tabs, activity feed, Clinical layout, and locked UX decisions (v0.2.30); visit banner shows active `new_visit` state only — no doctor routing.
 - [NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md) — **B7** MRD primary redesign research + legacy chart boundary plain-English glossary (v0.1.1); audit synthesis companion to MRD + LEGACY_CHART_CONTEXT.
-- [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) — Calendar, Flow Board, and Recalls UI/UX redesign + alignment (v0.2.3); implements §6.7 hard rules.
-- [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) — Staff Messages + Dated Reminders hub (v1.0.3, **approved Phase 1**); replaces legacy Message Center tabs; recalls remain S1.
-- [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) — Patient Registry cohort search (**Module M10**, v0.2.1); [PAGE_DESIGNS §7.32](./NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry); replaces legacy Patient Finder; separate from Front Desk search.
-- [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) — Front Desk patient search (M1a, v1.0.7, **approved Phase 1**); `PatientSearchService` + `patient-search` component; preview via `PatientPreviewDto` / `patient-context-banner` (§5.6 implementation status).
-- [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) — **Module M11** Chart Depth (v0.1.12); payment history, referrals & letters, clinical export, external care — [PAGE_DESIGNS §7.13–§7.16](./NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history); post-pilot **V1.1-CD** (§20.1).
-- [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) — **Module M12** Lab Operations Hub (v0.1.7); worklists, manual results, panels, send-out, LIS/DORN — [PAGE_DESIGNS §7.17–§7.20](./NEW_CLINIC_V1_PAGE_DESIGNS.md#717-lab-opsindexphp--lab-operations-hub); **V1.1-LAB** / **V1.1-LAB-ORD** (doctor panels) / **V1.2-LIS** (§20.1).
-- [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) — **Module M13** Pharmacy Operations Hub (v0.1.8); dispense worklists, stock receive, OPD starter formulary, OTC counter — [PAGE_DESIGNS §7.21–§7.24](./NEW_CLINIC_V1_PAGE_DESIGNS.md#721-pharm-opsindexphp--pharmacy-operations-hub); **V1.1-PRINT-RX** (Type A community-pharmacy PDF) / **V1.1-PHARM** / **V1.2-PHARM-RX** (doctor favorites) / **V3** supply chain (§20.1).
-- [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) — **Module M14** Billing Back Office Hub (v0.1.3); charge corrections, payment search, daysheet, outstanding balances, admin insurance vault — [PAGE_DESIGNS §7.25–§7.26](./NEW_CLINIC_V1_PAGE_DESIGNS.md#725-bill-opsindexphp--billing-back-office-hub); post-pilot **V1.2-BILL** (§20.1).
-- [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) — **Module M6 + M15** Admin Operations Hub (v0.1.3); clinic setup, people & access, forms, system health, day-2 runbooks — [PAGE_DESIGNS §7.27](./NEW_CLINIC_V1_PAGE_DESIGNS.md#727-admin-hubindexphp--admin-operations-hub); **V1.1-ADMIN** (§20.1).
-- [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) — **Module M7 + M16** Reporting Operations Hub (v0.1.2); daily ops + periodic/compliance façades over stock Reports — [PAGE_DESIGNS §7.10](./NEW_CLINIC_V1_PAGE_DESIGNS.md#710-reportsphp--daily-reports) + [§7.29](./NEW_CLINIC_V1_PAGE_DESIGNS.md#729-report-hubindexphp--reporting-operations-hub); **V1.1-REP** (§20.1); day-2 runbooks **RR-01–RR-12** (§17.4.9).
-- [NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md](./NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) — **Module M4 + M17** Clinical Documentation Hub (v0.1.2); curated encounter forms façade over stock `interface/forms/` — [PAGE_DESIGNS §7.30](./NEW_CLINIC_V1_PAGE_DESIGNS.md#730-clinical-docindexphp--clinical-documentation-hub); **V1.1-DOC** (§20.1); day-2 runbooks **DR-01–DR-08** (§17.4.10); respects **NG5**.
-- [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) — **Module M18** Queue Bridge Hub (v0.1.2); scheduling ↔ visit queue exception detection & guided fixes — [PAGE_DESIGNS §7.31](./NEW_CLINIC_V1_PAGE_DESIGNS.md#731-queue-bridgeindexphp--queue-bridge-hub); **V1.1-BRIDGE** (§20.1); day-2 runbooks **SQ-01–SQ-08** (§17.4.11); **H3** stands (no bidirectional sync).
-- [NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) — **Patient payment history / Ledger** (v0.1.1); pilot **M11-F11** ledger wrapper · **V1.1-CDa** timeline + reprint · read-only core AR.
+- [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) — Calendar, Flow Board, and Recalls UI/UX redesign + alignment (v0.2.3); implements §6.7 hard rules.
+- [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) — Staff Messages + Dated Reminders hub (v1.0.3, **approved Phase 1**); replaces legacy Message Center tabs; recalls remain S1.
+- [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) — Patient Registry cohort search (**Module M10**, v0.2.1); [PAGE_DESIGNS §7.32](./NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry); replaces legacy Patient Finder; separate from Front Desk search.
+- [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) — Front Desk patient search (M1a, v1.0.7, **approved Phase 1**); `PatientSearchService` + `patient-search` component; preview via `PatientPreviewDto` / `patient-context-banner` (§5.6 implementation status).
+- [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) — **Module M11** Chart Depth (v0.1.12); payment history, referrals & letters, clinical export, external care — [PAGE_DESIGNS §7.13–§7.16](./NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history); post-pilot **V1.1-CD** (§20.1).
+- [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) — **Module M12** Lab Operations Hub (v0.1.7); worklists, manual results, panels, send-out, LIS/DORN — [PAGE_DESIGNS §7.17–§7.20](./NEW_CLINIC_V1_PAGE_DESIGNS.md#717-lab-opsindexphp--lab-operations-hub); **V1.1-LAB** / **V1.1-LAB-ORD** (doctor panels) / **V1.2-LIS** (§20.1).
+- [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) — **Module M13** Pharmacy Operations Hub (v0.1.8); dispense worklists, stock receive, OPD starter formulary, OTC counter — [PAGE_DESIGNS §7.21–§7.24](./NEW_CLINIC_V1_PAGE_DESIGNS.md#721-pharm-opsindexphp--pharmacy-operations-hub); **V1.1-PRINT-RX** (Type A community-pharmacy PDF) / **V1.1-PHARM** / **V1.2-PHARM-RX** (doctor favorites) / **V3** supply chain (§20.1).
+- [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) — **Module M14** Billing Back Office Hub (v0.1.3); charge corrections, payment search, daysheet, outstanding balances, admin insurance vault — [PAGE_DESIGNS §7.25–§7.26](./NEW_CLINIC_V1_PAGE_DESIGNS.md#725-bill-opsindexphp--billing-back-office-hub); post-pilot **V1.2-BILL** (§20.1).
+- [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) — **Module M6 + M15** Admin Operations Hub (v0.1.3); clinic setup, people & access, forms, system health, day-2 runbooks — [PAGE_DESIGNS §7.27](./NEW_CLINIC_V1_PAGE_DESIGNS.md#727-admin-hubindexphp--admin-operations-hub); **V1.1-ADMIN** (§20.1).
+- [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) — **Module M7 + M16** Reporting Operations Hub (v0.1.2); daily ops + periodic/compliance façades over stock Reports — [PAGE_DESIGNS §7.10](./NEW_CLINIC_V1_PAGE_DESIGNS.md#710-reportsphp--daily-reports) + [§7.29](./NEW_CLINIC_V1_PAGE_DESIGNS.md#729-report-hubindexphp--reporting-operations-hub); **V1.1-REP** (§20.1); day-2 runbooks **RR-01–RR-12** (§17.4.9).
+- [NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md](./done/NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) — **Module M4 + M17** Clinical Documentation Hub (v0.1.2); curated encounter forms façade over stock `interface/forms/` — [PAGE_DESIGNS §7.30](./NEW_CLINIC_V1_PAGE_DESIGNS.md#730-clinical-docindexphp--clinical-documentation-hub); **V1.1-DOC** (§20.1); day-2 runbooks **DR-01–DR-08** (§17.4.10); respects **NG5**.
+- [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) — **Module M18** Queue Bridge Hub (v0.1.2); scheduling ↔ visit queue exception detection & guided fixes — [PAGE_DESIGNS §7.31](./NEW_CLINIC_V1_PAGE_DESIGNS.md#731-queue-bridgeindexphp--queue-bridge-hub); **V1.1-BRIDGE** (§20.1); day-2 runbooks **SQ-01–SQ-08** (§17.4.11); **H3** stands (no bidirectional sync).
+- [NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) — **Patient payment history / Ledger** (v0.1.1); pilot **M11-F11** ledger wrapper · **V1.1-CDa** timeline + reprint · read-only core AR.
 - [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) — **Patient referrals & letters (Transactions)** (v0.1.1); pilot **M11-F11** transactions wrapper · **V1.1-CDb** wizard + list · inbound/outbound split (D34).
-- [NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) — **Patient clinical export / Reports** (v0.1.1); pilot **M11-F11** stock wrapper · **V1.1-CDc** preset builder · menu cutover · distinct from M16.
-- [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) — **Clinical → Background** / History & Lifestyle (v0.1.1); read summary **T1-F20** · edit stock V1 · **T1-F20b** editor wrap · Ghana HIS pack **M6-F28** · legacy overlay on history pages.
-- [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) — **T1-F18/F19** legacy chart patient context (v0.1.2); visit-aware strip on stock `patient_file` — **V1.2-CTX** (optional pilot per §5.6.1); pairs with T1-F17 encounter strip; enable checklist **§17.4.12** / acceptance **§21.1z**.
+- [NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) — **Patient clinical export / Reports** (v0.1.1); pilot **M11-F11** stock wrapper · **V1.1-CDc** preset builder · menu cutover · distinct from M16.
+- [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) — **Clinical → Background** / History & Lifestyle (v0.1.1); read summary **T1-F20** · edit stock V1 · **T1-F20b** editor wrap · Ghana HIS pack **M6-F28** · legacy overlay on history pages.
+- [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) — **T1-F18/F19** legacy chart patient context (v0.1.2); visit-aware strip on stock `patient_file` — **V1.2-CTX** (optional pilot per §5.6.1); pairs with T1-F17 encounter strip; enable checklist **§17.4.12** / acceptance **§21.1z**.
 
 ---
 
@@ -97,7 +97,7 @@ We are **not** rebuilding OpenEMR’s clinical engine, billing engine, or databa
 | System | Staff question | Build |
 |--------|----------------|-------|
 | **Walk-in (today’s flow)** | “Who is in the clinic right now?” | M0–M9, M2 Visit Board, role desks — `new_visit` queue |
-| **Schedule (planning + arrivals)** | “Who is booked / due back / checking in?” | **S1 Scheduling & Flow** — Calendar, Flow Board, Recalls redesign per [SCHEDULING_REDESIGN](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) |
+| **Schedule (planning + arrivals)** | “Who is booked / due back / checking in?” | **S1 Scheduling & Flow** — Calendar, Flow Board, Recalls redesign per [SCHEDULING_REDESIGN](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) |
 
 At the door, **every patient enters the walk-in system** (Start visit → Visit Board). The schedule system handles booking, follow-up, and appointment check-in; it does **not** replace Visit Board for live floor operations (§5.5, §6.7 H3).
 
@@ -195,7 +195,7 @@ These problems drive **Module M1 (Front Desk)** and the closed registration deci
 | G4 | Visit visibility | Staff can see queue by stage in &lt;2 seconds | Visit Board page-load timing reported via browser performance API |
 | G5 | Safe extension | No core fork; installable module; audit trail preserved | Code review checklist + clean Module Manager install/uninstall test |
 | G6 | Pilot readiness | 1 clinic runs 2 weeks live on V1; staff training for **enabled roles** completed in **≤10 hours** total (curriculum §17.2; ~8h instruction if all roles + S1, ≤10h with practice buffer) | Training log signed by trainer |
-| G7 | Patient search performance | First result &lt; 1.5s P95; correct returning patient surfaced in top 5 ≥ 95% of attempts | Server-side `server_timing_ms` on `ajax.php?action=patients.search`; "found-in-top-5" measured by `bin/benchmark-patient-search.php` (50 known patients) — see [FRONT_DESK_SEARCH_REDESIGN](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) §14 |
+| G7 | Patient search performance | First result &lt; 1.5s P95; correct returning patient surfaced in top 5 ≥ 95% of attempts | Server-side `server_timing_ms` on `ajax.php?action=patients.search`; "found-in-top-5" measured by `bin/benchmark-patient-search.php` (50 known patients) — see [FRONT_DESK_SEARCH_REDESIGN](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) §14 |
 | G8 | Duplicate prevention | New-patient creations on returning patients reduced ≥ 80% vs stock OpenEMR baseline | Stock baseline = count of duplicate pairs detected by `manage_dup_patients.php` (score ≥ 17) created in the 4 weeks **before** module install. Pilot count = same query over the 4 weeks **after** install |
 | G9 | Completion at chokepoints | 100% of completed visits have profile completion ≥ billing threshold **or** a logged billing override (Q13) at time of payment | M7-F08 completion-override report; sum of (completed visits with score ≥ 70) + (completed visits with override log entry) must equal total completed visits |
 | G10 | Profile documentation signed | 100% of completed visits have E-Signed documentation for their **`service_profile`** (consult / lab intake / pharmacy service) **or** logged `new_esign_skip_complete` at handoff or payment | M7-F17 unsigned report; ancillary rows include profile + formdir |
@@ -232,7 +232,7 @@ These problems drive **Module M1 (Front Desk)** and the closed registration deci
 4. **One unfinished visit at a time** — A patient may have **many visits in one day**, but only **one open visit** on the queue at once (§6.5.0). Start the next visit after the previous one is finished.
 5. **Fail safe clinically** — Never skip audit logs; never bypass ACL; never delete clinical data silently; **never reach payment with unsigned documentation** unless logged override (§6.1.1, G10).
 6. **Region-ready** — Country config packs later; V1 ships launch-region defaults (currency, phone, timezone) with extension hooks.
-7. **Desk registration form** — Search first; when no match, four-section accordion at Front Desk (Q46). Section 1 creates patient; Sections 2–4 complete profile before billing chokepoints. Normative: [FRONT_DESK_REGISTRATION](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md).
+7. **Desk registration form** — Search first; when no match, four-section accordion at Front Desk (Q46). Section 1 creates patient; Sections 2–4 complete profile before billing chokepoints. Normative: [FRONT_DESK_REGISTRATION](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md).
 8. **Documentation attestation before payment** — Profile-appropriate E-Sign is **always** required at **cashier payment** (`assertProfileSigned`). At **Complete consult**, E-Sign is required only when `require_esign_before_complete_consult` = 1 (pilot worksheet default **0** — D42). Lab complete / Pharmacy complete always require profile E-Sign (§6.1.1, D32).
 9. **Desk answers “what next?”; chart answers “what happened before?”** — Role desks **push** consult-ready context via `patient-context-banner`; MRD is depth when push is insufficient (§6.1g). **Background vs assessments:** longitudinal facts in Clinical **Background** + `lists`; visit documentation in encounter forms / **This visit** (§6.1h). Do not require full chart open for routine OPD handoffs.
 
@@ -494,7 +494,7 @@ All module-defined ACL keys, in one place. Install SQL creates these as a single
 | **COM** | **Communications Hub** | Core UI redesign | Staff messages (`pnotes`) + dated reminders split-pane hub; replaces legacy Message Center tabs |
 | T1 | **New Theme & Shell** | Theme + menu overrides | Typography, colors, responsive layout, menu pruning |
 | T2 | **Menu & globals profile** | Config documentation + installer | “Private cash clinic” globals preset |
-| **S1** | **Scheduling & Flow** | Submodule / routes in M0 (`public/scheduling.php` + lenses) | Unified shell; **Calendar** redesign; **Flow Board** kanban; **Recall Worklist**; loop closure (recall → appointment → check-in → `new_visit`). Full spec: [SCHEDULING_REDESIGN](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) |
+| **S1** | **Scheduling & Flow** | Submodule / routes in M0 (`public/scheduling.php` + lenses) | Unified shell; **Calendar** redesign; **Flow Board** kanban; **Recall Worklist**; loop closure (recall → appointment → check-in → `new_visit`). Full spec: [SCHEDULING_REDESIGN](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) |
 
 ### 5.5 Two systems — staff map & build boundary
 
@@ -547,7 +547,7 @@ Clinics that want walk-in-only operation may set `enable_scheduled_integration` 
 
 See [Section 3.2](#32-non-goals-v1). Additionally: patient portal, telehealth, group therapy, **new** lab order form UI, **new** e-prescribing UI, standalone billing ledger bypassing OpenEMR AR.
 
-**In scope when clinic enables it:** in-house drug inventory/dispense via core `interface/drugs/` (Pharmacy role links in; no full inventory redesign). Post-pilot **M13** Pharmacy Operations Hub (`enable_pharm_ops`) wraps stock screens without schema fork — see [PHARMACY_OPERATIONS](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md).
+**In scope when clinic enables it:** in-house drug inventory/dispense via core `interface/drugs/` (Pharmacy role links in; no full inventory redesign). Post-pilot **M13** Pharmacy Operations Hub (`enable_pharm_ops`) wraps stock screens without schema fork — see [PHARMACY_OPERATIONS](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md).
 
 ### 5.4 Codebase integration principles (from architecture review)
 
@@ -575,17 +575,17 @@ See [Section 3.2](#32-non-goals-v1). Additionally: patient portal, telehealth, g
 | **M5** Cashier | PRD §8 | **Shipped** (React) | Yes | Checkout + payments |
 | **M6** Clinic Admin | PRD §8 | **Shipped** (React hub + setup) | Yes | M15 system tab when `enable_admin_hub` = 1 |
 | **M7** Daily Reports | PRD §8; PAGE_DESIGNS §7.10 | **Shipped** (React) | Yes | Manager EOD; pilot-blocking with B6 |
-| **M16** Reporting Operations Hub | Draft v0.1.2; [REPORTING spec](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md); PAGE_DESIGNS §7.29 | **Shipped** (React) | Post-pilot | **V1.1-REP** when `enable_report_hub` = 1; RR-01–RR-12 runbooks in hub footer |
-| **M17** Clinical Documentation Hub | Draft v0.1.2; [CLINICAL_DOCUMENTATION spec](./NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md); PAGE_DESIGNS §7.30 | **Shipped** (React) | Post-pilot | **V1.1-DOC** when `enable_clinical_doc_hub` = 1 |
-| **M18** Queue Bridge Hub | Draft v0.1.2; [SCHEDULING_QUEUE_BOUNDARY spec](./NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md); PAGE_DESIGNS §7.31 | **Shipped** (React) | Post-pilot | EX-01 chips on Flow Board; EX-03/04 on Visit Board; Front Desk guard |
+| **M16** Reporting Operations Hub | Draft v0.1.2; [REPORTING spec](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md); PAGE_DESIGNS §7.29 | **Shipped** (React) | Post-pilot | **V1.1-REP** when `enable_report_hub` = 1; RR-01–RR-12 runbooks in hub footer |
+| **M17** Clinical Documentation Hub | Draft v0.1.2; [CLINICAL_DOCUMENTATION spec](./done/NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md); PAGE_DESIGNS §7.30 | **Shipped** (React) | Post-pilot | **V1.1-DOC** when `enable_clinical_doc_hub` = 1 |
+| **M18** Queue Bridge Hub | Draft v0.1.2; [SCHEDULING_QUEUE_BOUNDARY spec](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md); PAGE_DESIGNS §7.31 | **Shipped** (React) | Post-pilot | EX-01 chips on Flow Board; EX-03/04 on Visit Board; Front Desk guard |
 | **M8** Lab Desk | PRD §8 | **Shipped** (React) | Yes | Gated by `enable_lab_role` |
 | **M9** Pharmacy Desk | PRD §8 | **Shipped** (React) | Yes | Gated by `enable_pharmacy_role` |
 | **M10** Patient Registry | Draft v0.2.1 | **Shipped** (React) | Post-pilot | **PR-3** saved filters (save/update/delete); **V1.1-REG** |
 | **M11** Chart Depth | Draft v0.1.7; PAGE_DESIGNS §7.13–§7.16 | **Shipped** (React) | Post-pilot | **V1.1-CD**; menu cutover via `PatientMenuRestrictService` |
 | **M12** Lab Operations Hub | Draft v0.1.8; PAGE_DESIGNS §7.17–§7.20 | **Shipped** (React) | Post-pilot | **V1.1-LAB** when `enable_lab_ops` = 1 |
 | **M13** Pharmacy Operations Hub | Draft v0.1.8; PAGE_DESIGNS §7.21–§7.24 | **Shipped** (React) | Post-pilot | **V1.1-PHARM** when `enable_pharm_ops` = 1 |
-| **M14** Billing Back Office | Draft v0.1.3; [BILLING_AR spec](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md); PAGE_DESIGNS §7.25–§7.26 | **Shipped** (React) | Post-pilot | **V1.2-BILL** F04 outstanding pane when `enable_bill_ops_outstanding` = 1 |
-| **M15** Admin Operations Hub | Draft v0.1.3; [ADMIN_CONFIGURATION spec](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md); PAGE_DESIGNS §7.27 | **Shipped** (React) | Post-pilot | RB-01–RB-20 runbooks; gated by `enable_admin_hub` |
+| **M14** Billing Back Office | Draft v0.1.3; [BILLING_AR spec](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md); PAGE_DESIGNS §7.25–§7.26 | **Shipped** (React) | Post-pilot | **V1.2-BILL** F04 outstanding pane when `enable_bill_ops_outstanding` = 1 |
+| **M15** Admin Operations Hub | Draft v0.1.3; [ADMIN_CONFIGURATION spec](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md); PAGE_DESIGNS §7.27 | **Shipped** (React) | Post-pilot | RB-01–RB-20 runbooks; gated by `enable_admin_hub` |
 | **COM** Communications Hub | **Approved Phase 1** v1.0.3 | **Shipped** (React) | Post-pilot | `communications_hub_enable` |
 | **S1** Scheduling & Flow | Draft v0.2.3 | **Shipped** (React) | Post-pilot | Calendar, Flow Board, Recalls when `enable_scheduling_redesign` = 1 |
 | **T1** Theme & shell | PRD §8 | **Shipped** | Yes | Twig shell + React islands |
@@ -980,7 +980,7 @@ V1 optimizes **safe handoff and billing integrity** over fastest possible consul
 
 **Trainer one-liner:** *“**Background** is who they are over time; **assessments** are what we documented **this visit**.”* — complements §6.1g *desk vs chart* ([USER_WORKFLOWS §17.7](./NEW_CLINIC_V1_USER_WORKFLOWS.md#177-training-copy--rollout-guardrails)).
 
-**Normative MRD layout:** [MRD §8.9](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#89-clinical-tab--layout--anchors-d-mrd-10) · build spec [PAGE_DESIGNS §4.14](./NEW_CLINIC_V1_PAGE_DESIGNS.md#414-mrd-clinical-tab--build-spec-t1-f16-d-mrd-10) · Background detail [MEDICAL_HISTORY_BACKGROUND](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md).
+**Normative MRD layout:** [MRD §8.9](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#89-clinical-tab--layout--anchors-d-mrd-10) · build spec [PAGE_DESIGNS §4.14](./NEW_CLINIC_V1_PAGE_DESIGNS.md#414-mrd-clinical-tab--build-spec-t1-f16-d-mrd-10) · Background detail [MEDICAL_HISTORY_BACKGROUND](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md).
 
 #### Taxonomy (closed — D49)
 
@@ -1078,7 +1078,7 @@ When `enable_l3b_background_completion` = 1, M6 adds optional completion weight 
 | MRD full chart | **Yes** — sticky Zone A | MRD-G1/G2 |
 | Sensitive modals (cancel, route, payment, override) | **Yes** — name + MRN in modal body | Not banner-only |
 | Core encounter screens opened via desk shortcut | **Yes** — compact **encounter identity strip** (T1-F17) | Module-injected; matches bound visit |
-| Stock chart pages (`patient_file/*`, legacy ledger/report) | **Yes** when `enable_legacy_patient_context_overlay` = 1 — **legacy strip** (T1-F18) | Compact name · MRN · active visit chip; [LEGACY_CHART_CONTEXT](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md); **not** a fourth anchor when overlay OFF — pilot recommends ON (§5.6.1) |
+| Stock chart pages (`patient_file/*`, legacy ledger/report) | **Yes** when `enable_legacy_patient_context_overlay` = 1 — **legacy strip** (T1-F18) | Compact name · MRN · active visit chip; [LEGACY_CHART_CONTEXT](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md); **not** a fourth anchor when overlay OFF — pilot recommends ON (§5.6.1) |
 | Visit Board queue cards | Abbreviated name + queue # | **Tier 1 required** — shared `patient-context-banner` in **Visit detail modal** on row select (M2-F13, D57); audit timeline in optional drawer |
 | Wall display (D22) | **Initials only** — not full identity | Public privacy |
 
@@ -1200,7 +1200,7 @@ Independent flags — enable à la carte (§23.1). M6 **Apply cash clinic profil
 
 #### V1.2 / legacy (D54)
 
-Normative build spec: [LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) · PAGE_DESIGNS **§4.11.8** · **§4.15** legacy strip.
+Normative build spec: [LEGACY_CHART_CONTEXT_REDESIGN.md](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) · PAGE_DESIGNS **§4.11.8** · **§4.15** legacy strip.
 
 | Config key | Default | F-ID | Behavior |
 |------------|---------|------|----------|
@@ -1209,7 +1209,7 @@ Normative build spec: [LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_
 | `enable_legacy_strip_clinical_chips` | `0` | T1-F18b | When `1` + overlay ON: severe allergy chips (max 2) on legacy strip |
 | `enable_legacy_strip_desk_return` | `1` | T1-F18c | When `1` + overlay ON: **Return to {Desk}** when `sessionStorage` visit `pid` ≠ chart `pid` |
 
-**V1.2.1 polish (deferred — not in config table until ship):** `enable_legacy_strip_terminal_chip` — when `1`, grey **Visit ended** chip for terminal visits today (default OFF); see [LEGACY_CHART_CONTEXT](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) §9.
+**V1.2.1 polish (deferred — not in config table until ship):** `enable_legacy_strip_terminal_chip` — when `1`, grey **Visit ended** chip for terminal visits today (default OFF); see [LEGACY_CHART_CONTEXT](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) §9.
 
 ##### T1-F18 — implementation (closed — D54 detail)
 
@@ -1712,7 +1712,7 @@ Behavioral detail and QA checklist: companion [USER_WORKFLOWS §12.2](./NEW_CLIN
 
 ### 6.7 Schedule system: Calendar, Flow Board, and Recalls (S1)
 
-V1 ships the **schedule system fully** as package **S1** ([SCHEDULING_REDESIGN](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md)) — unified **Scheduling & Flow** shell with Calendar, Flow Board, and Recall Worklist lenses. Core tables remain systems of record (`openemr_postcalendar_events`, `patient_tracker`, `medex_recalls`); legacy PostCalendar / `patient_tracker.php` / Message Center Recall Board are **retired from daily menus** once S1 reaches parity (§19).
+V1 ships the **schedule system fully** as package **S1** ([SCHEDULING_REDESIGN](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md)) — unified **Scheduling & Flow** shell with Calendar, Flow Board, and Recall Worklist lenses. Core tables remain systems of record (`openemr_postcalendar_events`, `patient_tracker`, `medex_recalls`); legacy PostCalendar / `patient_tracker.php` / Message Center Recall Board are **retired from daily menus** once S1 reaches parity (§19).
 
 **Closed decision (system of record):** Calendar owns appointments; Flow Board owns appointment check-in/out; Recalls own follow-up (S1 safe write path — not `save_recall()`). **`new_visit` owns today's clinical queue** (§5.5). Schedule system feeds **arrivals** into Start visit; it does not replace Visit Board (H3).
 
@@ -2287,7 +2287,7 @@ Ship vertical slices in dependency order so patient context and queue state exis
 
 **Purpose:** Find or create a patient, prevent duplicates, capture profile data at the front desk, and start the visit. This is the single most-used screen in the system.
 
-> **Normative registration spec (M1b/M1c):** [NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) — supersedes L1-only Quick Add (Q10 → Q46).
+> **Normative registration spec (M1b/M1c):** [NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) — supersedes L1-only Quick Add (Q10 → Q46).
 
 #### M1 Design philosophy (non-negotiable)
 
@@ -2301,8 +2301,8 @@ Ship vertical slices in dependency order so patient context and queue state exis
 
 | Sub-area | Description |
 |----------|-------------|
-| **M1a** Search & match | Unified search + suggestions + duplicate detection — [FRONT_DESK_SEARCH](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) |
-| **M1b** Registration form | 4-section accordion create/edit — [FRONT_DESK_REGISTRATION](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) |
+| **M1a** Search & match | Unified search + suggestions + duplicate detection — [FRONT_DESK_SEARCH](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) |
+| **M1b** Registration form | 4-section accordion create/edit — [FRONT_DESK_REGISTRATION](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) |
 | **M1c** Profile completion | Completion scoring + banner; same field contract as M1b |
 | **M1d** Start visit | Creates `form_encounter` (per §6.1 step 3) |
 
@@ -2324,7 +2324,7 @@ Ship vertical slices in dependency order so patient context and queue state exis
 | ID | Requirement | Priority |
 |----|-------------|----------|
 | M1a-F01 | Single unified search input; auto-focused on load; supports name, phone, `pubpid`, NHIS no., National ID | P0 |
-| M1a-F02 | Debounced (250ms) live results; server scores up to **25** candidates; UI displays top **8** (see [FRONT_DESK_SEARCH_REDESIGN](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) §5) | P0 |
+| M1a-F02 | Debounced (250ms) live results; server scores up to **25** candidates; UI displays top **8** (see [FRONT_DESK_SEARCH_REDESIGN](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) §5) | P0 |
 | M1a-F03 | Search uses **fuzzy/phonetic matching** on lname (SOUNDEX), normalized phone (digits-only), startswith on fname/lname/pubpid; **no exact-match-only fallback** | P0 |
 | M1a-F04 | Normalized phone search: strip spaces, hyphens, leading `+233`/`233`/`0`; index a `phone_normalized` view or computed search vector | P0 |
 | M1a-F05 | Each result row shows: full name, sex, age, phone (masked last 4 visible), `pubpid`, completion badge, last visit date | P0 |
@@ -2344,11 +2344,11 @@ Ship vertical slices in dependency order so patient context and queue state exis
 
 - Patient core data: `patient_data` (existing indexes on `lname`, `fname`, `phone_*` should be verified and a `phone_normalized` index added in module install SQL).
 - SQL helpers for SOUNDEX, normalized phone matching: pattern adapted from `library/dupscore.inc.php`.
-- Do **not** depend on `dynamic_finder.php` directly (its `patient_finder_exact_search` toggle is not what we want); build module search via `PatientSearchService` per [FRONT_DESK_SEARCH_REDESIGN](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md).
+- Do **not** depend on `dynamic_finder.php` directly (its `patient_finder_exact_search` toggle is not what we want); build module search via `PatientSearchService` per [FRONT_DESK_SEARCH_REDESIGN](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md).
 
 ##### M1a Full spec
 
-Algorithm, API contracts (`patients.search`, `patients.preview`), embed matrix, and test scenarios: [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (v1.0.3).
+Algorithm, API contracts (`patients.search`, `patients.preview`), embed matrix, and test scenarios: [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (v1.0.3).
 
 ---
 
@@ -2380,7 +2380,7 @@ Algorithm, API contracts (`patients.search`, `patients.preview`), embed matrix, 
 
 ##### Level 1 — Basic Identity (Section 1)
 
-Full field contract: [FRONT_DESK_REGISTRATION §5](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md#5-section-1--basic-info).
+Full field contract: [FRONT_DESK_REGISTRATION §5](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md#5-section-1--basic-info).
 
 | Field | Type | Required at create | Notes |
 |-------|------|--------------------|--------|
@@ -2439,7 +2439,7 @@ Per §15.3 this is documented as a known limitation; clinicians remain responsib
 
 #### M1.5 Registration form (M1b) functional requirements
 
-Normative detail: [FRONT_DESK_REGISTRATION](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md). Summary:
+Normative detail: [FRONT_DESK_REGISTRATION](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md). Summary:
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
@@ -2765,14 +2765,14 @@ When **Register patient** clicked, the 4-section registration accordion opens in
 #### M8 Integration
 
 - Core only for order entry (doctor); lab role does not create orders in V1 unless ACL allows.
-- **Lab admin, compendium, pending review, HL7/LIS:** out of M8 scope — see [LAB_OPERATIONS_REDESIGN](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) **Module M12** (D-LAB-1).
+- **Lab admin, compendium, pending review, HL7/LIS:** out of M8 scope — see [LAB_OPERATIONS_REDESIGN](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) **Module M12** (D-LAB-1).
 - When `enable_lab_ops` = 1: **Enter results** prefers M12 façade (`lab-ops/results.php`); stock shortcuts remain fallback when hub OFF (LAB-5).
 
 ---
 
 ### Module M12 — Lab Operations Hub
 
-**Purpose:** Clinic-wide **lab operations** — pending worklists, manual result entry façade, clinic panel packs, send-out requisitions, and (V1.2) LIS/HL7 status — without forking OpenEMR `procedure_*` tables. Full spec: [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.7). Wireframes: [PAGE_DESIGNS §7.17–§7.20](./NEW_CLINIC_V1_PAGE_DESIGNS.md#717-lab-opsindexphp--lab-operations-hub). MRD labs section: [MRD §8.9](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#89-clinical-tab--layout--anchors-d-mrd-10).
+**Purpose:** Clinic-wide **lab operations** — pending worklists, manual result entry façade, clinic panel packs, send-out requisitions, and (V1.2) LIS/HL7 status — without forking OpenEMR `procedure_*` tables. Full spec: [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.7). Wireframes: [PAGE_DESIGNS §7.17–§7.20](./NEW_CLINIC_V1_PAGE_DESIGNS.md#717-lab-opsindexphp--lab-operations-hub). MRD labs section: [MRD §8.9](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#89-clinical-tab--layout--anchors-d-mrd-10).
 
 **Type:** Submodule routes under `public/lab-ops/` — complements **M8** visit queue; does not replace it (D-LAB-1).
 
@@ -2782,7 +2782,7 @@ When **Register patient** clicked, the 4-section registration accordion opens in
 
 #### M12 User stories
 
-See lab spec [Appendix B](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md#appendix-b--user-stories) (`US-LAB-1`–`US-LAB-8`).
+See lab spec [Appendix B](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md#appendix-b--user-stories) (`US-LAB-1`–`US-LAB-8`).
 
 #### M12 Functional requirements
 
@@ -2857,7 +2857,7 @@ See lab spec [Appendix B](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md#appendix-b-
 
 - Requires global **`inhouse_pharmacy`** when using `interface/drugs/` / `drug_inventory.php`; M6 sets this with `enable_pharmacy_role`.
 - Prescription REST API is **read-only** — dispense via core Rx / inventory UI deep links, or M13 façade when `enable_pharm_ops` = 1.
-- **Inventory, drug master, lot management, destruction:** out of M9 scope — see [PHARMACY_OPERATIONS_REDESIGN](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) **Module M13** (D-PHARM-1).
+- **Inventory, drug master, lot management, destruction:** out of M9 scope — see [PHARMACY_OPERATIONS_REDESIGN](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) **Module M13** (D-PHARM-1).
 - When `enable_pharm_ops` = 1: **Dispense** prefers M13 façade (`pharm-ops/dispense.php`); stock shortcuts remain fallback when hub OFF (PHARM-5).
 - Cashier may bill pharmacy via `new_fee_schedule` lines mapped to product/dispensing codes (§M5.2).
 
@@ -2865,7 +2865,7 @@ See lab spec [Appendix B](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md#appendix-b-
 
 ### Module M13 — Pharmacy Operations Hub
 
-**Purpose:** Clinic-wide **pharmacy operations** — pending dispense worklists, dispense/receive façades, clinic formulary starter packs — without forking OpenEMR `drugs` / `drug_sales` tables. **Print Rx** for Type A clinics is **M13-F10** shared service under **V1.1-PRINT-RX** (D-PHARM-4), not hub-only. Full spec: [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.7). Wireframes: [PAGE_DESIGNS §7.21–§7.24](./NEW_CLINIC_V1_PAGE_DESIGNS.md#721-pharm-opsindexphp--pharmacy-operations-hub). MRD meds section: [MRD §8.10.5](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8105-clinical--meds-strip-m13-entry).
+**Purpose:** Clinic-wide **pharmacy operations** — pending dispense worklists, dispense/receive façades, clinic formulary starter packs — without forking OpenEMR `drugs` / `drug_sales` tables. **Print Rx** for Type A clinics is **M13-F10** shared service under **V1.1-PRINT-RX** (D-PHARM-4), not hub-only. Full spec: [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.7). Wireframes: [PAGE_DESIGNS §7.21–§7.24](./NEW_CLINIC_V1_PAGE_DESIGNS.md#721-pharm-opsindexphp--pharmacy-operations-hub). MRD meds section: [MRD §8.10.5](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8105-clinical--meds-strip-m13-entry).
 
 **Type:** Submodule routes under `public/pharm-ops/` — complements **M9** visit queue; does not replace it (D-PHARM-1).
 
@@ -2875,7 +2875,7 @@ See lab spec [Appendix B](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md#appendix-b-
 
 #### M13 User stories
 
-See pharmacy spec [Appendix B](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md#appendix-b--user-stories) (`US-PHARM-1`–`US-PHARM-8`).
+See pharmacy spec [Appendix B](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md#appendix-b--user-stories) (`US-PHARM-1`–`US-PHARM-8`).
 
 #### M13 Functional requirements
 
@@ -2914,7 +2914,7 @@ See pharmacy spec [Appendix B](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md#a
 
 ### Module M14 — Billing Back Office Hub
 
-**Purpose:** Clinic-wide **billing back office** — supervised charge corrections, payment search/reverse, daysheet/close-of-day, optional outstanding balances, and admin-only insurance/EDI gateway — without forking OpenEMR `billing` / `ar_*` / `payments` tables. Full spec: [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.2). Wireframes: [PAGE_DESIGNS §7.25–§7.26](./NEW_CLINIC_V1_PAGE_DESIGNS.md#725-bill-opsindexphp--billing-back-office-hub).
+**Purpose:** Clinic-wide **billing back office** — supervised charge corrections, payment search/reverse, daysheet/close-of-day, optional outstanding balances, and admin-only insurance/EDI gateway — without forking OpenEMR `billing` / `ar_*` / `payments` tables. Full spec: [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.2). Wireframes: [PAGE_DESIGNS §7.25–§7.26](./NEW_CLINIC_V1_PAGE_DESIGNS.md#725-bill-opsindexphp--billing-back-office-hub).
 
 **Type:** Submodule routes under `public/bill-ops/` — complements **M5** visit checkout and **M7** aggregate reports; does not replace them (D-BILL-1).
 
@@ -2924,7 +2924,7 @@ See pharmacy spec [Appendix B](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md#a
 
 #### M14 User stories
 
-See billing spec [Appendix B](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md#appendix-b--user-stories) (`US-BILL-1`–`US-BILL-6`).
+See billing spec [Appendix B](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md#appendix-b--user-stories) (`US-BILL-1`–`US-BILL-6`).
 
 #### M14 Functional requirements
 
@@ -2950,7 +2950,7 @@ See billing spec [Appendix B](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md#
 
 ### Module M10 — Patient Registry
 
-**Purpose:** Structured **cohort search** — “who matches these rules?” — for program leads, doctors, and admins. **Not** daily walk-in lookup (that is M1a Front Desk search). Full spec: [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.1). Wireframes: [PAGE_DESIGNS §7.32](./NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry).
+**Purpose:** Structured **cohort search** — “who matches these rules?” — for program leads, doctors, and admins. **Not** daily walk-in lookup (that is M1a Front Desk search). Full spec: [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.1). Wireframes: [PAGE_DESIGNS §7.32](./NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry).
 
 **Entry:** `public/patient-registry.php` — menu **Clinic → Patient Registry**.
 
@@ -2991,7 +2991,7 @@ See registry doc Appendix A (`REG-US-*`). P0: cohort filter, record status defau
 
 ### Module M11 — Chart Depth
 
-**Purpose:** In-chart **depth panels** for payment history, referrals & letters, clinical export, and (V1.2) external care — beyond the MRD five-tab IA. Full product spec: [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.15). Payment history: [PATIENT_PAYMENT_HISTORY](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md). Referrals & letters: [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.1). Wireframes: [PAGE_DESIGNS §7.13–§7.16](./NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history). MRD host strips: [MRD §8.10](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#810-mrd-host-summary-strips-chart-depth-entry).
+**Purpose:** In-chart **depth panels** for payment history, referrals & letters, clinical export, and (V1.2) external care — beyond the MRD five-tab IA. Full product spec: [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.15). Payment history: [PATIENT_PAYMENT_HISTORY](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md). Referrals & letters: [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.1). Wireframes: [PAGE_DESIGNS §7.13–§7.16](./NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history). MRD host strips: [MRD §8.10](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#810-mrd-host-summary-strips-chart-depth-entry).
 
 **Type:** Submodule routes under `public/chart-depth/` — slide-over from MRD on desktop; full-page on mobile.
 
@@ -3007,7 +3007,7 @@ See registry doc Appendix A (`REG-US-*`). P0: cohort filter, record status defau
 | M11-F02 | **Receipt reprint** with **Patient · MRN · Receipt # · Amount** confirm modal + `chart_depth.receipt_reprinted` audit | P1 (V1.1-CDa) |
 | M11-F03 | **Referral wizard** (3-step façade over `LBTref`) linked to `encounter_id` + optional `visit_id` | P1 (V1.1-CDb) |
 | M11-F04 | Referrals & letters list + reprint; distinct inbound **Referral on file** vs outbound **Referral issued** chips | P1 (V1.1-CDb) |
-| M11-F05 | **Export presets** — Visit summary, Clinical summary, Employer/school letter (→ CDb composer); Custom checkbox panel; hide insurance/CCR when cash profile — [PATIENT_CLINICAL_EXPORT](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) | P1 (V1.1-CDc) |
+| M11-F05 | **Export presets** — Visit summary, Clinical summary, Employer/school letter (→ CDb composer); Custom checkbox panel; hide insurance/CCR when cash profile — [PATIENT_CLINICAL_EXPORT](./done/NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) | P1 (V1.1-CDc) |
 | M11-F06 | Full chart export (admin) — ACL `new_chart_depth_export_full`; distinct from Custom (D-EXP-9) | P2 (V1.1-CDc) |
 | M11-F07 | MRD Profile **Payments strip** + `mrd.profile_payments_summary` AJAX (MRD §8.10) | P1 (V1.1-CDa) |
 | M11-F08 | MRD Clinical **Referrals strip** + `mrd.clinical_referrals_strip` when outbound referrals exist | P1 (V1.1-CDb) |
@@ -3028,7 +3028,7 @@ See registry doc Appendix A (`REG-US-*`). P0: cohort filter, record status defau
 
 ### Module COM — Communications Hub
 
-**Purpose:** Unified staff workspace for internal patient-related messages and dated reminders. Full spec: [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) (v1.0.3).
+**Purpose:** Unified staff workspace for internal patient-related messages and dated reminders. Full spec: [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) (v1.0.3).
 
 **Type:** Core interface redesign at `interface/main/messages/` — not inside `oe-module-new-clinic` until optional T1 wrap (COM redesign §19 Phase 4).
 
@@ -3227,7 +3227,7 @@ Slip is a separate print action from the cashier receipt (no payment lines). Use
 
 ### Module M15 — Admin Operations Hub
 
-**Purpose:** Unified **admin & configuration** workspace for clinic owners and IT — staff lifecycle, forms bundle health, backup/cron status, and **in-product day-2 runbooks** — without exposing stock `edit_globals.php` as the default path. Full spec: [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.3). Wireframes: [PAGE_DESIGNS §7.27](./NEW_CLINIC_V1_PAGE_DESIGNS.md#727-admin-hubindexphp--admin-operations-hub).
+**Purpose:** Unified **admin & configuration** workspace for clinic owners and IT — staff lifecycle, forms bundle health, backup/cron status, and **in-product day-2 runbooks** — without exposing stock `edit_globals.php` as the default path. Full spec: [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.3). Wireframes: [PAGE_DESIGNS §7.27](./NEW_CLINIC_V1_PAGE_DESIGNS.md#727-admin-hubindexphp--admin-operations-hub).
 
 **Type:** Submodule routes under `public/admin-hub/` — **embeds M6** Clinic setup as first lens; wraps (does not rewrite) stock Users, ACL, Forms, Backup, Logs.
 
@@ -3239,7 +3239,7 @@ Slip is a separate print action from the cashier receipt (no payment lines). Use
 
 #### M15 User stories
 
-See admin spec [Appendix B](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md#appendix-b--user-stories) (`US-ADM-1`–`US-ADM-8`).
+See admin spec [Appendix B](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md#appendix-b--user-stories) (`US-ADM-1`–`US-ADM-8`).
 
 #### M15 Functional requirements
 
@@ -3275,7 +3275,7 @@ See admin spec [Appendix B](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md#appe
 
 **Type:** Submodule routes under `public/report-hub/` — **embeds M7** as **Today** lens; wraps stock report PHP screens via iframe/deep link (**D-REP-6**).
 
-Full spec: [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.1). Wireframes: [PAGE_DESIGNS §7.29](./NEW_CLINIC_V1_PAGE_DESIGNS.md#729-report-hubindexphp--reporting-operations-hub).
+Full spec: [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.1). Wireframes: [PAGE_DESIGNS §7.29](./NEW_CLINIC_V1_PAGE_DESIGNS.md#729-report-hubindexphp--reporting-operations-hub).
 
 **Phasing:** **V1.1-REP** — ships after **M7 P0**; **not** pilot-blocking when `enable_report_hub` = 0 (stock Reports + M7 remain). Independent of M14/M15 slices (§23.1).
 
@@ -3310,7 +3310,7 @@ Full spec: [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_REPO
 
 **Type:** Submodule routes under `public/clinical-doc/` — wraps stock `load_form.php` / `view_form.php` via extended **`consult_shortcut_preflight`** (**D-FORM-6**).
 
-Full spec: [NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md](./NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) (v0.1.2). Wireframes: [PAGE_DESIGNS §7.30](./NEW_CLINIC_V1_PAGE_DESIGNS.md#730-clinical-docindexphp--clinical-documentation-hub).
+Full spec: [NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md](./done/NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) (v0.1.2). Wireframes: [PAGE_DESIGNS §7.30](./NEW_CLINIC_V1_PAGE_DESIGNS.md#730-clinical-docindexphp--clinical-documentation-hub).
 
 **Phasing:** **V1.1-DOC** — ships after **M4 P0**; **not** pilot-blocking when `enable_clinical_doc_hub` = 0 (M4 shortcuts + stock Visit Forms remain). Independent of M15/M16 slices (§23.1).
 
@@ -3345,7 +3345,7 @@ Full spec: [NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md](./NEW_CLINIC_V1_CL
 
 **Type:** Submodule routes under `public/queue-bridge/` — read-only detectors + staff-confirmed one-way fixes via **M0-F16** and `AppointmentService::updateAppointmentStatus()`.
 
-Full spec: [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) (v0.1.2). Wireframes: [PAGE_DESIGNS §7.31](./NEW_CLINIC_V1_PAGE_DESIGNS.md#731-queue-bridgeindexphp--queue-bridge-hub).
+Full spec: [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) (v0.1.2). Wireframes: [PAGE_DESIGNS §7.31](./NEW_CLINIC_V1_PAGE_DESIGNS.md#731-queue-bridgeindexphp--queue-bridge-hub).
 
 **Phasing:** **V1.1-BRIDGE** — ships after **S1-P2** (Flow Board) + **M0-F16** stable; requires `enable_scheduled_integration` = 1. **Not** pilot-blocking when `enable_queue_bridge` = 0 (M7-F16 funnel counts only). Independent of M15/M16/M17 slices (§23.1).
 
@@ -3382,7 +3382,7 @@ Full spec: [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./NEW_CLINIC_V1
 
 ### Module S1 — Scheduling & Flow (V1)
 
-**Purpose:** Full **schedule system** — booking, appointment arrivals, and recall follow-up. Spec detail: [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md).
+**Purpose:** Full **schedule system** — booking, appointment arrivals, and recall follow-up. Spec detail: [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md).
 
 **Entry:** `public/scheduling.php` — tabs Calendar | Flow Board | Recalls; shared filter bar (§5.5 Mode 2).
 
@@ -3466,10 +3466,10 @@ Full spec: [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./NEW_CLINIC_V1
 | T1-F14 | **MRD insurance**: hide all insurance UI when `enable_insurance = false`; NHIS as Profile field only (§12) | P1 |
 | T1-F15 | **MRD timelines (supplementary):** Overview **activity feed** (90d, 25/page, canonical enum §8.6); Visits tab **past pagination** (20/page); inline expand vs navigate (§8.4.4, §8.5.4); Block B dedup (§8.3.1); AJAX/DTO (§8.7, M0-F27); audit shared with Visit Board; **D-MRD-8** / **D-MRD-9** | P1 |
 | T1-F16 | **MRD Clinical tab layout (§8.9, D-MRD-10):** **seven core sections (1–7)** + three conditional (8–10); stable anchors; **This visit** lists encounter-bound forms; Visits past row **View documentation** → encounter forms; PAGE_DESIGNS §4.14. Background read panel = **T1-F20** (separate row). | P1 |
-| T1-F20 | **Background read summary (§8.9 #1, D-HIST-1):** Twig summary panel from `history_data` + SDOH chips at `#clinical-background`; **not** stock `history.php` iframe; **Edit history** → `history_full.php` with `return=clinical-background`; AJAX `mrd.clinical_section` `section: background` (alias `mrd.background_summary`); [MEDICAL_HISTORY_BACKGROUND](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) | P1 |
+| T1-F20 | **Background read summary (§8.9 #1, D-HIST-1):** Twig summary panel from `history_data` + SDOH chips at `#clinical-background`; **not** stock `history.php` iframe; **Edit history** → `history_full.php` with `return=clinical-background`; AJAX `mrd.clinical_section` `section: background` (alias `mrd.background_summary`); [MEDICAL_HISTORY_BACKGROUND](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) | P1 |
 | T1-F20b | **History editor wrap (V1.1-HIST-WRAP):** when `enable_history_editor_wrap` = 1 — T1 shell on stock History editor + **Back to chart**; default OFF (D-HIST-8) | P1 (V1.1-HIST-WRAP) |
 | T1-F17 | **Core encounter identity strip (closed — D51):** server-side `encounter-identity-strip.twig` injected on allowlisted core redirect URLs after preflight bind — name · MRN · queue # · encounter # · Back to desk; **not** iframe/postMessage primary | P0 |
-| T1-F18 | **Legacy patient context overlay** (V1.2-CTX): when `enable_legacy_patient_context_overlay` = 1 — server-inject `legacy-patient-context-strip.twig` on allowlisted stock chart URLs (§6.1j, D54, [LEGACY_CHART_CONTEXT](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md)); **optional pilot** when B7 pending (§5.6.1) | P1 (V1.2-CTX) |
+| T1-F18 | **Legacy patient context overlay** (V1.2-CTX): when `enable_legacy_patient_context_overlay` = 1 — server-inject `legacy-patient-context-strip.twig` on allowlisted stock chart URLs (§6.1j, D54, [LEGACY_CHART_CONTEXT](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md)); **optional pilot** when B7 pending (§5.6.1) | P1 (V1.2-CTX) |
 | T1-F18b | **Legacy strip clinical chips:** when `enable_legacy_strip_clinical_chips` = 1 — severe allergy chips on T1-F18 strip | P1 (V1.2-CTX) |
 | T1-F18c | **Legacy strip desk return:** when `enable_legacy_strip_desk_return` = 1 — **Return to {Desk}** when sessionStorage visit `pid` ≠ chart `pid` | P1 (V1.2-CTX) |
 | T1-F19 | **Shared device session warning** (V1.2-CTX): when `enable_shared_device_session_warning` = 1 — blocking banner on **module desk** load when session ≠ desk `sessionStorage` visit (§6.1j, D54); Cashier **pid-only** compare | P1 (V1.2-CTX) |
@@ -3602,7 +3602,7 @@ Stock OpenEMR’s Medical Record Dashboard (`demographics.php`, page id `core.mr
 | **Positioning** | “Open full chart” from Front Desk (M1a-F08), Doctor Desk, and admin — not post-login landing. Lands on **role default tab** per [MRD §10.1](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#101-default-tab-on-open) (**D-MRD-13**) — never the stock 25-card dashboard layout. Hosts may pass explicit `?tab=` (e.g. reception → Profile per M1a-F08 / §16.3). |
 | **Training copy** | *“Desk for queue work; chart for history; depth panels for money, letters, and exports; ops hubs for bench/counter; billing back office after V1.2-BILL.”* — [USER_WORKFLOWS §17.0h](./NEW_CLINIC_V1_USER_WORKFLOWS.md#170h-clinical-decision-at-the-desk), [§17.0j](./NEW_CLINIC_V1_USER_WORKFLOWS.md#170j-billing-back-office--trainer-one-liner) |
 | **IA** | Four zones: sticky banner · safety strip · 5 workspace tabs · banner-first actions (optional rail ≥1200px) |
-| **Tabs** | Overview · Clinical · Visits · Profile · Messages — Documents in Profile; Chart Depth (ledger, referrals, export) via strips + [M11](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) slide-overs — not a 6th tab |
+| **Tabs** | Overview · Clinical · Visits · Profile · Messages — Documents in Profile; Chart Depth (ledger, referrals, export) via strips + [M11](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) slide-overs — not a 6th tab |
 | **Visit awareness** | When module installed: `new_visit.state`, queue #, CC, today’s vitals in banner |
 | **Completion** | Completion ring in banner; Profile checklist; cashier block aligns with 70% gate |
 | **Cash clinic** | No insurance UI when disabled; balance due formatted in clinic currency on `ready_for_payment` |
@@ -4273,7 +4273,7 @@ Internal migration gates paired with each React island. Seeded **`1`** in `insta
 | `visits.reopen` | §6.4a |
 | `visits.cancel` | Cancel visit |
 | `visits.by_encounter` | Lookup by `pid` + `encounter` |
-| `patients.search` | Fuzzy search (rate-limited SEC06); POST body `{ q, limit? }` — see [FRONT_DESK_SEARCH_REDESIGN](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) §12.1 |
+| `patients.search` | Fuzzy search (rate-limited SEC06); POST body `{ q, limit? }` — see [FRONT_DESK_SEARCH_REDESIGN](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) §12.1 |
 | `patients.preview` | Preview pane payload for selected `pid` — §12.2 |
 | `patients.quick` | Quick Add + `updateDupScore` |
 | `patients.dup_check` | Dup scoring |
@@ -4710,7 +4710,7 @@ The module uses OpenEMR's existing test infrastructure (PHPUnit 11 + Jest 29 —
 
 | ID | Test | Proves |
 |----|------|--------|
-| CTX-1 | Overlay ON — `demographics.php` shows sticky strip with name · MRN · unfinished visit chip | T1-F18; §6.1i; [LEGACY_CHART_CONTEXT](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) |
+| CTX-1 | Overlay ON — `demographics.php` shows sticky strip with name · MRN · unfinished visit chip | T1-F18; §6.1i; [LEGACY_CHART_CONTEXT](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) |
 | CTX-2 | Overlay OFF — no strip markup/CSS on stock chart | PRD §5.6.1 feature-flag rule |
 | CTX-3 | T1-F17 page — encounter strip only, no duplicate T1-F18 | D-CTX-5 |
 | CTX-4 | Bookmarked `load_form.php` without preflight — T1-F18 strip when overlay ON | §6.1j bookmark bypass |
@@ -5076,7 +5076,7 @@ Attach signed **G12 worksheet** to training log (G6). Maps to **§21.1m**, goal 
 
 #### 17.4.4 Lab operations checklist (V1.1-LAB — M12-F01–F06)
 
-Complete when enabling `enable_lab_ops` = 1 **after pilot**. Maps to **§21.1q** and tests **LAB-1–LAB-8**. Narrative: [LAB_OPERATIONS §17.3](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md#173-installer-runbook-summary).
+Complete when enabling `enable_lab_ops` = 1 **after pilot**. Maps to **§21.1q** and tests **LAB-1–LAB-8**. Narrative: [LAB_OPERATIONS §17.3](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md#173-installer-runbook-summary).
 
 | F-ID | Runbook step | Verify |
 |------|--------------|--------|
@@ -5095,7 +5095,7 @@ Complete when enabling `enable_lab_ops` = 1 **after pilot**. Maps to **§21.1q**
 
 #### 17.4.5 Pharmacy operations checklist (V1.1-PHARM — M13-F01–F07)
 
-Complete when enabling `enable_pharm_ops` = 1 **after pilot**. Maps to **§21.1r** and tests **PHARM-1–PHARM-7**. Narrative: [PHARMACY_OPERATIONS §17.2](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md#172-installer-runbook-summary).
+Complete when enabling `enable_pharm_ops` = 1 **after pilot**. Maps to **§21.1r** and tests **PHARM-1–PHARM-7**. Narrative: [PHARMACY_OPERATIONS §17.2](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md#172-installer-runbook-summary).
 
 | F-ID | Runbook step | Verify |
 |------|--------------|--------|
@@ -5126,7 +5126,7 @@ Complete when enabling `enable_rx_print` = 1 for **print-only** or **send-out** 
 
 #### 17.4.7 Billing back office checklist (V1.2-BILL — M14-F01–F06)
 
-Complete when enabling `enable_bill_ops` = 1 **after pilot** (M5 + M7 stable). Maps to **§21.1u** and tests **BILL-1–BILL-6**. Narrative: [BILLING_AR §15.2](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md#152-installer-runbook-summary).
+Complete when enabling `enable_bill_ops` = 1 **after pilot** (M5 + M7 stable). Maps to **§21.1u** and tests **BILL-1–BILL-6**. Narrative: [BILLING_AR §15.2](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md#152-installer-runbook-summary).
 
 | F-ID | Runbook step | Verify |
 |------|--------------|--------|
@@ -5151,7 +5151,7 @@ Optional when clinic needs credit call list or insurance backlog:
 
 **When:** **Day 2 through day 90** after pilot go-live — ongoing owner/manager tasks **not** covered by install worksheet Q4–Q9 or §17.4 steps 1–12.
 
-**Normative detail:** [ADMIN_CONFIGURATION §14](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md#14-day-2-admin-runbook-operational) (RB-01–RB-20). Trainer workflows: [USER_WORKFLOWS §14.8](./NEW_CLINIC_V1_USER_WORKFLOWS.md#148-day-2-admin-workflows). In-product: M15 **Runbooks** lens (M15-F10).
+**Normative detail:** [ADMIN_CONFIGURATION §14](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md#14-day-2-admin-runbook-operational) (RB-01–RB-20). Trainer workflows: [USER_WORKFLOWS §14.8](./NEW_CLINIC_V1_USER_WORKFLOWS.md#148-day-2-admin-workflows). In-product: M15 **Runbooks** lens (M15-F10).
 
 | Phase | Owner | Runbook IDs | Verify |
 |-------|-------|-------------|--------|
@@ -5170,7 +5170,7 @@ Optional when clinic needs credit call list or insurance backlog:
 
 **When:** **Day 2 through day 90** after pilot go-live — ongoing manager/clinical-lead reporting tasks **not** covered by install worksheet or M7-only pilot training.
 
-**Normative detail:** [REPORTING_OPERATIONS §23](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md#23-day-2-reporting-runbook-operational) (RR-01–RR-12). Trainer workflows: [USER_WORKFLOWS §14.9](./NEW_CLINIC_V1_USER_WORKFLOWS.md#149-periodic-reporting-workflows).
+**Normative detail:** [REPORTING_OPERATIONS §23](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md#23-day-2-reporting-runbook-operational) (RR-01–RR-12). Trainer workflows: [USER_WORKFLOWS §14.9](./NEW_CLINIC_V1_USER_WORKFLOWS.md#149-periodic-reporting-workflows).
 
 | Phase | Owner | Runbook IDs | Verify |
 |-------|-------|-------------|--------|
@@ -5189,7 +5189,7 @@ Optional when clinic needs credit call list or insurance backlog:
 
 **When:** **Go-live through day 90** — ongoing clinical-lead / owner documentation tasks **not** covered by M4 shortcut pilot training alone.
 
-**Normative detail:** [CLINICAL_DOCUMENTATION §23](./NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md#23-day-2-clinical-documentation-runbook) (DR-01–DR-08). Trainer workflows: [USER_WORKFLOWS §14.10](./NEW_CLINIC_V1_USER_WORKFLOWS.md#1410-clinical-documentation-workflows).
+**Normative detail:** [CLINICAL_DOCUMENTATION §23](./done/NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md#23-day-2-clinical-documentation-runbook) (DR-01–DR-08). Trainer workflows: [USER_WORKFLOWS §14.10](./NEW_CLINIC_V1_USER_WORKFLOWS.md#1410-clinical-documentation-workflows).
 
 | Phase | Owner | Runbook IDs | Verify |
 |-------|-------|-------------|--------|
@@ -5206,7 +5206,7 @@ Optional when clinic needs credit call list or insurance backlog:
 
 **When:** **Go-live through day 90** — reception lead / manager tasks for **two-system** clinics (`enable_scheduled_integration` = 1) when exception hub is enabled.
 
-**Normative detail:** [SCHEDULING_QUEUE_BOUNDARY §12](./NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md#12-lens-end-of-day-boundary-sweep) + Appendix A (EX codes). Trainer workflows: [USER_WORKFLOWS §14.11](./NEW_CLINIC_V1_USER_WORKFLOWS.md#1411-queue-bridge--scheduling-boundary-workflows).
+**Normative detail:** [SCHEDULING_QUEUE_BOUNDARY §12](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md#12-lens-end-of-day-boundary-sweep) + Appendix A (EX codes). Trainer workflows: [USER_WORKFLOWS §14.11](./NEW_CLINIC_V1_USER_WORKFLOWS.md#1411-queue-bridge--scheduling-boundary-workflows).
 
 | Phase | Owner | Runbook IDs | Verify |
 |-------|-------|-------------|--------|
@@ -5221,7 +5221,7 @@ Optional when clinic needs credit call list or insurance backlog:
 
 #### 17.4.12 Legacy chart context checklist (V1.2-CTX — T1-F18/F19)
 
-Complete when enabling `enable_legacy_patient_context_overlay` = 1 and/or `enable_shared_device_session_warning` = 1 — **during pilot** (§5.6.1) or post-V1. Maps to **§21.1z** and tests **CTX-1–CTX-5**. Narrative: [LEGACY_CHART_CONTEXT §15](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md#15-phasing--prd-alignment).
+Complete when enabling `enable_legacy_patient_context_overlay` = 1 and/or `enable_shared_device_session_warning` = 1 — **during pilot** (§5.6.1) or post-V1. Maps to **§21.1z** and tests **CTX-1–CTX-5**. Narrative: [LEGACY_CHART_CONTEXT §15](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md#15-phasing--prd-alignment).
 
 | F-ID | Runbook step | Verify |
 |------|--------------|--------|
@@ -5260,7 +5260,7 @@ See **Module M7** for full specification. Summary:
 | **Unsigned encounters** | Manager / clinical lead | Visits with unsigned documentation at handoff or payment (M7-F17, G10) |
 | **Documentation integrity** | Manager / clinical lead | E-Sign events + reopen + override per visit — override ≠ amendment (M7-F19, V1.1-OPS, §6.1l) |
 
-**Periodic & compliance reporting (M16 — V1.1-REP):** when `enable_report_hub` = 1, managers use the **Reporting Operations Hub** for immunization exports, destroyed drugs, clinical cohorts, and public-health prep — curated from stock OpenEMR Reports. Day-2 tasks: **§17.4.9** (RR-01–RR-12). Full IA: [REPORTING_OPERATIONS spec](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) §8–§15. Pilot week 1 uses **M7 only** + stock Reports menu.
+**Periodic & compliance reporting (M16 — V1.1-REP):** when `enable_report_hub` = 1, managers use the **Reporting Operations Hub** for immunization exports, destroyed drugs, clinical cohorts, and public-health prep — curated from stock OpenEMR Reports. Day-2 tasks: **§17.4.9** (RR-01–RR-12). Full IA: [REPORTING_OPERATIONS spec](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) §8–§15. Pilot week 1 uses **M7 only** + stock Reports menu.
 
 #### M16 lens summary (when hub enabled)
 
@@ -5275,7 +5275,7 @@ See **Module M7** for full specification. Summary:
 
 **Integration rules (closed):** iframe/deep link for V1.1-REP (**D-REP-6**); async export above 5000 rows (**D-REP-4**); `new_nurse_lead` has clinical lens ACL (**D-REP-7**).
 
-**Clinical documentation (M17 — V1.1-DOC):** when `enable_clinical_doc_hub` = 1, doctors and nurses use the **Clinical Documentation Hub** for curated encounter forms instead of the flat **Visit Forms** menu. Day-2 tasks: **§17.4.10** (DR-01–DR-08). Full IA: [CLINICAL_DOCUMENTATION spec](./NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) §8–§17. Pilot week 1 uses **M4 shortcuts** + stock `encounter_top.php`.
+**Clinical documentation (M17 — V1.1-DOC):** when `enable_clinical_doc_hub` = 1, doctors and nurses use the **Clinical Documentation Hub** for curated encounter forms instead of the flat **Visit Forms** menu. Day-2 tasks: **§17.4.10** (DR-01–DR-08). Full IA: [CLINICAL_DOCUMENTATION spec](./done/NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) §8–§17. Pilot week 1 uses **M4 shortcuts** + stock `encounter_top.php`.
 
 #### M17 lens summary (when hub enabled)
 
@@ -5290,7 +5290,7 @@ See **Module M7** for full specification. Summary:
 
 **Integration rules (closed):** wrap stock forms via `consult_shortcut_preflight` (**D-FORM-6**); one primary consult card (**D-FORM-7**); M15 bundle board optional (**D-FORM-9**); US AMC hidden when flag OFF (**D-FORM-10**).
 
-**Queue bridge (M18 — V1.1-BRIDGE):** when `enable_queue_bridge` = 1, reception and managers use the **Queue Bridge Hub** for schedule vs queue mismatches — guided fixes only; **no** background sync (**D-BRIDGE-1** / **H3**). Day-2 tasks: **§17.4.11** (SQ-01–SQ-08). Full IA: [SCHEDULING_QUEUE_BOUNDARY spec](./NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) §8–§17. Pilot week 1 uses **M0-F16** + M7-F16 counts only.
+**Queue bridge (M18 — V1.1-BRIDGE):** when `enable_queue_bridge` = 1, reception and managers use the **Queue Bridge Hub** for schedule vs queue mismatches — guided fixes only; **no** background sync (**D-BRIDGE-1** / **H3**). Day-2 tasks: **§17.4.11** (SQ-01–SQ-08). Full IA: [SCHEDULING_QUEUE_BOUNDARY spec](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) §8–§17. Pilot week 1 uses **M0-F16** + M7-F16 counts only.
 
 ---
 
@@ -5630,7 +5630,7 @@ Maps to **D49** / **D-MRD-10** and mandatory test **42**. **Not** pilot week 1 b
 
 ### 21.1aa Background / History & Lifestyle (T1-F20 — when B7 ships)
 
-Maps to **D-HIST-1–8** and mandatory test **42** + slice tests **HIST-1–HIST-6**. Full spec: [MEDICAL_HISTORY_BACKGROUND](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md). **Not** pilot week 1 blocking.
+Maps to **D-HIST-1–8** and mandatory test **42** + slice tests **HIST-1–HIST-6**. Full spec: [MEDICAL_HISTORY_BACKGROUND](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md). **Not** pilot week 1 blocking.
 
 - [ ] `#clinical-background` renders **T1-F20** read summary — family, social, PMH blocks show **only populated** fields; empty state + **Edit history** CTA when ACL allows (HIST-1).
 - [ ] Summary does **not** iframe stock `history.php`; data from `history_data` via server service (HIST-2).
@@ -5643,7 +5643,7 @@ Maps to **D-HIST-1–8** and mandatory test **42** + slice tests **HIST-1–HIST
 
 ### 21.1ab Patient clinical export / Reports (M11 — V1.1-CDc + pilot F11)
 
-Maps to **D-EXP-1–11** and tests **CD-3** / **CD-5** / **EXP-1–EXP-6** / pilot **F11**. Full spec: [PATIENT_CLINICAL_EXPORT](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) v0.1.1. **Not** M16 clinic Report Hub.
+Maps to **D-EXP-1–11** and tests **CD-3** / **CD-5** / **EXP-1–EXP-6** / pilot **F11**. Full spec: [PATIENT_CLINICAL_EXPORT](./done/NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) v0.1.1. **Not** M16 clinic Report Hub.
 
 **Pilot wrapper (M11-F11 — EXP-1):**
 
@@ -5672,7 +5672,7 @@ Maps to **D-EXP-1–11** and tests **CD-3** / **CD-5** / **EXP-1–EXP-6** / pil
 
 ### 21.1ac Patient payment history / Ledger (M11 — V1.1-CDa + pilot F11 ledger)
 
-Maps to **D-FIN-1–12** and tests **CD-1** / **FIN-1–FIN-6** / pilot **F11** ledger. Full spec: [PATIENT_PAYMENT_HISTORY](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md). **Read-only** core AR — not M5 post, not M14 write.
+Maps to **D-FIN-1–12** and tests **CD-1** / **FIN-1–FIN-6** / pilot **F11** ledger. Full spec: [PATIENT_PAYMENT_HISTORY](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md). **Read-only** core AR — not M5 post, not M14 write.
 
 **Pilot wrapper (M11-F11 ledger — FIN-1):**
 
@@ -5732,7 +5732,7 @@ Maps to **D-REF-1–13** and tests **CD-2** / **REF-1–REF-7** / pilot **F11** 
 
 ### 21.1ae Patient Registry / cohort search (M10 — V1.1-REG)
 
-Requires `enable_patient_registry` = 1. Maps to **D-COHORT-1–10** and tests **REG-1–REG-8** (`@new-clinic-v11-registry`; PR-1 subset `@new-clinic-v11-registry-pr1`). Full spec: [PATIENT_REGISTRY_REDESIGN](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md). Wireframes: [PAGE_DESIGNS §7.32](./NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry). **Not** daily Front Desk lookup (M1a).
+Requires `enable_patient_registry` = 1. Maps to **D-COHORT-1–10** and tests **REG-1–REG-8** (`@new-clinic-v11-registry`; PR-1 subset `@new-clinic-v11-registry-pr1`). Full spec: [PATIENT_REGISTRY_REDESIGN](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md). Wireframes: [PAGE_DESIGNS §7.32](./NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry). **Not** daily Front Desk lookup (M1a).
 
 **Shell & filters (PR-1 — REG-1–REG-3):**
 
@@ -5921,7 +5921,7 @@ Requires `enable_admin_hub` = 1 and **M6 P0** complete. **Independent** of M12�
 
 ### 21.1w Reporting Operations Hub (M16 — V1.1-REP)
 
-Requires `enable_report_hub` = 1 and **M7 P0** complete. **Independent** of M14/M15 slices (§23.1). Maps to [REPORTING_OPERATIONS spec](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md), **§17.4.9** / RR-01–RR-12, and USER_WORKFLOWS **§14.9**. **Closed (D-REP-1):** M7 = daily ops; M16 = periodic/compliance façades.
+Requires `enable_report_hub` = 1 and **M7 P0** complete. **Independent** of M14/M15 slices (§23.1). Maps to [REPORTING_OPERATIONS spec](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md), **§17.4.9** / RR-01–RR-12, and USER_WORKFLOWS **§14.9**. **Closed (D-REP-1):** M7 = daily ops; M16 = periodic/compliance façades.
 
 - [ ] **Hub shell (REP-1):** `new_admin` lands on **Today (M7)** tab; header KPIs match M7 cash/visits for today.
 - [ ] **Menu cutover (REP-2):** Stock Reports hidden for clinic roles when hub ON; Advanced opens stock tree.
@@ -5936,7 +5936,7 @@ Requires `enable_report_hub` = 1 and **M7 P0** complete. **Independent** of M14/
 
 ### 21.1x Clinical Documentation Hub (M17 — V1.1-DOC)
 
-Requires `enable_clinical_doc_hub` = 1 and **M4 P0** complete. **Independent** of M15/M16 slices (§23.1). Maps to [CLINICAL_DOCUMENTATION spec](./NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md), **§17.4.10** / DR-01–DR-08, and USER_WORKFLOWS **§14.10**. **Closed (D-FORM-1):** M4 shortcuts = fast path; M17 = curated documentation façade (**NG5**).
+Requires `enable_clinical_doc_hub` = 1 and **M4 P0** complete. **Independent** of M15/M16 slices (§23.1). Maps to [CLINICAL_DOCUMENTATION spec](./done/NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md), **§17.4.10** / DR-01–DR-08, and USER_WORKFLOWS **§14.10**. **Closed (D-FORM-1):** M4 shortcuts = fast path; M17 = curated documentation façade (**NG5**).
 
 - [ ] **Hub shell (DOC-1):** `ghana_opd_v1` bundle shows ≤7 primary cards across Consult + Nursing + Orders lenses.
 - [ ] **Menu cutover (DOC-2):** Visit Forms hidden for clinic roles when hub ON; Advanced opens stock `forms.php`.
@@ -5949,7 +5949,7 @@ Requires `enable_clinical_doc_hub` = 1 and **M4 P0** complete. **Independent** o
 
 ### 21.1y Queue Bridge Hub (M18 — V1.1-BRIDGE)
 
-Requires `enable_queue_bridge` = 1, `enable_scheduled_integration` = 1, and **S1-P2** + **M0-F16** complete. Maps to [SCHEDULING_QUEUE_BOUNDARY spec](./NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md), **§17.4.11** / SQ-01–SQ-08, and USER_WORKFLOWS **§14.11**. **Closed (D-BRIDGE-1):** detect + guide + audit — **H3** stands.
+Requires `enable_queue_bridge` = 1, `enable_scheduled_integration` = 1, and **S1-P2** + **M0-F16** complete. Maps to [SCHEDULING_QUEUE_BOUNDARY spec](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md), **§17.4.11** / SQ-01–SQ-08, and USER_WORKFLOWS **§14.11**. **Closed (D-BRIDGE-1):** detect + guide + audit — **H3** stands.
 
 - [ ] **EX-01 detect (BRIDGE-1):** Arrived on Flow Board without clinical visit appears on action tab.
 - [ ] **Guided fix (BRIDGE-2):** Resolve via M0-F16 — one visit + `@` when guard passes.
@@ -5962,7 +5962,7 @@ Requires `enable_queue_bridge` = 1, `enable_scheduled_integration` = 1, and **S1
 
 ### 21.1z Legacy chart context (T1-F18/F19 — V1.2-CTX)
 
-Requires `enable_legacy_patient_context_overlay` = 1 and/or `enable_shared_device_session_warning` = 1. **Independent** of M11–M18 (§20.1 rule 12). Maps to [LEGACY_CHART_CONTEXT spec](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md), **§17.4.12**, PAGE_DESIGNS **§4.11.8** / **§4.15**, and USER_WORKFLOWS **§17.7**. **Closed (D-CTX-1–10):** server inject on stock chart only; T1-F19 on module desks only; no `bindForVisit` on strip render.
+Requires `enable_legacy_patient_context_overlay` = 1 and/or `enable_shared_device_session_warning` = 1. **Independent** of M11–M18 (§20.1 rule 12). Maps to [LEGACY_CHART_CONTEXT spec](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md), **§17.4.12**, PAGE_DESIGNS **§4.11.8** / **§4.15**, and USER_WORKFLOWS **§17.7**. **Closed (D-CTX-1–10):** server inject on stock chart only; T1-F19 on module desks only; no `bindForVisit` on strip render.
 
 - [ ] **CTX-1 (overlay ON):** `demographics.php` shows sticky strip — name · MRN · unfinished visit chip when today's visit open.
 - [ ] **CTX-2 (overlay OFF):** no strip markup/CSS on stock chart pages.
@@ -6079,7 +6079,7 @@ Registration, completion, and related engineering choices (defaults in [§12.4](
 | # | Decision |
 |---|----------|
 | Q10 | ~~**Progressive** registration (Quick Add → enforce-at-billing)~~ **Superseded by Q46** (2026-06-25) |
-| Q46 | **Desk full registration form** — 4-section accordion at Front Desk; Section 1 creates; region→district hierarchy; `registration_mode` default `desk_full_form`; normative [FRONT_DESK_REGISTRATION](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) |
+| Q46 | **Desk full registration form** — 4-section accordion at Front Desk; Section 1 creates; region→district hierarchy; `registration_mode` default `desk_full_form`; normative [FRONT_DESK_REGISTRATION](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) |
 | Q11 | Billing-block threshold **70%** |
 | Q12 | Rx strict mode **OFF** in V1 |
 | Q13 | Billing override **Yes** — ACL + mandatory reason + audit |
@@ -6096,7 +6096,7 @@ Registration, completion, and related engineering choices (defaults in [§12.4](
 | D14 | Login redirect via **`list_options` apps** (§11.3) — no core `main_screen.php` fork |
 | D15 | Cash checkout mirrors **`front_payment.php` cash** AR path (§M5.2) |
 | D16 | **MRD redesign locked (v0.2):** 5 tabs (Overview/Clinical/Visits/Profile/Messages); banner-first actions; visit-scoped vitals in banner; insurance hidden when off — full spec in [MRD doc](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) |
-| D17 | **V1 builds both systems fully:** walk-in (M0–M9, Visit Board) + schedule (S1 per [SCHEDULING_REDESIGN](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md)); one operational queue at the door; ~26-week dual-track plan (§20); `enable_scheduled_integration` default **ON**, OFF for walk-in-only profile |
+| D17 | **V1 builds both systems fully:** walk-in (M0–M9, Visit Board) + schedule (S1 per [SCHEDULING_REDESIGN](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md)); one operational queue at the door; ~26-week dual-track plan (§20); `enable_scheduled_integration` default **ON**, OFF for walk-in-only profile |
 | D18 | **Tracker sync permanently closed (H3):** no bidirectional `new_visit` ↔ `patient_tracker` sync; sole tracker touch is one-way `updateAppointmentStatus()` at arrival (§6.6) |
 | D19 | **One encounter rule:** atomic `VisitQueueService::startVisitFromAppointment()` (M0-F16); single UI **Start visit & check in**; never `calendar_arrived()` (H2/H4) |
 | D20 | **Visit type from appointment:** default from `pc_catid` via M6 `new_visit_type`; override allowed at Start visit; fees at cashier only |
@@ -6150,7 +6150,7 @@ Registration, completion, and related engineering choices (defaults in [§12.4](
 | D-REF-11 | **Employer letter ACL (closed):** base `new_reception` → reception lead for employer/school letter when CDb ON |
 | D-REF-12 | **Hub read-only (closed):** `new_chart_depth` without `new_chart_depth_referral` — view list; hide create/reprint |
 | D-REF-13 | **Letter status (closed):** letters use Documents link — separate from referral `new_referral_meta` enum |
-| D-COHORT-1 | **Confirmation source (closed):** user-selectable when condition/ICD set — [PATIENT_REGISTRY](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) §10.1 |
+| D-COHORT-1 | **Confirmation source (closed):** user-selectable when condition/ICD set — [PATIENT_REGISTRY](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) §10.1 |
 | D-COHORT-2 | **Age at diagnosis (closed):** relative to index diagnosis event — not age today alone |
 | D-COHORT-3 | **Record status (closed):** default **Active patients only** — deceased excluded |
 | D-COHORT-4 | **vs Front Desk (closed):** M1a daily lookup; M10 cohort — do not merge |
@@ -6160,11 +6160,11 @@ Registration, completion, and related engineering choices (defaults in [§12.4](
 | D-COHORT-8 | **AJAX namespace (closed):** `cohort.search` / `cohort.export` / `cohort.presets` / `cohort.saved_filter` |
 | D-COHORT-9 | **PAGE_DESIGNS (closed):** normative wireframes §7.32 |
 | D-COHORT-10 | **vs M16 (closed):** M10 = per-patient cohort list; M16 = facility-wide periodic reports |
-| D-FIN-1 | **No parallel ledger (closed):** M11 reads core AR — PRD §M5.2 / D-BILL-1 — [PATIENT_PAYMENT_HISTORY](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) |
+| D-FIN-1 | **No parallel ledger (closed):** M11 reads core AR — PRD §M5.2 / D-BILL-1 — [PATIENT_PAYMENT_HISTORY](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) |
 | D-FIN-2 | **V1.1-CDa payment history (closed):** `chart-depth/payments.php` primary when `enable_chart_depth_finance` = 1 |
 | D-FIN-3 | **Pilot ledger wrapper (closed):** stock `pat_ledger.php` + M11-F11 — hide payer columns when cash profile |
 | D-FIN-4 | **Cash profile ledger (closed):** hide payer/insurance in wrapper and panel when `enable_insurance = false` |
-| D-FIN-5 | **Reprint confirm (closed):** **Patient · MRN · Receipt # · Amount** before `chart_depth.receipt_reprint` — [PATIENT_PAYMENT_HISTORY](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) |
+| D-FIN-5 | **Reprint confirm (closed):** **Patient · MRN · Receipt # · Amount** before `chart_depth.receipt_reprint` — [PATIENT_PAYMENT_HISTORY](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) |
 | D-FIN-6 | **Ledger menu cutover (closed):** horizontal **Ledger** hidden only when `enable_chart_depth_finance` = 1 (D-EXP-6) |
 | D-FIN-7 | **Three layers (closed):** M5 write / M11 read / M14 correct — no post payment in M11 |
 | D-FIN-8 | **Doctor finance scope (closed):** `new_chart_depth_finance_summary` — active visit charges on Zone A + Clinical **This visit**; payment panel **403** |
@@ -6173,7 +6173,7 @@ Registration, completion, and related engineering choices (defaults in [§12.4](
 | D-FIN-11 | **Adjustment rows (closed):** timeline type `adjustment` visible only to `new_cashier_lead`, `new_admin`, or core `acct` / `rep` |
 | D-FIN-12 | **Overview feed ACL (closed):** `payment_posted` navigate action requires `new_chart_depth_finance`; otherwise expand inline only |
 | D-EXP-1 | **Patient export pilot (closed):** stock `patient_report.php` + **M11-F11** T1 wrapper — hide CCR/CCD/insurance when cash profile; not new engine until CDc |
-| D-EXP-2 | **V1.1-CDc export builder (closed):** `chart-depth/export.php` presets (M11-F05/F06) primary for clinic roles — [PATIENT_CLINICAL_EXPORT](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) |
+| D-EXP-2 | **V1.1-CDc export builder (closed):** `chart-depth/export.php` presets (M11-F05/F06) primary for clinic roles — [PATIENT_CLINICAL_EXPORT](./done/NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) |
 | D-EXP-3 | **Export placement (closed):** Chart Depth depth panel / route — not sixth MRD tab (D-CD-1) |
 | D-EXP-4 | **Cash profile export (closed):** hide CCR/CCD/insurance/billing in presets and wrapper when `enable_insurance = false` |
 | D-EXP-5 | **Unsigned notes (closed):** excluded from presets by default |
@@ -6188,7 +6188,7 @@ Registration, completion, and related engineering choices (defaults in [§12.4](
 | D51 | **Wrong patient P0 hardening (closed):** **§6.1j** — T1-F17 **server-side** strip only; M1a-F15 cashier search **`visit_id`** resolution; reject payment by `pid` alone |
 | D52 | **Wrong patient P1 polish (closed):** M1a-F14b Quick Add switch; M5-F16 all cashier terminal modals; test **43h–k** |
 | D53 | **Wrong patient V1.1-OPS (closed):** pinned preview via M6 cash profile; `enable_faster_queue_interrupts`; `enable_similar_surname_queue_warning`; banner deep links (existing MRD §6.3) |
-| D54 | **Wrong patient V1.2 / legacy (closed):** T1-F18–F19 + T1-F18b/c; normative [LEGACY_CHART_CONTEXT](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md); **D-CTX-1–10**; slice **V1.2-CTX**; tests **CTX-1–CTX-5** |
+| D54 | **Wrong patient V1.2 / legacy (closed):** T1-F18–F19 + T1-F18b/c; normative [LEGACY_CHART_CONTEXT](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md); **D-CTX-1–10**; slice **V1.2-CTX**; tests **CTX-1–CTX-5** |
 | D-CTX-1 | **Server-side Twig injection only** for T1-F18 — no postMessage primary |
 | D-CTX-2 | **Three-tier identity** — desk/MRD banner · T1-F17 · T1-F18 |
 | D-CTX-3 | Legacy strip **informational** — never `bindForVisit` on render |
@@ -6224,19 +6224,19 @@ Registration, completion, and related engineering choices (defaults in [§12.4](
 | D-BILL-4 | **Unpaid vs outstanding reports (closed):** M7-F14 = terminal `closed_unpaid` visit audit; M14-F04 = AR balance / credit call list — different audiences |
 | D-BILL-5 | **Correction reopen visit (closed):** `bill_ops_reopen_on_correction` default **0** — underpaid correction does not auto-return visit to `ready_for_payment`; manager sends patient to cashier manually (O-BILL-1) |
 | D-BILL-6 | **NG2 optional softening (closed):** M14-F04 outstanding list is **opt-in** (`enable_bill_ops_outstanding`); does not make collections the primary V1 workflow |
-| D-ADMIN-1 | **Two-layer admin model (closed):** M6 = clinic policy & commercial config; M15 = people, forms, platform health, day-2 runbooks; stock `edit_globals.php` = Advanced only — [ADMIN_CONFIGURATION spec](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) |
+| D-ADMIN-1 | **Two-layer admin model (closed):** M6 = clinic policy & commercial config; M15 = people, forms, platform health, day-2 runbooks; stock `edit_globals.php` = Advanced only — [ADMIN_CONFIGURATION spec](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) |
 | D-ADMIN-2 | **Backup ACL at hub (closed):** V1.1-ADMIN manual backup requires core OpenEMR **`admin` super** **and** `new_admin_hub_system`; P2 may relax to hub-only ACL (O-ADMIN-2) |
 | D-ADMIN-3 | **Runbook language (closed):** English V1 in RB cards; UI via xl(); Twi/French in-product snippets defer V2 (O-ADMIN-3) |
 | D-ADMIN-4 | **Staff invite channel (closed):** V1 owner sets initial password in add-staff wizard; SMS/email invite defer **V1.1-OPS** (O-ADMIN-4) |
 | D-ADMIN-5 | **NG7 config export (closed):** M15-F13 exports facility M6 keys as **JSON**; SQL site clone defer NG7 tooling (O-ADMIN-5) |
-| D-REP-1 | **Two-layer reporting model (closed):** M7 = daily operational truth; M16 = periodic/compliance façades over stock Reports; US CQM/AMC hidden in cash profile — [REPORTING_OPERATIONS spec](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) |
+| D-REP-1 | **Two-layer reporting model (closed):** M7 = daily operational truth; M16 = periodic/compliance façades over stock Reports; US CQM/AMC hidden in cash profile — [REPORTING_OPERATIONS spec](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) |
 | D-REP-2 | **M13 vs M16 pharmacy reports (closed):** M13-F08 = bench inventory embed in `pharm-ops` (V1.2-PHARM); M16 pharmacy lens = clinic-wide compliance (destroyed drugs, transactions) — cross-link, no duplicate cards |
 | D-REP-3 | **M7-F18 slice boundary (closed):** Ancillary services tab stays on M7 under **V1.1-ANC** gate; M16 clinical lens links export only — not bundled into V1.1-REP ship criteria |
 | D-REP-4 | **Async export threshold (closed):** Default **5000** rows (`report_hub_async_export_threshold`); above → `reports.export` job + `reports.export_status` poll; M16-F10 |
 | D-REP-5 | **MOH indicator pack (closed):** Default **`ghana_v1`** (`report_hub_moh_pack`); clinical lead + owner sign worksheet before first district submit; **`nigeria_v1`** V3 only |
 | D-REP-6 | **Stock report integration (closed):** V1.1-REP uses iframe/deep link to stock reports; native cards for immunization + destroyed drugs deferred **P2** |
 | D-REP-7 | **Nurse lead clinical lens (closed):** `new_nurse_lead` in default group for `new_reports_clinical` (§4.4); hub shell remains `new_admin` / `new_reports_hub` |
-| D-FORM-1 | **Two-layer documentation model (closed):** M4 shortcuts = fast path; M17 = curated encounter documentation hub — **NG5** respected — [CLINICAL_DOCUMENTATION spec](./NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) |
+| D-FORM-1 | **Two-layer documentation model (closed):** M4 shortcuts = fast path; M17 = curated encounter documentation hub — **NG5** respected — [CLINICAL_DOCUMENTATION spec](./done/NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) |
 | D-FORM-2 | **Iframe/wrap stock forms (closed):** V1.1-DOC uses stock `load_form.php` / `view_form.php`; native SOAP shell defer P2 |
 | D-FORM-3 | **Billing forms excluded (closed):** `fee_sheet` / US billing formdirs never in hub catalog — M5/M14 only |
 | D-FORM-4 | **Default Ghana OPD bundle (closed):** `ghana_opd_v1` = SOAP + vitals + procedure_order + Rx; screening/specialty opt-in |
@@ -6246,7 +6246,7 @@ Registration, completion, and related engineering choices (defaults in [§12.4](
 | D-FORM-8 | **Fast path preserved (closed):** `encounter` shortcut may redirect to hub (`encounter_hub`) when flag ON — still one tap |
 | D-FORM-9 | **M15 optional (closed):** hub reads registry when `enable_admin_hub` = 0; enriches from M15-F06 when ON |
 | D-FORM-10 | **US AMC hide (closed):** suppress on wrapped pages when `clinical_doc_show_us_quality` = 0 — no fork of `forms.php` |
-| D-BRIDGE-1 | **No bidirectional sync (closed):** M18 = detect + guide + audit; **H3** / **D18** stand — [SCHEDULING_QUEUE_BOUNDARY spec](./NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) |
+| D-BRIDGE-1 | **No bidirectional sync (closed):** M18 = detect + guide + audit; **H3** / **D18** stand — [SCHEDULING_QUEUE_BOUNDARY spec](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) |
 | D-BRIDGE-2 | **Floor truth = Visit Board (closed):** clinical actions from `new_visit` queue; Flow Board = planning/arrival only |
 | D-BRIDGE-3 | **One bridge button (closed):** **Start visit & check in** (M0-F16); arrival advisor blocks plain Start when EX-01 |
 | D-BRIDGE-4 | **Orthogonal KPIs (closed):** M7-F16 + M18 list — never sum appointment + visit counts in UI |
@@ -6325,7 +6325,7 @@ Complete with clinical lead + owner; snapshot M6 settings and attach to training
 | Billing chokepoint | 70% unchanged | 70% unchanged |
 | Rollback | — | `registration_mode=progressive` |
 
-**Decision (Q46 closed):** Ship Ghana pilot with `registration_mode=desk_full_form`. Normative spec: [FRONT_DESK_REGISTRATION](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md). Q10 retained in log for historical context only.
+**Decision (Q46 closed):** Ship Ghana pilot with `registration_mode=desk_full_form`. Normative spec: [FRONT_DESK_REGISTRATION](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md). Q10 retained in log for historical context only.
 
 ---
 
@@ -6493,31 +6493,31 @@ The "Apply cash clinic profile" button in M6-F07 sets the following OpenEMR `glo
 | Version | Date | Scope | Summary |
 |---------|------|-------|---------|
 | 1.20.51 | 2026-07-08 | **AUDIT-13 doc-sync** — §12.4.1 operational flags from `install.sql`; §12.4.2 `enable_react_*` cutover matrix; §12.4.3 planned flags; `enable_rx_print` install vs profile note; no normative behavior change |
-| 1.20.50 | 2026-06-25 | **Q46 desk registration form** — supersedes Q10 Quick Add; [FRONT_DESK_REGISTRATION](./NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md); M1b/M1c rewrite; `registration_mode=desk_full_form`; region+district weights; §24.3 updated; companions v1.9.50 / v0.6.51 / FRONT_DESK_REGISTRATION v1.0.0 |
-| 1.20.49 | 2026-06-24 | **M10 audit closure (V1.1-REG)** — D-COHORT-5 reception-only `fin0` hide + D-CTX-10; §4.4 `new_registry*` ACL; M10-F03/F10/F11 phasing; audit events + §12.1 DDL; `cohort.saved_filter`; SEC06 rate limits; **§19.8** menu cutover; **§20.1** V1.1-REG row; §24.4 row 13; REG-8; `@new-clinic-v11-registry-pr1`; companion [PATIENT_REGISTRY](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) v0.2.1 / PAGE_DESIGNS §7.32 v0.6.49 |
-| 1.20.48 | 2026-06-24 | **Patient Registry comprehensive redesign** — D-COHORT-1–10; §21.1ae; REG-1–7 + `@new-clinic-v11-registry`; §13.1 `cohort.*`; companion [PATIENT_REGISTRY](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) v0.2.0 / PAGE_DESIGNS §7.32 |
+| 1.20.50 | 2026-06-25 | **Q46 desk registration form** — supersedes Q10 Quick Add; [FRONT_DESK_REGISTRATION](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md); M1b/M1c rewrite; `registration_mode=desk_full_form`; region+district weights; §24.3 updated; companions v1.9.50 / v0.6.51 / FRONT_DESK_REGISTRATION v1.0.0 |
+| 1.20.49 | 2026-06-24 | **M10 audit closure (V1.1-REG)** — D-COHORT-5 reception-only `fin0` hide + D-CTX-10; §4.4 `new_registry*` ACL; M10-F03/F10/F11 phasing; audit events + §12.1 DDL; `cohort.saved_filter`; SEC06 rate limits; **§19.8** menu cutover; **§20.1** V1.1-REG row; §24.4 row 13; REG-8; `@new-clinic-v11-registry-pr1`; companion [PATIENT_REGISTRY](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) v0.2.1 / PAGE_DESIGNS §7.32 v0.6.49 |
+| 1.20.48 | 2026-06-24 | **Patient Registry comprehensive redesign** — D-COHORT-1–10; §21.1ae; REG-1–7 + `@new-clinic-v11-registry`; §13.1 `cohort.*`; companion [PATIENT_REGISTRY](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) v0.2.0 / PAGE_DESIGNS §7.32 |
 | 1.20.47 | 2026-06-24 | **Referrals audit closure** — D-REF-8 confirm aligned; D-REF-11–13; REF-7; `referral_status` AJAX; MRD Referral issued chip + Visits row; companion [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) v0.1.1 / MRD v0.2.35 |
 | 1.20.46 | 2026-06-24 | **Patient referrals & letters spec** — D-REF-1–10; §21.1ad; REF-1–6 + `@new-clinic-v11-cdb`; M11-F11 transactions wrapper; companion [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) v0.1.0 |
-| 1.20.45 | 2026-06-24 | **Payment history audit closure** — D-FIN-5 Amount confirm; D-FIN-10–12 pilot `acct/rep`, adjustment ACL, overview feed gate; `new_cashier_lead` → `new_chart_depth_finance`; CD-1 ≤2s; §21.1ac expanded; companion [PATIENT_PAYMENT_HISTORY](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) v0.1.1 / Chart Depth v0.1.13 / MRD v0.2.34 |
-| 1.20.44 | 2026-06-24 | **Patient payment history spec** — D-FIN-1–9; §21.1ac; FIN-1–6 + `@new-clinic-v11-cda`; companion [PATIENT_PAYMENT_HISTORY](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) v0.1.0 |
+| 1.20.45 | 2026-06-24 | **Payment history audit closure** — D-FIN-5 Amount confirm; D-FIN-10–12 pilot `acct/rep`, adjustment ACL, overview feed gate; `new_cashier_lead` → `new_chart_depth_finance`; CD-1 ≤2s; §21.1ac expanded; companion [PATIENT_PAYMENT_HISTORY](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) v0.1.1 / Chart Depth v0.1.13 / MRD v0.2.34 |
+| 1.20.44 | 2026-06-24 | **Patient payment history spec** — D-FIN-1–9; §21.1ac; FIN-1–6 + `@new-clinic-v11-cda`; companion [PATIENT_PAYMENT_HISTORY](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) v0.1.0 |
 | 1.20.43 | 2026-06-24 | **Export audit closure** — D-EXP-6 per-sub-flag menu cutover; D-EXP-7/9/10/11; EXP-1–6 + `@new-clinic-v11-cdc`; CD-3/5 expanded; M11-F05/F09; mPDF; companion PATIENT_CLINICAL_EXPORT v0.1.1 |
-| 1.20.42 | 2026-06-24 | **Patient clinical export spec** — D-EXP-1–8; §21.1ab; companion [PATIENT_CLINICAL_EXPORT](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) v0.1.0 |
+| 1.20.42 | 2026-06-24 | **Patient clinical export spec** — D-EXP-1–8; §21.1ab; companion [PATIENT_CLINICAL_EXPORT](./done/NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) v0.1.0 |
 | 1.20.41 | 2026-06-24 | **Medical history audit closure** — T1-F20/T1-F20b Background read + editor wrap; M6-F28 Ghana HIS pack; D-HIST-1–8; `enable_history_editor_wrap`; §21.1aa + HIST-1–6; T1-F06 History/SDOH nav hide; test **42** + T1-F20 scope; companion MEDICAL_HISTORY v0.1.1 |
 | 1.20.40 | 2026-06-24 | **B7 audit closure** — D-MRD-13 role-default landing tab; §10.5 / §5.6.1 pilot chart diagram; T1-F16 seven core + conditional; companion sync (MRD v0.2.30, PAGE_DESIGNS v0.6.44, USER_WORKFLOWS v1.9.44, Chart Depth v0.1.8, B7 primary v0.1.1) |
-| 1.20.39 | 2026-06-22 | **M18 audit closure (V1.1-BRIDGE)** — D-BRIDGE-8–10; M18-F11a/b + F13/F14; dismiss ACL split; EX-01 detector refined; §17.4.1 post-pilot pointer; §24.4 row 12; companion [SCHEDULING_QUEUE_BOUNDARY](./NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) v0.1.2 / PAGE_DESIGNS §7.31 / USER_WORKFLOWS §14.11 |
+| 1.20.39 | 2026-06-22 | **M18 audit closure (V1.1-BRIDGE)** — D-BRIDGE-8–10; M18-F11a/b + F13/F14; dismiss ACL split; EX-01 detector refined; §17.4.1 post-pilot pointer; §24.4 row 12; companion [SCHEDULING_QUEUE_BOUNDARY](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) v0.1.2 / PAGE_DESIGNS §7.31 / USER_WORKFLOWS §14.11 |
 | 1.20.38 | 2026-06-22 | **V1.2-CTX audit closure** — §16.1.1 post-V1 traceability **CTX-1–CTX-5**; **§21.1z** acceptance; **§17.4.12** enable checklist; V1.2.1 `enable_legacy_strip_terminal_chip` deferred note in §6.1j |
-| 1.20.37 | 2026-06-22 | **T1 legacy chart context (V1.2-CTX)** — §6.1i stock chart row; §6.1j T1-F18/F19 expanded; T1-F18b/c; config keys; **CTX-1–CTX-5** + `@new-clinic-v12-ctx`; §20.1 **V1.2-CTX** rule 12; **D-CTX-1–10**; companion [LEGACY_CHART_CONTEXT](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) v0.1.1 / PAGE_DESIGNS §4.11.8 / USER_WORKFLOWS §17.7 |
-| 1.20.36 | 2026-06-22 | **M18 Queue Bridge Hub** — §5.1/§8 M18-F01–F12; §4.4 `new_queue_bridge_*`; §7.1 `queue-bridge/`; §7.2 mermaid M18; §12.1 `queue_bridge_exception_snapshot`; §12.4 hub config; §13.1 `queue_bridge.*`; **§19.7** menu entry; §16.1 BRIDGE-1–7 + `@new-clinic-v11-bridge`; **§17.4.11** SQ runbooks; **§21.1y**; M2-F14; S1-F10; M7-F16 exception footer; D-BRIDGE-1–7; **V1.1-BRIDGE** §20.1 rule 11; companion [SCHEDULING_QUEUE_BOUNDARY](./NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) v0.1.1 / PAGE_DESIGNS §7.31 / USER_WORKFLOWS §14.11 |
-| 1.20.35 | 2026-06-22 | **M17 Clinical Documentation Hub** — §5.1/§8 M17-F01–F10; §4.4 `new_clinical_doc_*`; §7.1 `clinical-doc/`; §7.2 mermaid M17; §12.1 `clinical_doc_form_open`; §12.4 hub config; §13.1 `clinical_doc.*`; §11.2 Visit Forms cutover; **§19.6** menu cutover; §16.1 DOC-1–8 + `@new-clinic-v11-doc`; **§17.4.10** DR runbooks; **§21.1x**; M4-F40–F42; D-FORM-1–10; **V1.1-DOC** §20.1 rule 10; companion [CLINICAL_DOCUMENTATION](./NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) v0.1.2 / PAGE_DESIGNS §7.30 / USER_WORKFLOWS §14.10 / MRD v0.2.29 |
-| 1.20.34 | 2026-06-22 | **M16 audit full closure** — D-REP-4–7; M16-F10 async export; §17.4.9 RR-01–RR-12; §18 M16 lens table; REP-8; config `report_hub_async_export_threshold` + `report_hub_moh_pack`; companion [REPORTING_OPERATIONS](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) v0.1.2 |
-| 1.20.33 | 2026-06-22 | **M16 reporting audit closure** — §5.1/§8 M16-F01–F09; §4.4 `reports` + `new_reports_*`; §7.1 `report-hub/`; §7.2 mermaid M16; §12.1 `report_hub_export_run`; §12.4 report hub config; §13.1 `reports.*`; §11.2 Reports cutover; **§19.5** menu cutover; §16.1 REP-1–7 + `@new-clinic-v11-rep`; **§21.1w**; D-REP-1–3; **V1.1-REP** §20.1; §5.6 M7 phasing fix; companion [REPORTING_OPERATIONS](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) v0.1.1 / PAGE_DESIGNS §7.10.18–§7.29 / USER_WORKFLOWS §14.9 |
-| 1.20.32 | 2026-06-22 | **M15 audit closure** — §7.2 mermaid M10–M15; §7.1 full submodule tree; D-ADMIN-2–5; M15-F09 backup ACL; §13.1 AJAX + audit mapping; §16.1.1 post-V1 ADMIN traceability; companion [ADMIN_CONFIGURATION](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) v0.1.3 |
-| 1.20.31 | 2026-06-22 | **M15 consistency audit** — §4.2/§4.2.1 hub routing; §7.1 `admin-hub/`; §7.5 parallel M15; M6-F06 vs M15 People; §12.1 M15 DDL; §12.4 `admin_hub_backup_retention_days`; §16.1 ADMIN-1–7 + `@new-clinic-v11-admin`; audit event family; M15-F11 `admin_hub_setup_complete`; companion [ADMIN_CONFIGURATION](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) v0.1.2 |
-| 1.20.30 | 2026-06-22 | **M15 Admin Operations Hub** — §5.1/§8 M15-F01–F13; §4.4 `new_admin_hub_*`; §12.4 config; §13.1 `admin_hub.*`; **§17.4.8** day-2 runbook; **§19.4** menu cutover; **§21.1v**; D-ADMIN-1; **V1.1-ADMIN** §20.1; companion [ADMIN_CONFIGURATION](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) v0.1.1 / PAGE_DESIGNS §7.27 / USER_WORKFLOWS §14.8 |
+| 1.20.37 | 2026-06-22 | **T1 legacy chart context (V1.2-CTX)** — §6.1i stock chart row; §6.1j T1-F18/F19 expanded; T1-F18b/c; config keys; **CTX-1–CTX-5** + `@new-clinic-v12-ctx`; §20.1 **V1.2-CTX** rule 12; **D-CTX-1–10**; companion [LEGACY_CHART_CONTEXT](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) v0.1.1 / PAGE_DESIGNS §4.11.8 / USER_WORKFLOWS §17.7 |
+| 1.20.36 | 2026-06-22 | **M18 Queue Bridge Hub** — §5.1/§8 M18-F01–F12; §4.4 `new_queue_bridge_*`; §7.1 `queue-bridge/`; §7.2 mermaid M18; §12.1 `queue_bridge_exception_snapshot`; §12.4 hub config; §13.1 `queue_bridge.*`; **§19.7** menu entry; §16.1 BRIDGE-1–7 + `@new-clinic-v11-bridge`; **§17.4.11** SQ runbooks; **§21.1y**; M2-F14; S1-F10; M7-F16 exception footer; D-BRIDGE-1–7; **V1.1-BRIDGE** §20.1 rule 11; companion [SCHEDULING_QUEUE_BOUNDARY](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) v0.1.1 / PAGE_DESIGNS §7.31 / USER_WORKFLOWS §14.11 |
+| 1.20.35 | 2026-06-22 | **M17 Clinical Documentation Hub** — §5.1/§8 M17-F01–F10; §4.4 `new_clinical_doc_*`; §7.1 `clinical-doc/`; §7.2 mermaid M17; §12.1 `clinical_doc_form_open`; §12.4 hub config; §13.1 `clinical_doc.*`; §11.2 Visit Forms cutover; **§19.6** menu cutover; §16.1 DOC-1–8 + `@new-clinic-v11-doc`; **§17.4.10** DR runbooks; **§21.1x**; M4-F40–F42; D-FORM-1–10; **V1.1-DOC** §20.1 rule 10; companion [CLINICAL_DOCUMENTATION](./done/NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) v0.1.2 / PAGE_DESIGNS §7.30 / USER_WORKFLOWS §14.10 / MRD v0.2.29 |
+| 1.20.34 | 2026-06-22 | **M16 audit full closure** — D-REP-4–7; M16-F10 async export; §17.4.9 RR-01–RR-12; §18 M16 lens table; REP-8; config `report_hub_async_export_threshold` + `report_hub_moh_pack`; companion [REPORTING_OPERATIONS](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) v0.1.2 |
+| 1.20.33 | 2026-06-22 | **M16 reporting audit closure** — §5.1/§8 M16-F01–F09; §4.4 `reports` + `new_reports_*`; §7.1 `report-hub/`; §7.2 mermaid M16; §12.1 `report_hub_export_run`; §12.4 report hub config; §13.1 `reports.*`; §11.2 Reports cutover; **§19.5** menu cutover; §16.1 REP-1–7 + `@new-clinic-v11-rep`; **§21.1w**; D-REP-1–3; **V1.1-REP** §20.1; §5.6 M7 phasing fix; companion [REPORTING_OPERATIONS](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) v0.1.1 / PAGE_DESIGNS §7.10.18–§7.29 / USER_WORKFLOWS §14.9 |
+| 1.20.32 | 2026-06-22 | **M15 audit closure** — §7.2 mermaid M10–M15; §7.1 full submodule tree; D-ADMIN-2–5; M15-F09 backup ACL; §13.1 AJAX + audit mapping; §16.1.1 post-V1 ADMIN traceability; companion [ADMIN_CONFIGURATION](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) v0.1.3 |
+| 1.20.31 | 2026-06-22 | **M15 consistency audit** — §4.2/§4.2.1 hub routing; §7.1 `admin-hub/`; §7.5 parallel M15; M6-F06 vs M15 People; §12.1 M15 DDL; §12.4 `admin_hub_backup_retention_days`; §16.1 ADMIN-1–7 + `@new-clinic-v11-admin`; audit event family; M15-F11 `admin_hub_setup_complete`; companion [ADMIN_CONFIGURATION](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) v0.1.2 |
+| 1.20.30 | 2026-06-22 | **M15 Admin Operations Hub** — §5.1/§8 M15-F01–F13; §4.4 `new_admin_hub_*`; §12.4 config; §13.1 `admin_hub.*`; **§17.4.8** day-2 runbook; **§19.4** menu cutover; **§21.1v**; D-ADMIN-1; **V1.1-ADMIN** §20.1; companion [ADMIN_CONFIGURATION](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) v0.1.1 / PAGE_DESIGNS §7.27 / USER_WORKFLOWS §14.8 |
 | 1.20.29 | 2026-06-22 | **Hygiene pass** — §5.6.1 V1.2-BILL interim; §24.2 O-BILL-5; pilot worksheet row 11; §17.2.4 M14 correction path; §5.1 matrix version sync; companion sync (MRD v0.2.28, Chart Depth v0.1.7, PAGE_DESIGNS v0.6.34, USER_WORKFLOWS v1.9.34, Lab/Pharm v0.1.8, Billing v0.1.3); Information architecture titles; CLAUDE.md + Documentation/README |
 | 1.20.28 | 2026-06-22 | **Medium-gap pass** — NG2 softening (D-BILL-6); D-BILL-2–5 (partial pay, M7↔M14, M7-F14 vs F04); M7 integration table; §19.3 menu cutover; §11.2 Fees hide; companion version sync |
 | 1.20.27 | 2026-06-22 | **M14 PRD integration** — §5.1/§8 M14-F01–F06; §4.4 `new_bill_ops_*`; §12.4 config; §13.1 `bill_ops.*`; §16.1 BILL-1–BILL-6; **§17.4.7** runbook; **§21.1u**; D36/§23.1 **V1.2-BILL**; M5-F10/M11-F01 routing; companions Billing v0.1.1 / PAGE_DESIGNS §7.25–§7.26 |
-| 1.20.26 | 2026-06-22 | **D-BILL-1** — M14 Billing Back Office spec; V1.2-BILL slice; companion [BILLING_AR_BACKOFFICE_REDESIGN](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) v0.1.0 |
+| 1.20.26 | 2026-06-22 | **D-BILL-1** — M14 Billing Back Office spec; V1.2-BILL slice; companion [BILLING_AR_BACKOFFICE_REDESIGN](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) v0.1.0 |
 | 1.20.25 | 2026-06-22 | **D-STAFF-1** lead ACL groups — §4.2.1 staff provisioning; formal `new_*_lead` groups; §4.4 / §11.2 / §17.4; receive stock lead-only |
 | 1.20.24 | 2026-06-22 | **D-REG-3** companion sync — §17.4 currency verify step; matrix + companion doc versions (MRD v0.2.26, Chart Depth v0.1.4, Lab/Pharm v0.1.6) |
 | 1.20.23 | 2026-06-22 | **D-REG-3** admin clinic currency — M6-F27; `formatMoney()`; §14; config keys; neutral amount fields in docs |
@@ -6528,7 +6528,7 @@ The "Apply cash clinic profile" button in M6-F07 sets the following OpenEMR `glo
 | 1.20.18 | 2026-06-22 | Lab audit fixes | **D-LAB-3** Model A; M12-F13 menu cutover; M6-F24; M8-F12–F14 alignment; LAB-6–LAB-8; §23.1/D36 slice list; MRD anchor fix; §5.6.1 training; Lab spec v0.1.4 |
 | 1.20.17 | 2026-06-22 | Lab quick order deferral | **D-LAB-2**; **M4-F36**; **V1.1-LAB-ORD** §20.1; `enable_lab_panel_order`; LAB spec v0.1.3 |
 | 1.20.16 | 2026-06-22 | Lab Operations integration | **M12** full §8 F01–F12 + M8-F11–F15; §4.4 `new_lab_ops_*`; §12.1 `new_lab_order_meta`; §13.1 `lab_ops.*` + `mrd.clinical_labs_summary`; **§17.4.4** runbook; **§21.1q**; tests LAB-1–LAB-5; sample CSV; companions v0.6.26 / v0.1.2 / v1.9.26 / v0.2.23 |
-| 1.20.15 | 2026-06-22 | Lab Operations (M12) | **Module M12** §8 summary; §5.1/§5.6; §12.4 `enable_lab_ops` / `enable_lab_lis`; **V1.1-LAB** §20.1; **D62**; companion [LAB_OPERATIONS_REDESIGN](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) v0.1.0 |
+| 1.20.15 | 2026-06-22 | Lab Operations (M12) | **Module M12** §8 summary; §5.1/§5.6; §12.4 `enable_lab_ops` / `enable_lab_lis`; **V1.1-LAB** §20.1; **D62**; companion [LAB_OPERATIONS_REDESIGN](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) v0.1.0 |
 | 1.20.14 | 2026-06-22 | Chart Depth audit | `new_referral_meta` + `new_external_care` §12.1; `chart_depth.referral_print` + external AJAX §13.1; companions v0.1.3 / v0.2.22 / v0.6.25 |
 | 1.20.13 | 2026-06-22 | Chart Depth (M11) integration | **Module M11** §8; §4.4 ACL; §12.4 config; §13.1 AJAX; **V1.1-CD** §20.1; §21.1p; §5.6.1 interim chart **D61**; tests CD-1–CD-5; companions v0.2.21 / v0.6.24 / v0.1.2 / v1.9.25 |
 | 1.20.12 | 2026-06-17 | Signed record amendment | **§6.1l** **D60**; pragmatic reopen; M4-F35; test **44**; **§17.2.4** drill; M7-F19; §6.1k longitudinal cross-ref; companions v0.6.22 / v1.9.24 |
@@ -6583,7 +6583,7 @@ The "Apply cash clinic profile" button in M6-F07 sets the following OpenEMR `glo
 | 1.14.0 | 2026-06-15 | Multi-doctor model | **§6.5.1** shared pool; D28; M0-F16 `pc_aid` hint; M0-F17 takePatient; M3-F12; M4-F06/F12; M2-F05 P1; config `enable_multi_doctor_filters`; mandatory test **22** |
 | 1.12.0 | 2026-06-11 | **D18–D21 consistency pass** | §6.6 D18 sync policy closed (no V1.1 deferral); §6.7.4–6.7.6 reframed for V1 atomic arrival bridge; **M0-F16** `startVisitFromAppointment()`; H4; `new_visit.pc_eid`/`appt_date`; M6-F14 default ON; §4.2/§11/Appendix A S1 routes; G6/§17.2 ~10h training; D18–D21 closed; companions USER_WORKFLOWS v1.6.0 + PAGE_DESIGNS v0.3.0 |
 | 1.11.0 | 2026-06-11 | **D17 — build both systems fully** | §1.1/§1.3 two-system product; §5.1 **S1** + §5.5 staff map; §5.2 S1 replaces legacy Calendar/Flow/Recalls for daily use; §6.7 reframed as full S1 build (default integration ON); **Module S1** F-IDs; §20 dual-track ~26-week plan; §21.1f S1 acceptance; §23 removes erroneous tracker sync from V1.1; §17.4/§19 S1 runbook + menu hide; D17 closed |
-| 1.10.0 | 2026-06-11 | Scheduling redesign companion | New companion [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.1.0): current-state analysis + UI/UX redesign for **Calendar, Flow Board, Recalls**, unified scheduling shell + shared components, unified lifecycle/loop closure, additive data-model changes; implements §6.7 H1-H3 (no demographic/consent writes from recalls, no `calendar_arrived()`, no queue duplication). Added to companion-docs list |
+| 1.10.0 | 2026-06-11 | Scheduling redesign companion | New companion [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.1.0): current-state analysis + UI/UX redesign for **Calendar, Flow Board, Recalls**, unified scheduling shell + shared components, unified lifecycle/loop closure, additive data-model changes; implements §6.7 H1-H3 (no demographic/consent writes from recalls, no `calendar_arrived()`, no queue duplication). Added to companion-docs list |
 | 1.9.2 | 2026-06-10 | Cross-doc consistency | **Fixed F-ID collision**: §6.7 integration IDs renumbered M6-F10–F14 → **M6-F14–F18** (old IDs already used for DEM layout/dup thresholds/print/reconciliation); added M6-F14–F18 to canonical §8 M6 table; §11 integration matrix gains **Calendar** + **Recalls** rows and Flow-Board check-in note; propagated to USER_WORKFLOWS v1.4.0 §12.3 and PAGE_DESIGNS v0.2.0 §4.1.4/§7.2.6; cross-doc companion versions reconciled |
 
 ---

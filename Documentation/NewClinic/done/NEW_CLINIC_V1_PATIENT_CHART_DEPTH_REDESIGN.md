@@ -4,11 +4,11 @@
 |-------|--------|
 | **Document version** | 0.1.15 |
 | **Status** | Draft for review — aligned to PRD **Module M11** (v1.20.47, decision **D61**; currency **D-REG-3** / M6-F27; M14 cross-link **D-BILL-1**) |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.47), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.35), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.47), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.47), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.47), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.35), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.47), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.47), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](../NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3) |
 | **Audience** | Product, design, clinical leads, billing leads, implementers, QA |
 | **Scope** | Legacy patient-chart surfaces **not fully absorbed** by the redesigned MRD — financial history, referrals & letters, clinical reports, PRO, external data, and overflow navigation |
 | **Implementation** | Design only — no code in this document |
-| **Wireframes** | [PAGE_DESIGNS §7.13–§7.16](./NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history) · MRD host strips [§4.19](./NEW_CLINIC_V1_PAGE_DESIGNS.md#419-mrd-host-summary-strips-m11) |
+| **Wireframes** | [PAGE_DESIGNS §7.13–§7.16](../NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history) · MRD host strips [§4.19](../NEW_CLINIC_V1_PAGE_DESIGNS.md#419-mrd-host-summary-strips-m11) |
 | **Primary market** | Private outpatient clinics — **West Africa** (V1 launch region) |
 
 ---
@@ -45,7 +45,7 @@
 
 ### 1.1 What this document is for
 
-The [Medical Record Dashboard (MRD) redesign](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) collapses stock OpenEMR’s 25+ dashboard cards into **five workspace tabs** (Overview · Clinical · Visits · Profile · Messages) plus a safety strip and banner-first actions. That is the right **daily full-chart** surface for New Clinic.
+The [Medical Record Dashboard (MRD) redesign](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md) collapses stock OpenEMR’s 25+ dashboard cards into **five workspace tabs** (Overview · Clinical · Visits · Profile · Messages) plus a safety strip and banner-first actions. That is the right **daily full-chart** surface for New Clinic.
 
 However, several **high-value legacy surfaces** remain reachable only via:
 
@@ -235,7 +235,7 @@ Embedded widget for Social Determinants of Health screening; separate from main 
 
 ## 5. UI/UX principles for chart depth
 
-Aligned with PRD §10, MRD §3, and [FRONTEND_2026_MODERNIZATION_PLAN.md](./FRONTEND_2026_MODERNIZATION_PLAN.md):
+Aligned with PRD §10, MRD §3, and [FRONTEND_2026_MODERNIZATION_PLAN.md](../FRONTEND_2026_MODERNIZATION_PLAN.md):
 
 ### 5.1 Core principles
 
@@ -402,7 +402,7 @@ Visits tab
 
 ## 9. Financial — visit charges & patient ledger
 
-**Full spec:** [PATIENT_PAYMENT_HISTORY](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) — pilot **M11-F11** ledger wrapper + **V1.1-CDa** payment history (M11-F01/F02/F07/F12). Wireframes: [PAGE_DESIGNS §7.13](./NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history).
+**Full spec:** [PATIENT_PAYMENT_HISTORY](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) — pilot **M11-F11** ledger wrapper + **V1.1-CDa** payment history (M11-F01/F02/F07/F12). Wireframes: [PAGE_DESIGNS §7.13](../NEW_CLINIC_V1_PAGE_DESIGNS.md#713-chart-depthpaymentsphp--payment-history).
 
 ### 9.1 Purpose
 
@@ -470,7 +470,7 @@ Answer: *“What has this patient paid and owed — by visit — in clinic curre
 
 - Cashier reprints receipt from history in ≤3 clicks from MRD Profile strip or Cashier **History** link (M11-F12)
 - Reprint confirm modal shows **Patient · MRN · Receipt # · Amount** before generate (D-FIN-5)
-- **Add correction** visible only when `enable_bill_ops` = 1 and user has `new_bill_ops_correct`; opens [PAGE_DESIGNS §7.26](./NEW_CLINIC_V1_PAGE_DESIGNS.md#726-bill-opscorrectphp--charge-correction-slide-over) with `visit_id` pre-filled
+- **Add correction** visible only when `enable_bill_ops` = 1 and user has `new_bill_ops_correct`; opens [PAGE_DESIGNS §7.26](../NEW_CLINIC_V1_PAGE_DESIGNS.md#726-bill-opscorrectphp--charge-correction-slide-over) with `visit_id` pre-filled
 - Doctor sees visit charge total on Zone A + Clinical **This visit** — payment panel **403** without `new_chart_depth_finance` (D-FIN-8)
 - All amounts in clinic currency; no `$` or payer columns in cash profile
 - First page of `chart_depth.payments_list` ≤2s for one patient with &lt;500 rows (CD-1)
@@ -479,7 +479,7 @@ Answer: *“What has this patient paid and owed — by visit — in clinic curre
 
 ## 10. Referrals, transactions & correspondence
 
-**Full spec:** [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) — pilot **M11-F11** transactions wrapper + **V1.1-CDb** referral wizard + list (M11-F03/F04/F08). Wireframes: [PAGE_DESIGNS §7.14](./NEW_CLINIC_V1_PAGE_DESIGNS.md#714-chart-depthreferralsphp--referrals--letters).
+**Full spec:** [PATIENT_REFERRALS_LETTERS](../NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) — pilot **M11-F11** transactions wrapper + **V1.1-CDb** referral wizard + list (M11-F03/F04/F08). Wireframes: [PAGE_DESIGNS §7.14](../NEW_CLINIC_V1_PAGE_DESIGNS.md#714-chart-depthreferralsphp--referrals--letters).
 
 ### 10.1 Purpose
 
@@ -554,7 +554,7 @@ Module table **V1.1-CDb** (PRD §12.1) — optional metadata on stock `transacti
 
 ## 11. Clinical reports & record export
 
-**Full spec:** [PATIENT_CLINICAL_EXPORT](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) — pilot **M11-F11** stock wrapper + **V1.1-CDc** export builder (M11-F05/F06). Wireframes: [PAGE_DESIGNS §7.15](./NEW_CLINIC_V1_PAGE_DESIGNS.md#715-chart-depthexportphp--clinical-export).
+**Full spec:** [PATIENT_CLINICAL_EXPORT](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) — pilot **M11-F11** stock wrapper + **V1.1-CDc** export builder (M11-F05/F06). Wireframes: [PAGE_DESIGNS §7.15](../NEW_CLINIC_V1_PAGE_DESIGNS.md#715-chart-depthexportphp--clinical-export).
 
 ### 11.1 Purpose
 
@@ -728,7 +728,7 @@ See PRD **§4.4** — not optional:
 
 ### 16.1 AJAX envelope
 
-Follow [PAGE_DESIGNS §6](./NEW_CLINIC_V1_PAGE_DESIGNS.md#6-ajax-response-envelope).
+Follow [PAGE_DESIGNS §6](../NEW_CLINIC_V1_PAGE_DESIGNS.md#6-ajax-response-envelope).
 
 **Chart Depth namespace (`chart_depth.*`):**
 
@@ -775,7 +775,7 @@ Normative list: PRD **§13.1**.
 
 ## 17. Phasing & PRD alignment
 
-Normative module requirements: PRD [§8 Module M11](./NEW_CLINIC_V1_PRD.md#module-m11--chart-depth) · pilot interim full chart: PRD [§5.6.1](./NEW_CLINIC_V1_PRD.md#561-interim-full-chart-pilot-week-1-4).
+Normative module requirements: PRD [§8 Module M11](../NEW_CLINIC_V1_PRD.md#module-m11--chart-depth) · pilot interim full chart: PRD [§5.6.1](../NEW_CLINIC_V1_PRD.md#561-interim-full-chart-pilot-week-1-4).
 
 | Phase | Deliverable | PRD gate | M11-F |
 |-------|-------------|----------|-------|
@@ -796,7 +796,7 @@ Until M11 ships, T1 theme wraps stock pages:
 |-----------|------------------|
 | `pat_ledger.php` | Inject banner; hide insurance columns via CSS + cash profile |
 | `patient_report.php` | Banner + hide CCR/CCD when cash profile |
-| `transactions.php` | Banner + rename heading **Referrals & letters** — [PATIENT_REFERRALS_LETTERS §7](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md#7-pilot-interim--stock-transactions-wrapper-m11-f11) |
+| `transactions.php` | Banner + rename heading **Referrals & letters** — [PATIENT_REFERRALS_LETTERS §7](../NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md#7-pilot-interim--stock-transactions-wrapper-m11-f11) |
 
 ---
 
@@ -839,8 +839,8 @@ Maps to PRD **§21.1p** and post-V1 tests **CD-1–CD-5** (§16.1). Build is acc
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 0.1.15 | 2026-06-24 | **Referrals audit closure** — §16 `chart_depth.referral_status`; [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) v0.1.1 |
-| 0.1.14 | 2026-06-24 | **Patient referrals & letters spec** — §10 cross-ref [PATIENT_REFERRALS_LETTERS](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md); §17.1 F11 transactions wrapper |
+| 0.1.15 | 2026-06-24 | **Referrals audit closure** — §16 `chart_depth.referral_status`; [PATIENT_REFERRALS_LETTERS](../NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) v0.1.1 |
+| 0.1.14 | 2026-06-24 | **Patient referrals & letters spec** — §10 cross-ref [PATIENT_REFERRALS_LETTERS](../NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md); §17.1 F11 transactions wrapper |
 | 0.1.13 | 2026-06-24 | **Payment history audit closure** — §9.2 cashier_lead + Amount confirm + D-FIN-11 adjustments; §9.6 CD-1 ≤2s + doctor UI; [PATIENT_PAYMENT_HISTORY](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) v0.1.1 |
 | 0.1.12 | 2026-06-24 | **Patient payment history spec** — §2 Ledger gap row; §9 cross-ref [PATIENT_PAYMENT_HISTORY](./NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) |
 | 0.1.11 | 2026-06-24 | **Export audit closure** — §15.1 per-sub-flag F09 (D-EXP-6); §17 phasing F09 split by slice; §18 CD-5; [PATIENT_CLINICAL_EXPORT](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md) v0.1.1 |
@@ -871,7 +871,7 @@ Maps to PRD **§21.1p** and post-V1 tests **CD-1–CD-5** (§16.1). Build is acc
 | PRO | `interface/easipro/pro.php`, `library/ajax/easipro_util.php`, `src/Easipro/Easipro.php` |
 | External data | `interface/reports/external_data.php` |
 | SDOH | `interface/patient_file/history/history_sdoh_widget.php` |
-| MRD overflow spec | [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) §8.10, §18 |
+| MRD overflow spec | [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md) §8.10, §18 |
 
 ---
 
@@ -904,4 +904,4 @@ Maps to PRD **§21.1p** and post-V1 tests **CD-1–CD-5** (§16.1). Build is acc
 
 ---
 
-*For MRD tab layout and activity feed, see [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md). For cash posting rules, see [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) §M5.2. For inbound referral scan, see PRD §6.8 D34.*
+*For MRD tab layout and activity feed, see [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md). For cash posting rules, see [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) §M5.2. For inbound referral scan, see PRD §6.8 D34.*

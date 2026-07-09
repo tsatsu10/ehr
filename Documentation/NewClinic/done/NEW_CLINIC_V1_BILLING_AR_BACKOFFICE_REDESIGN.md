@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.1.3 |
 | **Status** | Draft for review — **Module M14** integrated in PRD v1.20.29; **M5 Cashier** remains V1 golden-path payment; D-BILL-1 **closed**; O-BILL-1–4 **closed**; O-BILL-5 **open** (PRD §24.2) |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.29), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.34), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.34), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.7), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.28) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.29), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.34), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.34), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.7), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.28) |
 | **Audience** | Product, design, billing leads, clinic owners, implementers, QA |
 | **Scope** | Everything **beyond M5 same-day cash checkout** — charge corrections, payment search/edit, daysheet, simplified outstanding balances, and **admin-only** insurance/EDI backlog — without forking OpenEMR `billing` / `ar_*` tables |
 | **Implementation** | Design only — no code in this document |

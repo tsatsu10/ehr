@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.2.6 |
 | **Status** | **In scope for V1** (package S1 — PRD D17, §20 dual-track) |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.14), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.25), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.25), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.22), [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) (v1.0.3) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.14), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.25), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.25), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](../MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.22), [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) (v1.0.3) |
 | **Audience** | Product, design, clinical leads, implementers, QA |
 | **Scope** | Core OpenEMR Calendar (PostCalendar), Patient Flow Board, and Recalls |
 | **Implementation** | Design only — no code in this document |
@@ -388,7 +388,7 @@ When reception uses **Start visit & check in** (PRD M0-F16 / §6.7.5), the atomi
 
 Nurse **Send to doctor** never selects a provider. Doctors use Doctor Desk **All / Me** filter; **Take patient** sets provider when still NULL. V1.1 advisory routing may set `routing_suggested_provider_id` (PRD §6.5.2). V1.2 optional hard assignment (`hard_assigned_provider_id`, PRD §6.5.3) and doctor-ready notify (§6.5.4) — config OFF by default.
 
-See [USER_WORKFLOWS §8.3.1](./NEW_CLINIC_V1_USER_WORKFLOWS.md#831-multi-doctor-clinics) and [§8.3.2](./NEW_CLINIC_V1_USER_WORKFLOWS.md#832-advisory-routing-v11).
+See [USER_WORKFLOWS §8.3.1](../NEW_CLINIC_V1_USER_WORKFLOWS.md#831-multi-doctor-clinics) and [§8.3.2](../NEW_CLINIC_V1_USER_WORKFLOWS.md#832-advisory-routing-v11).
 
 ### 9.2 Shared filter & navigation state
 
