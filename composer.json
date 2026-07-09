@@ -278,7 +278,7 @@
         ],
         "rector-check": "php -d memory_limit=4g ./vendor/bin/rector process --dry-run",
         "rector-fix": "php -d memory_limit=4g ./vendor/bin/rector process",
-        "test:new-clinic-mandatory": "php -d memory_limit=512M vendor/bin/phpunit -c phpunit.xml --group new-clinic-mandatory tests/Tests/Unit/Modules/NewClinic/NewClinicMandatoryContractTest.php tests/Tests/Unit/Modules/NewClinic/WrongPatientPreventionMandatoryTest.php tests/Tests/Unit/Modules/NewClinic/VisitBoardAuditTimelineMandatoryTest.php tests/Tests/Unit/Modules/NewClinic/AjaxAclContractTest.php",
+        "test:new-clinic-mandatory": "php -d memory_limit=512M vendor/bin/phpunit -c phpunit.xml --group new-clinic-mandatory tests/Tests/Unit/Modules/NewClinic/NewClinicMandatoryContractTest.php tests/Tests/Unit/Modules/NewClinic/WrongPatientPreventionMandatoryTest.php tests/Tests/Unit/Modules/NewClinic/VisitBoardAuditTimelineMandatoryTest.php tests/Tests/Unit/Modules/NewClinic/AjaxAclContractTest.php tests/Tests/Unit/Modules/NewClinic/CsrfCoverageTest.php",
         "verify:new-clinic": "php interface/modules/custom_modules/oe-module-new-clinic/scripts/verify-module.php --bootstrap",
         "registry-signoff": [
             "php interface/modules/custom_modules/oe-module-new-clinic/scripts/registry-signoff-smoke.php",

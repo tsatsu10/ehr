@@ -34,7 +34,9 @@ use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ReportsActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\SchedulingActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\TriageActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\VisitActionHandler;
+use OpenEMR\Common\Logging\EventAuditLogger;
 use OpenEMR\Modules\NewClinic\Exceptions\EncounterSessionMismatchException;
+use OpenEMR\Modules\NewClinic\Exceptions\InputValidationException;
 use OpenEMR\Modules\NewClinic\Exceptions\StaleVisitException;
 use OpenEMR\Modules\NewClinic\Exceptions\AllergiesUndocumentedException;
 use OpenEMR\Modules\NewClinic\Exceptions\ExternalRxIncompleteException;
@@ -150,6 +152,17 @@ class AjaxController
             ], 409);
         } catch (EncounterSessionMismatchException $e) {
             $this->respond(false, $e->getMessage(), ['code' => 'session_mismatch'], 409);
+        } catch (InputValidationException $e) {
+            // Field names only — the rejected values may contain PHI or a password.
+            error_log(
+                'nc-validation: action=' . $action
+                . ' user=' . $userId
+                . ' fields=' . implode(',', array_keys($e->getFieldErrors()))
+            );
+            $this->respond(false, $e->getMessage(), [
+                'code' => 'validation',
+                'field_errors' => $e->getFieldErrors(),
+            ], 400);
         } catch (\InvalidArgumentException $e) {
             $this->respond(false, $e->getMessage(), ['code' => 'validation'], 400);
         } catch (\RuntimeException $e) {
@@ -733,6 +746,16 @@ class AjaxController
         $token = $bodyToken !== '' ? $bodyToken : ($headerToken !== '' ? $headerToken : $postToken);
 
         if (!CsrfUtils::verifyCsrfToken($token)) {
+            // SEC-2: audit the failure with action + user only — never the token
+            // value (a bad/stale token can indicate an attack or a session bug).
+            EventAuditLogger::getInstance()->newEvent(
+                'new-clinic-csrf',
+                (string) ($_SESSION['authUser'] ?? ''),
+                (string) ($_SESSION['authProvider'] ?? ''),
+                0,
+                'CSRF verification failed: action=' . $this->resolveRequestAction()
+                    . ' user=' . (int) ($_SESSION['authUserID'] ?? 0)
+            );
             $this->respond(false, 'Invalid CSRF token', ['code' => 'csrf'], 403);
         }
     }
