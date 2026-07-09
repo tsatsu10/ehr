@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { ncShadcnTableClass } from '@components/ncTableStyles';
 import { Button } from '@components/ui/button';
@@ -11,7 +11,8 @@ import {
   TableRow,
 } from '@components/ui/table';
 import { oeFetch } from '@core/oeFetch';
-import type { ReferralRow, ReferralsListData } from './chartDepthTypes';
+import { ReferralWizard } from './ReferralWizard';
+import type { ReferralRow, ReferralsListData, ReferralSaveResult } from './chartDepthTypes';
 
 interface ReferralsPaneProps {
   ajaxUrl: string;
@@ -20,7 +21,22 @@ interface ReferralsPaneProps {
   encounterId?: number;
 }
 
-function ReferralRowView({ item }: { item: ReferralRow }) {
+function ReferralRowView({
+  item,
+  busy,
+  onPrint,
+  onStatus,
+}: {
+  item: ReferralRow;
+  busy: boolean;
+  onPrint: (item: ReferralRow) => void;
+  onStatus: (item: ReferralRow, status: string) => void;
+}) {
+  // Status transitions only apply to wizard-tracked rows (M11-F03 meta).
+  const nextStatus =
+    item.status_key === 'printed' ? 'given' : item.status_key === 'given' ? 'result_received' : null;
+  const nextLabel = nextStatus === 'given' ? 'Mark given' : 'Result received';
+
   return (
     <TableRow>
       <TableCell>
@@ -31,10 +47,25 @@ function ReferralRowView({ item }: { item: ReferralRow }) {
       <TableCell>{item.occurred_at ?? '—'}</TableCell>
       <TableCell className="text-right">
         {item.print_url && (
-          <Button variant="outline" size="sm" className="mr-1" asChild>
-            <a href={item.print_url} target="_top">
-              Print
-            </a>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mr-1"
+            disabled={busy}
+            onClick={() => onPrint(item)}
+          >
+            Print
+          </Button>
+        )}
+        {nextStatus && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="mr-1"
+            disabled={busy}
+            onClick={() => onStatus(item, nextStatus)}
+          >
+            {nextLabel}
           </Button>
         )}
         {item.edit_url && (
@@ -52,11 +83,15 @@ function ReferralRowView({ item }: { item: ReferralRow }) {
 export function ReferralsPane({ ajaxUrl, csrfToken, pid, encounterId }: ReferralsPaneProps) {
   const [rows, setRows] = useState<ReferralRow[]>([]);
   const [createUrl, setCreateUrl] = useState<string | null>(null);
+  const [canCreate, setCanCreate] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [rowBusyId, setRowBusyId] = useState<number | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const fetchOptions = useMemo(() => ({ ajaxUrl, csrfToken }), [ajaxUrl, csrfToken]);
 
@@ -77,6 +112,7 @@ export function ReferralsPane({ ajaxUrl, csrfToken, pid, encounterId }: Referral
         if (cancelled) return;
 
         setRows(data.items ?? []);
+        setCanCreate(!!data.can_create_referral);
         setCreateUrl(
           data.can_create_referral && data.create_referral_url ? data.create_referral_url : null
         );
@@ -94,7 +130,53 @@ export function ReferralsPane({ ajaxUrl, csrfToken, pid, encounterId }: Referral
     return () => {
       cancelled = true;
     };
-  }, [encounterId, fetchOptions, pid]);
+  }, [encounterId, fetchOptions, pid, reloadKey]);
+
+  const handlePrint = useCallback(
+    async (item: ReferralRow) => {
+      const transactionId = item.transaction_id ?? 0;
+      if (transactionId <= 0) {
+        if (item.print_url) window.open(item.print_url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      setRowBusyId(transactionId);
+      try {
+        const result = await oeFetch<ReferralSaveResult>('chart_depth.referral_print', {
+          method: 'POST',
+          ...fetchOptions,
+          json: { transaction_id: transactionId },
+        });
+        window.open(result.print_url ?? item.print_url ?? '', '_blank', 'noopener,noreferrer');
+        setReloadKey((k) => k + 1);
+      } catch {
+        if (item.print_url) window.open(item.print_url, '_blank', 'noopener,noreferrer');
+      } finally {
+        setRowBusyId(null);
+      }
+    },
+    [fetchOptions],
+  );
+
+  const handleStatus = useCallback(
+    async (item: ReferralRow, status: string) => {
+      const transactionId = item.transaction_id ?? 0;
+      if (transactionId <= 0) return;
+      setRowBusyId(transactionId);
+      try {
+        await oeFetch('chart_depth.referral_status', {
+          method: 'POST',
+          ...fetchOptions,
+          json: { transaction_id: transactionId, status },
+        });
+        setReloadKey((k) => k + 1);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not update the referral status.');
+      } finally {
+        setRowBusyId(null);
+      }
+    },
+    [fetchOptions],
+  );
 
   const loadMore = async () => {
     setLoadingMore(true);
@@ -125,15 +207,33 @@ export function ReferralsPane({ ajaxUrl, csrfToken, pid, encounterId }: Referral
 
   return (
     <>
-      {createUrl && (
-        <div id="nc-referrals-actions" className="mb-3">
-          <Button size="sm" asChild>
-            <a href={createUrl} target="_top">
-              New referral
-            </a>
+      {canCreate && (
+        <div id="nc-referrals-actions" className="mb-3 flex flex-wrap items-center gap-2">
+          <Button size="sm" id="nc-referral-new-btn" onClick={() => setWizardOpen(true)}>
+            New referral
           </Button>
+          {createUrl && (
+            <Button variant="ghost" size="sm" asChild>
+              <a href={createUrl} target="_top">
+                Advanced (stock form)
+              </a>
+            </Button>
+          )}
         </div>
       )}
+
+      <ReferralWizard
+        open={wizardOpen}
+        ajaxUrl={ajaxUrl}
+        csrfToken={csrfToken}
+        pid={pid}
+        encounterId={encounterId}
+        onClose={() => setWizardOpen(false)}
+        onSaved={() => {
+          setWizardOpen(false);
+          setReloadKey((k) => k + 1);
+        }}
+      />
 
       {!rows.length ? (
         <p className="text-[var(--oe-nc-text-muted)] mb-0">No referrals for this filter.</p>
@@ -151,7 +251,17 @@ export function ReferralsPane({ ajaxUrl, csrfToken, pid, encounterId }: Referral
               </TableHeader>
               <TableBody id="nc-referrals-rows">
                 {rows.map((row, idx) => (
-                  <ReferralRowView key={`${row.label ?? idx}-${row.occurred_at ?? ''}`} item={row} />
+                  <ReferralRowView
+                    key={`${row.transaction_id ?? idx}-${row.occurred_at ?? ''}`}
+                    item={row}
+                    busy={rowBusyId === (row.transaction_id ?? -1)}
+                    onPrint={(item) => {
+                      void handlePrint(item);
+                    }}
+                    onStatus={(item, status) => {
+                      void handleStatus(item, status);
+                    }}
+                  />
                 ))}
               </TableBody>
             </Table>

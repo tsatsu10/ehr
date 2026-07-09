@@ -26,6 +26,7 @@ final class ChartDepthActionHandler implements AjaxActionHandlerInterface
     private const ACTIONS = [
         'mrd.profile_payments_summary',
         'chart_depth.payments_list',
+        'chart_depth.visit_charges_summary',
         'chart_depth.receipt_reprint',
         'mrd.clinical_referrals_strip',
         'mrd.clinical_labs_summary',
@@ -33,6 +34,9 @@ final class ChartDepthActionHandler implements AjaxActionHandlerInterface
         'chart_depth.export_builder',
         'chart_depth.export_generate',
         'chart_depth.referrals_list',
+        'chart_depth.referral_save',
+        'chart_depth.referral_print',
+        'chart_depth.referral_status',
     ];
 
     public function __construct(
@@ -80,6 +84,17 @@ final class ChartDepthActionHandler implements AjaxActionHandlerInterface
                     trim((string) ($_REQUEST['date_to'] ?? '')) ?: null,
                 );
                 $this->host->respond(true, 'ok', $list);
+                break;
+            case 'chart_depth.visit_charges_summary':
+                $pid = (int) ($_REQUEST['pid'] ?? 0);
+                $this->host->assertPatientChartPid($pid);
+                $this->host->authorizeDeferredHandler('chart_depth.visit_charges_summary', $pid);
+                $encounterId = (int) ($_REQUEST['encounter_id'] ?? 0);
+                $summary = $this->host->svc(PaymentHistoryService::class)->getVisitChargesSummary(
+                    $pid,
+                    $encounterId > 0 ? $encounterId : null
+                );
+                $this->host->respond(true, 'ok', $summary);
                 break;
             case 'chart_depth.receipt_reprint':
                 if ($method !== 'POST') {
@@ -159,6 +174,41 @@ final class ChartDepthActionHandler implements AjaxActionHandlerInterface
                     $preset,
                     $encounterId > 0 ? $encounterId : null,
                     $normalizedIncludes,
+                    $userId
+                );
+                $this->host->respond(true, 'ok', $result);
+                break;
+            case 'chart_depth.referral_save':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $result = $this->host->svc(ReferralCorrespondenceService::class)->saveReferral($body, $userId);
+                $this->host->respond(true, 'ok', $result);
+                break;
+            case 'chart_depth.referral_print':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $result = $this->host->svc(ReferralCorrespondenceService::class)->printReferral(
+                    (int) ($body['transaction_id'] ?? 0),
+                    $userId
+                );
+                $this->host->respond(true, 'ok', $result);
+                break;
+            case 'chart_depth.referral_status':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $result = $this->host->svc(ReferralCorrespondenceService::class)->updateReferralStatus(
+                    (int) ($body['transaction_id'] ?? 0),
+                    strtolower(trim((string) ($body['status'] ?? ''))),
+                    !empty($body['result_document_id']) ? (int) $body['result_document_id'] : null,
                     $userId
                 );
                 $this->host->respond(true, 'ok', $result);

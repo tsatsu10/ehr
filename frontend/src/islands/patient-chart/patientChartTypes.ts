@@ -41,6 +41,8 @@ export interface ChartActiveVisit {
   chief_complaint?: string;
   encounter_signed?: boolean;
   require_esign_before_complete_consult?: boolean;
+  /** D-FIN-8 — read-only charge total chip for finance-summary ACL */
+  visit_charges_label?: string;
 }
 
 export interface ChartSafety {
@@ -94,6 +96,9 @@ export interface ActivityFeedItem {
     encounter_id?: number;
     problem_count?: number;
     variant?: string | null;
+    receipt_number?: string;
+    amount_paid?: string;
+    cashier?: string | null;
   };
   primary_action?: ActivityFeedAction;
   secondary_action?: ActivityFeedAction;
@@ -196,6 +201,9 @@ export interface ClinicalBackgroundSection {
   anchor?: string;
   editor_url?: string;
   lines?: ClinicalBackgroundLine[];
+  /** T1-F20 — SDOH screening summary chips (max 4) */
+  sdoh_chips?: string[];
+  sdoh_more?: number;
 }
 
 export interface ClinicalVitalsSection {
@@ -235,6 +243,8 @@ export interface ClinicalThisVisitSection {
   visit_id?: number | null;
   open_encounter_url?: string;
   encounter_note?: ClinicalEncounterNotePreview | null;
+  /** D-FIN-8 — active-visit charge total (label only; no receipt/method) */
+  charges_total_label?: string | null;
   forms?: ClinicalFormRow[];
   empty?: boolean;
 }

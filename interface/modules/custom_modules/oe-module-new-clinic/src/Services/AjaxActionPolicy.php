@@ -103,6 +103,11 @@ class AjaxActionPolicy
         'admin.reconciliation.run' => 'new_admin',
         'admin.profile.apply_cash_clinic' => 'new_admin',
         'admin.forms_catalog.set_state' => 'new_admin',
+        'admin.his_pack_status' => 'new_admin',
+        'admin.his_pack_import' => 'new_admin',
+        'chart_depth.referral_save' => 'new_chart_depth_referral',
+        'chart_depth.referral_print' => 'new_chart_depth_referral',
+        'chart_depth.referral_status' => 'new_chart_depth_referral',
         'admin.health_status' => 'new_admin',
         'admin.backup.run' => 'new_admin',
         'admin.backup.complete' => 'new_admin',
@@ -451,6 +456,7 @@ class AjaxActionPolicy
         'patients.chart.search',
         'mrd.profile_payments_summary',
         'chart_depth.payments_list',
+        'chart_depth.visit_charges_summary',
         'mrd.clinical_referrals_strip',
         'mrd.clinical_labs_summary',
         'mrd.clinical_meds_summary',
@@ -465,6 +471,7 @@ class AjaxActionPolicy
      */
     private const DEFERRED_PRIMARY_ACLS = [
         'chart_depth.payments_list' => ['new_chart_depth_finance'],
+        'chart_depth.visit_charges_summary' => ['new_chart_depth_finance_summary', 'new_chart_depth_finance'],
         'chart_depth.receipt_reprint' => ['new_receipt_reprint', 'new_chart_depth_finance'],
         'chart_depth.referrals_list' => ['new_chart_depth_referral', 'new_chart_depth'],
     ];

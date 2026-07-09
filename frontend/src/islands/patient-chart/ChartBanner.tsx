@@ -20,13 +20,18 @@ export function ChartBanner({ preview }: ChartBannerProps) {
         safety={preview.safety}
         aside={<CompletionScorePill score={completion.score} threshold={completion.billing_threshold} />}
       >
-        {active && active.encounter_signed === false && (
-          <div className="mt-2">
-            <Badge variant={active.require_esign_before_complete_consult ? 'danger' : 'warning'}>
-              {active.require_esign_before_complete_consult
-                ? 'Unsigned — sign before complete'
-                : 'Unsigned — payment blocked'}
-            </Badge>
+        {active && (active.encounter_signed === false || active.visit_charges_label) && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {active.encounter_signed === false && (
+              <Badge variant={active.require_esign_before_complete_consult ? 'danger' : 'warning'}>
+                {active.require_esign_before_complete_consult
+                  ? 'Unsigned — sign before complete'
+                  : 'Unsigned — payment blocked'}
+              </Badge>
+            )}
+            {active.visit_charges_label && (
+              <Badge variant="neutral">{active.visit_charges_label}</Badge>
+            )}
           </div>
         )}
       </PatientContextBanner>

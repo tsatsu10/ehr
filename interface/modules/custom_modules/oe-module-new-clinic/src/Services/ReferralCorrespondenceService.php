@@ -13,10 +13,14 @@ namespace OpenEMR\Modules\NewClinic\Services;
 
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Database\QueryUtils;
+use OpenEMR\Common\Logging\EventAuditLogger;
 
 class ReferralCorrespondenceService
 {
     public const PAGE_SIZE = 20;
+
+    /** @var array<int, string> M11-F03 status model (§10.6, D-REF-1) */
+    public const REFERRAL_STATUSES = ['draft', 'printed', 'given', 'result_received'];
 
     public function __construct(
         private readonly FacilityScopeService $facilityScope = new FacilityScopeService(),
@@ -116,13 +120,225 @@ class ReferralCorrespondenceService
         ];
     }
 
+    /**
+     * M11-F03 — referral wizard save. Writes stock `transactions` + `lbt_data`
+     * plus a `new_referral_meta` status row (D-REF-1 façade — no engine fork).
+     *
+     * @param array<string, mixed> $body
+     * @return array<string, mixed>
+     */
+    public function saveReferral(array $body, int $actorUserId): array
+    {
+        $pid = (int) ($body['pid'] ?? 0);
+        if ($pid <= 0) {
+            throw new \InvalidArgumentException('Patient id is required');
+        }
+        $this->facilityScope->assertPatientAccessible($pid);
+        $this->assertReferralEnabled();
+        $this->assertCanManage();
+
+        $destination = trim((string) ($body['destination_facility'] ?? ''));
+        if ($destination === '') {
+            throw new \InvalidArgumentException('Destination facility is required');
+        }
+        $summary = trim((string) ($body['summary'] ?? ''));
+        if ($summary === '') {
+            throw new \InvalidArgumentException('Clinical summary is required');
+        }
+
+        $department = trim((string) ($body['destination_department'] ?? ''));
+        $diagnosis = trim((string) ($body['diagnosis'] ?? ''));
+        $chiefComplaint = trim((string) ($body['chief_complaint'] ?? ''));
+        $encounterId = (int) ($body['encounter_id'] ?? 0);
+        $visitId = (int) ($body['visit_id'] ?? 0);
+        $referDate = date('Y-m-d');
+
+        $referTo = $department !== '' ? $destination . ' — ' . $department : $destination;
+        $bodyText = implode("\n", array_filter([
+            $chiefComplaint !== '' ? 'Chief complaint: ' . $chiefComplaint : null,
+            $diagnosis !== '' ? 'Diagnosis: ' . $diagnosis : null,
+            $summary,
+        ]));
+
+        $transactionId = QueryUtils::sqlInsert(
+            "INSERT INTO transactions (date, title, pid, user, groupname, authorized)
+             VALUES (NOW(), 'LBTref', ?, ?, ?, 1)",
+            [$pid, $_SESSION['authUser'] ?? '', $_SESSION['authProvider'] ?? 'Default']
+        );
+
+        foreach ([
+            'refer_date' => $referDate,
+            'refer_to' => $referTo,
+            'body' => $bodyText,
+        ] as $fieldId => $fieldValue) {
+            QueryUtils::sqlStatementThrowException(
+                'INSERT INTO lbt_data (form_id, field_id, field_value) VALUES (?, ?, ?)',
+                [$transactionId, $fieldId, $fieldValue]
+            );
+        }
+
+        QueryUtils::sqlStatementThrowException(
+            "INSERT INTO new_referral_meta
+                (transaction_id, pid, encounter_id, visit_id, status,
+                 destination_facility, destination_department, created_by)
+             VALUES (?, ?, ?, ?, 'draft', ?, ?, ?)",
+            [
+                $transactionId,
+                $pid,
+                $encounterId > 0 ? $encounterId : null,
+                $visitId > 0 ? $visitId : null,
+                $destination,
+                $department !== '' ? $department : null,
+                $actorUserId,
+            ]
+        );
+
+        $webroot = $GLOBALS['webroot'] ?? '';
+
+        return [
+            'transaction_id' => (int) $transactionId,
+            'status' => 'draft',
+            'print_url' => $webroot
+                . '/interface/patient_file/transaction/print_referral.php?transid='
+                . urlencode((string) $transactionId),
+        ];
+    }
+
+    /**
+     * M11-F03/F04 — mark printed + audit; returns the stock print URL.
+     *
+     * @return array<string, mixed>
+     */
+    public function printReferral(int $transactionId, int $actorUserId): array
+    {
+        $this->assertReferralEnabled();
+        $this->assertCanManage();
+        $referral = $this->loadReferralTransaction($transactionId);
+        $this->facilityScope->assertPatientAccessible((int) $referral['pid']);
+
+        $meta = $this->loadMeta($transactionId);
+        if ($meta === null || $meta['status'] === 'draft') {
+            $this->upsertMetaStatus($transactionId, (int) $referral['pid'], 'printed', null, $actorUserId);
+        }
+
+        EventAuditLogger::getInstance()->newEvent(
+            'new_clinic',
+            'chart_depth',
+            $actorUserId,
+            1,
+            'chart_depth.referral_printed transaction_id=' . $transactionId
+            . ' pid=' . (int) $referral['pid']
+        );
+
+        $webroot = $GLOBALS['webroot'] ?? '';
+
+        return [
+            'transaction_id' => $transactionId,
+            'status' => $this->loadMeta($transactionId)['status'] ?? 'printed',
+            'print_url' => $webroot
+                . '/interface/patient_file/transaction/print_referral.php?transid='
+                . urlencode((string) $transactionId),
+        ];
+    }
+
+    /**
+     * M11-F04 — status transitions: printed → given → result_received
+     * (result may attach a scanned document id).
+     *
+     * @return array<string, mixed>
+     */
+    public function updateReferralStatus(
+        int $transactionId,
+        string $status,
+        ?int $resultDocumentId,
+        int $actorUserId
+    ): array {
+        $this->assertReferralEnabled();
+        $this->assertCanManage();
+        if (!in_array($status, self::REFERRAL_STATUSES, true)) {
+            throw new \InvalidArgumentException('Unknown referral status');
+        }
+
+        $referral = $this->loadReferralTransaction($transactionId);
+        $this->facilityScope->assertPatientAccessible((int) $referral['pid']);
+
+        $this->upsertMetaStatus(
+            $transactionId,
+            (int) $referral['pid'],
+            $status,
+            $status === 'result_received' ? $resultDocumentId : null,
+            $actorUserId
+        );
+
+        return [
+            'transaction_id' => $transactionId,
+            'status' => $status,
+        ];
+    }
+
+    protected function assertCanManage(): void
+    {
+        if (!AclMain::aclCheckCore('new_clinic', 'new_chart_depth_referral')) {
+            throw new \RuntimeException('Forbidden', 403);
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function loadReferralTransaction(int $transactionId): array
+    {
+        if ($transactionId <= 0) {
+            throw new \InvalidArgumentException('Referral id is required');
+        }
+
+        $row = QueryUtils::querySingleRow(
+            "SELECT id, pid FROM transactions WHERE id = ? AND title = 'LBTref' LIMIT 1",
+            [$transactionId]
+        );
+        if (!is_array($row)) {
+            throw new \RuntimeException('Referral not found', 404);
+        }
+
+        return $row;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function loadMeta(int $transactionId): ?array
+    {
+        $row = QueryUtils::querySingleRow(
+            'SELECT status, result_document_id FROM new_referral_meta WHERE transaction_id = ? LIMIT 1',
+            [$transactionId]
+        );
+
+        return is_array($row) ? $row : null;
+    }
+
+    private function upsertMetaStatus(
+        int $transactionId,
+        int $pid,
+        string $status,
+        ?int $resultDocumentId,
+        int $actorUserId
+    ): void {
+        QueryUtils::sqlStatementThrowException(
+            'INSERT INTO new_referral_meta (transaction_id, pid, status, result_document_id, created_by)
+             VALUES (?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE status = VALUES(status),
+                 result_document_id = COALESCE(VALUES(result_document_id), result_document_id)',
+            [$transactionId, $pid, $status, $resultDocumentId, $actorUserId]
+        );
+    }
+
     private function isReferralStripEnabled(int $facilityId): bool
     {
         return $this->config->getInt('enable_chart_depth', 0, $facilityId) === 1
             && $this->config->getInt('enable_chart_depth_referral', 0, $facilityId) === 1;
     }
 
-    private function assertReferralEnabled(): void
+    protected function assertReferralEnabled(): void
     {
         $facilityId = $this->visitScope->resolveDefaultFacilityId();
         if (!$this->isReferralStripEnabled($facilityId)) {
@@ -178,9 +394,12 @@ class ReferralCorrespondenceService
             "SELECT t.id, t.date, t.user,
                     MAX(CASE WHEN ld.field_id = 'refer_to' THEN ld.field_value END) AS refer_to,
                     MAX(CASE WHEN ld.field_id = 'refer_date' THEN ld.field_value END) AS refer_date,
-                    MAX(CASE WHEN ld.field_id = 'body' THEN ld.field_value END) AS body
+                    MAX(CASE WHEN ld.field_id = 'body' THEN ld.field_value END) AS body,
+                    MAX(meta.status) AS meta_status,
+                    MAX(meta.result_document_id) AS result_document_id
              FROM transactions t
              LEFT JOIN lbt_data ld ON ld.form_id = t.id
+             LEFT JOIN new_referral_meta meta ON meta.transaction_id = t.id
              WHERE t.pid = ? AND t.title = 'LBTref'{$dateFilter}
              GROUP BY t.id, t.date, t.user
              ORDER BY COALESCE(MAX(CASE WHEN ld.field_id = 'refer_date' THEN ld.field_value END), t.date) DESC,
@@ -222,7 +441,17 @@ class ReferralCorrespondenceService
         $referTo = trim((string) ($row['refer_to'] ?? ''));
         $body = trim((string) ($row['body'] ?? ''));
         $label = $referTo !== '' ? $referTo : ($body !== '' ? $this->clipText($body, 60) : 'Referral');
-        $status = $referTo === '' ? 'Draft' : 'Issued';
+
+        // Meta status (M11-F03 wizard rows) wins; legacy rows keep the heuristic.
+        $metaStatus = trim((string) ($row['meta_status'] ?? ''));
+        $statusLabels = [
+            'draft' => 'Draft',
+            'printed' => 'Printed',
+            'given' => 'Given to patient',
+            'result_received' => 'Result received',
+        ];
+        $status = $statusLabels[$metaStatus] ?? ($referTo === '' ? 'Draft' : 'Issued');
+
         $occurredAt = trim((string) ($row['refer_date'] ?? ''));
         if ($occurredAt === '' || $occurredAt === '0000-00-00') {
             $occurredAt = (string) ($row['date'] ?? '');
@@ -232,6 +461,10 @@ class ReferralCorrespondenceService
             'transaction_id' => (int) ($row['id'] ?? 0),
             'label' => $label,
             'status' => $status,
+            'status_key' => $metaStatus !== '' ? $metaStatus : null,
+            'result_document_id' => !empty($row['result_document_id'])
+                ? (int) $row['result_document_id']
+                : null,
             'occurred_at' => $this->formatDate($occurredAt),
             'author' => trim((string) ($row['user'] ?? '')),
         ];

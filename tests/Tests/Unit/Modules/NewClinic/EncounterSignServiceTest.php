@@ -15,6 +15,7 @@ require_once __DIR__ . '/ModuleAutoload.php';
 
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocCatalogService;
+use OpenEMR\Modules\NewClinic\Services\EncounterNoteEnginePolicy;
 use OpenEMR\Modules\NewClinic\Services\EncounterNoteService;
 use OpenEMR\Modules\NewClinic\Services\EncounterSignService;
 use PHPUnit\Framework\TestCase;
@@ -77,8 +78,10 @@ class EncounterSignServiceTest extends TestCase
         try {
             $config->set('encounter_note_engine', EncounterNoteService::ENGINE_NATIVE, 0);
 
-            $encounterNote = new EncounterNoteService(config: $config);
-            $catalog = new ClinicalDocCatalogService(config: $config, encounterNote: $encounterNote);
+            $catalog = new ClinicalDocCatalogService(
+                config: $config,
+                enginePolicy: new EncounterNoteEnginePolicy(config: $config),
+            );
 
             $service = new class ($config, $catalog) extends EncounterSignService {
                 public function __construct(
@@ -115,8 +118,10 @@ class EncounterSignServiceTest extends TestCase
         try {
             $config->set('encounter_note_engine', EncounterNoteService::ENGINE_NATIVE, 0);
 
-            $encounterNote = new EncounterNoteService(config: $config);
-            $catalog = new ClinicalDocCatalogService(config: $config, encounterNote: $encounterNote);
+            $catalog = new ClinicalDocCatalogService(
+                config: $config,
+                enginePolicy: new EncounterNoteEnginePolicy(config: $config),
+            );
 
             $service = new class ($config, $catalog) extends EncounterSignService {
                 public function __construct(

@@ -11,6 +11,7 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
+use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Database\QueryUtils;
 
 class PatientChartClinicalService
@@ -90,10 +91,14 @@ class PatientChartClinicalService
             }
         }
 
+        $sdoh = $this->buildSdohChips($pid);
+
         return [
             'anchor' => 'clinical-background',
             'lines' => $lines,
-            'empty' => $lines === [],
+            'empty' => $lines === [] && $sdoh['chips'] === [],
+            'sdoh_chips' => $sdoh['chips'],
+            'sdoh_more' => $sdoh['more'],
             'editor_url' => $this->historyEditorWrap->appendReturnParam(
                 $webroot
                 . '/interface/patient_file/history/history_full.php?set_pid='
@@ -102,6 +107,56 @@ class PatientChartClinicalService
             ),
             'last_updated' => is_array($row) ? ($row['date'] ?? null) : null,
         ];
+    }
+
+    /**
+     * T1-F20 — SDOH summary chips on Background (max 4 + "+N") from the
+     * latest screening row. Empty when the SDOH feature is unused.
+     *
+     * @return array{chips: array<int, string>, more: int}
+     */
+    private function buildSdohChips(int $pid): array
+    {
+        try {
+            $row = QueryUtils::querySingleRow(
+                'SELECT food_insecurity, housing_instability, transportation_insecurity,
+                        utilities_insecurity, interpersonal_safety, financial_strain,
+                        social_isolation
+                 FROM form_history_sdoh WHERE pid = ?
+                 ORDER BY assessment_date DESC, id DESC LIMIT 1',
+                [$pid]
+            );
+        } catch (\Throwable) {
+            // Table absent on installs without the SDOH feature.
+            return ['chips' => [], 'more' => 0];
+        }
+
+        if (!is_array($row)) {
+            return ['chips' => [], 'more' => 0];
+        }
+
+        $domainLabels = [
+            'food_insecurity' => 'Food',
+            'housing_instability' => 'Housing',
+            'transportation_insecurity' => 'Transport',
+            'utilities_insecurity' => 'Utilities',
+            'interpersonal_safety' => 'Safety',
+            'financial_strain' => 'Finances',
+            'social_isolation' => 'Social',
+        ];
+
+        $chips = [];
+        foreach ($domainLabels as $field => $label) {
+            $value = trim((string) ($row[$field] ?? ''));
+            if ($value === '') {
+                continue;
+            }
+            $chips[] = $label . ': ' . ucfirst(str_replace('_', ' ', $value));
+        }
+
+        $more = max(0, count($chips) - 4);
+
+        return ['chips' => array_slice($chips, 0, 4), 'more' => $more];
     }
 
     /**
@@ -464,9 +519,39 @@ class PatientChartClinicalService
             'visit_id' => $visitId > 0 ? $visitId : null,
             'open_encounter_url' => $this->docHubLinks->buildDocumentationUrl($pid, $encounterId, $facilityId),
             'encounter_note' => $encounterNote,
+            'charges_total_label' => $this->buildChargesTotalLabel($pid, $encounterId, $visitId),
             'forms' => $forms,
             'empty' => $forms === [] && $encounterNote === null,
         ];
+    }
+
+    /**
+     * D-FIN-8 — active-visit charge total for `new_chart_depth_finance_summary`.
+     * Label only: no receipt #, no payment method, active visit required.
+     */
+    private function buildChargesTotalLabel(int $pid, int $encounterId, int $visitId): ?string
+    {
+        if ($visitId <= 0 || $encounterId <= 0) {
+            return null;
+        }
+
+        if (
+            !AclMain::aclCheckCore('new_clinic', 'new_chart_depth_finance_summary')
+            && !AclMain::aclCheckCore('new_clinic', 'new_chart_depth_finance')
+        ) {
+            return null;
+        }
+
+        try {
+            $summary = (new PaymentHistoryService())->getVisitChargesSummary($pid, $encounterId);
+        } catch (\RuntimeException) {
+            // Chart Depth finance flags are OFF — no charge summary on the chart.
+            return null;
+        }
+
+        return 'Charges total: '
+            . (string) ($summary['currency_symbol'] ?? '')
+            . number_format((float) ($summary['charges_amount'] ?? 0), 2);
     }
 
     /**

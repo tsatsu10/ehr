@@ -15,12 +15,27 @@ use OpenEMR\Modules\NewClinic\Services\ClinicalDocCatalogService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocDocumentationStatusService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocHubLinkService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
+use OpenEMR\Modules\NewClinic\Services\EncounterNoteEnginePolicy;
 use OpenEMR\Modules\NewClinic\Services\EncounterNoteService;
 use OpenEMR\Modules\NewClinic\Services\EncounterSignService;
+use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 use PHPUnit\Framework\TestCase;
 
 class ClinicalDocDocumentationStatusServiceTest extends TestCase
 {
+    /**
+     * Pin engine-policy facility resolution to the test's facility 0 rows.
+     */
+    private function facilityZeroScope(): VisitScopeService
+    {
+        return new class extends VisitScopeService {
+            public function resolveDeskFacilityId(?int $requestedFacilityId = null): int
+            {
+                return 0;
+            }
+        };
+    }
+
     public function testFullOpdListsUnsignedConsultNote(): void
     {
         $config = new ClinicConfigService();
@@ -33,8 +48,14 @@ class ClinicalDocDocumentationStatusServiceTest extends TestCase
             $config->set('encounter_note_engine', EncounterNoteService::ENGINE_LEGACY, 0);
 
             $hubLinks = new ClinicalDocHubLinkService(config: $config);
-            $encounterNote = new EncounterNoteService(config: $config);
-            $catalog = new ClinicalDocCatalogService(config: $config, encounterNote: $encounterNote);
+            $catalog = new ClinicalDocCatalogService(
+                config: $config,
+                visitScope: $this->facilityZeroScope(),
+                enginePolicy: new EncounterNoteEnginePolicy(
+                    config: $config,
+                    visitScope: $this->facilityZeroScope(),
+                ),
+            );
             $sign = new class ($config, $catalog) extends EncounterSignService {
                 public function __construct(
                     private readonly ClinicConfigService $testConfig,
@@ -85,8 +106,14 @@ class ClinicalDocDocumentationStatusServiceTest extends TestCase
             $config->set('encounter_note_engine', EncounterNoteService::ENGINE_NATIVE, 0);
 
             $hubLinks = new ClinicalDocHubLinkService(config: $config);
-            $encounterNote = new EncounterNoteService(config: $config);
-            $catalog = new ClinicalDocCatalogService(config: $config, encounterNote: $encounterNote);
+            $catalog = new ClinicalDocCatalogService(
+                config: $config,
+                visitScope: $this->facilityZeroScope(),
+                enginePolicy: new EncounterNoteEnginePolicy(
+                    config: $config,
+                    visitScope: $this->facilityZeroScope(),
+                ),
+            );
             $sign = new class ($config, $catalog) extends EncounterSignService {
                 public function __construct(
                     private readonly ClinicConfigService $testConfig,

@@ -107,6 +107,16 @@ function renderExpandDetail(item: ActivityFeedItem): React.ReactNode {
     );
   }
 
+  if (item.event_type === 'payment_posted') {
+    return (
+      <div className="text-sm text-[var(--oe-nc-text-muted)]">
+        {expand.receipt_number ? `Receipt #${expand.receipt_number}` : 'Payment'}
+        {expand.amount_paid ? ` · ${expand.amount_paid}` : ''}
+        {expand.cashier ? ` · ${expand.cashier}` : ''}
+      </div>
+    );
+  }
+
   if (item.event_type === 'pharmacy_dispensed' && expand.drug_name) {
     return (
       <div className="text-sm text-[var(--oe-nc-text-muted)]">

@@ -249,6 +249,8 @@ export function AdminHubTabPanels({
             importingPackKey={ancillaryLbfImporting}
             installingAll={installingAllAncillary}
             catalogTogglingId={catalogTogglingId}
+            ajaxUrl={ajaxUrl}
+            csrfToken={csrfToken}
             onImportPack={onImportAncillaryLbfPack}
             onInstallAllMissing={onInstallAllMissing}
             onToggleCatalogForm={onToggleCatalogForm}

@@ -128,6 +128,18 @@ function ClinicalBackground({ section }: { section: ClinicalBackgroundSection })
       ) : (
         <p className="text-[var(--oe-nc-text-muted)] mb-0">No background documented.</p>
       )}
+      {(section.sdoh_chips ?? []).length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1" aria-label="Social screening summary">
+          {(section.sdoh_chips ?? []).map((chip) => (
+            <Badge key={chip} variant="neutral">
+              {chip}
+            </Badge>
+          ))}
+          {(section.sdoh_more ?? 0) > 0 && (
+            <Badge variant="neutral">+{section.sdoh_more}</Badge>
+          )}
+        </div>
+      )}
     </ChartSection>
   );
 }
@@ -190,6 +202,11 @@ function ClinicalThisVisit({ section }: { section: ClinicalThisVisitSection }) {
       }
       bodyClassName="py-3"
     >
+      {section.charges_total_label ? (
+        <p className="mb-3 text-sm font-medium text-[var(--oe-nc-text)]">
+          {section.charges_total_label}
+        </p>
+      ) : null}
       {note?.native_enabled ? (
         <div className="border rounded p-3 mb-3 bg-[var(--oe-nc-bg-tint)]">
           <div className="flex flex-wrap items-start justify-between gap-2 mb-2">

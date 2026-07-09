@@ -284,7 +284,9 @@ class EncounterNoteService
             throw new \RuntimeException('Manager access required to unlock signed consult notes', 403);
         }
 
-        $visit = $this->loadClinicalVisit($visitId, $actorUserId);
+        // Manager unlock (DR-08) is not a provider action — skip the with_doctor
+        // assignment guard; ACL + password re-auth above gate this path.
+        $visit = $this->loadClinicalVisit($visitId, $actorUserId, false);
         $facilityId = (int) ($visit['facility_id'] ?? $this->visitScope->resolveDeskFacilityId());
         $this->assertEncounterNoteAccess($facilityId);
 
@@ -1753,7 +1755,7 @@ class EncounterNoteService
     /**
      * @return array<string, mixed>
      */
-    private function loadClinicalVisit(int $visitId, int $actorUserId): array
+    private function loadClinicalVisit(int $visitId, int $actorUserId, bool $requireProviderMatch = true): array
     {
         $visit = $this->queueService->getVisitForActor($visitId);
         $state = (string) ($visit['state'] ?? '');
@@ -1765,7 +1767,11 @@ class EncounterNoteService
             throw new \InvalidArgumentException('Visit is not in an active clinical state');
         }
 
-        if ($state === 'with_doctor' && (int) ($visit['assigned_provider_id'] ?? 0) !== $actorUserId) {
+        if (
+            $requireProviderMatch
+            && $state === 'with_doctor'
+            && (int) ($visit['assigned_provider_id'] ?? 0) !== $actorUserId
+        ) {
             throw new \InvalidArgumentException('Visit is assigned to another provider');
         }
 

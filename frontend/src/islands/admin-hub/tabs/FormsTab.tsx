@@ -8,6 +8,7 @@ import type {
 } from '../adminTypes';
 import { FormBundleBoard } from '../FormBundleBoard';
 import { FormsCatalog } from '../FormsCatalog';
+import { HisPackCard } from '../HisPackCard';
 import { AdminSection, AdminStack } from '../adminUi';
 
 interface FormsTabProps {
@@ -17,6 +18,8 @@ interface FormsTabProps {
   importingPackKey: string | null;
   installingAll: boolean;
   catalogTogglingId: number | null;
+  ajaxUrl: string;
+  csrfToken: string;
   onImportPack: (packKey: string) => void;
   onInstallAllMissing: () => void;
   onToggleCatalogForm: (item: FormsCatalogItem, enabled: boolean) => void;
@@ -26,12 +29,15 @@ export function FormsTab({
   board,
   catalog,
   catalogTogglingId,
+  ajaxUrl,
+  csrfToken,
   onToggleCatalogForm,
   ...bundleProps
 }: FormsTabProps) {
   return (
     <AdminStack>
       <FormBundleBoard board={board} {...bundleProps} />
+      <HisPackCard ajaxUrl={ajaxUrl} csrfToken={csrfToken} />
       <FormsCatalog
         catalog={catalog}
         togglingId={catalogTogglingId}

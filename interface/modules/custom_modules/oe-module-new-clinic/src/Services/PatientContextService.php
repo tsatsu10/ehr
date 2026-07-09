@@ -35,6 +35,46 @@ class PatientContextService
     ) {
     }
 
+    /**
+     * D-FIN-8 — MRD Zone A "Visit charges" chip for `new_chart_depth_finance_summary`.
+     * Clinical states only; charge total only (no receipt #, no payment method).
+     *
+     * @param array<string, mixed>|null $activeVisit
+     */
+    private function buildVisitChargesChip(int $pid, ?array $activeVisit): ?string
+    {
+        if (!is_array($activeVisit)) {
+            return null;
+        }
+
+        $encounterId = (int) ($activeVisit['encounter_id'] ?? 0);
+        $state = (string) ($activeVisit['state'] ?? '');
+        $clinicalStates = [
+            'with_doctor', 'ready_for_doctor', 'ready_for_lab', 'in_lab',
+            'ready_for_pharmacy', 'in_pharmacy', 'ready_for_payment',
+        ];
+        if ($encounterId <= 0 || !in_array($state, $clinicalStates, true)) {
+            return null;
+        }
+
+        if (
+            !\OpenEMR\Common\Acl\AclMain::aclCheckCore('new_clinic', 'new_chart_depth_finance_summary')
+            && !\OpenEMR\Common\Acl\AclMain::aclCheckCore('new_clinic', 'new_chart_depth_finance')
+        ) {
+            return null;
+        }
+
+        try {
+            $summary = (new PaymentHistoryService())->getVisitChargesSummary($pid, $encounterId);
+        } catch (\RuntimeException) {
+            return null;
+        }
+
+        return 'Visit charges: '
+            . (string) ($summary['currency_symbol'] ?? '')
+            . number_format((float) ($summary['charges_amount'] ?? 0), 2);
+    }
+
     public function preview(int $pid, int $actorUserId, string $context = 'default'): PatientPreviewDto
     {
         $payload = $this->previewPayload($pid, $actorUserId, $context);
@@ -213,6 +253,11 @@ class PatientContextService
             $overview = $this->activityFeed->getOverviewBlocks($pid, true);
             $payload['action_required'] = $overview['action_required'];
             $payload['activity_feed'] = $overview['activity_feed'];
+
+            $chargesLabel = $this->buildVisitChargesChip($pid, $activeVisit);
+            if ($chargesLabel !== null && is_array($payload['active_visit'])) {
+                $payload['active_visit']['visit_charges_label'] = $chargesLabel;
+            }
         }
 
         $payload['appointment_today'] = $this->appointmentToday->chipForPatient($pid, $facilityId);

@@ -348,6 +348,13 @@ class ClinicalDocCatalogService
             return 'consult';
         }
 
+        // Existing legacy consult notes stay on the Consult lens even when the
+        // native engine filters the legacy primary out of the catalog defs.
+        $legacyPrimary = strtolower(trim((string) ($this->getConfig()->get('consult_note_formdir', 'soap', $facilityId) ?? 'soap')));
+        if ($legacyPrimary !== '' && $formdir === $legacyPrimary) {
+            return 'consult';
+        }
+
         foreach ($this->bundleLensIds($facilityId) as $lensId) {
             foreach ($this->lensDefinitions($lensId, $facilityId) as $def) {
                 if (strcasecmp($def['formdir'], $formdir) === 0) {

@@ -166,7 +166,7 @@ class EncounterNoteServiceTest extends TestCase
             __DIR__ . '/../../../../../interface/modules/custom_modules/oe-module-new-clinic/src/Services/EncounterNoteService.php'
         );
 
-        $this->assertStringContainsString("assertLensAccess('consult')", $source);
+        $this->assertStringContainsString('assertConsultNoteAccess()', $source);
         $this->assertStringContainsString('assertEncounterNoteAccess($facilityId)', $source);
     }
 

@@ -85,12 +85,22 @@ export interface ReceiptReprintPayload {
 }
 
 export interface ReferralRow {
+  transaction_id?: number;
   label?: string;
   author?: string;
   status?: string;
+  /** M11-F03 meta status key: draft | printed | given | result_received */
+  status_key?: string | null;
+  result_document_id?: number | null;
   occurred_at?: string;
   print_url?: string;
   edit_url?: string;
+}
+
+export interface ReferralSaveResult {
+  transaction_id: number;
+  status: string;
+  print_url?: string;
 }
 
 export interface ReferralsListData {

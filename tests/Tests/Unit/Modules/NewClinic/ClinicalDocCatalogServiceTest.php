@@ -14,10 +14,24 @@ require_once __DIR__ . '/ModuleAutoload.php';
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocAccessService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocCatalogService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
+use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 use PHPUnit\Framework\TestCase;
 
 class ClinicalDocCatalogServiceTest extends TestCase
 {
+    /**
+     * Pin facility resolution to the test's facility 0 config rows.
+     */
+    private function facilityZeroScope(): VisitScopeService
+    {
+        return new class extends VisitScopeService {
+            public function resolveDeskFacilityId(?int $requestedFacilityId = null): int
+            {
+                return 0;
+            }
+        };
+    }
+
     public function testResolveSourceLensForSoapIsConsult(): void
     {
         $access = new ClinicalDocAccessService(
@@ -61,7 +75,11 @@ class ClinicalDocCatalogServiceTest extends TestCase
                 aclChecker: static fn (string $section, string $aco): bool =>
                     $section === 'new_clinic' && $aco === 'new_doctor',
             );
-            $catalog = new ClinicalDocCatalogService(access: $access, config: $config);
+            $catalog = new ClinicalDocCatalogService(
+                access: $access,
+                config: $config,
+                visitScope: $this->facilityZeroScope(),
+            );
 
             $this->assertSame(ClinicalDocCatalogService::DEFAULT_BUNDLE_KEY, $catalog->resolveBundleKey(0));
             $this->assertSame('consult', $catalog->resolveSourceLensForFormdir('soap', 0));
@@ -81,7 +99,11 @@ class ClinicalDocCatalogServiceTest extends TestCase
                 aclChecker: static fn (string $section, string $aco): bool =>
                     $section === 'new_clinic' && $aco === 'new_doctor',
             );
-            $catalog = new ClinicalDocCatalogService(access: $access, config: $config);
+            $catalog = new ClinicalDocCatalogService(
+                access: $access,
+                config: $config,
+                visitScope: $this->facilityZeroScope(),
+            );
 
             $this->assertSame(
                 ClinicalDocCatalogService::REFERRAL_HOSPITAL_BUNDLE_KEY,

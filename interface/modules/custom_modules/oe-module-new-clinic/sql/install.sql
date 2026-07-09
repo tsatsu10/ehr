@@ -1123,3 +1123,23 @@ UPDATE `new_clinic_config`
 SET `config_value` = 'ghana_opd_v1'
 WHERE `config_key` = 'clinical_doc_bundle'
   AND `config_value` <> 'ghana_opd_v1';
+
+#IfNotTable new_referral_meta
+CREATE TABLE IF NOT EXISTS `new_referral_meta` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `transaction_id` BIGINT NOT NULL,
+    `pid` BIGINT NOT NULL,
+    `encounter_id` INT NULL,
+    `visit_id` BIGINT NULL,
+    `status` ENUM('draft','printed','given','result_received') NOT NULL DEFAULT 'draft',
+    `destination_facility` VARCHAR(255) NULL,
+    `destination_department` VARCHAR(128) NULL,
+    `result_document_id` INT NULL,
+    `created_by` BIGINT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uniq_transaction` (`transaction_id`),
+    KEY `idx_pid` (`pid`)
+) ENGINE=InnoDB COMMENT='Outbound referral status metadata over stock transactions (M11-F03, D-REF-1)';
+#EndIf

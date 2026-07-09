@@ -18,6 +18,7 @@ use OpenEMR\Modules\NewClinic\Services\ClinicAdminService;
 use OpenEMR\Modules\NewClinic\Services\FacilityUserAdminService;
 use OpenEMR\Modules\NewClinic\Services\FeeScheduleAdminService;
 use OpenEMR\Modules\NewClinic\Services\GeoService;
+use OpenEMR\Modules\NewClinic\Services\HisPackImportService;
 use OpenEMR\Modules\NewClinic\Services\ReconciliationService;
 use OpenEMR\Modules\NewClinic\Services\StaffAccessSummaryService;
 use OpenEMR\Modules\NewClinic\Services\StaffAdminService;
@@ -65,6 +66,8 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
         'admin.reconciliation.run',
         'admin.profile.apply_cash_clinic',
         'admin.forms_catalog.set_state',
+        'admin.his_pack_status',
+        'admin.his_pack_import',
         'admin.health_status',
         'admin.backup.run',
         'admin.backup.complete',
@@ -487,6 +490,18 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                         $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
                     );
                     $this->host->respond(true, 'Cash clinic profile applied', $payload);
+                    break;
+                case 'admin.his_pack_status':
+                    $this->host->respond(true, 'ok', $this->host->svc(HisPackImportService::class)->getStatus());
+                    break;
+                case 'admin.his_pack_import':
+                    if ($method !== 'POST') {
+                        $this->host->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->host->readJsonBody();
+                    $this->host->verifyCsrf($body);
+                    $result = $this->host->svc(HisPackImportService::class)->applyGhanaOpdPack($userId);
+                    $this->host->respond(true, 'ok', $result);
                     break;
                 case 'admin.forms_catalog.set_state':
                     if ($method !== 'POST') {
