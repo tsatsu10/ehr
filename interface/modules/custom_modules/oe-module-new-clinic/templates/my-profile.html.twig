@@ -10,7 +10,8 @@
     data-props="{{ {
         ajaxUrl: ajax_url,
         csrfToken: csrf_token,
-        webroot: webroot
+        webroot: webroot,
+        forcePasswordChange: force_password_change|default(false)
     }|json_encode|e('html_attr') }}"
 ></div>
 {% endblock %}

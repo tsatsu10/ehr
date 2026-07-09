@@ -15,4 +15,5 @@ use OpenEMR\Modules\NewClinic\Controllers\PageController;
 
 (new PageController())->renderForAuthenticatedUser('my-profile.html.twig', 'My profile', [
     'island_entry' => 'my-profile',
+    'force_password_change' => !empty($_GET['force_password']),
 ]);

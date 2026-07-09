@@ -1,0 +1,19 @@
+# fail2ban jail for OpenEMR (SEC-5). Install: /etc/fail2ban/jail.d/openemr.local
+#
+# Posture: on the DEFAULT tunnel-only deployment bots never reach the login page,
+# so this jail is belt-and-suspenders. On a PUBLIC-EXPOSED deployment it is
+# REQUIRED (SEC-7). Bans ~8 failures / 5 min, escalating on repeat offenders.
+[openemr-auth]
+enabled  = true
+filter   = openemr-auth
+backend  = auto
+logpath  = /var/log/apache2/error.log
+          /opt/lampp/logs/error_log
+maxretry = 8
+findtime = 300
+bantime  = 900
+# Escalate: repeat offenders get progressively longer bans.
+bantime.increment = true
+bantime.factor    = 4
+bantime.maxtime   = 1d
+action   = %(action_)s

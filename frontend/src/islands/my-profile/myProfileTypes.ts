@@ -38,4 +38,6 @@ export interface MyProfileProps {
   ajaxUrl: string;
   csrfToken: string;
   webroot?: string;
+  /** SEC-5: set when the shell redirected here to force a temporary-password change. */
+  forcePasswordChange?: boolean;
 }

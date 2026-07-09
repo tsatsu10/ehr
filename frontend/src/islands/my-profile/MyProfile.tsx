@@ -104,7 +104,7 @@ function PasswordFields({
   );
 }
 
-export function MyProfile({ ajaxUrl, csrfToken }: MyProfileProps) {
+export function MyProfile({ ajaxUrl, csrfToken, forcePasswordChange }: MyProfileProps) {
   const [profile, setProfile] = useState<MyProfileData | null>(null);
   const [form, setForm] = useState({ fname: '', lname: '', mname: '', email: '' });
   const [loading, setLoading] = useState(true);
@@ -204,6 +204,11 @@ export function MyProfile({ ajaxUrl, csrfToken }: MyProfileProps) {
 
   return (
     <div className="nc-my-profile space-y-4">
+      {forcePasswordChange && (
+        <div className="nc-my-profile-message nc-my-profile-message--error" role="alert">
+          You’re using a temporary password. Set a new password below before you can open the clinic desks.
+        </div>
+      )}
       <header className={`nc-my-profile-hero ${accentClass}`}>
         <span className="nc-my-profile-avatar" aria-hidden="true">
           {profile.initials}

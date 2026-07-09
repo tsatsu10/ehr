@@ -1143,3 +1143,12 @@ CREATE TABLE IF NOT EXISTS `new_referral_meta` (
     KEY `idx_pid` (`pid`)
 ) ENGINE=InnoDB COMMENT='Outbound referral status metadata over stock transactions (M11-F03, D-REF-1)';
 #EndIf
+
+#IfNotTable new_password_reset_required
+CREATE TABLE IF NOT EXISTS `new_password_reset_required` (
+    `user_id` BIGINT NOT NULL,
+    `created_by` BIGINT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`user_id`)
+) ENGINE=InnoDB COMMENT='SEC-5: staff who must change a temporary password at next login';
+#EndIf

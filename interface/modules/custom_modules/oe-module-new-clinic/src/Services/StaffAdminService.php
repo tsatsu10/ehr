@@ -119,20 +119,19 @@ class StaffAdminService
     {
         $this->assertCanManageStaff();
 
-        $username = trim((string) ($input['username'] ?? ''));
+        $v = new InputValidator();
+        $username = $v->username('username', $input['username'] ?? '');
         $password = (string) ($input['password'] ?? '');
-        $fname = trim((string) ($input['fname'] ?? ''));
-        $lname = trim((string) ($input['lname'] ?? ''));
+        $fname = $v->name('fname', $input['fname'] ?? '', true);
+        $lname = $v->name('lname', $input['lname'] ?? '', true);
         $templateId = trim((string) ($input['template_id'] ?? ''));
         $isLead = !empty($input['is_lead']);
         $promoteReason = trim((string) ($input['promote_reason'] ?? ''));
 
-        if ($username === '' || $fname === '' || $lname === '') {
-            throw new \InvalidArgumentException('Username, first name, and last name are required');
+        if (strlen($password) < 8 || strlen($password) > 72) {
+            $v->addError('password', 'Password must be 8–72 characters');
         }
-        if (strlen($password) < 8) {
-            throw new \InvalidArgumentException('Password must be at least 8 characters');
-        }
+        $v->throwIfInvalid();
 
         $template = ClinicRolesService::getTemplate($templateId);
         if ($template === null) {
@@ -244,19 +243,17 @@ class StaffAdminService
             throw new \RuntimeException('Not authorized to modify this user', 403);
         }
 
-        $fname = trim((string) ($input['fname'] ?? $user['fname'] ?? ''));
-        $lname = trim((string) ($input['lname'] ?? $user['lname'] ?? ''));
-        $mname = trim((string) ($input['mname'] ?? $user['mname'] ?? ''));
+        $v = new InputValidator();
+        $fname = $v->name('fname', $input['fname'] ?? $user['fname'] ?? '', true);
+        $lname = $v->name('lname', $input['lname'] ?? $user['lname'] ?? '', true);
+        $mname = $v->name('mname', $input['mname'] ?? $user['mname'] ?? '');
         $active = array_key_exists('active', $input) ? !empty($input['active']) : ((int) ($user['active'] ?? 0) === 1);
         $facilityId = (int) ($input['facility_id'] ?? 0);
-        $email = trim((string) ($input['email'] ?? ''));
+        $email = $v->email('email', $input['email'] ?? '');
+        $v->throwIfInvalid();
         $groups = is_array($input['groups'] ?? null)
             ? array_values(array_filter(array_map('strval', $input['groups'])))
             : (AclExtended::aclGetGroupTitles($username) ?: []);
-
-        if ($fname === '' || $lname === '') {
-            throw new \InvalidArgumentException('First and last name are required');
-        }
 
         if (!$active && $this->isLastClinicAdmin($username)) {
             throw new \InvalidArgumentException('Cannot deactivate the last clinic admin');
@@ -282,7 +279,13 @@ class StaffAdminService
         return $this->getUserDetail($userId);
     }
 
-    public function resetPassword(int $targetUserId, string $adminPassword, string $newPassword, int $actorUserId): void
+    public function resetPassword(
+        int $targetUserId,
+        string $adminPassword,
+        string $newPassword,
+        int $actorUserId,
+        bool $requireChangeAtNextLogin = false
+    ): void
     {
         $this->assertCanManageStaff();
 
@@ -311,11 +314,128 @@ class StaffAdminService
         $newPass = $newPassword;
         $success = $authUtils->updatePassword($actorUserId, $targetUserId, $adminPass, $newPass);
         if (!$success) {
-            $message = trim((string) $authUtils->getErrorMessage());
-            throw new \InvalidArgumentException($message !== '' ? $message : 'Password reset failed');
+            // Generic on purpose — do not reveal which check failed (auth-adjacent).
+            throw new \InvalidArgumentException(
+                'Password reset failed. Check your password and the new password requirements.'
+            );
+        }
+
+        if ($requireChangeAtNextLogin) {
+            self::requirePasswordChange($targetUserId, $actorUserId);
+            $this->auditStaffEvent('admin_hub.staff_temp_password', $actorUserId, $username, '');
+        } else {
+            self::clearPasswordChangeRequirement($targetUserId);
         }
 
         $this->auditStaffEvent('admin_hub.staff_password_reset', $actorUserId, $username, '');
+    }
+
+    /**
+     * SEC-5: flag a staff account to change its (temporary) password before it
+     * can use the New Clinic desks again. Enforced at the module shell.
+     */
+    public static function requirePasswordChange(int $userId, ?int $actorUserId = null): void
+    {
+        QueryUtils::sqlStatementThrowException(
+            'INSERT INTO new_password_reset_required (user_id, created_by) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE created_by = VALUES(created_by), created_at = NOW()',
+            [$userId, $actorUserId]
+        );
+    }
+
+    public static function clearPasswordChangeRequirement(int $userId): void
+    {
+        QueryUtils::sqlStatementThrowException(
+            'DELETE FROM new_password_reset_required WHERE user_id = ?',
+            [$userId]
+        );
+    }
+
+    public static function passwordChangeRequired(int $userId): bool
+    {
+        if ($userId <= 0) {
+            return false;
+        }
+        $row = QueryUtils::querySingleRow(
+            'SELECT user_id FROM new_password_reset_required WHERE user_id = ?',
+            [$userId]
+        );
+
+        return !empty($row);
+    }
+
+    /**
+     * Accounts currently blocked by core's failed-login counter
+     * (users_secure.login_fail_counter vs password_max_failed_logins, within
+     * the time_reset window). Locked staff cannot log in until the window
+     * elapses or an admin unlocks them here.
+     *
+     * @return array<string, mixed>
+     */
+    public function listLockedAccounts(): array
+    {
+        $this->assertCanManageStaff();
+
+        $maxFails = (int) ($GLOBALS['password_max_failed_logins'] ?? 0);
+        $windowSeconds = (int) ($GLOBALS['time_reset_password_max_failed_logins'] ?? 0);
+        if ($maxFails <= 0) {
+            return ['enabled' => false, 'items' => [], 'max_failed_logins' => 0, 'window_seconds' => $windowSeconds];
+        }
+
+        $sql = "SELECT u.id, u.username, u.fname, u.lname, us.login_fail_counter,
+                       TIMESTAMPDIFF(SECOND, us.last_login_fail, NOW()) AS seconds_since_fail
+                FROM users_secure us
+                INNER JOIN users u ON BINARY u.username = us.username
+                WHERE us.login_fail_counter >= ?";
+        $bind = [$maxFails];
+        if ($windowSeconds > 0) {
+            $sql .= ' AND TIMESTAMPDIFF(SECOND, us.last_login_fail, NOW()) <= ?';
+            $bind[] = $windowSeconds;
+        }
+        $sql .= ' ORDER BY us.last_login_fail DESC';
+
+        $items = [];
+        foreach (QueryUtils::fetchRecords($sql, $bind) ?: [] as $row) {
+            $secondsSince = (int) ($row['seconds_since_fail'] ?? 0);
+            $items[] = [
+                'user_id' => (int) $row['id'],
+                'username' => (string) $row['username'],
+                'display_name' => trim((string) ($row['fname'] ?? '') . ' ' . (string) ($row['lname'] ?? '')),
+                'fail_counter' => (int) ($row['login_fail_counter'] ?? 0),
+                'seconds_since_fail' => $secondsSince,
+                'auto_unlock_in_seconds' => $windowSeconds > 0 ? max(0, $windowSeconds - $secondsSince) : null,
+            ];
+        }
+
+        return [
+            'enabled' => true,
+            'items' => $items,
+            'max_failed_logins' => $maxFails,
+            'window_seconds' => $windowSeconds,
+        ];
+    }
+
+    /**
+     * Admin unlock: clear core's per-user failed-login counter. Audited; no
+     * email to the user (staff accounts are admin-managed).
+     */
+    public function unlockAccount(int $targetUserId, int $actorUserId): array
+    {
+        $this->assertCanManageStaff();
+
+        $user = QueryUtils::querySingleRow(
+            'SELECT id, username FROM users WHERE id = ?',
+            [$targetUserId]
+        );
+        if (empty($user) || (string) ($user['username'] ?? '') === '') {
+            throw new \InvalidArgumentException('User not found');
+        }
+
+        $username = (string) $user['username'];
+        AuthUtils::resetLoginFailedCounter($username);
+        $this->auditStaffEvent('admin_hub.staff_unlocked', $actorUserId, $username, '');
+
+        return $this->listLockedAccounts();
     }
 
     public function deactivateUser(int $userId, int $actorUserId): void

@@ -31,6 +31,7 @@ export function PasswordResetPanel({
   const [adminPassword, setAdminPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [requireChange, setRequireChange] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,9 +88,14 @@ export function PasswordResetPanel({
           user_id: userId,
           admin_password: adminPassword,
           new_password: newPassword,
+          require_change: requireChange,
         },
       });
-      setMessage(`Password updated for ${selected?.username ?? 'user'}`);
+      setMessage(
+        requireChange
+          ? `Temporary password set for ${selected?.username ?? 'user'} — they must change it at next login`
+          : `Password updated for ${selected?.username ?? 'user'}`,
+      );
       setAdminPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -166,6 +172,22 @@ export function PasswordResetPanel({
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
           </div>
+
+          <label className="flex items-start gap-2 text-sm" htmlFor="reset-require-change">
+            <input
+              id="reset-require-change"
+              type="checkbox"
+              className="mt-1"
+              checked={requireChange}
+              onChange={(e) => setRequireChange(e.target.checked)}
+            />
+            <span>
+              Require the staff member to change this password at their next login
+              <span className="block text-[var(--oe-nc-text-muted)]">
+                Recommended when you set a temporary password so you don’t know their long-term one.
+              </span>
+            </span>
+          </label>
 
           {error && <p className="text-sm text-[var(--color-oe-danger,#b91c1c)]">{error}</p>}
           {message && <p className="text-sm text-[var(--color-oe-cta,#047857)]">{message}</p>}

@@ -105,14 +105,12 @@ class MyProfileService
         }
 
         $username = (string) ($user['username'] ?? '');
-        $fname = trim((string) ($input['fname'] ?? $user['fname'] ?? ''));
-        $lname = trim((string) ($input['lname'] ?? $user['lname'] ?? ''));
-        $mname = trim((string) ($input['mname'] ?? $user['mname'] ?? ''));
-        $email = trim((string) ($input['email'] ?? $user['email'] ?? ''));
-
-        if ($fname === '' || $lname === '') {
-            throw new \InvalidArgumentException('First and last name are required');
-        }
+        $v = new InputValidator();
+        $fname = $v->name('fname', $input['fname'] ?? $user['fname'] ?? '', true);
+        $lname = $v->name('lname', $input['lname'] ?? $user['lname'] ?? '', true);
+        $mname = $v->name('mname', $input['mname'] ?? $user['mname'] ?? '');
+        $email = $v->email('email', $input['email'] ?? $user['email'] ?? '');
+        $v->throwIfInvalid();
 
         sqlStatement(
             'UPDATE users SET fname = ?, lname = ?, mname = ?, email = ? WHERE id = ?',
@@ -159,9 +157,15 @@ class MyProfileService
         $authUtils = new AuthUtils();
         $success = $authUtils->updatePassword($userId, $userId, $currentPassword, $newPassword);
         if (!$success) {
-            $message = trim((string) $authUtils->getErrorMessage());
-            throw new \InvalidArgumentException($message !== '' ? $message : 'Password change failed');
+            // Generic on purpose — do not reveal which check failed (auth-adjacent).
+            throw new \InvalidArgumentException(
+                'Password change failed. Check your current password and the new password requirements.'
+            );
         }
+
+        // SEC-5: a self-service change satisfies any admin-set temporary-password
+        // requirement, so the module shell stops forcing the change screen.
+        StaffAdminService::clearPasswordChangeRequirement($userId);
 
         EventAuditLogger::instance()->newEvent(
             'admin',

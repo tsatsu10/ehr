@@ -1275,12 +1275,64 @@ class AuthUtils
             ) {
                 // the last login fail was longer than the timeout required to reset the failed logins, so will set the login_fail_counter to 1 (ie. reset the counter to 0 and add the 1 for the most recent fail)
                 privStatement("UPDATE `users_secure` SET `total_login_fail_counter` = total_login_fail_counter+1, `login_fail_counter` = 1, `last_login_fail` = NOW(), `auto_block_emailed` = 0 WHERE BINARY `username` = ?", [$user]);
+                $this->newClinicProgressiveFailureDelay(1);
                 return;
             }
         }
 
         privStatement("UPDATE `users_secure` SET `total_login_fail_counter` = total_login_fail_counter+1, `login_fail_counter` = login_fail_counter+1, `last_login_fail` = NOW() WHERE BINARY `username` = ?", [$user]);
+        $failCount = privQuery("SELECT `login_fail_counter` FROM `users_secure` WHERE BINARY `username` = ?", [$user]);
+        $this->newClinicProgressiveFailureDelay((int) ($failCount['login_fail_counter'] ?? 1));
     }
+
+    // ============================= NC-FORK-PATCH =============================
+    // NEW CLINIC FORK PATCH — small flat delay on failed logins.
+    // Upstream OpenEMR applies NO delay on failure (only a constant-cost dummy
+    // hash), so an attacker can burn the whole password_max_failed_logins budget
+    // in under a second. We add a FLAT 2s speed bump (SEC-5).
+    //
+    // Deliberately NOT progressive (was 2^n, capped 30s): on a publicly exposed
+    // VPS a login flood of long in-PHP sleeps holds Apache workers open and
+    // becomes a self-inflicted DoS. The real brute-force defense is at the
+    // network layer — tunnel-only by default (bots never see the login page),
+    // plus fail2ban + web-server rate limiting when publicly exposed (see
+    // scripts/deploy/fail2ban/ and the SEC-5 runbook). This flat cap is only a
+    // courtesy speed bump, capped so a flood cannot exhaust workers.
+    //
+    // DO NOT DROP ON UPSTREAM REBASE: guarded by
+    // tests/Tests/Unit/Modules/NewClinic/LoginHardeningTest.php, documented in
+    // interface/modules/custom_modules/oe-module-new-clinic/scripts/
+    // pilot-enable-login-hardening.php.
+    // =========================================================================
+
+    /** Hard ceiling on the in-PHP failure delay (SEC-5: no self-DoS). */
+    public const NC_MAX_FAILURE_DELAY_SECONDS = 2;
+
+    /**
+     * NC-FORK-PATCH — flat delay in whole seconds after a failed login,
+     * capped at NC_MAX_FAILURE_DELAY_SECONDS regardless of the fail count.
+     */
+    public static function newClinicFailureDelaySeconds(int $failCount): int
+    {
+        if ($failCount < 1) {
+            return 0;
+        }
+
+        return self::NC_MAX_FAILURE_DELAY_SECONDS;
+    }
+
+    /**
+     * NC-FORK-PATCH — apply the delay (separate wrapper so unit tests can
+     * exercise the formula without sleeping).
+     */
+    private function newClinicProgressiveFailureDelay(int $failCount): void
+    {
+        $seconds = self::newClinicFailureDelaySeconds($failCount);
+        if ($seconds > 0) {
+            sleep($seconds);
+        }
+    }
+    // =========================== end NC-FORK-PATCH ===========================
 
     /**
      * @param string $ipString

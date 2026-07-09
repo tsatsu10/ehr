@@ -25,6 +25,7 @@ use OpenEMR\Modules\NewClinic\Services\PersonalizedDeskLabelService;
 use OpenEMR\Modules\NewClinic\Services\SessionRoleService;
 use OpenEMR\Modules\NewClinic\Services\ShellService;
 use OpenEMR\Modules\NewClinic\Services\ViteManifestService;
+use OpenEMR\Modules\NewClinic\Services\StaffAdminService;
 use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 
 class PageController
@@ -94,6 +95,22 @@ class PageController
      */
     private function emitPage(string $template, string $title, string $shellAco, array $context): void
     {
+        // SEC-5: a staff member given a temporary password must change it before
+        // reaching any desk. The my-profile page is exempt (it hosts the change
+        // form); once changed, MyProfileService clears the requirement.
+        $islandEntry = is_string($context['island_entry'] ?? null) ? $context['island_entry'] : '';
+        if (
+            !in_array($islandEntry, ['my-profile', 'role-picker'], true)
+            && StaffAdminService::passwordChangeRequired((int) ($_SESSION['authUserID'] ?? 0))
+        ) {
+            $webroot = $GLOBALS['webroot'] ?? '';
+            header(
+                'Location: ' . $webroot
+                . '/interface/modules/custom_modules/oe-module-new-clinic/public/my-profile.php?force_password=1'
+            );
+            exit;
+        }
+
         ob_start();
         Header::setupHeader(['common']);
         $headerHtml = ob_get_clean();

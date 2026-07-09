@@ -52,6 +52,8 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
         'admin.staff.get',
         'admin.staff.update',
         'admin.staff.reset_password',
+        'admin.staff.locked_list',
+        'admin.staff.unlock',
         'admin.acl.users',
         'admin.acl.membership',
         'admin.acl.membership_add',
@@ -355,9 +357,29 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                         $targetUserId,
                         (string) ($body['admin_password'] ?? ''),
                         (string) ($body['new_password'] ?? ''),
-                        $userId
+                        $userId,
+                        !empty($body['require_change'])
                     );
                     $this->host->respond(true, 'Password reset');
+                    break;
+                case 'admin.staff.locked_list':
+                    $this->host->respond(true, 'ok', $this->host->svc(StaffAdminService::class)->listLockedAccounts());
+                    break;
+                case 'admin.staff.unlock':
+                    if ($method !== 'POST') {
+                        $this->host->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->host->readJsonBody();
+                    $this->host->verifyCsrf($body);
+                    $targetUserId = (int) ($body['user_id'] ?? 0);
+                    if ($targetUserId <= 0) {
+                        $this->host->respond(false, 'user_id required', [], 400);
+                    }
+                    $this->host->respond(
+                        true,
+                        'Account unlocked',
+                        $this->host->svc(StaffAdminService::class)->unlockAccount($targetUserId, $userId)
+                    );
                     break;
                 case 'admin.acl.users':
                     $this->host->respond(true, 'ok', $this->host->svc(AclAdminService::class)->listUsers());
