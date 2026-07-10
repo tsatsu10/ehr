@@ -17,18 +17,13 @@ namespace OpenEMR\Modules\NewClinic\Controllers\Rest;
 
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Http\HttpRestRequest;
+use OpenEMR\Modules\NewClinic\Services\AjaxActionPolicy;
 use OpenEMR\Modules\NewClinic\Services\VisitQueueService;
 use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 final class NewClinicVisitsRestController
 {
-    /** Any one of these New Clinic ACOs may read the queue (mirrors AjaxController::requireClinicDeskAcl). */
-    private const READ_ACOS = [
-        'new_reception', 'new_nurse', 'new_doctor', 'new_lab',
-        'new_pharmacy', 'new_cashier', 'new_admin', 'reports',
-    ];
-
     public function __construct(
         private readonly VisitQueueService $queueService = new VisitQueueService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
@@ -68,7 +63,7 @@ final class NewClinicVisitsRestController
     private function assertReadAcl(HttpRestRequest $request): void
     {
         $user = $request->getSession()->get('authUser');
-        foreach (self::READ_ACOS as $aco) {
+        foreach (AjaxActionPolicy::DESK_ACL_ANY as $aco) {
             if (AclMain::aclCheckCore('new_clinic', $aco, $user)) {
                 return;
             }

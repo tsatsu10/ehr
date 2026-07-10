@@ -133,8 +133,14 @@ class AjaxActionPolicy
         'reports.scheduling' => 'reports',
     ];
 
-    /** @var array<int, string> */
-    private const DESK_ACL_ANY = [
+    /**
+     * Any New Clinic desk role (all clinic roles + reports). Canonical shared list —
+     * reference this instead of re-declaring it; also used by AjaxController::requireClinicDeskAcl(),
+     * PageController::resolveShellAcoForNotesUser(), and NewClinicVisitsRestController::assertReadAcl().
+     *
+     * @var array<int, string>
+     */
+    public const DESK_ACL_ANY = [
         'new_reception', 'new_nurse', 'new_doctor', 'new_lab',
         'new_pharmacy', 'new_cashier', 'new_admin', 'reports',
     ];
