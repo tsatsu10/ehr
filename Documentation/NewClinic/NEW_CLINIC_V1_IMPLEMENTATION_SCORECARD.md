@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Last audited** | 2026-07-09 |
+| **Last audited** | 2026-07-10 |
 | **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260709batch7` |
 | **Maintainer** | Engineering lead updates after each sprint; Product owns pilot sign-off |
 | **How to update** | Change `%` and `Status` cells; bump **Last audited**; sync PRD §5.6 row if shell status changes |
@@ -38,7 +38,7 @@
 
 | ID | Module | Shell | Feature % | Pilot-ready | Owner | Status | Top gaps |
 |----|--------|-------|-----------|-------------|-------|--------|----------|
-| M0 | Core (queue, FSM, ACL, install) | Done | **95** | Yes | Eng | Done | M0-F07 REST queue API; M0-F18 advisory routing |
+| M0 | Core (queue, FSM, ACL, install) | Done | **97** | Yes | Eng | Done | M0-F18 advisory routing (V1.1-RTb — see that slice) |
 | M1 | Front Desk (M1a–M1d) | Done | **100** | Yes | Eng | Done | M1a-F11 P95 benchmark at pilot scale (geo seed ships via `GeoService` JSON) |
 | M2 | Visit Board | Done | **92** | Yes | Eng | Done | M2-F11 cancelled collapsible; wall profile privacy hardening |
 | M3 | Triage | Done | **95** | Yes | Eng | Done | — |
@@ -61,7 +61,7 @@
 | S1 | Scheduling & Flow | Done | **85** | Post-pilot | Eng | Partial | S-P12 lane prefs; some calendar edge cases |
 | T1 | Theme & shell | Done | **90** | Yes | Eng | Done | Twig shell + React islands |
 | MRD | Patient chart (B7) | Done | **92** | Yes | Eng | Done | §17 eng-closed (spec v0.2.37 incl. `hide_dashboard_cards`); pilot-scale perf + trainer drills |
-| T2 | Globals profile | Partial | **40** | Yes | Eng | Stub | Installer preset doc; not full automation |
+| T2 | Globals profile | Partial | **75** | Yes | Eng | Partial | Doc + automation script shipped ([T2 profile](./new/NEW_CLINIC_T2_GLOBALS_PROFILE.md), `pilot-enable-clinic-globals-profile.php`); `gbl_time_zone` deliberately manual (site-specific) |
 
 **§5.6 mean feature % (all modules):** **87**  
 **Pilot-ready modules only (12):** **93**
@@ -75,7 +75,7 @@
 | **V1.1-ANC** | `enable_ancillary_services` | **88** | Eng | Partial | Lab-direct + pharmacy walk-in shipped; `v11-anc-smoke` green |
 | **V1.1-RTa** | `enable_doctor_roster` | **90** | Eng | Done | `DoctorRosterBar`, `new_doctor_availability` |
 | **V1.1-RTb** | `enable_advisory_routing` | **85** | Eng | Done | `VisitRoutingService`, queue chip, override modal |
-| **V1.1-OPS** | per-feature §23 | **30** | Eng | Partial | Faster poll, surname warning, MoMo label scattered |
+| **V1.1-OPS** | per-feature §23 | **90** | Eng | Done | Faster poll (`enable_faster_queue_interrupts`, M0-F34 visibility refresh), surname warning, MoMo label all shipped and individually toggleable (Admin Hub Queue tab, `adminFieldDefs.ts`); `pilot-enable-v11-ops.php` bundles all V1.1-OPS flags for pilot/E2E — no dedicated one-click Admin Hub bundle action, but not a functional gap |
 | **V1.1-CDa** | `enable_chart_depth_finance` | **85** | Eng | Done | payments island; menu cutover |
 | **V1.1-CDb** | `enable_chart_depth_referral` | **92** | Eng | Done | wizard + D-REF-8 print confirm, D-REF-9 guard, D-REF-12 read-only, Referral issued chip, Visits-row link (spec v0.1.3) |
 | **V1.1-CDc** | `enable_chart_depth_export` | **80** | Eng | Done | export presets |
@@ -147,11 +147,20 @@ Prioritized from lowest module/slice %.
 | P1 | — | V1.2 | Doctor ready notify E2E (test 35) | 100 | Done |
 | P1 | — | V1.2-LIS | Lab LIS / DORN integration | 0 | Eng |
 | P1 | — | V1.1-ANC | §21.1i Product normative sign-off | 88 | Product |
-| P1 | — | V1.1-OPS | Bundle MoMo label, faster poll, surname warn | 30 | Eng |
+| — | — | V1.1-OPS | MoMo label, faster poll, surname warn | 90 | Done |
 | P1 | M10 | M10 | Patient Registry product sign-off | 88 | Product |
-| P2 | M0-F07 | M0 | REST `GET /api/new/visits` | 0 | Eng |
-| P2 | T2 | Platform | Globals installer profile | 40 | Eng |
+| — | M0-F07 | M0 | REST `GET /api/new/visits` | 100 | Done |
+| P2 | T2 | Platform | Globals installer profile | 75 | Eng |
 | P2 | §9-B | UI | shadcn Phase B component swap | 100 | Done |
+
+**2026-07-10 notes:** V1.1-OPS was mis-scored at 30% — MoMo label, faster poll, and surname
+warning were all already shipped behind flags (`enable_momo_payment`,
+`enable_faster_queue_interrupts`, `enable_similar_surname_queue_warning`), individually
+toggleable in Admin Hub → Queue tab. Residual gap is a one-click bundle toggle vs. flipping
+three switches — not a functional gap. M0-F07 shipped as `NewClinicVisitsRestController`
+(`GET /api/new/visits?date=&state=&facility_id=`, route registered in
+`apis/routes/_rest_routes_standard.inc.php`). T2 shipped a doc + automation script (below);
+`gbl_time_zone` stays manual by design (site-specific, see doc).
 
 ---
 
@@ -300,6 +309,7 @@ Completed comprehensive Front Desk UX overhaul (sp182touch → sp191fuzzydup):
 | 2026-07-08 | Engineering | **AUDIT-13 doc-sync:** M8-F07/M9-F06 skip-to-payment confirmed restored (AUDIT-1); scorecard samples added; PRD §12.4 flag matrix reconciled with `install.sql`; CLAUDE.md island/cashier wording fixed; `new/` index consolidated |
 | 2026-07-08 | Engineering | **Spec-completion batches 1–5:** 19 companion specs audited against code, gaps fixed (payment-history quintet, enriched activity feed, role picker, admin menu cutover, CDb referral wizard + `new_referral_meta`, Ghana HIS pack, SDOH chips, pilot wrappers, core-ACL grants); 15 specs archived to `done/`; AUDIT-1–15 refactor roadmap complete; golden-path E2E 2/2; asset `20260708chartdepth1` |
 | 2026-07-09 | Engineering | **Spec-completion batch 6:** M1a/M16/M10 implementation-audit closure (spec v1.0.10 / v0.1.4 / v0.2.2); `reports.hub_advanced_open` distinct audit event (§16.3); `registry-signoff` + report-hub smoke re-verified green; scorecard rollup + stale cells refreshed; asset `20260709batch6` |
+| 2026-07-10 | Engineering | **P0 gap-closure batch:** M0-F07 REST `GET /api/new/visits` shipped (`NewClinicVisitsRestController`); T2 globals profile doc + `pilot-enable-clinic-globals-profile.php` shipped; V1.1-OPS rescored 30% → 90% after confirming MoMo label/faster poll/surname warning were already fully shipped (stale scorecard, not a code gap) |
 | 2026-07-09 | Engineering | **Spec-completion batch 7:** MRD/B7/Referrals closure (spec v0.2.37 / v0.1.2 / v0.1.3) — `hide_dashboard_cards` §17.6 mapping, Referral issued chip (REF-4/D34), D-REF-8 print identity confirm, D-REF-9 encounter guard, D-REF-12 read-only status gating, D-REF-3 wrapper LBTref sort, §503 Visits-row referrals link; asset `20260709batch7` |
 
 ---

@@ -590,7 +590,7 @@ See [Section 3.2](#32-non-goals-v1). Additionally: patient portal, telehealth, g
 | **S1** Scheduling & Flow | Draft v0.2.3 | **Shipped** (React) | Post-pilot | Calendar, Flow Board, Recalls when `enable_scheduling_redesign` = 1 |
 | **T1** Theme & shell | PRD §8 | **Shipped** | Yes | Twig shell + React islands |
 | **MRD** Full chart redesign | Draft v0.2.30 | **Shipped** (B7 island) | Yes | `patient-chart` island; stock chart via **V1.2-CTX** overlay bridge |
-| **T2** Globals profile | PRD §8 | Partial | Yes | Installer + M6 clinic setup |
+| **T2** Globals profile | PRD §8 | Partial | Yes | Installer + M6 clinic setup; [globals profile doc + script](./new/NEW_CLINIC_T2_GLOBALS_PROFILE.md) (`pilot-enable-clinic-globals-profile.php`) — `gbl_time_zone` stays manual (site-specific) |
 
 #### 5.6.1 Interim full chart (pilot week 1 — before B7 MRD ships)
 

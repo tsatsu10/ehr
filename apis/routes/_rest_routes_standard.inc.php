@@ -45,6 +45,8 @@ use OpenEMR\RestControllers\VersionRestController;
 use OpenEMR\Services\Search\SearchQueryConfig;
 // TODO: Remove this import when the OpenEMR\RestControllers\Config\RestConfig is no longer needed
 use OpenEMR\RestControllers\Config\RestConfig;
+// New Clinic module (M0-F07) — see interface/modules/custom_modules/oe-module-new-clinic/
+use OpenEMR\Modules\NewClinic\Controllers\Rest\NewClinicVisitsRestController;
 
 return [
     /**
@@ -7293,5 +7295,57 @@ return [
         $return = (new PrescriptionRestController())->getOne($uuid);
 
         return $return;
-    }
+    },
+
+    /**
+     * New Clinic module (M0-F07) — read-only queue polling for external
+     * dashboards/reporting tools. ACL is enforced inside the controller
+     * (any new_clinic desk role), not via RestConfig::request_authorization_check,
+     * since "new_clinic" is a module-defined ACL section, not a core one.
+     *
+     *  @OA\Get(
+     *      path="/api/new/visits",
+     *      description="Returns the New Clinic module's visit queue, optionally filtered by date and state.",
+     *      tags={"standard"},
+     *      @OA\Parameter(
+     *          name="date",
+     *          in="query",
+     *          description="Visit date (Y-m-d). Defaults to today for active-state visits.",
+     *          required=false,
+     *          @OA\Schema(
+     *              type="string"
+     *          )
+     *      ),
+     *      @OA\Parameter(
+     *          name="state",
+     *          in="query",
+     *          description="Visit FSM state, or a comma-separated list of states.",
+     *          required=false,
+     *          @OA\Schema(
+     *              type="string"
+     *          )
+     *      ),
+     *      @OA\Parameter(
+     *          name="facility_id",
+     *          in="query",
+     *          description="Facility id. Defaults to the caller's session/default service location.",
+     *          required=false,
+     *          @OA\Schema(
+     *              type="integer"
+     *          )
+     *      ),
+     *      @OA\Response(
+     *          response="200",
+     *          ref="#/components/responses/standard"
+     *      ),
+     *      @OA\Response(
+     *          response="401",
+     *          ref="#/components/responses/unauthorized"
+     *      ),
+     *      security={{"openemr_auth":{}}}
+     *  )
+     */
+    "GET /api/new/visits" => function (HttpRestRequest $request) {
+        return (new NewClinicVisitsRestController())->getAll($request);
+    },
 ];
