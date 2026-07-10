@@ -124,12 +124,13 @@ Everything below reuses the **existing** stack — no new dependencies beyond wh
 
 ### Phase GAP-A — Daily-use gaps (highest value, smallest surface)
 
-#### A1. Office Notes → new **`office-notes`** island (closes G1)
+#### A1. Office Notes → new **`office-notes`** island (closes G1) — **BUILT (2026-07-10)**
 
-- **Host:** `public/office-notes.php` (T1 shell) + card on desks' hub navigation; also embeddable in `report-hub` as a lens.
-- **UI:** single-column feed of `WidgetCard` notes with author/date, pin toggle, active/archived `SegmentedControl`; compose box reusing COM composer styling; `RowActionsMenu` for edit/archive.
-- **Backend:** `ajax.php` actions `onotes.list|save|archive` over the existing `onotes` table (no schema change).
-- **ACL:** `encounters/notes` (same as stock). **Toggle:** `enable_office_notes`.
+- **Host:** `public/office-notes.php` (T1 shell, `renderForEncounterNotesAcl`) + card on desks' hub navigation (`ShellService` + `Bootstrap` nav, gated by `enable_office_notes`); smart-vs-legacy redirect to stock `office_comments_full.php` when the flag is OFF. *report-hub lens embed deferred (not required for G1 closure).*
+- **UI:** single-column feed of `WidgetCard` notes with author/date, active/archived `SegmentedControl` (Active/Archived/All), inline compose + inline edit, `RowActionsMenu` (Edit / Archive-Restore / Delete), delete behind `ConfirmModal`. *Pin toggle dropped: the `onotes` table has no pin column and A1 mandates no schema change — the active/archived flag serves the keep-visible-vs-retire need.*
+- **Backend:** `ajax.php` actions `onotes.list|save|archive|delete` via `OfficeNotesService` (thin wrapper over core `OpenEMR\Services\ONoteService`) over the existing `onotes` table (no schema change).
+- **ACL:** core `encounters/notes` (same as stock; reachable because all clinic staff hold it via `Clinicians` group membership) — wired as new `office_notes_acl` policy type + `AjaxController::requireOfficeNotesAcl()`. **Toggle:** `enable_office_notes` (default OFF, `install.sql`).
+- **Verification:** frontend `npm run check` (lint + typecheck + 396 vitest) + `npm run build` green; backend static `verify-module.php` PASS (syntax, ctor cycles, controller imports, ajax crosscheck). Live `--bootstrap` + browser smoke pending a clean (non-nested) checkout.
 - **Effort:** S (1–2 sessions).
 
 #### A2. Documents manager → **`patient-chart` Documents tab + `doc-inbox` pane** (closes G2)

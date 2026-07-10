@@ -300,6 +300,7 @@ class Bootstrap
             ['id' => 'clinicad', 'label' => 'Clinic Setup', 'url' => $base . 'admin.php', 'acl' => $deskAclOr('new_admin')],
             ['id' => 'clinicrp', 'label' => 'Daily Reports', 'url' => $base . 'reports.php', 'acl' => $deskAclOr('reports')],
             ['id' => 'clinicmsg', 'label' => 'Messages', 'url' => $base . 'communications.php', 'acl' => ['patients', 'notes'], 'config' => 'communications_hub_enable'],
+            ['id' => 'clinicnotes', 'label' => 'Office Notes', 'url' => $base . 'office-notes.php', 'acl' => ['encounters', 'notes'], 'config' => 'enable_office_notes'],
             ['id' => 'clinicreg', 'label' => 'Patient Registry', 'url' => $base . 'patient-registry.php', 'acl' => [
                 $deskAclOr('new_registry'),
                 $deskAclOr('new_doctor'),

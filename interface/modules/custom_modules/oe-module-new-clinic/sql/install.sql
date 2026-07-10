@@ -379,6 +379,11 @@ WHERE `facility_id` = 0 AND `config_key` = 'registration_mode' AND `config_value
 UPDATE `new_completion_field_weight` SET `is_active` = 0 WHERE `field_key` IN ('city', 'state');
 #EndIf
 
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_office_notes
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_office_notes', '0');
+#EndIf
+
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_chart_depth
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_chart_depth', '0');

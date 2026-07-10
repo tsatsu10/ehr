@@ -188,6 +188,14 @@ class AjaxActionPolicy
         'communications.save_preferences',
     ];
 
+    /** @var array<int, string> Office Notes (GAP-A / A1) — core encounters/notes ACL */
+    private const OFFICE_NOTES_ACTIONS = [
+        'onotes.list',
+        'onotes.save',
+        'onotes.archive',
+        'onotes.delete',
+    ];
+
     /** @var array<int, string> */
     private const LAB_OPS_READ_ACTIONS = [
         'lab_ops.worklist',
@@ -518,6 +526,10 @@ class AjaxActionPolicy
 
         if (in_array($action, self::COMMUNICATIONS_ACTIONS, true)) {
             return ['type' => 'core_notes_acl'];
+        }
+
+        if (in_array($action, self::OFFICE_NOTES_ACTIONS, true)) {
+            return ['type' => 'office_notes_acl'];
         }
 
         if (in_array($action, self::LAB_OPS_READ_ACTIONS, true)) {

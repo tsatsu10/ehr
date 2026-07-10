@@ -1,0 +1,128 @@
+/*
+ * Office Notes island (GAP-A / A1). Non-layered BEM on --oe-nc-* tokens
+ * (Tailwind @layer utilities lose to unlayered Bootstrap 4 in the OpenEMR shell).
+ */
+
+.nc-office-notes {
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.nc-office-notes__intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.nc-office-notes__intro-lead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--oe-nc-text-muted);
+}
+
+.nc-office-notes__intro-text {
+  font-size: 0.875rem;
+}
+
+.nc-office-notes__legacy-link {
+  font-size: 0.8125rem;
+  color: var(--oe-nc-text-muted);
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+.nc-office-notes__legacy-link:hover {
+  color: var(--oe-nc-text);
+}
+
+.nc-office-notes__compose-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.nc-office-notes__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.nc-office-notes__count {
+  font-size: 0.8125rem;
+  color: var(--oe-nc-text-muted);
+}
+
+.nc-office-notes__feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.nc-office-notes__card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.nc-office-notes__card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.nc-office-notes__author {
+  font-weight: 600;
+  color: var(--oe-nc-text);
+}
+
+.nc-office-notes__date {
+  color: var(--oe-nc-text-muted);
+}
+
+.nc-office-notes__body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--oe-nc-text);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.nc-office-notes__edit {
+  display: flex;
+  flex-direction: column;
+}
+
+.nc-office-notes__pager {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.nc-office-notes__message {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+}
+
+.nc-office-notes__message--error {
+  color: var(--oe-nc-danger, #b42318);
+}
+
+@media (max-width: 480px) {
+  .nc-office-notes__intro,
+  .nc-office-notes__toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -25,6 +25,7 @@ use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\DoctorActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\LabActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\FrontDeskActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\LabOpsActionHandler;
+use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\OfficeNotesActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PatientActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PharmacyActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PharmOpsActionHandler;
@@ -229,6 +230,7 @@ class AjaxController
             new ChartDepthActionHandler($this),
             new AdminActionHandler($this),
             new ProfileActionHandler($this),
+            new OfficeNotesActionHandler($this),
             new ReportsActionHandler($this),
             new SchedulingActionHandler($this),
             new QueueBridgeActionHandler($this),
@@ -280,6 +282,7 @@ class AjaxController
             'any_acl' => $this->requireAnyAcl($desc['acls']),
             'desk_acl' => $this->requireClinicDeskAcl(),
             'core_notes_acl' => $this->requireCoreNotesAcl(),
+            'office_notes_acl' => $this->requireOfficeNotesAcl(),
             'cohort_acl' => $this->requireCohortAcl(),
             'cohort_export_acl' => $this->requireCohortExportAcl(),
             'lab_ops_read_acl' => $this->requireLabOpsReadAcl(),
@@ -346,6 +349,16 @@ class AjaxController
     private function requireCoreNotesAcl(): void
     {
         if (!AclMain::aclCheckCore('patients', 'notes')) {
+            $this->respond(false, 'Forbidden', ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requireOfficeNotesAcl(): void
+    {
+        // Office Notes are clinic-wide staff notes gated on the core encounters/notes
+        // pair (matches stock office_comments.php). Clinic staff hold it via their
+        // Clinicians group membership (see acl/seed_pilot_users.php).
+        if (!AclMain::aclCheckCore('encounters', 'notes')) {
             $this->respond(false, 'Forbidden', ['code' => 'forbidden'], 403);
         }
     }

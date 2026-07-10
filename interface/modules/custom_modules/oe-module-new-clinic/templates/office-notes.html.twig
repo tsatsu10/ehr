@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+
+{% block page_subtitle %}
+<div class="nc-page-heading-subtitle">{{ 'Clinic-wide notes for all staff'|xlt }}</div>
+{% endblock %}
+
+{% block content %}
+<div
+    data-island="office-notes"
+    data-props="{{ {
+        ajaxUrl: ajax_url,
+        csrfToken: csrf_token,
+        webroot: webroot,
+        legacyUrl: legacy_url
+    }|json_encode|e('html_attr') }}"
+></div>
+{% endblock %}
+
+{% block scripts %}
+{% include 'partials/island-assets.html.twig' %}
+{% endblock %}

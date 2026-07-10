@@ -14,8 +14,8 @@
       "_button-CnSZFKEu.js"
     ]
   },
-  "_BillOpsHub-BxnB1Q1A.js": {
-    "file": "chunks/BillOpsHub-BxnB1Q1A.js",
+  "_BillOpsHub-DwD0D4Ix.js": {
+    "file": "chunks/BillOpsHub-DwD0D4Ix.js",
     "name": "BillOpsHub",
     "imports": [
       "_button-CnSZFKEu.js",
@@ -30,7 +30,7 @@
       "_table-C82O4x-6.js",
       "_PaginationBar-DlH73hBA.js",
       "_ReprintReceiptModal-BlBbJTIS.js",
-      "_main-DeC4N96t.js"
+      "_main-vSDQv8RF.js"
     ]
   },
   "_ChartBanner-BZJXBhLq.js": {
@@ -108,12 +108,12 @@
       "_native-select-D7Lgcs2R.js"
     ]
   },
-  "_LabPanelModal-BVbr6rIn.js": {
-    "file": "chunks/LabPanelModal-BVbr6rIn.js",
+  "_LabPanelModal-CaVVAMDc.js": {
+    "file": "chunks/LabPanelModal-CaVVAMDc.js",
     "name": "LabPanelModal",
     "imports": [
       "_button-CnSZFKEu.js",
-      "_checkbox-DQByP7bO.js",
+      "_checkbox-COJtRDao.js",
       "_deskCalloutStyles-YSTUUOjX.js",
       "_dialog-BoUj-UeH.js",
       "_useModalDismiss-B0DKllo-.js",
@@ -150,8 +150,8 @@
       "_usePatientSearch-D2kA9ipO.js"
     ]
   },
-  "_PatientSearchWidget-DOEDuudR.js": {
-    "file": "chunks/PatientSearchWidget-DOEDuudR.js",
+  "_PatientSearchWidget-BxXEgd1G.js": {
+    "file": "chunks/PatientSearchWidget-BxXEgd1G.js",
     "name": "PatientSearchWidget",
     "imports": [
       "_button-CnSZFKEu.js",
@@ -163,7 +163,7 @@
       "_calendar-check-gQETvBOP.js",
       "_loader-circle-BlKGTIF3.js",
       "_calendar-days-CdYAfmDN.js",
-      "_checkbox-DQByP7bO.js",
+      "_checkbox-COJtRDao.js",
       "_clock-COCLe0_H.js",
       "_search-BnkdPJeV.js",
       "_user-plus-BgtKhYlw.js",
@@ -185,8 +185,8 @@
       "_pharmOpsPrintRx-BoyUJ76j.js"
     ]
   },
-  "_RegistrationForm-C-B4Fa18.js": {
-    "file": "chunks/RegistrationForm-C-B4Fa18.js",
+  "_RegistrationForm-De6Vk6wS.js": {
+    "file": "chunks/RegistrationForm-De6Vk6wS.js",
     "name": "RegistrationForm",
     "imports": [
       "_button-CnSZFKEu.js",
@@ -198,7 +198,7 @@
       "_circle-check-B6E2KeLA.js",
       "_loader-circle-BlKGTIF3.js",
       "_chevron-left-Dw05GU8Y.js",
-      "_checkbox-DQByP7bO.js",
+      "_checkbox-COJtRDao.js",
       "_chevron-up-gEwzfHUQ.js",
       "_chevron-right-pplSNfVA.js",
       "_clipboard-list-DsFgOkHX.js",
@@ -211,7 +211,7 @@
       "_textarea-D-8_lNwK.js",
       "_ConfirmModal-Ddfi3E5z.js",
       "_deskToast-D9GcLMy_.js",
-      "_select-DC9078o1.js",
+      "_select-CTLaKGv7.js",
       "_floating-ui.react-dom-Bay-kDb0.js"
     ]
   },
@@ -226,15 +226,15 @@
       "_formatMoney-BSsIFoKG.js"
     ]
   },
-  "_RowActionsMenu-DcIRJuOO.js": {
-    "file": "chunks/RowActionsMenu-DcIRJuOO.js",
+  "_RowActionsMenu-BTR9m9aC.js": {
+    "file": "chunks/RowActionsMenu-BTR9m9aC.js",
     "name": "RowActionsMenu",
     "imports": [
       "_button-CnSZFKEu.js",
       "_dist-BmmNRkqk.js",
       "_createLucideIcon-C1ZPqbjw.js",
-      "_checkbox-DQByP7bO.js",
       "_dialog-BoUj-UeH.js",
+      "_dist-Bl39fzrk.js",
       "_floating-ui.react-dom-Bay-kDb0.js"
     ]
   },
@@ -330,14 +330,15 @@
       "_button-CnSZFKEu.js"
     ]
   },
-  "_checkbox-DQByP7bO.js": {
-    "file": "chunks/checkbox-DQByP7bO.js",
+  "_checkbox-COJtRDao.js": {
+    "file": "chunks/checkbox-COJtRDao.js",
     "name": "checkbox",
     "imports": [
       "_button-CnSZFKEu.js",
       "_dist-BmmNRkqk.js",
       "_dist-k_AKRnzK.js",
-      "_createLucideIcon-C1ZPqbjw.js"
+      "_createLucideIcon-C1ZPqbjw.js",
+      "_dist-Bl39fzrk.js"
     ]
   },
   "_chevron-left-Dw05GU8Y.js": {
@@ -449,6 +450,14 @@
       "_button-CnSZFKEu.js",
       "_dist-BmmNRkqk.js",
       "_dist-k_AKRnzK.js"
+    ]
+  },
+  "_dist-Bl39fzrk.js": {
+    "file": "chunks/dist-Bl39fzrk.js",
+    "name": "dist",
+    "imports": [
+      "_button-CnSZFKEu.js",
+      "_dist-BmmNRkqk.js"
     ]
   },
   "_dist-BmmNRkqk.js": {
@@ -602,56 +611,17 @@
       "assets/main-B3uNSZHP.css"
     ]
   },
-  "_main-DeC4N96t.js": {
-    "file": "chunks/main-DeC4N96t.js",
-    "name": "main",
-    "imports": [
-      "_button-CnSZFKEu.js",
-      "_badge-C1Sm-FJj.js",
-      "_PatientContextBanner-CI6sYXBg.js",
-      "_checkbox-DQByP7bO.js",
-      "_deskCalloutStyles-YSTUUOjX.js",
-      "_patientBannerUtils--Wf2pVIG.js",
-      "_input-CfckuyLB.js",
-      "_label-CrlPLb1M.js",
-      "_native-select-D7Lgcs2R.js",
-      "_table-C82O4x-6.js",
-      "_formatMoney-BSsIFoKG.js"
-    ],
-    "css": [
-      "assets/main-B4EINF2r.css"
-    ]
-  },
-  "_main-DeqlW3w6.css": {
-    "file": "assets/main-DeqlW3w6.css",
-    "src": "_main-DeqlW3w6.css"
-  },
-  "_main-DioVBA1Q.css": {
-    "file": "assets/main-DioVBA1Q.css",
-    "src": "_main-DioVBA1Q.css"
-  },
-  "_main-L92Trohk.js": {
-    "file": "chunks/main-L92Trohk.js",
-    "name": "main",
-    "imports": [
-      "_button-CnSZFKEu.js",
-      "_createLucideIcon-C1ZPqbjw.js",
-      "_loader-circle-BlKGTIF3.js"
-    ],
-    "css": [
-      "assets/main-C-I2akwr.css"
-    ]
-  },
-  "_main-hBzakSQJ.js": {
-    "file": "chunks/main-hBzakSQJ.js",
+  "_main-Cm7_J7-h.js": {
+    "file": "chunks/main-Cm7_J7-h.js",
     "name": "main",
     "imports": [
       "_button-CnSZFKEu.js",
       "_usePageHeadingToolbar-Cl0Njf56.js",
       "_badge-C1Sm-FJj.js",
       "_createLucideIcon-C1ZPqbjw.js",
-      "_RowActionsMenu-DcIRJuOO.js",
-      "_checkbox-DQByP7bO.js",
+      "_RowActionsMenu-BTR9m9aC.js",
+      "_checkbox-COJtRDao.js",
+      "_sliders-horizontal-DRtmojZb.js",
       "_deskCalloutStyles-YSTUUOjX.js",
       "_CompletionScorePill-BjXlkPkg.js",
       "_input-CfckuyLB.js",
@@ -665,6 +635,45 @@
     ],
     "css": [
       "assets/main-DioVBA1Q.css"
+    ]
+  },
+  "_main-DBIiWeHZ.js": {
+    "file": "chunks/main-DBIiWeHZ.js",
+    "name": "main",
+    "imports": [
+      "_button-CnSZFKEu.js",
+      "_loader-circle-BlKGTIF3.js"
+    ],
+    "css": [
+      "assets/main-C-I2akwr.css"
+    ]
+  },
+  "_main-DeqlW3w6.css": {
+    "file": "assets/main-DeqlW3w6.css",
+    "src": "_main-DeqlW3w6.css"
+  },
+  "_main-DioVBA1Q.css": {
+    "file": "assets/main-DioVBA1Q.css",
+    "src": "_main-DioVBA1Q.css"
+  },
+  "_main-vSDQv8RF.js": {
+    "file": "chunks/main-vSDQv8RF.js",
+    "name": "main",
+    "imports": [
+      "_button-CnSZFKEu.js",
+      "_badge-C1Sm-FJj.js",
+      "_PatientContextBanner-CI6sYXBg.js",
+      "_checkbox-COJtRDao.js",
+      "_deskCalloutStyles-YSTUUOjX.js",
+      "_patientBannerUtils--Wf2pVIG.js",
+      "_input-CfckuyLB.js",
+      "_label-CrlPLb1M.js",
+      "_native-select-D7Lgcs2R.js",
+      "_table-C82O4x-6.js",
+      "_formatMoney-BSsIFoKG.js"
+    ],
+    "css": [
+      "assets/main-B4EINF2r.css"
     ]
   },
   "_message-square-YlZcSXzQ.js": {
@@ -760,22 +769,37 @@
       "_createLucideIcon-C1ZPqbjw.js"
     ]
   },
-  "_select-DC9078o1.js": {
-    "file": "chunks/select-DC9078o1.js",
+  "_select-CTLaKGv7.js": {
+    "file": "chunks/select-CTLaKGv7.js",
     "name": "select",
     "imports": [
       "_button-CnSZFKEu.js",
       "_dist-BmmNRkqk.js",
       "_dist-k_AKRnzK.js",
-      "_checkbox-DQByP7bO.js",
+      "_checkbox-COJtRDao.js",
       "_chevron-up-gEwzfHUQ.js",
       "_dialog-BoUj-UeH.js",
+      "_dist-Bl39fzrk.js",
       "_floating-ui.react-dom-Bay-kDb0.js"
+    ]
+  },
+  "_shield-BbYj6R0J.js": {
+    "file": "chunks/shield-BbYj6R0J.js",
+    "name": "shield",
+    "imports": [
+      "_createLucideIcon-C1ZPqbjw.js"
     ]
   },
   "_shield-alert-BoQCWP-b.js": {
     "file": "chunks/shield-alert-BoQCWP-b.js",
     "name": "shield-alert",
+    "imports": [
+      "_createLucideIcon-C1ZPqbjw.js"
+    ]
+  },
+  "_sliders-horizontal-DRtmojZb.js": {
+    "file": "chunks/sliders-horizontal-DRtmojZb.js",
+    "name": "sliders-horizontal",
     "imports": [
       "_createLucideIcon-C1ZPqbjw.js"
     ]
@@ -904,20 +928,21 @@
       "_badge-C1Sm-FJj.js",
       "_createLucideIcon-C1ZPqbjw.js",
       "_circle-check-B6E2KeLA.js",
-      "_RowActionsMenu-DcIRJuOO.js",
+      "_RowActionsMenu-BTR9m9aC.js",
       "_chevron-left-Dw05GU8Y.js",
       "_banknote-k8N5ucjd.js",
       "_clipboard-check-ZipPUwDR.js",
       "_calendar-days-CdYAfmDN.js",
-      "_checkbox-DQByP7bO.js",
+      "_checkbox-COJtRDao.js",
       "_download-k1az-0mq.js",
       "_heart-pulse-DagJs5db.js",
-      "_main-L92Trohk.js",
+      "_shield-BbYj6R0J.js",
       "_layout-grid-BUbk0L26.js",
       "_printer-RwYeI_Cc.js",
       "_users-CcChs-Lh.js",
       "_refresh-cw-CY_rMxVL.js",
       "_shield-alert-BoQCWP-b.js",
+      "_sliders-horizontal-DRtmojZb.js",
       "_user-plus-BgtKhYlw.js",
       "_SegmentedControl-CLmDy7pZ.js",
       "_deskCalloutStyles-YSTUUOjX.js",
@@ -931,7 +956,8 @@
       "_table-C82O4x-6.js",
       "_deskToast-D9GcLMy_.js",
       "_formatMoney-BSsIFoKG.js",
-      "_select-DC9078o1.js"
+      "_select-CTLaKGv7.js",
+      "_main-DBIiWeHZ.js"
     ]
   },
   "src/islands/bill-ops/index-correct.tsx": {
@@ -942,7 +968,7 @@
     "imports": [
       "_button-CnSZFKEu.js",
       "_WidgetCard-Cc36Jsv0.js",
-      "_main-DeC4N96t.js"
+      "_main-vSDQv8RF.js"
     ]
   },
   "src/islands/bill-ops/index.tsx": {
@@ -952,8 +978,8 @@
     "isEntry": true,
     "imports": [
       "_button-CnSZFKEu.js",
-      "_main-DeC4N96t.js",
-      "_BillOpsHub-BxnB1Q1A.js"
+      "_main-vSDQv8RF.js",
+      "_BillOpsHub-DwD0D4Ix.js"
     ]
   },
   "src/islands/cashier-desk/index.tsx": {
@@ -1005,7 +1031,7 @@
     "isEntry": true,
     "imports": [
       "_button-CnSZFKEu.js",
-      "_checkbox-DQByP7bO.js",
+      "_checkbox-COJtRDao.js",
       "_SegmentedControl-CLmDy7pZ.js",
       "_deskCalloutStyles-YSTUUOjX.js",
       "_dialog-BoUj-UeH.js",
@@ -1013,7 +1039,7 @@
       "_label-CrlPLb1M.js",
       "_ConfirmModal-Ddfi3E5z.js",
       "_table-C82O4x-6.js",
-      "_select-DC9078o1.js",
+      "_select-CTLaKGv7.js",
       "_ChartBanner-BZJXBhLq.js",
       "_WidgetCard-Cc36Jsv0.js",
       "_ReprintReceiptModal-BlBbJTIS.js"
@@ -1031,7 +1057,7 @@
       "_PatientContextBanner-CI6sYXBg.js",
       "_deskCalloutStyles-YSTUUOjX.js",
       "_dialog-BoUj-UeH.js",
-      "_LabPanelModal-BVbr6rIn.js",
+      "_LabPanelModal-CaVVAMDc.js",
       "_clinicalDocApi-5XbNQQQW.js"
     ],
     "css": [
@@ -1048,7 +1074,7 @@
       "_useInterval-gg0G04U9.js",
       "_badge-C1Sm-FJj.js",
       "_PatientContextBanner-CI6sYXBg.js",
-      "_checkbox-DQByP7bO.js",
+      "_checkbox-COJtRDao.js",
       "_deskCalloutStyles-YSTUUOjX.js",
       "_patientBannerUtils--Wf2pVIG.js",
       "_input-CfckuyLB.js",
@@ -1087,7 +1113,7 @@
       "_badge-C1Sm-FJj.js",
       "_AncillaryVisitBadges-D7sFYkSy.js",
       "_PatientContextBanner-CI6sYXBg.js",
-      "_checkbox-DQByP7bO.js",
+      "_checkbox-COJtRDao.js",
       "_chevron-right-pplSNfVA.js",
       "_external-link-Cl5JsYbp.js",
       "_file-text-BbpO64iH.js",
@@ -1114,7 +1140,7 @@
       "_PharmacyPrescriptionsTable-CIBnkQza.js",
       "_deskToast-D9GcLMy_.js",
       "_postDeskAction-BJ9jJXY-.js",
-      "_LabPanelModal-BVbr6rIn.js",
+      "_LabPanelModal-CaVVAMDc.js",
       "_clinicalDocApi-5XbNQQQW.js"
     ],
     "css": [
@@ -1136,7 +1162,7 @@
       "_user-round-Cpu5ys-N.js",
       "_chevron-left-Dw05GU8Y.js",
       "_clipboard-check-ZipPUwDR.js",
-      "_checkbox-DQByP7bO.js",
+      "_checkbox-COJtRDao.js",
       "_chevron-up-gEwzfHUQ.js",
       "_chevron-right-pplSNfVA.js",
       "_clipboard-list-DsFgOkHX.js",
@@ -1149,7 +1175,7 @@
       "_label-CrlPLb1M.js",
       "_textarea-D-8_lNwK.js",
       "_SupervisorCombobox-DPCexirr.js",
-      "_select-DC9078o1.js"
+      "_select-CTLaKGv7.js"
     ],
     "css": [
       "encounter-consult.css"
@@ -1168,12 +1194,12 @@
       "_card-DJpTpbye.js",
       "_PatientContextBanner-CI6sYXBg.js",
       "_createLucideIcon-C1ZPqbjw.js",
-      "_RegistrationForm-C-B4Fa18.js",
+      "_RegistrationForm-De6Vk6wS.js",
       "_circle-check-B6E2KeLA.js",
       "_calendar-check-gQETvBOP.js",
       "_circle-x-DCRVzDA0.js",
       "_loader-circle-BlKGTIF3.js",
-      "_PatientSearchWidget-DOEDuudR.js",
+      "_PatientSearchWidget-BxXEgd1G.js",
       "_triangle-alert-DpR-o9ng.js",
       "_user-round-Cpu5ys-N.js",
       "_chevron-left-Dw05GU8Y.js",
@@ -1195,7 +1221,7 @@
       "_textarea-D-8_lNwK.js",
       "_ConfirmModal-Ddfi3E5z.js",
       "_deskToast-D9GcLMy_.js",
-      "_select-DC9078o1.js"
+      "_select-CTLaKGv7.js"
     ],
     "css": [
       "front-desk.css"
@@ -1269,12 +1295,33 @@
       "_button-CnSZFKEu.js",
       "_badge-C1Sm-FJj.js",
       "_user-round-Cpu5ys-N.js",
-      "_main-L92Trohk.js",
+      "_shield-BbYj6R0J.js",
       "_input-CfckuyLB.js",
-      "_label-CrlPLb1M.js"
+      "_label-CrlPLb1M.js",
+      "_main-DBIiWeHZ.js"
     ],
     "css": [
       "my-profile.css"
+    ]
+  },
+  "src/islands/office-notes/index.tsx": {
+    "file": "office-notes.js",
+    "name": "office-notes",
+    "src": "src/islands/office-notes/index.tsx",
+    "isEntry": true,
+    "imports": [
+      "_button-CnSZFKEu.js",
+      "_badge-C1Sm-FJj.js",
+      "_createLucideIcon-C1ZPqbjw.js",
+      "_RowActionsMenu-BTR9m9aC.js",
+      "_SegmentedControl-CLmDy7pZ.js",
+      "_textarea-D-8_lNwK.js",
+      "_ConfirmModal-Ddfi3E5z.js",
+      "_main-DBIiWeHZ.js",
+      "_WidgetCard-Cc36Jsv0.js"
+    ],
+    "css": [
+      "office-notes.css"
     ]
   },
   "src/islands/patient-chart/index.tsx": {
@@ -1288,7 +1335,7 @@
       "_AncillaryVisitBadges-D7sFYkSy.js",
       "_card-DJpTpbye.js",
       "_createLucideIcon-C1ZPqbjw.js",
-      "_RegistrationForm-C-B4Fa18.js",
+      "_RegistrationForm-De6Vk6wS.js",
       "_circle-check-B6E2KeLA.js",
       "_loader-circle-BlKGTIF3.js",
       "_triangle-alert-DpR-o9ng.js",
@@ -1327,7 +1374,7 @@
     "isEntry": true,
     "imports": [
       "_button-CnSZFKEu.js",
-      "_main-hBzakSQJ.js"
+      "_main-Cm7_J7-h.js"
     ]
   },
   "src/islands/pharm-ops/PharmOpsDestroyDrawer.tsx": {
@@ -1493,7 +1540,7 @@
       "_badge-C1Sm-FJj.js",
       "_card-DJpTpbye.js",
       "_main-CCCkfeEa.js",
-      "_main-hBzakSQJ.js",
+      "_main-Cm7_J7-h.js",
       "_SegmentedControl-CLmDy7pZ.js",
       "_deskCalloutStyles-YSTUUOjX.js",
       "_input-CfckuyLB.js",
@@ -1503,8 +1550,8 @@
       "_DataTable-Em0akSOo.js",
       "_PaginationBar-DlH73hBA.js",
       "_main-Bub8VI_a.js",
-      "_main-DeC4N96t.js",
-      "_BillOpsHub-BxnB1Q1A.js"
+      "_main-vSDQv8RF.js",
+      "_BillOpsHub-DwD0D4Ix.js"
     ],
     "css": [
       "report-hub.css"
@@ -1554,8 +1601,8 @@
       "_badge-C1Sm-FJj.js",
       "_AncillaryVisitBadges-D7sFYkSy.js",
       "_PatientContextBanner-CI6sYXBg.js",
-      "_PatientSearchWidget-DOEDuudR.js",
-      "_checkbox-DQByP7bO.js",
+      "_PatientSearchWidget-BxXEgd1G.js",
+      "_checkbox-COJtRDao.js",
       "_chevron-right-pplSNfVA.js",
       "_stethoscope-B1cw_h4r.js",
       "_DeskQueueStatusBar-CjMQ_Sh2.js",
