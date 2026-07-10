@@ -98,6 +98,97 @@ class AuthorizationListenerTest extends TestCase
     }
 
     /**
+     * Regression test: the /oauth2/* authorization-server endpoints (registration, token, ...)
+     * are answered by OAuth2AuthorizationListener before this listener runs. Without the
+     * isOAuth2AuthorizationServerRequest() guard, BearerTokenAuthorizationStrategy's
+     * shouldProcessRequest() (which always returns true) would demand a Bearer token on the
+     * registration/token requests themselves, making it impossible to ever obtain a first token.
+     *
+     * @return void
+     * @throws Exception
+     */
+    public function testOnKernelRequestSkipsAuthorizationForAlreadyAnsweredOAuth2Request(): void
+    {
+        $kernel = $this->createMock(OEHttpKernel::class);
+        $kernel->expects($this->atLeastOnce())
+            ->method('getSystemLogger')
+            ->willReturn($this->mockLogger);
+        $kernel->expects($this->atLeastOnce())
+            ->method('getGlobalsBag')
+            ->willReturn($this->mockGlobalsBag);
+
+        // A strategy that must NOT be consulted once OAuth2AuthorizationListener has already
+        // answered an /oauth2/* request.
+        $mockStrategy = $this->createMock(IAuthorizationStrategy::class);
+        $mockStrategy->expects($this->never())->method('shouldProcessRequest');
+        $mockStrategy->expects($this->never())->method('authorizeRequest');
+        $this->authListener->addAuthorizationStrategy($mockStrategy);
+
+        $mockRestRequest = $this->createMock(HttpRestRequest::class);
+        $mockRestRequest->method('getBasePath')->willReturn('/openemr/apis/default/oauth2');
+
+        $requestEvent = $this->createMock(RequestEvent::class);
+        $requestEvent->expects($this->atLeastOnce())
+            ->method('getKernel')
+            ->willReturn($kernel);
+        $requestEvent->expects($this->atLeastOnce())
+            ->method('hasResponse')
+            ->willReturn(true);
+        $requestEvent->expects($this->atLeastOnce())
+            ->method('getRequest')
+            ->willReturn($mockRestRequest);
+
+        $this->authListener->onKernelRequest($requestEvent);
+    }
+
+    /**
+     * Guards against over-broadening the fix above into a blanket "skip auth whenever any
+     * response is already set" bypass: for a non-oauth2 path, authorization must still run
+     * even if the event already carries a response from an unrelated earlier listener.
+     *
+     * @return void
+     * @throws Exception
+     */
+    public function testOnKernelRequestStillAuthorizesNonOAuth2RequestEvenWithExistingResponse(): void
+    {
+        $kernel = $this->createMock(OEHttpKernel::class);
+        $kernel->expects($this->atLeastOnce())
+            ->method('getSystemLogger')
+            ->willReturn($this->mockLogger);
+        $kernel->expects($this->atLeastOnce())
+            ->method('getGlobalsBag')
+            ->willReturn($this->mockGlobalsBag);
+
+        $mockStrategy = $this->createMock(IAuthorizationStrategy::class);
+        // shouldProcessRequest() is consulted twice by design: once by the outer
+        // shouldProcessRequest() gate and again inside authorizeRequest() (see
+        // testOnKernelRequestProcessesSecondStrategyIfFirstIsSkipped above for the same pattern).
+        $mockStrategy->expects($this->atLeastOnce())
+            ->method('shouldProcessRequest')
+            ->willReturn(true);
+        $mockStrategy->expects($this->once())
+            ->method('authorizeRequest')
+            ->willReturn(true);
+        $this->authListener->addAuthorizationStrategy($mockStrategy);
+
+        $mockRestRequest = $this->createMock(HttpRestRequest::class);
+        $mockRestRequest->method('getBasePath')->willReturn('/openemr/apis/default');
+
+        $requestEvent = $this->createMock(RequestEvent::class);
+        $requestEvent->expects($this->atLeastOnce())
+            ->method('getKernel')
+            ->willReturn($kernel);
+        $requestEvent->expects($this->atLeastOnce())
+            ->method('hasResponse')
+            ->willReturn(true);
+        $requestEvent->expects($this->atLeastOnce())
+            ->method('getRequest')
+            ->willReturn($mockRestRequest);
+
+        $this->authListener->onKernelRequest($requestEvent);
+    }
+
+    /**
      * @return void
      * @throws Exception
      */
