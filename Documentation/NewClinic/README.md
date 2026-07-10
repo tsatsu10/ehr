@@ -54,6 +54,7 @@ Read in this order for a full picture:
 | [NEW_CLINIC_LOGIN_RECOVERY_QUICK_CARD.md](./new/NEW_CLINIC_LOGIN_RECOVERY_QUICK_CARD.md) | SEC-5 printable card: "Can't log in?" — 3 steps for staff, 3 for the admin (unlock + temporary password) |
 | [NEW_CLINIC_SEC6_DATA_AT_REST_RUNBOOK.md](./new/NEW_CLINIC_SEC6_DATA_AT_REST_RUNBOOK.md) | SEC-6 runbook: identifier-only logging, export retention/perms, display_errors off, log rotation, backup encryption + key custody |
 | [NEW_CLINIC_SEC7_TLS_NETWORK_RUNBOOK.md](./new/NEW_CLINIC_SEC7_TLS_NETWORK_RUNBOOK.md) | SEC-7 runbook: tunnel-only default + public-exposure variant, TLS/HSTS, session-cookie notes, MySQL binding, fleet healthcheck, outage additions |
+| [NEW_CLINIC_T2_GLOBALS_PROFILE.md](./new/NEW_CLINIC_T2_GLOBALS_PROFILE.md) | T2 "private cash clinic" core-globals preset: what's automated (`pilot-enable-clinic-globals-profile.php`) vs. deliberately manual per-site (`gbl_time_zone`) (v0.1.0) |
 | [VERSION_BASELINE.md](./new/VERSION_BASELINE.md) | SEC-8: the OpenEMR upstream release this fork tracks (8.0.0) — makes CVE triage mechanical |
 | [NEW_CLINIC_SEC8_EXPOSURE_MAP.md](./new/NEW_CLINIC_SEC8_EXPOSURE_MAP.md) | SEC-8: which core surfaces our deployments expose (login/session/ajax/upload/bridge YES; portal/API/FHIR NO) |
 | [NEW_CLINIC_SEC8_CVE_DRILL_RUNBOOK.md](./new/NEW_CLINIC_SEC8_CVE_DRILL_RUNBOOK.md) | SEC-8: advisory-check cadence, mechanical triage table, emergency-patch drill command sequence + a real dry-run |

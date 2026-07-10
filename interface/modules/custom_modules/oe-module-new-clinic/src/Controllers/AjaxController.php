@@ -330,11 +330,7 @@ class AjaxController
 
     private function requireClinicDeskAcl(): void
     {
-        $acos = [
-            'new_reception', 'new_nurse', 'new_doctor', 'new_lab',
-            'new_pharmacy', 'new_cashier', 'new_admin', 'reports',
-        ];
-        foreach ($acos as $aco) {
+        foreach (AjaxActionPolicy::DESK_ACL_ANY as $aco) {
             if (AclMain::aclCheckCore('new_clinic', $aco)) {
                 return;
             }
