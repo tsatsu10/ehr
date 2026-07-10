@@ -120,10 +120,32 @@ class AuthorizationListener implements EventSubscriberInterface
         }
 
         $request = $event->getRequest();
+
+        if ($event->hasResponse() && $this->isOAuth2AuthorizationServerRequest($request)) {
+            // The /oauth2/* authorization-server endpoints (registration, token, authorize,
+            // jwk, login, introspect, logout, ...) are handled and already answered by
+            // OAuth2AuthorizationListener before this listener runs. BearerTokenAuthorizationStrategy
+            // unconditionally demands a Bearer token on every request (its shouldProcessRequest()
+            // always returns true), which without this guard makes those endpoints reject
+            // themselves before a client can ever obtain its first token. Scoped to exactly the
+            // same path test OAuth2AuthorizationListener itself uses, so no other route's
+            // authorization is affected.
+            return;
+        }
+
         if ($this->shouldProcessRequest($request)) {
             // If the request should be processed, authorize it.
             $this->authorizeRequest($request);
         }
+    }
+
+    /**
+     * Mirrors OAuth2AuthorizationListener::shouldProcessRequest() — true only for requests
+     * under the /oauth2 authorization-server path space that listener owns.
+     */
+    private function isOAuth2AuthorizationServerRequest(Request $request): bool
+    {
+        return str_ends_with($request->getBasePath(), '/oauth2');
     }
 
     /**
