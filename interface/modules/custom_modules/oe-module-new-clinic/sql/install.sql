@@ -111,6 +111,16 @@ CREATE TABLE IF NOT EXISTS `new_patient_meta` (
 ) ENGINE=InnoDB COMMENT='Module-owned patient metadata';
 #EndIf
 
+#IfNotTable new_office_note_meta
+CREATE TABLE IF NOT EXISTS `new_office_note_meta` (
+    `onote_id` BIGINT NOT NULL,
+    `pinned` TINYINT(1) NOT NULL DEFAULT 0,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`onote_id`),
+    KEY `idx_pinned` (`pinned`)
+) ENGINE=InnoDB COMMENT='Module-owned pin state for core onotes (GAP-A A1)';
+#EndIf
+
 #IfNotTable new_patient_completion
 CREATE TABLE IF NOT EXISTS `new_patient_completion` (
     `pid` BIGINT NOT NULL,

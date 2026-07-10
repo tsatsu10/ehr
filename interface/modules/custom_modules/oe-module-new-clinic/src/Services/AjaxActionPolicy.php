@@ -193,6 +193,7 @@ class AjaxActionPolicy
         'onotes.list',
         'onotes.save',
         'onotes.archive',
+        'onotes.pin',
         'onotes.delete',
     ];
 

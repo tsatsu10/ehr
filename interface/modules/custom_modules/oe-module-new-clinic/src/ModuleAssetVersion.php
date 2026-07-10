@@ -13,5 +13,5 @@ namespace OpenEMR\Modules\NewClinic;
 
 class ModuleAssetVersion
 {
-    public const VERSION = '20260710officenotes';
+    public const VERSION = '20260710officenotespin';
 }

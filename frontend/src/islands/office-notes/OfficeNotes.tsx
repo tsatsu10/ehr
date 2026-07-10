@@ -8,7 +8,7 @@ import { SegmentedControl } from '@components/SegmentedControl';
 import { WidgetCard } from '@components/WidgetCard';
 import { oeFetch } from '@core/oeFetch';
 import { AdminEmptyState, AdminLoadingState } from '@islands/admin-hub/adminUi';
-import { StickyNote } from 'lucide-react';
+import { Pin, PinOff, StickyNote } from 'lucide-react';
 import type {
   OfficeNote,
   OfficeNoteFilter,
@@ -124,6 +124,19 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
         json: { id: note.id, active: !note.active },
       });
       await loadNotes(filter, offset);
+    } catch (err) {
+      setListError(err instanceof Error ? err.message : 'Could not update note');
+    }
+  };
+
+  const togglePin = async (note: OfficeNote) => {
+    try {
+      await oeFetch('onotes.pin', {
+        ...fetchOptions,
+        json: { id: note.id, pinned: !note.pinned },
+      });
+      // Reload from offset 0: (un)pinning changes global ordering.
+      await loadNotes(filter, 0);
     } catch (err) {
       setListError(err instanceof Error ? err.message : 'Could not update note');
     }
@@ -247,7 +260,10 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
         <ul className="nc-office-notes__feed">
           {notes.map((note) => (
             <li key={note.id}>
-              <WidgetCard bodyPad="pad" className="nc-office-notes__card">
+              <WidgetCard
+                bodyPad="pad"
+                className={`nc-office-notes__card${note.pinned ? ' nc-office-notes__card--pinned' : ''}`}
+              >
                 {editingId === note.id ? (
                   <div className="nc-office-notes__edit">
                     <Textarea
@@ -293,16 +309,40 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
                   <>
                     <div className="nc-office-notes__card-head">
                       <div className="nc-office-notes__card-meta">
+                        {note.pinned && (
+                          <Badge className="nc-office-notes__pinned-badge">
+                            <Pin className="h-3 w-3" aria-hidden="true" />
+                            Pinned
+                          </Badge>
+                        )}
                         <span className="nc-office-notes__author">{note.user || 'Unknown'}</span>
                         <span className="nc-office-notes__date">
                           {formatNoteDateTime(note.date)}
                         </span>
                         {!note.active && <Badge variant="neutral">Archived</Badge>}
                       </div>
-                      <RowActionsMenu
-                        label={`Actions for note by ${note.user || 'unknown'}`}
-                        items={rowActions(note)}
-                      />
+                      <div className="nc-office-notes__card-actions">
+                        <button
+                          type="button"
+                          className="nc-office-notes__pin-btn"
+                          aria-pressed={note.pinned}
+                          aria-label={note.pinned ? 'Unpin note' : 'Pin note'}
+                          title={note.pinned ? 'Unpin' : 'Pin to top'}
+                          onClick={() => {
+                            void togglePin(note);
+                          }}
+                        >
+                          {note.pinned ? (
+                            <PinOff className="h-4 w-4" aria-hidden="true" />
+                          ) : (
+                            <Pin className="h-4 w-4" aria-hidden="true" />
+                          )}
+                        </button>
+                        <RowActionsMenu
+                          label={`Actions for note by ${note.user || 'unknown'}`}
+                          items={rowActions(note)}
+                        />
+                      </div>
                     </div>
                     <p className="nc-office-notes__body mb-0">{note.body}</p>
                   </>

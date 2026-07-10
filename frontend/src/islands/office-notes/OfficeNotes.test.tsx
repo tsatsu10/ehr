@@ -13,8 +13,8 @@ function listResponse(notes: OfficeNotesListResponse['notes']): OfficeNotesListR
 }
 
 const sampleNotes = [
-  { id: 5, body: 'Fridge in break room is broken', user: 'ama', date: '2026-07-10 08:30:00', active: true },
-  { id: 4, body: 'Dr. Mensah away Friday', user: 'selorm', date: '2026-07-09 17:05:00', active: true },
+  { id: 5, body: 'Fridge in break room is broken', user: 'ama', date: '2026-07-10 08:30:00', active: true, pinned: true },
+  { id: 4, body: 'Dr. Mensah away Friday', user: 'selorm', date: '2026-07-09 17:05:00', active: true, pinned: false },
 ];
 
 beforeEach(() => {
@@ -30,9 +30,26 @@ describe('OfficeNotes', () => {
     expect(screen.getByText('Dr. Mensah away Friday')).toBeInTheDocument();
     // Regional DD/MM/YYYY formatting.
     expect(screen.getByText('10/07/2026 08:30')).toBeInTheDocument();
+    // Pinned note shows the Pinned badge + an Unpin control.
+    expect(screen.getByText('Pinned')).toBeInTheDocument();
     expect(mockedFetch).toHaveBeenCalledWith(
       'onotes.list',
       expect.objectContaining({ params: expect.objectContaining({ filter: 'active' }) }),
+    );
+  });
+
+  it('pins an unpinned note via onotes.pin', async () => {
+    mockedFetch.mockResolvedValue(listResponse(sampleNotes) as never);
+    render(<OfficeNotes ajaxUrl="/ajax.php" csrfToken="token" />);
+    await screen.findByText('Dr. Mensah away Friday');
+
+    // Note id 4 (Dr. Mensah) is unpinned -> its control is "Pin note".
+    fireEvent.click(screen.getByRole('button', { name: 'Pin note' }));
+    await waitFor(() =>
+      expect(mockedFetch).toHaveBeenCalledWith(
+        'onotes.pin',
+        expect.objectContaining({ json: { id: 4, pinned: true } }),
+      ),
     );
   });
 

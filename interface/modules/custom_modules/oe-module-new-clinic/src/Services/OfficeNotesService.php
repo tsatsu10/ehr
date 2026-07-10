@@ -1,11 +1,12 @@
 <?php
 
 /**
- * OfficeNotesService — thin New Clinic wrapper over core ONoteService (GAP-A / A1).
+ * OfficeNotesService — New Clinic Office Notes (GAP-A / A1, closes G1).
  *
- * Closes gap G1: clinic-wide sticky notes. Delegates all persistence to core
- * OpenEMR\Services\ONoteService (the `onotes` table) — no new schema, no new SQL —
- * and shapes rows into a typed, paginated payload for the `office-notes` island.
+ * Writes delegate to core OpenEMR\Services\ONoteService (the `onotes` table) — no
+ * duplicated write SQL. Pin state lives in the module-owned companion table
+ * `new_office_note_meta` (core `onotes` is left untouched). The list read is a
+ * LEFT JOIN so pinned notes float to the top across the whole list, not just a page.
  *
  * @package   OpenEMR
  * @link      https://www.open-emr.org
@@ -15,6 +16,7 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
+use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Services\ONoteService;
 
 class OfficeNotesService
@@ -31,18 +33,34 @@ class OfficeNotesService
      */
     public function list(string $filter = 'active', int $offset = 0): array
     {
-        $activity = $this->filterToActivity($filter);
+        $filter = $this->normalizeFilter($filter);
         $offset = max(0, $offset);
+        $limit = self::PAGE_SIZE;
 
-        $rows = $this->core->getNotes($activity, $offset, self::PAGE_SIZE);
-        $total = (int) $this->core->countNotes($activity);
+        [$where, $bind] = $this->filterClause($filter);
+
+        $rows = QueryUtils::fetchRecords(
+            "SELECT o.id, o.body, o.user, o.date, o.activity, COALESCE(m.pinned, 0) AS pinned
+             FROM onotes o
+             LEFT JOIN new_office_note_meta m ON m.onote_id = o.id
+             {$where}
+             ORDER BY COALESCE(m.pinned, 0) DESC, o.date DESC
+             LIMIT " . (int) $limit . " OFFSET " . (int) $offset,
+            $bind
+        ) ?: [];
+
+        $countRows = QueryUtils::fetchRecords(
+            "SELECT COUNT(*) AS cnt FROM onotes o {$where}",
+            $bind
+        );
+        $total = (int) ($countRows[0]['cnt'] ?? 0);
 
         return [
             'notes' => array_map([$this, 'shape'], $rows),
             'total' => $total,
             'offset' => $offset,
             'page_size' => self::PAGE_SIZE,
-            'filter' => $this->normalizeFilter($filter),
+            'filter' => $filter,
         ];
     }
 
@@ -66,9 +84,7 @@ class OfficeNotesService
 
     public function setActive(int $id, bool $active): void
     {
-        if ($id <= 0) {
-            throw new \RuntimeException('Invalid note');
-        }
+        $this->assertId($id);
 
         if ($active) {
             $this->core->enableNoteById($id);
@@ -77,22 +93,42 @@ class OfficeNotesService
         }
     }
 
+    public function setPinned(int $id, bool $pinned): void
+    {
+        $this->assertId($id);
+
+        sqlStatement(
+            "INSERT INTO `new_office_note_meta` (`onote_id`, `pinned`) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE `pinned` = VALUES(`pinned`)",
+            [$id, $pinned ? 1 : 0]
+        );
+    }
+
     public function delete(int $id): void
+    {
+        $this->assertId($id);
+
+        $this->core->deleteNoteById($id);
+        sqlStatement("DELETE FROM `new_office_note_meta` WHERE `onote_id` = ?", [$id]);
+    }
+
+    /**
+     * @return array{0: string, 1: array<int, mixed>}
+     */
+    private function filterClause(string $filter): array
+    {
+        return match ($filter) {
+            'active' => ['WHERE o.activity = ?', [1]],
+            'archived' => ['WHERE o.activity = ?', [0]],
+            default => ['', []], // 'all'
+        };
+    }
+
+    private function assertId(int $id): void
     {
         if ($id <= 0) {
             throw new \RuntimeException('Invalid note');
         }
-
-        $this->core->deleteNoteById($id);
-    }
-
-    private function filterToActivity(string $filter): int
-    {
-        return match ($this->normalizeFilter($filter)) {
-            'active' => 1,
-            'archived' => 0,
-            default => -1, // 'all'
-        };
     }
 
     private function normalizeFilter(string $filter): string
@@ -112,6 +148,7 @@ class OfficeNotesService
             'user' => (string) ($row['user'] ?? ''),
             'date' => (string) ($row['date'] ?? ''),
             'active' => ((int) ($row['activity'] ?? 0)) === 1,
+            'pinned' => ((int) ($row['pinned'] ?? 0)) === 1,
         ];
     }
 }

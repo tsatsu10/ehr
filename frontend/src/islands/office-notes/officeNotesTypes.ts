@@ -7,6 +7,7 @@ export interface OfficeNote {
   /** MySQL datetime string, e.g. "2026-07-10 14:33:00". */
   date: string;
   active: boolean;
+  pinned: boolean;
 }
 
 export interface OfficeNotesListResponse {

@@ -25,6 +25,7 @@ final class OfficeNotesActionHandler implements AjaxActionHandlerInterface
         'onotes.list',
         'onotes.save',
         'onotes.archive',
+        'onotes.pin',
         'onotes.delete',
     ];
 
@@ -63,6 +64,15 @@ final class OfficeNotesActionHandler implements AjaxActionHandlerInterface
                 $this->host->svc(OfficeNotesService::class)->setActive(
                     (int) ($body['id'] ?? 0),
                     !empty($body['active'])
+                );
+                $this->host->respond(true, 'Note updated');
+                break;
+
+            case 'onotes.pin':
+                $body = $this->requirePostBody($method);
+                $this->host->svc(OfficeNotesService::class)->setPinned(
+                    (int) ($body['id'] ?? 0),
+                    !empty($body['pinned'])
                 );
                 $this->host->respond(true, 'Note updated');
                 break;

@@ -66,12 +66,57 @@
   gap: 0.75rem;
 }
 
+.nc-office-notes__card--pinned {
+  border-color: var(--oe-nc-role-accent, var(--oe-nc-primary, #2563eb));
+  box-shadow: inset 3px 0 0 0 var(--oe-nc-role-accent, var(--oe-nc-primary, #2563eb));
+}
+
 .nc-office-notes__card-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
+}
+
+.nc-office-notes__card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.nc-office-notes__pin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--oe-nc-text-muted);
+  cursor: pointer;
+}
+
+.nc-office-notes__pin-btn:hover {
+  background: var(--oe-nc-surface-muted, rgba(0, 0, 0, 0.05));
+  color: var(--oe-nc-text);
+}
+
+.nc-office-notes__pin-btn[aria-pressed='true'] {
+  color: var(--oe-nc-role-accent, var(--oe-nc-primary, #2563eb));
+}
+
+.nc-office-notes__pin-btn:focus-visible {
+  outline: 2px solid var(--oe-nc-role-accent, var(--oe-nc-primary, #2563eb));
+  outline-offset: 2px;
+}
+
+.nc-office-notes__pinned-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .nc-office-notes__card-meta {
