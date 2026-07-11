@@ -15,6 +15,7 @@ use OpenEMR\Modules\NewClinic\Controllers\Ajax\AjaxActionHandlerInterface;
 use OpenEMR\Modules\NewClinic\Controllers\AjaxController;
 use OpenEMR\Modules\NewClinic\Services\AclAdminService;
 use OpenEMR\Modules\NewClinic\Services\ClinicAdminService;
+use OpenEMR\Modules\NewClinic\Services\DirectoryContactService;
 use OpenEMR\Modules\NewClinic\Services\FacilityUserAdminService;
 use OpenEMR\Modules\NewClinic\Services\FeeScheduleAdminService;
 use OpenEMR\Modules\NewClinic\Services\GeoService;
@@ -39,6 +40,8 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
         'admin.fee.archive',
         'admin.fee.billing_codes',
         'admin.fee.import',
+        'admin.directory.save',
+        'admin.directory.delete',
         'admin.roles.grant_self',
         'admin.roles.templates',
         'admin.staff.list',
@@ -182,6 +185,30 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                         $userId
                     );
                     $this->host->respond(true, 'Visit type archived', $payload);
+                    break;
+                case 'admin.directory.save':
+                    if ($method !== 'POST') {
+                        $this->host->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->host->readJsonBody();
+                    $this->host->verifyCsrf($body);
+                    $contacts = $this->host->svc(DirectoryContactService::class)->save(
+                        (array) ($body['contact'] ?? $body),
+                        $userId
+                    );
+                    $this->host->respond(true, 'Contact saved', ['directory_contacts' => $contacts]);
+                    break;
+                case 'admin.directory.delete':
+                    if ($method !== 'POST') {
+                        $this->host->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->host->readJsonBody();
+                    $this->host->verifyCsrf($body);
+                    $contacts = $this->host->svc(DirectoryContactService::class)->delete(
+                        (int) ($body['id'] ?? 0),
+                        $userId
+                    );
+                    $this->host->respond(true, 'Contact deleted', ['directory_contacts' => $contacts]);
                     break;
                 case 'admin.fee.save':
                     if ($method !== 'POST') {

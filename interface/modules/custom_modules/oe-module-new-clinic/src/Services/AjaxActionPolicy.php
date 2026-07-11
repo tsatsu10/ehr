@@ -79,6 +79,8 @@ class AjaxActionPolicy
         'admin.fee.archive' => 'new_fee_schedule_admin',
         'admin.fee.billing_codes' => 'new_fee_schedule_admin',
         'admin.fee.import' => 'new_fee_schedule_admin',
+        'admin.directory.save' => 'new_admin',
+        'admin.directory.delete' => 'new_admin',
         'admin.roles.grant_self' => 'new_admin',
         'admin.roles.templates' => 'new_admin',
         'admin.staff.list' => 'new_admin',

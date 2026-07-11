@@ -13,5 +13,5 @@ namespace OpenEMR\Modules\NewClinic;
 
 class ModuleAssetVersion
 {
-    public const VERSION = '20260711unfileddocs';
+    public const VERSION = '20260711directory';
 }

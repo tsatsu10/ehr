@@ -1,6 +1,6 @@
 export type AdminScope = 'facility' | 'global';
 
-export type AdminTabId = 'queue' | 'people' | 'completion' | 'clinic' | 'forms' | 'system' | 'types' | 'fees';
+export type AdminTabId = 'queue' | 'people' | 'completion' | 'clinic' | 'forms' | 'system' | 'types' | 'fees' | 'directory';
 
 export const ADMIN_TABS: { id: AdminTabId; label: string }[] = [
   { id: 'queue', label: 'Queue & roles' },
@@ -11,6 +11,7 @@ export const ADMIN_TABS: { id: AdminTabId; label: string }[] = [
   { id: 'system', label: 'System' },
   { id: 'types', label: 'Visit types' },
   { id: 'fees', label: 'Fees' },
+  { id: 'directory', label: 'Directory' },
 ];
 
 export interface AdminHubProps {
@@ -49,6 +50,28 @@ export interface FeeScheduleRow {
   sort_order: number;
   is_active: boolean;
   scope_label?: string;
+}
+
+export interface DirectoryContactType {
+  option_id: string;
+  title: string;
+  is_company: boolean;
+}
+
+export interface DirectoryContactRow {
+  id: number;
+  abook_type: string;
+  type_label: string;
+  is_company: boolean;
+  organization: string;
+  title: string;
+  fname: string;
+  lname: string;
+  display_name: string;
+  phone: string;
+  fax: string;
+  email: string;
+  notes: string;
 }
 
 export interface FeeCategoryOption {
@@ -318,6 +341,8 @@ export interface AdminConfigPayload {
   visit_types?: VisitTypeRow[];
   calendar_categories?: CalendarCategory[];
   fee_schedule?: FeeScheduleRow[];
+  directory_contacts?: DirectoryContactRow[];
+  directory_types?: DirectoryContactType[];
   categories?: FeeCategoryOption[];
   templates?: FeeTemplate[];
   billing_code_types?: BillingCodeType[];

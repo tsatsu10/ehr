@@ -33,6 +33,8 @@ import type {
   CompletionFieldWeightPayload,
   CompletionFieldWeightRow,
   SystemHealthPayload,
+  DirectoryContactRow,
+  DirectoryContactType,
   FeeCategoryOption,
   FeeImportSummary,
   FeeScheduleRow,
@@ -42,6 +44,7 @@ import type {
 } from './adminTypes';
 import { ADMIN_TABS } from './adminTypes';
 import { initialAdminTab, localDateString } from './adminUtils';
+import { DirectoryModal } from './modals/DirectoryModal';
 import { FeeModal } from './modals/FeeModal';
 import { VisitTypeModal } from './modals/VisitTypeModal';
 import { AdminHubConfirmModal } from './AdminHubConfirmModal';
@@ -83,6 +86,8 @@ export function AdminHub({
 
   const [visitTypes, setVisitTypes] = useState<VisitTypeRow[]>([]);
   const [calendarCategories, setCalendarCategories] = useState<AdminConfigPayload['calendar_categories']>([]);
+  const [directoryContacts, setDirectoryContacts] = useState<DirectoryContactRow[]>([]);
+  const [directoryTypes, setDirectoryTypes] = useState<DirectoryContactType[]>([]);
   const [feeSchedule, setFeeSchedule] = useState<FeeScheduleRow[]>([]);
   const [feeCategories, setFeeCategories] = useState<FeeCategoryOption[]>([]);
   const [feeTemplates, setFeeTemplates] = useState<FeeTemplate[]>([]);
@@ -133,6 +138,11 @@ export function AdminHub({
   const [billingCodes, setBillingCodes] = useState<BillingCode[]>([]);
   const [billingCodesLoading, setBillingCodesLoading] = useState(false);
 
+  const [directoryModalOpen, setDirectoryModalOpen] = useState(false);
+  const [directoryEdit, setDirectoryEdit] = useState<DirectoryContactRow | null>(null);
+  const [directorySaving, setDirectorySaving] = useState(false);
+  const [directoryError, setDirectoryError] = useState<string | null>(null);
+
   const [feeCsv, setFeeCsv] = useState('');
   const [feeImporting, setFeeImporting] = useState(false);
   const [grantingRoles, setGrantingRoles] = useState(false);
@@ -174,6 +184,8 @@ export function AdminHub({
     setSettings(data.settings ?? {});
     setVisitTypes(data.visit_types ?? []);
     setCalendarCategories(data.calendar_categories ?? []);
+    setDirectoryContacts(data.directory_contacts ?? []);
+    setDirectoryTypes(data.directory_types ?? []);
     setFeeSchedule(data.fee_schedule ?? []);
     setFeeCategories(data.categories ?? []);
     setFeeTemplates(data.templates ?? []);
@@ -398,6 +410,56 @@ export function AdminHub({
       setErrorMessage(err instanceof Error ? err.message : 'Archive failed');
     }
   }, [facilityId, fetchOptions]);
+
+  const openDirectoryModal = useCallback((row: DirectoryContactRow | null) => {
+    setDirectoryEdit(row);
+    setDirectoryError(null);
+    setDirectoryModalOpen(true);
+  }, []);
+
+  const saveDirectoryContact = useCallback(async (payload: {
+    id: number;
+    abook_type: string;
+    organization: string;
+    title: string;
+    fname: string;
+    lname: string;
+    phone: string;
+    fax: string;
+    email: string;
+    notes: string;
+  }) => {
+    setDirectorySaving(true);
+    setDirectoryError(null);
+    try {
+      const data = await oeFetch<{ directory_contacts: DirectoryContactRow[] }>('admin.directory.save', {
+        ...fetchOptions,
+        json: { contact: payload },
+      });
+      setDirectoryContacts(data.directory_contacts ?? []);
+      setDirectoryModalOpen(false);
+      setSuccessMessage('Contact saved.');
+      setErrorMessage(null);
+    } catch (err) {
+      setDirectoryError(err instanceof Error ? err.message : 'Save failed');
+    } finally {
+      setDirectorySaving(false);
+    }
+  }, [fetchOptions]);
+
+  const deleteDirectoryContact = useCallback(async (row: DirectoryContactRow) => {
+    try {
+      const data = await oeFetch<{ directory_contacts: DirectoryContactRow[] }>('admin.directory.delete', {
+        ...fetchOptions,
+        json: { id: row.id },
+      });
+      setDirectoryContacts(data.directory_contacts ?? []);
+      setSuccessMessage('Contact deleted.');
+      setErrorMessage(null);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Delete failed');
+    }
+  }, [fetchOptions]);
 
   const openFeeModal = useCallback(async (row: FeeScheduleRow | null) => {
     setFeeEdit(row);
@@ -1038,6 +1100,8 @@ export function AdminHub({
             healthRefreshing={healthRefreshing}
             visitTypes={visitTypes}
             calendarCategories={calendarCategories}
+            directoryContacts={directoryContacts}
+            directoryTypes={directoryTypes}
             feeSchedule={feeSchedule}
             feeCsv={feeCsv}
             feeImporting={feeImporting}
@@ -1069,6 +1133,9 @@ export function AdminHub({
             onEditFee={(row) => { void openFeeModal(row); }}
             onArchiveFee={(row) => setPendingConfirm({ type: 'archive_fee', row })}
             onImportFees={() => { void importFees(); }}
+            onAddDirectoryContact={() => openDirectoryModal(null)}
+            onEditDirectoryContact={(row) => openDirectoryModal(row)}
+            onDeleteDirectoryContact={(row) => setPendingConfirm({ type: 'delete_directory_contact', row })}
           />
         </>
       )}
@@ -1120,9 +1187,21 @@ export function AdminHub({
             void applyCashProfile();
           } else if (confirm.type === 'catalog_enable') {
             void applyCatalogEnable(confirm.item);
+          } else if (confirm.type === 'delete_directory_contact') {
+            void deleteDirectoryContact(confirm.row);
           }
           setPendingConfirm(null);
         }}
+      />
+
+      <DirectoryModal
+        open={directoryModalOpen}
+        row={directoryEdit}
+        types={directoryTypes}
+        saving={directorySaving}
+        error={directoryError}
+        onClose={() => setDirectoryModalOpen(false)}
+        onSave={(payload) => { void saveDirectoryContact(payload); }}
       />
     </AdminShell>
   );

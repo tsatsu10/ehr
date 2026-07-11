@@ -6,6 +6,8 @@ import type {
   CompletionFieldWeightRow,
   ConfigExportMeta,
   ConfigImportResult,
+  DirectoryContactRow,
+  DirectoryContactType,
   FormBundleBoardPayload,
   FormsCatalogItem,
   FormsCatalogPayload,
@@ -20,6 +22,7 @@ import type {
 import { AdminEmptyState, AdminTabPanel } from './adminUi';
 import { ClinicTab } from './tabs/ClinicTab';
 import { CompletionTab } from './tabs/CompletionTab';
+import { DirectoryTab } from './tabs/DirectoryTab';
 import { FeesTab } from './tabs/FeesTab';
 import { FormsTab } from './tabs/FormsTab';
 import { PeopleAccessTab } from './tabs/PeopleAccessTab';
@@ -73,6 +76,8 @@ export interface AdminHubTabPanelsProps {
   feeSchedule: FeeScheduleRow[];
   feeCsv: string;
   feeImporting: boolean;
+  directoryContacts: DirectoryContactRow[];
+  directoryTypes: DirectoryContactType[];
   onFieldChange: (key: string, value: unknown) => void;
   onImportGhanaLbfPack: (setAsConsultNote: boolean) => void;
   onImportReferralHospitalLbfPack: (setAsConsultNote: boolean) => void;
@@ -101,6 +106,9 @@ export interface AdminHubTabPanelsProps {
   onEditFee: (row: FeeScheduleRow) => void;
   onArchiveFee: (row: FeeScheduleRow) => void;
   onImportFees: () => void;
+  onAddDirectoryContact: () => void;
+  onEditDirectoryContact: (row: DirectoryContactRow) => void;
+  onDeleteDirectoryContact: (row: DirectoryContactRow) => void;
 }
 
 export function AdminHubTabPanels({
@@ -149,6 +157,8 @@ export function AdminHubTabPanels({
   feeSchedule,
   feeCsv,
   feeImporting,
+  directoryContacts,
+  directoryTypes,
   onFieldChange,
   onImportGhanaLbfPack,
   onImportReferralHospitalLbfPack,
@@ -177,6 +187,9 @@ export function AdminHubTabPanels({
   onEditFee,
   onArchiveFee,
   onImportFees,
+  onAddDirectoryContact,
+  onEditDirectoryContact,
+  onDeleteDirectoryContact,
 }: AdminHubTabPanelsProps) {
   const roles = roleGroups ?? {};
 
@@ -322,6 +335,16 @@ export function AdminHubTabPanels({
           onEdit={onEditFee}
           onArchive={onArchiveFee}
           onImport={onImportFees}
+        />
+      </AdminTabPanel>
+
+      <AdminTabPanel tabId="directory" active={activeTab === 'directory'}>
+        <DirectoryTab
+          contacts={directoryContacts}
+          types={directoryTypes}
+          onAdd={onAddDirectoryContact}
+          onEdit={onEditDirectoryContact}
+          onDelete={onDeleteDirectoryContact}
         />
       </AdminTabPanel>
     </>

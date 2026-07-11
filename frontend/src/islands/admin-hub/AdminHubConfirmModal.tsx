@@ -22,7 +22,8 @@ export function AdminHubConfirmModal({
             : pendingConfirm?.type === 'archive_fee' ? 'Archive fee line?'
               : pendingConfirm?.type === 'grant_roles' ? 'Grant desk roles?'
                 : pendingConfirm?.type === 'catalog_enable' ? 'Enable billing form?'
-                  : 'Apply cash clinic profile?'
+                  : pendingConfirm?.type === 'delete_directory_contact' ? 'Delete directory contact?'
+                    : 'Apply cash clinic profile?'
       }
       modalId="nc-admin-confirm-modal"
       cancelLabel="Cancel"
@@ -31,10 +32,13 @@ export function AdminHubConfirmModal({
           : pendingConfirm?.type === 'grant_roles' ? 'Grant roles'
             : pendingConfirm?.type === 'cash_profile' ? 'Apply profile'
               : pendingConfirm?.type === 'catalog_enable' ? 'Enable anyway'
-                : 'Archive'
+                : pendingConfirm?.type === 'delete_directory_contact' ? 'Delete contact'
+                  : 'Archive'
       }
       confirmVariant={
-        pendingConfirm?.type === 'archive_visit_type' || pendingConfirm?.type === 'archive_fee'
+        pendingConfirm?.type === 'archive_visit_type'
+          || pendingConfirm?.type === 'archive_fee'
+          || pendingConfirm?.type === 'delete_directory_contact'
           ? 'danger'
           : 'warning'
       }
@@ -65,6 +69,12 @@ export function AdminHubConfirmModal({
       )}
       {pendingConfirm?.type === 'catalog_enable' && (
         <p className="mb-0">{pendingConfirm.item.enable_warning}</p>
+      )}
+      {pendingConfirm?.type === 'delete_directory_contact' && (
+        <p className="mb-0">
+          Delete &quot;{pendingConfirm.row.display_name}&quot; from the directory? Referrals
+          already sent to this contact are not affected.
+        </p>
       )}
     </ConfirmModal>
   );
