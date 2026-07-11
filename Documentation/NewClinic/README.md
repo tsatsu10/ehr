@@ -46,7 +46,7 @@ Read in this order for a full picture:
 
 | Document | Purpose |
 |----------|---------|
-| [NEW_CLINIC_OPENEMR_GAP_ANALYSIS_AND_REDESIGN_PLAN.md](./new/NEW_CLINIC_OPENEMR_GAP_ANALYSIS_AND_REDESIGN_PLAN.md) | Coverage audit vs stock OpenEMR menu tree + phased GAP-A–D React redesign plan for unaddressed areas; GAP-A/A1 (Office Notes) and A2 (Documents manager, both halves) merged and closed — G1, G2 done; A3 (Address Book) next (v0.1.4) |
+| [NEW_CLINIC_OPENEMR_GAP_ANALYSIS_AND_REDESIGN_PLAN.md](./new/NEW_CLINIC_OPENEMR_GAP_ANALYSIS_AND_REDESIGN_PLAN.md) | Coverage audit vs stock OpenEMR menu tree + phased GAP-A–D React redesign plan for unaddressed areas; GAP-A/A1 (Office Notes), A2 (Documents manager), A3 (Address Book → Directory tab) closed — G1, G2, G3 done; A4 (Letters & labels) next (v0.1.6) |
 | [NEW_CLINIC_MARKET_EXPANSION_MASTER_PLAN.md](./new/NEW_CLINIC_MARKET_EXPANSION_MASTER_PLAN.md) | Market segments T0–T8, MKT-* feature roadmap merged with GAP/SCALE waves, pilot playbook, project-management operating model, and business plan (pricing, hosting, support, GTM, legal, risks) (v0.1.3) |
 | [NEW_CLINIC_VPS_REPLICA_DEPLOYMENT_PROMPT.md](./new/NEW_CLINIC_VPS_REPLICA_DEPLOYMENT_PROMPT.md) | Executable deployment prompt: one-way clinic→VPS MySQL/documents replication (on-prem primary + VPS read-replica per master plan §7.2), monitoring hooks, disaster-path runbook (v0.1.0) |
 | [NEW_CLINIC_V1_SECURITY_HARDENING_PROMPT.md](./new/NEW_CLINIC_V1_SECURITY_HARDENING_PROMPT.md) | Consolidated pre-pilot security pass (SEC-1..8): per-action ACL audit (blocks pilot), CSRF coverage, input validation, auth-error uniformity, brute-force + humane lockout recovery, PHI in logs/backups, TLS/network access, upstream CVE process (v0.1.0) |

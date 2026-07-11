@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | **Last audited** | 2026-07-11 |
-| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260711unfileddocs` |
+| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260711directory` |
 | **Maintainer** | Engineering lead updates after each sprint; Product owns pilot sign-off |
 | **How to update** | Change `%` and `Status` cells; bump **Last audited**; sync PRD §5.6 row if shell status changes |
 
@@ -238,6 +238,20 @@ Use PRD §8 tables as source of truth. Below: **representative** IDs for spot au
 ---
 
 ## Audit log
+
+**2026-07-11 — GAP-A / A3 Directory tab shipped — G3 closed, GAP-A daily-use trio (G1/G2/G3) complete**
+
+New "Directory" tab in Admin Hub (`DirectoryTab.tsx`/`DirectoryModal.tsx`) replaces the 2005-era
+`addrbook_list.php`/`addrbook_edit.php` screens for managing external referral contacts
+(specialists, labs, vendors, etc.). Storage is stock (`users.abook_type` rows, distinguished from
+real staff logins by `username='' `/`authorized=0`) — every read/write/delete carries that guard,
+proven by a PHPUnit test that seeds a fake staff-login row and confirms the service can't touch
+it. Gated on the module's own `new_admin` ACO (not stock `admin/practice`, which would have 403'd
+real pilot admins), always-on like Visit Types/Fees (no new toggle). Live testing caught a
+genuine surprise before shipping: "External Organization" is stock `option_value=1`
+(person-centric) despite the name — the UI already followed the real per-type flag, not a
+hardcoded assumption, so this needed no fix, just a documented gotcha. 15 new tests (9 PHPUnit,
+including a load-bearing guard test that seeds a fake staff row; 6 Vitest).
 
 **2026-07-11 — GAP-A / A2 "unfiled documents" inbox lens shipped — G2 fully closed**
 
