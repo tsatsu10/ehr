@@ -15,7 +15,8 @@
         frontDeskUrl: module_url ~ '/front-desk.php',
         exportChartUrl: export_chart_url|default(''),
         registrationMode: registration_mode,
-        enableInChartPatientSearch: enable_in_chart_patient_search|default(false)
+        enableInChartPatientSearch: enable_in_chart_patient_search|default(false),
+        enableDocuments: enable_documents|default(false)
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}

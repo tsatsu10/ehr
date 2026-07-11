@@ -111,6 +111,16 @@ CREATE TABLE IF NOT EXISTS `new_patient_meta` (
 ) ENGINE=InnoDB COMMENT='Module-owned patient metadata';
 #EndIf
 
+#IfNotTable new_office_note_meta
+CREATE TABLE IF NOT EXISTS `new_office_note_meta` (
+    `onote_id` BIGINT NOT NULL,
+    `pinned` TINYINT(1) NOT NULL DEFAULT 0,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`onote_id`),
+    KEY `idx_pinned` (`pinned`)
+) ENGINE=InnoDB COMMENT='Module-owned pin state for core onotes (GAP-A A1)';
+#EndIf
+
 #IfNotTable new_patient_completion
 CREATE TABLE IF NOT EXISTS `new_patient_completion` (
     `pid` BIGINT NOT NULL,
@@ -385,6 +395,16 @@ WHERE `facility_id` = 0 AND `config_key` = 'registration_mode' AND `config_value
 
 #IfRow2D new_completion_field_weight field_key city level 2
 UPDATE `new_completion_field_weight` SET `is_active` = 0 WHERE `field_key` IN ('city', 'state');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_office_notes
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_office_notes', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_documents_native
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_documents_native', '0');
 #EndIf
 
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_chart_depth

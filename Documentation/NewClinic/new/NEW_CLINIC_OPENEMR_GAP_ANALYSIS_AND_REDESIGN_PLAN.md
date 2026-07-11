@@ -1,12 +1,17 @@
 # New Clinic — OpenEMR Coverage Gap Analysis & Comprehensive React Redesign Plan
 
-**Version:** v0.1.2 · **Date:** 2026-07-11 · **Status:** GAP-A underway (A1 build started)
+**Version:** v0.1.3 · **Date:** 2026-07-11 · **Status:** GAP-A underway (A1 merged to main; A2 per-patient tab merged, inbox lens pending)
 **v0.1.1:** second-pass audit added off-menu surfaces (MFA, login/auth, issue editor, growth charts, authorizations, record request, background-service monitors) — see G11, W10–W11, A6.
 **v0.1.2:** re-verified A1 (Office Notes) against current code before build start — corrected the
 `onotes` schema/UI claims, the ACL story, and the page-count headcount; see the A1 entry in §5 and
 the version-history table at the bottom. Confirms the general rule from CLAUDE.md §12: trust the
 code over this doc's status claims, then fix the doc — applied here for the first time this doc
 gets touched during actual implementation rather than a planning pass.
+**v0.1.3:** A1 (Office Notes) and A2's per-patient Documents tab built, reviewed, and merged to
+main — closes G1, and closes the per-patient half of G2 (the clinic-wide "unfiled documents"
+inbox lens is still open). Reconciled the pre-build v0.1.2 draft against the real implementation:
+pin **was** shipped after all (companion table, not a core schema change), and the ACL turned out
+to need zero new `acl_setup.php` wiring (the stock `Clinicians` group already covers it). See §5.
 
 This document answers two questions:
 
@@ -130,46 +135,46 @@ Everything below reuses the **existing** stack — no new dependencies beyond wh
 
 ### Phase GAP-A — Daily-use gaps (highest value, smallest surface)
 
-#### A1. Office Notes → new **`office-notes`** island (closes G1)
+*Re-verified against the actual built code 2026-07-11 (merge review), superseding the pre-build
+v0.1.2 draft below it in history — two of that draft's own predictions turned out wrong: pin
+**was** shipped (via a companion table, not a core schema change), and the ACL turned out to need
+no new `acl_setup.php` grant at all. Both corrected here against the real code, not assumed.*
 
-*Re-verified against current code 2026-07-11 before build start (see history table). Corrections
-from the original draft below are marked ⚠.*
-
-- **Host:** `public/office-notes.php` (T1 shell), following the `communications.php` precedent:
-  `ClinicConfigService::isEnabled('enable_office_notes', 0, $facilityId)` gates the page; disabled
-  → 302 redirect to stock `interface/main/onotes/office_comments_full.php`. Card on desks' hub
-  navigation; also embeddable in `report-hub` as a lens (unchanged from original plan).
+- **Host:** `public/office-notes.php` (T1 shell, `PageController::renderForEncounterNotesAcl`) +
+  card on desks' hub navigation (`ShellService` + `Bootstrap` nav, gated by `enable_office_notes`);
+  smart-vs-legacy redirect to stock `office_comments_full.php` when the flag is OFF. *report-hub
+  lens embed deferred (not required for G1 closure).*
 - **UI:** single-column feed of `WidgetCard` notes with author/date, active/archived
-  `SegmentedControl` (backed by the stock `activity` column — `enableNoteById`/`disableNoteById`);
-  compose box reusing COM composer styling; `RowActionsMenu` for edit/archive.
-  ⚠ **No pin toggle** — the stock `onotes` table (`id, date, body, user, groupname, activity`) has
-  no pin/priority column and `ONoteService` has no such concept. Dropped from V1 scope; a pin
-  feature would require a real schema change, which contradicts the "no schema change" design
-  goal for this item. Revisit only as its own follow-up spec if a clinic actually asks for it.
-- **Backend:** `ajax.php` actions `office_notes.list|save|update|archive|unarchive` — domain
-  renamed from the original `onotes.*` to `office_notes.*` to avoid colliding with the unrelated
-  `core_notes_acl` policy name already in `AjaxActionPolicy` (see ACL note below). Delegates to a
-  new `OfficeNotesService` wrapping the existing stock `ONoteService`/`onotes` table — confirmed
-  **no schema change** needed for list/save/archive.
-- **ACL:** ⚠ more than "same as stock" — `AclMain::aclCheckCore('encounters', 'notes')` is the
-  correct stock check, but it needs its **own** new policy branch (`office_notes_acl` type →
-  `AjaxController::requireOfficeNotesAcl()`), distinct from the existing `core_notes_acl` type
-  (which checks the unrelated `patients/notes` section for Communications Hub — reusing it by
-  mistake would gate office notes on the wrong ACO). No `new_clinic`-section ACO exists for this
-  today, and New Clinic role groups aren't auto-granted arbitrary stock ACOs — grant access via a
-  `$coreGrants` entry in `acl_setup.php` (precedent: the `acct/rep` and `patients/pat_rep` grants
-  already there), rather than assuming it's free.
-- **Toggle:** `enable_office_notes`, default OFF, added to `install.sql` (`#IfNotRow2D` block,
-  precedent: `enable_bill_ops`/`enable_report_hub`) and to `adminFieldDefs.ts` (M6 Clinic tab).
-- **Effort:** S (1–2 sessions) — unchanged; the corrections above are scope clarifications, not
-  scope growth.
+  `SegmentedControl` (Active/Archived/All), inline compose + inline edit, **pin toggle** (pinned
+  notes float to the top with a Pinned badge + accent), `RowActionsMenu` (Edit / Archive-Restore /
+  Delete), delete behind `ConfirmModal`. Error/validation messages use the shared
+  `deskCalloutClass('error')` convention (fixed in merge review — the first cut had a bespoke
+  message class).
+- **Backend:** `ajax.php` actions `onotes.list|save|archive|pin|delete` via `OfficeNotesService`.
+  Writes delegate to core `OpenEMR\Services\ONoteService` (core `onotes` untouched); **pin state
+  lives in the module-owned companion table `new_office_note_meta`** (`onote_id` PK) — the list
+  read LEFT JOINs it so pinned notes sort first globally, not just within a page. Confirmed: no
+  change to the core `onotes` table itself.
+- **ACL:** core `encounters/notes` (same as stock) — wired as its own `office_notes_acl` policy
+  type + `AjaxController::requireOfficeNotesAcl()`, distinct from the existing `core_notes_acl`
+  type (which checks the unrelated `patients/notes` section for Communications Hub). No new
+  `acl_setup.php` grant was needed: the stock `Clinicians` GACL group already holds
+  `encounters => ['notes', 'relaxed']` and `patients => [..., 'docs', 'notes', ...]` at write
+  level, and `ClinicRolesService` already adds every New Clinic role to `Clinicians` — so both A1
+  and A2's ACL checks are satisfied for free by existing staff provisioning. **Toggle:**
+  `enable_office_notes` (default OFF, `install.sql`).
+- **Verification:** frontend `npm run check` (lint + typecheck + 401 vitest) + `npm run build`
+  green; backend static `verify-module.php` PASS (syntax, 0 ctor cycles, controller imports, ajax
+  crosscheck). Reviewed via `nc-code-review` before merge to main.
+- **Effort:** S (1–2 sessions).
 
-#### A2. Documents manager → **`patient-chart` Documents tab + `doc-inbox` pane** (closes G2)
+#### A2. Documents manager → **`patient-chart` Documents tab + `doc-inbox` pane** (closes G2) — **per-patient tab BUILT (2026-07-11); inbox lens pending**
 
-- **UI (per-patient):** new "Documents" section in MRD Profile tab: `DataTable` of documents (category, date, uploader), drag-drop upload zone, preview in `SlideOver` (PDF/image `<iframe>`/`<img>`), category move via `native-select`, delete behind `ConfirmModal`.
-- **UI (clinic-wide inbox):** "Unfiled documents" lens in `report-hub` for scans awaiting patient assignment, reusing `PatientSearchDropdown` to file them.
-- **Backend:** `ajax.php` actions `documents.list|upload|recategorize|delete` delegating to core `Document` classes and `C_Document` semantics; uploads via `multipart` branch in `oeFetch` (extend once, reuse everywhere).
-- **ACL:** `patients/docs`. **Toggle:** `enable_documents_native`.
+- **UI (per-patient) — BUILT:** new "Documents" **tab** in the MRD chart (gated by `enableDocuments`): `DataTable` of documents (name, category, date, uploader), drag-drop + choose-file upload zone with a category `native-select`, preview in `SlideOver` (`<img>` for images, `<iframe>` for PDF, download fallback otherwise), category move via `native-select` in the preview, delete behind `ConfirmModal`. Tab hidden entirely when the toggle is OFF; lazy-loads on first activation.
+- **UI (clinic-wide inbox) — PENDING (commit 2):** "Unfiled documents" lens in `report-hub` for scans awaiting patient assignment, reusing `PatientSearchDropdown` to file them.
+- **Backend — BUILT:** `ajax.php` actions `documents.list|categories|upload|recategorize|delete` via `DocumentsService`, delegating storage to core `\Document::createDocument` (same path as `ReferralDocumentService`); membership in `categories_to_documents`; **delete is a soft-delete** (`documents.deleted = 1`, recoverable, matches every core read filter). Per-category ACL enforced with `AclMain::aclCheckAcoSpec`; every action re-scopes to the patient (`assertPatientChartPid`). Uploads reuse the **existing** `oeFetch` FormData pass-through (no oeFetch change needed — the plan's "multipart branch" was already covered by the referral-upload precedent). Hardened like the referral service: MIME allow-list (PDF + JPEG/PNG/GIF/WebP), 10 MB cap, `isWhiteFile`/`secure_upload` policy, filename sanitize, audit log.
+- **ACL:** core `patients/docs` (new `patients_docs_acl` policy type + `AjaxController::requirePatientsDocsAcl()`). **Toggle:** `enable_documents_native` (default OFF, `install.sql`).
+- **Verification:** frontend `npm run check` + `npm run build` green; backend static `verify-module.php` PASS. Live `--bootstrap` + browser smoke pending a clean (non-nested) checkout.
 - **Effort:** M (3–4 sessions). Highest daily value in this phase.
 
 #### A3. Address Book → **Admin Hub "Directory" tab** (closes G3)
@@ -346,3 +351,4 @@ Net-new shared components required: **one** (SVG trend chart — shared by B2 tr
 | v0.1.0 | 2026-07-07 | Initial gap analysis + redesign plan (§1–§9), first audit pass |
 | v0.1.1 | 2026-07-07 | Second-pass audit: off-menu surfaces added (G11, W10–W11, A6) |
 | v0.1.2 | 2026-07-11 | Re-verified A1 (Office Notes) against current code before starting the build: dropped the unbacked "pin toggle," corrected the ACL story (new `office_notes_acl` policy branch + `$coreGrants` wiring needed, not a free reuse of stock ACL), renamed the ajax action domain to `office_notes.*` to avoid colliding with the existing `core_notes_acl` policy type, corrected the module page count (23, not 24). Build of A1 started same day. |
+| v0.1.3 | 2026-07-11 | A1 (Office Notes) and A2's per-patient Documents tab built and merged to main, closing G1 and the per-patient half of G2. Merge review found the pre-build v0.1.2 draft wrong on two points once checked against the real code: pin *was* shipped (via a companion table `new_office_note_meta`, not a core schema change) and the ACL needed zero new `acl_setup.php` grants (stock `Clinicians` group membership already covers `encounters/notes` + `patients/docs` for every New Clinic role via `ClinicRolesService`). One code-review fix applied before merge: Office Notes error messages switched to the shared `deskCalloutClass()` convention. A2's clinic-wide "unfiled documents" inbox lens remains open. |

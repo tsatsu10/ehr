@@ -68,6 +68,7 @@ $reactPatientChart = $config->get('enable_react_patient_chart', '1') === '1';
         'visit_id_filter' => $visitIdFilter,
         'registration_mode' => $config->get('registration_mode', 'desk_full_form') ?? 'desk_full_form',
         'enable_in_chart_patient_search' => $config->getInt('enable_in_chart_patient_search', 0) === 1,
+        'enable_documents' => $config->getInt('enable_documents_native', 0) === 1,
         'enable_react_patient_chart' => $reactPatientChart,
         'shell_nav_id' => 'clinicchart',
         'visit_board_url' => $GLOBALS['webroot']

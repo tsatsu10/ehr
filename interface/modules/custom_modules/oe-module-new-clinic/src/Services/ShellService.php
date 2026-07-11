@@ -205,6 +205,16 @@ class ShellService
             'config' => 'communications_hub_enable',
         ],
         [
+            'id' => 'clinicnotes',
+            'label' => 'Office Notes',
+            'path' => 'office-notes.php',
+            'acos' => [],
+            'core_acl' => ['encounters', 'notes'],
+            'group' => 'hubs',
+            'icon' => 'fa-sticky-note',
+            'config' => 'enable_office_notes',
+        ],
+        [
             'id' => 'clinicreg',
             'label' => 'Registry',
             'path' => 'patient-registry.php',

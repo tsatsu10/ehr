@@ -76,6 +76,26 @@ class PageController
     }
 
     /**
+     * Render for users with core encounters/notes ACL (Office Notes — GAP-A / A1).
+     * Same clinic-wide notes permission the stock office_comments.php screen gates on.
+     */
+    public function renderForEncounterNotesAcl(string $template, string $title, array $context = []): void
+    {
+        if (empty($_SESSION['authUserID'])) {
+            authLoginScreen();
+        }
+
+        if (!AclMain::aclCheckCore('encounters', 'notes')) {
+            http_response_code(403);
+            echo xlt('Access denied');
+            exit;
+        }
+
+        $shellAco = $this->resolveShellAcoForNotesUser();
+        $this->emitPage($template, $title, $shellAco, $context);
+    }
+
+    /**
      * Render for any authenticated OpenEMR user (e.g. My profile).
      *
      * @param array<string, mixed> $context

@@ -12,6 +12,7 @@ import { oeFetch } from '@core/oeFetch';
 import { ChartBanner } from './ChartBanner';
 import { ChartInChartSearch } from './ChartInChartSearch';
 import { ClinicalTab } from './ClinicalTab';
+import { DocumentsTab } from './DocumentsTab';
 import {
   ChartLoadingState,
   ChartShell,
@@ -46,6 +47,7 @@ const TAB_LABELS: Record<ChartTabId, string> = {
   profile: 'Profile',
   visits: 'Visits',
   clinical: 'Clinical',
+  documents: 'Documents',
   messages: 'Messages',
 };
 
@@ -61,10 +63,13 @@ export function PatientChart({
   exportChartUrl,
   registrationMode,
   enableInChartPatientSearch = false,
+  enableDocuments = false,
 }: PatientChartProps) {
-  const [activeTab, setActiveTab] = useState<ChartTabId>(
-    isValidChartTab(initialTab) ? initialTab : 'overview'
-  );
+  const resolvedInitialTab =
+    isValidChartTab(initialTab) && (initialTab !== 'documents' || enableDocuments)
+      ? initialTab
+      : 'overview';
+  const [activeTab, setActiveTab] = useState<ChartTabId>(resolvedInitialTab);
 
   const fetchOptions = useMemo(() => ({ ajaxUrl, csrfToken }), [ajaxUrl, csrfToken]);
 
@@ -480,7 +485,9 @@ export function PatientChart({
     };
   }, [activeTab, preview?.active_visit?.visit_id, reloadContext]);
 
-  const tabSegments = CHART_TAB_IDS.map((tab) => ({
+  const tabSegments = CHART_TAB_IDS.filter(
+    (tab) => tab !== 'documents' || enableDocuments
+  ).map((tab) => ({
     id: tab,
     label: TAB_LABELS[tab],
   }));
@@ -608,6 +615,17 @@ export function PatientChart({
                   onScrollToAnchor={scrollToClinicalAnchor}
                 />
               </ChartTabPanel>
+
+              {enableDocuments && (
+                <ChartTabPanel tabId="documents" active={activeTab === 'documents'}>
+                  <DocumentsTab
+                    ajaxUrl={ajaxUrl}
+                    csrfToken={csrfToken}
+                    pid={pid}
+                    active={activeTab === 'documents'}
+                  />
+                </ChartTabPanel>
+              )}
 
               <ChartTabPanel tabId="messages" active={activeTab === 'messages'}>
                 <MessagesTab
