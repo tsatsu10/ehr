@@ -4,8 +4,8 @@
 
 | Field | Value |
 |-------|-------|
-| **Last audited** | 2026-07-09 |
-| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260709batch7` |
+| **Last audited** | 2026-07-11 |
+| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260711gapaclose` |
 | **Maintainer** | Engineering lead updates after each sprint; Product owns pilot sign-off |
 | **How to update** | Change `%` and `Status` cells; bump **Last audited**; sync PRD §5.6 row if shell status changes |
 
@@ -238,6 +238,19 @@ Use PRD §8 tables as source of truth. Below: **representative** IDs for spot au
 ---
 
 ## Audit log
+
+**2026-07-11 — GAP-A / A1 Office Notes + A2 Documents tab (per-patient half) shipped**
+
+Closed G1 (Office Notes) and the per-patient half of G2 (Documents manager) from the
+[OpenEMR gap analysis](./new/NEW_CLINIC_OPENEMR_GAP_ANALYSIS_AND_REDESIGN_PLAN.md) — new
+`office-notes` island (clinic-wide sticky notes, pin/archive) and a native Documents tab in
+`patient-chart` (list, upload, recategorize, soft-delete), both behind default-OFF flags
+(`enable_office_notes`, `enable_documents_native`) with the stock screens still reachable. Both
+reuse the existing `Clinicians` GACL group grants — no new `acl_setup.php` wiring needed. Fixed a
+critical bug found in live browser smoke testing (not caught by unit tests, since neither service
+had any): `DocumentsService` queried a `categories.active` column that doesn't exist in the stock
+schema, 500ing every category-related action. Added first-ever test coverage for both services (9
+tests). A2's clinic-wide "unfiled documents" inbox lens remains open.
 
 **2026-07-05 — UX Enhancement Sprint (21 features)**
 
