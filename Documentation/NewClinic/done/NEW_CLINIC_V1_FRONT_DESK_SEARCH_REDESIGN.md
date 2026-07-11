@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 1.0.10 |
 | **Status** | **Approved for Phase 1 implementation** — design complete; PRD **M1a-F***, PAGE_DESIGNS §4.1, USER_WORKFLOWS §8.1 trace here |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.48), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.48), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.48), [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.2) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.48), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.48), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.48), [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.2) |
 | **Audience** | Product, design, backend engineers, frontend engineers, QA |
 | **Scope** | **M1a** — unified patient search component + `PatientSearchService` + AJAX API |
 | **Implementation** | Design spec; no code in this document |

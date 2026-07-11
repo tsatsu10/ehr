@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Document version** | 1.0.0 |
+| **Document version** | 1.0.4 |
 | **Status** | Living security control — regenerate after any `AjaxActionPolicy` change |
 | **Owner** | Engineering (security) |
 | **Generated from** | `src/Services/AjaxActionPolicy.php` via the audit harness in SEC-1 |
@@ -148,7 +148,7 @@ out-of-facility `pid`/`visit` by editing the payload (wrong-patient guard G12).
 | `doctor.lab_panel_catalog` | single_acl | new_doctor |  |
 | `doctor.lab_panel_place` | single_acl | new_doctor |  |
 | `doctor.queue` | desk_acl | any New Clinic desk role (new_reception|nurse|doctor|lab|pharmacy|cashier|admin|reports) |  |
-| `doctor.reopen` | single_acl | new_visit_reopen |  |
+| `doctor.reopen` | single_acl | new_visit_reopen | Reason optional/ignored when the actor is the visit's own assigned doctor; required (≥10 chars) only for admin reopening someone else's patient |
 | `doctor.restore_session` | single_acl | new_doctor |  |
 | `doctor.roster` | desk_acl | any New Clinic desk role (new_reception|nurse|doctor|lab|pharmacy|cashier|admin|reports) |  |
 | `doctor.roster.set_taking` | single_acl | new_doctor |  |
@@ -156,6 +156,7 @@ out-of-facility `pid`/`visit` by editing the payload (wrong-patient guard G12).
 | `doctor.search_providers` | single_acl | new_doctor |  |
 | `doctor.set_supervisor` | single_acl | new_doctor |  |
 | `doctor.shortcut_preflight` | single_acl | new_doctor |  |
+| `doctor.start_walk_in` | single_acl | new_doctor | VIP/walk-in bypass — visit created directly in `with_doctor`, skips Front Desk and Triage entirely |
 | `doctor.take` | single_acl | new_doctor |  |
 | `encounter_note.get` | encounter_note_acl | encounter note roles |  |
 | `encounter_note.prefill` | encounter_note_acl | encounter note roles |  |
@@ -280,11 +281,13 @@ out-of-facility `pid`/`visit` by editing the payload (wrong-patient guard G12).
 | `triage.save_vitals` | single_acl | new_nurse |  |
 | `triage.select` | single_acl | new_nurse |  |
 | `triage.send_doctor` | single_acl | new_nurse |  |
+| `triage.set_urgent` | single_acl | new_nurse | Nurse-side urgency escalation (never changes state); reason required to de-escalate |
 | `triage.start` | single_acl | new_nurse |  |
 | `visit.board` | desk_acl | any New Clinic desk role (new_reception|nurse|doctor|lab|pharmacy|cashier|admin|reports) |  |
 | `visit.cancel` | single_acl | new_visit_cancel |  |
 | `visit.detail` | desk_acl | any New Clinic desk role (new_reception|nurse|doctor|lab|pharmacy|cashier|admin|reports) |  |
 | `visit.hard_assign` | single_acl | new_hard_assign_provider |  |
+| `visit.send_back_to_doctor` | single_acl | new_visit_return_to_doctor | Reception Lead or Nurse (any, not lead-only) routes an ancillary-complete visit into the shared `ready_for_doctor` pool (not `with_doctor` directly) — no session lock; original doctor carried as routing suggestion |
 | `visit.skip_triage` | single_acl | new_skip_triage |  |
 | `visit.start` | single_acl | new_reception |  |
 | `visit.start_from_appointment` | single_acl | new_reception |  |

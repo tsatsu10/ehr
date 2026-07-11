@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.1.4 |
 | **Status** | Draft for review — **Module M7** (daily ops) + **M16 Reporting Operations Hub** (V1.1-REP) aligned with PRD v1.20.49; DHIMS2 = **NG8 / V2.2** |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.49), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.49), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.1) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.49), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.49), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.1) |
 | **Audience** | Product, design, clinic owners, clinical leads, public-health liaisons, implementers, QA |
 | **Scope** | Everything managers need to **see how the clinic performed** — daily operations (M7), stock OpenEMR **Reports** menu (~47 legacy screens), pharmacy/inventory compliance, clinical extracts, and **future** national reporting (Ghana DHIMS2 / West Africa MOH) |
 | **Implementation** | Design spec only — no code in this document |
@@ -771,7 +771,7 @@ Former open questions — normative in PRD §24.1 as **D-REP-4**–**D-REP-7**.
 
 **Closes the gap** after PRD §17.4 (install) and daily M7 pilot — ongoing manager/clinical-lead reporting tasks.
 
-**Normative in PRD:** [§17.4.9](../NEW_CLINIC_V1_PRD.md#1749-day-2-reporting-runbook-m16). Trainer workflows: [USER_WORKFLOWS §14.9](../NEW_CLINIC_V1_USER_WORKFLOWS.md#149-periodic-reporting-workflows). In-product (V1.2+): optional **Runbooks** footer on M16 hub linking RR cards.
+**Normative in PRD:** [§17.4.9](./NEW_CLINIC_V1_PRD.md#1749-day-2-reporting-runbook-m16). Trainer workflows: [USER_WORKFLOWS §14.9](../NEW_CLINIC_V1_USER_WORKFLOWS.md#149-periodic-reporting-workflows). In-product (V1.2+): optional **Runbooks** footer on M16 hub linking RR cards.
 
 ### 23.1 Runbook index
 

@@ -4,7 +4,7 @@
 |-------|-------|
 | Document version | 0.6.51 |
 | Status | Draft for review — aligned to PRD v1.20.50; **M1b Registration form** approved; companion specs COM + M1a **approved Phase 1**; Chart Depth §7.13–§7.16; Lab Ops §7.17–§7.20; Pharm Ops §7.21–§7.24; Bill Ops §7.25–§7.26; Admin Hub §7.27–§7.28; Report Hub §7.29; Clinical Doc Hub §7.30; Queue Bridge Hub §7.31; **Patient Registry** §7.32; **T1-F18 legacy strip** §4.11.8; M7 §7.10.18–7.10.20; **V1.1-PRINT-RX** §7.4.7 / §7.6.14 |
-| Companion to | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.49), [NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) (v1.0.0), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.36), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.6), [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) (v1.0.3), [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.1), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (v1.0.9), [NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) (v1.0.0), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.15), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.9), [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.9), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.4), [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.3) |
+| Companion to | [NEW_CLINIC_V1_PRD.md](./done/NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.49), [NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) (v1.0.0), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.36), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.6), [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) (v1.0.3), [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.1), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (v1.0.9), [NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) (v1.0.0), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.15), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.9), [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.9), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.4), [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.3) |
 | Audience | Product, design, frontend engineers, QA |
 | Purpose | Page-level build spec for New Clinic pages and chart-depth panels — wireframes, components, state behavior, AJAX contracts, acceptance — design only, no code |
 | Module status | `oe-module-new-clinic` not yet built. This document is the page-level build spec, complementing PRD §7.4 (module skeleton) and §M0–M7 (functional requirements) |
@@ -66,7 +66,7 @@ This document defines **what each New Clinic page looks like and how it behaves*
 
 | Companion doc | Tells you |
 |---|---|
-| [PRD](./NEW_CLINIC_V1_PRD.md) | Modules, requirements (M-IDs), data model, ACL, integration |
+| [PRD](./done/NEW_CLINIC_V1_PRD.md) | Modules, requirements (M-IDs), data model, ACL, integration |
 | [User Workflows](./NEW_CLINIC_V1_USER_WORKFLOWS.md) | Who does what in what order, frameworks, exceptions |
 | [UI/UX Design Plan](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) | Cross-cutting principles, tokens, component catalog, module map |
 | [MRD Redesign](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) | Full chart depth view |
@@ -707,7 +707,7 @@ When multiple chips compete for banner space, render in this **priority order** 
 
 ### 4.13 Encounter session binding (shared — M0-F22)
 
-**Normative contract** for all desks that open **stock OpenEMR clinical screens**. Staff lifecycle: PRD [§6.1b](./NEW_CLINIC_V1_PRD.md#61b-encounter-lifecycle--anchor) · [Appendix F](./NEW_CLINIC_V1_PRD.md#appendix-f--encounter-requirements-matrix-p0).
+**Normative contract** for all desks that open **stock OpenEMR clinical screens**. Staff lifecycle: PRD [§6.1b](./done/NEW_CLINIC_V1_PRD.md#61b-encounter-lifecycle--anchor) · [Appendix F](./done/NEW_CLINIC_V1_PRD.md#appendix-f--encounter-requirements-matrix-p0).
 
 OpenEMR core PHP pages read `$_SESSION['pid']` and `$_SESSION['encounter']`. The module **owns** binding when staff leave a New Clinic desk for core UI.
 
@@ -778,7 +778,7 @@ On mismatch, show blocking banner — role shortcuts disabled until **`restore_e
 
 ### 4.14 MRD Clinical tab — build spec (T1-F16, D-MRD-10)
 
-**Host:** `demographics.php?tab=clinical` (MRD Zone C). Normative IA: [MRD §8.9](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#89-clinical-tab--layout--anchors-d-mrd-10) · taxonomy [PRD §6.1h](./NEW_CLINIC_V1_PRD.md#61h-longitudinal-chart-taxonomy--history-vs-assessments).
+**Host:** `demographics.php?tab=clinical` (MRD Zone C). Normative IA: [MRD §8.9](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#89-clinical-tab--layout--anchors-d-mrd-10) · taxonomy [PRD §6.1h](./done/NEW_CLINIC_V1_PRD.md#61h-longitudinal-chart-taxonomy--history-vs-assessments).
 
 **Purpose:** Single build spec for longitudinal **Background** + structured lists + **This visit** assessments — closes History vs Assessments gap. Full background spec: [MEDICAL_HISTORY_BACKGROUND](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md).
 
@@ -845,7 +845,7 @@ May batch sections 2–6 in one fetch V1; section 7 refetches when active visit 
 
 ### 4.19 MRD host summary strips (M11)
 
-**Host:** MRD Profile and Clinical tabs (`demographics.php?tab=profile|clinical`). Normative: [MRD §8.10](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#810-mrd-host-summary-strips-chart-depth-entry) · product [M11](./NEW_CLINIC_V1_PRD.md#module-m11--chart-depth).
+**Host:** MRD Profile and Clinical tabs (`demographics.php?tab=profile|clinical`). Normative: [MRD §8.10](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#810-mrd-host-summary-strips-chart-depth-entry) · product [M11](./done/NEW_CLINIC_V1_PRD.md#module-m11--chart-depth).
 
 #### Profile — Payments strip
 
@@ -884,7 +884,7 @@ Placed **above** §4.14 section 7 (**This visit**). **Create referral** button i
 | Shown when | `enable_lab_ops` = 1 AND (pending orders on active encounter OR recent results) |
 | CTAs | **Open in Lab Ops** → §7.17; **View trends** → `#clinical-labs` |
 
-Normative: [MRD §8.10.3](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8103-clinical--labs-strip-m12-entry) · [M12](./NEW_CLINIC_V1_PRD.md#module-m12--lab-operations-hub).
+Normative: [MRD §8.10.3](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8103-clinical--labs-strip-m12-entry) · [M12](./done/NEW_CLINIC_V1_PRD.md#module-m12--lab-operations-hub).
 
 ```text
 ┌─ Labs ──────────────────────────────────────────────────────────────────┐
@@ -908,7 +908,7 @@ Normative: [MRD §8.10.3](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8103-clini
 | Shown when | `enable_pharm_ops` = 1 AND (undispensed Rx on active encounter OR recent dispense) |
 | CTAs | **Open in Pharm Ops** → §7.21; **View meds** → `#clinical-meds` |
 
-Normative: [MRD §8.10.5](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8105-clinical--meds-strip-m13-entry) · [M13](./NEW_CLINIC_V1_PRD.md#module-m13--pharmacy-operations-hub).
+Normative: [MRD §8.10.5](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8105-clinical--meds-strip-m13-entry) · [M13](./done/NEW_CLINIC_V1_PRD.md#module-m13--pharmacy-operations-hub).
 
 ```text
 ┌─ Medications ───────────────────────────────────────────────────────────┐
@@ -923,7 +923,7 @@ Normative: [MRD §8.10.5](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md#8105-clini
 
 ### 4.15 Patient switch contract — wrong patient prevention (D50)
 
-**Normative contract** for switching the active patient on a desk without wrong-patient writes. PRD anchor: [§6.1i](./NEW_CLINIC_V1_PRD.md#61i-wrong-patient-prevention).
+**Normative contract** for switching the active patient on a desk without wrong-patient writes. PRD anchor: [§6.1i](./done/NEW_CLINIC_V1_PRD.md#61i-wrong-patient-prevention).
 
 **Client rule (all desks):** replace active pane from **full server payload** — never patch banner chips locally (§7.4.7c).
 
@@ -1228,7 +1228,7 @@ Every action that calls `transition()` carries the `row_version` it last saw. On
 
 ### 5.5 “In use” soft hold (UI only — PRD §6.1c, D38)
 
-**Authority:** FSM + `assigned_provider_id` — **not** this display. Normative matrix: [Appendix G](./NEW_CLINIC_V1_PRD.md#appendix-g--concurrent-access-matrix-p0).
+**Authority:** FSM + `assigned_provider_id` — **not** this display. Normative matrix: [Appendix G](./done/NEW_CLINIC_V1_PRD.md#appendix-g--concurrent-access-matrix-p0).
 
 | Property | Behavior |
 |---|---|
@@ -2061,7 +2061,7 @@ Product decision (2026-06-17). Implements return-from-core without patching stoc
 
 ### 7.4.7a Encounter session binding — Doctor Desk (implements §4.13)
 
-**Shared contract:** [§4.13](./NEW_CLINIC_V1_PAGE_DESIGNS.md#413-encounter-session-binding-shared--m0-f22) · PRD [Appendix F](./NEW_CLINIC_V1_PRD.md#appendix-f--encounter-requirements-matrix-p0).
+**Shared contract:** [§4.13](./NEW_CLINIC_V1_PAGE_DESIGNS.md#413-encounter-session-binding-shared--m0-f22) · PRD [Appendix F](./done/NEW_CLINIC_V1_PRD.md#appendix-f--encounter-requirements-matrix-p0).
 
 OpenEMR core clinical pages read `$_SESSION['pid']` and `$_SESSION['encounter']` (PRD §11.4). Doctor Desk uses **`consult_shortcut_preflight`** and **`restore_encounter_session`** (M4-F18–F20).
 
@@ -5459,5 +5459,5 @@ This is the consolidated QA checklist mapping every page to PRD F-IDs.
 
 ---
 
-*For requirements, data model, ACL keys, and OpenEMR integration, see [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md). For staff behavior and exception flows, see [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md). For the redesigned full chart, see [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md).*
+*For requirements, data model, ACL keys, and OpenEMR integration, see [NEW_CLINIC_V1_PRD.md](./done/NEW_CLINIC_V1_PRD.md). For staff behavior and exception flows, see [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md). For the redesigned full chart, see [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md).*
 

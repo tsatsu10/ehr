@@ -1,6 +1,6 @@
 # PRD §21 — E2E evidence map
 
-Living worksheet mapping [PRD §21 acceptance](./NEW_CLINIC_V1_PRD.md#21-acceptance-criteria-v1-pilot) to automated tests and pilot scripts.
+Living worksheet mapping [PRD §21 acceptance](./done/NEW_CLINIC_V1_PRD.md#21-acceptance-criteria-v1-pilot) to automated tests and pilot scripts.
 
 | Field | Value |
 |-------|--------|
@@ -88,6 +88,6 @@ Formal record: [NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md](./NEW_CLINIC_V1_SECTION21
 | **Engineering signed** | Hub smokes (19 specs) | Playwright **57/57** — 2026-07-04 |
 | **Open** | Normative §21.1c–z checkboxes, training, MRD B7, perf, reconciliation | [Pilot worksheets](./worksheets/README.md) |
 
-PRD checkboxes for signed rows are marked in [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md#21-acceptance-criteria-v1-pilot).
+PRD checkboxes for signed rows are marked in [NEW_CLINIC_V1_PRD.md](./done/NEW_CLINIC_V1_PRD.md#21-acceptance-criteria-v1-pilot).
 
 Update [NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md](./NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md) when new smoke specs land.

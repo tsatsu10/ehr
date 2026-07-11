@@ -1,6 +1,6 @@
 # New Clinic V1 — Implementation Scorecard
 
-**Living tracker** synced to [PRD §5.6](./NEW_CLINIC_V1_PRD.md#56-implementation-status-matrix) (module shells) and [§20.1](./NEW_CLINIC_V1_PRD.md#201-post-pilot-release-slices-v11-family--independent-ships) (post-pilot release slices).
+**Living tracker** synced to [PRD §5.6](./done/NEW_CLINIC_V1_PRD.md#56-implementation-status-matrix) (module shells) and [§20.1](./done/NEW_CLINIC_V1_PRD.md#201-post-pilot-release-slices-v11-family--independent-ships) (post-pilot release slices).
 
 | Field | Value |
 |-------|-------|
@@ -306,9 +306,9 @@ Completed comprehensive Front Desk UX overhaul (sp182touch → sp191fuzzydup):
 
 ## Related documents
 
-- [PRD §5.6 matrix](./NEW_CLINIC_V1_PRD.md#56-implementation-status-matrix)
-- [PRD §20.1 slices](./NEW_CLINIC_V1_PRD.md#201-post-pilot-release-slices-v11-family--independent-ships)
-- [PRD §21 acceptance](./NEW_CLINIC_V1_PRD.md#21-acceptance-criteria-v1-pilot)
+- [PRD §5.6 matrix](./done/NEW_CLINIC_V1_PRD.md#56-implementation-status-matrix)
+- [PRD §20.1 slices](./done/NEW_CLINIC_V1_PRD.md#201-post-pilot-release-slices-v11-family--independent-ships)
+- [PRD §21 acceptance](./done/NEW_CLINIC_V1_PRD.md#21-acceptance-criteria-v1-pilot)
 - [§21 E2E evidence map](./NEW_CLINIC_V1_SECTION21_E2E_MAP.md)
 - [§21 QA sign-off record](./NEW_CLINIC_V1_SECTION21_QA_SIGNOFF.md)
 - [NEXT_STEPS.md](../../interface/modules/custom_modules/oe-module-new-clinic/NEXT_STEPS.md) — deploy / pilot commands

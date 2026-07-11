@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.1.15 |
 | **Status** | Draft for review — aligned to PRD **Module M11** (v1.20.47, decision **D61**; currency **D-REG-3** / M6-F27; M14 cross-link **D-BILL-1**) |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.47), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.35), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.47), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.47), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.47), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.35), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.47), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.47), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3) |
 | **Audience** | Product, design, clinical leads, billing leads, implementers, QA |
 | **Scope** | Legacy patient-chart surfaces **not fully absorbed** by the redesigned MRD — financial history, referrals & letters, clinical reports, PRO, external data, and overflow navigation |
 | **Implementation** | Design only — no code in this document |
@@ -775,7 +775,7 @@ Normative list: PRD **§13.1**.
 
 ## 17. Phasing & PRD alignment
 
-Normative module requirements: PRD [§8 Module M11](../NEW_CLINIC_V1_PRD.md#module-m11--chart-depth) · pilot interim full chart: PRD [§5.6.1](../NEW_CLINIC_V1_PRD.md#561-interim-full-chart-pilot-week-1-4).
+Normative module requirements: PRD [§8 Module M11](./NEW_CLINIC_V1_PRD.md#module-m11--chart-depth) · pilot interim full chart: PRD [§5.6.1](./NEW_CLINIC_V1_PRD.md#561-interim-full-chart-pilot-week-1-4).
 
 | Phase | Deliverable | PRD gate | M11-F |
 |-------|-------------|----------|-------|
@@ -904,4 +904,4 @@ Maps to PRD **§21.1p** and post-V1 tests **CD-1–CD-5** (§16.1). Build is acc
 
 ---
 
-*For MRD tab layout and activity feed, see [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md). For cash posting rules, see [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) §M5.2. For inbound referral scan, see PRD §6.8 D34.*
+*For MRD tab layout and activity feed, see [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md). For cash posting rules, see [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) §M5.2. For inbound referral scan, see PRD §6.8 D34.*

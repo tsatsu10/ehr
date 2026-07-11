@@ -19,7 +19,7 @@ sales). It sits **above** the PRD in ambition but **below** it in authority: not
 overrides PRD §3.2 non-goals — every scope expansion is explicitly marked
 **[PRD amendment required]** and must land in the PRD before code starts.
 
-Read alongside: [PRD](../NEW_CLINIC_V1_PRD.md) ·
+Read alongside: [PRD](../done/NEW_CLINIC_V1_PRD.md) ·
 [Gap analysis & GAP-A–D plan](./NEW_CLINIC_OPENEMR_GAP_ANALYSIS_AND_REDESIGN_PLAN.md) ·
 [Scorecard](../NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md) ·
 [Scalability plan](./NEW_CLINIC_V1_SCALABILITY_HARDENING_PLAN.md) ·

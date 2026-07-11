@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.1.4 |
 | **Status** | Draft for review — **Module M6 + M15** integrated in PRD v1.20.32; PAGE_DESIGNS §7.27–§7.28; USER_WORKFLOWS §14.8; PRD §17.4.8 / §19.4 / §21.1v; **D-ADMIN-1–5 closed** |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.32), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.37), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.37), [FRONTEND_2026_MODERNIZATION_PLAN.md](../FRONTEND_2026_MODERNIZATION_PLAN.md) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.32), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.37), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.37), [FRONTEND_2026_MODERNIZATION_PLAN.md](../FRONTEND_2026_MODERNIZATION_PLAN.md) |
 | **Audience** | Product, design, clinic owners, IT implementers, trainers, QA |
 | **Scope** | Everything under stock OpenEMR **Admin** menu that clinic owners touch after go-live — plus **M6 Clinic Admin** — unified for **private OPD clinics in Ghana and West Africa** |
 | **Implementation** | Design spec only — no code in this document |

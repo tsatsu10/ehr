@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.1.2 |
 | **Status** | Draft for review — **B7** build slice; integrates MRD v0.2.30 + Legacy Chart Context v0.1.2 |
-| **Companion to** | [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (normative MRD IA), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (stock chart boundary), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (T1-F20 Background), [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.41), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.45), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.9) |
+| **Companion to** | [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (normative MRD IA), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (stock chart boundary), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (T1-F20 Background), [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.41), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.45), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.9) |
 | **Audience** | Product, design, clinical leads, trainers, implementers, QA |
 | **Primary market** | Private outpatient clinics — **Ghana & West Africa** |
 | **Build milestone** | **B7** — redesigned full patient chart replaces stock Medical Record Dashboard for Clinic roles |
@@ -530,7 +530,7 @@ flowchart TB
 
 ### 11.1a Pilot interim chart surfaces (before B7)
 
-See also [USER_WORKFLOWS §17.1a](../NEW_CLINIC_V1_USER_WORKFLOWS.md#171a-pilot-interim--which-chart-surface-before-b7) and [PRD §5.6.1](../NEW_CLINIC_V1_PRD.md#561-interim-full-chart-pilot-week-1--before-b7-mrd-ships).
+See also [USER_WORKFLOWS §17.1a](../NEW_CLINIC_V1_USER_WORKFLOWS.md#171a-pilot-interim--which-chart-surface-before-b7) and [PRD §5.6.1](./NEW_CLINIC_V1_PRD.md#561-interim-full-chart-pilot-week-1--before-b7-mrd-ships).
 
 ```text
 Pilot week 1–4 (B7 pending):
@@ -592,4 +592,4 @@ Full normative checklists: [MRD §17](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md#17-
 
 ---
 
-*Normative IA and wireframes: [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) · Legacy boundary: [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) · Product requirements: [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) §5.6.1, §6.1g–§6.1j, B7, T1-F18/F19.*
+*Normative IA and wireframes: [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) · Legacy boundary: [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) · Product requirements: [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) §5.6.1, §6.1g–§6.1j, B7, T1-F18/F19.*

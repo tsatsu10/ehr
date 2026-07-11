@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.2.2 |
 | **Status** | Audit closure — **Module M10** / **V1.1-REG**; normative product spec + build contracts; wireframes in [PAGE_DESIGNS §7.32](../NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.49), [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (v1.0.7), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.49), [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.49), [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (v1.0.7), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.49), [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2) |
 | **Audience** | Product, design, clinical leads, program managers, frontend engineers, QA |
 | **Scope** | Replace legacy **Patient Finder** (`dynamic_finder.php`) with a **Patient Registry** cohort-search experience — structured filters, auditable exports, Ghana-realistic defaults |
 | **Primary market** | Private outpatient clinics — **Ghana & West Africa** |
@@ -730,7 +730,7 @@ flowchart LR
 
 ## 21. Phasing & PRD alignment
 
-**Module M10** — [PRD §8 Module M10](../NEW_CLINIC_V1_PRD.md#module-m10--patient-registry) (M10-F01–F13).
+**Module M10** — [PRD §8 Module M10](./NEW_CLINIC_V1_PRD.md#module-m10--patient-registry) (M10-F01–F13).
 
 | Phase | When | Deliverables |
 |-------|------|--------------|
@@ -851,4 +851,4 @@ Maps to PRD **§21.1ae** tests **REG-1–REG-8** (`@new-clinic-v11-registry`; PR
 
 ---
 
-*Normative wireframes: [PAGE_DESIGNS §7.32](../NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) · Front Desk boundary: [FRONT_DESK_SEARCH](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) · Workflows: [USER_WORKFLOWS §8.1d](../NEW_CLINIC_V1_USER_WORKFLOWS.md#81d-cohort-search--patient-registry) · PRD M10: [§8 Module M10](../NEW_CLINIC_V1_PRD.md#module-m10--patient-registry)*
+*Normative wireframes: [PAGE_DESIGNS §7.32](../NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) · Front Desk boundary: [FRONT_DESK_SEARCH](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) · Workflows: [USER_WORKFLOWS §8.1d](../NEW_CLINIC_V1_USER_WORKFLOWS.md#81d-cohort-search--patient-registry) · PRD M10: [§8 Module M10](./NEW_CLINIC_V1_PRD.md#module-m10--patient-registry)*

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 1.1.0 |
+| **Document version** | 1.4.0 |
 | **Companion to** | [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) §4 (Roles and landing screens), §8.2 (Nurse — Triage playbook) |
 | **Last audited** | 2026-07-07 — spec anchors and product claims verified against code (see [NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md](./done/NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md)) |
 | **Audience** | Product, design, trainers, QA, implementers |
@@ -12,6 +12,8 @@
 > in Ghana. It is not a real patient-facing record — no real name, facility, or patient data is
 > used. Where it makes a claim about clinical regulation or training pathways, that reflects
 > general, stable knowledge of the Ghanaian nursing system rather than a specific individual.
+> Where §8 restates a product rule, it is rationale, not authority — the PRD and workflows stay
+> canonical and win any conflict; drift is resolved by updating the persona, never the spec.
 
 ---
 
@@ -49,7 +51,7 @@
 | Throughout | Occasionally a walk-in arrives directly to the triage room with no visit yet — she searches the patient, confirms **Start visit + Start triage** in one modal | §8.2 "Patient search (no visit)" / §12.2.2 Auto-start at triage |
 | Mid-morning | A returning follow-up patient is sent straight to the doctor by reception (**Skip triage**) — she notices the **Triage** queue is quieter than the Visit Board's **Doctor** column and knows this is expected, not a system fault | §8.2 "Empty-state hint" |
 | 12:30pm | Lunch, often eaten standing at the nurses' station between patients — she does not get an uninterrupted break most days | — |
-| 1:00–4:00pm | Afternoon triage load, dressing changes and injections ordered by the doctor, occasional urgent case (chest pain, high fever in a child) that she flags **Urgent** | is_urgent sort, §12.2 exceptions |
+| 1:00–4:00pm | Afternoon triage load, dressing changes and injections ordered by the doctor; occasionally an urgent case (chest pain, high fever in a child) that she flags **Urgent** herself from the active pane — one click, no reason needed to escalate | is_urgent sort, §8.2 step 3b, §12.2 exceptions |
 | 4:00–5:00pm | Handover to the closing shift or documentation clean-up; double-checks that no patient is left on her screen with unsaved vitals before logging out | Role indicator in top bar ("Nurse — Akua"), Switch role / Logout discipline |
 
 She rarely uses the full patient chart beyond vitals depth — that's the doctor's domain — but will open it to check a returning patient's last visit notes or allergy flags before triage.
@@ -75,7 +77,9 @@ She rarely uses the full patient chart beyond vitals depth — that's the doctor
 - **Shared-device confusion.** Before role-switching was clear, she has previously (at other jobs, on other systems) accidentally acted "as" a colleague who forgot to log out — a source of real anxiety since it implicates her license for someone else's entry.
 - **Small text and low contrast in bright rooms.** The triage room has strong midday light through a window; low-contrast UI is hard to read quickly between patients.
 - **Network and power instability.** Ghana's private clinics commonly run on a mix of grid power, inverters, and generators; brief outages and slow mobile-data failover are a fact of life, not an edge case.
-- **Being asked to "trust the computer" over her own clinical judgment** — she wants the system to support urgent-patient prioritization, not silently override her sense of who needs to be seen next.
+- **Being asked to "trust the computer" over her own clinical judgment** — she wants the system to support urgent-patient prioritization, not silently override her sense of who needs to be seen next. **Shipped 2026-07-09:** she can now mark or clear the urgent flag herself from the active pane — escalating is one click with no reason required, clearing an existing flag requires one, matching standard triage practice (ESI) where the trained assessor's override is authoritative and recorded, not gated behind a lead.
+- **Her vitals warnings don't know a child from an adult.** Verified 2026-07-09: the same numeric thresholds fire for an infant and an adult — a normal infant heart rate can flag as abnormal while a genuinely dangerous low pulse for that same infant sits inside the "normal" adult band and never flags at all. The codebase already computes patient age for a different gate (revisit completion) — it just isn't wired into vitals. Still open — see [NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md](./new/NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md) §5 (D1).
+- **A "10 out of 10" pain score looks exactly like a "0" everywhere on her screen.** Verified 2026-07-09: pain is collected but never evaluated — it cannot trigger the abnormal-vitals warning or badge no matter the value, even though severe pain is a recognized triage-escalation criterion (ESI) she'd expect the system to act on, not just log. Still open — same document, §5 (D2).
 
 ---
 
@@ -112,6 +116,7 @@ Direct implications for the Triage island and shared components, cross-reference
 - **Form must never wipe on error, and never auto-discard on navigation away** — matches the existing forms-UX rule in [`NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md`](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) and CLAUDE.md §7; for Akua this isn't a nicety, it's a patient-safety requirement given how often she's interrupted mid-vitals.
 - **Every desk shows wait time and state via `<WaitTimeSpan />` / `QueueCard`**, never inline formatting — she reads the Triage queue and Visit Board dozens of times a shift and needs the same visual language every time.
 - **Urgent patients sort to top but still go through normal triage** unless reception also used Skip to doctor — the UI must make this distinction unambiguous so she isn't second-guessing whether a case was actually triaged.
+- **Her own urgency override, not just reception's.** **Shipped 2026-07-09** (`triage.set_urgent`, ACL `new_nurse`) — a fast, reason-optional-to-escalate / reason-required-to-de-escalate control in the active pane, matching how standard triage practice (ESI) already treats nurse override as normal, audited, and not gated behind a lead. Never changes visit state. See [NEW_CLINIC_TRIAGE_URGENCY_ESCALATION_GAP.md](./done/NEW_CLINIC_TRIAGE_URGENCY_ESCALATION_GAP.md) for the design this shipped from.
 - **Skipped-triage patients must never look like a missing/broken queue** — the empty-state hint pointing to the Doctor column (§8.2) is exactly the kind of reassurance she needs mid-shift, since a "did the system lose this patient?" moment costs her time and trust.
 - **Active role clearly visible at all times** ("Nurse — Akua" in the top bar) with a deliberate Switch role / Logout step — protects her personally as much as it protects data integrity.
 - **High contrast, large touch targets (44px), visible focus states** — the triage room's bright window light and her habit of quick taps between patients make this a real usability need, not just an accessibility checkbox (WCAG 2.1 AA per CLAUDE.md §7 is the floor, not the ceiling, for her environment).
@@ -145,3 +150,7 @@ To keep scope honest, this persona does **not** drive requirements for: prescrib
 |---|---|---|
 | 1.0.0 | 2026-07-07 | Initial persona |
 | 1.1.0 | 2026-07-07 | Audited against code: all spec anchors (§4, §8.2, §12.2.2) and product claims verified. Corrected §8 connectivity bullet — `oeFetch` has no automatic retry/backoff and no offline queue; the real contract is error-surfacing + form preservation for manual retry. Added history table + README index entry |
+| 1.1.1 | 2026-07-09 | Preamble: §8 restates product rules as rationale only — PRD/workflows stay canonical and win conflicts |
+| 1.2.0 | 2026-07-09 | Corrected §3/§4/§5/§8 overclaim: verified against code that the nurse has no urgency-escalation control on the Triage Desk (`is_urgent` is reception-write-only, plus one narrow walk-in path). Reframed as a known, researched gap with a link to [NEW_CLINIC_TRIAGE_URGENCY_ESCALATION_GAP.md](./new/NEW_CLINIC_TRIAGE_URGENCY_ESCALATION_GAP.md) rather than existing behavior |
+| 1.3.0 | 2026-07-09 | Cross-role safety audit pass: added two new verified gaps — vitals thresholds have no pediatric adjustment, pain score is collected but never evaluated for a warning — linked to [NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md](./new/NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md) |
+| 1.4.0 | 2026-07-09 | **Urgency-escalation gap shipped** (`triage.set_urgent`) — §3/§4/§8 flipped from "known gap" back to real behavior; gap doc moved to `done/`. Pediatric-vitals and pain-score gaps (§5) remain open |

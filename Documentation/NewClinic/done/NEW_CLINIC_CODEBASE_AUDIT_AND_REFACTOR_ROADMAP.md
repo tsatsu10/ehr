@@ -1,6 +1,6 @@
 # New Clinic — Codebase Audit & Refactoring Roadmap
 
-**Version:** v0.1.2 · **Date:** 2026-07-08 · **Status:** Roadmap complete — all AUDIT-1..15 tasks verified done (§7.0)
+**Version:** v0.1.3 · **Date:** 2026-07-09 · **Status:** Roadmap complete — all AUDIT-1..15 tasks verified done (§7.0)
 **Scope:** Full evidence-based audit of the New Clinic module (PHP + React + SQL + docs) as of the working tree on 2026-07-07
 **Audience:** Lead dev (desktop + Cursor iOS sessions); roadmap tasks are written to be executable by a smaller model
 
@@ -298,6 +298,8 @@ Golden path **register → vitals → consult → lab → Rx → cashier**, trac
 
 Rules: one task per PR; Conventional Commit subjects given; every task lists exact verification and a "Do NOT" line. Tags: **[iOS-safe]** per `.cursor/rules/new-clinic-mobile-scope.mdc`, **[desktop-only]** otherwise. Frontend tasks end with the standard gate — `cd frontend; npm test -- --run src/islands/<island>; npm run check; npm run build` — plus **one** `ModuleAssetVersion.php` bump per batch and a hard-refresh instruction. Backend tasks end with `composer verify:new-clinic` printing `RESULT: PASS`.
 
+**Persona-sync rule:** the role personas cite AUDIT findings as dated facts (Selorm: AUDIT-3/-11/-13; Kofi/Labik/Esi: AUDIT-1). When a finding's status changes, update the citing personas in the same batch — Labik/Esi were synced 2026-07-08, Kofi/Selorm 2026-07-09. Any future audit that mints new finding IDs inherits this rule.
+
 ---
 
 **AUDIT-1 · Critical · Restore skip-to-payment on Lab & Pharmacy desks · [iOS-safe]**
@@ -440,6 +442,7 @@ Do NOT: write source-text "contract" tests (see §9.2); assert behavior.
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
+| v0.1.3 | 2026-07-09 | Engineering | Persona-sync rule added to §7.0; Kofi (stale AUDIT-1 warning) and Selorm (AUDIT-3/-11/-13 present-tense claims) personas updated to fixed status |
 | v0.1.2 | 2026-07-08 | Engineering | §7.0 status table — all AUDIT-1..15 verified done; AUDIT-12 tail (`run_acl_upgrade.php`) and AUDIT-15 tail (7 uncovered services) closed; golden-path E2E name-generator drift fixed (letters-only names) and specs re-run |
 | v0.1.1 | 2026-07-08 | Engineering | AUDIT-13 doc-sync landed: scorecard, PRD §12.4 flag matrix, CLAUDE.md, README index; AUDIT-1 skip-to-payment confirmed in tree |
 | v0.1.0 | 2026-07-07 | Codebase audit session (Claude) | Initial audit: 6-phase evidence-based review; 10 sections; AUDIT-1..15 roadmap |

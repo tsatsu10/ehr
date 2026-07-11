@@ -1,6 +1,6 @@
 # PRD §21 — QA sign-off record
 
-Formal acceptance worksheet for [PRD §21](./NEW_CLINIC_V1_PRD.md#21-acceptance-criteria-v1-pilot). Engineering evidence map: [NEW_CLINIC_V1_SECTION21_E2E_MAP.md](./NEW_CLINIC_V1_SECTION21_E2E_MAP.md).
+Formal acceptance worksheet for [PRD §21](./done/NEW_CLINIC_V1_PRD.md#21-acceptance-criteria-v1-pilot). Engineering evidence map: [NEW_CLINIC_V1_SECTION21_E2E_MAP.md](./NEW_CLINIC_V1_SECTION21_E2E_MAP.md).
 
 | Field | Value |
 |-------|--------|
@@ -121,7 +121,7 @@ vendor/bin/phpunit -c phpunit.xml --filter testMandatory44SignedLockAndReopenPra
 | §21.1b | 1/1 | `golden-path.spec.js` skip-queue path |
 | §21.5 (CI row) | 1/1 | PHPUnit mandatory 1–63 file contracts + integration subset |
 
-PRD checkboxes for §21.1, §21.1b, and §21.5 CI row are marked `[x]` in [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md#21-acceptance-criteria-v1-pilot).
+PRD checkboxes for §21.1, §21.1b, and §21.5 CI row are marked `[x]` in [NEW_CLINIC_V1_PRD.md](./done/NEW_CLINIC_V1_PRD.md#21-acceptance-criteria-v1-pilot).
 
 ### Signed — hub engineering smokes (2026-07-04)
 

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 1.0.0 |
+| **Document version** | 1.1.0 |
 | **Companion to** | [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) §4 (Roles and landing screens), §8.6 (Cashier — Cashier), §10 (Profile completion framework), §12 (Exceptions); PRD D-BILL-2 (no partial payments), §6.1.1 (payment E-Sign gate) |
 | **Audience** | Product, design, trainers, QA, implementers |
 | **Purpose** | Ground design and copy decisions for the Cashier Desk, payment confirmation, and end-of-day cash discipline in the day of the person whose drawer has to balance |
@@ -11,6 +11,8 @@
 > Composite persona for design purposes — no real name, facility, or patient data is used. He is
 > the "Kofi" named in the PRD's role table (workflows §4). Claims about Ghanaian cash-handling
 > norms reflect general, stable knowledge of the setting rather than a specific individual.
+> Where §8 restates a product rule, it is rationale, not authority — the PRD and workflows stay
+> canonical and win any conflict; drift is resolved by updating the persona, never the spec.
 
 ---
 
@@ -74,6 +76,8 @@
 - **Receipt printer failures at the worst moment.** A payment that posted but didn't print needs an obvious, immediate reprint path — the patient will not leave without paper, and he will not un-post a payment to regenerate one.
 - **Queue pile-ups he can see coming.** The cashier queue is the clinic's drain — when it backs up, everyone's day ends late. He watches the `ready_for_payment` count the way reception watches the waiting room.
 - **Being handed someone else's session.** Money actions on the wrong login are the nightmare scenario of shared-device work — the confirm modal repeating the active role before payment is, for him, the single most reassuring pattern in the product.
+- **His "pending is a word for other people's money" standard isn't actually guaranteed by the system.** Verified 2026-07-09: payment posting and receipt writing aren't in the same transaction — a receipt-insert failure can leave a visit marked paid and completed with no receipt row at all, invisible to the very reconciliation meant to catch it. The reconciliation math also never subtracts reversed payments, so a same-day reversal can leave the day looking "balanced" when it isn't.
+- **His drawer count never actually touches the system.** There's no in-product "count what's in the drawer, compare to system total, sign it" step anywhere — his whole professional pride ("boringly, every day") currently rests entirely on a paper/verbal report to the manager the next morning. See [NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md](./new/NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md) §6 (E1–E3).
 
 ---
 
@@ -112,7 +116,7 @@ Direct implications for the Cashier Desk and payment flow, cross-referenced to e
 - **The empty-charge guard is a feature; keep it server-side** — refusing payment on a visit with no fee lines protects reconciliation; the UI should pair it with a fast path to add the suggested lines rather than a dead end.
 - **Cash tendered / change due must be the biggest numbers on the screen** — they are read aloud across a counter to a patient; this is a shared display, not a form field.
 - **Left-without-paying and Close-without-charge must be visible, ACL-gated, reason-required, and slightly ceremonial** — their weight in the UI is what lets him deflect pressure ("it's recorded properly") while the audit trail (M7-F14, override reports) protects him at review time.
-- **Skip-to-payment arrivals need their context visible on the payment screen** — a patient who bypassed pharmacy with reason "Patient declined Rx today" should not get charged for a dispense; the skip reason on the card is billing-relevant information, not just workflow trivia. *(Note: the skip UI upstream is currently regressed — AUDIT-1 in the [audit roadmap](./done/NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md) — but skip-state visits still reach his queue via the FSM, so this display requirement stands.)*
+- **Skip-to-payment arrivals need their context visible on the payment screen** — a patient who bypassed pharmacy with reason "Patient declined Rx today" should not get charged for a dispense; the skip reason on the card is billing-relevant information, not just workflow trivia. *(The upstream skip UI was briefly regressed — AUDIT-1 in the [audit roadmap](./done/NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md) — and confirmed restored 2026-07-08; the golden-path E2E now exercises lab skip-to-payment through his queue.)*
 - **Receipt reprint must exist and never re-post** — printer failures are routine; the recovery path has to be one click from the completed visit.
 - **The daily cash summary is his scoreboard** — it must match core AR posting to the pesewa, because the manager's morning reconciliation (RB-02) is, from Kofi's seat, a daily performance review he intends to pass forever.
 - **Confirm modals repeat the active role before money moves** (shared-device rule, §8.6) — hold this pattern permanently; it is the product's promise that nobody spends money on his name but him.
@@ -142,3 +146,5 @@ This persona does **not** drive requirements for: registration/search (Reception
 | Version | Date | Changes |
 |---|---|---|
 | 1.0.0 | 2026-07-07 | Initial persona, written from workflows §8.6, §10, §14.2 and code verified during the 2026-07-07 codebase audit (`ready_for_payment`-only queue gate, empty-charge guard, idempotent confirm, E-Sign payment re-check) |
+| 1.0.1 | 2026-07-09 | Removed stale AUDIT-1 regression warning in §8 — skip UI confirmed restored 2026-07-08 (audit roadmap §7.0). Preamble: §8 restates product rules as rationale only; PRD/workflows stay canonical |
+| 1.1.0 | 2026-07-09 | Cross-role safety audit pass: added three new verified gaps — payment posting and receipt writing aren't atomic, reconciliation never subtracts reversed payments, no in-product drawer-count/sign-off action exists — linked to [NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md](./new/NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md) |

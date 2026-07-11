@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 1.0.0 |
+| **Document version** | 1.2.0 |
 | **Companion to** | [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) §4 (Roles and landing screens), §14 (Manager & admin workflows: §14.1 setup, §14.1.1 staff/ACL, §14.4 pilot worksheet, §14.8 day-2 runbooks RB-01–RB-20); [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (M6 + M15 Admin Hub); PRD §5.6 (flag invariant), §17.4 (technical runbooks) |
 | **Audience** | Product, design, trainers, QA, implementers |
 | **Purpose** | Ground design and copy decisions for the Admin Hub (config, People & Access, health/system), feature-flag enablement, and day-2 operations in the day of the clinic's only technical staff member |
@@ -13,6 +13,8 @@
 > IT-trained administrator rather than the owner-doctor wearing a second hat. Claims about the
 > Ghanaian IT-career context reflect general, stable knowledge of the setting rather than a
 > specific individual.
+> Where §8 restates a product rule, it is rationale, not authority — the PRD and workflows stay
+> canonical and win any conflict; drift is resolved by updating the persona, never the spec.
 
 ---
 
@@ -70,12 +72,15 @@
 ## 5. Frustrations and pain points
 
 - **Single point of failure, human edition.** There is no second IT person. Her sick days are the clinic's IT sick days. Everything about the product that is self-explanatory, self-healing, or safely delegable is personal relief; everything that requires her specifically is technical debt with her name on it.
-- **Flag sprawl and drift.** The `enable_*` family has grown large, and she has personally hit the gap between the PRD's flag table and what's actually in the database — the 2026-07-07 audit confirmed the drift she suspected (flags in the PRD absent from code, and a couple dozen in code absent from the PRD). She wants **one** authoritative flag list, generated from reality, with defaults and dependencies (`enable_pharm_ops` requires `enable_pharmacy_role`) stated where she flips them.
-- **Fresh-install landmines.** Her staging discipline exists because she doesn't trust installers blindly — and the audit proved the instinct right (a fresh single-pass install currently leaves `new_clinic_recall_meta.recall_type` missing until the upgrade runs again; **AUDIT-3**). A second clinic site is on the owner's mind, so fresh-install correctness is not hypothetical to her.
+- **Flag sprawl and drift.** The `enable_*` family has grown large, and she has personally hit the gap between the PRD's flag table and what's actually in the database — the 2026-07-07 audit confirmed the drift she suspected (**AUDIT-13, since fixed**: the PRD §12.4 flag matrix is now generated from `install.sql` rather than hand-maintained). The doc-level fix doesn't retire her want: **one** authoritative flag surface *in the product*, generated from reality, with defaults and dependencies (`enable_pharm_ops` requires `enable_pharmacy_role`) stated where she flips them.
+- **Fresh-install landmines.** Her staging discipline exists because she doesn't trust installers blindly — and the audit proved the instinct right (a fresh single-pass install used to leave `new_clinic_recall_meta.recall_type` missing until the upgrade ran again; **AUDIT-3, since fixed** — the column now ships in the CREATE body). A second clinic site is on the owner's mind, so fresh-install correctness is not hypothetical to her, and one fixed instance doesn't retire the bug class.
 - **The stale-cache "you didn't fix it" loop.** Staff report a bug; a fix ships; staff report it again because the browser cached the old bundle. She now checks the loaded `?v=` asset version reflexively, but she resents every minute spent proving a fix that already worked.
 - **Stock OpenEMR admin screens she still needs.** Until People & Access reaches full parity, some tasks bounce her into wrapped legacy screens — she understands the strangler-fig deal (legacy stays reachable until parity sign-off) and holds the product to the second half of that promise.
-- **Version numbers that disagree.** Three different `acl_version` values across setup files (audit finding, **AUDIT-11**) means "is ACL up to date?" is answerable only by her memory. Systems should answer their own status questions.
+- **Version numbers that disagree.** Three different `acl_version` values across setup files (**AUDIT-11, since fixed** — consolidated into a single `AclVersion::VERSION` pinned by a test) meant "is ACL up to date?" was answerable only by her memory. The fix landed; the lesson stands: systems should answer their own status questions.
 - **Power and network as weather.** UPS, generator changeover, mobile-data failover — infrastructure instability is her baseline, and it's why she cares that the system fails *loudly and recoverably* (a clear error, an idempotent retry) rather than quietly and ambiguously.
+- **Her "twice a year we restore one" habit has no product support at all.** Verified 2026-07-09: the Admin Hub's backup action is a self-attested status checkbox — clicking it doesn't trigger a dump, write a file, or record a restore-test date. Her own quote about sleeping better after a restore test describes a discipline the product doesn't know exists.
+- **The exact bug class that bit her once (AUDIT-3) has no guard against a sibling.** There's still no post-install/schema self-check anywhere in the module — precisely the "one authoritative status surface" she already asked for in §8, just for schema/table drift instead of flags.
+- **Her own floor-admin standard isn't met by the health panel she just got.** Verified 2026-07-09: health chips carry no link to the RB-01..RB-20 runbook catalog that already exists in code — failing the exact bar §8.1 sets ("could the owner-doctor complete this with the runbook alone?"). See [NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md](./new/NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md) §7 (F1–F3).
 
 ---
 
@@ -110,14 +115,35 @@
 Direct implications for the Admin Hub (M6 + M15), flag management, and operational surfaces, cross-referenced to existing product rules:
 
 - **The flag invariant (PRD §5.6) is her contract — honor it absolutely.** Default OFF, OFF = 100% legacy, no half-new chrome. Her staged-enablement discipline is built on it; any surface that leaks through a disabled flag breaks her deployment model, not just a spec line.
-- **One authoritative flag surface in M6** — every `enable_*` with its current value, default, dependency (e.g. `enable_pharm_ops` requires `enable_pharmacy_role` and `inhouse_pharmacy` ≠ 0), and a link to its runbook. The PRD-vs-code flag drift found by the audit (AUDIT-13) is exactly the class of problem this surface should make structurally impossible.
+- **One authoritative flag surface in M6** — every `enable_*` with its current value, default, dependency (e.g. `enable_pharm_ops` requires `enable_pharmacy_role` and `inhouse_pharmacy` ≠ 0), and a link to its runbook. The PRD-vs-code flag drift found by the audit (AUDIT-13, fixed by the doc-sync) is exactly the class of problem this surface should make structurally impossible rather than periodically re-fixed.
 - **People & Access must reach honest parity before the legacy screens disappear** — templates (RB-05/06), deactivate-never-delete (RB-07), and the access-summary view that makes the quarterly RB-17 review a report she reads rather than a spreadsheet she builds. Until parity sign-off, the wrapped legacy screens remain a deliberate feature, not an embarrassment.
 - **Config export/import as first-class rollback** — export before change is her habit; the product should encourage it (offer an export at the moment of risky edits) and make import a reviewed, confirmable diff rather than a blind overwrite.
-- **System health that answers its own questions** — backup age, reconciliation status, ACL version vs expected, module/asset version, pending upgrade SQL. Every status she can read from a health panel (admin health-status surface) is a question the owner doesn't need her physically present to answer — and version drift like the `acl_version` mismatch (AUDIT-11) should be *visible* there, not archaeological.
-- **Fresh-install and upgrade paths must be trustworthy** — her multi-site future depends on the installer being idempotent and complete in one pass; the `recall_type` ordering bug (AUDIT-3) is the counterexample to design against, and a post-install self-check ("all expected tables/columns present") would convert her staging paranoia into a product feature.
+- **System health that answers its own questions** — backup age, reconciliation status, ACL version vs expected, module/asset version, pending upgrade SQL. Every status she can read from a health panel (admin health-status surface) is a question the owner doesn't need her physically present to answer — and version drift like the `acl_version` mismatch (AUDIT-11, since consolidated) should be *visible* there, not archaeological.
+- **Fresh-install and upgrade paths must be trustworthy** — her multi-site future depends on the installer being idempotent and complete in one pass; the `recall_type` ordering bug (AUDIT-3, since fixed) is the counterexample to design against, and a post-install self-check ("all expected tables/columns present") would convert her staging paranoia into a product feature.
 - **Fee edits with operational sequencing in mind** — the product already implies "tell the front desk before you save" (RB-09); surfacing that guidance at the point of change (and showing that open visits keep prior quoted amounts) turns tribal knowledge into UI.
 - **Errors that respect a technical reader** — she is the one user who *wants* the action name, the HTTP status, and the asset version in a diagnostic view; give the admin role a debug-friendly error surface so her bug reports arrive pre-triaged.
 - **Keep the plain-English layer for the owner** — everything she can delegate must read like the runbooks: numbered, jargon-free, safe. The product serves her best when it lets her be *optional* for the routine 80%.
+
+### 8.1 The floor: when the admin seat is the owner-doctor
+
+Selorm is the ceiling (§10); many pilot clinics will run this seat as the owner-doctor or manager
+part-time, with no IT background. Every implication above must degrade gracefully to that reader:
+
+- **Plain-English error copy first, diagnostics second** — the action name / HTTP status / asset
+  version she wants belong in an expandable "technical details" block, never in the headline message.
+- **Health panel readable without training** — green/amber/red with a one-line "what to do"
+  ("Backup is 3 days old — run RB-01"), each status linking to its runbook.
+- **Runbook-shaped flows for the routine 80%** — password reset, fee edit, backup check must be
+  completable by someone holding only the printed runbook, with no DevTools, phpMyAdmin, or
+  staging environment assumed.
+- **Flag enablement must not assume staging exists** — the enable flow should state the risk and
+  the rollback (flag back OFF = 100% legacy, PRD §5.6) in plain words, because the floor admin's
+  only "staging" is that promise.
+- **Offer the config export automatically before risky changes** — Selorm exports by habit; the
+  floor admin gets the same rollback only if the product does it for them.
+
+Acceptance check for any Admin Hub design: *could the owner-doctor complete this with the runbook
+alone?* If not, it serves only the ceiling.
 
 ---
 
@@ -144,3 +170,5 @@ This persona does **not** drive requirements for: clinical workflows of any kind
 | Version | Date | Changes |
 |---|---|---|
 | 1.0.0 | 2026-07-07 | Initial persona (IT-background clinic administrator), written from workflows §14 (setup, staff/ACL, worksheet, RB-01–RB-20 runbooks), the Admin Configuration redesign, PRD §5.6/§17.4, and audit findings AUDIT-3/-11/-13 verified 2026-07-07 |
+| 1.1.0 | 2026-07-09 | AUDIT-3/-11/-13 citations updated to fixed status (all closed 2026-07-08, roadmap §7.0) with design lessons retained. Added §8.1 floor requirements for the owner-doctor-as-admin seat (companion to §10's ceiling note). Preamble: §8 restates product rules as rationale only; PRD/workflows stay canonical |
+| 1.2.0 | 2026-07-09 | Cross-role safety audit pass: added three new verified gaps — backup is a self-attested checkbox with no restorability check, no post-install schema self-check despite already being bitten by this bug class (AUDIT-3), health chips lack runbook links (fails her own §8.1 floor-admin bar) — linked to [NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md](./new/NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md) |

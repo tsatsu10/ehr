@@ -6,7 +6,7 @@
 | **Date** | 2026-07-07 |
 | **Status** | Draft for review |
 | **Method** | Desk research: existing software analysis + competitor review synthesis, mapped against PRD §2/§4 and the shipped V1 module |
-| **Related** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) §2, §4 · [NEW_CLINIC_OPENEMR_GAP_ANALYSIS_AND_REDESIGN_PLAN.md](./NEW_CLINIC_OPENEMR_GAP_ANALYSIS_AND_REDESIGN_PLAN.md) · [NEW_CLINIC_MARKET_EXPANSION_MASTER_PLAN.md](./NEW_CLINIC_MARKET_EXPANSION_MASTER_PLAN.md) |
+| **Related** | [NEW_CLINIC_V1_PRD.md](../done/NEW_CLINIC_V1_PRD.md) §2, §4 · [NEW_CLINIC_OPENEMR_GAP_ANALYSIS_AND_REDESIGN_PLAN.md](./NEW_CLINIC_OPENEMR_GAP_ANALYSIS_AND_REDESIGN_PLAN.md) · [NEW_CLINIC_MARKET_EXPANSION_MASTER_PLAN.md](./NEW_CLINIC_MARKET_EXPANSION_MASTER_PLAN.md) |
 
 ---
 

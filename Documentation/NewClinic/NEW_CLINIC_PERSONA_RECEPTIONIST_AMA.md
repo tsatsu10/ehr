@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 1.0.0 |
+| **Document version** | 1.1.0 |
 | **Companion to** | [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) §4 (Roles and landing screens), §8.1 (Reception — Front Desk), §8.1a–d (Booking, Recalls, Communications, Registry), §9 (Registration & duplicate decision tree), §10 (Profile completion framework) |
 | **Audience** | Product, design, trainers, QA, implementers |
 | **Purpose** | Ground design and copy decisions for the Front Desk, registration accordion, and check-in flows in the day of the clinic's single highest-frequency user |
@@ -11,6 +11,8 @@
 > Composite persona for design purposes — no real name, facility, or patient data is used. She is
 > the "Ama" named in the PRD's role table (workflows §4). Claims about Ghanaian front-office work
 > reflect general, stable knowledge of the setting rather than a specific individual.
+> Where §8 restates a product rule, it is rationale, not authority — the PRD and workflows stay
+> canonical and win any conflict; drift is resolved by updating the persona, never the spec.
 
 ---
 
@@ -76,6 +78,9 @@
 - **Being blamed for queue physics.** When the doctor is slow, the waiting room complains to *her*. Accurate wait context on the board — and a queue slip in the patient's hand — deflects arguments she otherwise absorbs personally.
 - **Override theater.** When the dup gate or revisit gate blocks her for a good reason, fine — but if she has to interrupt her lead for an override on a case the rules could have handled (a returning patient whose file is 68% because of one missing field), the gate teaches staff to resent it.
 - **The old two-systems habit.** Colleagues from other clinics still ask "but where's the *real* patient list?" — the stock Finder being hidden for her role is correct, and she defends it, but only because module search has never yet failed to find someone she knew was there.
+- **Search finds the patient before she's actually looked at them.** Verified 2026-07-09: the top search result auto-selects and opens straight into Start Visit with no forced "is this really them" moment — risky with the common-surname collisions the product already anticipates elsewhere (`SimilarSurnameQueueService` exists on the Visit Board, just not here).
+- **The photo she could be taking at registration doesn't do anything.** A full camera-capture component exists in the code but isn't wired into her registration form — for the undocumented, no-phone, estimated-age patients she registers every day, it's the one identifier that would actually stick.
+- **"How much?" still can't be answered from her screen** — this is the exact gap her own §4/§8 already call out as a requirement, verified 2026-07-09 as still true: no fee schedule reaches the Front Desk at all. See [NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md](./new/NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md) §2 (A1, A2) and §8 (G1).
 
 ---
 
@@ -144,3 +149,5 @@ This persona does **not** drive requirements for: vitals/triage capture (Nurse),
 | Version | Date | Changes |
 |---|---|---|
 | 1.0.0 | 2026-07-07 | Initial persona, written from workflows §8.1/.1a–d, §9, §10 and code verified during the 2026-07-07 codebase audit (search actions, StartVisitForm priority flags, queue-slip inline delivery, revisit gate) |
+| 1.0.1 | 2026-07-09 | Preamble: §8 restates product rules as rationale only — PRD/workflows stay canonical and win conflicts |
+| 1.1.0 | 2026-07-09 | Cross-role safety audit pass: added three new verified gaps — search auto-selects with no identity re-verification, photo capture built but never wired into registration, no fee schedule reaches the Front Desk — linked to [NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md](./new/NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md) |

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 1.1.0 |
+| **Document version** | 1.2.0 |
 | **Companion to** | [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) §4 (Roles and landing screens), §8.5 (Pharmacy — Pharmacy Desk), §8.5a (Pharmacy walk-in triage), §8.5b (OTC counter sale), §8.4c (Pharmacy Operations Hub) |
 | **Last audited** | 2026-07-07 — spec anchors and product claims verified against code (see [NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md](./done/NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md)) |
 | **Audience** | Product, design, trainers, QA, implementers |
@@ -11,6 +11,8 @@
 > Composite persona for design purposes — no real name, facility, or patient data is used. Claims
 > about Ghanaian pharmacy licensing reflect general, stable knowledge of the system rather than a
 > specific individual.
+> Where §8 restates a product rule, it is rationale, not authority — the PRD and workflows stay
+> canonical and win any conflict; drift is resolved by updating the persona, never the spec.
 
 ---
 
@@ -74,6 +76,8 @@
 - **External-Rx verification friction in the wrong direction.** She wants friction on *skipping* required fields (prescriber name, registration/ID, Rx date), not friction on *entering* them quickly when she's doing it correctly — slow, clunky data entry here just tempts staff to eventually take a manager override shortcut instead of doing the check properly.
 - **Ambiguity around "why we didn't dispense."** The reason codes (`rx_required_refer_to_opd`, `rx_required_no_doctor_available`, `rx_required_patient_declined`) matter to her because they protect her professionally — if the UI makes these hard to find or easy to skip in favor of just closing the visit, she loses the documented trail that shows she made the right call.
 - **Undispensed-Rx block feeling punitive rather than protective** if the override-reason flow is clunky — she agrees with the rule in principle (don't let a patient pay and leave with an Rx never actually filled) but wants the override path, when legitimately needed, to be quick and clearly logged rather than a dead end.
+- **Allergy is the only safety check she has — there's no interaction or duplicate-therapy screen at all.** Verified 2026-07-09: the dispense and OTC-sale screens fetch allergies and nothing else about the patient's other active medications — she's expected to remember interactions from a paper glance at the chart, which is exactly the kind of gap her "ask me for the allergy every single time" standard is meant to close for every risk, not just one.
+- **A controlled substance can be sold at the OTC counter with no prescription check at all**, and the controlled-drug register she'd be relying on for her own legal protection is a retrospective report, not a running balance she or an inspector can trust between counts. See [NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md](./new/NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md) §3 (B2, B4).
 - **Lot and quantity confirmation during a rush** — partial dispense on short stock is a real, frequent scenario for her, and a fumbly slide-over here directly slows the busiest part of her day.
 
 ---
@@ -143,4 +147,6 @@ This persona does **not** drive requirements for triage/vitals (Nurse), consult/
 |---|---|---|
 | 1.0.0 | 2026-07-07 | Initial persona |
 | 1.1.1 | 2026-07-08 | AUDIT-13: skip-to-payment UI confirmed restored (AUDIT-1); removed regression warning |
+| 1.1.2 | 2026-07-09 | Preamble: §8 restates product rules as rationale only — PRD/workflows stay canonical and win conflicts |
+| 1.2.0 | 2026-07-09 | Cross-role safety audit pass: added two new verified gaps — no drug-interaction/duplicate-therapy check anywhere in dispense/OTC, controlled substances sellable OTC with no prescription and no running-balance register — linked to [NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md](./new/NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md) |
 | 1.1.0 | 2026-07-07 | Audited against code: allergy gate verified real and blocking (`AllergyGateService::assertDocumented` → `AllergiesUndocumentedException`), `pharmacy_walkin` profile and all three `rx_required_*` reason codes verified in `PharmacyWalkinService`. **Added the missing Skip-to-payment path** (D-PHARM-5 alternate to the undispensed gate) to §3 and §8, with a warning that the skip UI is currently regressed (AUDIT-1). Added history table + README index entry |

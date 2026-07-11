@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 1.1.0 |
+| **Document version** | 1.2.0 |
 | **Companion to** | [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) §4 (Roles and landing screens), §8.3 (Doctor — Doctor Desk), §8.3.1–.4 (multi-doctor, advisory routing, hard assignment, notifications) |
 | **Last audited** | 2026-07-07 — spec anchors and product claims verified against code (see [NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md](./done/NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md)) |
 | **Audience** | Product, design, trainers, QA, implementers |
@@ -11,6 +11,8 @@
 > Composite persona for design purposes — no real name, facility, or patient data is used. Claims
 > about Ghanaian medical licensing and training reflect general, stable knowledge of the system
 > rather than a specific individual.
+> Where §8 restates a product rule, it is rationale, not authority — the PRD and workflows stay
+> canonical and win any conflict; drift is resolved by updating the persona, never the spec.
 
 ---
 
@@ -74,6 +76,8 @@ On multi-doctor days, he is the "Dr. A" of the shared-pool scenario in [§8.3.1]
 - **Late orders after the fact.** When a lab comes back positive after he already released the patient, he needs **Reopen consult** to be fast and obvious — a patient who's already left the building because this took too long is now his liability.
 - **Being second-guessed by "the system's routing guess."** Advisory routing suggestions are useful context, never an instruction — he's mildly annoyed by any UI treatment that makes an override feel like he did something wrong.
 - **Hard assignment friction (V1.2, when enabled).** If a clinic turns on hard assignment, being **blocked (409)** from taking a colleague's patient without a documented override reason is something he understands clinically but finds bureaucratic when he's just trying to cover for a colleague who stepped out.
+- **His fast prescribe path has no safety net at all.** Verified 2026-07-09: the quick-prescribe action he actually uses day to day bypasses the allergy check entirely — the only allergy gate in the product lives on Pharmacy's dispense screen, not on anything he touches when writing the order. Neither prescribing nor lab-ordering checks for an existing active order on the same drug/test before creating a duplicate. See [NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md](./new/NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md) §3 (B1, B3).
+- **A late-positive lab result can vanish into silence.** His own "getting back into that chart needs to take seconds" quote assumes he'll be *told* there's something to get back into — verified 2026-07-09 that isn't true: an abnormal result is computed and logged, but nothing pushes it to him once the patient has left his queue, especially the next day. Same document, §4 (C1).
 - **Mobile consults on a tablet during a busier satellite day** — small touch targets or a cramped one-patient wizard slow him down when he's moving between exam rooms.
 
 ---
@@ -144,3 +148,5 @@ This persona does **not** drive requirements for: nurse triage vitals capture, c
 |---|---|---|
 | 1.0.0 | 2026-07-07 | Initial persona |
 | 1.1.0 | 2026-07-07 | Audited against code: all claims verified exactly — `require_esign_before_complete_consult` defaults to `0` (install.sql, ClinicAdminService), the 30-second queue refresh is the real default (`DoctorDesk.tsx` `pollMs = 30_000`), and advisory routing/Me–All filters are live post desk-redesign (renamed to `DoctorTeamRoster`/`useDoctorRoster`). No factual corrections needed. Added history table + README index entry |
+| 1.1.1 | 2026-07-09 | Preamble: §8 restates product rules as rationale only — PRD/workflows stay canonical and win conflicts |
+| 1.2.0 | 2026-07-09 | Cross-role safety audit pass: added two new verified gaps — quick-prescribe bypasses the allergy gate entirely, no duplicate-order check on prescribe/lab-order, and abnormal lab results never reach him once the patient leaves the queue — linked to [NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md](./new/NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md) |

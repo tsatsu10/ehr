@@ -53,7 +53,7 @@ Attach signed worksheets to training log (G6).
 | Step | Document | Gate |
 |------|----------|------|
 | Hub slices enabled for clinic | [Hub Product sign-off](./NEW_CLINIC_V1_HUB_PRODUCT_SIGNOFF_WORKSHEET.md) | Staging OK per enabled slice |
-| Normative §21 rows | [PRD §21](../NEW_CLINIC_V1_PRD.md#21-acceptance-criteria-v1-pilot) | Mark `[x]` after live validation |
+| Normative §21 rows | [PRD §21](../done/NEW_CLINIC_V1_PRD.md#21-acceptance-criteria-v1-pilot) | Mark `[x]` after live validation |
 
 ---
 

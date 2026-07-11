@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 1.1.0 |
+| **Document version** | 1.2.0 |
 | **Companion to** | [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) §4 (Roles and landing screens), §8.4 (Lab — Lab Desk), §8.4a (Lab-direct intake), §8.4b (Lab Operations Hub) |
 | **Last audited** | 2026-07-07 — spec anchors and product claims verified against code (see [NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md](./done/NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md)) |
 | **Audience** | Product, design, trainers, QA, implementers |
@@ -11,6 +11,8 @@
 > Composite persona for design purposes — no real name, facility, or patient data is used. Claims
 > about Ghanaian allied health licensing reflect general, stable knowledge of the system rather
 > than a specific individual.
+> Where §8 restates a product rule, it is rationale, not authority — the PRD and workflows stay
+> canonical and win any conflict; drift is resolved by updating the persona, never the spec.
 
 ---
 
@@ -70,8 +72,10 @@ He is also the person a nurse's "urgent" flag actually reaches in practice: an u
 ## 5. Frustrations and pain points
 
 - **Two different "queues" to keep straight** — the visit-scoped **Lab Desk** (patient physically in the building, part of the FSM) versus the clinic-wide **Lab Operations Hub** (bench worklist, not tied to the visit queue) can blur together under pressure; he needs the training one-liner ("desk for who's at the bench; ops hub for what's pending; chart for history") to actually hold up in the UI, not just in documentation.
-- **Send-out limbo.** Once a requisition is printed for an external lab, if the product has no way to mark "sample sent, awaiting external result," he ends up tracking this in his head or on a sticky note — precisely the kind of shadow system New Clinic is supposed to replace.
+- ~~**Send-out limbo.**~~ **Resolved.** Verified fixed 2026-07-09: `new_lab_order_meta` (`fulfillment`, `requisition_printed_at`, `collected_at`) and a dedicated Send-out tab in the Lab Operations Hub now track "sample sent, awaiting external result" as a real state, not a sticky note.
 - **Urgent flag getting lost between roles.** A nurse's `is_urgent` on the visit doesn't automatically mean his own bench worklist treats the sample as urgent unless the Lab Operations Hub's "Urgent first" sort genuinely reflects the same flag — a mismatch here is a patient-safety issue, not a cosmetic one.
+- **No two-identifier check at specimen collection.** Verified 2026-07-09: "Mark collected" has an *optional* accession field and no patient-identity confirmation step — the exact wrong-specimen risk he names as his biggest fear has no product-side guard today. See [NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md](./new/NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md) §2 (A3).
+- **A critical result he releases may never reach the doctor.** Verified 2026-07-09: the abnormal-result flag he and the system compute at release is logged but never pushed to the ordering doctor once the patient leaves the queue — a next-day critical value has no notification path at all. See the same audit, §4 (C1).
 - **Lab-direct intake documentation load.** Walk-ins with no doctor visit today still require him to create the order and complete a signed intake note himself — more clinical documentation responsibility than his public-hospital job ever asked of him, and something he's still building confidence in.
 - **Being the default IT contact for lab equipment/reagent issues** with no product surface for it — frustration born of scope, not of the software itself, but it colors how much patience he has left for software friction on top of everything else.
 - **Result entry that doesn't obviously distinguish "draft" from "released"** — if the UI doesn't make this boundary crisp, he worries a doctor could act on a value he hadn't actually finished verifying.
@@ -110,7 +114,9 @@ Direct implications for the Lab Desk and Lab Operations Hub, cross-referenced to
 
 - **Desk vs. hub distinction must be visually unmistakable**, not just documented in a training one-liner — different chrome, different queue semantics (visit-scoped vs. clinic-wide bench worklist) so he never confuses "who's physically at my bench" with "what's pending across the clinic."
 - **Urgent-first sort in the Lab Operations Hub must trace back to the same `is_urgent` flag used elsewhere** — any drift between the nurse's urgent flag and his own worklist sort is a patient-safety gap, not a display inconsistency.
-- **Send-out specimens need a visible state distinct from pending/in-progress/complete** — even a simple "Sent out — awaiting external result" status, tied to the printed requisition, removes a shadow-tracking burden he currently carries himself.
+- ~~**Send-out specimens need a visible state distinct from pending/in-progress/complete**~~ — **shipped**; the Send-out tab and `new_lab_order_meta.fulfillment` now cover this.
+- **Specimen collection needs a real identity check, not an optional text field** — "Mark collected" should require either an accession number or an explicit confirmed-identity acknowledgment before it submits; today neither is enforced (audit §2 A3).
+- **Abnormal results must reach the doctor even after the patient leaves the queue** — his own "draft vs. released" discipline is undermined if a result he correctly flags and releases has no path back to the prescriber once the visit is no longer live (audit §4 C1).
 - **Draft vs. Release to doctor must be a deliberate, hard-to-fumble step** — this is the moment he wants to feel in control of, matching his professional instinct to verify before a result becomes actionable to a clinician.
 - **Lab-direct intake (`lab_direct` service profile) should make the required E-Sign and order-creation steps feel like a supported workflow, not an improvised one** — since these walk-ins never touched a doctor today, the product is effectively asking him to carry documentation weight a public-hospital job never did; clear step sequencing and confirmations reduce his anxiety here.
 - **Referral-on-file chip and requisition printing must be fast and unambiguous** — he is often doing this between patients at a single-operator bench, so any extra clicks compound across a full day.
@@ -143,4 +149,6 @@ This persona does **not** drive requirements for triage/vitals (Nurse), consult/
 |---|---|---|
 | 1.0.0 | 2026-07-07 | Initial persona |
 | 1.1.1 | 2026-07-08 | AUDIT-13: skip-to-payment UI confirmed restored (AUDIT-1); removed regression warning |
+| 1.1.2 | 2026-07-09 | Preamble: §8 restates product rules as rationale only — PRD/workflows stay canonical and win conflicts |
+| 1.2.0 | 2026-07-09 | Cross-role safety audit pass: marked §5/§8 "send-out limbo" resolved (verified fixed in code); added two new verified gaps — no two-identifier check at specimen collection, no critical-result notification path to the doctor once the patient leaves the queue — both linked to [NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md](./new/NEW_CLINIC_CROSS_ROLE_SAFETY_INTEGRITY_AUDIT.md) |
 | 1.1.0 | 2026-07-07 | Audited against code: spec anchors (§8.4/.4a/.4b), `lab_direct` service profile (`LabDirectService`), and urgent-flag claims verified. **Added the missing Skip-to-payment step** to §3 and §8 — it is step 5 of his own playbook (workflows §8.4) and the natural end of every send-out scenario — with a warning that the skip UI is currently regressed (AUDIT-1). Added history table + README index entry |

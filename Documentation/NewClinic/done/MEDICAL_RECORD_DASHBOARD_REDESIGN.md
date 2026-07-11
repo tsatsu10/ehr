@@ -4,7 +4,7 @@
 |-------|--------|
 | **Document version** | 0.2.37 |
 | **Status** | Draft for review |
-| **Companion to** | [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) (v1.20.47), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.47), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.47), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.3), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.15), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3) |
+| **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.47), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.47), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.47), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.3), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.15), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.8), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3) |
 | **Audience** | Product, design, clinical leads, implementers, QA |
 | **Core target** | `interface/patient_file/summary/demographics.php` (page id `core.mrd`) |
 | **Implementation** | Design only — no code in this document |
@@ -604,7 +604,7 @@ Shown when `enable_chart_depth_referral` = 1 **and** ≥1 outbound referral (`LB
 
 #### 8.10.3 Clinical — Labs strip (M12 entry)
 
-When `enable_lab_ops` = 1. Lazy-fetch: `mrd.clinical_labs_summary`. Product: [M12](../NEW_CLINIC_V1_PRD.md#module-m12--lab-operations-hub) · [LAB_OPERATIONS](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md).
+When `enable_lab_ops` = 1. Lazy-fetch: `mrd.clinical_labs_summary`. Product: [M12](./NEW_CLINIC_V1_PRD.md#module-m12--lab-operations-hub) · [LAB_OPERATIONS](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md).
 
 ```text
 ┌─ Labs ──────────────────────────────────────────────────────────────────┐
@@ -630,7 +630,7 @@ Past/today visit row expand shows applicable secondary actions; requires `new_ch
 
 #### 8.10.5 Clinical — Meds strip (M13 entry)
 
-When `enable_pharm_ops` = 1. Lazy-fetch: `mrd.clinical_meds_summary`. Product: [M13](../NEW_CLINIC_V1_PRD.md#module-m13--pharmacy-operations-hub) · [PHARMACY_OPERATIONS](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md).
+When `enable_pharm_ops` = 1. Lazy-fetch: `mrd.clinical_meds_summary`. Product: [M13](./NEW_CLINIC_V1_PRD.md#module-m13--pharmacy-operations-hub) · [PHARMACY_OPERATIONS](./NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md).
 
 ```text
 ┌─ Medications ──────────────────────────────────────────────────────────────────┐
@@ -947,4 +947,4 @@ MRD provides **summary strips** (Profile payments, Clinical referrals) and **⋯
 
 ---
 
-*For product requirements and ACL integration, see [NEW_CLINIC_V1_PRD.md](../NEW_CLINIC_V1_PRD.md) §5.2, §6.1b–§6.1e, Appendix F–G, §10.5, §19, T1-F09–F15. For staff behavior, see [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) §8.3, §12.2, §17.*
+*For product requirements and ACL integration, see [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) §5.2, §6.1b–§6.1e, Appendix F–G, §10.5, §19, T1-F09–F15. For staff behavior, see [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) §8.3, §12.2, §17.*

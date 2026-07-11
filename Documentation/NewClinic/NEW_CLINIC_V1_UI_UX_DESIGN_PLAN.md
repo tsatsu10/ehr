@@ -5,7 +5,7 @@
 | **Document version** | 2.0.0 |
 | **Status** | Active — full rewrite; trunk-test IA, single component contract, shadcn migration plan (2026-06-29) |
 | **Supersedes** | v1.2.3 (additive Track B). v1.x history preserved in [§13](#13-document-history). |
-| **Companion to** | [PRD](./NEW_CLINIC_V1_PRD.md) v1.20.50 · [PAGE_DESIGNS](./NEW_CLINIC_V1_PAGE_DESIGNS.md) v0.6.51 · [USER_WORKFLOWS](./NEW_CLINIC_V1_USER_WORKFLOWS.md) v1.9.50 · [FRONTEND_2026](./FRONTEND_2026_MODERNIZATION_PLAN.md) |
+| **Companion to** | [PRD](./done/NEW_CLINIC_V1_PRD.md) v1.20.50 · [PAGE_DESIGNS](./NEW_CLINIC_V1_PAGE_DESIGNS.md) v0.6.51 · [USER_WORKFLOWS](./NEW_CLINIC_V1_USER_WORKFLOWS.md) v1.9.50 · [FRONTEND_2026](./FRONTEND_2026_MODERNIZATION_PLAN.md) |
 | **Audience** | Product · design · frontend · QA · clinical leads |
 | **Purpose** | The single entry point for *how* New Clinic looks and behaves. Cross-cutting principles, the visual system, **one canonical shared-component reference**, the shadcn migration plan, and the quality bar new work must meet. Per-page wireframes stay in PAGE_DESIGNS. |
 
@@ -68,7 +68,7 @@ Norman: *the user's model should match the design model.* Five nouns describe ev
 
 | Layer | Document | Wins on… |
 |-------|----------|----------|
-| Requirements | [PRD](./NEW_CLINIC_V1_PRD.md) | Modules, ACL, data model, feature flags, acceptance |
+| Requirements | [PRD](./done/NEW_CLINIC_V1_PRD.md) | Modules, ACL, data model, feature flags, acceptance |
 | Workflows | [USER_WORKFLOWS](./NEW_CLINIC_V1_USER_WORKFLOWS.md) | Who does what, in what order |
 | **This plan** | UI/UX master | Principles, visual system, **component contracts**, IA, shadcn migration |
 | Page build spec | [PAGE_DESIGNS](./NEW_CLINIC_V1_PAGE_DESIGNS.md) | Layout, wireframes, AJAX, per-page state, mobile, a11y |
@@ -885,4 +885,4 @@ From `OPENEMR_AREAS_NOT_ADDRESSED.txt` and PRD non-goals:
 
 ---
 
-*Normative wireframes: [PAGE_DESIGNS](./NEW_CLINIC_V1_PAGE_DESIGNS.md) · Workflows: [USER_WORKFLOWS](./NEW_CLINIC_V1_USER_WORKFLOWS.md) · Requirements: [PRD](./NEW_CLINIC_V1_PRD.md) · Platform: [FRONTEND_2026](./FRONTEND_2026_MODERNIZATION_PLAN.md)*
+*Normative wireframes: [PAGE_DESIGNS](./NEW_CLINIC_V1_PAGE_DESIGNS.md) · Workflows: [USER_WORKFLOWS](./NEW_CLINIC_V1_USER_WORKFLOWS.md) · Requirements: [PRD](./done/NEW_CLINIC_V1_PRD.md) · Platform: [FRONTEND_2026](./FRONTEND_2026_MODERNIZATION_PLAN.md)*
