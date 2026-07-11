@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | **Last audited** | 2026-07-11 |
-| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260711gapaclose` |
+| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260711unfileddocs` |
 | **Maintainer** | Engineering lead updates after each sprint; Product owns pilot sign-off |
 | **How to update** | Change `%` and `Status` cells; bump **Last audited**; sync PRD §5.6 row if shell status changes |
 
@@ -238,6 +238,23 @@ Use PRD §8 tables as source of truth. Below: **representative** IDs for spot au
 ---
 
 ## Audit log
+
+**2026-07-11 — GAP-A / A2 "unfiled documents" inbox lens shipped — G2 fully closed**
+
+Closed the remaining half of G2: a new "Unfiled documents" lens in `report-hub`
+(`UnfiledDocumentsLens.tsx`) lists scans with `foreign_id = 0` (stock's own pre-existing
+"no patient" sentinel, same one `documents.php`'s "New Document Uploads" screen already used) and
+files them to a patient via `PatientSearchDropdown`, reusing `documents.list`'s shapes and the
+existing `patients_docs_acl` policy. report-hub's lens system turned out to be a hardcoded enum +
+generic report-card catalog, not an extensible registry — the 7th lens needed special-casing
+across 4 files (`reportHubTypes.ts`, `reportHubLensMeta.ts`, `ReportHubAccessService.php`,
+`ReportHubLensPane.tsx`) plus a Twig toolbar button, matching how the existing `today` lens is
+special-cased. Reused the `enable_documents_native` flag (no new toggle). Live browser
+verification surfaced a pre-existing, already-tracked scalability gap — PHP's default session-file
+locking serializes concurrent same-session ajax calls because no New Clinic handler calls
+`session_write_close()` yet (`NEW_CLINIC_V1_SCALABILITY_HARDENING_PLAN.md`) — correctly attributed
+as a systemic, out-of-scope issue rather than a defect in the new action. 5 new PHPUnit tests + 3
+new Vitest tests.
 
 **2026-07-11 — GAP-A / A1 Office Notes + A2 Documents tab (per-patient half) shipped**
 

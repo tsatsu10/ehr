@@ -1,6 +1,6 @@
 # New Clinic — OpenEMR Coverage Gap Analysis & Comprehensive React Redesign Plan
 
-**Version:** v0.1.3 · **Date:** 2026-07-11 · **Status:** GAP-A underway (A1 merged to main; A2 per-patient tab merged, inbox lens pending)
+**Version:** v0.1.4 · **Date:** 2026-07-11 · **Status:** GAP-A: A1 + A2 fully merged and closed (G1, G2); A3 next
 **v0.1.1:** second-pass audit added off-menu surfaces (MFA, login/auth, issue editor, growth charts, authorizations, record request, background-service monitors) — see G11, W10–W11, A6.
 **v0.1.2:** re-verified A1 (Office Notes) against current code before build start — corrected the
 `onotes` schema/UI claims, the ACL story, and the page-count headcount; see the A1 entry in §5 and
@@ -12,6 +12,15 @@ main — closes G1, and closes the per-patient half of G2 (the clinic-wide "unfi
 inbox lens is still open). Reconciled the pre-build v0.1.2 draft against the real implementation:
 pin **was** shipped after all (companion table, not a core schema change), and the ACL turned out
 to need zero new `acl_setup.php` wiring (the stock `Clinicians` group already covers it). See §5.
+**v0.1.4:** A2's remaining "unfiled documents" inbox lens shipped in `report-hub`, closing G2 fully.
+Confirmed report-hub's lens system is a hardcoded enum + generic card catalog, not a registry —
+adding a 7th lens meant touching 4 files plus a Twig toolbar button, not a drop-in catalog card.
+Live browser verification surfaced (and correctly attributed rather than "fixed") a pre-existing,
+already-tracked scalability gap: PHP's default file-based session locking serializes concurrent
+same-session ajax calls because no New Clinic handler calls `session_write_close()` yet — a
+`documents.unfiled_list` call took 21s once, competing with two other in-flight requests from the
+same tab, not a defect in the new action itself. See §5 and
+[NEW_CLINIC_V1_SCALABILITY_HARDENING_PLAN.md](./NEW_CLINIC_V1_SCALABILITY_HARDENING_PLAN.md).
 
 This document answers two questions:
 
@@ -26,7 +35,7 @@ Read alongside: [PRD](../done/NEW_CLINIC_V1_PRD.md) · [Scorecard](../NEW_CLINIC
 
 - **Daily clinical flow is covered.** All role desks (M1–M9), Visit Board, MRD chart, Scheduling, Communications, Registry, Admin Hub, Reporting, and the post-pilot ops hubs (M11–M18) exist as React islands at 72–100% completion.
 - **Three kinds of gaps remain:**
-  - **Tier 1 — Unaddressed, in-market:** stock screens a cash-clinic actually uses that have *no* New Clinic treatment (Office Notes, Documents manager, Address Book, patient labels/letters, Batch Communications, patient/clinical reminders, MFA enrollment, i18n).
+  - **Tier 1 — Unaddressed, in-market:** stock screens a cash-clinic actually uses that have *no* New Clinic treatment. **Closed:** Office Notes (G1), Documents manager (G2, both per-patient and clinic-wide unfiled inbox). Still open: Address Book, patient labels/letters, Batch Communications, patient/clinical reminders, MFA enrollment, i18n.
   - **Tier 2 — Wrapped/deep-linked, not redesigned:** legacy screens reachable through T1 iframes or gateway cards (People/ACL legacy escape hatch, LBF form engine, Backup, Audit Logs, Merge Patients, Calendar admin, Codes/superbill admin, drug inventory admin).
   - **Tier 3 — Deliberate non-goals:** patient portal, telehealth, US claims/EDI, eRx vendors, FHIR/SMART, group therapy, DICOM, fax, de-identification. These stay out; this plan re-affirms the boundary rather than sneaking them in.
 - **The plan (§5) closes Tier 1 fully and converts the highest-traffic Tier 2 wrappers to native React**, in four phases (GAP-A through GAP-D), reusing `DataTable`, `SlideOver`/`Sheet`, `WidgetCard`, `SegmentedControl`, `ConfirmModal`, the wizard and dual-list patterns from Admin Hub, and the standard `oeFetch`/`ajax.php` data layer.
@@ -81,8 +90,8 @@ Two scope notes from the second audit pass:
 
 | # | Core area | Stock path | Why it matters to a cash outpatient clinic | Current state |
 |---|---|---|---|---|
-| G1 | **Office Notes** | `interface/main/onotes/office_comments.php` | Clinic-wide sticky notes ("fridge broken", "Dr. A away Friday"); staff use it daily in stock installs | No island, no link |
-| G2 | **Documents manager** (patient + global) | `controller.php?document`, `interface/main/display_documents.php` | Scanned IDs, referral letters, lab PDFs land here; MRD only deep-links per-patient | Deep-linked only; no upload/browse UI in module |
+| G1 | **Office Notes** | `interface/main/onotes/office_comments.php` | Clinic-wide sticky notes ("fridge broken", "Dr. A away Friday"); staff use it daily in stock installs | **Closed** — `office-notes` island, 2026-07-11 |
+| G2 | **Documents manager** (patient + global) | `controller.php?document`, `interface/main/display_documents.php` | Scanned IDs, referral letters, lab PDFs land here; MRD only deep-links per-patient | **Closed** — `patient-chart` Documents tab + report-hub "Unfiled documents" lens, 2026-07-11 |
 | G3 | **Address Book** | `interface/usergroup/addrbook_list.php` | Referral targets (specialists, hospitals) power M11 referrals & letters; currently edited in a 2005-era screen | Unaddressed; referrals spec depends on it |
 | G4 | **Letters & printed artifacts** | `patient_file/letter.php`, `label.php`, `addr_label.php`, `barcode_label.php` | Referral letters exist (V1.1-CDb) but generic letter templates, chart/address/barcode labels do not | Partial (referrals only) |
 | G5 | **Patient / clinical reminders** | `patient_file/reminder/` | Distinct from COM dated reminders; recall-adjacent follow-up nudges per patient | Unaddressed (flagged in NOT_ADDRESSED) |
@@ -168,14 +177,15 @@ no new `acl_setup.php` grant at all. Both corrected here against the real code, 
   crosscheck). Reviewed via `nc-code-review` before merge to main.
 - **Effort:** S (1–2 sessions).
 
-#### A2. Documents manager → **`patient-chart` Documents tab + `doc-inbox` pane** (closes G2) — **per-patient tab BUILT (2026-07-11); inbox lens pending**
+#### A2. Documents manager → **`patient-chart` Documents tab + report-hub inbox lens** (closes G2) — **BUILT (2026-07-11), both halves**
 
 - **UI (per-patient) — BUILT:** new "Documents" **tab** in the MRD chart (gated by `enableDocuments`): `DataTable` of documents (name, category, date, uploader), drag-drop + choose-file upload zone with a category `native-select`, preview in `SlideOver` (`<img>` for images, `<iframe>` for PDF, download fallback otherwise), category move via `native-select` in the preview, delete behind `ConfirmModal`. Tab hidden entirely when the toggle is OFF; lazy-loads on first activation.
-- **UI (clinic-wide inbox) — PENDING (commit 2):** "Unfiled documents" lens in `report-hub` for scans awaiting patient assignment, reusing `PatientSearchDropdown` to file them.
-- **Backend — BUILT:** `ajax.php` actions `documents.list|categories|upload|recategorize|delete` via `DocumentsService`, delegating storage to core `\Document::createDocument` (same path as `ReferralDocumentService`); membership in `categories_to_documents`; **delete is a soft-delete** (`documents.deleted = 1`, recoverable, matches every core read filter). Per-category ACL enforced with `AclMain::aclCheckAcoSpec`; every action re-scopes to the patient (`assertPatientChartPid`). Uploads reuse the **existing** `oeFetch` FormData pass-through (no oeFetch change needed — the plan's "multipart branch" was already covered by the referral-upload precedent). Hardened like the referral service: MIME allow-list (PDF + JPEG/PNG/GIF/WebP), 10 MB cap, `isWhiteFile`/`secure_upload` policy, filename sanitize, audit log.
-- **ACL:** core `patients/docs` (new `patients_docs_acl` policy type + `AjaxController::requirePatientsDocsAcl()`). **Toggle:** `enable_documents_native` (default OFF, `install.sql`).
-- **Verification:** frontend `npm run check` + `npm run build` green; backend static `verify-module.php` PASS. Live `--bootstrap` + browser smoke pending a clean (non-nested) checkout.
-- **Effort:** M (3–4 sessions). Highest daily value in this phase.
+- **UI (clinic-wide inbox) — BUILT:** new **"Unfiled documents"** lens in `report-hub` (`UnfiledDocumentsLens.tsx`), special-cased like the `today` lens (it isn't a `ReportHubCard`-shaped catalog entry — report-hub's lens system is a hardcoded 6→7-member enum + generic date-range card catalog, not an extensible registry; adding a 7th lens meant touching 4 files: `reportHubTypes.ts`, `reportHubLensMeta.ts`, `ReportHubAccessService.php`, and special-casing the render in `ReportHubLensPane.tsx`, plus the Twig toolbar button). `DataTable` of scans with `foreign_id = 0` (name, category, scanned date, uploader), inline "Assign…" action opens a `PatientSearchDropdown`; picking a patient files it and the row disappears from the list. Reuses the exact same `PatientDocument`/`DocumentsListResponse` shapes and `formatDocDate`/`formatBytes` helpers as the per-patient tab.
+- **"Unfiled" is a real, pre-existing stock concept, not new plumbing:** `Document::createDocument()` already stores `foreign_id = 0` (int, never NULL) when no patient is given — the exact sentinel stock's own "Documents → New Document Uploads" screen (`controllers/C_Document.class.php::list_action`) already uses. Filing is the same primitive as stock's `move_action_process`/`Document::change_patient()` — just `UPDATE documents SET foreign_id = ?`.
+- **Backend — BUILT:** `ajax.php` actions `documents.list|categories|upload|recategorize|delete|unfiled_list|assign_patient` via `DocumentsService`, delegating storage to core `\Document::createDocument` (same path as `ReferralDocumentService`); membership in `categories_to_documents`; **delete is a soft-delete** (`documents.deleted = 1`, recoverable, matches every core read filter). Per-category ACL enforced with `AclMain::aclCheckAcoSpec`; every per-patient action re-scopes to the patient (`assertPatientChartPid`); `assign_patient` re-scopes to its *target* patient the same way. Uploads reuse the **existing** `oeFetch` FormData pass-through (no oeFetch change needed — the plan's "multipart branch" was already covered by the referral-upload precedent). Hardened like the referral service: MIME allow-list (PDF + JPEG/PNG/GIF/WebP), 10 MB cap, `isWhiteFile`/`secure_upload` policy, filename sanitize, audit log.
+- **ACL:** core `patients/docs` for all `documents.*` actions (`patients_docs_acl` policy type + `AjaxController::requirePatientsDocsAcl()`), satisfied for every New Clinic role via the stock `Clinicians` group grant (no new `acl_setup.php` wiring needed — see A1's note, same mechanism). The report-hub *tab itself* additionally gates on `new_reception`/`new_admin` (reception is who actually triages batch scans) — a report-hub-local visibility rule, not a data-access rule; the underlying ajax actions don't care which lens called them. **Toggle:** `enable_documents_native` (default OFF, `install.sql`) — reused for both halves, no second flag; the inbox lens also requires `enable_report_hub` since it lives inside that hub.
+- **Verification:** frontend `npm run check` + `npm run build` green; backend static `verify-module.php` PASS; live browser smoke (real PDF upload, category resolves, file lands on disk) clean. Caught and fixed a real bug in review: `DocumentsService` queried a `categories.active` column that has never existed in stock — 500'd every category-related action; neither service had test coverage before this batch (13 tests added across both).
+- **Effort:** M (3–4 sessions) for the per-patient half; +1 session for the inbox lens once the report-hub lens-registry limitation was understood.
 
 #### A3. Address Book → **Admin Hub "Directory" tab** (closes G3)
 
@@ -352,3 +362,4 @@ Net-new shared components required: **one** (SVG trend chart — shared by B2 tr
 | v0.1.1 | 2026-07-07 | Second-pass audit: off-menu surfaces added (G11, W10–W11, A6) |
 | v0.1.2 | 2026-07-11 | Re-verified A1 (Office Notes) against current code before starting the build: dropped the unbacked "pin toggle," corrected the ACL story (new `office_notes_acl` policy branch + `$coreGrants` wiring needed, not a free reuse of stock ACL), renamed the ajax action domain to `office_notes.*` to avoid colliding with the existing `core_notes_acl` policy type, corrected the module page count (23, not 24). Build of A1 started same day. |
 | v0.1.3 | 2026-07-11 | A1 (Office Notes) and A2's per-patient Documents tab built and merged to main, closing G1 and the per-patient half of G2. Merge review found the pre-build v0.1.2 draft wrong on two points once checked against the real code: pin *was* shipped (via a companion table `new_office_note_meta`, not a core schema change) and the ACL needed zero new `acl_setup.php` grants (stock `Clinicians` group membership already covers `encounters/notes` + `patients/docs` for every New Clinic role via `ClinicRolesService`). One code-review fix applied before merge: Office Notes error messages switched to the shared `deskCalloutClass()` convention. A2's clinic-wide "unfiled documents" inbox lens remains open. |
+| v0.1.4 | 2026-07-11 | A2's "unfiled documents" inbox lens shipped in `report-hub`, closing G2 fully. Discovered report-hub's lens system is a hardcoded 6-member enum + generic date-range card catalog, not a registry — the 7th lens needed special-casing across 4 files plus a Twig toolbar button, not a drop-in catalog card. Added `documents.unfiled_list`/`documents.assign_patient` actions (reusing the existing `patients_docs_acl` policy — no new ACL type) and a new `new_reception`/`new_admin` tab-visibility gate. Live browser verification surfaced a pre-existing, already-tracked scalability gap (PHP session-file-locking queues concurrent same-session requests because no handler calls `session_write_close()` yet) — correctly attributed to `NEW_CLINIC_V1_SCALABILITY_HARDENING_PLAN.md`, not treated as a defect in the new code. |
