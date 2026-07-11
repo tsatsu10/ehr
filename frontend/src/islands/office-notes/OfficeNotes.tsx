@@ -3,6 +3,7 @@ import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
 import { Textarea } from '@components/ui/textarea';
 import { ConfirmModal } from '@components/ConfirmModal';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { RowActionsMenu, type RowActionItem } from '@components/RowActionsMenu';
 import { SegmentedControl } from '@components/SegmentedControl';
 import { WidgetCard } from '@components/WidgetCard';
@@ -208,9 +209,9 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
           }}
         />
         {composeError && (
-          <p className="nc-office-notes__message nc-office-notes__message--error" role="alert">
+          <div className={deskCalloutClass('error', 'nc-office-notes__message')} role="alert">
             {composeError}
-          </p>
+          </div>
         )}
         <div className="nc-office-notes__compose-actions">
           <Button
@@ -240,9 +241,9 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
       </div>
 
       {listError && (
-        <p className="nc-office-notes__message nc-office-notes__message--error" role="alert">
+        <div className={deskCalloutClass('error', 'nc-office-notes__message')} role="alert">
           {listError}
-        </p>
+        </div>
       )}
 
       {loading ? (
@@ -276,12 +277,12 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
                       }}
                     />
                     {editError && (
-                      <p
-                        className="nc-office-notes__message nc-office-notes__message--error"
+                      <div
+                        className={deskCalloutClass('error', 'nc-office-notes__message')}
                         role="alert"
                       >
                         {editError}
-                      </p>
+                      </div>
                     )}
                     <div className="nc-office-notes__compose-actions">
                       <Button

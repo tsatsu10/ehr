@@ -160,10 +160,6 @@
   font-size: 0.8125rem;
 }
 
-.nc-office-notes__message--error {
-  color: var(--oe-nc-danger, #b42318);
-}
-
 @media (max-width: 480px) {
   .nc-office-notes__intro,
   .nc-office-notes__toolbar {
