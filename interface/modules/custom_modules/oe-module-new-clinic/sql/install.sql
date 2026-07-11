@@ -298,6 +298,14 @@ CREATE INDEX `idx_facility_state_active` ON `new_visit` (`facility_id`, `state`)
 CREATE INDEX `idx_queue_sort_stateless` ON `new_visit` (`facility_id`, `is_urgent`, `visit_date`, `queue_number`, `started_at`);
 #EndIf
 
+#IfNotIndex new_visit_state_log idx_visit_to_state
+CREATE INDEX `idx_visit_to_state` ON `new_visit_state_log` (`visit_id`, `to_state`);
+#EndIf
+
+#IfNotIndex new_visit_state_log idx_visit_from_state
+CREATE INDEX `idx_visit_from_state` ON `new_visit_state_log` (`visit_id`, `from_state`);
+#EndIf
+
 #IfNotRow2D new_completion_field_weight field_key fname level 1
 INSERT INTO `new_completion_field_weight` (`field_key`, `level`, `weight`, `is_active`) VALUES
 ('fname', 1, 15, 1),

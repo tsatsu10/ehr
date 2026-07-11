@@ -28,6 +28,7 @@ final class TriageActionHandler implements AjaxActionHandlerInterface
         'triage.send_doctor',
         'triage.auto_start',
         'triage.restore_session',
+        'triage.set_urgent',
     ];
 
     public function __construct(
@@ -133,6 +134,21 @@ final class TriageActionHandler implements AjaxActionHandlerInterface
                 );
                 $this->host->svc(EncounterSessionService::class)->bindForVisit((int) $visit['id'], $userId);
                 $this->host->respond(true, 'Visit started at triage', ['visit' => $visit]);
+                break;
+            case 'triage.set_urgent':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $visit = $this->host->svc(VisitQueueService::class)->setUrgency(
+                    (int) ($body['visit_id'] ?? 0),
+                    $userId,
+                    (int) ($body['row_version'] ?? 0),
+                    !empty($body['is_urgent']),
+                    isset($body['reason']) ? (string) $body['reason'] : null
+                );
+                $this->host->respond(true, 'Urgency updated', ['visit' => $visit]);
                 break;
             case 'triage.restore_session':
                 if ($method !== 'POST') {

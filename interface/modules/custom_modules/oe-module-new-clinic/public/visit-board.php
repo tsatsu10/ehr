@@ -43,6 +43,7 @@ $kioskChrome = $boardProfile === 'wall' && (
     'shell_minimal' => $boardProfile === 'wall',
     'enable_react_visit_board' => $reactVisitBoard,
     'can_cancel_visit' => AclMain::aclCheckCore('new_clinic', 'new_visit_cancel'),
+    'can_send_back_to_doctor' => AclMain::aclCheckCore('new_clinic', 'new_visit_return_to_doctor'),
     'desk_urls' => [
         'front_desk' => $moduleUrl . '/front-desk.php',
         'triage' => $moduleUrl . '/triage.php',

@@ -34,6 +34,7 @@
          'kioskChrome': kiosk_chrome|default(false) ? true : false,
          'clinicName':  shell.brand.clinic_name|default(''),
          'canCancel':   can_cancel_visit,
+         'canSendBackToDoctor': can_send_back_to_doctor,
          'deskUrls':    desk_urls
      }|json_encode|e('html_attr') }}"></div>
 {% else %}

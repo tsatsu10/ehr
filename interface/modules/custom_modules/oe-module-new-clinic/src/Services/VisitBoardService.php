@@ -32,6 +32,7 @@ class VisitBoardService
         private readonly VisitRowEnricher $rowEnricher = new VisitRowEnricher(),
         private readonly ClinicDateService $clinicDate = new ClinicDateService(),
         private readonly QueueBridgeSurfaceService $queueBridgeSurface = new QueueBridgeSurfaceService(),
+        private readonly LabResultsReadinessService $labReadiness = new LabResultsReadinessService(),
     ) {
     }
 
@@ -47,6 +48,15 @@ class VisitBoardService
         $active = $this->fetchVisits($facilityId, $visitDate, false);
         $cancelled = $this->fetchVisits($facilityId, $visitDate, true);
         $closedUnpaid = $this->fetchClosedUnpaid($facilityId, $visitDate);
+
+        // Lab-ready badge (no severity judgment — just "a result exists to look at"; see
+        // LabOpsResultService::orderHasAbnormal for the separate, human-decided abnormal concept).
+        $labChips = $this->labReadiness->batchRoutingChipsForVisits($active, $facilityId);
+        foreach ($active as &$row) {
+            $visitId = (int) ($row['id'] ?? 0);
+            $row['lab_results_ready'] = !empty($labChips[$visitId]['results_ready']);
+        }
+        unset($row);
 
         $columns = [];
         foreach (self::COLUMN_STATES as $columnKey => $states) {

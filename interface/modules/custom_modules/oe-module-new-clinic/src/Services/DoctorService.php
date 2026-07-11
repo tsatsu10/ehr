@@ -193,6 +193,38 @@ class DoctorService
     }
 
     /**
+     * Doctor's own walk-in bypass — patient never passed through Front Desk or Triage. Same
+     * "one active consult at a time" guard as taking a patient off the shared queue.
+     */
+    public function startWalkIn(
+        int $pid,
+        int $visitTypeId,
+        int $actorUserId,
+        ?int $facilityId = null,
+        ?string $chiefComplaint = null
+    ): array {
+        $resolvedFacilityId = $this->visitScope->resolveActorFacilityId($facilityId);
+        $existing = $this->findActiveConsult($resolvedFacilityId, $actorUserId);
+        if (!empty($existing)) {
+            throw new VisitNotTakeableException(
+                'Complete or release your current patient before starting a new one'
+            );
+        }
+
+        $visit = $this->queueService->startVisitWithDoctor(
+            $pid,
+            $visitTypeId,
+            $actorUserId,
+            $resolvedFacilityId,
+            $chiefComplaint
+        );
+        $visitId = (int) ($visit['id'] ?? 0);
+        $this->encounterSessionService->bindForVisit($visitId, $actorUserId);
+
+        return $this->buildConsultPayload($visitId, $actorUserId);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function completeConsult(
@@ -251,21 +283,22 @@ class DoctorService
     /**
      * @return array<string, mixed>
      */
+    /**
+     * Reopening your own patient's own visit is frictionless by design — same encounter, same
+     * doctor, nothing new to justify (reason is optional and ignored). Reopening a visit assigned
+     * to someone else (admin-only path) still requires a real reason — that's the actual
+     * oversight-worthy action, not a doctor picking their own patient back up.
+     */
     public function reopenConsult(
         int $visitId,
         int $actorUserId,
         int $expectedVersion,
-        string $reason
+        ?string $reason = null
     ): array {
         if (!AclMain::aclCheckCore('new_clinic', 'new_visit_reopen')
             && !AclMain::aclCheckCore('new_clinic', 'new_admin')
             && !AclMain::aclCheckCore('admin', 'super')) {
             throw new \InvalidArgumentException('Not authorized to reopen consult');
-        }
-
-        $reason = trim($reason);
-        if (mb_strlen($reason) < 10) {
-            throw new \InvalidArgumentException('Reopen reason must be at least 10 characters');
         }
 
         $visit = $this->queueService->getVisitForActor($visitId);
@@ -274,11 +307,19 @@ class DoctorService
             throw new \InvalidArgumentException('Visit cannot be reopened from state ' . $fromState);
         }
 
-        $assigned = (int) ($visit['assigned_provider_id'] ?? 0);
+        // The doctor who actually conducted the consult — not new_visit.assigned_provider_id,
+        // which lab/pharmacy overwrite once they take the patient after the doctor releases it.
+        $assigned = $this->queueService->lastDoctorForVisit($visitId);
         $isAdmin = AclMain::aclCheckCore('new_clinic', 'new_admin')
             || AclMain::aclCheckCore('admin', 'super');
-        if ($assigned > 0 && $assigned !== $actorUserId && !$isAdmin) {
+        $isOwnVisit = $assigned > 0 && $assigned === $actorUserId;
+        if ($assigned > 0 && !$isOwnVisit && !$isAdmin) {
             throw new \InvalidArgumentException('Visit is assigned to another provider');
+        }
+
+        $reason = trim((string) ($reason ?? ''));
+        if (!$isOwnVisit && mb_strlen($reason) < 10) {
+            throw new \InvalidArgumentException('Reopen reason must be at least 10 characters');
         }
 
         $facilityId = (int) ($visit['facility_id'] ?? 0);
@@ -294,7 +335,7 @@ class DoctorService
             $visitId,
             $actorUserId,
             $expectedVersion,
-            $reason,
+            $reason !== '' ? $reason : 'self_reopen',
             $providerId
         );
         $this->encounterSessionService->bindForVisit($visitId, $actorUserId);
@@ -443,8 +484,15 @@ class DoctorService
         $placeholders = implode(',', array_fill(0, count($states), '?'));
         $bind = array_merge([$facilityId, $visitDate], $states);
 
+        // last_doctor_id: who actually conducted the consult — NOT v.assigned_provider_id, which
+        // is a generic "current holder" overwritten by lab/pharmacy once they take the patient.
+        // Filtering on this (via HAVING) keeps "my reopenable patients" correct even after the
+        // visit has moved through ancillary desks since the consult.
         $sql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid, pd.sex, pd.DOB,
-                       vt.label AS visit_type_label
+                       vt.label AS visit_type_label,
+                       (SELECT sl.actor_user_id FROM new_visit_state_log sl
+                        WHERE sl.visit_id = v.id AND sl.to_state = 'with_doctor'
+                        ORDER BY sl.id DESC LIMIT 1) AS last_doctor_id
                 FROM new_visit v
                 INNER JOIN patient_data pd ON pd.pid = v.pid
                 LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
@@ -452,13 +500,25 @@ class DoctorService
                 AND v.state IN ({$placeholders})";
 
         if (!$canReopenAny) {
-            $sql .= " AND v.assigned_provider_id = ?";
+            $sql .= " HAVING last_doctor_id = ?";
             $bind[] = $actorUserId;
         }
 
         $sql .= " ORDER BY v.updated_at DESC LIMIT 15";
 
         $rows = QueryUtils::fetchRecords($sql, $bind) ?: [];
+
+        // Lab-ready badge — same neutral "a result exists" signal as the live queue and Visit
+        // Board, no severity judgment (see LabOpsResultService::orderHasAbnormal for that).
+        $labChips = $this->labReadiness->batchRoutingChipsForVisits($rows, $facilityId);
+        foreach ($rows as &$row) {
+            $visitId = (int) ($row['id'] ?? 0);
+            $row['lab_results_ready'] = !empty($labChips[$visitId]['results_ready']);
+            // Overwrite the raw (stale) v.assigned_provider_id with the true consulting doctor
+            // so the frontend's "is this my own patient" check is correct for reopenable rows.
+            $row['assigned_provider_id'] = (int) ($row['last_doctor_id'] ?? 0) ?: null;
+        }
+        unset($row);
 
         return $this->rowEnricher->enrichVisitRows($rows);
     }

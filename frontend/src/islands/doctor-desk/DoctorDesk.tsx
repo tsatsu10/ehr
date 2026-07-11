@@ -22,6 +22,7 @@ import type {
   LabPanelPlaceResult,
   PharmacyPrescriptionLine,
   RoutingPreview,
+  VisitType,
 } from '@core/types';
 import { DoctorQueue } from './DoctorQueue';
 import { DoctorMobileQueueBar, DoctorMobileQueueSheet } from './DoctorMobileQueueSheet';
@@ -29,11 +30,14 @@ import { DoctorDutyToggle } from './DoctorDutyToggle';
 import { DoctorTeamRoster } from './DoctorTeamRoster';
 import { useDoctorRoster } from './useDoctorRoster';
 import { DoctorActivePane, type ActiveMode } from './DoctorActivePane';
+import { DoctorWalkInModal } from './DoctorWalkInModal';
 import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import { NativeSelect } from '@components/ui/native-select';
 import { showDeskNotice, showDeskToast } from '@components/deskToast';
+import { FindPatientDrawer } from '@components/FindPatientDrawer';
+import { usePageHeadingButton } from '@core/usePageHeadingToolbar';
 import { labPanelPlaceNotice, labReturnNotice } from './LabPanelModal';
 import { formularyRxPlaceNotice } from './FormularyRxModal';
 import { rxReturnNotice } from './doctorDeskUtils';
@@ -47,6 +51,7 @@ import { setDoctorDeskCurrencyFormat } from './doctorDeskUtils';
 import type { DoctorSignMeta } from './DoctorPatientBanner';
 import { DoctorDeskLayout } from './doctorDeskUi';
 import { applyConsultPayload } from './doctorDeskPayload';
+import { postDoctorAction } from './postDoctorAction';
 import { useNarrowDoctorDesk } from './useNarrowDoctorDesk';
 import { useDoctorDeskQueue } from './useDoctorDeskQueue';
 import { DoctorDeskModals } from './DoctorDeskModals';
@@ -110,6 +115,15 @@ export function DoctorDesk({
   const [overrideCard, setOverrideCard] = useState<DoctorQueueCard | null>(null);
   const [overrideSubmitting, setOverrideSubmitting] = useState(false);
   const [hardAssignOverrideCard, setHardAssignOverrideCard] = useState<DoctorQueueCard | null>(null);
+  const [findDrawerOpen, setFindDrawerOpen] = useState(false);
+  const [walkIn, setWalkIn] = useState<{
+    pid: number;
+    patientName: string;
+    patientMrn: string;
+    visitTypes: VisitType[];
+    submitting: boolean;
+    error: string | null;
+  } | null>(null);
 
   const activeVisitRef = useRef(activeVisit);
   useEffect(() => {
@@ -140,6 +154,8 @@ export function DoctorDesk({
   }, []);
 
   const loadActiveConsultRef = useRef<(visitId: number) => Promise<DoctorConsultPayload | null>>(async () => null);
+
+  usePageHeadingButton('nc-doctor-find-patient', () => setFindDrawerOpen(true));
 
   const sharedSession = useSharedDeviceSession({
     enabled: sharedDeviceWarning,
@@ -441,6 +457,169 @@ export function DoctorDesk({
     void fetchQueue();
   }, [fetchQueue, sharedSession]);
 
+  const selfReopenInFlightRef = useRef(false);
+
+  /**
+   * Reopening your own patient is frictionless — no reason prompt, one click. The reopenable-today
+   * list is already scoped to the current doctor's own visits (regular doctors never see someone
+   * else's patient here), so this only ever fires for your own encounter; the reason-required
+   * ReopenModal stays reserved for the admin-viewing-someone-else's-patient case.
+   */
+  const handleReopenClick = useCallback((row: DoctorReopenableRow) => {
+    const isOwnVisit = queue.myUserId > 0 && row.assigned_provider_id === queue.myUserId;
+    if (!isOwnVisit) {
+      setReopenTarget(row);
+      return;
+    }
+    if (selfReopenInFlightRef.current) return;
+    selfReopenInFlightRef.current = true;
+
+    void (async () => {
+      const result = await postDoctorAction<DoctorConsultPayload>({
+        ajaxUrl,
+        csrfToken,
+        facilityId,
+        action: 'doctor.reopen',
+        body: { visit_id: row.id, row_version: row.row_version ?? 0 },
+      });
+
+      selfReopenInFlightRef.current = false;
+
+      if (!result.ok) {
+        const msg = result.message.toLowerCase();
+        if (msg.includes('stale') || msg.includes('updated elsewhere') || msg.includes('not takeable')) {
+          setInterrupt({ type: 'generic', message: result.message });
+          resetActivePane();
+          void fetchQueue();
+          return;
+        }
+        showDeskToast(result.message || 'Reopen failed', 'danger');
+        return;
+      }
+
+      handleReopened(result.data);
+    })();
+  }, [ajaxUrl, csrfToken, facilityId, fetchQueue, handleReopened, queue.myUserId, resetActivePane]);
+
+  /**
+   * Doctor's own walk-in / self-serve reopen search — scoped to patients with a visit already
+   * on the books today; if it's reopenable, jump straight to Reopen Consult (frictionless when
+   * it's this doctor's own patient, matching handleReopenClick); if there's no visit at all,
+   * offer the walk-in bypass for patients who never passed through Front Desk or Triage.
+   */
+  const handleFindPatient = useCallback(async (pid: number) => {
+    if (!pid) return;
+
+    try {
+      const data = await oeFetch<{
+        identity: { display_name: string; pubpid: string };
+        active_visit?: {
+          state: string;
+          visit_id: number;
+          row_version?: number;
+          assigned_provider_id?: number | null;
+        };
+      }>('patients.preview', {
+        ajaxUrl,
+        csrfToken,
+        method: 'POST',
+        json: { pid, context: 'doctor' },
+      });
+
+      const active = data.active_visit;
+      const reopenStates = ['ready_for_lab', 'ready_for_pharmacy', 'ready_for_payment', 'lab_complete', 'pharmacy_complete'];
+
+      if (active && reopenStates.includes(active.state)) {
+        const result = await postDoctorAction<DoctorConsultPayload>({
+          ajaxUrl,
+          csrfToken,
+          facilityId,
+          action: 'doctor.reopen',
+          body: { visit_id: active.visit_id, row_version: active.row_version ?? 0 },
+        });
+        if (!result.ok) {
+          setInterrupt({ type: 'generic', message: result.message || 'Could not reopen this patient' });
+          return;
+        }
+        handleReopened(result.data);
+        return;
+      }
+
+      if (active) {
+        const STATE_LABELS: Record<string, string> = {
+          waiting: 'waiting for triage',
+          in_triage: 'in triage',
+          ready_for_doctor: 'waiting for a doctor',
+          with_doctor: 'with a doctor',
+          in_lab: 'in the lab',
+          in_pharmacy: 'in pharmacy',
+        };
+        const label = STATE_LABELS[active.state] ?? `in state "${active.state}"`;
+        setInterrupt({
+          type: 'visit_not_takeable',
+          message: `${data.identity.display_name} already has an active visit (${label}).`,
+        });
+        return;
+      }
+
+      const vtData = await oeFetch<{ visit_types: VisitType[] }>('visit.types', {
+        ajaxUrl,
+        csrfToken,
+        params: facilityParams,
+      });
+
+      setWalkIn({
+        pid,
+        patientName: data.identity.display_name,
+        patientMrn: data.identity.pubpid,
+        visitTypes: vtData.visit_types ?? [],
+        submitting: false,
+        error: null,
+      });
+    } catch (err) {
+      setInterrupt({
+        type: 'generic',
+        message: err instanceof Error ? err.message : 'Failed to look up patient',
+      });
+    }
+  }, [ajaxUrl, csrfToken, facilityId, facilityParams, handleReopened]);
+
+  const handleWalkInConfirm = useCallback(async (visitTypeId: number) => {
+    if (!walkIn) return;
+    setWalkIn((prev) => (prev ? { ...prev, submitting: true, error: null } : prev));
+
+    try {
+      const data = await oeFetch<DoctorConsultPayload>('doctor.start_walk_in', {
+        ajaxUrl,
+        csrfToken,
+        method: 'POST',
+        json: {
+          pid: walkIn.pid,
+          visit_type_id: visitTypeId,
+          ...(facilityId > 0 ? { facility_id: facilityId } : {}),
+        },
+      });
+
+      setWalkIn(null);
+      applyConsultPayload(
+        data,
+        setActiveVisit,
+        setActivePreview,
+        setRoutingPreview,
+        setSignMeta,
+        sharedSession.setActiveVisitId,
+        setPharmOpsConsult,
+        activeVisitRef,
+      );
+      setMode('consult');
+      void fetchQueue();
+    } catch (err) {
+      setWalkIn((prev) =>
+        prev ? { ...prev, submitting: false, error: err instanceof Error ? err.message : 'Failed to start visit' } : prev
+      );
+    }
+  }, [walkIn, ajaxUrl, csrfToken, facilityId, fetchQueue, sharedSession]);
+
   const handleSupervisorUpdated = useCallback((meta: DoctorSupervisorMeta) => {
     setSignMeta((prev) => (prev ? {
       ...prev,
@@ -597,7 +776,7 @@ export function DoctorDesk({
               error={queue.queueError}
               queueHeaderExtra={teamRosterExtra}
               onTakePatient={(card) => void handleTakePatient(card)}
-              onReopenClick={setReopenTarget}
+              onReopenClick={handleReopenClick}
             />
           )}
         />
@@ -695,6 +874,27 @@ export function DoctorDesk({
         onDocFavoritesClose={() => setDocFavoritesOpen(false)}
         onDocFavoritesError={(msg) => showDeskToast(msg, 'danger')}
       />
+
+      <FindPatientDrawer
+        open={findDrawerOpen}
+        onClose={() => setFindDrawerOpen(false)}
+        ajaxUrl={ajaxUrl}
+        csrfToken={csrfToken}
+        onSelectPatient={(pid) => void handleFindPatient(pid)}
+      />
+
+      {walkIn && (
+        <DoctorWalkInModal
+          open
+          patientName={walkIn.patientName}
+          patientMrn={walkIn.patientMrn}
+          visitTypes={walkIn.visitTypes}
+          submitting={walkIn.submitting}
+          error={walkIn.error}
+          onConfirm={(visitTypeId) => void handleWalkInConfirm(visitTypeId)}
+          onClose={() => setWalkIn(null)}
+        />
+      )}
     </div>
   );
 }

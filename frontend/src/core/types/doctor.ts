@@ -117,6 +117,9 @@ export interface DoctorReopenableRow {
   pubpid: string;
   state: string;
   row_version?: number | null;
+  assigned_provider_id?: number | null;
+  /** Neutral "a lab result is ready to look at" signal — no severity/abnormal judgment. */
+  lab_results_ready?: boolean;
 }
 
 /** Response from ?action=doctor.queue */

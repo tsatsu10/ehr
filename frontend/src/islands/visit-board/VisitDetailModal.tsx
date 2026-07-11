@@ -23,6 +23,9 @@ import { resolveQueueBridgeException } from '@islands/queue-bridge/queueBridgeAp
 import type { VisitDetailData } from '@core/types';
 import { deskActionForState } from './visitBoardUtils';
 
+/** Visit states from which a visit can be routed back to the doctor (workflows §12.2). */
+const REOPEN_SOURCE_STATES = ['ready_for_lab', 'ready_for_pharmacy', 'ready_for_payment', 'lab_complete', 'pharmacy_complete'];
+
 interface VisitDetailModalProps {
   visitId: number | null;
   open: boolean;
@@ -30,10 +33,12 @@ interface VisitDetailModalProps {
   csrfToken: string;
   facilityId: number;
   canCancel: boolean;
+  canSendBackToDoctor?: boolean;
   deskUrls: Record<string, string>;
   onClose: () => void;
   onOpenDrawer: (data: VisitDetailData) => void;
   onVisitCancelled: () => void;
+  onVisitSentBackToDoctor?: () => void;
   onQueueBridgeResolved?: () => void;
 }
 
@@ -62,10 +67,12 @@ export function VisitDetailModal({
   csrfToken,
   facilityId,
   canCancel,
+  canSendBackToDoctor = false,
   deskUrls,
   onClose,
   onOpenDrawer,
   onVisitCancelled,
+  onVisitSentBackToDoctor,
   onQueueBridgeResolved,
 }: VisitDetailModalProps) {
   const [data, setData] = useState<VisitDetailData | null>(null);
@@ -73,6 +80,7 @@ export function VisitDetailModal({
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [sendingBack, setSendingBack] = useState(false);
   const [linking, setLinking] = useState(false);
 
   useModalDismiss(open, onClose);
@@ -141,6 +149,31 @@ export function VisitDetailModal({
       setActionError(err instanceof Error ? err.message : 'Cancel failed');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleSendBackToDoctor = async () => {
+    if (!data?.visit || sendingBack) return;
+
+    setSendingBack(true);
+    setActionError(null);
+    try {
+      await oeFetch('visit.send_back_to_doctor', {
+        ajaxUrl,
+        csrfToken,
+        method: 'POST',
+        json: {
+          visit_id: data.visit.id,
+          row_version: data.visit.row_version ?? 0,
+        },
+        params: facilityId > 0 ? { facility_id: facilityId } : undefined,
+      });
+      onVisitSentBackToDoctor?.();
+      onClose();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Send back to doctor failed');
+    } finally {
+      setSendingBack(false);
     }
   };
 
@@ -284,6 +317,17 @@ export function VisitDetailModal({
                 <a href={chartUrl} target="_blank" rel="noopener noreferrer">
                   Open full chart
                 </a>
+              </Button>
+            )}
+            {canSendBackToDoctor && REOPEN_SOURCE_STATES.includes(visit.state) && (
+              <Button
+                type="button"
+                variant="outline"
+                id="nc-modal-send-back-to-doctor"
+                disabled={sendingBack}
+                onClick={() => void handleSendBackToDoctor()}
+              >
+                {sendingBack ? 'Sending…' : 'Send back to doctor'}
               </Button>
             )}
             {canCancel && visit.state !== 'cancelled' && visit.state !== 'completed' && (

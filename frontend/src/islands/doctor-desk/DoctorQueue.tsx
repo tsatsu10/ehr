@@ -10,6 +10,7 @@ import type {
 } from '@core/types';
 import { WaitTimeSpan } from '@components/WaitTimeSpan';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
 import { ChevronRight } from 'lucide-react';
 import { DoctorQueueCardBadges } from './DoctorQueueCardBadges';
@@ -163,6 +164,11 @@ export function DoctorQueueBody({
                   <div>
                     <div className="nc-doctor-queue-archive__row-title">
                       #{row.queue_number} {row.display_name}
+                      {row.lab_results_ready && (
+                        <Badge variant="info" className="ml-1" title="Lab result ready to review">
+                          Lab ready
+                        </Badge>
+                      )}
                     </div>
                     <div className="nc-doctor-queue-archive__row-meta">
                       {row.state.replace(/_/g, ' ')}

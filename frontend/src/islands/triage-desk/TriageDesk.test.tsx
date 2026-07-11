@@ -489,4 +489,62 @@ describe('TriageDesk', () => {
     const saveCallsAfter = mockFetch.mock.calls.filter(([a]) => a === 'triage.save_vitals').length;
     expect(saveCallsAfter).toBe(saveCallsBefore);
   });
+
+  // ── Nurse-side urgency escalation ──────────────────────────────────────────
+
+  it('marks a patient urgent with no reason and shows the Urgent badge', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ...emptyQueue, visits: [waitingPatient], counts: { waiting: 1, in_triage: 0 } })
+      .mockResolvedValueOnce(selectResponse) // triage.select
+      .mockResolvedValueOnce(emptyQueue)     // fetchQueue after select
+      .mockResolvedValueOnce({ visit: { ...selectResponse.visit, is_urgent: 1, row_version: 2 } }) // triage.set_urgent
+      .mockResolvedValue(emptyQueue);        // fetchQueue after set_urgent
+
+    render(<TriageDesk {...props} />);
+    await waitFor(() => screen.getByText(/Amara Osei/));
+    fireEvent.click(screen.getByRole('button', { name: /Amara Osei/ }));
+
+    const markButton = await waitFor(() => screen.getByRole('button', { name: /mark urgent/i }));
+    fireEvent.click(markButton);
+
+    await waitFor(() =>
+      expect(mockFetch).toHaveBeenCalledWith('triage.set_urgent', expect.objectContaining({
+        method: 'POST',
+        json: expect.objectContaining({ visit_id: 42, is_urgent: true }),
+      }))
+    );
+    await waitFor(() => expect(screen.getByText('Urgent')).toBeInTheDocument());
+  });
+
+  it('requires a reason before removing an urgent flag', async () => {
+    const urgentSelect: TriageSelectData = {
+      ...selectResponse,
+      visit: { ...selectResponse.visit, is_urgent: 1 },
+    };
+    mockFetch
+      .mockResolvedValueOnce({ ...emptyQueue, visits: [{ ...waitingPatient, is_urgent: 1 as const }], counts: { waiting: 1, in_triage: 0 } })
+      .mockResolvedValueOnce(urgentSelect) // triage.select
+      .mockResolvedValue(emptyQueue);
+
+    render(<TriageDesk {...props} />);
+    await waitFor(() => screen.getByText(/Amara Osei/));
+    fireEvent.click(screen.getByRole('button', { name: /Amara Osei/ }));
+
+    const removeButton = await waitFor(() => screen.getByRole('button', { name: /remove urgent flag/i }));
+    fireEvent.click(removeButton);
+
+    const confirmButton = await waitFor(() => screen.getByRole('button', { name: /confirm removal/i }));
+    expect(confirmButton).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(/reason \(required\)/i), { target: { value: 'Reassessed — stable' } });
+    expect(confirmButton).not.toBeDisabled();
+
+    fireEvent.click(confirmButton);
+    await waitFor(() =>
+      expect(mockFetch).toHaveBeenCalledWith('triage.set_urgent', expect.objectContaining({
+        method: 'POST',
+        json: expect.objectContaining({ visit_id: 42, is_urgent: false, reason: 'Reassessed — stable' }),
+      }))
+    );
+  });
 });

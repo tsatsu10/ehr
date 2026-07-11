@@ -144,6 +144,25 @@ class VisitQueueService
     }
 
     /**
+     * The doctor who actually conducted the consult — NOT `new_visit.assigned_provider_id`,
+     * which is a generic "current holder" field overwritten by whichever desk (lab, pharmacy)
+     * takes the patient next. Reads the state log for the last transition INTO `with_doctor`,
+     * which survives every downstream desk touching the visit afterward. Returns 0 if the visit
+     * never reached a doctor.
+     */
+    public function lastDoctorForVisit(int $visitId): int
+    {
+        $row = QueryUtils::querySingleRow(
+            "SELECT actor_user_id FROM new_visit_state_log
+             WHERE visit_id = ? AND to_state = 'with_doctor'
+             ORDER BY id DESC LIMIT 1",
+            [$visitId]
+        );
+
+        return is_array($row) ? (int) ($row['actor_user_id'] ?? 0) : 0;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function getVisitForActor(int $visitId): array
@@ -330,6 +349,44 @@ class VisitQueueService
             $isUrgent,
             'in_triage',
             'auto_started_at_triage'
+        );
+    }
+
+    /**
+     * Doctor's own walk-in bypass — a patient who never passed through Front Desk or Triage
+     * (e.g. a VIP who walks straight into the doctor's office). Skips the whole front-of-house
+     * pipeline: the visit is created directly in with_doctor, bound to the doctor initiating it.
+     * Same visit/encounter model as every other visit — no special-cased data shape downstream.
+     */
+    public function startVisitWithDoctor(
+        int $pid,
+        int $visitTypeId,
+        int $actorUserId,
+        ?int $facilityId = null,
+        ?string $chiefComplaint = null
+    ): array {
+        if (!AclMain::aclCheckCore('new_clinic', 'new_doctor')) {
+            throw new \InvalidArgumentException('Not authorized to start a visit directly with the doctor');
+        }
+
+        $facilityId = $facilityId ?? $this->visitScope->resolveActorFacilityId(null);
+        $visitType = $this->loadVisitTypeForFacility($visitTypeId, $facilityId);
+        if ((string) $visitType['service_profile'] !== 'full_opd') {
+            throw new \InvalidArgumentException('Only OPD visit types can be started directly with a doctor');
+        }
+
+        return $this->createVisit(
+            $pid,
+            $visitTypeId,
+            $actorUserId,
+            $facilityId,
+            $chiefComplaint,
+            false,
+            'with_doctor',
+            'doctor_walk_in',
+            null,
+            null,
+            $actorUserId
         );
     }
 
@@ -712,6 +769,61 @@ class VisitQueueService
             'from_state' => $fromState,
             'actor' => $actorUserId,
             'reason' => mb_substr(trim($reason), 0, 200),
+        ]);
+
+        return $this->getVisitById($visitId) ?? [];
+    }
+
+    /**
+     * Reception routes a patient back into the shared doctor pool once ancillary work is done
+     * (lab/pharmacy complete, or the patient needs to be seen before payment after all) — unlike
+     * reopenToWithDoctor(), this does NOT lock a specific doctor's session; it joins the same
+     * shared ready_for_doctor pool a brand-new patient enters, so any on-duty doctor can Take it.
+     * The original assigned doctor is carried forward as the routing suggestion (hint) so whoever
+     * looks at the shared queue sees who saw this patient before — assigned_provider_id itself is
+     * left untouched as the continuity-of-care record.
+     *
+     * @return array<string, mixed>
+     */
+    public function sendBackToDoctor(
+        int $visitId,
+        int $actorUserId,
+        int $expectedVersion,
+        ?string $reason = null
+    ): array {
+        if (!AclMain::aclCheckCore('new_clinic', 'new_visit_return_to_doctor')) {
+            throw new \InvalidArgumentException('Not authorized to send visit back to doctor');
+        }
+
+        $visit = $this->getVisitForActor($visitId);
+        $fromState = (string) ($visit['state'] ?? '');
+        if (!VisitFsm::canReverseTransition($fromState, 'ready_for_doctor')) {
+            throw new \InvalidArgumentException("Invalid reverse transition {$fromState} -> ready_for_doctor");
+        }
+
+        $reasonValue = $reason !== null ? mb_substr(trim($reason), 0, 200) : null;
+        if ($reasonValue === '') {
+            $reasonValue = null;
+        }
+        // The doctor who actually saw this patient — not new_visit.assigned_provider_id, which
+        // lab/pharmacy overwrote once they took the patient after the doctor released it.
+        $suggestedProviderId = $this->lastDoctorForVisit($visitId);
+
+        $sql = "UPDATE new_visit
+                SET state = 'ready_for_doctor', routing_suggested_provider_id = ?,
+                    row_version = row_version + 1, updated_at = NOW()
+                WHERE id = ? AND state = ? AND row_version = ?";
+        sqlStatement($sql, [$suggestedProviderId > 0 ? $suggestedProviderId : null, $visitId, $fromState, $expectedVersion]);
+
+        if (generic_sql_affected_rows() < 1) {
+            $this->resolveTransitionConflict($visitId, $fromState, 'ready_for_doctor', $expectedVersion);
+        }
+
+        $this->logStateChange($visitId, $fromState, 'ready_for_doctor', $actorUserId, $reasonValue ?? 'sent_back_to_doctor');
+        $this->audit('new_visit', 'sent_back_to_doctor', (int) $visit['pid'], $visitId, [
+            'from_state' => $fromState,
+            'reason' => $reasonValue,
+            'suggested_provider_id' => $suggestedProviderId,
         ]);
 
         return $this->getVisitById($visitId) ?? [];
@@ -1150,6 +1262,60 @@ class VisitQueueService
         }
 
         return $suggested === $actorUserId ? 'accepted_suggestion' : 'manual_override';
+    }
+
+    /**
+     * Nurse-side urgency escalation (triage.set_urgent). Never a state change — urgent alone
+     * must not skip triage (workflows §12.2) — so this bypasses logStateChange entirely.
+     * Self-contained like cancelVisit(): validates its own reason rule, re-checks facility
+     * access via getVisitForActor(), pins state in the optimistic-lock WHERE clause, and always
+     * enforces row_version — including when the target value happens to already match current
+     * state, so a stale caller can never get a silent "success" instead of a conflict.
+     *
+     * @return array<string, mixed>
+     */
+    public function setUrgency(
+        int $visitId,
+        int $actorUserId,
+        int $expectedVersion,
+        bool $isUrgent,
+        ?string $reason
+    ): array {
+        $reasonValue = $reason !== null ? mb_substr(trim($reason), 0, 200) : null;
+        if ($reasonValue === '') {
+            $reasonValue = null;
+        }
+        if (!$isUrgent && $reasonValue === null) {
+            throw new \InvalidArgumentException('Reason required to remove the urgent flag');
+        }
+
+        $visit = $this->getVisitForActor($visitId);
+        if (!in_array($visit['state'], ['waiting', 'in_triage'], true)) {
+            throw new \InvalidArgumentException('Visit must be waiting or in triage to change urgency');
+        }
+
+        $priorValue = (int) ($visit['is_urgent'] ?? 0);
+        $targetValue = $isUrgent ? 1 : 0;
+
+        $sql = "UPDATE new_visit SET is_urgent = ?, row_version = row_version + 1, updated_at = NOW()
+                WHERE id = ? AND state IN ('waiting', 'in_triage') AND row_version = ?";
+        sqlStatement($sql, [$targetValue, $visitId, $expectedVersion]);
+
+        if (generic_sql_affected_rows() < 1) {
+            throw new StaleVisitException($visitId);
+        }
+
+        if ($priorValue !== $targetValue) {
+            $this->audit('new_visit', 'urgency_changed', (int) $visit['pid'], $visitId, [
+                'is_urgent' => $isUrgent,
+                'reason' => $reasonValue,
+                'set_by_role' => 'nurse',
+                'actor_user_id' => $actorUserId,
+                'prior_value' => $priorValue,
+            ]);
+        }
+
+        return $this->getVisitById($visitId) ?? [];
     }
 
     private function audit(string $category, string $event, int $pid, int $visitId, array $payload): void

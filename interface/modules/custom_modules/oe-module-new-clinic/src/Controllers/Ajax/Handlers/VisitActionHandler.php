@@ -32,6 +32,7 @@ final class VisitActionHandler implements AjaxActionHandlerInterface
         'visit.start',
         'visit.skip_triage',
         'visit.start_from_appointment',
+        'visit.send_back_to_doctor',
     ];
 
     public function __construct(
@@ -148,6 +149,20 @@ final class VisitActionHandler implements AjaxActionHandlerInterface
                     isset($body['reason']) ? (string) $body['reason'] : null
                 );
                 $this->host->respond(true, 'Skipped triage', ['visit' => $visit]);
+                break;
+            case 'visit.send_back_to_doctor':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $visit = $this->host->svc(VisitQueueService::class)->sendBackToDoctor(
+                    (int) ($body['visit_id'] ?? 0),
+                    $userId,
+                    (int) ($body['row_version'] ?? 0),
+                    isset($body['reason']) ? (string) $body['reason'] : null
+                );
+                $this->host->respond(true, 'Sent back to doctor', ['visit' => $visit]);
                 break;
             case 'visit.start_from_appointment':
                 if ($method !== 'POST') {

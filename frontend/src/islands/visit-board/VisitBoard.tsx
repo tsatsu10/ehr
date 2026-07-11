@@ -63,6 +63,7 @@ export function VisitBoard({
   profile = 'default',
   privacyMode: privacyModeProp,
   canCancel = false,
+  canSendBackToDoctor = false,
   deskUrls = {},
   kioskChrome = false,
   clinicName = '',
@@ -182,6 +183,11 @@ export function VisitBoard({
   }, [isWall]);
 
   const handleVisitCancelled = useCallback(() => {
+    closeDetail();
+    void fetchBoard();
+  }, [closeDetail, fetchBoard]);
+
+  const handleVisitSentBackToDoctor = useCallback(() => {
     closeDetail();
     void fetchBoard();
   }, [closeDetail, fetchBoard]);
@@ -384,10 +390,12 @@ export function VisitBoard({
         csrfToken={csrfToken}
         facilityId={facilityId}
         canCancel={canCancel}
+        canSendBackToDoctor={canSendBackToDoctor}
         deskUrls={deskUrls}
         onClose={closeDetail}
         onOpenDrawer={setDrawerData}
         onVisitCancelled={handleVisitCancelled}
+        onVisitSentBackToDoctor={handleVisitSentBackToDoctor}
         onQueueBridgeResolved={() => void fetchBoard()}
       />
       <VisitDetailDrawer

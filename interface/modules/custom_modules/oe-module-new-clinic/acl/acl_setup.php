@@ -34,6 +34,7 @@ $acos = [
     'new_revisit_skip_completion' => 'Skip Revisit Completion',
     'new_skip_triage' => 'Skip Triage',
     'new_visit_reopen' => 'Reopen Consult',
+    'new_visit_return_to_doctor' => 'Return Visit to Doctor Queue',
     'new_visit_cancel' => 'Cancel Visit',
     'new_discount' => 'Apply Discount',
     'new_receipt_reprint' => 'Reprint Receipt',
@@ -159,14 +160,14 @@ if (!empty($groupAcls[$leadTierAco]) && isset($acos[$leadTierAco])) {
 }
 
 $extraGrants = [
-    'new_reception_lead' => ['new_reception', 'new_create_despite_dup', 'new_skip_triage', 'new_visit_cancel', 'new_visit_skip_queue', 'new_queue_bridge', 'new_queue_bridge_resolve', 'new_queue_bridge_dismiss', 'new_start_ancillary_visit', 'new_hard_assign_provider'],
+    'new_reception_lead' => ['new_reception', 'new_create_despite_dup', 'new_skip_triage', 'new_visit_cancel', 'new_visit_skip_queue', 'new_visit_return_to_doctor', 'new_queue_bridge', 'new_queue_bridge_resolve', 'new_queue_bridge_dismiss', 'new_start_ancillary_visit', 'new_hard_assign_provider'],
     'new_nurse_lead' => ['new_nurse', 'new_skip_triage', 'new_cohort_share_filter', 'new_reports_clinical', 'new_clinical_doc_screening', 'new_hard_assign_provider'],
     'new_lab_lead' => ['new_lab', 'new_lab_ops', 'new_lab_ops_enter', 'new_lab_ops_release', 'new_lab_order_intake'],
     'new_pharmacy_lead' => ['new_pharmacy', 'new_pharm_ops', 'new_pharm_ops_dispense', 'new_pharm_ops_receive', 'new_pharm_ops_destroy', 'new_pharmacy_undispensed_override', 'new_pharmacy_external_rx_override', 'new_pharmacy_walkin_dispense', 'new_pharmacy_refer_to_opd', 'new_reports_pharmacy'],
     'new_cashier_lead' => ['new_cashier', 'new_billing_skip_completion', 'new_discount', 'new_visit_mark_outstanding', 'new_close_without_charge', 'new_receipt_reprint', 'new_esign_skip_complete', 'new_chart_depth', 'new_chart_depth_finance', 'new_chart_depth_referral', 'new_bill_ops', 'new_bill_ops_correct', 'new_bill_ops_payment', 'new_bill_ops_close', 'new_bill_ops_outstanding', 'new_reports_financial'],
     'new_admin' => array_keys($acos),
     'new_doctor' => ['new_doctor', 'new_visit_reopen', 'new_visit_skip_queue', 'new_chart_depth', 'new_chart_depth_finance_summary', 'new_chart_depth_referral', 'new_chart_depth_export', 'new_registry', 'new_registry_export', 'new_lab_ops', 'new_lab_order_intake', 'new_clinical_doc_hub', 'new_clinical_doc_consult', 'new_clinical_doc_screening', 'new_clinical_doc_orders', 'new_clinical_doc_specialty', 'new_take_assigned_override'],
-    'new_nurse' => ['new_nurse', 'new_registry', 'new_registry_export', 'new_clinical_doc_hub', 'new_clinical_doc_nursing'],
+    'new_nurse' => ['new_nurse', 'new_registry', 'new_registry_export', 'new_clinical_doc_hub', 'new_clinical_doc_nursing', 'new_visit_return_to_doctor'],
     'new_cashier' => ['new_cashier', 'new_receipt_reprint', 'new_chart_depth', 'new_chart_depth_finance'],
 ];
 

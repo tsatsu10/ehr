@@ -62,6 +62,62 @@ class DoctorServiceTest extends TestCase
         $this->assertStringContainsString('bindForVisit', $body);
     }
 
+    public function testReopenConsultOnlyRequiresReasonWhenNotOwnVisit(): void
+    {
+        $reflection = new \ReflectionMethod(DoctorService::class, 'reopenConsult');
+        $source = file_get_contents($reflection->getFileName());
+        $lines = explode("\n", $source);
+        $body = implode("\n", array_slice(
+            $lines,
+            $reflection->getStartLine() - 1,
+            $reflection->getEndLine() - $reflection->getStartLine() + 1
+        ));
+
+        // Frictionless self-reopen: the ≥10-char reason check must be conditioned on !$isOwnVisit,
+        // not applied unconditionally — reopening your own patient asks no questions.
+        $this->assertStringContainsString('isOwnVisit', $body);
+        $this->assertStringContainsString('!$isOwnVisit && mb_strlen($reason) < 10', $body);
+        // Signature no longer demands a reason up front.
+        $this->assertStringContainsString('?string $reason = null', $body);
+    }
+
+    public function testFetchReopenableTodayOverwritesAssignedProviderWithLastDoctor(): void
+    {
+        $reflection = new \ReflectionMethod(DoctorService::class, 'fetchReopenableToday');
+        $source = file_get_contents($reflection->getFileName());
+        $lines = explode("\n", $source);
+        $body = implode("\n", array_slice(
+            $lines,
+            $reflection->getStartLine() - 1,
+            $reflection->getEndLine() - $reflection->getStartLine() + 1
+        ));
+
+        // Reopenable rows must report the true consulting doctor as assigned_provider_id, not the
+        // raw (possibly lab/pharmacy-overwritten) column value — the frontend's own-patient check
+        // for frictionless self-reopen relies on this field meaning "the doctor."
+        $this->assertStringContainsString("to_state = 'with_doctor'", $body);
+        $this->assertStringContainsString("AS last_doctor_id", $body);
+        $this->assertStringContainsString("\$row['assigned_provider_id'] = (int) (\$row['last_doctor_id']", $body);
+    }
+
+    public function testStartWalkInGuardsOneActiveConsultAndBindsSession(): void
+    {
+        $reflection = new \ReflectionMethod(DoctorService::class, 'startWalkIn');
+        $source = file_get_contents($reflection->getFileName());
+        $lines = explode("\n", $source);
+        $body = implode("\n", array_slice(
+            $lines,
+            $reflection->getStartLine() - 1,
+            $reflection->getEndLine() - $reflection->getStartLine() + 1
+        ));
+
+        $this->assertStringContainsString('findActiveConsult', $body);
+        $this->assertStringContainsString('VisitNotTakeableException', $body);
+        $this->assertStringContainsString('startVisitWithDoctor', $body);
+        $this->assertStringContainsString('bindForVisit', $body);
+        $this->assertStringContainsString('buildConsultPayload', $body);
+    }
+
     public function testConsultPayloadIncludesPharmOpsPrescriptionsWhenEnabled(): void
     {
         $reflection = new \ReflectionMethod(DoctorService::class, 'buildConsultPayload');

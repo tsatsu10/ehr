@@ -42,6 +42,7 @@ import { TriageSendDoctorModal } from './TriageSendDoctorModal';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
 import { FindPatientDrawer } from '@components/FindPatientDrawer';
 import { useSharedDeviceSession } from '@core/useSharedDeviceSession';
+import { showDeskToast } from '@components/deskToast';
 
 /** sessionStorage key — must match triage.js STORAGE_KEY */
 const TRIAGE_STORAGE_KEY = 'triage_desk_active_visit_id';
@@ -95,6 +96,8 @@ export function TriageDesk({
   const [starting, setStarting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
+  const [settingUrgent, setSettingUrgent] = useState(false);
+  const [urgencyError, setUrgencyError] = useState<string | null>(null);
 
   // ── Interrupt (conflict) banner ──────────────────────────────────────────
   const [interrupt, setInterrupt] = useState<DeskInterrupt | null>(null);
@@ -140,6 +143,7 @@ export function TriageDesk({
     setFormDirty(false);
     setChiefComplaint('');
     setFormError(null);
+    setUrgencyError(null);
   }, []);
 
   // ── Queue polling ────────────────────────────────────────────────────────
@@ -466,6 +470,48 @@ export function TriageDesk({
     void executeSendToDoctor(null);
   }, [activeVisit, assignableDoctors.length, executeSendToDoctor, hardAssignEnabled, sending, sharedDevice.blocked]);
 
+  // ── Set / remove urgency (nurse-side escalation) ────────────────────────
+
+  const handleSetUrgency = useCallback(async (isUrgent: boolean, reason?: string) => {
+    if (!activeVisit || settingUrgent || sharedDevice.blocked) return;
+    setSettingUrgent(true);
+    setUrgencyError(null);
+    try {
+      const data = await oeFetch<{ visit: TriageVisit }>('triage.set_urgent', {
+        ajaxUrl,
+        csrfToken,
+        method: 'POST',
+        json: {
+          visit_id: activeVisit.id,
+          row_version: activeVisit.row_version,
+          is_urgent: isUrgent,
+          ...(reason ? { reason } : {}),
+        },
+      });
+
+      setInterrupt(null);
+      setActiveVisit(data.visit);
+      showDeskToast(
+        isUrgent ? 'Marked urgent — moved to top of queue.' : 'Urgent flag removed.',
+        'success'
+      );
+      void fetchQueue();
+    } catch (err) {
+      const conflict = resolveActionConflict(err, {
+        onSessionMismatch: () => void sharedDevice.probe(),
+      });
+      if (conflict) {
+        setInterrupt(conflict);
+        resetActivePaneAndSession();
+        void fetchQueue();
+      } else {
+        setUrgencyError(err instanceof Error ? err.message : 'Failed to update urgency');
+      }
+    } finally {
+      setSettingUrgent(false);
+    }
+  }, [activeVisit, settingUrgent, ajaxUrl, csrfToken, fetchQueue, resetActivePaneAndSession, sharedDevice]);
+
   // ── Record another set ───────────────────────────────────────────────────
 
   const handleReenter = useCallback(() => {
@@ -643,6 +689,8 @@ export function TriageDesk({
             saving={saving}
             sending={sending}
             starting={starting}
+            settingUrgent={settingUrgent}
+            urgencyError={urgencyError}
             formError={formError}
             visitBoardUrl={visitBoardUrl}
             onVitalsChange={handleVitalChange}
@@ -651,6 +699,7 @@ export function TriageDesk({
             onSave={handleSave}
             onSend={handleSend}
             onReenter={handleReenter}
+            onSetUrgency={handleSetUrgency}
           />
         )}
         queue={(

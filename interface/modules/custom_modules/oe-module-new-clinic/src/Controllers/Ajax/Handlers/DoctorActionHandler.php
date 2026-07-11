@@ -42,6 +42,7 @@ final class DoctorActionHandler implements AjaxActionHandlerInterface
         'doctor.lab_panel_place',
         'doctor.formulary_rx_catalog',
         'doctor.formulary_rx_place',
+        'doctor.start_walk_in',
     ];
 
     public function __construct(
@@ -151,6 +152,21 @@ final class DoctorActionHandler implements AjaxActionHandlerInterface
                     isset($body['override_reason']) ? (string) $body['override_reason'] : null
                 );
                 $this->host->respond(true, 'Patient taken', $payload);
+                break;
+            case 'doctor.start_walk_in':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $payload = $this->host->svc(DoctorService::class)->startWalkIn(
+                    (int) ($body['pid'] ?? 0),
+                    (int) ($body['visit_type_id'] ?? 0),
+                    $userId,
+                    $this->host->resolveDeskFacilityFromBody($body),
+                    isset($body['chief_complaint']) ? (string) $body['chief_complaint'] : null
+                );
+                $this->host->respond(true, 'Visit started with doctor', $payload);
                 break;
             case 'doctor.complete':
                 if ($method !== 'POST') {

@@ -16,6 +16,7 @@ import { useVitalsValidation } from '@core/useVitalsValidation';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Button } from '@components/ui/button';
 import { TriagePatientBanner } from './TriagePatientBanner';
+import { TriageUrgencyControl } from './TriageUrgencyControl';
 import { VitalsForm } from './VitalsForm';
 import { VitalsSavedPanel } from './VitalsSavedPanel';
 import {
@@ -42,6 +43,8 @@ interface TriageActivePaneProps {
   saving: boolean;
   sending: boolean;
   starting: boolean;
+  settingUrgent: boolean;
+  urgencyError: string | null;
   formError: string | null;
   visitBoardUrl?: string;
   onVitalsChange: (name: VitalName, value: string) => void;
@@ -50,6 +53,7 @@ interface TriageActivePaneProps {
   onSave: () => void;
   onSend: () => void;
   onReenter: () => void;
+  onSetUrgency: (isUrgent: boolean, reason?: string) => void;
 }
 
 function buildVitalsSummary(vitals: VitalsData, tempUnit: string): string {
@@ -78,6 +82,8 @@ export function TriageActivePane({
   saving,
   sending,
   starting,
+  settingUrgent,
+  urgencyError,
   formError,
   visitBoardUrl,
   onVitalsChange,
@@ -86,6 +92,7 @@ export function TriageActivePane({
   onSave,
   onSend,
   onReenter,
+  onSetUrgency,
 }: TriageActivePaneProps) {
   const [submitted, setSubmitted] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -146,6 +153,14 @@ export function TriageActivePane({
           preview={preview}
           visit={visit}
           chiefComplaint={chiefComplaint}
+        />
+
+        <TriageUrgencyControl
+          key={`${visit.id}-${visit.is_urgent}`}
+          isUrgent={visit.is_urgent === 1}
+          submitting={settingUrgent}
+          error={urgencyError}
+          onSetUrgency={onSetUrgency}
         />
 
         <TriageActiveSection title={mode === 'saved' ? 'Saved vitals' : 'Vitals'}>

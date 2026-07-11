@@ -136,6 +136,9 @@ export function QueueCard({ card, privacyMode = false, onClick, selected = false
               {card.skipped_triage && (
                 <Badge variant="neutral" title="Skipped triage">Skipped triage</Badge>
               )}
+              {card.lab_results_ready && (
+                <Badge variant="info" title="Lab result ready to review">Lab ready</Badge>
+              )}
               <AncillaryVisitBadges badges={card.ancillary_badges} />
               {hasSimilarSurname && (
                 <Badge variant="warning" title="Another patient in today's queue shares this surname">

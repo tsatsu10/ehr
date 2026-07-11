@@ -32,6 +32,8 @@ export interface VisitCard {
   };
   /** PRD §6.8.6 — when enable_ancillary_services is on */
   ancillary_badges?: string[];
+  /** Neutral "a lab result is ready to look at" signal — no severity/abnormal judgment. */
+  lab_results_ready?: boolean;
 }
 
 export type ColumnKey =
@@ -86,6 +88,8 @@ export interface VisitBoardProps {
   profile?: 'default' | 'wall';
   privacyMode?: boolean;
   canCancel?: boolean;
+  /** Reception-lead/admin: route an ancillary-complete visit back into the shared doctor pool. */
+  canSendBackToDoctor?: boolean;
   /** Desk-specific navigation URLs keyed by role slug. */
   deskUrls?: Record<string, string>;
   /** V1.1-OPS — fullscreen + wake-lock toolbar on wall profile. */

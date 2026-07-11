@@ -92,6 +92,7 @@ export interface TriageVisit {
   visit_type_label?: string;
   chief_complaint?: string;
   row_version?: number | null;
+  is_urgent?: 0 | 1;
 }
 
 /** Response from ?action=triage.select */

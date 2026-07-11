@@ -166,7 +166,7 @@ class PatientContextService
 
         $visit = QueryUtils::querySingleRow(
             "SELECT v.id, v.state, v.queue_number, v.chief_complaint, v.encounter, v.facility_id, v.row_version,
-                    v.hard_assigned_provider_id, ha.fname AS hard_fname, ha.lname AS hard_lname
+                    v.hard_assigned_provider_id, v.assigned_provider_id, ha.fname AS hard_fname, ha.lname AS hard_lname
              FROM new_visit v
              LEFT JOIN users ha ON ha.id = v.hard_assigned_provider_id
              WHERE v.pid = ?
@@ -210,6 +210,7 @@ class PatientContextService
                     0,
                     $facilityId
                 ) === 1,
+                'assigned_provider_id' => (int) ($visit['assigned_provider_id'] ?? 0) ?: null,
             ];
             if ($hardId > 0) {
                 $activeVisit['hard_assigned_provider_id'] = $hardId;
