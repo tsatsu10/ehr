@@ -284,4 +284,33 @@ class ClinicAdminServiceTest extends TestCase
             'admin_hub_backup_retention_days' => '999',
         ], 1);
     }
+
+    /**
+     * Regression guard for the class of bug behind the enable_office_notes /
+     * enable_admin_hub / encounter_note_lbf_export_formdir audit (2026-07-11):
+     * a field's own declared default in EDITABLE_SETTINGS must always pass its
+     * own type's validation, because Admin Hub sends every known key's current
+     * value on every save -- once a key is exposed to the UI at all, its
+     * untouched default is exactly what gets round-tripped through save.
+     */
+    public function testEveryEditableSettingsDefaultSurvivesASave(): void
+    {
+        $service = new ClinicAdminService();
+
+        $result = $service->saveSettings('global', ClinicAdminService::globalMigrationDefaults(), 1);
+
+        $this->assertIsArray($result);
+    }
+
+    public function testSaveAcceptsEmptyLbfExportFormdirDefault(): void
+    {
+        $service = new ClinicAdminService();
+
+        $result = $service->saveSettings('global', [
+            'encounter_note_lbf_export_on_save' => '0',
+            'encounter_note_lbf_export_formdir' => '',
+        ], 1);
+
+        $this->assertIsArray($result);
+    }
 }

@@ -675,7 +675,11 @@ class ClinicAdminService
 
         if ($meta['type'] === 'string') {
             $value = trim((string) $raw);
-            if ($value === '') {
+            // encounter_note_lbf_export_formdir is optional -- it only matters when
+            // encounter_note_lbf_export_on_save is on, and its own declared default
+            // is '', so it must be allowed to save empty (unlike every other string
+            // setting here, which always has a real default and should never be blank).
+            if ($value === '' && $key !== 'encounter_note_lbf_export_formdir') {
                 throw new \InvalidArgumentException('Invalid value for ' . $key);
             }
 
