@@ -9,7 +9,7 @@
 
 | Document | Purpose |
 |----------|---------|
-| [NEW_CLINIC_V1_PRD.md](./NewClinic/NEW_CLINIC_V1_PRD.md) | Product requirements — modules M0–M14, workflows, data model (v1.20.29) |
+| [NEW_CLINIC_V1_PRD.md](./NewClinic/done/NEW_CLINIC_V1_PRD.md) | Product requirements — modules M0–M14, workflows, data model (v1.20.29) |
 | [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NewClinic/NEW_CLINIC_V1_PAGE_DESIGNS.md) | Page wireframes, components, AJAX contracts |
 | [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NewClinic/NEW_CLINIC_V1_USER_WORKFLOWS.md) | Role playbooks and exception paths |
 | [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./NewClinic/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) | Full patient chart (MRD) — 5-tab IA |

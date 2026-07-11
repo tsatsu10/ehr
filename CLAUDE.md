@@ -90,64 +90,14 @@ upstream-style full test suites (see `CONTRIBUTING.md`).
 
 ## 5. Verification gates — run these, in this order, every batch
 
-### Frontend islands changed
+Never claim "done" for backend PHP without `composer verify:new-clinic` passing, or for UI
+without a build + asset version bump + a hard-refresh instruction. Full gate sequence
+(frontend, backend, schema/ACL, browser smoke, sign-off smokes) lives in the `/verify-batch`
+skill — invoke it after any batch of changes.
 
-```powershell
-cd c:\xampp\htdocs\openemr\frontend
-npm test -- --run src/islands/<island>   # scoped Vitest first
-npm run check                            # lint + typecheck + full vitest
-npm run build                            # Vite → public/assets/modern/
-```
-
-Then bump `interface/modules/custom_modules/oe-module-new-clinic/src/ModuleAssetVersion.php`
-(`VERSION = 'YYYYMMDD<slug>'`) **once per batch, not per file**. Stale cached assets are the #1
-cause of "you didn't fix it" reports — after building, the user must hard-refresh (Ctrl+Shift+R),
-and you can confirm the loaded `?v=` in the failing URL matches the new version. Shell-CSS-only
-changes (`public/assets/css/*.css`) need only the version bump, no rebuild.
-
-### Backend module PHP changed
-
-```powershell
-cd c:\xampp\htdocs\openemr
-composer verify:new-clinic     # syntax, ctor-cycle scan, controller imports, stray files, --bootstrap
-```
-
-Must print `RESULT: PASS` including AjaxController bootstrap. CI cannot run this (no MySQL) — it
-is a desktop-only gate. Targeted PHP tests:
-
-```powershell
-vendor\bin\phpunit -c phpunit.xml tests\Tests\Unit\Modules\NewClinic
-vendor\bin\phpunit -c phpunit.xml --filter "<ServiceName>"
-composer test:new-clinic-mandatory   # contract tests (queue FSM, wrong-patient, audit timeline)
-```
-
-### Schema or ACL changed
-
-```powershell
-C:\xampp\php\php.exe interface\modules\custom_modules\oe-module-new-clinic\bin\upgrade_sql.php
-C:\xampp\php\php.exe interface\modules\custom_modules\oe-module-new-clinic\bin\install_acl.php
-```
-
-New tables go in the module's `install.sql` with `#IfNotRow2D` guards; existing installs only get
-them via `upgrade_sql.php` — "missing table" errors on a working feature almost always mean this
-step was skipped.
-
-### Browser smoke (any UI change)
-
-Hard-refresh http://localhost/openemr/, open the changed desk, DevTools → Network: `ajax.php`
-actions return **200** (not 500, not `ERR_CONNECTION_RESET`), no white screen or React overlay.
-
-### Sign-off smokes (when the area is touched)
-
-`composer registry-signoff` (M10), `composer people-signoff` (People & Access hub). Dozens more
-HTTP smokes and pilot-enable scripts live in the module's `scripts/` folder — use the matching one.
-
-### CI
-
-Workflow **New Clinic Verify** (`.github/workflows/new-clinic-verify.yml`): static PHP verify +
-scoped Vitest (front-desk, patient-registry, visit-board) + Vite build. Repo-wide `npm run
-typecheck` is NOT in CI (TS debt) — run it locally when touching types. CI green does **not**
-replace `composer verify:new-clinic`.
+CI (`.github/workflows/new-clinic-verify.yml`) runs a scoped subset (static PHP verify +
+scoped Vitest + Vite build) and does **not** replace `composer verify:new-clinic` — CI green
+alone is never enough to claim done.
 
 ## 6. Hard-won Windows/XAMPP gotchas (do not relearn these)
 
@@ -178,28 +128,10 @@ replace `composer verify:new-clinic`.
 
 ## 7. Frontend conventions (New Clinic islands)
 
-- **Design tokens:** all colors/spacing from `--oe-nc-*` (`frontend/src/core/tokens.css` +
-  `public/assets/css/tokens.css`). Never hardcode hex or arbitrary Tailwind palette classes.
-  Note: CSS *variables* are `--oe-nc-*` but CSS *class names* use the shorter `nc-` prefix
-  (`.nc-shell-main`, `.nc-page-heading`, `.nc-callout-*`). Layout: `--oe-nc-content-max` (90rem) +
-  `--oe-nc-content-gutter`; centering lives in `shell.css` (`.nc-shell-main`) — don't re-solve
-  centering per island (Visit Board has a deliberate full-width exception with horizontal lanes).
-- **Feedback:** token callouts, not Bootstrap alerts — React variants in
-  `@components/deskCalloutStyles` (`nc-error-callout`, `nc-warn-callout`, `nc-info-callout`,
-  `nc-success-callout`), Twig shell equivalents `.nc-callout-*` in `components.css`;
-  `showDeskToast()` from `@components/deskToast`; `ConfirmModal` (Radix) for destructive/identity
-  confirmation; Badge variant is `neutral` (not `secondary`).
-- **Every desk renders wait time via `<WaitTimeSpan />` / `QueueCard`** — never inline the
-  formatting (see `.cursor/rules/new-clinic-big-picture-first.mdc` for the full render-path list).
-- **Forms UX rules the user insists on:** inline validation while typing (not save-time only),
-  form must not wipe on error, form disappears after successful save, registration stays an
-  **accordion** (wizard replacements were explicitly rejected).
-- **Regional:** DD/MM/YYYY dates, clinic-configurable currency (never hardcode `$` or GHS),
-  insurance UI hidden when `enable_insurance=false`.
-- **A11y:** WCAG 2.1 AA; aria-labels on icon buttons; 44px touch targets; visible focus ring;
-  `prefers-reduced-motion` guard; Lucide icons in React (no emojis as icons).
-- Every island has `*.test.tsx`; TS strict, no `any` without a justifying comment; no
-  `console.log`; no business logic in components (PHP enforces ACL, services compute).
+Moved to [`frontend/CLAUDE.md`](./frontend/CLAUDE.md) (2026-07-09, `/doctor` context cleanup) — it
+loads automatically whenever a session touches files under `frontend/`, instead of being resident
+in every session regardless of task. Covers: design tokens, feedback/callout conventions,
+`WaitTimeSpan`/`QueueCard`, forms UX rules, regional formatting, A11y, and test/TS conventions.
 
 ## 8. Testing (full matrix)
 
@@ -237,7 +169,7 @@ when doing hardening work.
 
 ## 12. Documentation hierarchy & upkeep
 
-**PRD wins conflicts.** `Documentation/NewClinic/NEW_CLINIC_V1_PRD.md` (canonical) →
+**PRD wins conflicts.** `Documentation/NewClinic/done/NEW_CLINIC_V1_PRD.md` (canonical) →
 `NEW_CLINIC_V1_USER_WORKFLOWS.md` + `NEW_CLINIC_V1_PAGE_DESIGNS.md` (normative companions) →
 per-module `*_REDESIGN.md` specs → `NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md` (living % tracker)
 → `README.md` (index). When you change a spec: bump its version, add a history row, and sync the
@@ -258,6 +190,8 @@ explicit out-of-scope items.
   scale headroom is 10×–50×, not infinite).
 - **Explain in simple words** for product questions — plain English, no file-name soup.
 - **Naming:** the product is "New Clinic", never "Ghana-this" in docs; neutral regional examples.
+  Deliberate exception: the `NEW_CLINIC_PERSONA_*.md` role personas are setting-specific
+  composites by design (see the README personas section).
 - **Never claim "done"** for backend PHP without desktop `composer verify:new-clinic`, or for UI
   without build + asset bump + a hard-refresh instruction. If the user says "not fixed", first
   check the loaded asset version, then grep for the render path you missed.

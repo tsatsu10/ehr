@@ -336,7 +336,7 @@ POST /openemr/interface/modules/custom_modules/oe-module-new-clinic/public/ajax.
 
 ### Project Documentation
 
-- **PRD:** `Documentation/NewClinic/NEW_CLINIC_V1_PRD.md` (v1.20.50)
+- **PRD:** `Documentation/NewClinic/done/NEW_CLINIC_V1_PRD.md` (v1.20.50)
 - **User Workflows:** `Documentation/NewClinic/NEW_CLINIC_V1_USER_WORKFLOWS.md` (v1.9.50)
 - **Page Designs:** `Documentation/NewClinic/NEW_CLINIC_V1_PAGE_DESIGNS.md` (v0.6.51)
 - **UI/UX Plan:** `Documentation/NewClinic/NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md` (v1.1.0)
