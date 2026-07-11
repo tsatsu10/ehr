@@ -85,14 +85,17 @@ class DocumentsService
     }
 
     /**
-     * Active document categories the current user may file into.
+     * Document categories the current user may file into. Stock `categories`
+     * has no active/inactive concept (confirmed against schema and core
+     * CategoryTree.class.php, which never filters on it) — every row is a
+     * candidate, narrowed only by ACO-spec visibility below.
      *
      * @return array<int, array{id: int, name: string}>
      */
     public function categories(): array
     {
         $rows = QueryUtils::fetchRecords(
-            "SELECT id, name, aco_spec FROM categories WHERE active = 1 ORDER BY lft, name",
+            "SELECT id, name, aco_spec FROM categories ORDER BY lft, name",
             []
         ) ?: [];
 
@@ -281,7 +284,7 @@ class DocumentsService
     private function assertCategoryWritable(int $categoryId): void
     {
         $row = QueryUtils::querySingleRow(
-            "SELECT aco_spec FROM categories WHERE id = ? AND active = 1",
+            "SELECT aco_spec FROM categories WHERE id = ?",
             [$categoryId]
         );
         if (!is_array($row)) {
@@ -301,7 +304,7 @@ class DocumentsService
 
         // Fall back to the root "Categories" node (id 1 in stock installs).
         $row = QueryUtils::querySingleRow(
-            "SELECT id FROM categories WHERE parent = 0 AND active = 1 ORDER BY id ASC LIMIT 1",
+            "SELECT id FROM categories WHERE parent = 0 ORDER BY id ASC LIMIT 1",
             []
         );
 

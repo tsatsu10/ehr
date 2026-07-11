@@ -20,8 +20,8 @@ class AclVersionTest extends TestCase
 
     public function testCanonicalAclVersionIsRecordedByInstallPaths(): void
     {
-        $this->assertSame('0.2.5', AclVersion::VERSION);
-        $this->assertTrue(AclVersion::isSatisfiedBy('0.2.5'));
+        $this->assertSame('0.2.7', AclVersion::VERSION);
+        $this->assertTrue(AclVersion::isSatisfiedBy('0.2.7'));
         $this->assertTrue(AclVersion::isSatisfiedBy('0.3.0'));
         $this->assertFalse(AclVersion::isSatisfiedBy('0.2.0'));
         $this->assertFalse(AclVersion::isSatisfiedBy(''));
