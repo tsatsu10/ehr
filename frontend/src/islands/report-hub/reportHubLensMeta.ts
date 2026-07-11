@@ -41,6 +41,11 @@ export const LENS_META: Record<ReportHubLens, ReportHubLensMeta> = {
     blurb: 'Overrides, data quality, and operational audit trails.',
     icon: 'fa-shield',
   },
+  unfiled_documents: {
+    title: 'Unfiled documents',
+    blurb: 'Batch-scanned documents awaiting a patient — file each one before it goes stale.',
+    icon: 'fa-file-o',
+  },
 };
 
 export function cardKindLabel(kind: ReportHubCard['kind']): string {

@@ -207,6 +207,8 @@ class AjaxActionPolicy
         'documents.upload',
         'documents.recategorize',
         'documents.delete',
+        'documents.unfiled_list',
+        'documents.assign_patient',
     ];
 
     /** @var array<int, string> */

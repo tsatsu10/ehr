@@ -95,7 +95,7 @@ export function ReportHub(props: ReportHubProps) {
   }, [props.ajaxUrl, props.csrfToken]);
 
   const loadCatalog = useCallback(async () => {
-    if (tab === 'today') {
+    if (tab === 'today' || tab === 'unfiled_documents') {
       setCards([]);
       setCatalogError(null);
       return;

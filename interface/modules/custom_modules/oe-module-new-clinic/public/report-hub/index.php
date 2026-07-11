@@ -80,6 +80,7 @@ if (!in_array($tabParam, $allowedTabs, true)) {
         'can_financial' => $access->canViewFinancial(),
         'can_public_health' => $access->canViewPublicHealth(),
         'can_audit' => $access->canViewAudit(),
+        'can_unfiled_documents' => $access->canViewUnfiledDocuments($facilityId),
         'can_show_advanced' => AclMain::aclCheckCore('new_clinic', 'new_admin')
             || AclMain::aclCheckCore('admin', 'super'),
         'can_cancel_visit' => AclMain::aclCheckCore('new_clinic', 'new_visit_cancel'),

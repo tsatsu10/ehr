@@ -75,3 +75,25 @@ export function deleteDocument(
     json: { pid, id },
   });
 }
+
+/** Clinic-wide scans awaiting patient assignment (foreign_id = 0) — report-hub lens. */
+export function listUnfiledDocuments(
+  ctx: FetchContext,
+  offset: number,
+): Promise<DocumentsListResponse> {
+  return oeFetch<DocumentsListResponse>('documents.unfiled_list', {
+    ...ctx,
+    params: { offset },
+  });
+}
+
+export function assignDocumentToPatient(
+  ctx: FetchContext,
+  id: number,
+  pid: number,
+): Promise<Record<string, never>> {
+  return oeFetch('documents.assign_patient', {
+    ...ctx,
+    json: { id, pid },
+  });
+}

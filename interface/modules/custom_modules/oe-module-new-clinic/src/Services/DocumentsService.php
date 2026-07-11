@@ -85,6 +85,85 @@ class DocumentsService
     }
 
     /**
+     * Clinic-wide scans awaiting patient assignment. Stock OpenEMR already has
+     * this exact concept: `Document::createDocument()` stores `foreign_id = 0`
+     * (int, never NULL) when no patient is given at upload time — the same
+     * sentinel stock's own "New Document Uploads" screen
+     * (`controllers/C_Document.class.php::list_action`) already uses. This is
+     * the clinic-wide half of A2 (closes G2 fully); the per-patient tab only
+     * ever lists `foreign_id = <real pid>` rows.
+     *
+     * @return array{documents: array<int, array<string, mixed>>, total: int, offset: int, page_size: int}
+     */
+    public function unfiledList(int $offset = 0): array
+    {
+        $offset = max(0, $offset);
+        $limit = self::PAGE_SIZE;
+
+        $rows = QueryUtils::fetchRecords(
+            "SELECT d.id, d.name, d.mimetype, d.size, d.docdate, d.date, d.owner,
+                    ctd.category_id,
+                    COALESCE(c.name, '') AS category_name,
+                    COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.fname, u.lname)), ''), u.username, '') AS uploader
+             FROM documents d
+             LEFT JOIN categories_to_documents ctd ON ctd.document_id = d.id
+             LEFT JOIN categories c ON c.id = ctd.category_id
+             LEFT JOIN users u ON u.id = d.owner
+             WHERE d.foreign_id = 0 AND d.deleted = 0
+             ORDER BY COALESCE(d.docdate, d.date) DESC, d.id DESC
+             LIMIT " . (int) $limit . " OFFSET " . (int) $offset
+        ) ?: [];
+
+        $countRows = QueryUtils::fetchRecords(
+            "SELECT COUNT(*) AS cnt FROM documents WHERE foreign_id = 0 AND deleted = 0"
+        );
+        $total = (int) ($countRows[0]['cnt'] ?? 0);
+
+        return [
+            'documents' => array_map(fn(array $r): array => $this->shape(0, $r), $rows),
+            'total' => $total,
+            'offset' => $offset,
+            'page_size' => self::PAGE_SIZE,
+        ];
+    }
+
+    /**
+     * File an unfiled scan (`foreign_id = 0`) to a real patient — the same
+     * mutation as stock's `Document::change_patient()`, done directly since
+     * we already hold the row.
+     */
+    public function assignPatient(int $documentId, int $targetPid): void
+    {
+        if ($documentId <= 0) {
+            throw new \InvalidArgumentException('Document is required');
+        }
+        if ($targetPid <= 0) {
+            throw new \InvalidArgumentException('Patient is required');
+        }
+
+        $row = QueryUtils::querySingleRow(
+            "SELECT id FROM documents WHERE id = ? AND foreign_id = 0 AND deleted = 0",
+            [$documentId]
+        );
+        if (!is_array($row)) {
+            throw new \InvalidArgumentException('This document is not awaiting assignment');
+        }
+
+        sqlStatement(
+            "UPDATE documents SET foreign_id = ? WHERE id = ? AND foreign_id = 0",
+            [$targetPid, $documentId]
+        );
+
+        EventAuditLogger::getInstance()->newEvent(
+            'new_clinic',
+            'document_assign_patient',
+            $_SESSION['authUserID'] ?? 0,
+            1,
+            'document_id=' . $documentId . ' pid=' . $targetPid
+        );
+    }
+
+    /**
      * Document categories the current user may file into. Stock `categories`
      * has no active/inactive concept (confirmed against schema and core
      * CategoryTree.class.php, which never filters on it) — every row is a

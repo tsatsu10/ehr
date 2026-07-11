@@ -33,6 +33,11 @@
             {{ 'Audit'|xlt }}
         </button>
         {% endif %}
+        {% if can_unfiled_documents %}
+        <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary{% if initial_tab == 'unfiled_documents' %} active{% endif %}" data-tab="unfiled_documents">
+            {{ 'Unfiled documents'|xlt }}
+        </button>
+        {% endif %}
     </div>
     <span class="nc-text-muted nc-text-sm nc-mb-1 nc-mr-2" id="nc-reporthub-kpis"></span>
     <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1 nc-mr-1" href="{{ visit_board_url|attr }}">{{ 'Visit Board'|xlt }}</a>
@@ -79,6 +84,7 @@
         canFinancial: can_financial ? true : false,
         canPublicHealth: can_public_health ? true : false,
         canAudit: can_audit ? true : false,
+        canUnfiledDocuments: can_unfiled_documents ? true : false,
         canShowAdvanced: can_show_advanced ? true : false,
         canCancelVisit: can_cancel_visit ? true : false,
         canMarkUnpaid: can_mark_unpaid ? true : false,

@@ -64,6 +64,7 @@ const baseProps = {
   canFinancial: false,
   canPublicHealth: false,
   canAudit: false,
+  canUnfiledDocuments: false,
 };
 
 describe('report hub lens helpers', () => {

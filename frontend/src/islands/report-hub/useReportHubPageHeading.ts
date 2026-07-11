@@ -54,6 +54,7 @@ export function useReportHubPageHeading({
         || tabName === 'financial'
         || tabName === 'public_health'
         || tabName === 'audit'
+        || tabName === 'unfiled_documents'
       ) {
         onTabChange(tabName);
       }
@@ -81,6 +82,7 @@ export function allowedLenses(props: {
   canFinancial: boolean;
   canPublicHealth: boolean;
   canAudit: boolean;
+  canUnfiledDocuments: boolean;
 }): ReportHubLens[] {
   const lenses: ReportHubLens[] = [];
   if (props.canToday) lenses.push('today');
@@ -89,5 +91,6 @@ export function allowedLenses(props: {
   if (props.canFinancial) lenses.push('financial');
   if (props.canPublicHealth) lenses.push('public_health');
   if (props.canAudit) lenses.push('audit');
+  if (props.canUnfiledDocuments) lenses.push('unfiled_documents');
   return lenses;
 }

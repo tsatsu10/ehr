@@ -65,6 +65,18 @@ class ReportHubAccessService
         'new_admin',
     ];
 
+    /**
+     * Unfiled documents lens (GAP-A / A2 clinic-wide half) — visible to the
+     * roles that actually triage scanned intake docs. The underlying
+     * documents.* ajax actions separately enforce core patients/docs
+     * (satisfied by Clinicians group membership for every New Clinic role —
+     * see acl_setup.php); this list only controls whether the *tab* shows.
+     */
+    public const UNFILED_DOCUMENTS_ACLS = [
+        'new_reception',
+        'new_admin',
+    ];
+
     /** @var callable|null */
     private $aclChecker;
 
@@ -125,6 +137,16 @@ class ReportHubAccessService
     public function canViewAudit(): bool
     {
         return $this->hasAnyAcl(self::AUDIT_ACLS);
+    }
+
+    public function canViewUnfiledDocuments(?int $facilityId = null): bool
+    {
+        if ($facilityId === null || $facilityId <= 0) {
+            $facilityId = $this->visitScope->resolveDeskFacilityId();
+        }
+
+        return $this->config->getInt('enable_documents_native', 0, $facilityId) === 1
+            && $this->hasAnyAcl(self::UNFILED_DOCUMENTS_ACLS);
     }
 
     public function showUsQualityReports(): bool
@@ -199,6 +221,7 @@ class ReportHubAccessService
             'financial' => $this->canViewFinancial(),
             'public_health' => $this->canViewPublicHealth(),
             'audit' => $this->canViewAudit(),
+            'unfiled_documents' => $this->canViewUnfiledDocuments(),
             default => false,
         };
         if (!$allowed) {
@@ -229,6 +252,9 @@ class ReportHubAccessService
         }
         if ($this->canViewAudit()) {
             $lenses[] = 'audit';
+        }
+        if ($this->canViewUnfiledDocuments()) {
+            $lenses[] = 'unfiled_documents';
         }
 
         return $lenses;

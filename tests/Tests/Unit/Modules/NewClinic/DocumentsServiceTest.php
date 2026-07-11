@@ -16,6 +16,11 @@ use PHPUnit\Framework\TestCase;
 
 class DocumentsServiceTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        sqlStatement("DELETE FROM documents WHERE name = 'phpunit-unfiled-doc.pdf'");
+    }
+
     public function testCategoriesQueriesTheRealStockSchemaWithoutError(): void
     {
         // Regression guard: an earlier revision filtered `WHERE active = 1`, a
@@ -61,5 +66,73 @@ class DocumentsServiceTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
 
         $service->recategorize(0, 1, 1);
+    }
+
+    public function testUnfiledListQueriesTheRealSchemaWithoutError(): void
+    {
+        $service = new DocumentsService();
+
+        $result = $service->unfiledList();
+
+        $this->assertArrayHasKey('documents', $result);
+        $this->assertArrayHasKey('total', $result);
+        $this->assertIsArray($result['documents']);
+        foreach ($result['documents'] as $document) {
+            $this->assertArrayHasKey('id', $document);
+            $this->assertArrayHasKey('view_url', $document);
+        }
+    }
+
+    public function testAssignPatientRejectsInvalidDocumentId(): void
+    {
+        $service = new DocumentsService();
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        $service->assignPatient(0, 1);
+    }
+
+    public function testAssignPatientRejectsInvalidPid(): void
+    {
+        $service = new DocumentsService();
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        $service->assignPatient(1, 0);
+    }
+
+    public function testAssignPatientRejectsDocumentNotAwaitingAssignment(): void
+    {
+        $service = new DocumentsService();
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        // A document id that either doesn't exist or already belongs to a
+        // real patient (foreign_id != 0) must not be assignable.
+        $service->assignPatient(999999999, 1);
+    }
+
+    public function testAssignPatientMovesAnUnfiledDocumentToTheTargetPatient(): void
+    {
+        // The documents table's id column has no AUTO_INCREMENT (core assigns
+        // ids explicitly via ORDataObject::persist()) -- sqlInsert()'s
+        // LAST_INSERT_ID() return value is meaningless here, so pick an id
+        // directly instead of trusting it.
+        $documentId = 999999998;
+        sqlStatement(
+            "INSERT INTO documents (id, name, mimetype, size, date, docdate, foreign_id, deleted)
+             VALUES (?, ?, 'application/pdf', 10, NOW(), NOW(), 0, 0)",
+            [$documentId, 'phpunit-unfiled-doc.pdf']
+        );
+
+        $service = new DocumentsService();
+        $service->assignPatient($documentId, 1);
+
+        $row = sqlQuery('SELECT foreign_id FROM documents WHERE id = ?', [$documentId]);
+        $this->assertSame(1, (int) $row['foreign_id']);
+
+        // Re-assigning an already-filed document must fail (no longer foreign_id = 0).
+        $this->expectException(\InvalidArgumentException::class);
+        $service->assignPatient($documentId, 2);
     }
 }

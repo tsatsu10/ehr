@@ -13,6 +13,7 @@ import type {
 } from './reportHubTypes';
 import { ReportHubNativeCard } from './ReportHubNativeCard';
 import { ReportHubEmbedView } from './ReportHubEmbedView';
+import { UnfiledDocumentsLens } from './UnfiledDocumentsLens';
 import { resolveHubEmbedTarget, resolveHref } from './reportHubEmbed';
 import {
   cardKindBadgeVariant,
@@ -179,6 +180,15 @@ export function ReportHubLensPane({
             initialTab="visits"
           />
         </div>
+      </section>
+    );
+  }
+
+  if (lens === 'unfiled_documents') {
+    return (
+      <section className="nc-reporthub-pane" aria-labelledby="nc-reporthub-lens-unfiled_documents">
+        <ReportHubLensIntro lens="unfiled_documents" headingId="nc-reporthub-lens-unfiled_documents" />
+        <UnfiledDocumentsLens ajaxUrl={ajaxUrl} csrfToken={csrfToken} />
       </section>
     );
   }

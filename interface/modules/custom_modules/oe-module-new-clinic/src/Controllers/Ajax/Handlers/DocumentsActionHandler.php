@@ -1,12 +1,16 @@
 <?php
 
 /**
- * documents.* ajax actions — per-patient Documents tab (GAP-A / A2, closes G2).
+ * documents.* ajax actions — per-patient Documents tab + clinic-wide unfiled
+ * inbox (GAP-A / A2, closes G2).
  *
  * Authorization (core patients/docs) is enforced in AjaxController::authorizeAction
- * via the 'patients_docs_acl' policy type before this handler runs. Every action
- * re-scopes to the patient (facility access), writes re-check CSRF, and the upload
- * action reads a multipart body ($_POST + $_FILES) rather than JSON.
+ * via the 'patients_docs_acl' policy type before this handler runs. Every
+ * per-patient action re-scopes to the patient (facility access); unfiled_list
+ * is clinic-wide by design (it lists foreign_id = 0 rows, so there's no
+ * patient to scope to) and assign_patient re-scopes to its *target* patient.
+ * Writes re-check CSRF, and the upload action reads a multipart body
+ * ($_POST + $_FILES) rather than JSON.
  *
  * @package   OpenEMR
  * @link      https://www.open-emr.org
@@ -29,6 +33,8 @@ final class DocumentsActionHandler implements AjaxActionHandlerInterface
         'documents.upload',
         'documents.recategorize',
         'documents.delete',
+        'documents.unfiled_list',
+        'documents.assign_patient',
     ];
 
     public function __construct(
@@ -104,6 +110,26 @@ final class DocumentsActionHandler implements AjaxActionHandlerInterface
                     (int) ($body['id'] ?? 0)
                 );
                 $this->host->respond(true, 'Document deleted');
+                break;
+
+            case 'documents.unfiled_list':
+                $offset = (int) ($_REQUEST['offset'] ?? 0);
+                $this->host->respond(
+                    true,
+                    'ok',
+                    $this->host->svc(DocumentsService::class)->unfiledList($offset)
+                );
+                break;
+
+            case 'documents.assign_patient':
+                $body = $this->requirePostBody($method);
+                $targetPid = (int) ($body['pid'] ?? 0);
+                $this->host->assertPatientChartPid($targetPid);
+                $this->host->svc(DocumentsService::class)->assignPatient(
+                    (int) ($body['id'] ?? 0),
+                    $targetPid
+                );
+                $this->host->respond(true, 'Document assigned');
                 break;
 
             default:

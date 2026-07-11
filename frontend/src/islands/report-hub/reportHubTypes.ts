@@ -4,7 +4,8 @@ export type ReportHubLens =
   | 'pharmacy'
   | 'financial'
   | 'public_health'
-  | 'audit';
+  | 'audit'
+  | 'unfiled_documents';
 
 export interface ReportHubCard {
   id: string;
@@ -86,6 +87,7 @@ export interface ReportHubProps {
   canFinancial: boolean;
   canPublicHealth: boolean;
   canAudit: boolean;
+  canUnfiledDocuments: boolean;
   canShowAdvanced: boolean;
   webroot: string;
   canCancelVisit: boolean;
@@ -120,4 +122,5 @@ export const LENS_LABELS: Record<ReportHubLens, string> = {
   financial: 'Financial',
   public_health: 'Public health',
   audit: 'Audit',
+  unfiled_documents: 'Unfiled documents',
 };
