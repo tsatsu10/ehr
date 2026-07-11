@@ -1,14 +1,19 @@
 # New Clinic — OpenEMR Coverage Gap Analysis & Comprehensive React Redesign Plan
 
-**Version:** v0.1.1 · **Date:** 2026-07-07 · **Status:** Draft for review
+**Version:** v0.1.2 · **Date:** 2026-07-11 · **Status:** GAP-A underway (A1 build started)
 **v0.1.1:** second-pass audit added off-menu surfaces (MFA, login/auth, issue editor, growth charts, authorizations, record request, background-service monitors) — see G11, W10–W11, A6.
+**v0.1.2:** re-verified A1 (Office Notes) against current code before build start — corrected the
+`onotes` schema/UI claims, the ACL story, and the page-count headcount; see the A1 entry in §5 and
+the version-history table at the bottom. Confirms the general rule from CLAUDE.md §12: trust the
+code over this doc's status claims, then fix the doc — applied here for the first time this doc
+gets touched during actual implementation rather than a planning pass.
 
 This document answers two questions:
 
 1. **Gap analysis (§1–§3):** Which parts of stock OpenEMR has the New Clinic module *not* yet addressed — audited against the full core menu tree (`interface/main/tabs/menu/menus/standard.json`), the implementation scorecard, and `OPENEMR_AREAS_NOT_ADDRESSED.txt`.
 2. **Redesign plan (§4–§8):** A comprehensive, phased plan to close every closable gap using the **React island architecture and shared components we already ship** — no new frameworks, no new patterns.
 
-Read alongside: [PRD](../NEW_CLINIC_V1_PRD.md) · [Scorecard](../NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md) · [UI/UX Plan](../NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) · [OPENEMR_AREAS_NOT_ADDRESSED.txt](../OPENEMR_AREAS_NOT_ADDRESSED.txt)
+Read alongside: [PRD](../done/NEW_CLINIC_V1_PRD.md) · [Scorecard](../NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md) · [UI/UX Plan](../NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) · [OPENEMR_AREAS_NOT_ADDRESSED.txt](../OPENEMR_AREAS_NOT_ADDRESSED.txt)
 
 ---
 
@@ -28,7 +33,8 @@ Read alongside: [PRD](../NEW_CLINIC_V1_PRD.md) · [Scorecard](../NEW_CLINIC_V1_I
 Three sources were diffed:
 
 1. **Core feature surface:** every entry in `standard.json` (Calendar, Finder, Flow, Recalls, Messages, Patient, Groups, Fees, Modules, Inventory, Procedures, eRx, Admin, Reports, Miscellaneous, Popups).
-2. **Module surface:** the 24 top-level pages in `oe-module-new-clinic/public/` plus hub subdirectories (`scheduling/`, `bill-ops/`, `lab-ops/`, `pharm-ops/`, `clinical-doc/`, `queue-bridge/`, `report-hub/`, `chart-depth/`) and the 22 React islands in `frontend/src/islands/`.
+2. **Module surface:** the 23 top-level host/utility pages in `oe-module-new-clinic/public/` (25 files
+   minus `ajax.php`/`bootstrap.php` infrastructure — re-counted 2026-07-11) plus hub subdirectories (`scheduling/`, `bill-ops/`, `lab-ops/`, `pharm-ops/`, `clinical-doc/`, `queue-bridge/`, `report-hub/`, `chart-depth/`) and the 22 React islands in `frontend/src/islands/`.
 3. **Declared scope:** PRD §3.2 non-goals (NG1–NG15), PRD §5.3 exclusions, scorecard P0 backlog, and `OPENEMR_AREAS_NOT_ADDRESSED.txt`.
 
 A core area counts as **Replaced** when a React island is the daily-use surface, **Wrapped** when it is reachable only through a T1 iframe wrapper or gateway card (e.g. `admin-people-legacy.php`, `clinical-form-bridge.php`), **Deep-linked** when desks link out to the stock screen in the OpenEMR shell, and **Unaddressed** when the module neither replaces, wraps, nor links it.
@@ -126,11 +132,37 @@ Everything below reuses the **existing** stack — no new dependencies beyond wh
 
 #### A1. Office Notes → new **`office-notes`** island (closes G1)
 
-- **Host:** `public/office-notes.php` (T1 shell) + card on desks' hub navigation; also embeddable in `report-hub` as a lens.
-- **UI:** single-column feed of `WidgetCard` notes with author/date, pin toggle, active/archived `SegmentedControl`; compose box reusing COM composer styling; `RowActionsMenu` for edit/archive.
-- **Backend:** `ajax.php` actions `onotes.list|save|archive` over the existing `onotes` table (no schema change).
-- **ACL:** `encounters/notes` (same as stock). **Toggle:** `enable_office_notes`.
-- **Effort:** S (1–2 sessions).
+*Re-verified against current code 2026-07-11 before build start (see history table). Corrections
+from the original draft below are marked ⚠.*
+
+- **Host:** `public/office-notes.php` (T1 shell), following the `communications.php` precedent:
+  `ClinicConfigService::isEnabled('enable_office_notes', 0, $facilityId)` gates the page; disabled
+  → 302 redirect to stock `interface/main/onotes/office_comments_full.php`. Card on desks' hub
+  navigation; also embeddable in `report-hub` as a lens (unchanged from original plan).
+- **UI:** single-column feed of `WidgetCard` notes with author/date, active/archived
+  `SegmentedControl` (backed by the stock `activity` column — `enableNoteById`/`disableNoteById`);
+  compose box reusing COM composer styling; `RowActionsMenu` for edit/archive.
+  ⚠ **No pin toggle** — the stock `onotes` table (`id, date, body, user, groupname, activity`) has
+  no pin/priority column and `ONoteService` has no such concept. Dropped from V1 scope; a pin
+  feature would require a real schema change, which contradicts the "no schema change" design
+  goal for this item. Revisit only as its own follow-up spec if a clinic actually asks for it.
+- **Backend:** `ajax.php` actions `office_notes.list|save|update|archive|unarchive` — domain
+  renamed from the original `onotes.*` to `office_notes.*` to avoid colliding with the unrelated
+  `core_notes_acl` policy name already in `AjaxActionPolicy` (see ACL note below). Delegates to a
+  new `OfficeNotesService` wrapping the existing stock `ONoteService`/`onotes` table — confirmed
+  **no schema change** needed for list/save/archive.
+- **ACL:** ⚠ more than "same as stock" — `AclMain::aclCheckCore('encounters', 'notes')` is the
+  correct stock check, but it needs its **own** new policy branch (`office_notes_acl` type →
+  `AjaxController::requireOfficeNotesAcl()`), distinct from the existing `core_notes_acl` type
+  (which checks the unrelated `patients/notes` section for Communications Hub — reusing it by
+  mistake would gate office notes on the wrong ACO). No `new_clinic`-section ACO exists for this
+  today, and New Clinic role groups aren't auto-granted arbitrary stock ACOs — grant access via a
+  `$coreGrants` entry in `acl_setup.php` (precedent: the `acct/rep` and `patients/pat_rep` grants
+  already there), rather than assuming it's free.
+- **Toggle:** `enable_office_notes`, default OFF, added to `install.sql` (`#IfNotRow2D` block,
+  precedent: `enable_bill_ops`/`enable_report_hub`) and to `adminFieldDefs.ts` (M6 Clinic tab).
+- **Effort:** S (1–2 sessions) — unchanged; the corrections above are scope clarifications, not
+  scope growth.
 
 #### A2. Documents manager → **`patient-chart` Documents tab + `doc-inbox` pane** (closes G2)
 
@@ -304,3 +336,13 @@ Net-new shared components required: **one** (SVG trend chart — shared by B2 tr
 2. **Documents storage quota/virus scanning** — accept core defaults, or gate uploads by size/type in the module?
 3. **i18n target locales** — French (regional) as the first non-English dictionary?
 4. **Proc-order parity bar** — which fields of stock `procedure_order` are mandatory for D3 sign-off vs dropped as unused?
+
+---
+
+## 10. Version history
+
+| Version | Date | Change |
+|---|---|---|
+| v0.1.0 | 2026-07-07 | Initial gap analysis + redesign plan (§1–§9), first audit pass |
+| v0.1.1 | 2026-07-07 | Second-pass audit: off-menu surfaces added (G11, W10–W11, A6) |
+| v0.1.2 | 2026-07-11 | Re-verified A1 (Office Notes) against current code before starting the build: dropped the unbacked "pin toggle," corrected the ACL story (new `office_notes_acl` policy branch + `$coreGrants` wiring needed, not a free reuse of stock ACL), renamed the ajax action domain to `office_notes.*` to avoid colliding with the existing `core_notes_acl` policy type, corrected the module page count (23, not 24). Build of A1 started same day. |
