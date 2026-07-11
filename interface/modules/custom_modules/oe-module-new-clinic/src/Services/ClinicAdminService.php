@@ -135,6 +135,8 @@ class ClinicAdminService
         'enable_admin_hub' => ['type' => 'bool', 'default' => '0'],
         'admin_hub_backup_retention_days' => ['type' => 'int', 'default' => '30', 'min' => 1, 'max' => 365],
         'admin_hub_setup_complete' => ['type' => 'bool', 'default' => '0'],
+        'enable_office_notes' => ['type' => 'bool', 'default' => '0'],
+        'enable_documents_native' => ['type' => 'bool', 'default' => '0'],
         'pediatric_exact_dob_age' => ['type' => 'int', 'default' => '5', 'min' => 0, 'max' => 18],
         'currency_code' => ['type' => 'currency_code', 'default' => 'GHS'],
         'currency_symbol' => ['type' => 'currency_symbol', 'default' => 'GH₵'],

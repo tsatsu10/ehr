@@ -98,6 +98,8 @@ export const ADMIN_SETTING_KEYS: string[] = [
   ...REACT_KILL_SWITCH_KEYS,
   'enable_bill_ops',
   'enable_bill_ops_outstanding',
+  'enable_office_notes',
+  'enable_documents_native',
   'enable_report_hub',
   'report_hub_show_us_quality',
   'enable_queue_bridge',
@@ -489,6 +491,23 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         type: 'bool',
         label: 'Enable Admin Hub system features (M15)',
         hint: 'System health, runbooks, and setup checklist. Core clinic setup tabs remain when OFF.',
+      },
+    ],
+  },
+  {
+    title: 'Office Notes & Documents (GAP-A)',
+    fields: [
+      {
+        key: 'enable_office_notes',
+        type: 'bool',
+        label: 'Enable Office Notes',
+        hint: 'Native clinic-wide sticky notes island. Legacy notes screen stays reachable when OFF.',
+      },
+      {
+        key: 'enable_documents_native',
+        type: 'bool',
+        label: 'Enable native Documents (patient chart tab + unfiled inbox)',
+        hint: 'Native document upload/browse in the patient chart, plus the report-hub "Unfiled documents" lens (also requires Reporting Operations Hub below). Legacy documents screens stay reachable when OFF.',
       },
     ],
   },
