@@ -28,6 +28,7 @@ const DESK_MAP = [
     'reports'          => 'reports.php',
     'communications'   => 'communications.php',
     'patient-registry' => 'patient-registry.php',
+    'office-notes'     => 'office-notes.php',
 ];
 
 $slug = strtolower(preg_replace('/[^a-z0-9-]/', '', (string) ($_GET['_desk'] ?? 'front-desk')));
