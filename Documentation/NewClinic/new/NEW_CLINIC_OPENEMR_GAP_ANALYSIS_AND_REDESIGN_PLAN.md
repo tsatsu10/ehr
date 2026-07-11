@@ -1,6 +1,6 @@
 # New Clinic — OpenEMR Coverage Gap Analysis & Comprehensive React Redesign Plan
 
-**Version:** v0.1.4 · **Date:** 2026-07-11 · **Status:** GAP-A: A1 + A2 fully merged and closed (G1, G2); A3 next
+**Version:** v0.1.5 · **Date:** 2026-07-11 · **Status:** GAP-A: A1 + A2 closed (G1, G2); A3 re-verified, build starting
 **v0.1.1:** second-pass audit added off-menu surfaces (MFA, login/auth, issue editor, growth charts, authorizations, record request, background-service monitors) — see G11, W10–W11, A6.
 **v0.1.2:** re-verified A1 (Office Notes) against current code before build start — corrected the
 `onotes` schema/UI claims, the ACL story, and the page-count headcount; see the A1 entry in §5 and
@@ -21,6 +21,12 @@ same-session ajax calls because no New Clinic handler calls `session_write_close
 `documents.unfiled_list` call took 21s once, competing with two other in-flight requests from the
 same tab, not a defect in the new action itself. See §5 and
 [NEW_CLINIC_V1_SCALABILITY_HARDENING_PLAN.md](./NEW_CLINIC_V1_SCALABILITY_HARDENING_PLAN.md).
+**v0.1.5:** re-verified A3 (Address Book) against current code before build start — five real
+staleness points found (more than A1 or A2): `Sheet` → `Dialog` (no precedent for `Sheet` CRUD in
+admin-hub), fabricated "Hospital" category, `admin/practice` → module's own `new_admin` ACO (stock
+ACL would 403 real admins), wrong referral-component name, and a real safety-guard requirement for
+writing to the shared `users` table that the original "no new table" framing understated. See A3
+in §5.
 
 This document answers two questions:
 
@@ -189,9 +195,45 @@ no new `acl_setup.php` grant at all. Both corrected here against the real code, 
 
 #### A3. Address Book → **Admin Hub "Directory" tab** (closes G3)
 
-- **UI:** new tab in the existing `admin-hub` island: `DataTable` of external contacts (specialists, hospitals, labs) with type filter chips (`ChipCloud`), row edit in `Sheet` drawer form, add via the same drawer. Referral pickers in M11 (`PatientReferralsLetters`) switch from free text to a `command`-palette lookup against this directory.
-- **Backend:** `ajax.php` actions `directory.list|save|delete` over the core `users` table `abook_type` rows (stock address book storage — no new table).
-- **ACL:** `admin/practice`. **Effort:** S–M (2 sessions).
+*Re-verified against current code 2026-07-11 before build start. Corrections from the original
+draft below are marked ⚠ — this item had five real staleness points, more than A1 or A2.*
+
+- **UI:** new tab in the existing `admin-hub` island (`ADMIN_TABS` array + `AdminTabId` union in
+  `adminTypes.ts`, wired through `AdminHub.tsx`/`AdminHubTabPanels.tsx` — a flat hand-edited list,
+  not a registry): `DataTable` of external contacts with type filter chips (`ChipCloud`), add/edit
+  in a **`Dialog`** ⚠ (not `Sheet` — no existing admin-hub CRUD tab uses `Sheet`; the established,
+  working pattern for exactly this shape is `Dialog`, precedent `VisitTypeModal`/`FeeModal`).
+  ⚠ **Type chips are not "specialists, hospitals, labs"** — no "Hospital" category exists in stock.
+  The real `abook_type` list (`list_options`, `list_id='abook_type'`): Specialist, Lab Service,
+  Imaging Service, Immunization Service, Vendor, Distributor, External Provider, External
+  Organization, Billing Service, Care Coordination, EMR Direct. Chips should reflect these.
+  Referral-target picker in M11 ⚠ (component is **`ReferralWizard.tsx`** in `chart-depth`, not
+  "`PatientReferralsLetters`" — that name doesn't exist in the codebase) can later swap its
+  free-text destination `<input>` for a `Command`-based lookup against this directory (precedent:
+  `PatientSearchWidget.tsx`'s `Command`/`cmdk` typeahead) — **frontend-only, optional follow-up**,
+  not required for A3 itself; `destination_facility`/`destination_department` stay plain strings
+  either way, no backend schema change needed to wire the picker.
+- **Backend:** `ajax.php` actions `directory.list|save|delete` over the core `users` table's
+  `abook_type` rows (stock address book storage — confirmed, no new table). ⚠ **This needs a real
+  safety guard, not just "no new table."** Stock's own screens (`addrbook_list.php`,
+  `addrbook_edit.php`) store address-book contacts and real staff login accounts in the *same*
+  `users` table, distinguished only by `username = '' OR username IS NULL` + `authorized = 0`
+  (contact) vs. a real username + `authorized = 1` (staff login/ACL principal). Every `directory.*`
+  query and mutation must carry that exact WHERE guard on every read, write, and delete — a bug
+  here risks corrupting or deleting a real staff account, not just a contact card. Mirror stock's
+  own guard (`addrbook_edit.php`'s delete statement) rather than reinventing it.
+- **ACL:** ⚠ **not `admin/practice`** — verified the module's `ajax.php` never checks any stock
+  `admin`-section ACO for anything; every `admin.*` action (including the `VisitTypeModal`/
+  `FeeModal` precedent this tab copies) is gated on the module's own `new_clinic`-section `new_admin`
+  ACO via `AjaxActionPolicy.php`'s `SINGLE_ACL` map + `AclMain::aclCheckCore('new_clinic', 'new_admin')`.
+  `admin/practice` is not granted to the `new_admin` role by any seed path (not stock
+  `Administrators`, not `acl_setup.php`'s `$coreGrants`) — building against it as originally
+  planned would 403 every real pilot admin. Use `new_admin` like every sibling admin-hub tab.
+- **Toggle:** ⚠ none needed — precedent (`enable_admin_hub` only gates the `system`/`forms` tabs;
+  `people`/`completion`/`clinic`/`types`/`fees`/`queue` are always-on "core clinic setup") puts
+  Directory in the always-on group alongside Visit Types/Fees, not behind a new or existing flag.
+- **Effort:** S–M (2 sessions) — unchanged; corrections above are scope clarifications, matching
+  the A1/A2 pattern of the pre-build draft being wrong on ACL/UI-pattern specifics, not on scope.
 
 #### A4. Letters & labels → extend **chart-depth** (closes G4)
 
@@ -363,3 +405,4 @@ Net-new shared components required: **one** (SVG trend chart — shared by B2 tr
 | v0.1.2 | 2026-07-11 | Re-verified A1 (Office Notes) against current code before starting the build: dropped the unbacked "pin toggle," corrected the ACL story (new `office_notes_acl` policy branch + `$coreGrants` wiring needed, not a free reuse of stock ACL), renamed the ajax action domain to `office_notes.*` to avoid colliding with the existing `core_notes_acl` policy type, corrected the module page count (23, not 24). Build of A1 started same day. |
 | v0.1.3 | 2026-07-11 | A1 (Office Notes) and A2's per-patient Documents tab built and merged to main, closing G1 and the per-patient half of G2. Merge review found the pre-build v0.1.2 draft wrong on two points once checked against the real code: pin *was* shipped (via a companion table `new_office_note_meta`, not a core schema change) and the ACL needed zero new `acl_setup.php` grants (stock `Clinicians` group membership already covers `encounters/notes` + `patients/docs` for every New Clinic role via `ClinicRolesService`). One code-review fix applied before merge: Office Notes error messages switched to the shared `deskCalloutClass()` convention. A2's clinic-wide "unfiled documents" inbox lens remains open. |
 | v0.1.4 | 2026-07-11 | A2's "unfiled documents" inbox lens shipped in `report-hub`, closing G2 fully. Discovered report-hub's lens system is a hardcoded 6-member enum + generic date-range card catalog, not a registry — the 7th lens needed special-casing across 4 files plus a Twig toolbar button, not a drop-in catalog card. Added `documents.unfiled_list`/`documents.assign_patient` actions (reusing the existing `patients_docs_acl` policy — no new ACL type) and a new `new_reception`/`new_admin` tab-visibility gate. Live browser verification surfaced a pre-existing, already-tracked scalability gap (PHP session-file-locking queues concurrent same-session requests because no handler calls `session_write_close()` yet) — correctly attributed to `NEW_CLINIC_V1_SCALABILITY_HARDENING_PLAN.md`, not treated as a defect in the new code. |
+| v0.1.5 | 2026-07-11 | Re-verified A3 (Address Book) before starting the build — the most stale pre-build draft of the three GAP-A items done so far: fabricated "Hospital" `abook_type` category (real list has none — Specialist/Lab Service/Imaging/Immunization/Vendor/Distributor/External Provider/External Organization/Billing Service/Care Coordination/EMR Direct), wrong UI pattern (`Sheet` has no admin-hub CRUD precedent — `Dialog` does, via `VisitTypeModal`/`FeeModal`), wrong ACL (`admin/practice` is never checked by this module's `ajax.php` and isn't granted to `new_admin` by any seed path — would 403 real pilot admins; correct gate is the module's own `new_admin` ACO), wrong referral-component name (`PatientReferralsLetters` doesn't exist; real files are `ReferralWizard.tsx`/`ReferralsPane.tsx`), and an understated safety requirement (writing to the shared `users` table risks corrupting real staff login/ACL rows without stock's exact `username=''`/`authorized=0` guard on every query). |
