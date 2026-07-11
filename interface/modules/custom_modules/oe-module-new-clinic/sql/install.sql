@@ -394,6 +394,11 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_office_notes', '0');
 #EndIf
 
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_documents_native
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_documents_native', '0');
+#EndIf
+
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_chart_depth
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_chart_depth', '0');

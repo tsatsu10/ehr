@@ -25,6 +25,7 @@ use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\DoctorActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\LabActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\FrontDeskActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\LabOpsActionHandler;
+use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\DocumentsActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\OfficeNotesActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PatientActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PharmacyActionHandler;
@@ -231,6 +232,7 @@ class AjaxController
             new AdminActionHandler($this),
             new ProfileActionHandler($this),
             new OfficeNotesActionHandler($this),
+            new DocumentsActionHandler($this),
             new ReportsActionHandler($this),
             new SchedulingActionHandler($this),
             new QueueBridgeActionHandler($this),
@@ -283,6 +285,7 @@ class AjaxController
             'desk_acl' => $this->requireClinicDeskAcl(),
             'core_notes_acl' => $this->requireCoreNotesAcl(),
             'office_notes_acl' => $this->requireOfficeNotesAcl(),
+            'patients_docs_acl' => $this->requirePatientsDocsAcl(),
             'cohort_acl' => $this->requireCohortAcl(),
             'cohort_export_acl' => $this->requireCohortExportAcl(),
             'lab_ops_read_acl' => $this->requireLabOpsReadAcl(),
@@ -359,6 +362,15 @@ class AjaxController
         // pair (matches stock office_comments.php). Clinic staff hold it via their
         // Clinicians group membership (see acl/seed_pilot_users.php).
         if (!AclMain::aclCheckCore('encounters', 'notes')) {
+            $this->respond(false, 'Forbidden', ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requirePatientsDocsAcl(): void
+    {
+        // Per-patient Documents tab (A2). Core patients/docs pair — the same ACL
+        // stock's controller.php document viewer enforces.
+        if (!AclMain::aclCheckCore('patients', 'docs')) {
             $this->respond(false, 'Forbidden', ['code' => 'forbidden'], 403);
         }
     }

@@ -474,13 +474,6 @@
       "_button-CnSZFKEu.js"
     ]
   },
-  "_download-k1az-0mq.js": {
-    "file": "chunks/download-k1az-0mq.js",
-    "name": "download",
-    "imports": [
-      "_createLucideIcon-C1ZPqbjw.js"
-    ]
-  },
   "_external-link-Cl5JsYbp.js": {
     "file": "chunks/external-link-Cl5JsYbp.js",
     "name": "external-link",
@@ -557,21 +550,9 @@
     "file": "assets/main-B4EINF2r.css",
     "src": "_main-B4EINF2r.css"
   },
-  "_main-Bub8VI_a.js": {
-    "file": "chunks/main-Bub8VI_a.js",
-    "name": "main",
-    "imports": [
-      "_button-CnSZFKEu.js",
-      "_deskCalloutStyles-YSTUUOjX.js",
-      "_native-select-D7Lgcs2R.js"
-    ],
-    "css": [
-      "assets/main-DeqlW3w6.css"
-    ]
-  },
-  "_main-C-I2akwr.css": {
-    "file": "assets/main-C-I2akwr.css",
-    "src": "_main-C-I2akwr.css"
+  "_main-BmBXqSh-.css": {
+    "file": "assets/main-BmBXqSh-.css",
+    "src": "_main-BmBXqSh-.css"
   },
   "_main-CCCkfeEa.js": {
     "file": "chunks/main-CCCkfeEa.js",
@@ -611,8 +592,16 @@
       "assets/main-B3uNSZHP.css"
     ]
   },
-  "_main-Cm7_J7-h.js": {
-    "file": "chunks/main-Cm7_J7-h.js",
+  "_main-CQX_Ihvj.css": {
+    "file": "assets/main-CQX_Ihvj.css",
+    "src": "_main-CQX_Ihvj.css"
+  },
+  "_main-CjNIKFrQ.css": {
+    "file": "assets/main-CjNIKFrQ.css",
+    "src": "_main-CjNIKFrQ.css"
+  },
+  "_main-D1MVlUK4.js": {
+    "file": "chunks/main-D1MVlUK4.js",
     "name": "main",
     "imports": [
       "_button-CnSZFKEu.js",
@@ -634,27 +623,31 @@
       "_PaginationBar-DlH73hBA.js"
     ],
     "css": [
-      "assets/main-DioVBA1Q.css"
+      "assets/main-BmBXqSh-.css"
     ]
   },
-  "_main-DBIiWeHZ.js": {
-    "file": "chunks/main-DBIiWeHZ.js",
+  "_main-IKsAMFmw.js": {
+    "file": "chunks/main-IKsAMFmw.js",
     "name": "main",
     "imports": [
       "_button-CnSZFKEu.js",
       "_loader-circle-BlKGTIF3.js"
     ],
     "css": [
-      "assets/main-C-I2akwr.css"
+      "assets/main-CjNIKFrQ.css"
     ]
   },
-  "_main-DeqlW3w6.css": {
-    "file": "assets/main-DeqlW3w6.css",
-    "src": "_main-DeqlW3w6.css"
-  },
-  "_main-DioVBA1Q.css": {
-    "file": "assets/main-DioVBA1Q.css",
-    "src": "_main-DioVBA1Q.css"
+  "_main-YQ0fnMid.js": {
+    "file": "chunks/main-YQ0fnMid.js",
+    "name": "main",
+    "imports": [
+      "_button-CnSZFKEu.js",
+      "_deskCalloutStyles-YSTUUOjX.js",
+      "_native-select-D7Lgcs2R.js"
+    ],
+    "css": [
+      "assets/main-CQX_Ihvj.css"
+    ]
   },
   "_main-vSDQv8RF.js": {
     "file": "chunks/main-vSDQv8RF.js",
@@ -674,13 +667,6 @@
     ],
     "css": [
       "assets/main-B4EINF2r.css"
-    ]
-  },
-  "_message-square-YlZcSXzQ.js": {
-    "file": "chunks/message-square-YlZcSXzQ.js",
-    "name": "message-square",
-    "imports": [
-      "_createLucideIcon-C1ZPqbjw.js"
     ]
   },
   "_native-select-D7Lgcs2R.js": {
@@ -825,9 +811,23 @@
       "_button-CnSZFKEu.js"
     ]
   },
+  "_trash-2-COz5VoT9.js": {
+    "file": "chunks/trash-2-COz5VoT9.js",
+    "name": "trash-2",
+    "imports": [
+      "_createLucideIcon-C1ZPqbjw.js"
+    ]
+  },
   "_triangle-alert-DpR-o9ng.js": {
     "file": "chunks/triangle-alert-DpR-o9ng.js",
     "name": "triangle-alert",
+    "imports": [
+      "_createLucideIcon-C1ZPqbjw.js"
+    ]
+  },
+  "_upload-CrbZ1eea.js": {
+    "file": "chunks/upload-CrbZ1eea.js",
+    "name": "upload",
     "imports": [
       "_createLucideIcon-C1ZPqbjw.js"
     ]
@@ -934,7 +934,7 @@
       "_clipboard-check-ZipPUwDR.js",
       "_calendar-days-CdYAfmDN.js",
       "_checkbox-COJtRDao.js",
-      "_download-k1az-0mq.js",
+      "_upload-CrbZ1eea.js",
       "_heart-pulse-DagJs5db.js",
       "_shield-BbYj6R0J.js",
       "_layout-grid-BUbk0L26.js",
@@ -957,7 +957,7 @@
       "_deskToast-D9GcLMy_.js",
       "_formatMoney-BSsIFoKG.js",
       "_select-CTLaKGv7.js",
-      "_main-DBIiWeHZ.js"
+      "_main-IKsAMFmw.js"
     ]
   },
   "src/islands/bill-ops/index-correct.tsx": {
@@ -1167,7 +1167,7 @@
       "_chevron-right-pplSNfVA.js",
       "_clipboard-list-DsFgOkHX.js",
       "_heart-pulse-DagJs5db.js",
-      "_message-square-YlZcSXzQ.js",
+      "_trash-2-COz5VoT9.js",
       "_plus-B2oGiM2-.js",
       "_stethoscope-B1cw_h4r.js",
       "_dialog-BoUj-UeH.js",
@@ -1298,7 +1298,7 @@
       "_shield-BbYj6R0J.js",
       "_input-CfckuyLB.js",
       "_label-CrlPLb1M.js",
-      "_main-DBIiWeHZ.js"
+      "_main-IKsAMFmw.js"
     ],
     "css": [
       "my-profile.css"
@@ -1317,7 +1317,7 @@
       "_SegmentedControl-CLmDy7pZ.js",
       "_textarea-D-8_lNwK.js",
       "_ConfirmModal-Ddfi3E5z.js",
-      "_main-DBIiWeHZ.js",
+      "_main-IKsAMFmw.js",
       "_WidgetCard-Cc36Jsv0.js"
     ],
     "css": [
@@ -1342,14 +1342,14 @@
       "_chevron-left-Dw05GU8Y.js",
       "_calendar-days-CdYAfmDN.js",
       "_chevron-right-pplSNfVA.js",
-      "_download-k1az-0mq.js",
+      "_upload-CrbZ1eea.js",
       "_clipboard-list-DsFgOkHX.js",
       "_external-link-Cl5JsYbp.js",
       "_file-text-BbpO64iH.js",
       "_flask-conical-Cc7Puor_.js",
       "_heart-pulse-DagJs5db.js",
       "_layout-grid-BUbk0L26.js",
-      "_message-square-YlZcSXzQ.js",
+      "_trash-2-COz5VoT9.js",
       "_pill-DKp_gt72.js",
       "_plus-B2oGiM2-.js",
       "_search-BnkdPJeV.js",
@@ -1359,8 +1359,12 @@
       "_SegmentedControl-CLmDy7pZ.js",
       "_deskCalloutStyles-YSTUUOjX.js",
       "_patientBannerUtils--Wf2pVIG.js",
+      "_SlideOver-CPZSYo_Q.js",
       "_input-CfckuyLB.js",
+      "_ConfirmModal-Ddfi3E5z.js",
+      "_native-select-D7Lgcs2R.js",
       "_table-C82O4x-6.js",
+      "_DataTable-Em0akSOo.js",
       "_ChartBanner-BZJXBhLq.js"
     ],
     "css": [
@@ -1374,7 +1378,7 @@
     "isEntry": true,
     "imports": [
       "_button-CnSZFKEu.js",
-      "_main-Cm7_J7-h.js"
+      "_main-D1MVlUK4.js"
     ]
   },
   "src/islands/pharm-ops/PharmOpsDestroyDrawer.tsx": {
@@ -1457,7 +1461,7 @@
       "_preload-helper-DYl5dUZ5.js",
       "_reportsFormatters-Cl5Kncev.js",
       "_usePageHeadingDateInput-CkJmO0UN.js",
-      "_main-Bub8VI_a.js"
+      "_main-YQ0fnMid.js"
     ],
     "dynamicImports": [
       "src/islands/pharm-ops/PharmOpsDispenseDrawer.tsx",
@@ -1540,7 +1544,7 @@
       "_badge-C1Sm-FJj.js",
       "_card-DJpTpbye.js",
       "_main-CCCkfeEa.js",
-      "_main-Cm7_J7-h.js",
+      "_main-D1MVlUK4.js",
       "_SegmentedControl-CLmDy7pZ.js",
       "_deskCalloutStyles-YSTUUOjX.js",
       "_input-CfckuyLB.js",
@@ -1549,7 +1553,7 @@
       "_reportsFormatters-Cl5Kncev.js",
       "_DataTable-Em0akSOo.js",
       "_PaginationBar-DlH73hBA.js",
-      "_main-Bub8VI_a.js",
+      "_main-YQ0fnMid.js",
       "_main-vSDQv8RF.js",
       "_BillOpsHub-DwD0D4Ix.js"
     ],

@@ -197,6 +197,15 @@ class AjaxActionPolicy
         'onotes.delete',
     ];
 
+    /** @var array<int, string> Documents manager (GAP-A / A2) — core patients/docs ACL */
+    private const DOCUMENTS_ACTIONS = [
+        'documents.list',
+        'documents.categories',
+        'documents.upload',
+        'documents.recategorize',
+        'documents.delete',
+    ];
+
     /** @var array<int, string> */
     private const LAB_OPS_READ_ACTIONS = [
         'lab_ops.worklist',
@@ -531,6 +540,10 @@ class AjaxActionPolicy
 
         if (in_array($action, self::OFFICE_NOTES_ACTIONS, true)) {
             return ['type' => 'office_notes_acl'];
+        }
+
+        if (in_array($action, self::DOCUMENTS_ACTIONS, true)) {
+            return ['type' => 'patients_docs_acl'];
         }
 
         if (in_array($action, self::LAB_OPS_READ_ACTIONS, true)) {

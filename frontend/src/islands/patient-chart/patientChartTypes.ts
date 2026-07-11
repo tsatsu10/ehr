@@ -1,8 +1,21 @@
 import type { PatientCompletion, PatientIdentity, PatientPreview } from '@core/types';
 
-export type ChartTabId = 'overview' | 'profile' | 'visits' | 'clinical' | 'messages';
+export type ChartTabId =
+  | 'overview'
+  | 'profile'
+  | 'visits'
+  | 'clinical'
+  | 'documents'
+  | 'messages';
 
-export const CHART_TAB_IDS: ChartTabId[] = ['overview', 'profile', 'visits', 'clinical', 'messages'];
+export const CHART_TAB_IDS: ChartTabId[] = [
+  'overview',
+  'profile',
+  'visits',
+  'clinical',
+  'documents',
+  'messages',
+];
 
 export interface PatientChartProps {
   ajaxUrl: string;
@@ -16,6 +29,31 @@ export interface PatientChartProps {
   exportChartUrl?: string;
   registrationMode: string;
   enableInChartPatientSearch?: boolean;
+  enableDocuments?: boolean;
+}
+
+export interface PatientDocument {
+  id: number;
+  name: string;
+  mimetype: string;
+  size: number;
+  date: string;
+  category_id: number;
+  category_name: string;
+  uploader: string;
+  view_url: string;
+}
+
+export interface DocumentsListResponse {
+  documents: PatientDocument[];
+  total: number;
+  offset: number;
+  page_size: number;
+}
+
+export interface DocumentCategory {
+  id: number;
+  name: string;
 }
 
 export interface ChartSearchResultItem {

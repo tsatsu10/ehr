@@ -133,12 +133,13 @@ Everything below reuses the **existing** stack — no new dependencies beyond wh
 - **Verification:** frontend `npm run check` (lint + typecheck + 396 vitest) + `npm run build` green; backend static `verify-module.php` PASS (syntax, ctor cycles, controller imports, ajax crosscheck). Live `--bootstrap` + browser smoke pending a clean (non-nested) checkout.
 - **Effort:** S (1–2 sessions).
 
-#### A2. Documents manager → **`patient-chart` Documents tab + `doc-inbox` pane** (closes G2)
+#### A2. Documents manager → **`patient-chart` Documents tab + `doc-inbox` pane** (closes G2) — **per-patient tab BUILT (2026-07-11); inbox lens pending**
 
-- **UI (per-patient):** new "Documents" section in MRD Profile tab: `DataTable` of documents (category, date, uploader), drag-drop upload zone, preview in `SlideOver` (PDF/image `<iframe>`/`<img>`), category move via `native-select`, delete behind `ConfirmModal`.
-- **UI (clinic-wide inbox):** "Unfiled documents" lens in `report-hub` for scans awaiting patient assignment, reusing `PatientSearchDropdown` to file them.
-- **Backend:** `ajax.php` actions `documents.list|upload|recategorize|delete` delegating to core `Document` classes and `C_Document` semantics; uploads via `multipart` branch in `oeFetch` (extend once, reuse everywhere).
-- **ACL:** `patients/docs`. **Toggle:** `enable_documents_native`.
+- **UI (per-patient) — BUILT:** new "Documents" **tab** in the MRD chart (gated by `enableDocuments`): `DataTable` of documents (name, category, date, uploader), drag-drop + choose-file upload zone with a category `native-select`, preview in `SlideOver` (`<img>` for images, `<iframe>` for PDF, download fallback otherwise), category move via `native-select` in the preview, delete behind `ConfirmModal`. Tab hidden entirely when the toggle is OFF; lazy-loads on first activation.
+- **UI (clinic-wide inbox) — PENDING (commit 2):** "Unfiled documents" lens in `report-hub` for scans awaiting patient assignment, reusing `PatientSearchDropdown` to file them.
+- **Backend — BUILT:** `ajax.php` actions `documents.list|categories|upload|recategorize|delete` via `DocumentsService`, delegating storage to core `\Document::createDocument` (same path as `ReferralDocumentService`); membership in `categories_to_documents`; **delete is a soft-delete** (`documents.deleted = 1`, recoverable, matches every core read filter). Per-category ACL enforced with `AclMain::aclCheckAcoSpec`; every action re-scopes to the patient (`assertPatientChartPid`). Uploads reuse the **existing** `oeFetch` FormData pass-through (no oeFetch change needed — the plan's "multipart branch" was already covered by the referral-upload precedent). Hardened like the referral service: MIME allow-list (PDF + JPEG/PNG/GIF/WebP), 10 MB cap, `isWhiteFile`/`secure_upload` policy, filename sanitize, audit log.
+- **ACL:** core `patients/docs` (new `patients_docs_acl` policy type + `AjaxController::requirePatientsDocsAcl()`). **Toggle:** `enable_documents_native` (default OFF, `install.sql`).
+- **Verification:** frontend `npm run check` + `npm run build` green; backend static `verify-module.php` PASS. Live `--bootstrap` + browser smoke pending a clean (non-nested) checkout.
 - **Effort:** M (3–4 sessions). Highest daily value in this phase.
 
 #### A3. Address Book → **Admin Hub "Directory" tab** (closes G3)
