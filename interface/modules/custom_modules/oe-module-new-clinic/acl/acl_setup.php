@@ -25,9 +25,11 @@ $acos = [
     'new_nurse' => 'Nurse Desk',
     'new_doctor' => 'Doctor Desk',
     'new_lab' => 'Lab Desk',
+    'new_lab_lead' => 'New Clinic Lab Lead',
     'new_pharmacy' => 'Pharmacy Desk',
     'new_pharmacy_lead' => 'New Clinic Pharmacy Lead',
     'new_cashier' => 'Cashier Desk',
+    'new_cashier_lead' => 'New Clinic Cashier Lead',
     'new_admin' => 'Clinic Admin',
     'new_create_despite_dup' => 'Create Despite Duplicate',
     'new_billing_skip_completion' => 'Skip Billing Completion',
@@ -146,17 +148,23 @@ foreach ($deskMap as $group => $aco) {
     }
 }
 
-$leadTierAco = 'new_pharmacy_lead';
-if (!empty($groupAcls[$leadTierAco]) && isset($acos[$leadTierAco])) {
-    AclExtended::updateAcl(
-        $groupAcls[$leadTierAco],
-        $groups[$leadTierAco],
-        $section,
-        $sectionTitle,
-        $leadTierAco,
-        $acos[$leadTierAco],
-        'write'
-    );
+// Lead groups each get their own self-named ACO (in addition to whatever
+// base-desk ACO they inherit via $extraGrants below) so any direct
+// aclCheckCore('new_clinic', 'new_X_lead') check in application code has a
+// real ACO behind it, not just an incidental pass-through fallback grant.
+$leadTierAcos = ['new_pharmacy_lead', 'new_lab_lead', 'new_cashier_lead'];
+foreach ($leadTierAcos as $leadTierAco) {
+    if (!empty($groupAcls[$leadTierAco]) && isset($acos[$leadTierAco])) {
+        AclExtended::updateAcl(
+            $groupAcls[$leadTierAco],
+            $groups[$leadTierAco],
+            $section,
+            $sectionTitle,
+            $leadTierAco,
+            $acos[$leadTierAco],
+            'write'
+        );
+    }
 }
 
 $extraGrants = [

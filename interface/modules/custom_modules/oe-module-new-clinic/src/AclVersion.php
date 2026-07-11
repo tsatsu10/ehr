@@ -13,7 +13,7 @@ namespace OpenEMR\Modules\NewClinic;
 
 class AclVersion
 {
-    public const VERSION = '0.2.7';
+    public const VERSION = '0.2.8';
 
     public static function isSatisfiedBy(?string $installedVersion): bool
     {
