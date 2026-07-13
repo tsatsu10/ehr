@@ -55,9 +55,11 @@ class TriageService
             $bind[] = $visitDate;
         }
 
-        $sql .= " ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC";
+        $sql .= " ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC"
+            . QueueLimits::limitClause(QueueLimits::QUEUE_HARD_CAP);
 
         $rows = QueryUtils::fetchRecords($sql, $bind) ?: [];
+        [$rows, $queueTruncated] = QueueLimits::applyCap($rows, QueueLimits::QUEUE_HARD_CAP);
         $visitIds = array_map(fn (array $row) => (int) ($row['id'] ?? 0), $rows);
         $holders = $this->rowEnricher->batchTriageHolders($visitIds);
         $rows = $this->rowEnricher->enrichVisitRows($rows);
@@ -85,6 +87,8 @@ class TriageService
             ],
             'visit_date' => $visitDate ?? $today,
             'queue_date_filter' => $visitDate,
+            'queue_truncated' => $queueTruncated,
+            'queue_cap' => QueueLimits::QUEUE_HARD_CAP,
             'last_updated' => date('c'),
             'vitals_unit_label' => $this->vitalsValidation->formTemperatureUnitLabel(),
             'vitals_form_rules' => $this->vitalsValidation->getFormRules(),

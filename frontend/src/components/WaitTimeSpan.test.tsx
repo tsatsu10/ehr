@@ -47,4 +47,25 @@ describe('WaitTimeSpan', () => {
     const { container } = render(<WaitTimeSpan card={card(30)} />);
     expect(container.querySelector('[data-wait-severity]')).not.toBeInTheDocument();
   });
+
+  // SCALE-1.8 follow-up — client-computed wait from a stable start epoch.
+  it('computes wait live from started_at_epoch (ignoring stale server value)', () => {
+    const epoch = Math.floor(Date.now() / 1000) - 40 * 60; // started 40 min ago
+    render(
+      <WaitTimeSpan
+        card={{ wait_minutes: 9999, wait_label: 'STALE', visit_date: '2099-01-01', started_at_epoch: epoch }}
+      />,
+    );
+    expect(screen.getByText('40m')).toBeInTheDocument();
+  });
+
+  it('derives severity from the client-computed wait, not the server value', () => {
+    const epoch = Math.floor(Date.now() / 1000) - 250 * 60; // 250 min → long severity
+    const { container } = render(
+      <WaitTimeSpan
+        card={{ wait_minutes: 1, wait_label: '', visit_date: '2099-01-01', started_at_epoch: epoch }}
+      />,
+    );
+    expect(container.querySelector('[data-wait-severity="long"]')).toBeInTheDocument();
+  });
 });

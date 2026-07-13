@@ -47,6 +47,7 @@ class ReferralCorrespondenceService
         $visitDate = $this->resolveVisitDateForEncounter($pid, $encounterId);
         $items = $this->fetchReferralItems($pid, $visitDate, 5);
         $canManage = AclMain::aclCheckCore('new_clinic', 'new_chart_depth_referral');
+        $canOpen = $canManage || AclMain::aclCheckCore('new_clinic', 'new_chart_depth');
         $hubUrl = $webroot
             . '/interface/modules/custom_modules/oe-module-new-clinic/public/chart-depth/referrals.php?pid='
             . urlencode((string) $pid)
@@ -54,15 +55,21 @@ class ReferralCorrespondenceService
             . urlencode((string) $encounterId);
 
         return [
-            'hidden' => $items === [],
+            // Show the strip whenever the user can open the hub — even with zero
+            // referrals on file — so the "Open referrals" entry point is never
+            // stranded. It is the only Clinical-tab path to create the first
+            // referral (and, when letters are on, the first letter), exactly the
+            // case where the old `$items === []` gate hid it. Same reachability
+            // rule as the Visits-tab link (buildVisitReferralsUrl): enabled + ACL,
+            // not referral history. Only truly hidden when there is nothing to
+            // show AND nowhere to go.
+            'hidden' => $items === [] && !$canOpen,
             'encounter_id' => $encounterId,
             'items' => $items,
             'has_active_draft' => $this->hasDraftItem($items),
-            'can_open_referrals' => $canManage || AclMain::aclCheckCore('new_clinic', 'new_chart_depth'),
+            'can_open_referrals' => $canOpen,
             'can_create_referral' => $canManage,
-            'open_referrals_url' => $canManage || AclMain::aclCheckCore('new_clinic', 'new_chart_depth')
-                ? $hubUrl
-                : null,
+            'open_referrals_url' => $canOpen ? $hubUrl : null,
             'stock_transactions_url' => $webroot
                 . '/interface/patient_file/transaction/transactions.php?set_pid='
                 . urlencode((string) $pid),

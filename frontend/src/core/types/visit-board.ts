@@ -16,6 +16,8 @@ export interface VisitCard {
   age_years: string;
   wait_minutes: number;
   wait_label: string;
+  /** SCALE-1.8 — stable start epoch (Unix seconds) for live client-side wait. */
+  started_at_epoch?: number | null;
   visit_date: string;
   visit_type_label: string;
   chief_complaint: string;
@@ -56,6 +58,12 @@ export interface BoardData {
   columns: Partial<Record<ColumnKey, VisitCard[]>>;
   config: BoardConfig;
   stale_count: number;
+  /** SCALE-1.2 — true when any lane hit its row cap; show QueueTruncationBanner. */
+  queue_truncated?: boolean;
+  queue_cap?: number;
+  /** SCALE-1.8 — delta-poll token; `unchanged` responses carry only these two. */
+  revision?: string;
+  unchanged?: boolean;
   visit_date?: string;
   cancelled?: BoardTerminalVisit[];
   closed_unpaid?: BoardTerminalVisit[];

@@ -9,12 +9,15 @@ require_once __DIR__ . '/bootstrap.php';
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Modules\NewClinic\Controllers\PageController;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
+use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 use OpenEMR\Modules\NewClinic\Services\VitalsValidationService;
 
 $moduleUrl = $GLOBALS['webroot'] . '/interface/modules/custom_modules/oe-module-new-clinic/public';
 $config = new ClinicConfigService();
+// Per-facility flag — read at the resolved facility, not the global default.
+$facilityId = (new VisitScopeService())->resolveDefaultFacilityId();
 
-if (!$config->isEnabled('enable_triage', 1)) {
+if (!$config->isEnabled('enable_triage', 1, $facilityId)) {
     http_response_code(403);
     echo xlt('Triage Desk is disabled. Enable triage in Clinic Setup.');
     exit;

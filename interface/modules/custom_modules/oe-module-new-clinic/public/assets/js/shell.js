@@ -22,9 +22,20 @@
             window.NewClinicUI.bindCompletionBannerActions(root);
         }
         refreshQueueCounts(root, ajaxUrl);
+        // SCALE-1.7 — don't poll while the tab is hidden (a backgrounded desk made a
+        // request every REFRESH_MS for nothing); refresh immediately when it becomes
+        // visible again. ±10% jitter so every open shell doesn't poll in lockstep.
+        var pollDelay = REFRESH_MS * (0.9 + Math.random() * 0.2);
         window.setInterval(function () {
-            refreshQueueCounts(root, ajaxUrl);
-        }, REFRESH_MS);
+            if (!document.hidden) {
+                refreshQueueCounts(root, ajaxUrl);
+            }
+        }, pollDelay);
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) {
+                refreshQueueCounts(root, ajaxUrl);
+            }
+        });
     }
 
     function bindSidebar(root) {

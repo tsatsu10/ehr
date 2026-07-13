@@ -4,8 +4,8 @@
 
 | Field | Value |
 |-------|-------|
-| **Last audited** | 2026-07-11 |
-| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260711directory` |
+| **Last audited** | 2026-07-12 |
+| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260712frsweep1` |
 | **Maintainer** | Engineering lead updates after each sprint; Product owns pilot sign-off |
 | **How to update** | Change `%` and `Status` cells; bump **Last audited**; sync PRD §5.6 row if shell status changes |
 
@@ -238,6 +238,60 @@ Use PRD §8 tables as source of truth. Below: **representative** IDs for spot au
 ---
 
 ## Audit log
+
+**2026-07-12 — GAP-D / D3 native procedure-order form shipped (W2 top slice) — full native form behind `enable_native_proc_order` (OFF); browser sign-off pending**
+
+Research first overturned the plan: a native React lab-ordering path already shipped
+(`LabPanelModal` → `LabPanelOrderService`, `enable_lab_panel_order`), so "build a native pane" was
+~60% met. Product parity-bar decision (open Q#4): **full native form**. Built in two verified slices —
+`ProcedureOrderEnginePolicy` + `ProcedureOrderFormService` (full-field getFormData/saveOrder reusing
+`LabPanelOrderService` idioms + `LabOrderChargeService` billing, no duplicate logic), then the
+`proc-order` island (`ProcOrderForm`: lab picker, per-lab test checkboxes with fees + estimate,
+priority/specimen/diagnosis/clinical-hx, edit prefill; on `t()` + the D1 eslint fence), `proc-order.php`
+host (maps clinical-doc `form_id`=forms.id → procedure_order_id — a real slice-1 bug caught in debug),
+ajax `proc_order.form_data|save` (`clinical_doc_write_acl`), and the routing hook in
+`ClinicalDocFormOpenService` (native-vs-bridge; catalog card unchanged). Flag wired 3 places (OFF).
+Full PHPUnit **975 (no failures)**, Vitest **490/490**, verify **297 actions / 0 cycles**, live-DB read
+smoke green (real catalog + fees + 38 specimen options). Two self-caught issues fixed honestly: the
+form_id/procedure_order_id bug, and DB pollution from a crashed smoke (fatal skips `finally`, left the
+flag on at the desk facility) — cleaned + test hardened to read the resolved facility. Manual browser
+submit is the remaining parity gate before prod enablement. Asset `20260712procorder`.
+
+**2026-07-12 — GAP-D / D1 i18n foundation shipped — G8 mechanism closed (sweep continues desk-by-desk)**
+
+The island i18n mechanism + extraction pipeline, per the D1 deliverable ("mechanism plus
+extraction, not translations"). `@core/i18n`'s `t(msg, params?)` mirrors core `xl()`:
+English source string as key, dictionary lookup with automatic English fallback, `{param}`
+interpolation applied after translation so translators can reorder placeholders.
+`mountIsland()` awaits `ensureI18nReady()` before first render; the locale reaches islands
+via `#nc-t1` `data-lang-code`/`data-i18n-url`, stamped by new `ShellLocaleService`
+(session `language_choice` → `lang_languages.lang_code`; dictionary URL only when
+`public/assets/i18n/<code>.json` exists — NOT `assets/modern/`, which Vite wipes).
+Research finding: the Twig half of D1 was already done (259 `|xlt` uses across all 41
+templates); only `<html lang>` needed fixing. `npm run i18n:extract` maintains the key
+inventory (`messages.json`); `i18n:check` joined `npm run check`; an eslint
+`react/jsx-no-literals` fence covers migrated islands (office-notes seeded — 42 keys).
+English ships as the only locale; French is open product question #3. Full gates green
+(970 PHPUnit / 487 Vitest / verify 295 actions / build). Also fixed two pre-existing
+full-suite test failures found while verifying: `backup_target_dir`'s blank default
+(uncommitted prior work) and the referral-strip test's unpinned premise (ordering flake).
+
+**2026-07-11 — GAP-A / A4 Letters & labels shipped — G4 closed**
+
+Letters tab on the chart-depth referrals hub (`LettersPanel.tsx` behind a Referrals|Letters
+`SegmentedControl`) + a "Print label" menu (chart/address/MRN-barcode) in the patient-chart
+header, both behind one `enable_letters_labels` flag (default OFF; legacy `letter.php` stays
+reachable). Letters reuse the STOCK flat-file template engine end to end — pre-build research
+overturned the plan's `document_templates`-table assumption (that's the patient-portal system) —
+so templates are interchangeable with the legacy screen; `TO_*` recipients come from the A3
+directory (same `username=''` guard). Print pages (`letter-print.php` POST+CSRF,
+`patient-label.php`) follow the queue-slip/rx-print Twig pattern; barcodes render via the
+core-vendored `Barcode::gd()` as PNG data-URIs (no FPDF). Post-build audit: a new unit test
+caught a dotfile-listing gap pre-merge, and the live smoke exposed + fixed a **pre-existing
+chart-killing bug** — `PaymentsStrip.tsx` rendered `last_receipt` (an object) as a React child,
+crashing the whole patient-chart island for any patient with a receipt once chart-depth finance
+is on. 11 new tests (5 PHPUnit, 6 Vitest); full gates green (918 PHPUnit / 426 Vitest / verify
+270 actions).
 
 **2026-07-11 — GAP-A / A3 Directory tab shipped — G3 closed, GAP-A daily-use trio (G1/G2/G3) complete**
 

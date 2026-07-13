@@ -1,0 +1,2 @@
+import{b as e}from"./dist-DIKAfs_x.js";import{t}from"./badge-BJjDgHKZ.js";import{n}from"./patientBannerUtils--Wf2pVIG.js";var r=e();function i({score:e,threshold:i=70,className:a}){return(0,r.jsxs)(t,{variant:n(e,i),className:a,children:[e,`% complete`]})}export{i as t};
+//# sourceMappingURL=CompletionScorePill-BE7q2Q_a.js.map

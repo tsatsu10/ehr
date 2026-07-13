@@ -50,6 +50,8 @@ describe('SystemHealthBoard', () => {
 
     render(
       <SystemHealthBoard
+        ajaxUrl="/ajax.php"
+        csrfToken="tok"
         health={health}
         reconciliationRunning={false}
         backupRunning={false}
@@ -66,5 +68,67 @@ describe('SystemHealthBoard', () => {
     expect(screen.getByText('Backup')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Mark backup complete/i }));
     expect(onCompleteBackup).toHaveBeenCalledTimes(1);
+  });
+
+  it('nags to save the recovery key when it was never exported', () => {
+    render(
+      <SystemHealthBoard
+        ajaxUrl="/ajax.php"
+        csrfToken="tok"
+        health={{
+          ...health,
+          backup_native_enabled: true,
+          recovery_key: {
+            present: true,
+            key_files: ['sevena', 'sevenb'],
+            methods_dir: '/sites/default/documents/logs_and_misc/methods',
+            exported_at: null,
+            export_warning: true,
+          },
+        }}
+        reconciliationRunning={false}
+        backupRunning={false}
+        backupCompleting={false}
+        onRunReconciliation={vi.fn()}
+        onRunBackup={vi.fn()}
+        onCompleteBackup={vi.fn()}
+        onRefresh={vi.fn()}
+        refreshing={false}
+      />
+    );
+
+    expect(screen.getByText(/Save your recovery key off this machine/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Save recovery key/i })).toBeInTheDocument();
+  });
+
+  it('confirms when the recovery key has been exported', () => {
+    render(
+      <SystemHealthBoard
+        ajaxUrl="/ajax.php"
+        csrfToken="tok"
+        health={{
+          ...health,
+          backup_native_enabled: true,
+          recovery_key: {
+            present: true,
+            key_files: ['sevena', 'sevenb'],
+            methods_dir: '/sites/default/documents/logs_and_misc/methods',
+            exported_at: '2026-07-11 09:00:00',
+            export_warning: false,
+          },
+        }}
+        reconciliationRunning={false}
+        backupRunning={false}
+        backupCompleting={false}
+        onRunReconciliation={vi.fn()}
+        onRunBackup={vi.fn()}
+        onCompleteBackup={vi.fn()}
+        onRefresh={vi.fn()}
+        refreshing={false}
+      />
+    );
+
+    expect(screen.getByText(/Recovery key last saved 2026-07-11 09:00:00/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Save recovery key again/i })).toBeInTheDocument();
   });
 });

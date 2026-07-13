@@ -1,3 +1,4 @@
+import { t } from '@core/i18n';
 import type { OfficeNoteFilter } from './officeNotesTypes';
 
 /**
@@ -14,8 +15,15 @@ export function formatNoteDateTime(mysqlDateTime: string): string {
   return `${day}/${month}/${year} ${hour}:${minute}`;
 }
 
-export const OFFICE_NOTE_FILTERS: { id: OfficeNoteFilter; label: string }[] = [
-  { id: 'active', label: 'Active' },
-  { id: 'archived', label: 'Archived' },
-  { id: 'all', label: 'All' },
-];
+/**
+ * Filter segments for the notes SegmentedControl. A function, not a
+ * module-scope constant: t() must run at render time, after the locale
+ * dictionary has loaded (module scope evaluates at import, before it).
+ */
+export function officeNoteFilters(): { id: OfficeNoteFilter; label: string }[] {
+  return [
+    { id: 'active', label: t('Active') },
+    { id: 'archived', label: t('Archived') },
+    { id: 'all', label: t('All') },
+  ];
+}

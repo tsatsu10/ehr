@@ -13,6 +13,7 @@ namespace OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers;
 
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\AjaxActionHandlerInterface;
 use OpenEMR\Modules\NewClinic\Controllers\AjaxController;
+use OpenEMR\Modules\NewClinic\Services\ClinicalIssueEditorService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\PatientActivityFeedService;
 use OpenEMR\Modules\NewClinic\Services\PatientChartClinicalService;
@@ -33,6 +34,8 @@ final class PatientActionHandler implements AjaxActionHandlerInterface
         'patients.preview',
         'patients.chart.visits',
         'patients.chart.clinical',
+        'patients.chart.issue_get',
+        'patients.chart.issue_save',
         'patients.chart.activity_feed',
         'patients.chart.messages',
         'patients.chart.search',
@@ -100,6 +103,37 @@ final class PatientActionHandler implements AjaxActionHandlerInterface
                 $this->host->assertPatientChartPid($pid);
                 $clinical = $this->host->svc(PatientChartClinicalService::class)->getClinicalPayload($pid);
                 $this->host->respond(true, 'ok', $clinical);
+                break;
+            case 'patients.chart.issue_get':
+                $pid = (int) ($_REQUEST['pid'] ?? 0);
+                $this->host->authorizeDeferredHandler('patients.chart.clinical', $pid);
+                $this->host->assertPatientChartPid($pid);
+                try {
+                    $issue = $this->host->svc(ClinicalIssueEditorService::class)
+                        ->getIssue($pid, (int) ($_REQUEST['id'] ?? 0));
+                    $this->host->respond(true, 'ok', $issue);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'not_found'], (int) ($e->getCode() ?: 404));
+                }
+                break;
+            case 'patients.chart.issue_save':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $pid = (int) ($_REQUEST['pid'] ?? 0);
+                $this->host->authorizeDeferredHandler('patients.chart.clinical', $pid);
+                $this->host->assertPatientChartPid($pid);
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                try {
+                    $saved = $this->host->svc(ClinicalIssueEditorService::class)
+                        ->saveIssue($pid, (array) ($body['issue'] ?? []), $userId);
+                    $this->host->respond(true, 'Saved', $saved);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid'], (int) ($e->getCode() ?: 400));
+                } catch (\RuntimeException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                }
                 break;
             case 'patients.chart.activity_feed':
                 $pid = (int) ($_REQUEST['pid'] ?? 0);

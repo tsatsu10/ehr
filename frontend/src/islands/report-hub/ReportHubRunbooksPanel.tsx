@@ -39,7 +39,7 @@ export function ReportHubRunbooksPanel({ cards }: Props) {
         <div className="grid grid-cols-12 gap-3">
           {filtered.map((card) => (
             <div className="col-span-12 md:col-span-6 lg:col-span-4 mb-3" key={card.id}>
-              <Card className="h-100 border">
+              <Card className="h-full border">
                 <CardContent className="flex flex-col h-full pt-4">
                   <div className="flex justify-between items-start mb-2">
                     <Badge variant="neutral">{card.id}</Badge>

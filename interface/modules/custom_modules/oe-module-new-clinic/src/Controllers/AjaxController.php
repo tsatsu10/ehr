@@ -30,6 +30,7 @@ use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\OfficeNotesActionHandler
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PatientActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PharmacyActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\PharmOpsActionHandler;
+use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\OutreachActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ProfileActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\QueueBridgeActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ReportsActionHandler;
@@ -62,6 +63,7 @@ use OpenEMR\Modules\NewClinic\Services\SchedulingAccessService;
 use OpenEMR\Modules\NewClinic\Services\VisitClaimLostService;
 use OpenEMR\Modules\NewClinic\Services\SimilarSurnameQueueService;
 use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
+use OpenEMR\Modules\NewClinic\Services\QueueRevision;
 
 class AjaxController
 {
@@ -98,6 +100,12 @@ class AjaxController
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         $userId = (int) $_SESSION['authUserID'];
 
+        // SCALE-0.1 — server-side perf baseline. Logs ONE structured line for slow
+        // (>500 ms) or errored requests only (never per-fast-request → no log spam).
+        // Registered before ACL/dispatch so 4xx short-circuits are captured too;
+        // uses a shutdown function because respond() exits (a finally never runs).
+        $this->registerPerfLogging($action, $userId);
+
         if ($action === 'visit.transition') {
             $this->respond(
                 false,
@@ -109,6 +117,19 @@ class AjaxController
 
         if ($action !== '' && !$this->svc(AjaxActionPolicy::class)->defersAuthorizationToHandler($action)) {
             $this->authorizeAction($action);
+        }
+
+        // SCALE-1.1 — release the PHP session lock for vetted read-only actions
+        // (queue/board/counts polls, reference + admin reads) once auth + ACL have
+        // read the session. Without this, PHP holds an exclusive session file lock
+        // for the whole request, so concurrent requests from one user (multiple
+        // tabs, or a desk polling while another loads) serialize one-behind-another.
+        // The allowlist is proven free of $_SESSION writes; reads after close are
+        // fine (the superglobal stays populated), only writes would be dropped.
+        if ($action !== ''
+            && session_status() === PHP_SESSION_ACTIVE
+            && $this->svc(AjaxActionPolicy::class)->isReadOnly($action)) {
+            session_write_close();
         }
 
         try {
@@ -236,6 +257,7 @@ class AjaxController
             new ReportsActionHandler($this),
             new SchedulingActionHandler($this),
             new QueueBridgeActionHandler($this),
+            new OutreachActionHandler($this),
         ];
     }
 
@@ -914,6 +936,66 @@ class AjaxController
         return $this->svc(QuickAddService::class)->create($patient, $userId);
     }
 
+
+    /**
+     * SCALE-0.1 — one-line perf log for slow/errored ajax requests.
+     *
+     * Uses a shutdown function (respond() calls exit, so a finally block would
+     * never run) and reads the final HTTP status to classify errors. Fast, healthy
+     * requests log nothing. Format is grep-friendly and stable:
+     *   NC_PERF action=<action> ms=<int> user=<id> facility=<id> [status=<4xx/5xx>]
+     */
+    private function registerPerfLogging(string $action, int $userId): void
+    {
+        // True wall-clock request start (more accurate than handler-entry microtime).
+        $t0 = isset($_SERVER['REQUEST_TIME_FLOAT'])
+            ? (float) $_SERVER['REQUEST_TIME_FLOAT']
+            : microtime(true);
+        $facilityId = (int) ($_SESSION['facilityId'] ?? 0);
+
+        register_shutdown_function(static function () use ($t0, $action, $userId, $facilityId): void {
+            $ms = (int) round((microtime(true) - $t0) * 1000);
+            $status = http_response_code();
+            $status = is_int($status) ? $status : 200;
+            $errored = $status >= 400;
+
+            // Only slow OR errored requests are worth a line — keep the log clean.
+            if ($ms <= 500 && !$errored) {
+                return;
+            }
+
+            error_log(sprintf(
+                'NC_PERF action=%s ms=%d user=%d facility=%d%s',
+                $action !== '' ? $action : '(none)',
+                $ms,
+                $userId,
+                $facilityId,
+                $errored ? ' status=' . $status : ''
+            ));
+        });
+    }
+
+    /**
+     * SCALE-1.8 — respond to a queue/board poll with delta support. Hashes the final
+     * payload; if it matches the client's `known_revision`, returns a tiny
+     * {unchanged:true, revision} (client skips its re-render, we skip shipping the
+     * payload). Otherwise returns the payload tagged with its revision. Safe to use
+     * everywhere: a client that never sends `known_revision` always gets the full
+     * payload, so enabling this per-desk is opt-in from the frontend.
+     *
+     * @param array<string, mixed> $payload
+     */
+    public function respondQueue(array $payload): void
+    {
+        $revision = QueueRevision::of($payload);
+        $known = trim((string) ($_REQUEST['known_revision'] ?? ''));
+        if ($known !== '' && $known === $revision) {
+            $this->respond(true, 'ok', ['unchanged' => true, 'revision' => $revision]);
+        }
+        $payload['revision'] = $revision;
+        $payload['unchanged'] = false;
+        $this->respond(true, 'ok', $payload);
+    }
 
     public function respond(bool $success, string $message, array $data = [], int $status = 200): void
     {

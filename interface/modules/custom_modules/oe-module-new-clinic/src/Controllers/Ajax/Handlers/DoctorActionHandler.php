@@ -67,7 +67,7 @@ final class DoctorActionHandler implements AjaxActionHandlerInterface
                     (string) ($_REQUEST['scope'] ?? 'me')
                 );
                 $queue = $this->host->enrichQueuePayload($queue, $userId, $facilityId);
-                $this->host->respond(true, 'ok', $queue);
+                $this->host->respondQueue($queue); // SCALE-1.8 delta poll
                 break;
             case 'doctor.roster':
                 $facilityId = $this->host->resolveRequestFacilityId();

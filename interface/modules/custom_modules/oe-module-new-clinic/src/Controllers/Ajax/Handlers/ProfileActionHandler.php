@@ -13,6 +13,7 @@ namespace OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers;
 
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\AjaxActionHandlerInterface;
 use OpenEMR\Modules\NewClinic\Controllers\AjaxController;
+use OpenEMR\Modules\NewClinic\Services\MfaEnrollmentService;
 use OpenEMR\Modules\NewClinic\Services\MyProfileService;
 use OpenEMR\Modules\NewClinic\Services\SessionRoleService;
 
@@ -23,6 +24,10 @@ final class ProfileActionHandler implements AjaxActionHandlerInterface
         'profile.get',
         'profile.update',
         'profile.change_password',
+        'profile.mfa.status',
+        'profile.mfa.enroll_start',
+        'profile.mfa.enroll_verify',
+        'profile.mfa.remove',
         'switch_role',
     ];
 
@@ -62,6 +67,57 @@ final class ProfileActionHandler implements AjaxActionHandlerInterface
                     (string) ($body['new_password'] ?? '')
                 );
                 $this->host->respond(true, 'Password updated');
+                break;
+            case 'profile.mfa.status':
+                $this->host->respond(true, 'ok', $this->host->svc(MfaEnrollmentService::class)->getStatus($userId));
+                break;
+            case 'profile.mfa.enroll_start':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                try {
+                    $result = $this->host->svc(MfaEnrollmentService::class)
+                        ->startEnrollment($userId, (string) ($body['password'] ?? ''));
+                    $this->host->respond(true, 'ok', $result);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                } catch (\RuntimeException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                }
+                break;
+            case 'profile.mfa.enroll_verify':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                try {
+                    $result = $this->host->svc(MfaEnrollmentService::class)
+                        ->verifyAndSave($userId, (string) ($body['code'] ?? ''));
+                    $this->host->respond(true, 'ok', $result);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                } catch (\RuntimeException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                }
+                break;
+            case 'profile.mfa.remove':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                try {
+                    $result = $this->host->svc(MfaEnrollmentService::class)
+                        ->remove($userId, (string) ($body['password'] ?? ''));
+                    $this->host->respond(true, 'ok', $result);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                } catch (\RuntimeException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                }
                 break;
             case 'switch_role':
                 if ($method !== 'POST') {

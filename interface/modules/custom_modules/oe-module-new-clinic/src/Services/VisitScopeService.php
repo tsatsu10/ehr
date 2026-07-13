@@ -72,7 +72,10 @@ class VisitScopeService
 
                 return $requestedFacilityId;
             } catch (\RuntimeException) {
-                if ($this->hasMultipleServiceLocations()) {
+                // SCALE-1.1: read-only ajax actions call session_write_close() before
+                // dispatch, so guard this diagnostic flag — a write after close is
+                // silently dropped. Only set it while the session is still open.
+                if ($this->hasMultipleServiceLocations() && session_status() === PHP_SESSION_ACTIVE) {
                     $_SESSION['nc_desk_facility_fallback'] = 1;
                 }
             }
@@ -223,51 +226,118 @@ class VisitScopeService
 
         $this->assertFacilityAccessible($facilityId);
 
-        // Pass 1 — date-scoped (same as before)
-        $key = $this->buildOrphanRepairKey($facilityId, $visitDate);
-        if (!isset(self::$repairedKeys[$key])) {
-            self::$repairedKeys[$key] = true;
+        // Request-local fast path: never re-run for the same facility+date within
+        // one request (preserves the original static-cache dedup).
+        $requestKey = $this->buildOrphanRepairKey($facilityId, $visitDate);
+        if (isset(self::$repairedKeys[$requestKey])) {
+            return;
+        }
+        self::$repairedKeys[$requestKey] = true;
 
+        // SCALE-1.3 — cross-request throttle. These UPDATE…JOINs used to run on EVERY
+        // poll from EVERY tab (the static cache only dedupes within one request, and
+        // each poll is a fresh request). Now a DB lock lets at most ONE request per
+        // facility+date run the writes every 5 minutes; the rest skip them. Skipping
+        // loses nothing — the queues already reflect the last repair, and a genuinely
+        // new orphan is caught on the next 5-minute window.
+        if (!$this->claimMaintenanceLock('repair_orphans_' . $facilityId . '_' . $visitDate)) {
+            return;
+        }
+
+        // Pass 1 — date-scoped (common same-day case).
+        sqlStatement(
+            "UPDATE new_visit v
+             INNER JOIN form_encounter fe ON fe.encounter = v.encounter AND fe.pid = v.pid
+             SET v.facility_id = fe.facility_id, v.updated_at = NOW()
+             WHERE v.facility_id = 0 AND v.visit_date = ?
+             AND fe.facility_id = ?
+             AND v.state NOT IN ('completed', 'closed_unpaid', 'cancelled')",
+            [$visitDate, $facilityId]
+        );
+
+        if ($this->shouldRunAggressiveOrphanRepair()) {
             sqlStatement(
                 "UPDATE new_visit v
                  INNER JOIN form_encounter fe ON fe.encounter = v.encounter AND fe.pid = v.pid
-                 SET v.facility_id = fe.facility_id, v.updated_at = NOW()
+                 SET v.facility_id = ?, v.updated_at = NOW()
                  WHERE v.facility_id = 0 AND v.visit_date = ?
-                 AND fe.facility_id = ?
+                 AND (fe.facility_id = 0 OR fe.facility_id IS NULL)
                  AND v.state NOT IN ('completed', 'closed_unpaid', 'cancelled')",
-                [$visitDate, $facilityId]
+                [$facilityId, $visitDate]
             );
+        }
 
-            if ($this->shouldRunAggressiveOrphanRepair()) {
-                sqlStatement(
-                    "UPDATE new_visit v
-                     INNER JOIN form_encounter fe ON fe.encounter = v.encounter AND fe.pid = v.pid
-                     SET v.facility_id = ?, v.updated_at = NOW()
-                     WHERE v.facility_id = 0 AND v.visit_date = ?
-                     AND (fe.facility_id = 0 OR fe.facility_id IS NULL)
-                     AND v.state NOT IN ('completed', 'closed_unpaid', 'cancelled')",
-                    [$facilityId, $visitDate]
-                );
+        $this->syncEncounterFacilitiesForDesk($facilityId, $visitDate);
+
+        // Pass 2 — active orphans from any date (handles midnight carry-over visits).
+        sqlStatement(
+            "UPDATE new_visit v
+             INNER JOIN form_encounter fe ON fe.encounter = v.encounter AND fe.pid = v.pid
+             SET v.facility_id = fe.facility_id, v.updated_at = NOW()
+             WHERE v.facility_id = 0
+             AND fe.facility_id = ?
+             AND v.state NOT IN ('completed', 'closed_unpaid', 'cancelled')",
+            [$facilityId]
+        );
+    }
+
+    /**
+     * Try to claim a short-lived maintenance lock (SCALE-1.3).
+     *
+     * Returns true if THIS request won the claim (and should run the work), false if
+     * another request already holds an unexpired lock.
+     *
+     * Uses a unique owner token + read-back rather than affected-rows: OpenEMR's
+     * sqlStatement() logs each query, so affected_rows() reflects the LOGGING insert,
+     * not our statement — it can't tell a win from a no-op. Instead: (1) take over an
+     * expired lock, (2) INSERT IGNORE one if absent, both stamping our token, then
+     * (3) read back the owner. We won iff the lock now carries our token. Under a
+     * race, InnoDB row locking + the PK serialise the writers so exactly one token
+     * survives.
+     *
+     * Fails OPEN (returns true) if the lock table isn't installed yet, so behaviour
+     * degrades to the old always-run rather than silently never-run.
+     */
+    private function claimMaintenanceLock(string $lockKey, int $ttlSeconds = 300): bool
+    {
+        try {
+            // Fast path (honours R2 — reads don't write): if a live lock already
+            // exists we've lost, so return WITHOUT writing. This keeps the common
+            // "poll loses" case a single shared read instead of every poll taking a
+            // write lock on the same lock row (which would re-introduce the very
+            // contention this throttle exists to remove). Only the ~once-per-window
+            // winner falls through to the write path below.
+            $live = QueryUtils::querySingleRow(
+                'SELECT (locked_until > NOW()) AS live FROM new_clinic_maintenance_lock WHERE lock_key = ?',
+                [$lockKey]
+            );
+            if (is_array($live) && (int) ($live['live'] ?? 0) === 1) {
+                return false;
             }
 
-            $this->syncEncounterFacilitiesForDesk($facilityId, $visitDate);
-        }
-
-        // Pass 2 — active orphans from any date (handles midnight carry-over visits)
-        $allActiveKey = $this->buildOrphanRepairKey($facilityId, '__active__');
-        if (!isset(self::$repairedKeys[$allActiveKey])) {
-            self::$repairedKeys[$allActiveKey] = true;
-
+            $token = bin2hex(random_bytes(16));
+            // Take over the lock only if the current one has expired.
             sqlStatement(
-                "UPDATE new_visit v
-                 INNER JOIN form_encounter fe ON fe.encounter = v.encounter AND fe.pid = v.pid
-                 SET v.facility_id = fe.facility_id, v.updated_at = NOW()
-                 WHERE v.facility_id = 0
-                 AND fe.facility_id = ?
-                 AND v.state NOT IN ('completed', 'closed_unpaid', 'cancelled')",
-                [$facilityId]
+                'UPDATE new_clinic_maintenance_lock
+                 SET locked_until = DATE_ADD(NOW(), INTERVAL ? SECOND), owner_token = ?
+                 WHERE lock_key = ? AND locked_until < NOW()',
+                [$ttlSeconds, $token, $lockKey]
             );
+            // Create it if absent; ignored if another request just made it.
+            sqlStatement(
+                'INSERT IGNORE INTO new_clinic_maintenance_lock (lock_key, locked_until, owner_token)
+                 VALUES (?, DATE_ADD(NOW(), INTERVAL ? SECOND), ?)',
+                [$lockKey, $ttlSeconds, $token]
+            );
+            $row = QueryUtils::querySingleRow(
+                'SELECT owner_token FROM new_clinic_maintenance_lock WHERE lock_key = ?',
+                [$lockKey]
+            );
+        } catch (\Throwable) {
+            return true;
         }
+
+        return is_array($row) && (string) ($row['owner_token'] ?? '') === $token;
     }
 
     private function shouldRunAggressiveOrphanRepair(): bool

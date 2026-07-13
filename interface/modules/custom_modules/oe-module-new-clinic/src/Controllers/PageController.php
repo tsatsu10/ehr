@@ -23,6 +23,7 @@ use OpenEMR\Modules\NewClinic\Services\OpenEmrProductRegistrationDismissService;
 use OpenEMR\Modules\NewClinic\Services\PageAccessService;
 use OpenEMR\Modules\NewClinic\Services\PersonalizedDeskLabelService;
 use OpenEMR\Modules\NewClinic\Services\SessionRoleService;
+use OpenEMR\Modules\NewClinic\Services\ShellLocaleService;
 use OpenEMR\Modules\NewClinic\Services\ShellService;
 use OpenEMR\Modules\NewClinic\Services\ViteManifestService;
 use OpenEMR\Modules\NewClinic\Services\StaffAdminService;
@@ -154,6 +155,19 @@ class PageController
         $deskConfig = new ClinicConfigService();
         $moneyFormat = new MoneyFormatService();
 
+        // D6 Step 3 — optional Bootstrap-theme cutover (experimental, default OFF).
+        // Drops ONLY the core theme stylesheet <link> from module pages so each
+        // desk can be visually checked without Bootstrap; JS/session side effects
+        // (already captured above) are untouched.
+        if ($deskConfig->isEnabled('enable_debootstrap_shell', 0, $deskFacilityId)) {
+            $headerHtml = self::stripCoreThemeStylesheet($headerHtml, (string) ($GLOBALS['css_header'] ?? ''));
+        }
+
+        // D1 i18n: resolve the session user's core language once per page so
+        // islands can translate (t()) and the document declares its language.
+        $shellLocale = new ShellLocaleService();
+        $langCode = $shellLocale->getLangCode();
+
         // When a page declares its island entry, resolve the full CSS set
         // (own + shared-chunk) from the Vite manifest so no styles are dropped.
         $islandCss = [];
@@ -185,7 +199,31 @@ class PageController
             ),
             'queue_poll_ms' => $deskConfig->resolveQueuePollIntervalMs($deskFacilityId),
             'currency_format' => $moneyFormat->getFormatPayload($deskFacilityId),
+            'lang_code' => $langCode,
+            'i18n_url' => $shellLocale->getDictionaryUrl($langCode),
         ], (new ShellService())->buildContext($shellAco, $context['shell_nav_id'] ?? null), $context));
+    }
+
+    /**
+     * D6 Step 3: strip only the core theme (Bootstrap) stylesheet <link> from the
+     * captured header HTML, keeping every script and other asset. Matches on the
+     * css_header PATH (e.g. /public/themes/style_light.css) so the ?v= cache-bust
+     * query is irrelevant. Pure + static so it can be unit-tested directly.
+     */
+    public static function stripCoreThemeStylesheet(string $headerHtml, string $cssHeader): string
+    {
+        $path = strtok($cssHeader, '?');
+        if ($path === false || $path === '') {
+            return $headerHtml;
+        }
+
+        $stripped = preg_replace(
+            '#<link\b[^>]*\bhref="[^"]*' . preg_quote($path, '#') . '[^"]*"[^>]*>\s*#i',
+            '',
+            $headerHtml
+        );
+
+        return is_string($stripped) ? $stripped : $headerHtml;
     }
 
     private function resolveShellAcoForNotesUser(): string

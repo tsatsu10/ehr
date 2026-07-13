@@ -39,6 +39,12 @@ export interface CashierPaidTodayRow {
 /** Response from ?action=cashier.queue */
 export interface CashierQueueData {
   visits: CashierQueueCard[];
+  /** SCALE-1.2 — true when the queue hit its row cap; show QueueTruncationBanner. */
+  queue_truncated?: boolean;
+  queue_cap?: number;
+  /** SCALE-1.8 — delta-poll token; `unchanged` responses carry only these two. */
+  revision?: string;
+  unchanged?: boolean;
   counts: { waiting: number; paid_today: number; closed_unpaid: number };
   visit_date?: string;
   paid_today?: CashierPaidTodayRow[];
@@ -116,6 +122,8 @@ export type CashierPaymentMethod = 'cash' | 'momo';
 
 export interface CashierReceipt {
   queue_number: number | string;
+  /** print_queue_number_on_receipt admin setting; undefined (older payloads) means show */
+  show_queue_number?: boolean;
   amount_paid: number;
   change_due: number;
   paid_at?: string;

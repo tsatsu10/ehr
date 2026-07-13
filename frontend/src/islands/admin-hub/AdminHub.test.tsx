@@ -214,6 +214,8 @@ describe('AdminHub', () => {
     document.body.innerHTML = '';
   });
 
+  // 15s: the queue tab renders 100+ config fields (grew ~30 in the 2026-07-11
+  // audit batches) and times out at the 5s default under full-suite load.
   it('loads and shows queue settings', async () => {
     render(<AdminHub {...props} />);
 
@@ -229,7 +231,7 @@ describe('AdminHub', () => {
     expect(screen.queryByLabelText(/Enable React Visit Board/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Enable React Front Desk/i)).not.toBeInTheDocument();
     expect(await screen.findByLabelText(/Enable Billing Back Office hub/i)).toBeInTheDocument();
-  });
+  }, 15000);
 
   it('saves settings when save is clicked', async () => {
     render(<AdminHub {...props} />);

@@ -32,6 +32,20 @@ class AdminHealthService
     ) {
     }
 
+    private ?AdminBackupService $backupService = null;
+    private ?BackupCloudTargetService $cloudTarget = null;
+
+    /** Lazy to avoid eager construction cycles (crash-safe). */
+    private function backupService(): AdminBackupService
+    {
+        return $this->backupService ??= new AdminBackupService();
+    }
+
+    private function cloudTarget(): BackupCloudTargetService
+    {
+        return $this->cloudTarget ??= new BackupCloudTargetService();
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -53,6 +67,10 @@ class AdminHealthService
             $this->cronChip($resolvedFacilityId),
         ];
 
+        $nativeBackupOn = $this->config->getInt('enable_native_backup', 0, $resolvedFacilityId) === 1;
+        $backupTargetDir = trim((string) ($this->config->get('backup_target_dir', '', $resolvedFacilityId) ?? ''));
+        $backupTargetCloud = $backupTargetDir !== '' ? $this->cloudTarget()->classify($backupTargetDir) : null;
+
         return [
             'overall_status' => $this->overallStatus($chips),
             'checked_at' => date('c'),
@@ -73,6 +91,36 @@ class AdminHealthService
                 : 'Backup requires OpenEMR administrator (super) access — ask your IT partner or use Advanced → Backup.',
             'backup_running' => is_array($latestBackup) && (string) ($latestBackup['status'] ?? '') === 'running',
             'backup_run_id' => is_array($latestBackup) ? (int) ($latestBackup['id'] ?? 0) : null,
+            'backup_history' => $this->backupHistory($resolvedFacilityId),
+            'backup_schedule' => $this->backupService()->dueForBackup($resolvedFacilityId),
+            'backup_native_enabled' => $nativeBackupOn,
+            // Site-files backup (design §3b) — a SEPARATE incremental per-file mirror
+            // of the documents tree. Own enable flag, own history, own schedule.
+            'files_backup_enabled' => $nativeBackupOn
+                && $this->backupService()->isFilesBackupEnabled($resolvedFacilityId),
+            'files_backup_history' => $nativeBackupOn
+                ? $this->backupHistory($resolvedFacilityId, 'files')
+                : [],
+            'files_backup_schedule' => $nativeBackupOn
+                ? $this->backupService()->dueForBackup($resolvedFacilityId, 'files')
+                : ['scheduled' => false, 'due' => false, 'frequency_days' => 0],
+            // Which cloud (if any) the target folder syncs to — off-site via the
+            // provider's own desktop app, no OAuth, archive already encrypted.
+            'backup_target_cloud' => $backupTargetCloud,
+            // Honest safety flag: native backups written to THIS machine (blank
+            // target / inside the app, and not a cloud folder) don't survive disk
+            // loss/theft.
+            'backup_target_local' => $nativeBackupOn && $backupTargetCloud === null
+                && $this->backupTargetIsLocal($resolvedFacilityId),
+            // Cloud sync folders detected on this box, to suggest as a target.
+            'backup_cloud_folders' => $nativeBackupOn ? $this->cloudTarget()->detectFolders() : [],
+            // Recovery-key custody: the drive key decrypts every backup and lives on
+            // THIS disk. If it's never exported off-box, the backups are one disk
+            // failure away from being unrecoverable — nag when so. Only computed when
+            // native backup is on (matches backup_cloud_folders; UI hides it otherwise).
+            'recovery_key' => $nativeBackupOn ? $this->backupService()->recoveryKeyStatus() : null,
+            // Lets the System tab's Possible-duplicates card skip its fetch when off.
+            'duplicate_review_enabled' => $this->config->getInt('enable_duplicate_review', 0, $resolvedFacilityId) === 1,
             'backup_url' => $webroot . '/interface/main/backup.php',
             'logview_url' => $webroot . '/interface/logview/logview.php',
             'backup_php_url' => $webroot . '/interface/main/backup.php',
@@ -93,6 +141,14 @@ class AdminHealthService
         }
 
         $facilityId = $this->visitScope->resolveDeskFacilityId($facilityId > 0 ? $facilityId : null);
+
+        // C6 follow-up — when the native engine is on, actually perform an encrypted
+        // backup (self-contained run row) instead of the log-only stub below.
+        if ($this->backupService()->isNativeEnabled($facilityId)) {
+            $this->supersedeRunningBackups($facilityId, 'Superseded by new native backup run');
+            return $this->backupService()->runBackup($facilityId, $actorUserId);
+        }
+
         $this->supersedeRunningBackups($facilityId, 'Superseded by new manual backup run');
 
         $startedAt = date('Y-m-d H:i:s');
@@ -100,8 +156,8 @@ class AdminHealthService
 
         $runId = (int) QueryUtils::sqlInsert(
             "INSERT INTO admin_hub_backup_run
-             (facility_id, started_at, status, actor_id, message)
-             VALUES (?, ?, 'running', ?, ?)",
+             (facility_id, kind, started_at, status, actor_id, message)
+             VALUES (?, 'db', ?, 'running', ?, ?)",
             [
                 $facilityId,
                 $startedAt,
@@ -123,6 +179,25 @@ class AdminHealthService
             'status' => 'running',
             'backup_url' => $webroot . '/interface/main/backup.php',
         ];
+    }
+
+    /**
+     * Run the separate site-files backup (design §3b). Super-admin only + native
+     * backup on + `backup_include_site_files` on (the service re-checks all three).
+     *
+     * @return array<string, mixed>
+     */
+    public function initiateFilesBackup(int $facilityId, int $actorUserId): array
+    {
+        if (!$this->canRunBackup()) {
+            throw new \RuntimeException(
+                'Backup requires OpenEMR administrator (super) access',
+                403
+            );
+        }
+        $facilityId = $this->visitScope->resolveDeskFacilityId($facilityId > 0 ? $facilityId : null);
+
+        return $this->backupService()->runFilesBackup($facilityId, $actorUserId);
     }
 
     /**
@@ -489,7 +564,7 @@ class AdminHealthService
         try {
             $row = QueryUtils::querySingleRow(
                 "SELECT * FROM admin_hub_backup_run
-                 WHERE facility_id = ?
+                 WHERE facility_id = ? AND kind = 'db'
                  ORDER BY id DESC
                  LIMIT 1",
                 [$facilityId]
@@ -502,6 +577,70 @@ class AdminHealthService
     }
 
     /**
+     * C6 (W3) — recent manual backup runs for the history table (bounded).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function backupHistory(int $facilityId, string $kind = 'db'): array
+    {
+        $kind = $kind === 'files' ? 'files' : 'db';
+        try {
+            $rows = QueryUtils::fetchRecords(
+                "SELECT id, started_at, finished_at, status, size_bytes, file_path, message
+                 FROM admin_hub_backup_run
+                 WHERE facility_id = ? AND kind = ?
+                 ORDER BY id DESC
+                 LIMIT 10",
+                [$facilityId, $kind]
+            ) ?: [];
+        } catch (\Throwable) {
+            return [];
+        }
+
+        return array_map(function (array $row): array {
+            $size = $row['size_bytes'] !== null ? (int) $row['size_bytes'] : null;
+
+            return [
+                'id' => (int) ($row['id'] ?? 0),
+                'started_at' => (string) ($row['started_at'] ?? ''),
+                'finished_at' => (string) ($row['finished_at'] ?? ''),
+                'status' => (string) ($row['status'] ?? ''),
+                'size_label' => $size !== null ? $this->humanSize($size) : '',
+                // Show only the file name in the UI, not the full server path.
+                'file_name' => $row['file_path'] !== null ? basename((string) $row['file_path']) : '',
+                'message' => (string) ($row['message'] ?? ''),
+            ];
+        }, $rows);
+    }
+
+    private function backupTargetIsLocal(int $facilityId): bool
+    {
+        $target = trim((string) ($this->config->get('backup_target_dir', '', $facilityId) ?? ''));
+        if ($target === '') {
+            return true; // defaults to documents/nc_backups on this box
+        }
+        $fileroot = rtrim(str_replace('\\', '/', (string) ($GLOBALS['fileroot'] ?? '')), '/');
+        $target = rtrim(str_replace('\\', '/', $target), '/');
+
+        return $fileroot !== '' && str_starts_with($target, $fileroot);
+    }
+
+    private function humanSize(int $bytes): string
+    {
+        if ($bytes >= 1073741824) {
+            return round($bytes / 1073741824, 1) . ' GB';
+        }
+        if ($bytes >= 1048576) {
+            return round($bytes / 1048576, 1) . ' MB';
+        }
+        if ($bytes >= 1024) {
+            return round($bytes / 1024, 1) . ' KB';
+        }
+
+        return $bytes . ' B';
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     private function resolveBackupRunRow(int $facilityId, ?int $runId): ?array
@@ -509,7 +648,7 @@ class AdminHealthService
         if ($runId !== null && $runId > 0) {
             $row = QueryUtils::querySingleRow(
                 "SELECT * FROM admin_hub_backup_run
-                 WHERE id = ? AND facility_id = ? AND status = 'running'
+                 WHERE id = ? AND facility_id = ? AND kind = 'db' AND status = 'running'
                  LIMIT 1",
                 [$runId, $facilityId]
             );
@@ -526,7 +665,7 @@ class AdminHealthService
             QueryUtils::sqlStatementThrowException(
                 "UPDATE admin_hub_backup_run
                  SET status = 'failed', finished_at = NOW(), message = ?
-                 WHERE facility_id = ? AND status = 'running'",
+                 WHERE facility_id = ? AND kind = 'db' AND status = 'running'",
                 [$message, $facilityId]
             );
         } catch (\Throwable) {
@@ -539,11 +678,13 @@ class AdminHealthService
      */
     private function auditBackupRun(string $event, array $payload): void
     {
+        // newEvent($event, $user, $groupname, $success, $comments, $patient_id) —
+        // record the acting user/group, not the action name in the user column.
         EventAuditLogger::getInstance()->newEvent(
-            'new_clinic_config',
             $event,
             $_SESSION['authUser'] ?? 'system',
             $_SESSION['authProvider'] ?? 'default',
+            1,
             json_encode($payload),
             0
         );

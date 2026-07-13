@@ -46,6 +46,7 @@ import { ADMIN_TABS } from './adminTypes';
 import { initialAdminTab, localDateString } from './adminUtils';
 import { DirectoryModal } from './modals/DirectoryModal';
 import { FeeModal } from './modals/FeeModal';
+import { BulkPriceModal } from './modals/BulkPriceModal';
 import { VisitTypeModal } from './modals/VisitTypeModal';
 import { AdminHubConfirmModal } from './AdminHubConfirmModal';
 import { AdminHubTabPanels } from './AdminHubTabPanels';
@@ -145,6 +146,7 @@ export function AdminHub({
 
   const [feeCsv, setFeeCsv] = useState('');
   const [feeImporting, setFeeImporting] = useState(false);
+  const [bulkPriceOpen, setBulkPriceOpen] = useState(false);
   const [grantingRoles, setGrantingRoles] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<AdminConfirm | null>(null);
 
@@ -1133,6 +1135,7 @@ export function AdminHub({
             onEditFee={(row) => { void openFeeModal(row); }}
             onArchiveFee={(row) => setPendingConfirm({ type: 'archive_fee', row })}
             onImportFees={() => { void importFees(); }}
+            onBulkPriceFees={() => setBulkPriceOpen(true)}
             onAddDirectoryContact={() => openDirectoryModal(null)}
             onEditDirectoryContact={(row) => openDirectoryModal(row)}
             onDeleteDirectoryContact={(row) => setPendingConfirm({ type: 'delete_directory_contact', row })}
@@ -1166,6 +1169,23 @@ export function AdminHub({
         onClose={() => setFeeModalOpen(false)}
         onCodeTypeChange={(codeType) => { void loadBillingCodes(codeType); }}
         onSave={(payload) => { void saveFee(payload); }}
+      />
+
+      <BulkPriceModal
+        open={bulkPriceOpen}
+        ajaxUrl={ajaxUrl}
+        csrfToken={csrfToken}
+        facilityId={facilityId}
+        categories={feeCategories}
+        settings={settings}
+        onClose={() => setBulkPriceOpen(false)}
+        onApplied={(changed) => {
+          setSuccessMessage(`Updated ${changed} fee price${changed === 1 ? '' : 's'}.`);
+          setErrorMessage(null);
+        }}
+        // Payload's fee_schedule is untyped at the modal boundary; the service
+        // returns the same FeeScheduleRow[] shape the rest of the tab uses.
+        onRefreshSchedule={(fs) => setFeeSchedule((fs as FeeScheduleRow[]) ?? [])}
       />
 
       <AdminHubConfirmModal

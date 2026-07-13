@@ -67,6 +67,12 @@ export interface LabOrderLine {
 /** Response from lab.queue */
 export interface LabQueueData {
   visits: LabQueueCard[];
+  /** SCALE-1.2 — true when the queue hit its row cap; show QueueTruncationBanner. */
+  queue_truncated?: boolean;
+  queue_cap?: number;
+  /** SCALE-1.8 — delta-poll token; `unchanged` responses carry only these two. */
+  revision?: string;
+  unchanged?: boolean;
   claim_lost_cards?: LabQueueCard[];
   counts: { waiting: number; in_lab: number; total: number };
   active_work?: LabVisit | null;

@@ -21,6 +21,10 @@ use OpenEMR\Modules\NewClinic\Services\FeeScheduleAdminService;
 use OpenEMR\Modules\NewClinic\Services\GeoService;
 use OpenEMR\Modules\NewClinic\Services\HisPackImportService;
 use OpenEMR\Modules\NewClinic\Services\ReconciliationService;
+use OpenEMR\Modules\NewClinic\Services\AdminBackupService;
+use OpenEMR\Modules\NewClinic\Services\AdminDuplicateReviewService;
+use OpenEMR\Modules\NewClinic\Services\AdminListEditorService;
+use OpenEMR\Modules\NewClinic\Services\AuditLogService;
 use OpenEMR\Modules\NewClinic\Services\StaffAccessSummaryService;
 use OpenEMR\Modules\NewClinic\Services\StaffAdminService;
 use OpenEMR\Modules\NewClinic\Services\VisitTypeAdminService;
@@ -40,6 +44,12 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
         'admin.fee.archive',
         'admin.fee.billing_codes',
         'admin.fee.import',
+        'admin.fee.bulk_price',
+        'admin.lists.catalog',
+        'admin.lists.options',
+        'admin.lists.save',
+        'admin.lists.set_active',
+        'admin.duplicates.list',
         'admin.directory.save',
         'admin.directory.delete',
         'admin.roles.grant_self',
@@ -48,6 +58,11 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
         'admin.staff.create',
         'admin.staff.deactivate',
         'admin.staff.access_summary',
+        'admin.audit.query',
+        'admin.audit.detail',
+        'admin.audit.export',
+        'admin.backup.verify',
+        'admin.backup.export_recovery_key',
         'admin.facility_user.list',
         'admin.facility_user.get',
         'admin.facility_user.save',
@@ -75,6 +90,7 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
         'admin.his_pack_import',
         'admin.health_status',
         'admin.backup.run',
+        'admin.backup.run_files',
         'admin.backup.complete',
         'admin.setup.mark_item',
         'admin.setup.complete',
@@ -258,6 +274,75 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                     );
                     $this->host->respond(true, 'Fees imported', $payload);
                     break;
+                case 'admin.fee.bulk_price':
+                    if ($method !== 'POST') {
+                        $this->host->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->host->readJsonBody();
+                    $this->host->verifyCsrf($body);
+                    $facilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    $dryRun = !empty($body['dry_run']);
+                    try {
+                        $payload = $this->host->svc(FeeScheduleAdminService::class)->bulkPriceUpdate(
+                            $facilityId,
+                            (array) ($body['bulk'] ?? $body),
+                            $userId,
+                            $dryRun
+                        );
+                        $this->host->respond(true, $dryRun ? 'ok' : 'Prices updated', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->host->respond(false, $e->getMessage(), ['code' => 'invalid'], 400);
+                    }
+                    break;
+                case 'admin.lists.catalog':
+                    $this->host->respond(true, 'ok', [
+                        'lists' => $this->host->svc(AdminListEditorService::class)->getCatalog(),
+                    ]);
+                    break;
+                case 'admin.lists.options':
+                    try {
+                        $options = $this->host->svc(AdminListEditorService::class)
+                            ->getOptions((string) ($_REQUEST['list_id'] ?? ''));
+                        $this->host->respond(true, 'ok', ['options' => $options]);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->host->respond(false, $e->getMessage(), ['code' => 'invalid'], 400);
+                    }
+                    break;
+                case 'admin.lists.save':
+                    if ($method !== 'POST') {
+                        $this->host->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->host->readJsonBody();
+                    $this->host->verifyCsrf($body);
+                    try {
+                        $options = $this->host->svc(AdminListEditorService::class)->saveOption(
+                            (string) ($body['list_id'] ?? ''),
+                            (array) ($body['option'] ?? []),
+                            $userId
+                        );
+                        $this->host->respond(true, 'Saved', ['options' => $options]);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->host->respond(false, $e->getMessage(), ['code' => 'invalid'], 400);
+                    }
+                    break;
+                case 'admin.lists.set_active':
+                    if ($method !== 'POST') {
+                        $this->host->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->host->readJsonBody();
+                    $this->host->verifyCsrf($body);
+                    try {
+                        $options = $this->host->svc(AdminListEditorService::class)->setActive(
+                            (string) ($body['list_id'] ?? ''),
+                            (string) ($body['option_id'] ?? ''),
+                            !empty($body['active']),
+                            $userId
+                        );
+                        $this->host->respond(true, 'Updated', ['options' => $options]);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->host->respond(false, $e->getMessage(), ['code' => 'invalid'], 400);
+                    }
+                    break;
                 case 'admin.roles.grant_self':
                     if ($method !== 'POST') {
                         $this->host->respond(false, 'POST required', [], 405);
@@ -312,6 +397,44 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                         $this->host->respond(false, 'user_id required', [], 400);
                     }
                     $this->host->respond(true, 'ok', $this->host->svc(StaffAccessSummaryService::class)->getSummary($targetUserId));
+                    break;
+                case 'admin.audit.query':
+                    $this->host->respond(true, 'ok', $this->host->svc(AuditLogService::class)->query($_REQUEST));
+                    break;
+                case 'admin.audit.detail':
+                    try {
+                        $this->host->respond(true, 'ok', $this->host->svc(AuditLogService::class)->detail((int) ($_REQUEST['id'] ?? 0)));
+                    } catch (\InvalidArgumentException $e) {
+                        $this->host->respond(false, $e->getMessage(), ['code' => 'not_found'], 404);
+                    }
+                    break;
+                case 'admin.audit.export':
+                    $this->host->respond(true, 'ok', $this->host->svc(AuditLogService::class)->export($_REQUEST));
+                    break;
+                case 'admin.backup.verify':
+                    try {
+                        $result = $this->host->svc(AdminBackupService::class)->verifyBackup((int) ($_REQUEST['run_id'] ?? 0));
+                        $this->host->respond(true, 'ok', $result);
+                    } catch (\RuntimeException $e) {
+                        $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'admin.backup.export_recovery_key':
+                    if ($method !== 'POST') {
+                        $this->host->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->host->readJsonBody();
+                    $this->host->verifyCsrf($body);
+                    try {
+                        $result = $this->host->svc(AdminBackupService::class)->exportRecoveryKey($userId);
+                        $this->host->respond(true, 'ok', $result);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
+                    break;
+                case 'admin.duplicates.list':
+                    $this->host->respond(true, 'ok', $this->host->svc(AdminDuplicateReviewService::class)->getReview());
                     break;
                 case 'admin.facility_user.list':
                     $this->host->respond(true, 'ok', $this->host->svc(FacilityUserAdminService::class)->listMatrix());
@@ -613,6 +736,29 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                             $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
                         );
                         $this->host->respond(true, 'Backup started', $payload);
+                    } catch (\RuntimeException $e) {
+                        $code = (int) ($e->getCode() ?: 403);
+                        $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                    }
+                    break;
+                case 'admin.backup.run_files':
+                    if ($method !== 'POST') {
+                        $this->host->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->host->readJsonBody();
+                    $this->host->verifyCsrf($body);
+                    $scope = strtolower(trim((string) ($body['scope'] ?? 'facility')));
+                    if ($scope !== 'global') {
+                        $scope = 'facility';
+                    }
+                    $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    try {
+                        $payload = $this->host->svc(ClinicAdminService::class)->initiateFilesBackupRun(
+                            $scope,
+                            $userId,
+                            $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
+                        );
+                        $this->host->respond(true, 'Site-files backup complete', $payload);
                     } catch (\RuntimeException $e) {
                         $code = (int) ($e->getCode() ?: 403);
                         $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);

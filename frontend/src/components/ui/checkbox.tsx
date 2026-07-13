@@ -10,10 +10,17 @@ export const Checkbox = forwardRef<
   <CheckboxPrimitive.Root
     ref={ref}
     className={cn(
-      'peer h-4 w-4 shrink-0 rounded-sm border border-[var(--oe-nc-border)] bg-white ring-offset-white',
+      // nc-checkbox owns ALL visual styling (base + checked) as unlayered
+      // BEM CSS in the shell's components.css. Tailwind class names that
+      // collide with Bootstrap 4 utilities (`bg-white`, `border`,
+      // `rounded-sm` — all `!important` in BS4) must NOT be used here:
+      // BS4's .bg-white kept the box white in both states, so toggles
+      // looked dead (2026-07-11 Admin Hub "read-only" bug). Only
+      // non-colliding layout/focus utilities remain below.
+      'nc-checkbox',
+      'peer h-4 w-4 shrink-0',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--oe-nc-primary)] focus-visible:ring-offset-2',
       'disabled:cursor-not-allowed disabled:opacity-50',
-      'data-[state=checked]:bg-[var(--oe-nc-primary)] data-[state=checked]:border-[var(--oe-nc-primary)] data-[state=checked]:text-white',
       className
     )}
     {...props}

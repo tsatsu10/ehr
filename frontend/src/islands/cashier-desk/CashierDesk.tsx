@@ -13,6 +13,7 @@ import { useSharedDeviceSession } from '@core/useSharedDeviceSession';
 import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
+import { QueueTruncationBanner } from '@components/QueueTruncationBanner';
 import type {
   CashierDeskProps,
   CashierPaymentMethod,
@@ -108,6 +109,7 @@ export function CashierDesk({
   }, [currencyFormat]);
 
   const [cards, setCards] = useState<CashierQueueCard[]>([]);
+  const [queueTruncated, setQueueTruncated] = useState(false);
   const [counts, setCounts] = useState<CashierQueueData['counts'] | null>(null);
   const [visitDate, setVisitDate] = useState<string | null>(null);
   const [paidToday, setPaidToday] = useState<CashierQueueData['paid_today']>([]);
@@ -156,6 +158,7 @@ export function CashierDesk({
   const narrowDesk = useNarrowCashierDesk();
 
   const queueSeq = useRef(0);
+  const revisionRef = useRef('');
   const activeVisitIdRef = useRef<number | null>(null);
   const modalOpenRef = useRef(false);
 
@@ -228,13 +231,23 @@ export function CashierDesk({
       const data = await oeFetch<CashierQueueData>('cashier.queue', {
         ajaxUrl,
         csrfToken,
-        params: facilityParams,
+        // SCALE-1.8 — send our last revision so an unchanged queue skips the re-render.
+        params: revisionRef.current
+          ? { ...facilityParams, known_revision: revisionRef.current }
+          : facilityParams,
       });
 
       if (token !== queueSeq.current) return;
+      if (data.unchanged) {
+        setQueueError(null);
+        setLastUpdated(new Date());
+        return;
+      }
+      revisionRef.current = data.revision ?? '';
 
       setCards(data.visits ?? []);
       setCounts(data.counts ?? null);
+      setQueueTruncated(!!data.queue_truncated);
       setVisitDate(data.visit_date ?? null);
       setPaidToday(data.paid_today ?? []);
       setQueueError(null);
@@ -589,6 +602,8 @@ export function CashierDesk({
           onReturnToQueue={sharedSession.returnToQueue}
         />
       )}
+
+      <QueueTruncationBanner truncated={queueTruncated} cap={200} />
 
       <DeskQueueStatusBar
         id="nc-cashier-status-bar"

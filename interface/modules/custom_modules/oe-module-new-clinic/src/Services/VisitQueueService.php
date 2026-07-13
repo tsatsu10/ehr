@@ -87,9 +87,13 @@ class VisitQueueService
             $bind[] = $dateScope;
         }
 
-        $sql .= " ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC";
+        $sql .= " ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC"
+            . QueueLimits::limitClause(QueueLimits::QUEUE_HARD_CAP);
 
-        return QueryUtils::fetchRecords($sql, $bind) ?: [];
+        // SCALE-1.2 (R1): hard cap. The +1 fetched by limitClause is sliced off here.
+        [$rows] = QueueLimits::applyCap(QueryUtils::fetchRecords($sql, $bind) ?: [], QueueLimits::QUEUE_HARD_CAP);
+
+        return $rows;
     }
 
     /**

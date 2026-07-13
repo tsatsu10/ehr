@@ -6,6 +6,7 @@ import { Card, CardContent } from '@components/ui/card';
 import { oeFetch } from '@core/oeFetch';
 import type { PharmSetupStatus } from './pharmOpsTypes';
 import { PharmOpsControlledCatalog } from './PharmOpsControlledCatalog';
+import { PharmOpsCatalogPanel } from './PharmOpsCatalogPanel';
 
 interface PharmOpsSetupPanelProps {
   ajaxUrl: string;
@@ -152,6 +153,12 @@ export function PharmOpsSetupPanel({
           )}
           . Disable legacy min/max months in globals when using reorder points (M6-F26).
         </div>
+
+        <PharmOpsCatalogPanel
+          ajaxUrl={ajaxUrl}
+          csrfToken={csrfToken}
+          enabled={!!setup.can_manage_catalog && !needsFormulary}
+        />
 
         <PharmOpsControlledCatalog
           ajaxUrl={ajaxUrl}

@@ -1,2 +1,2 @@
-import{u as e}from"./chunks/button-CnSZFKEu.js";import{t}from"./chunks/main-3iPydUku.js";e(`daily-reports`,t);
+import{v as e}from"./chunks/dist-DIKAfs_x.js";import{t}from"./chunks/main-BEO6TiIQ.js";e(`daily-reports`,t);
 //# sourceMappingURL=daily-reports.js.map

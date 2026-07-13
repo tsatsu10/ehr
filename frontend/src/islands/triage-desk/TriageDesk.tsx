@@ -36,6 +36,7 @@ import { TriageDeskLayout } from './triageDeskUi';
 import { TriageMobileQueueBar, TriageMobileQueueSheet } from './TriageMobileQueueSheet';
 import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
+import { QueueTruncationBanner } from '@components/QueueTruncationBanner';
 import { ConfirmModal, IdentityConfirmBanner } from '@components/ConfirmModal';
 import { AutoStartModal } from './AutoStartModal';
 import { TriageSendDoctorModal } from './TriageSendDoctorModal';
@@ -71,6 +72,7 @@ export function TriageDesk({
 }: TriageDeskProps) {
   // ── Queue state ──────────────────────────────────────────────────────────
   const [cards, setCards] = useState<TriageQueueCard[]>([]);
+  const [queueTruncated, setQueueTruncated] = useState(false);
   const [counts, setCounts] = useState<{ waiting: number; in_triage: number } | null>(null);
   const [visitDate, setVisitDate] = useState<string | null>(null);
   const [queueDateFilter, setQueueDateFilter] = useState<string | null>(null);
@@ -122,6 +124,7 @@ export function TriageDesk({
 
   // Stale-response guard for queue polling
   const queueSeq = useRef(0);
+  const revisionRef = useRef('');
   const selectVisitRef = useRef<(visitId: number, force?: boolean) => Promise<void>>(async () => {});
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -156,10 +159,19 @@ export function TriageDesk({
       const data = await oeFetch<TriageQueueData>('triage.queue', {
         ajaxUrl,
         csrfToken,
-        params: facilityParams,
+        // SCALE-1.8 — send our last revision so an unchanged queue skips the re-render.
+        params: revisionRef.current
+          ? { ...facilityParams, known_revision: revisionRef.current }
+          : facilityParams,
       });
 
       if (token !== queueSeq.current) return;
+      if (data.unchanged) {
+        setQueueError(null);
+        setLastUpdated(new Date());
+        return;
+      }
+      revisionRef.current = data.revision ?? '';
 
       const merged = [
         ...(data.visits ?? []),
@@ -167,6 +179,7 @@ export function TriageDesk({
       ];
       setCards(merged);
       setCounts(data.counts ?? null);
+      setQueueTruncated(!!data.queue_truncated);
       setVisitDate(data.visit_date ?? null);
       setQueueDateFilter(data.queue_date_filter ?? null);
       if (data.vitals_unit_label && data.vitals_form_rules) {
@@ -658,6 +671,8 @@ export function TriageDesk({
       )}
 
       <DeskInterruptBanner interrupt={interrupt} onDismiss={dismissInterrupt} />
+
+      <QueueTruncationBanner truncated={queueTruncated} cap={200} />
 
       <DeskQueueStatusBar
         id="nc-triage-status-bar"

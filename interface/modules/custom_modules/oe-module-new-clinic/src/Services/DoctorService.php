@@ -97,8 +97,10 @@ class DoctorService
         } else {
             $sql .= " ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC";
         }
+        $sql .= QueueLimits::limitClause(QueueLimits::QUEUE_HARD_CAP);
 
         $rows = QueryUtils::fetchRecords($sql, $bind) ?: [];
+        [$rows, $queueTruncated] = QueueLimits::applyCap($rows, QueueLimits::QUEUE_HARD_CAP);
         $routingByVisit = $this->labReadiness->batchRoutingChipsForVisits($rows, $facilityId);
         $rows = $this->rowEnricher->enrichVisitRows($rows);
         $visits = array_map(
@@ -120,6 +122,8 @@ class DoctorService
 
         return [
             'visits' => $visits,
+            'queue_truncated' => $queueTruncated,
+            'queue_cap' => QueueLimits::QUEUE_HARD_CAP,
             'counts' => [
                 'waiting' => count($visits),
                 'done_today' => count($doneToday),

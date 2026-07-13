@@ -14,6 +14,7 @@ require_once __DIR__ . '/bootstrap.php';
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Modules\NewClinic\Controllers\PageController;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
+use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 
 $moduleUrl = $GLOBALS['webroot'] . '/interface/modules/custom_modules/oe-module-new-clinic/public';
 $boardProfile = (string) ($_GET['profile'] ?? '') === 'wall' ? 'wall' : 'default';
@@ -21,9 +22,11 @@ $kioskQuery = (string) ($_GET['kiosk'] ?? '') === '1';
 
 // React visit board — kill-switch defaults ON after w50react cutover.
 $configService   = new ClinicConfigService();
+// Per-facility flag — read at the resolved facility, not the global default.
+$boardFacilityId = (new VisitScopeService())->resolveDefaultFacilityId();
 $reactVisitBoard = $configService->get('enable_react_visit_board', '1') === '1';
 $kioskChrome = $boardProfile === 'wall' && (
-    $kioskQuery || $configService->isEnabled('enable_visit_board_kiosk_chrome', 0)
+    $kioskQuery || $configService->isEnabled('enable_visit_board_kiosk_chrome', 0, $boardFacilityId)
 );
 
 (new PageController())->renderForAnyClinicRole('visit-board.html.twig', 'Visit Board', [

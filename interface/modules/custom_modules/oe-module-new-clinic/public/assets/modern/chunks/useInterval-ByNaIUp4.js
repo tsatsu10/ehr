@@ -1,0 +1,2 @@
+import{C as e,w as t}from"./dist-DIKAfs_x.js";var n=t(e(),1);function r(e,t){let r=(0,n.useRef)(e);(0,n.useEffect)(()=>{r.current=e},[e]),(0,n.useEffect)(()=>{if(t===null)return;let e=t*(.9+Math.random()*.2),n=window.setInterval(()=>{document.hidden||r.current()},e);return()=>window.clearInterval(n)},[t])}export{r as t};
+//# sourceMappingURL=useInterval-ByNaIUp4.js.map

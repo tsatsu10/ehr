@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
@@ -22,6 +22,8 @@ import {
   TableHeader,
   TableRow,
 } from '@components/ui/table';
+import { VitalsTrendsPanel } from './VitalsTrendsPanel';
+import { IssueEditorDrawer } from './IssueEditorDrawer';
 import type {
   ClinicalBackgroundSection,
   ClinicalData,
@@ -31,6 +33,7 @@ import type {
   ClinicalReferralsStrip,
   ClinicalThisVisitSection,
   ClinicalVitalsSection,
+  VitalsSeriesData,
 } from './patientChartTypes';
 
 interface ClinicalTabProps {
@@ -38,22 +41,33 @@ interface ClinicalTabProps {
   referralsStrip: ClinicalReferralsStrip | null;
   labsStrip: ClinicalLabsStrip | null;
   medsStrip: ClinicalMedsStrip | null;
+  vitalsSeries?: VitalsSeriesData | null;
   loading: boolean;
   error: string | null;
   clinicalAnchor?: string;
   onScrollToAnchor: (anchor: string) => void;
+  // D4 — native issue editor plumbing (only used when data.native_issue_editor is on).
+  pid: number;
+  ajaxUrl: string;
+  csrfToken: string;
+  onRefresh: () => void;
 }
 
 function ClinicalListSectionBlock({
   title,
   section,
   emptyLabel,
+  onEditIssue,
 }: {
   title: string;
   section: ClinicalListSection;
   emptyLabel: string;
+  /** When set (native editor on) and the section has an issue type, edits open the drawer. */
+  onEditIssue?: (type: string, id: number) => void;
 }) {
   const items = section.items ?? [];
+  // Native editing only applies to real issue sections (problems/allergies/meds).
+  const nativeType = onEditIssue && section.type ? section.type : null;
 
   let body: React.ReactNode;
   if (section.undocumented) {
@@ -64,9 +78,21 @@ function ClinicalListSectionBlock({
     body = (
       <ul className="list-none m-0 p-0 mb-0">
         {items.map((item, idx) => (
-          <li key={`${item.title ?? idx}`} className="mb-2">
-            <strong>{item.title}</strong>
-            {item.detail && <div className="text-sm text-[var(--oe-nc-text-muted)]">{item.detail}</div>}
+          <li key={`${item.id ?? item.title ?? idx}`} className="mb-2 flex items-start justify-between gap-2">
+            <div>
+              <strong>{item.title}</strong>
+              {item.detail && <div className="text-sm text-[var(--oe-nc-text-muted)]">{item.detail}</div>}
+            </div>
+            {nativeType && item.id ? (
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto shrink-0 p-0"
+                onClick={() => onEditIssue?.(nativeType, item.id ?? 0)}
+              >
+                Edit
+              </Button>
+            ) : null}
           </li>
         ))}
       </ul>
@@ -75,20 +101,29 @@ function ClinicalListSectionBlock({
     body = <p className="text-[var(--oe-nc-text-muted)] mb-0">{emptyLabel}</p>;
   }
 
+  let action: React.ReactNode;
+  if (nativeType) {
+    action = (
+      <Button variant="outline" size="sm" onClick={() => onEditIssue?.(nativeType, 0)}>
+        Add
+      </Button>
+    );
+  } else if (section.editor_url) {
+    action = (
+      <Button variant="outline" size="sm" asChild>
+        <a href={section.editor_url} target="_top">
+          Edit
+        </a>
+      </Button>
+    );
+  }
+
   return (
     <ChartSection
       id={section.anchor ?? undefined}
       title={title}
       icon={<ClipboardList className="h-4 w-4" aria-hidden />}
-      action={
-        section.editor_url ? (
-          <Button variant="outline" size="sm" asChild>
-            <a href={section.editor_url} target="_top">
-              Edit
-            </a>
-          </Button>
-        ) : undefined
-      }
+      action={action}
       bodyClassName="py-3"
     >
       {body}
@@ -299,9 +334,11 @@ function ReferralsStrip({
   if (strip.hidden) return null;
 
   const latest = strip.items?.[0];
+  // When the strip renders with no referrals, it is the empty-state entry point
+  // (kept visible so "Open referrals" can reach the hub to create the first one).
   const summary = latest
     ? `${latest.label ?? 'Referral'} · ${latest.status ?? '—'}${latest.occurred_at ? ` · ${latest.occurred_at}` : ''}`
-    : 'Referrals on file for this visit.';
+    : 'No referrals on this visit yet.';
 
   return (
     <ChartSection
@@ -310,12 +347,23 @@ function ReferralsStrip({
       icon={<Share2 className="h-4 w-4" aria-hidden />}
       variant="muted"
       action={
-        strip.open_referrals_url ? (
-          <Button variant="outline" size="sm" asChild>
-            <a href={strip.open_referrals_url} target="_top">
-              Open referrals
-            </a>
-          </Button>
+        strip.open_referrals_url || strip.stock_transactions_url ? (
+          <div className="flex flex-wrap gap-2">
+            {strip.open_referrals_url && (
+              <Button variant="outline" size="sm" asChild>
+                <a href={strip.open_referrals_url} target="_top">
+                  Open referrals
+                </a>
+              </Button>
+            )}
+            {strip.stock_transactions_url && (
+              <Button variant="outline" size="sm" asChild>
+                <a href={strip.stock_transactions_url} target="_top">
+                  Other transactions
+                </a>
+              </Button>
+            )}
+          </div>
         ) : undefined
       }
       bodyClassName="py-3"
@@ -446,12 +494,22 @@ export function ClinicalTab({
   referralsStrip,
   labsStrip,
   medsStrip,
+  vitalsSeries = null,
   loading,
   error,
   clinicalAnchor,
   onScrollToAnchor,
+  pid,
+  ajaxUrl,
+  csrfToken,
+  onRefresh,
 }: ClinicalTabProps) {
   const scrolledRef = useRef(false);
+  const [issueDrawer, setIssueDrawer] = useState<{ open: boolean; type: string; id: number }>({
+    open: false,
+    type: '',
+    id: 0,
+  });
 
   useEffect(() => {
     if (!clinicalAnchor || !data || scrolledRef.current) return;
@@ -474,6 +532,11 @@ export function ClinicalTab({
   const hiddenSections = data.hidden_sections ?? [];
   const isHidden = (name: string) => hiddenSections.includes(name);
 
+  // D4 — only pass the native edit callback to real issue sections when the flag is on.
+  const onEditIssue = data.native_issue_editor
+    ? (type: string, id: number) => setIssueDrawer({ open: true, type, id })
+    : undefined;
+
   return (
     <ChartStack>
       <ClinicalBackground section={data.background ?? {}} />
@@ -482,6 +545,7 @@ export function ClinicalTab({
           title="Problems"
           section={data.problems ?? {}}
           emptyLabel="No active problems."
+          onEditIssue={onEditIssue}
         />
       )}
       {!isHidden('allergies') && (
@@ -489,6 +553,7 @@ export function ClinicalTab({
           title="Allergies"
           section={data.allergies ?? {}}
           emptyLabel="No allergies on file."
+          onEditIssue={onEditIssue}
         />
       )}
       {!isHidden('medications') && (
@@ -496,6 +561,7 @@ export function ClinicalTab({
           title="Medications"
           section={data.medications ?? {}}
           emptyLabel="No active medications."
+          onEditIssue={onEditIssue}
         />
       )}
       {!immunizations?.hidden && (
@@ -512,7 +578,23 @@ export function ClinicalTab({
       )}
       {medsStrip && <MedsStrip strip={medsStrip} onScrollToAnchor={onScrollToAnchor} />}
       <ClinicalVitals section={data.vitals ?? {}} />
+      <VitalsTrendsPanel data={vitalsSeries} />
       <ClinicalThisVisit section={data.this_visit ?? {}} />
+      {data.native_issue_editor && (
+        <IssueEditorDrawer
+          open={issueDrawer.open}
+          pid={pid}
+          type={issueDrawer.type}
+          issueId={issueDrawer.id}
+          ajaxUrl={ajaxUrl}
+          csrfToken={csrfToken}
+          onClose={() => setIssueDrawer((s) => ({ ...s, open: false }))}
+          onSaved={() => {
+            setIssueDrawer((s) => ({ ...s, open: false }));
+            onRefresh();
+          }}
+        />
+      )}
     </ChartStack>
   );
 }

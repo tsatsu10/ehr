@@ -10,6 +10,10 @@
         csrfToken: csrf_token,
         pid: pid,
         encounterId: encounter_id|default(0)|number_format(0, '', ''),
+        enableReferrals: enable_referrals|default(true),
+        enableLetters: enable_letters|default(false),
+        initialView: initial_view|default('referrals'),
+        letterPrintUrl: letter_print_url|default(''),
         chartUrl: chart_url,
         visitBoardUrl: visit_board_url,
         currencyFormat: currency_format|default({})

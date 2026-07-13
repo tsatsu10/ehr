@@ -30,12 +30,14 @@ class AdminPeopleLegacyWrapServiceTest extends TestCase
     {
         $catalog = AdminPeopleLegacyWrapService::actionCatalog();
 
+        // 'facility_user' retired (C5/W1) — replaced by the native facility×user matrix.
         $this->assertSame(
-            ['users', 'user_add', 'user_edit', 'acl', 'acl_admin', 'facility_user', 'help_acl'],
+            ['users', 'user_add', 'user_edit', 'acl', 'acl_admin', 'help_acl'],
             array_keys($catalog)
         );
+        $this->assertArrayNotHasKey('facility_user', $catalog);
         $this->assertTrue($catalog['acl_admin']['advanced']);
-        foreach (['users', 'user_add', 'user_edit', 'acl', 'facility_user', 'help_acl'] as $view) {
+        foreach (['users', 'user_add', 'user_edit', 'acl', 'help_acl'] as $view) {
             $this->assertFalse($catalog[$view]['advanced'], "view {$view} must not be advanced");
         }
     }

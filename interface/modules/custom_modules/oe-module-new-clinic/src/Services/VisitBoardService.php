@@ -45,9 +45,9 @@ class VisitBoardService
         $visitDate = $visitDate ?? $this->clinicDate->today();
         $this->visitScope->repairOrphanVisits($facilityId, $visitDate);
 
-        $active = $this->fetchVisits($facilityId, $visitDate, false);
-        $cancelled = $this->fetchVisits($facilityId, $visitDate, true);
-        $closedUnpaid = $this->fetchClosedUnpaid($facilityId, $visitDate);
+        $active = $this->fetchVisits($facilityId, $visitDate, false, $activeTruncated);
+        $cancelled = $this->fetchVisits($facilityId, $visitDate, true, $cancelledTruncated);
+        $closedUnpaid = $this->fetchClosedUnpaid($facilityId, $visitDate, $closedUnpaidTruncated);
 
         // Lab-ready badge (no severity judgment — just "a result exists to look at"; see
         // LabOpsResultService::orderHasAbnormal for the separate, human-decided abnormal concept).
@@ -91,6 +91,10 @@ class VisitBoardService
             'cancelled' => $cancelled,
             'closed_unpaid' => $closedUnpaid,
             'counts' => $counts,
+            // SCALE-1.2 — true when a lane hit its row cap; the board shows a
+            // "refine filters" banner rather than silently dropping cards.
+            'queue_truncated' => (bool) ($activeTruncated || $cancelledTruncated || $closedUnpaidTruncated),
+            'queue_cap' => QueueLimits::QUEUE_HARD_CAP,
             'stale_count' => $staleCount,
             'visit_date' => $visitDate,
             'last_updated' => date('c'),
@@ -296,8 +300,11 @@ class VisitBoardService
      *
      * @return array<int, array<string, mixed>>
      */
-    private function fetchVisits(int $facilityId, string $visitDate, bool $cancelledOnly): array
+    private function fetchVisits(int $facilityId, string $visitDate, bool $cancelledOnly, ?bool &$truncated = null): array
     {
+        // Single-state cancelled lane → lane cap; combined active fetch (feeds every
+        // active column) → the larger hard cap. SCALE-1.2 (R1): bounded either way.
+        $cap = $cancelledOnly ? QueueLimits::BOARD_LANE_CAP : QueueLimits::QUEUE_HARD_CAP;
         if ($cancelledOnly) {
             $sql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid, pd.sex, pd.DOB,
                            vt.label AS visit_type_label
@@ -305,7 +312,7 @@ class VisitBoardService
                     INNER JOIN patient_data pd ON pd.pid = v.pid
                     LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
                     WHERE v.facility_id = ? AND v.visit_date = ? AND v.state = 'cancelled'
-                    ORDER BY v.cancelled_at DESC, v.queue_number ASC";
+                    ORDER BY v.cancelled_at DESC, v.queue_number ASC" . QueueLimits::limitClause($cap);
             $rows = QueryUtils::fetchRecords($sql, [$facilityId, $visitDate]) ?: [];
         } else {
             // Active states: no date cap. Completed: today only.
@@ -320,9 +327,12 @@ class VisitBoardService
                         v.state != 'completed'
                         OR v.visit_date = ?
                     )
-                    ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC";
+                    ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC"
+                    . QueueLimits::limitClause($cap);
             $rows = QueryUtils::fetchRecords($sql, [$facilityId, $visitDate]) ?: [];
         }
+
+        [$rows, $truncated] = QueueLimits::applyCap($rows, $cap);
 
         return $this->enrichVisitRows($rows);
     }
@@ -342,7 +352,7 @@ class VisitBoardService
      *
      * @return array<int, array<string, mixed>>
      */
-    private function fetchClosedUnpaid(int $facilityId, string $visitDate): array
+    private function fetchClosedUnpaid(int $facilityId, string $visitDate, ?bool &$truncated = null): array
     {
         $sql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid, pd.sex, pd.DOB,
                        vt.label AS visit_type_label,
@@ -353,16 +363,22 @@ class VisitBoardService
                 INNER JOIN patient_data pd ON pd.pid = v.pid
                 LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
                 WHERE v.facility_id = ? AND v.visit_date = ? AND v.state = 'closed_unpaid'
-                ORDER BY v.left_unpaid_at DESC, v.queue_number ASC";
+                ORDER BY v.left_unpaid_at DESC, v.queue_number ASC" . QueueLimits::limitClause(QueueLimits::BOARD_LANE_CAP);
 
         $rows = QueryUtils::fetchRecords($sql, [$facilityId, $visitDate]) ?: [];
-        return array_map(function (array $row): array {
-            $enriched = $this->enrichVisitRows([$row])[0] ?? $row;
+        [$rows, $truncated] = QueueLimits::applyCap($rows, QueueLimits::BOARD_LANE_CAP);
 
-            return array_merge($enriched, [
-                'unpaid_reason' => (string) ($row['unpaid_reason'] ?? ''),
-            ]);
-        }, $rows);
+        // SCALE-2.5 — enrich ALL rows in ONE batch, then attach the per-row
+        // unpaid_reason. (Previously enrichVisitRows() was called per row inside
+        // array_map, re-running its batch queries once for every row = an N+1.)
+        $enriched = $this->enrichVisitRows($rows);
+        return array_map(
+            static fn (array $enrichedRow, array $rawRow): array => array_merge($enrichedRow, [
+                'unpaid_reason' => (string) ($rawRow['unpaid_reason'] ?? ''),
+            ]),
+            $enriched,
+            $rows
+        );
     }
 
     /**

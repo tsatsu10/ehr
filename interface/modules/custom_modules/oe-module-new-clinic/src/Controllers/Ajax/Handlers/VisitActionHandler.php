@@ -60,7 +60,9 @@ final class VisitActionHandler implements AjaxActionHandlerInterface
                     $_REQUEST['visit_date'] ?? date('Y-m-d')
                 );
                 $board = $this->host->svc(SimilarSurnameQueueService::class)->annotateBoard($board, $facilityId);
-                $this->host->respond(true, 'ok', $board);
+                // SCALE-1.8 — delta poll (shared helper): tiny "unchanged" reply when
+                // the board hasn't changed since the client's last revision.
+                $this->host->respondQueue($board);
                 break;
             case 'visit.detail':
                 if ($method !== 'POST') {

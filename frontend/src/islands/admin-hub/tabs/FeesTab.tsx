@@ -26,6 +26,7 @@ interface FeesTabProps {
   onEdit: (row: FeeScheduleRow) => void;
   onArchive: (row: FeeScheduleRow) => void;
   onImport: () => void;
+  onBulkPrice: () => void;
 }
 
 export function FeesTab({
@@ -39,6 +40,7 @@ export function FeesTab({
   onEdit,
   onArchive,
   onImport,
+  onBulkPrice,
 }: FeesTabProps) {
   return (
     <AdminStack>
@@ -65,14 +67,26 @@ export function FeesTab({
         description="Cash fee schedule for cashier charges and billing codes."
         icon={<Receipt className="h-4 w-4" aria-hidden />}
         action={
-          <Button
-            type="button"
-            size="sm"
-            id="nc-admin-add-fee"
-            onClick={onAdd}
-          >
-            Add fee line
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              id="nc-admin-bulk-price"
+              disabled={!feeSchedule.some((r) => r.is_active)}
+              onClick={onBulkPrice}
+            >
+              Bulk price update
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              id="nc-admin-add-fee"
+              onClick={onAdd}
+            >
+              Add fee line
+            </Button>
+          </div>
         }
       >
         <div id="nc-admin-fee-schedule">

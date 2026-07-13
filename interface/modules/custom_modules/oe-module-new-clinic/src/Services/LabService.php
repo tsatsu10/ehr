@@ -50,9 +50,11 @@ class LabService
                 LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
                 WHERE v.facility_id = ?
                 AND v.state IN ('ready_for_lab', 'in_lab')
-                ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC";
+                ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC"
+                . QueueLimits::limitClause(QueueLimits::QUEUE_HARD_CAP);
 
         $rows = QueryUtils::fetchRecords($sql, [$facilityId]) ?: [];
+        [$rows, $queueTruncated] = QueueLimits::applyCap($rows, QueueLimits::QUEUE_HARD_CAP);
         $visitIds = array_map(fn (array $row) => (int) ($row['id'] ?? 0), $rows);
         $holders = $this->rowEnricher->batchLabHolders($visitIds);
         $orderCounts = $this->rowEnricher->batchLabOrderCounts($visitIds);
@@ -76,6 +78,8 @@ class LabService
 
         return [
             'visits' => $visits,
+            'queue_truncated' => $queueTruncated,
+            'queue_cap' => QueueLimits::QUEUE_HARD_CAP,
             'counts' => [
                 'waiting' => $waitingCount,
                 'in_lab' => $inLabCount,

@@ -41,3 +41,16 @@ export interface MyProfileProps {
   /** SEC-5: set when the shell redirected here to force a temporary-password change. */
   forcePasswordChange?: boolean;
 }
+
+/** A6 — TOTP MFA enrollment status (profile.mfa.status). */
+export interface MfaStatus {
+  totp_enabled: boolean;
+  /** Directory-managed accounts can't self-enroll app TOTP here. */
+  ad_managed: boolean;
+}
+
+/** profile.mfa.enroll_start payload — QR data-URI + base32 secret for manual entry. */
+export interface MfaEnrollStart {
+  qr: string;
+  secret: string;
+}

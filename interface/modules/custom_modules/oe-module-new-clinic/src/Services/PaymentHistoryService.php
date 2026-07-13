@@ -112,13 +112,7 @@ class PaymentHistoryService
         );
 
         return [
-            'receipt' => [
-                'receipt_number' => (string) ($receipt['receipt_number'] ?? ''),
-                'queue_number' => (int) ($receipt['queue_number'] ?? 0),
-                'amount_paid' => round((float) ($receipt['amount_paid'] ?? 0), 2),
-                'change_due' => round((float) ($receipt['change_due'] ?? 0), 2),
-                'paid_at_label' => $this->formatDateTime((string) ($receipt['created_at'] ?? '')),
-            ],
+            'receipt' => $this->mapReceiptForPrint($receipt),
             'patient' => $patient,
         ];
     }
@@ -180,14 +174,26 @@ class PaymentHistoryService
         );
 
         return [
-            'receipt' => [
-                'receipt_number' => (string) ($receipt['receipt_number'] ?? ''),
-                'queue_number' => (int) ($receipt['queue_number'] ?? 0),
-                'amount_paid' => round((float) ($receipt['amount_paid'] ?? 0), 2),
-                'change_due' => round((float) ($receipt['change_due'] ?? 0), 2),
-                'paid_at_label' => $this->formatDateTime((string) ($receipt['created_at'] ?? '')),
-            ],
+            'receipt' => $this->mapReceiptForPrint($receipt),
             'patient' => $patient,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $receipt
+     * @return array<string, mixed>
+     */
+    private function mapReceiptForPrint(array $receipt): array
+    {
+        $facilityId = $this->visitScope->resolveDefaultFacilityId();
+
+        return [
+            'receipt_number' => (string) ($receipt['receipt_number'] ?? ''),
+            'queue_number' => (int) ($receipt['queue_number'] ?? 0),
+            'show_queue_number' => $this->config->getInt('print_queue_number_on_receipt', 1, $facilityId) === 1,
+            'amount_paid' => round((float) ($receipt['amount_paid'] ?? 0), 2),
+            'change_due' => round((float) ($receipt['change_due'] ?? 0), 2),
+            'paid_at_label' => $this->formatDateTime((string) ($receipt['created_at'] ?? '')),
         ];
     }
 

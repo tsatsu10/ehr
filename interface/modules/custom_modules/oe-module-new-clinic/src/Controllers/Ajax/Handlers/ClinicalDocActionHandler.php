@@ -20,6 +20,7 @@ use OpenEMR\Modules\NewClinic\Services\ClinicalDocCatalogService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocFormOpenService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocVisitSummaryService;
 use OpenEMR\Modules\NewClinic\Services\EncounterNoteService;
+use OpenEMR\Modules\NewClinic\Services\ProcedureOrderFormService;
 
 final class ClinicalDocActionHandler implements AjaxActionHandlerInterface
 {
@@ -39,6 +40,8 @@ final class ClinicalDocActionHandler implements AjaxActionHandlerInterface
         'encounter_note.validate',
         'encounter_note.sign',
         'encounter_note.unlock',
+        'proc_order.form_data',
+        'proc_order.save',
     ];
 
     public function __construct(
@@ -283,6 +286,36 @@ final class ClinicalDocActionHandler implements AjaxActionHandlerInterface
                     $this->host->respond(true, 'Ancillary LBF pack imported', $payload);
                 } catch (\InvalidArgumentException $e) {
                     $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_pack'], 400);
+                }
+                break;
+            case 'proc_order.form_data':
+                $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                $procedureOrderId = (int) ($_REQUEST['procedure_order_id'] ?? 0);
+                try {
+                    $payload = $this->host->svc(ProcedureOrderFormService::class)
+                        ->getFormData($visitId, $procedureOrderId, $userId);
+                    $this->host->respond(true, 'ok', $payload);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                } catch (\RuntimeException $e) {
+                    $code = (int) ($e->getCode() ?: 403);
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                }
+                break;
+            case 'proc_order.save':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                try {
+                    $payload = $this->host->svc(ProcedureOrderFormService::class)->saveOrder($body, $userId);
+                    $this->host->respond(true, 'Order saved', $payload);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                } catch (\RuntimeException $e) {
+                    $code = (int) ($e->getCode() ?: 403);
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
                 }
                 break;
             default:

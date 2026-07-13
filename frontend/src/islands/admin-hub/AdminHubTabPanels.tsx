@@ -105,6 +105,7 @@ export interface AdminHubTabPanelsProps {
   onAddFee: () => void;
   onEditFee: (row: FeeScheduleRow) => void;
   onArchiveFee: (row: FeeScheduleRow) => void;
+  onBulkPriceFees: () => void;
   onImportFees: () => void;
   onAddDirectoryContact: () => void;
   onEditDirectoryContact: (row: DirectoryContactRow) => void;
@@ -186,6 +187,7 @@ export function AdminHubTabPanels({
   onAddFee,
   onEditFee,
   onArchiveFee,
+  onBulkPriceFees,
   onImportFees,
   onAddDirectoryContact,
   onEditDirectoryContact,
@@ -279,6 +281,8 @@ export function AdminHubTabPanels({
       <AdminTabPanel tabId="system" active={activeTab === 'system'}>
         {systemHealth && runbooks && setupProgress ? (
           <SystemTab
+            ajaxUrl={ajaxUrl}
+            csrfToken={csrfToken}
             health={systemHealth}
             runbooks={runbooks}
             setupProgress={setupProgress}
@@ -335,6 +339,7 @@ export function AdminHubTabPanels({
           onEdit={onEditFee}
           onArchive={onArchiveFee}
           onImport={onImportFees}
+          onBulkPrice={onBulkPriceFees}
         />
       </AdminTabPanel>
 

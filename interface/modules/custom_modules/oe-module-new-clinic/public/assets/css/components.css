@@ -1583,3 +1583,26 @@ body.nc-modal-open {
     white-space: nowrap !important;
     border: 0 !important;
 }
+
+/*
+ * Radix checkbox state fill (2026-07-11 Admin Hub "read-only" bug).
+ * The React islands' Tailwind data-[state=checked] utilities live inside
+ * @layer utilities, which loses to unlayered Bootstrap/theme CSS on every
+ * OpenEMR page — so a checked box painted identically to an unchecked one
+ * and toggles looked dead. This unlayered rule is what actually paints the
+ * checked state; components.css loads on every module shell page, so it
+ * covers every island's checkboxes at once.
+ */
+.nc-checkbox {
+    background-color: var(--oe-nc-surface, #fff);
+    border: 1px solid var(--oe-nc-border, #d3dce3);
+    border-radius: var(--oe-nc-radius-sm, 0.125rem);
+    color: var(--oe-nc-surface, #fff);
+    padding: 0;
+}
+.nc-checkbox[data-state="checked"],
+.nc-checkbox[data-state="indeterminate"] {
+    background-color: var(--oe-nc-primary, #1b3a5f);
+    border-color: var(--oe-nc-primary, #1b3a5f);
+    color: #fff;
+}

@@ -79,14 +79,29 @@ class AjaxActionPolicy
         'admin.fee.archive' => 'new_fee_schedule_admin',
         'admin.fee.billing_codes' => 'new_fee_schedule_admin',
         'admin.fee.import' => 'new_fee_schedule_admin',
+        'admin.fee.bulk_price' => 'new_fee_schedule_admin',
+        'admin.lists.catalog' => 'new_admin',
+        'admin.lists.options' => 'new_admin',
+        'admin.lists.save' => 'new_admin',
+        'admin.lists.set_active' => 'new_admin',
+        'admin.duplicates.list' => 'new_admin',
         'admin.directory.save' => 'new_admin',
         'admin.directory.delete' => 'new_admin',
+        'outreach.presets' => 'new_admin',
+        'outreach.preview' => 'new_admin',
+        'outreach.queue' => 'new_admin',
+        'outreach.history' => 'new_admin',
         'admin.roles.grant_self' => 'new_admin',
         'admin.roles.templates' => 'new_admin',
         'admin.staff.list' => 'new_admin',
         'admin.staff.create' => 'new_admin',
         'admin.staff.deactivate' => 'new_admin',
         'admin.staff.access_summary' => 'new_admin',
+        'admin.audit.query' => 'new_admin',
+        'admin.audit.detail' => 'new_admin',
+        'admin.audit.export' => 'new_admin',
+        'admin.backup.verify' => 'new_admin',
+        'admin.backup.export_recovery_key' => 'new_admin',
         'admin.facility_user.list' => 'new_admin',
         'admin.facility_user.get' => 'new_admin',
         'admin.facility_user.save' => 'new_admin',
@@ -117,6 +132,7 @@ class AjaxActionPolicy
         'chart_depth.referral_status' => 'new_chart_depth_referral',
         'admin.health_status' => 'new_admin',
         'admin.backup.run' => 'new_admin',
+        'admin.backup.run_files' => 'new_admin',
         'admin.backup.complete' => 'new_admin',
         'admin.setup.mark_item' => 'new_admin',
         'admin.setup.complete' => 'new_admin',
@@ -160,6 +176,10 @@ class AjaxActionPolicy
         'profile.get',
         'profile.update',
         'profile.change_password',
+        'profile.mfa.status',
+        'profile.mfa.enroll_start',
+        'profile.mfa.enroll_verify',
+        'profile.mfa.remove',
     ];
 
     /** @var array<int, string> */
@@ -172,6 +192,8 @@ class AjaxActionPolicy
     /** @var array<int, string> */
     private const COHORT_EXPORT_ACTIONS = [
         'cohort.export',
+        'cohort.export_status',
+        'cohort.export_download',
     ];
 
     /** @var array<int, string> */
@@ -293,6 +315,8 @@ class AjaxActionPolicy
         'pharm_ops.formulary_import',
         'pharm_ops.controlled_catalog',
         'pharm_ops.controlled_catalog_save',
+        'pharm_ops.catalog_list',
+        'pharm_ops.catalog_save',
     ];
 
     /** @var array<int, string> */
@@ -320,6 +344,7 @@ class AjaxActionPolicy
         'scheduling.recalls.update_status',
         'scheduling.recalls.snooze',
         'scheduling.recalls.send_reminder',
+        'scheduling.recalls.flag_follow_up',
     ];
 
     /** @var array<int, string> */
@@ -365,6 +390,10 @@ class AjaxActionPolicy
     /** @var array<int, string> */
     private const CLINICAL_DOC_WRITE_ACTIONS = [
         'clinical_doc.open_form',
+        // D3 native procedure-order form — form bootstrap + save. Both require
+        // clinical-doc write access (the service also calls assertWriteAccess()).
+        'proc_order.form_data',
+        'proc_order.save',
     ];
 
     /** @var array<int, string> */
@@ -484,6 +513,8 @@ class AjaxActionPolicy
         'patients.registration.get',
         'patients.chart.visits',
         'patients.chart.clinical',
+        'patients.chart.issue_get',
+        'patients.chart.issue_save',
         'patients.chart.activity_feed',
         'patients.chart.messages',
         'patients.chart.search',
@@ -493,7 +524,10 @@ class AjaxActionPolicy
         'mrd.clinical_referrals_strip',
         'mrd.clinical_labs_summary',
         'mrd.clinical_meds_summary',
+        'mrd.clinical_vitals_series',
         'chart_depth.referrals_list',
+        'letters.templates',
+        'letters.render',
     ];
 
     /**
@@ -507,11 +541,111 @@ class AjaxActionPolicy
         'chart_depth.visit_charges_summary' => ['new_chart_depth_finance_summary', 'new_chart_depth_finance'],
         'chart_depth.receipt_reprint' => ['new_receipt_reprint', 'new_chart_depth_finance'],
         'chart_depth.referrals_list' => ['new_chart_depth_referral', 'new_chart_depth'],
+        'letters.templates' => ['new_chart_depth_referral', 'new_chart_depth'],
+        'letters.render' => ['new_chart_depth_referral', 'new_chart_depth'],
     ];
 
     /** @var array<string, true> */
     private const DEPRECATED = [
         'visit.transition' => true,
+    ];
+
+    /**
+     * SCALE-1.1 — actions safe to release the PHP session lock for
+     * (`session_write_close()`) before dispatch, so concurrent tabs/requests from
+     * one user stop serializing on the session file.
+     *
+     * MEMBERSHIP RULE (safety): an action belongs here ONLY if its handler + service
+     * chain performs NO `$_SESSION` writes (a write after close is silently dropped)
+     * and does no mutation. Verified against every `$_SESSION[...] =` site in the
+     * module: the writers are patient-search/dup rate-limiting, encounter/patient
+     * context binding (take/select/restore), MFA enrol, product-reg dismiss, session
+     * role switch, and the (now guarded) desk-facility fallback — none of which are
+     * listed here. DEFAULT IS LOCKED: anything not in this set keeps the lock, so a
+     * forgotten new action is merely un-optimised, never incorrect.
+     *
+     * Deliberately EXCLUDED for now (revisit later): `patients.search` /
+     * `patients.dup_check` (session-based rate limiter — SCALE-3.1), the chart/patient
+     * reads that bind `$_SESSION['pid']`, and `reports.export_status` (still runs work
+     * inline — SCALE-2.1).
+     *
+     * @var array<string, true>
+     */
+    private const READONLY_ACTIONS = [
+        // Hot desk/board polls (fire every 10–30 s from every open desk).
+        'queue.counts' => true,
+        'visit.board' => true,
+        'visit.detail' => true,
+        'triage.queue' => true,
+        'doctor.queue' => true,
+        'cashier.queue' => true,
+        'lab.queue' => true,
+        'pharmacy.queue' => true,
+        'outreach.queue' => true,
+        'doctor.roster' => true,
+        'queue_bridge.list' => true,
+        // Scheduling reads/polls.
+        'scheduling.flow_board.list' => true,
+        'scheduling.flow_board.poll' => true,
+        'scheduling.flow_board.prefs' => true,
+        'scheduling.flow_board.lane_map' => true,
+        'scheduling.calendar.range' => true,
+        'scheduling.calendar.poll' => true,
+        'scheduling.recalls.list' => true,
+        // Communications reads.
+        'communications.hub_counts' => true,
+        'communications.messages_list' => true,
+        'communications.message_detail' => true,
+        'communications.reminders_list' => true,
+        'communications.reminder_log' => true,
+        'communications.compose_options' => true,
+        'communications.reminder_create_options' => true,
+        // List reads.
+        'onotes.list' => true,
+        'documents.list' => true,
+        'documents.categories' => true,
+        'documents.unfiled_list' => true,
+        // Lab/Pharmacy ops reads.
+        'lab_ops.worklist' => true,
+        'lab_ops.result_get' => true,
+        'lab_ops.setup_status' => true,
+        'lab_ops.fee_map_list' => true,
+        'pharm_ops.worklist' => true,
+        'pharm_ops.dispense_get' => true,
+        'pharm_ops.otc_drugs_search' => true,
+        'pharm_ops.otc_sale_get' => true,
+        'pharm_ops.setup_status' => true,
+        'pharm_ops.catalog_list' => true,
+        'pharm_ops.controlled_catalog' => true,
+        // Export-job status polls (pure read; inline fallback writes DB/files, not $_SESSION).
+        'cohort.export_status' => true,
+        // Report hub + clinical-doc reads.
+        'reports.hub_summary' => true,
+        'reports.catalog' => true,
+        'clinical_doc.visit_summary' => true,
+        'clinical_doc.catalog' => true,
+        'clinical_doc.sign_status' => true,
+        'clinical_doc.favorites' => true,
+        // Bill-ops reads.
+        'bill_ops.visit_charges' => true,
+        'bill_ops.payments_search' => true,
+        'bill_ops.outstanding_list' => true,
+        'bill_ops.daysheet' => true,
+        // Reference reads.
+        'visit.types' => true,
+        'admin.geo.regions' => true,
+        'admin.geo.districts' => true,
+        // Admin reads (admin.config is the worst baseline offender — SCALE-1.4 also).
+        'admin.config' => true,
+        'admin.health_status' => true,
+        'admin.audit.query' => true,
+        'admin.audit.detail' => true,
+        'admin.duplicates.list' => true,
+        'admin.staff.list' => true,
+        'admin.staff.access_summary' => true,
+        'admin.facility_user.list' => true,
+        'admin.facility_user.matrix' => true,
+        'admin.his_pack_status' => true,
     ];
 
     /**
@@ -742,6 +876,27 @@ class AjaxActionPolicy
     public function isDeprecated(string $action): bool
     {
         return isset(self::DEPRECATED[$action]);
+    }
+
+    /**
+     * SCALE-1.1 — is this action safe to release the PHP session lock for before
+     * dispatch (no `$_SESSION` writes, no mutation)? Default is false (keep the
+     * lock) for any action not in the vetted allowlist.
+     */
+    public function isReadOnly(string $action): bool
+    {
+        return isset(self::READONLY_ACTIONS[$this->normalizeAction($action)]);
+    }
+
+    /**
+     * The vetted read-only action allowlist (SCALE-1.1). Exposed for the guardrail
+     * test that asserts these never overlap known-mutating actions.
+     *
+     * @return array<int, string>
+     */
+    public function readOnlyActions(): array
+    {
+        return array_keys(self::READONLY_ACTIONS);
     }
 
     public function requiresSingleAcl(string $action): ?string

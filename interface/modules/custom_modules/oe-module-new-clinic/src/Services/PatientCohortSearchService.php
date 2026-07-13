@@ -20,6 +20,9 @@ class PatientCohortSearchService
     private const PAGE_SIZE_MAX = 100;
     private const EXPORT_ROW_LIMIT = 5000;
 
+    /** SCALE-2.2 — cohorts this size or smaller build inline; larger ones defer to the worker. */
+    private const SYNC_EXPORT_MAX = 500;
+
     /** @var array<int, string> */
     public const VISIT_STATE_OPTIONS = [
         'waiting',
@@ -275,18 +278,64 @@ class PatientCohortSearchService
      * @param array<string, mixed> $request
      * @return array{filename: string, content: string, row_count: int}
      */
-    public function export(array $request): array
+    /**
+     * SCALE-2.2 — decide sync vs background job by cohort size. Small cohorts build
+     * inline (unchanged UX); large ones enqueue a job so the CSV build (and its
+     * per-row subqueries) never runs inside the web request.
+     *
+     * @param array<string, mixed> $request
+     * @return array<string, mixed>
+     */
+    public function requestExport(array $request, int $actorUserId): array
     {
         $this->assertExportAccess();
 
+        // SECURITY — `__facility_filter` is a SERVER-only field (a raw scope clause).
+        // Strip anything the client sent so it can't inject/widen its facility scope;
+        // only the enqueue path below sets it, from the server-resolved session scope.
+        unset($request['__facility_filter']);
+
+        $total = $this->countExport($request);
+        if ($total > self::EXPORT_ROW_LIMIT) {
+            throw new \InvalidArgumentException(
+                'Export exceeds ' . self::EXPORT_ROW_LIMIT . ' rows. Narrow your filters.'
+            );
+        }
+
+        if ($total <= self::SYNC_EXPORT_MAX) {
+            return array_merge(['mode' => 'sync'], $this->buildExportFile($request));
+        }
+
+        // SECURITY (SCALE-2.2 audit) — the background worker has NO session, so the
+        // facility filter would resolve to "unfiltered" and leak other facilities'
+        // patients. Capture THIS user's facility filter now (session present) and
+        // carry it in the job so the worker applies the exact same scope.
+        $facilityId = $this->visitScope->resolveDeskFacilityId();
+        $request['__facility_filter'] = $this->facilityScope->getPatientFilterClause('pd');
+        $jobId = (new ExportJobService())->enqueue('cohort_csv', $request, $facilityId, $actorUserId);
+
+        return ['mode' => 'async', 'job_id' => $jobId, 'row_count_estimate' => $total];
+    }
+
+    /**
+     * Shared cohort WHERE/JOIN/ORDER builder (used by both count and file build).
+     *
+     * @param array<string, mixed> $request
+     * @return array{where: string, bind: array<int, mixed>, joins: string, order: string}
+     */
+    private function buildCohortQuery(array $request): array
+    {
         $filters = is_array($request['filters'] ?? null) ? $request['filters'] : [];
         $sort = $this->normalizeSort((string) ($request['sort'] ?? 'name_asc'));
 
         $where = ['1=1'];
         $bind = [];
-
-        $this->appendFacilityFilter($where, $bind);
-
+        // Use the scope captured at enqueue when running under the (session-less)
+        // worker; otherwise resolve from the live session (sync path).
+        $facilityOverride = isset($request['__facility_filter']) && is_array($request['__facility_filter'])
+            ? $request['__facility_filter']
+            : null;
+        $this->appendFacilityFilter($where, $bind, $facilityOverride);
         $this->applyRecordStatus($filters, $where, $bind);
         $this->applyDemographics($filters, $where, $bind);
         $this->applyVisitFilters($filters, $where, $bind);
@@ -295,24 +344,45 @@ class PatientCohortSearchService
         $this->applyAllergyMedicationFilters($filters, $where, $bind);
         $this->applyCommunicationsFilters($filters, $where, $bind);
 
-        $joinSql = $this->buildJoins($filters);
-        $whereSql = implode(' AND ', $where);
-        $orderSql = $this->sortSql($sort);
+        return [
+            'where' => implode(' AND ', $where),
+            'bind' => $bind,
+            'joins' => $this->buildJoins($filters),
+            'order' => $this->sortSql($sort),
+        ];
+    }
 
-        $countRow = QueryUtils::querySingleRow(
-            "SELECT COUNT(DISTINCT pd.pid) AS cnt
-             FROM patient_data pd
-             {$joinSql}
-             WHERE {$whereSql}",
-            $bind
+    /**
+     * @param array<string, mixed> $request
+     */
+    public function countExport(array $request): int
+    {
+        $q = $this->buildCohortQuery($request);
+        $row = QueryUtils::querySingleRow(
+            "SELECT COUNT(DISTINCT pd.pid) AS cnt FROM patient_data pd {$q['joins']} WHERE {$q['where']}",
+            $q['bind']
         );
-        $total = is_array($countRow) ? (int) ($countRow['cnt'] ?? 0) : 0;
+
+        return is_array($row) ? (int) ($row['cnt'] ?? 0) : 0;
+    }
+
+    /**
+     * Build the cohort CSV file. No ACL check — the caller (requestExport) or the
+     * enqueue already authorized it; the background worker calls this with no session.
+     *
+     * @param array<string, mixed> $request
+     * @return array{filename: string, content: string, row_count: int}
+     */
+    public function buildExportFile(array $request): array
+    {
+        $total = $this->countExport($request);
         if ($total > self::EXPORT_ROW_LIMIT) {
             throw new \InvalidArgumentException(
                 'Export exceeds ' . self::EXPORT_ROW_LIMIT . ' rows. Narrow your filters.'
             );
         }
 
+        $q = $this->buildCohortQuery($request);
         $rows = QueryUtils::fetchRecords(
             "SELECT DISTINCT pd.pid, pd.fname, pd.lname, pd.sex, pd.DOB, pd.pubpid, pd.phone_cell,
                     pd.phone_normalized, COALESCE(npc.completion_score, 0) AS completion_pct,
@@ -321,11 +391,11 @@ class PatientCohortSearchService
                      WHERE nv.pid = pd.pid AND nv.visit_date = CURDATE()
                      AND nv.state NOT IN ('completed', 'closed_unpaid', 'cancelled')) AS active_visit_today
              FROM patient_data pd
-             {$joinSql}
-             WHERE {$whereSql}
-             ORDER BY {$orderSql}
+             {$q['joins']}
+             WHERE {$q['where']}
+             ORDER BY {$q['order']}
              LIMIT " . (int) self::EXPORT_ROW_LIMIT,
-            $bind
+            $q['bind']
         ) ?: [];
 
         $handle = fopen('php://temp', 'r+');
@@ -498,9 +568,13 @@ class PatientCohortSearchService
      * @param array<int, string> $where
      * @param array<int, mixed> $bind
      */
-    private function appendFacilityFilter(array &$where, array &$bind): void
+    /**
+     * @param array{sql: string, bind: array<int, mixed>}|null $override captured scope
+     *        (worker path — no session); null resolves from the live session.
+     */
+    private function appendFacilityFilter(array &$where, array &$bind, ?array $override = null): void
     {
-        $facility = $this->facilityScope->getPatientFilterClause('pd');
+        $facility = $override ?? $this->facilityScope->getPatientFilterClause('pd');
         $clause = ltrim($facility['sql'], ' AND');
         if ($clause === '') {
             return;

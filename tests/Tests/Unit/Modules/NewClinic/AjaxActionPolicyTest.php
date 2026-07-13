@@ -112,4 +112,71 @@ class AjaxActionPolicyTest extends TestCase
         $this->assertTrue($policy->defersAuthorizationToHandler('chart_depth.export_generate'));
         $this->assertFalse($policy->defersAuthorizationToHandler('visit.board'));
     }
+
+    // ---- SCALE-1.1: read-only session-lock release ------------------------
+
+    public function testHotPollsAreReadOnly(): void
+    {
+        $policy = new AjaxActionPolicy();
+
+        foreach (
+            [
+                'queue.counts', 'visit.board', 'triage.queue', 'doctor.queue',
+                'cashier.queue', 'lab.queue', 'pharmacy.queue', 'doctor.roster',
+                'queue_bridge.list', 'scheduling.flow_board.poll', 'admin.config',
+                'communications.hub_counts', 'documents.list',
+            ] as $action
+        ) {
+            $this->assertTrue($policy->isReadOnly($action), "$action should be read-only");
+        }
+    }
+
+    /**
+     * SAFETY-CRITICAL: a mutating action must never be marked read-only — releasing
+     * the session lock before a $_SESSION write would silently drop that write.
+     */
+    public function testMutatingActionsAreNotReadOnly(): void
+    {
+        $policy = new AjaxActionPolicy();
+
+        foreach (
+            [
+                // money + state transitions
+                'cashier.pay', 'cashier.charges.post', 'cashier.mark_unpaid',
+                'visit.start', 'visit.cancel', 'doctor.take', 'doctor.complete',
+                'triage.save_vitals', 'triage.send_doctor', 'lab.take', 'pharmacy.take',
+                // patient/session context + writes
+                'patients.create', 'patients.search', 'patients.dup_check',
+                'patients.preview', 'patients.chart.visits',
+                // config/admin writes
+                'admin.config.save', 'admin.fee.save', 'admin.backup.run',
+                // clinical writes + exports (inline work / session pid)
+                'encounter_note.save', 'encounter_note.sign', 'clinical_doc.open_form',
+                'scheduling.calendar.book', 'scheduling.recalls.save',
+                'reports.export_run', 'reports.export_status', 'cohort.export',
+                'profile.switch_role', 'profile.mfa.enroll_start',
+            ] as $action
+        ) {
+            $this->assertFalse($policy->isReadOnly($action), "$action must NOT be read-only");
+        }
+    }
+
+    public function testReadOnlyActionsAreNormalizedAndUnique(): void
+    {
+        $policy = new AjaxActionPolicy();
+        $actions = $policy->readOnlyActions();
+
+        $this->assertSame(
+            array_values(array_unique($actions)),
+            $actions,
+            'read-only allowlist has duplicate entries'
+        );
+        foreach ($actions as $action) {
+            $this->assertSame(
+                $action,
+                $policy->normalizeAction($action),
+                "read-only action '$action' is not in normalized form (typo/alias?)"
+            );
+        }
+    }
 }

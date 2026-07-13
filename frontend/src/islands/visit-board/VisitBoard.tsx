@@ -17,6 +17,7 @@ import { VisitBoardColumn } from './VisitBoardColumn';
 import { SegmentedControl } from '@components/SegmentedControl';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { QueueTruncationBanner } from '@components/QueueTruncationBanner';
 import { Button } from '@components/ui/button';
 import { AlertTriangle, Clock, X } from 'lucide-react';
 import { VisitDetailModal } from './VisitDetailModal';
@@ -89,6 +90,7 @@ export function VisitBoard({
   const [drawerData, setDrawerData] = useState<VisitDetailData | null>(null);
 
   const seqRef = useRef(0);
+  const revisionRef = useRef('');
   const deepLinkPidRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -108,10 +110,20 @@ export function VisitBoard({
     try {
       const params: Record<string, string | number> = {};
       if (facilityId > 0) params.facility_id = facilityId;
+      // SCALE-1.8 — send our last revision; server replies {unchanged:true} when
+      // the board is byte-for-byte the same, so we skip the whole re-render.
+      if (revisionRef.current) params.known_revision = revisionRef.current;
 
       const result = await oeFetch<BoardData>('visit.board', { ajaxUrl, csrfToken, params });
 
       if (token !== seqRef.current) return;
+      if (result.unchanged) {
+        setFetchError(null);
+        setErrorDismissed(false);
+        setLastUpdated(new Date());
+        return;
+      }
+      revisionRef.current = result.revision ?? '';
       setData(result);
       setFetchError(null);
       setErrorDismissed(false);
@@ -249,6 +261,12 @@ export function VisitBoard({
 
   const alerts = (
     <>
+      <QueueTruncationBanner
+        truncated={data.queue_truncated}
+        cap={data.queue_cap}
+        className="flex items-center gap-2"
+      />
+
       {data.stale_count > 0 && (
         <div className={deskCalloutClass('warn', 'flex items-center gap-2')} role="status" aria-live="polite">
           <Clock className="h-4 w-4 shrink-0" aria-hidden="true" />

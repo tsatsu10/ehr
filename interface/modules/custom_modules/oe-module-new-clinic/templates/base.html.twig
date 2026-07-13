@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ lang_code|default('en') }}">
 <head>
     <meta charset="UTF-8">
     <title>{{ page_title|xlt }}</title>
@@ -19,7 +19,9 @@
      data-ajax-url="{{ ajax_url }}"
      data-csrf-token="{{ csrf_token }}"
      data-facility-id="{{ desk_facility_id }}"
-     data-queue-poll-ms="{{ queue_poll_ms|default(30000) }}">
+     data-queue-poll-ms="{{ queue_poll_ms|default(30000) }}"
+     data-lang-code="{{ lang_code|default('en') }}"
+     data-i18n-url="{{ i18n_url|default('')|attr }}">
 
     {% if not shell_minimal|default(false) %}
     <div class="nc-sidebar-backdrop" id="nc-sidebar-backdrop" hidden aria-hidden="true"></div>

@@ -48,6 +48,7 @@ export function useDoctorDeskQueue({
 }: UseDoctorDeskQueueOptions) {
   const [cards, setCards] = useState<DoctorQueueCard[]>([]);
   const [counts, setCounts] = useState<DoctorQueueData['counts'] | null>(null);
+  const [queueTruncated, setQueueTruncated] = useState(false);
   const [visitDate, setVisitDate] = useState<string | null>(null);
   const [doneToday, setDoneToday] = useState<DoctorQueueData['done_today']>([]);
   const [reopenableToday, setReopenableToday] = useState<DoctorQueueData['reopenable_today']>([]);
@@ -57,12 +58,19 @@ export function useDoctorDeskQueue({
   const [queueError, setQueueError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [queueRefreshToken, setQueueRefreshToken] = useState(0);
+  // SCALE-1.7 — the roster (doctor.roster) refetches when this token changes. It
+  // used to bump every queue poll, so the roster was re-fetched every 10–30 s even
+  // though it changes rarely. Bump only every Nth poll; the roster still loads on
+  // mount (its own effect) and updates locally on toggle.
+  const rosterRefreshEveryNPolls = 5;
+  const queuePollCountRef = useRef(0);
   const [myUserId, setMyUserId] = useState(0);
   const [requireOverrideReason, setRequireOverrideReason] = useState(false);
   const [advisoryEnabled, setAdvisoryEnabled] = useState(advisoryRoutingEnabled);
   const [canTakeAssignedOverride, setCanTakeAssignedOverride] = useState(false);
 
   const queueSeq = useRef(0);
+  const revisionRef = useRef('');
   const resultsReadyRef = useRef<Record<number, boolean>>({});
   const resultsReadyBaselinedRef = useRef(false);
 
@@ -74,10 +82,27 @@ export function useDoctorDeskQueue({
       const data = await oeFetch<DoctorQueueData>('doctor.queue', {
         ajaxUrl,
         csrfToken,
-        params: { scope, ...(facilityParams ?? {}) },
+        // SCALE-1.8 — send our last revision so an unchanged queue skips the re-render.
+        params: {
+          scope,
+          ...(facilityParams ?? {}),
+          ...(revisionRef.current ? { known_revision: revisionRef.current } : {}),
+        },
       });
 
       if (token !== queueSeq.current) return;
+      if (data.unchanged) {
+        // Nothing changed — skip the queue re-render, but still advance the roster
+        // counter so the roster keeps refreshing even during an idle queue.
+        setQueueError(null);
+        setLastUpdated(new Date());
+        queuePollCountRef.current += 1;
+        if (queuePollCountRef.current % rosterRefreshEveryNPolls === 0) {
+          setQueueRefreshToken((prev) => prev + 1);
+        }
+        return;
+      }
+      revisionRef.current = data.revision ?? '';
 
       const merged = [
         ...(data.visits ?? []),
@@ -85,6 +110,7 @@ export function useDoctorDeskQueue({
       ];
       setCards(merged);
       setCounts(data.counts ?? null);
+      setQueueTruncated(!!data.queue_truncated);
       setVisitDate(data.visit_date ?? null);
       setDoneToday(data.done_today ?? []);
       setReopenableToday(data.reopenable_today ?? []);
@@ -103,7 +129,10 @@ export function useDoctorDeskQueue({
       }
       setQueueError(null);
       setLastUpdated(new Date());
-      setQueueRefreshToken((prev) => prev + 1);
+      queuePollCountRef.current += 1;
+      if (queuePollCountRef.current % rosterRefreshEveryNPolls === 0) {
+        setQueueRefreshToken((prev) => prev + 1);
+      }
 
       const activeConsult = data.active_consult;
 
@@ -209,6 +238,7 @@ export function useDoctorDeskQueue({
   return {
     cards,
     counts,
+    queueTruncated,
     visitDate,
     doneToday,
     reopenableToday,

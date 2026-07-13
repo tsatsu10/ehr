@@ -1,7 +1,12 @@
 import type { ApiRegistryFilters } from './registryTypes';
 import type { RegistrySortKey } from './registryQueryOptions';
+import { pollExportJobToDownload } from '@core/exportJobPolling';
 
-/** POST cohort.export and trigger a CSV download (non-JSON response). */
+/**
+ * POST cohort.export and download the CSV. Small cohorts come back as a direct CSV
+ * (sync); large cohorts (SCALE-2.2) come back as JSON `{ mode:'async', job_id }` —
+ * built by the background worker — so we poll for completion and then download.
+ */
 export async function exportRegistryCsv(
   ajaxUrl: string,
   csrfToken: string,
@@ -23,6 +28,24 @@ export async function exportRegistryCsv(
   });
 
   const contentType = response.headers.get('Content-Type') ?? '';
+
+  // Large cohort → deferred to the worker; poll then download.
+  if (response.ok && contentType.includes('application/json')) {
+    const payload = (await response.json()) as {
+      success?: boolean;
+      message?: string;
+      data?: { mode?: string; job_id?: number };
+    };
+    if (payload.data?.mode === 'async' && payload.data.job_id) {
+      await pollExportJobToDownload(ajaxUrl, csrfToken, payload.data.job_id, {
+        statusAction: 'cohort.export_status',
+        downloadAction: 'cohort.export_download',
+      });
+      return;
+    }
+    throw new Error(payload.message || 'Export failed');
+  }
+
   if (!response.ok || !contentType.includes('text/csv')) {
     let message = 'Export failed';
     try {

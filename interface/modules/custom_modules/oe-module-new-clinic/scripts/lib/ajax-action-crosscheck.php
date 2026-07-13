@@ -22,6 +22,8 @@ function moduleVerifyAjaxActionCallerAllowlist(): array
         'health' => 'infrastructure probe',
         'visit.transition' => 'deprecated tombstone (HTTP 410)',
         'queue_bridge.eod_export' => 'server-built download href, not oeFetch',
+        'cohort.export_status' => 'SCALE-2.2 export-job poll via shared pollExportJobToDownload helper (dynamic action arg)',
+        'cohort.export_download' => 'SCALE-2.2 export-job download via shared pollExportJobToDownload helper (dynamic action arg)',
         // Documented APIs not yet wired to a static caller (inventory — do not add new entries casually).
         'clinical_doc.sign_status' => 'poll API in PRD; hub reads sign_status via visit_summary until poll ships',
         'doctor.routing.reassign' => 'visit-board reassignment API; V1 desks use visit.hard_assign instead',

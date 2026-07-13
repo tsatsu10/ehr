@@ -164,6 +164,81 @@ class SchedulingRecallsService
         );
     }
 
+    /**
+     * A5/G5 — "Flag for follow-up" from the patient chart. Creates a recall of
+     * type `follow_up` so it lands in the existing S1 Recalls worklist rather
+     * than a parallel follow-up store. Same write ACL as every other recall
+     * (assertHubAccess + canBookAppointment); the chart only shows the entry
+     * point when both hold. Provider defaults to the patient's assigned provider,
+     * falling back to the acting user, so `r_provider` is always populated.
+     *
+     * @return array<string, mixed>
+     */
+    public function flagFollowUp(int $pid, string $dueDate, string $reason, int $actorUserId): array
+    {
+        $this->access->assertHubAccess();
+        if (!$this->access->canBookAppointment()) {
+            throw new \RuntimeException('Recall write permission denied', 403);
+        }
+
+        if ($pid <= 0) {
+            throw new \InvalidArgumentException('Patient is required');
+        }
+        $dueDate = trim($dueDate);
+        if (
+            $dueDate === ''
+            || !preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $dueDate, $dateParts)
+            || !checkdate((int) $dateParts[2], (int) $dateParts[3], (int) $dateParts[1])
+        ) {
+            throw new \InvalidArgumentException('Valid due date is required');
+        }
+        $reason = trim($reason);
+        if ($reason === '') {
+            $reason = 'Follow-up';
+        }
+        $reason = mb_substr($reason, 0, 255);
+
+        $facilityId = $this->visitScope->resolveDeskFacilityId();
+        $providerId = $this->resolveFollowUpProvider($pid, $actorUserId);
+        if ($providerId <= 0) {
+            throw new \RuntimeException('No provider available to own the follow-up', 400);
+        }
+
+        QueryUtils::sqlStatementThrowException(
+            'INSERT INTO medex_recalls (r_PRACTID, r_pid, r_reason, r_eventDate, r_provider, r_facility)
+             VALUES (0, ?, ?, ?, ?, ?)',
+            [$pid, $reason, $dueDate, $providerId, $facilityId],
+        );
+        $row = QueryUtils::querySingleRow(
+            'SELECT r_ID FROM medex_recalls WHERE r_pid = ? ORDER BY r_ID DESC LIMIT 1',
+            [$pid],
+        );
+        $recallId = (int) ($row['r_ID'] ?? 0);
+        if ($recallId <= 0) {
+            throw new \RuntimeException('Failed to create follow-up');
+        }
+
+        $this->upsertMeta($recallId, 'open', null, $actorUserId, 'follow_up');
+
+        return [
+            'recall_id' => $recallId,
+            'pid' => $pid,
+            'due_date' => $dueDate,
+            'reason' => $reason,
+        ];
+    }
+
+    private function resolveFollowUpProvider(int $pid, int $actorUserId): int
+    {
+        $row = QueryUtils::querySingleRow('SELECT providerID FROM patient_data WHERE pid = ?', [$pid]);
+        $providerId = is_array($row) ? (int) ($row['providerID'] ?? 0) : 0;
+        if ($providerId > 0) {
+            return $providerId;
+        }
+
+        return $actorUserId > 0 ? $actorUserId : 0;
+    }
+
     public function deleteRecall(int $recallId, int $actorUserId): void
     {
         $this->access->assertHubAccess();

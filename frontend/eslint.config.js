@@ -43,5 +43,30 @@ export default tseslint.config(
     rules: {
       'react-hooks/set-state-in-effect': 'off',
     },
+  },
+  {
+    /*
+     * D1 i18n fence: islands migrated to t() must not regress to raw JSX
+     * text. Add each island directory here as its desk-by-desk migration
+     * lands (see the gap-analysis plan, D1). ignoreProps stays true —
+     * className/variant/etc. would drown the signal; label-ish props are
+     * covered by review + the extraction inventory, not this rule.
+     */
+    files: [
+      'src/islands/office-notes/**/*.{ts,tsx}',
+      'src/islands/proc-order/**/*.{ts,tsx}',
+      'src/islands/my-profile/**/*.{ts,tsx}',
+    ],
+    ignores: ['**/*.test.{ts,tsx}'],
+    rules: {
+      'react/jsx-no-literals': [
+        'error',
+        {
+          noStrings: true,
+          ignoreProps: true,
+          allowedStrings: ['…', '—', '–', '·', '•', '×', '/', ':', '%', '(', ')', '@'],
+        },
+      ],
+    },
   }
 );

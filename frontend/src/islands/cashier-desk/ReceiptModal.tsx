@@ -57,8 +57,12 @@ export function ReceiptModal({ open, preview, receipt, historyUrl, onClose }: Re
               <strong>{identity.display_name}</strong>
               <br />
               {receipt.receipt_number ? <>Receipt #{receipt.receipt_number}<br /></> : null}
-              Queue #{receipt.queue_number}
-              <br />
+              {receipt.show_queue_number !== false ? (
+                <>
+                  Queue #{receipt.queue_number}
+                  <br />
+                </>
+              ) : null}
               {receipt.payment_method_label ? (
                 <>
                   Method: {receipt.payment_method_label}

@@ -9,6 +9,10 @@ export interface NcPageContext {
   csrfToken: string;
   facilityId: string | null;
   queuePollMs: number;
+  /** Two-letter core language code for the session user ('en' default). */
+  langCode: string;
+  /** Locale dictionary URL — empty for English or when no dictionary ships. */
+  i18nUrl: string;
 }
 
 /** @deprecated Use {@link NcPageContext} */
@@ -22,6 +26,8 @@ export function readPageContext(root: HTMLElement = document.body): NcPageContex
     csrfToken: shell.dataset.csrfToken ?? '',
     facilityId: shell.dataset.facilityId ?? null,
     queuePollMs: Number.parseInt(shell.dataset.queuePollMs ?? '30000', 10),
+    langCode: shell.dataset.langCode?.trim() || 'en',
+    i18nUrl: shell.dataset.i18nUrl?.trim() ?? '',
   };
 }
 

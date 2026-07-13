@@ -90,14 +90,43 @@ class ReportHubExportServiceTest extends TestCase
         ], 1);
     }
 
+    private function rawConfigRow(string $key, int $facilityId): ?string
+    {
+        $row = sqlQuery(
+            'SELECT config_value FROM new_clinic_config WHERE facility_id = ? AND config_key = ?',
+            [$facilityId, $key]
+        );
+
+        return is_array($row) && array_key_exists('config_value', $row)
+            ? (string) $row['config_value']
+            : null;
+    }
+
     public function testRequestExportReturnsAsyncWhenAboveThreshold(): void
     {
         $config = new ClinicConfigService();
         $prevHub = $config->get('enable_report_hub', '0', 0);
         $prevThreshold = $config->get('report_hub_async_export_threshold', '1000', 0);
+        // A facility-scoped row wins over the global row when the service resolves
+        // the reader's facility (an Admin Hub facility-scope save mirrors every
+        // setting there), so the resolved facility must be pinned too or this test
+        // silently reads someone else's saved threshold.
+        $readerFacilityId = $config->resolveReaderFacilityId();
+        $prevFacilityHub = null;
+        $prevFacilityThreshold = null;
+        if ($readerFacilityId > 0) {
+            // Raw row reads: ClinicConfigService::get() falls back to the global row,
+            // which would make a missing facility row indistinguishable from a real one.
+            $prevFacilityHub = $this->rawConfigRow('enable_report_hub', $readerFacilityId);
+            $prevFacilityThreshold = $this->rawConfigRow('report_hub_async_export_threshold', $readerFacilityId);
+        }
         try {
             $config->set('enable_report_hub', '1', 0);
             $config->set('report_hub_async_export_threshold', '10', 0);
+            if ($readerFacilityId > 0) {
+                $config->set('enable_report_hub', '1', $readerFacilityId);
+                $config->set('report_hub_async_export_threshold', '10', $readerFacilityId);
+            }
 
         $access = new ReportHubAccessService(
             config: $config,
@@ -137,6 +166,21 @@ class ReportHubExportServiceTest extends TestCase
         } finally {
             $config->set('enable_report_hub', (string) $prevHub, 0);
             $config->set('report_hub_async_export_threshold', (string) $prevThreshold, 0);
+            if ($readerFacilityId > 0) {
+                foreach ([
+                    'enable_report_hub' => $prevFacilityHub,
+                    'report_hub_async_export_threshold' => $prevFacilityThreshold,
+                ] as $key => $prev) {
+                    if ($prev !== null) {
+                        $config->set($key, $prev, $readerFacilityId);
+                    } else {
+                        sqlStatement(
+                            'DELETE FROM new_clinic_config WHERE facility_id = ? AND config_key = ?',
+                            [$readerFacilityId, $key]
+                        );
+                    }
+                }
+            }
         }
     }
 

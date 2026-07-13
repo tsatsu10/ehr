@@ -52,9 +52,11 @@ class CashierService
                 LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
                 WHERE v.facility_id = ?
                 AND v.state = 'ready_for_payment'
-                ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC";
+                ORDER BY v.is_urgent DESC, v.visit_date ASC, v.queue_number ASC, v.started_at ASC"
+                . QueueLimits::limitClause(QueueLimits::QUEUE_HARD_CAP);
 
         $rows = QueryUtils::fetchRecords($sql, [$facilityId]) ?: [];
+        [$rows, $queueTruncated] = QueueLimits::applyCap($rows, QueueLimits::QUEUE_HARD_CAP);
         $visits = array_map(function (array $row): array {
             $enriched = $row;
             $enriched['charges_total'] = round((float) ($row['charges_total'] ?? 0), 2);
@@ -67,6 +69,8 @@ class CashierService
 
         return [
             'visits' => $visits,
+            'queue_truncated' => $queueTruncated,
+            'queue_cap' => QueueLimits::QUEUE_HARD_CAP,
             'counts' => [
                 'waiting' => count($visits),
                 'paid_today' => count($doneToday),
@@ -455,6 +459,11 @@ class CashierService
         $changeDue = round($amountReceived - $totalDue, 2);
         $receipt = array_merge([
             'queue_number' => (int) ($visit['queue_number'] ?? 0),
+            'show_queue_number' => $this->configService->getInt(
+                'print_queue_number_on_receipt',
+                1,
+                (int) ($visit['facility_id'] ?? 0)
+            ) === 1,
             'amount_paid' => $totalDue,
             'change_due' => $changeDue,
             'paid_at' => date('c'),

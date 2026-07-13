@@ -41,7 +41,8 @@ final class SchedulingActionHandler implements AjaxActionHandlerInterface
         'scheduling.recalls.delete',
         'scheduling.recalls.update_status',
         'scheduling.recalls.snooze',
-        'scheduling.recalls.send_reminder'
+        'scheduling.recalls.send_reminder',
+        'scheduling.recalls.flag_follow_up'
     ];
 
     public function __construct(
@@ -380,6 +381,31 @@ final class SchedulingActionHandler implements AjaxActionHandlerInterface
                     try {
                         $result = $this->host->svc(SchedulingRecallsService::class)->sendRecallReminder(
                             (int) ($body['recall_id'] ?? 0),
+                            $userId,
+                        );
+                        $this->host->respond(true, 'ok', $result);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.recalls.flag_follow_up':
+                    if ($method !== 'POST') {
+                        $this->host->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->host->readJsonBody();
+                    $this->host->verifyCsrf($body);
+                    $pid = (int) ($body['pid'] ?? 0);
+                    // Confirm the target patient is accessible in the user's facility
+                    // scope before writing a recall for them (same guard every
+                    // chart-depth write uses); 404s otherwise.
+                    $this->host->assertPatientChartPid($pid);
+                    try {
+                        $result = $this->host->svc(SchedulingRecallsService::class)->flagFollowUp(
+                            $pid,
+                            (string) ($body['due_date'] ?? ''),
+                            (string) ($body['reason'] ?? ''),
                             $userId,
                         );
                         $this->host->respond(true, 'ok', $result);

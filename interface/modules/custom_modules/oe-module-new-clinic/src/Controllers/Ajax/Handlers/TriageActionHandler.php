@@ -53,7 +53,7 @@ final class TriageActionHandler implements AjaxActionHandlerInterface
                     $userId
                 );
                 $queue = $this->host->enrichQueuePayload($queue, $userId, $facilityId);
-                $this->host->respond(true, 'ok', $queue);
+                $this->host->respondQueue($queue); // SCALE-1.8 delta poll
                 break;
             case 'triage.select':
                 if ($method !== 'POST') {

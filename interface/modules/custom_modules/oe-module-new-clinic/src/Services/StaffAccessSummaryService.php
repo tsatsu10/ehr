@@ -79,8 +79,22 @@ class StaffAccessSummaryService
             'role_template' => $template,
             'desk_apps' => $desks,
             'sensitive_acos' => $sensitive,
+            // A6b (G11) — read-only MFA-enrolled status so leads can chase stragglers.
+            // Any registered method counts (TOTP or U2F); read-only here, enrollment
+            // is self-service only (my-profile).
+            'mfa_enabled' => $this->hasMfa($userId),
             'warnings' => $hasClinicDesk ? [] : ['No clinic desk access — assign a role template or group.'],
             'legacy_acl_url' => 'acl',
         ];
+    }
+
+    private function hasMfa(int $userId): bool
+    {
+        $row = QueryUtils::querySingleRow(
+            'SELECT COUNT(*) AS c FROM login_mfa_registrations WHERE user_id = ?',
+            [$userId]
+        );
+
+        return is_array($row) && (int) ($row['c'] ?? 0) > 0;
     }
 }

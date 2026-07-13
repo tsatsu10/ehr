@@ -1,0 +1,5 @@
+/* Outreach island (GAP-B B1). Layout leans on shared admin-hub section styles;
+   only island-specific tweaks live here. */
+.nc-outreach {
+  max-width: var(--oe-nc-content-max, 90rem);
+}

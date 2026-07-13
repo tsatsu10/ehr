@@ -12,6 +12,7 @@ import { setDeskActiveVisitId, clearDeskActiveVisitId } from '@core/deskSessionS
 import { useSharedDeviceSession } from '@core/useSharedDeviceSession';
 import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
+import { QueueTruncationBanner } from '@components/QueueTruncationBanner';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
 import { EsignOverrideModal } from '@components/EsignOverrideModal';
 import { SkipToPaymentModal } from '@components/SkipToPaymentModal';
@@ -64,6 +65,7 @@ export function LabDesk({
   canEsignOverride = false,
 }: LabDeskProps) {
   const [cards, setCards] = useState<LabQueueCard[]>([]);
+  const [queueTruncated, setQueueTruncated] = useState(false);
   const [counts, setCounts] = useState<LabQueueData['counts'] | null>(null);
   const [visitDate, setVisitDate] = useState<string | null>(null);
   const [hasActiveWork, setHasActiveWork] = useState(false);
@@ -86,6 +88,7 @@ export function LabDesk({
   const narrowDesk = useNarrowLabDesk();
 
   const queueSeq = useRef(0);
+  const revisionRef = useRef('');
   const activeVisitIdRef = useRef<number | null>(null);
   const activeWorkStateRef = useRef<LabSelectData['visit']['state'] | null>(null);
   const hasActiveWorkRef = useRef(false);
@@ -147,10 +150,19 @@ export function LabDesk({
       const data = await oeFetch<LabQueueData>('lab.queue', {
         ajaxUrl,
         csrfToken,
-        params: facilityParams,
+        // SCALE-1.8 — send our last revision so an unchanged queue skips the re-render.
+        params: revisionRef.current
+          ? { ...facilityParams, known_revision: revisionRef.current }
+          : facilityParams,
       });
 
       if (token !== queueSeq.current) return;
+      if (data.unchanged) {
+        setQueueError(null);
+        setLastUpdated(new Date());
+        return;
+      }
+      revisionRef.current = data.revision ?? '';
 
       const merged = [
         ...(data.visits ?? []),
@@ -158,6 +170,7 @@ export function LabDesk({
       ];
       setCards(merged);
       setCounts(data.counts ?? null);
+      setQueueTruncated(!!data.queue_truncated);
       setVisitDate(data.visit_date ?? null);
       setHasActiveWork(!!data.has_active_work);
       hasActiveWorkRef.current = !!data.has_active_work;
@@ -458,6 +471,8 @@ export function LabDesk({
           onReturnToQueue={sharedSession.returnToQueue}
         />
       )}
+
+      <QueueTruncationBanner truncated={queueTruncated} cap={200} />
 
       <DeskQueueStatusBar
         id="nc-lab-status-bar"

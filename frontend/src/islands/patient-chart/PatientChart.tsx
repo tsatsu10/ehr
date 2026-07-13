@@ -1,18 +1,29 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  CalendarClock,
   ClipboardList,
   Download,
   LayoutGrid,
+  Printer,
 } from 'lucide-react';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { SegmentedControl } from '@components/SegmentedControl';
 import { Button } from '@components/ui/button';
 import { Card, CardContent } from '@components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLinkItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@components/ui/dropdown-menu';
 import { oeFetch } from '@core/oeFetch';
 import { ChartBanner } from './ChartBanner';
 import { ChartInChartSearch } from './ChartInChartSearch';
 import { ClinicalTab } from './ClinicalTab';
 import { DocumentsTab } from './DocumentsTab';
+import { FollowUpFlagModal } from './FollowUpFlagModal';
 import {
   ChartLoadingState,
   ChartShell,
@@ -38,6 +49,7 @@ import {
   type PatientChartProps,
   type PaymentsStripData,
   type RegistrationGetData,
+  type VitalsSeriesData,
 } from './patientChartTypes';
 import { isValidChartTab } from './patientChartUtils';
 import { VisitsTab } from './VisitsTab';
@@ -64,12 +76,18 @@ export function PatientChart({
   registrationMode,
   enableInChartPatientSearch = false,
   enableDocuments = false,
+  enableLabels = false,
+  labelPrintUrl = '',
+  lettersHubUrl = '',
+  canFlagFollowUp = false,
+  enableVitalsTrends = false,
 }: PatientChartProps) {
   const resolvedInitialTab =
     isValidChartTab(initialTab) && (initialTab !== 'documents' || enableDocuments)
       ? initialTab
       : 'overview';
   const [activeTab, setActiveTab] = useState<ChartTabId>(resolvedInitialTab);
+  const [followUpOpen, setFollowUpOpen] = useState(false);
 
   const fetchOptions = useMemo(() => ({ ajaxUrl, csrfToken }), [ajaxUrl, csrfToken]);
 
@@ -104,6 +122,7 @@ export function PatientChart({
   const [referralsStrip, setReferralsStrip] = useState<ClinicalReferralsStrip | null>(null);
   const [labsStrip, setLabsStrip] = useState<ClinicalLabsStrip | null>(null);
   const [medsStrip, setMedsStrip] = useState<ClinicalMedsStrip | null>(null);
+  const [vitalsSeries, setVitalsSeries] = useState<VitalsSeriesData | null>(null);
 
   const [messagesData, setMessagesData] = useState<ChartMessagesData | null>(null);
   const [messagesLoaded, setMessagesLoaded] = useState(false);
@@ -237,7 +256,7 @@ export function PatientChart({
 
       const baseParams = { pid, ...encParam };
 
-      const [refs, labs, meds] = await Promise.all([
+      const [refs, labs, meds, vitals] = await Promise.all([
         oeFetch<ClinicalReferralsStrip>('mrd.clinical_referrals_strip', {
           ...fetchOptions,
           params: baseParams,
@@ -250,13 +269,22 @@ export function PatientChart({
           ...fetchOptions,
           params: baseParams,
         }).catch(() => null),
+        // Vitals trends are pid-scoped (longitudinal, not per-encounter) and only
+        // fetched when the clinic enabled the feature — no wasted request when off.
+        enableVitalsTrends
+          ? oeFetch<VitalsSeriesData>('mrd.clinical_vitals_series', {
+              ...fetchOptions,
+              params: { pid },
+            }).catch(() => null)
+          : Promise.resolve(null),
       ]);
 
       if (refs) setReferralsStrip(refs);
       if (labs) setLabsStrip(labs);
       if (meds) setMedsStrip(meds);
+      if (vitals) setVitalsSeries(vitals);
     },
-    [fetchOptions, pid]
+    [enableVitalsTrends, fetchOptions, pid]
   );
 
   const loadClinical = useCallback(async () => {
@@ -502,12 +530,60 @@ export function PatientChart({
               subtitle="Patient chart · overview, profile, visits, and clinical summary"
               actions={(
                 <>
+                  {enableLabels && (labelPrintUrl || lettersHubUrl) && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" aria-label="Print or write letter">
+                          <Printer className="mr-1.5 h-4 w-4" aria-hidden />
+                          Print / Letters
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {lettersHubUrl && (
+                          <DropdownMenuLinkItem href={lettersHubUrl}>
+                            Referral letter…
+                          </DropdownMenuLinkItem>
+                        )}
+                        {lettersHubUrl && labelPrintUrl && <DropdownMenuSeparator />}
+                        {labelPrintUrl &&
+                          ([
+                            ['chart', 'Chart label (name, DOB, MRN)'],
+                            ['address', 'Address label'],
+                            ['barcode', 'MRN barcode label'],
+                          ] as const).map(([type, label]) => (
+                            <DropdownMenuItem
+                              key={type}
+                              onSelect={() => {
+                                window.open(
+                                  `${labelPrintUrl}?pid=${pid}&type=${type}&print=1`,
+                                  '_blank',
+                                  'noopener,noreferrer'
+                                );
+                              }}
+                            >
+                              {label}
+                            </DropdownMenuItem>
+                          ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                   {exportChartUrl && (
                     <Button variant="outline" size="sm" asChild>
                       <a href={exportChartUrl} target="_top">
                         <Download className="mr-1.5 h-4 w-4" aria-hidden />
                         Export
                       </a>
+                    </Button>
+                  )}
+                  {canFlagFollowUp && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      id="nc-chart-flag-followup"
+                      onClick={() => setFollowUpOpen(true)}
+                    >
+                      <CalendarClock className="mr-1.5 h-4 w-4" aria-hidden />
+                      Flag for follow-up
                     </Button>
                   )}
                   <Button variant="outline" size="sm" asChild>
@@ -525,6 +601,16 @@ export function PatientChart({
                 </>
               )}
             />
+
+            {canFlagFollowUp && (
+              <FollowUpFlagModal
+                open={followUpOpen}
+                ajaxUrl={ajaxUrl}
+                csrfToken={csrfToken}
+                pid={pid}
+                onClose={() => setFollowUpOpen(false)}
+              />
+            )}
 
             <div id="nc-chart-banner">
               {previewLoading && !preview && <ChartLoadingState label="Loading patient…" />}
@@ -609,10 +695,15 @@ export function PatientChart({
                   referralsStrip={referralsStrip}
                   labsStrip={labsStrip}
                   medsStrip={medsStrip}
+                  vitalsSeries={vitalsSeries}
                   loading={clinicalLoading && !clinicalData}
                   error={clinicalError}
                   clinicalAnchor={pendingClinicalAnchor || clinicalAnchor}
                   onScrollToAnchor={scrollToClinicalAnchor}
+                  pid={pid}
+                  ajaxUrl={ajaxUrl}
+                  csrfToken={csrfToken}
+                  onRefresh={() => { void loadClinical(); }}
                 />
               </ChartTabPanel>
 

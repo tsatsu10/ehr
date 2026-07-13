@@ -29,6 +29,7 @@ class ClinicalDocFormOpenService
         private readonly EncounterIdentityStripService $identityStrip = new EncounterIdentityStripService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
         private readonly EncounterNoteService $encounterNote = new EncounterNoteService(),
+        private readonly ProcedureOrderEnginePolicy $procOrderPolicy = new ProcedureOrderEnginePolicy(),
     ) {
     }
 
@@ -89,6 +90,40 @@ class ClinicalDocFormOpenService
 
         if ($action === 'edit' && $formId > 0) {
             $this->assertFormInstanceOnEncounter($formId, $encounter, $pid, $canonicalFormdir);
+        }
+
+        if ($this->procOrderPolicy->shouldOpenNativeProcOrder($canonicalFormdir, $facilityId)) {
+            $webroot = $GLOBALS['webroot'] ?? '';
+            $modulePublic = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
+            $returnTo = strtolower(trim((string) ($body['return_to'] ?? 'hub')));
+            $returnTab = $lens !== '' ? $lens : 'visit';
+            $query = [
+                'visit_id' => (string) $visitId,
+                'return_to' => $returnTo,
+                'tab' => $returnTab,
+            ];
+            if ($action === 'edit' && $formId > 0) {
+                $query['form_id'] = (string) $formId;
+            }
+            $redirectUrl = $modulePublic . 'proc-order.php?' . http_build_query($query);
+            $returnUrl = $returnTo === 'doctor'
+                ? $modulePublic . 'doctor.php'
+                : $modulePublic . 'clinical-doc/index.php?visit_id=' . urlencode((string) $visitId)
+                    . '&tab=' . urlencode($returnTab);
+            $this->identityStrip->markFromShortcut($visitId, 'doctor', 'form:procedure_order');
+            if (isset($_SESSION[EncounterIdentityStripService::SESSION_KEY]) && is_array($_SESSION[EncounterIdentityStripService::SESSION_KEY])) {
+                $_SESSION[EncounterIdentityStripService::SESSION_KEY]['back_url'] = $returnUrl;
+                $_SESSION[EncounterIdentityStripService::SESSION_KEY]['desk_label'] = $returnTo === 'doctor'
+                    ? xl('Doctor Desk')
+                    : $this->deskLabelForLens($sourceLens);
+            }
+            $this->recordFormOpen($facilityId, $visitId, $encounter, 'procedure_order', $formId > 0 ? $formId : null, $actorUserId, 'open');
+
+            return [
+                'redirect_url' => $redirectUrl,
+                'formdir' => 'procedure_order',
+                'action' => $action,
+            ];
         }
 
         if ($this->encounterNote->shouldOpenNativeForm($canonicalFormdir, $facilityId)) {

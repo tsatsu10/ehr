@@ -32,7 +32,8 @@
         labResultsToastEnabled: lab_results_toast_enabled ? true : false,
         canRxAllergyOverride:     can_rx_allergy_override ? true : false,
         currencyFormat:        currency_format|default({}),
-        pollMs:                queue_poll_ms|default(30000)
+        pollMs:                queue_poll_ms|default(30000),
+        patientEducationResources: patient_education_resources|default([])
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}

@@ -66,8 +66,12 @@ export function ReprintReceiptModal({
               <br />
               Receipt #{receipt.receipt_number}
               <br />
-              Queue #{receipt.queue_number ?? '—'}
-              <br />
+              {receipt.show_queue_number !== false ? (
+                <>
+                  Queue #{receipt.queue_number ?? '—'}
+                  <br />
+                </>
+              ) : null}
               Paid: {formatChartMoney(receipt.amount_paid)}
               <br />
               Change: {formatChartMoney(receipt.change_due)}

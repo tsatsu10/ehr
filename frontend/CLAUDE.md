@@ -25,3 +25,18 @@ files under `frontend/`. Repo-wide guidance stays in the root `CLAUDE.md`.
   `prefers-reduced-motion` guard; Lucide icons in React (no emojis as icons).
 - Every island has `*.test.tsx`; TS strict, no `any` without a justifying comment; no
   `console.log`; no business logic in components (PHP enforces ACL, services compute).
+- **i18n (D1):** migrated islands route every UI string through `t()` from `@core/i18n` —
+  literal English as the key (`t('Save')`), `{param}` interpolation (`t('Hi {name}', {name})`,
+  NEVER template literals inside `t()`). **No module-scope `t()`** — the dictionary loads after
+  import; make label constants render-time functions (see `officeNoteFilters()`). After adding
+  strings run `npm run i18n:extract` (the `i18n:check` gate in `npm run check` fails otherwise).
+  When migrating an island, add its dir to the `react/jsx-no-literals` block in
+  `eslint.config.js`. Migrated so far: office-notes, proc-order, my-profile.
+- **De-Bootstrap ratchet (D6):** `npm run bs:check` (in `npm run check`) pins the count of
+  Tailwind-name-colliding BS4 classes (`bg-white`, `border`, `rounded*`, `text-*`, …) in
+  `frontend/src` via `scripts/bs-collision-baseline.json` and fails if any **increases** — so never
+  add one; use a token arbitrary value (`bg-[var(--oe-nc-surface)]`) or an `nc-` BEM rule. When you
+  migrate usages away, run `npm run bs:baseline` to lower the pin. **D6's wholesale theme cutover
+  (`enable_debootstrap_shell`) is DEFERRED by decision** — the module borrows FontAwesome icons + base
+  font from the core theme, so dropping it needs a base-layer rebuild first; the actual bug is already
+  fixed + guarded, so it isn't worth it. Don't re-attempt the cutover without the base-layer work.

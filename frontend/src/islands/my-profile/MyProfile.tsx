@@ -3,10 +3,12 @@ import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
+import { t } from '@core/i18n';
 import { oeFetch } from '@core/oeFetch';
 import { AdminEmptyState, AdminLoadingState, AdminSection } from '@islands/admin-hub/adminUi';
 import { KeyRound, Shield, UserRound } from 'lucide-react';
 import type { MyProfileData, MyProfileProps } from './myProfileTypes';
+import { MfaSecuritySection } from './MfaSecuritySection';
 import { profileAccentClass } from './myProfileUi';
 
 function PasswordFields({
@@ -37,10 +39,9 @@ function PasswordFields({
   if (!profile.can_change_password) {
     return (
       <div className="nc-my-profile-password-block">
-        <h3 className="nc-my-profile-subheading">Password</h3>
+        <h3 className="nc-my-profile-subheading">{t('Password')}</h3>
         <p className="nc-my-profile-hint mb-0">
-          Your organization manages sign-in through Active Directory. Contact IT if you need to
-          reset your directory password.
+          {t('Your organization manages sign-in through Active Directory. Contact IT if you need to reset your directory password.')}
         </p>
       </div>
     );
@@ -50,16 +51,16 @@ function PasswordFields({
     <div className="nc-my-profile-password-block">
       <h3 className="nc-my-profile-subheading">
         <KeyRound className="h-4 w-4" aria-hidden="true" />
-        Password
+        {t('Password')}
       </h3>
       <p className="nc-my-profile-hint">
         {profile.secure_password
-          ? 'Strong password required by clinic policy.'
-          : 'Update your sign-in password.'}
+          ? t('Strong password required by clinic policy.')
+          : t('Update your sign-in password.')}
       </p>
       <div className="nc-my-profile-form-grid mt-3">
         <div className="nc-my-profile-span-2">
-          <Label htmlFor="profile-cur-pass">Current password</Label>
+          <Label htmlFor="profile-cur-pass">{t('Current password')}</Label>
           <Input
             id="profile-cur-pass"
             type="password"
@@ -69,7 +70,7 @@ function PasswordFields({
           />
         </div>
         <div>
-          <Label htmlFor="profile-new-pass">New password</Label>
+          <Label htmlFor="profile-new-pass">{t('New password')}</Label>
           <Input
             id="profile-new-pass"
             type="password"
@@ -79,7 +80,7 @@ function PasswordFields({
           />
         </div>
         <div>
-          <Label htmlFor="profile-confirm-pass">Confirm new password</Label>
+          <Label htmlFor="profile-confirm-pass">{t('Confirm new password')}</Label>
           <Input
             id="profile-confirm-pass"
             type="password"
@@ -91,7 +92,7 @@ function PasswordFields({
       </div>
       <div className="nc-my-profile-actions mt-4">
         <Button type="button" size="sm" disabled={savingPassword} onClick={onSave}>
-          {savingPassword ? 'Updating…' : 'Update password'}
+          {savingPassword ? t('Updating…') : t('Update password')}
         </Button>
         {passwordMessage && (
           <p className="nc-my-profile-message nc-my-profile-message--ok">{passwordMessage}</p>
@@ -132,7 +133,7 @@ export function MyProfile({ ajaxUrl, csrfToken, forcePasswordChange }: MyProfile
         email: data.email,
       });
     } catch (err) {
-      setDetailsError(err instanceof Error ? err.message : 'Could not load profile');
+      setDetailsError(err instanceof Error ? err.message : t('Could not load profile'));
     } finally {
       setLoading(false);
     }
@@ -152,9 +153,9 @@ export function MyProfile({ ajaxUrl, csrfToken, forcePasswordChange }: MyProfile
         json: form,
       });
       setProfile(data);
-      setDetailsMessage('Profile saved');
+      setDetailsMessage(t('Profile saved'));
     } catch (err) {
-      setDetailsError(err instanceof Error ? err.message : 'Save failed');
+      setDetailsError(err instanceof Error ? err.message : t('Save failed'));
     } finally {
       setSavingDetails(false);
     }
@@ -164,7 +165,7 @@ export function MyProfile({ ajaxUrl, csrfToken, forcePasswordChange }: MyProfile
     setPasswordError(null);
     setPasswordMessage(null);
     if (newPassword !== confirmPassword) {
-      setPasswordError('New password and confirmation do not match');
+      setPasswordError(t('New password and confirmation do not match'));
       return;
     }
     setSavingPassword(true);
@@ -176,26 +177,26 @@ export function MyProfile({ ajaxUrl, csrfToken, forcePasswordChange }: MyProfile
           new_password: newPassword,
         },
       });
-      setPasswordMessage('Password updated');
+      setPasswordMessage(t('Password updated'));
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
-      setPasswordError(err instanceof Error ? err.message : 'Password change failed');
+      setPasswordError(err instanceof Error ? err.message : t('Password change failed'));
     } finally {
       setSavingPassword(false);
     }
   };
 
   if (loading) {
-    return <AdminLoadingState label="Loading your profile…" />;
+    return <AdminLoadingState label={t('Loading your profile…')} />;
   }
 
   if (!profile) {
     return (
       <AdminEmptyState
-        title="Profile unavailable"
-        description={detailsError ?? 'Try refreshing the page.'}
+        title={t('Profile unavailable')}
+        description={detailsError ?? t('Try refreshing the page.')}
       />
     );
   }
@@ -206,7 +207,7 @@ export function MyProfile({ ajaxUrl, csrfToken, forcePasswordChange }: MyProfile
     <div className="nc-my-profile space-y-4">
       {forcePasswordChange && (
         <div className="nc-my-profile-message nc-my-profile-message--error" role="alert">
-          You’re using a temporary password. Set a new password below before you can open the clinic desks.
+          {t('You’re using a temporary password. Set a new password below before you can open the clinic desks.')}
         </div>
       )}
       <header className={`nc-my-profile-hero ${accentClass}`}>
@@ -227,13 +228,13 @@ export function MyProfile({ ajaxUrl, csrfToken, forcePasswordChange }: MyProfile
 
       <div className="nc-my-profile-grid">
         <AdminSection
-          title="Account details"
-          description="Name and contact shown on charts, receipts, and audit trails."
+          title={t('Account details')}
+          description={t('Name and contact shown on charts, receipts, and audit trails.')}
           icon={<UserRound className="h-4 w-4" aria-hidden="true" />}
         >
           <div className="nc-my-profile-form-grid">
             <div>
-              <Label htmlFor="profile-fname">First name</Label>
+              <Label htmlFor="profile-fname">{t('First name')}</Label>
               <Input
                 id="profile-fname"
                 value={form.fname}
@@ -241,7 +242,7 @@ export function MyProfile({ ajaxUrl, csrfToken, forcePasswordChange }: MyProfile
               />
             </div>
             <div>
-              <Label htmlFor="profile-lname">Last name</Label>
+              <Label htmlFor="profile-lname">{t('Last name')}</Label>
               <Input
                 id="profile-lname"
                 value={form.lname}
@@ -249,7 +250,7 @@ export function MyProfile({ ajaxUrl, csrfToken, forcePasswordChange }: MyProfile
               />
             </div>
             <div>
-              <Label htmlFor="profile-mname">Middle name</Label>
+              <Label htmlFor="profile-mname">{t('Middle name')}</Label>
               <Input
                 id="profile-mname"
                 value={form.mname}
@@ -257,7 +258,7 @@ export function MyProfile({ ajaxUrl, csrfToken, forcePasswordChange }: MyProfile
               />
             </div>
             <div>
-              <Label htmlFor="profile-email">Email</Label>
+              <Label htmlFor="profile-email">{t('Email')}</Label>
               <Input
                 id="profile-email"
                 type="email"
@@ -267,14 +268,14 @@ export function MyProfile({ ajaxUrl, csrfToken, forcePasswordChange }: MyProfile
               />
             </div>
             <div className="nc-my-profile-span-2">
-              <Label htmlFor="profile-username">Username</Label>
+              <Label htmlFor="profile-username">{t('Username')}</Label>
               <Input id="profile-username" value={profile.username} disabled readOnly />
-              <p className="nc-my-profile-hint mt-1">Username changes require an administrator.</p>
+              <p className="nc-my-profile-hint mt-1">{t('Username changes require an administrator.')}</p>
             </div>
           </div>
           <div className="nc-my-profile-actions mt-4">
             <Button type="button" disabled={savingDetails} onClick={() => { void saveDetails(); }}>
-              {savingDetails ? 'Saving…' : 'Save details'}
+              {savingDetails ? t('Saving…') : t('Save details')}
             </Button>
             {detailsMessage && (
               <p className="nc-my-profile-message nc-my-profile-message--ok">{detailsMessage}</p>
@@ -301,28 +302,28 @@ export function MyProfile({ ajaxUrl, csrfToken, forcePasswordChange }: MyProfile
 
         <div className="nc-my-profile-grid__side space-y-4">
           <AdminSection
-            title="Session & access"
-            description="Your active desk and clinic permissions."
+            title={t('Session & access')}
+            description={t('Your active desk and clinic permissions.')}
             icon={<Shield className="h-4 w-4" aria-hidden="true" />}
             variant="muted"
           >
             <div className="space-y-3">
               <div>
                 <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[var(--oe-nc-text-muted)]">
-                  Active desk
+                  {t('Active desk')}
                 </p>
                 <p className="mb-0 text-sm font-medium text-[var(--oe-nc-text)]">
                   {profile.active_role.desk_label}
                 </p>
                 <p className="nc-my-profile-hint mt-1">
-                  Switch desks from the profile menu in the sidebar on shared devices.
+                  {t('Switch desks from the profile menu in the sidebar on shared devices.')}
                 </p>
               </div>
 
               {profile.role_template_label && (
                 <div>
                   <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[var(--oe-nc-text-muted)]">
-                    Role template
+                    {t('Role template')}
                   </p>
                   <Badge variant="neutral">{profile.role_template_label}</Badge>
                 </div>
@@ -330,7 +331,7 @@ export function MyProfile({ ajaxUrl, csrfToken, forcePasswordChange }: MyProfile
 
               <div>
                 <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[var(--oe-nc-text-muted)]">
-                  Access groups
+                  {t('Access groups')}
                 </p>
                 <div className="nc-my-profile-chip-list">
                   {profile.groups.length > 0 ? (
@@ -340,7 +341,7 @@ export function MyProfile({ ajaxUrl, csrfToken, forcePasswordChange }: MyProfile
                       </span>
                     ))
                   ) : (
-                    <span className="nc-my-profile-hint">No groups assigned</span>
+                    <span className="nc-my-profile-hint">{t('No groups assigned')}</span>
                   )}
                 </div>
               </div>
@@ -348,7 +349,7 @@ export function MyProfile({ ajaxUrl, csrfToken, forcePasswordChange }: MyProfile
               {profile.available_roles.length > 1 && (
                 <div>
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--oe-nc-text-muted)]">
-                    Your desks
+                    {t('Your desks')}
                   </p>
                   <div className="nc-my-profile-role-list">
                     {profile.available_roles.map((role) => (
@@ -357,7 +358,7 @@ export function MyProfile({ ajaxUrl, csrfToken, forcePasswordChange }: MyProfile
                         className={`nc-my-profile-role-row ${profileAccentClass(role.accent)}${role.is_active ? ' is-active' : ''}`}
                       >
                         <span className="text-sm font-medium">{role.desk_label}</span>
-                        {role.is_active ? <Badge>Active</Badge> : null}
+                        {role.is_active ? <Badge>{t('Active')}</Badge> : null}
                       </div>
                     ))}
                   </div>
@@ -365,6 +366,8 @@ export function MyProfile({ ajaxUrl, csrfToken, forcePasswordChange }: MyProfile
               )}
             </div>
           </AdminSection>
+
+          <MfaSecuritySection ajaxUrl={ajaxUrl} csrfToken={csrfToken} />
         </div>
       </div>
     </div>

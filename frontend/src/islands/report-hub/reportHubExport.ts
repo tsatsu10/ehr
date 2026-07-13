@@ -2,8 +2,11 @@ import { oeFetch } from '@core/oeFetch';
 import { localDateString } from '@islands/daily-reports/reportsFormatters';
 
 export const HUB_REPORT_PAGE_SIZE = 25;
-const EXPORT_POLL_ATTEMPTS = 120;
-const EXPORT_POLL_INTERVAL_MS = 500;
+// SCALE-2.1 — exports now complete in a background worker (or a short inline
+// fallback), so the poll is a cheap read. Budget ~150s (150 × 1s) to comfortably
+// cover the worker/fallback without the browser giving up mid-export.
+const EXPORT_POLL_ATTEMPTS = 150;
+const EXPORT_POLL_INTERVAL_MS = 1000;
 
 function triggerCsvDownload(filename: string, blob: Blob): void {
   const url = URL.createObjectURL(blob);

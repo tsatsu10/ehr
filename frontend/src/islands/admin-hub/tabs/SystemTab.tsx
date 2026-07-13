@@ -10,8 +10,12 @@ import { ConfigExportCard } from '../ConfigExportCard';
 import { ConfigImportCard } from '../ConfigImportCard';
 import type { ConfigExportMeta, ConfigImportResult } from '../adminTypes';
 import { AdminStack } from '../adminUi';
+import { AuditLogCard } from '../AuditLogCard';
+import { DuplicatesCard } from '../DuplicatesCard';
 
 interface SystemTabProps {
+  ajaxUrl: string;
+  csrfToken: string;
   health: SystemHealthPayload;
   runbooks: RunbooksPayload;
   setupProgress: SetupProgressPayload;
@@ -40,6 +44,8 @@ interface SystemTabProps {
 }
 
 export function SystemTab({
+  ajaxUrl,
+  csrfToken,
   health,
   runbooks,
   setupProgress,
@@ -78,6 +84,8 @@ export function SystemTab({
         />
       )}
       <SystemHealthBoard
+        ajaxUrl={ajaxUrl}
+        csrfToken={csrfToken}
         health={health}
         reconciliationRunning={reconciliationRunning}
         backupRunning={backupRunning}
@@ -109,6 +117,8 @@ export function SystemTab({
           />
         </>
       )}
+      <DuplicatesCard ajaxUrl={ajaxUrl} csrfToken={csrfToken} enabled={health.duplicate_review_enabled ?? false} />
+      <AuditLogCard ajaxUrl={ajaxUrl} csrfToken={csrfToken} />
     </AdminStack>
   );
 }

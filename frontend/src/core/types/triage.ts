@@ -71,6 +71,12 @@ export interface TriageQueueCard {
 /** Response from ?action=triage.queue */
 export interface TriageQueueData {
   visits: TriageQueueCard[];
+  /** SCALE-1.2 — true when the queue hit its row cap; show QueueTruncationBanner. */
+  queue_truncated?: boolean;
+  queue_cap?: number;
+  /** SCALE-1.8 — delta-poll token; `unchanged` responses carry only these two. */
+  revision?: string;
+  unchanged?: boolean;
   claim_lost_cards?: TriageQueueCard[];
   counts: { waiting: number; in_triage: number };
   visit_date?: string;

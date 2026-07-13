@@ -85,4 +85,42 @@ class FeeScheduleAdminServiceTest extends TestCase
 
         $this->assertStringContainsString('assertBillingCodeExists', $body);
     }
+
+    public function testBulkPriceRejectsUnknownMode(): void
+    {
+        $service = new FeeScheduleAdminService();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Choose how to change prices');
+        $service->bulkPriceUpdate(0, ['mode' => 'bogus', 'value' => 10], 1, true);
+    }
+
+    public function testBulkPriceRejectsExcessivePercentDecrease(): void
+    {
+        $service = new FeeScheduleAdminService();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('cannot exceed 100%');
+        $service->bulkPriceUpdate(0, ['mode' => 'decrease_percent', 'value' => 150], 1, true);
+    }
+
+    public function testBulkPriceRejectsNegativeValue(): void
+    {
+        $service = new FeeScheduleAdminService();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Value cannot be negative');
+        $service->bulkPriceUpdate(0, ['mode' => 'increase_amount', 'value' => -5], 1, true);
+    }
+
+    public function testApplyPriceModeMath(): void
+    {
+        $method = new ReflectionMethod(FeeScheduleAdminService::class, 'applyPriceMode');
+        $method->setAccessible(true);
+        $service = new FeeScheduleAdminService();
+
+        // Raw arithmetic (the caller rounds to 2dp) — tolerate float representation.
+        $this->assertEqualsWithDelta(55.0, $method->invoke($service, 50.0, 'increase_percent', 10.0), 0.0001);
+        $this->assertEqualsWithDelta(45.0, $method->invoke($service, 50.0, 'decrease_percent', 10.0), 0.0001);
+        $this->assertEqualsWithDelta(60.0, $method->invoke($service, 50.0, 'increase_amount', 10.0), 0.0001);
+        $this->assertEqualsWithDelta(40.0, $method->invoke($service, 50.0, 'decrease_amount', 10.0), 0.0001);
+        $this->assertEqualsWithDelta(99.0, $method->invoke($service, 50.0, 'set', 99.0), 0.0001);
+    }
 }

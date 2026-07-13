@@ -98,4 +98,49 @@ describe('PatientChart', () => {
 
     expect(screen.getByPlaceholderText(/Search this chart/i)).toBeInTheDocument();
   });
+
+  it('hides the print/letters menu when enable_letters_labels is off', async () => {
+    render(<PatientChart {...props} />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByRole('button', { name: /Print or write letter/i })).not.toBeInTheDocument();
+  });
+
+  it('shows the print/letters menu with labels and the referral-letter link when enabled (GAP-A A4)', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
+    render(
+      <PatientChart
+        {...props}
+        enableLabels
+        labelPrintUrl="/patient-label.php"
+        lettersHubUrl="/chart-depth/referrals.php?view=letters&pid=42"
+      />
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const trigger = screen.getByRole('button', { name: /Print or write letter/i });
+    fireEvent.pointerDown(trigger, { button: 0, pointerType: 'mouse' });
+    fireEvent.click(trigger);
+
+    // The referral-letter entry is a real link into the letters hub.
+    const letterLink = await screen.findByRole('menuitem', { name: 'Referral letter…' });
+    expect(letterLink).toHaveAttribute('href', '/chart-depth/referrals.php?view=letters&pid=42');
+
+    expect(screen.getByRole('menuitem', { name: 'Chart label (name, DOB, MRN)' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Address label' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'MRN barcode label' }));
+    expect(openSpy).toHaveBeenCalledWith(
+      '/patient-label.php?pid=42&type=barcode&print=1',
+      '_blank',
+      'noopener,noreferrer'
+    );
+    openSpy.mockRestore();
+  });
 });

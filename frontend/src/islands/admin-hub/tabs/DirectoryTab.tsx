@@ -32,7 +32,7 @@ export function DirectoryTab({ contacts, types, onAdd, onEdit, onDelete }: Direc
 
   return (
     <AdminSection
-      title="Directory"
+      title="Address book"
       description="External contacts — specialists, labs, and other referral targets."
       icon={<BookUser className="h-4 w-4" aria-hidden />}
       action={
@@ -65,7 +65,7 @@ export function DirectoryTab({ contacts, types, onAdd, onEdit, onDelete }: Direc
 
         {!filtered.length ? (
           <AdminEmptyState
-            title={contacts.length ? 'No contacts match this filter' : 'No directory contacts yet'}
+            title={contacts.length ? 'No contacts match this filter' : 'No address book contacts yet'}
           />
         ) : (
           <Table className={ncShadcnTableClass({ bordered: true, className: 'mb-0' })}>

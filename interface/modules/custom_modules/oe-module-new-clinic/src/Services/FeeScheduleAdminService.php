@@ -445,11 +445,11 @@ class FeeScheduleAdminService
         }
 
         EventAuditLogger::getInstance()->newEvent(
-            'new_clinic',
             'fee_schedule',
-            $actorUserId,
+            $_SESSION['authUser'] ?? 'system',
+            $_SESSION['authProvider'] ?? 'default',
             1,
-            $action . ' id=' . $savedId . ' facility_id=' . $targetFacilityId . ' code=' . $code
+            $action . ' id=' . $savedId . ' facility_id=' . $targetFacilityId . ' code=' . $code . ' uid=' . $actorUserId
         );
 
         return $this->adminPayload($facilityId);
@@ -474,11 +474,11 @@ class FeeScheduleAdminService
         );
 
         EventAuditLogger::getInstance()->newEvent(
-            'new_clinic',
             'fee_schedule',
-            $actorUserId,
+            $_SESSION['authUser'] ?? 'system',
+            $_SESSION['authProvider'] ?? 'default',
             1,
-            'archived id=' . $feeId
+            'archived id=' . $feeId . ' uid=' . $actorUserId
         );
 
         return $this->adminPayload($facilityId);
@@ -548,6 +548,131 @@ class FeeScheduleAdminService
         ];
 
         return $payload;
+    }
+
+    /** Bulk-price adjustment modes. */
+    public const BULK_MODES = ['increase_percent', 'decrease_percent', 'increase_amount', 'decrease_amount', 'set'];
+
+    /**
+     * Bulk price adjustment across active fee lines (optionally one category).
+     * A cash clinic re-prices often ("raise all consults 10%"); doing it row by
+     * row is error-prone. `dryRun` returns the exact diff without writing (preview
+     * for a ConfirmModal); otherwise it applies the changes and audits.
+     *
+     * @param array{mode?: string, value?: mixed, category?: string, round_whole?: mixed} $input
+     * @return array<string, mixed>
+     */
+    public function bulkPriceUpdate(int $facilityId, array $input, int $actorUserId, bool $dryRun): array
+    {
+        $facilityId = $this->visitScope->resolveActorFacilityId($facilityId > 0 ? $facilityId : null);
+
+        $mode = trim((string) ($input['mode'] ?? ''));
+        if (!in_array($mode, self::BULK_MODES, true)) {
+            throw new \InvalidArgumentException('Choose how to change prices');
+        }
+        $value = round((float) ($input['value'] ?? 0), 2);
+        if ($value < 0) {
+            throw new \InvalidArgumentException('Value cannot be negative');
+        }
+        if ($mode === 'decrease_percent' && $value > 100) {
+            throw new \InvalidArgumentException('A percentage decrease cannot exceed 100%');
+        }
+        $category = mb_substr(trim((string) ($input['category'] ?? '')), 0, 64);
+        if ($category !== '' && !self::isValidCategory($category)) {
+            throw new \InvalidArgumentException('Unknown category filter');
+        }
+        $roundWhole = !empty($input['round_whole']);
+
+        // Scope to the actor's own facility only. A specific facility's admin must
+        // NOT bulk-mutate the shared facility-0 "All facilities" template that other
+        // facilities inherit; facility 0 is in scope only when the actor IS facility 0
+        // (single-clinic / global admin). Per-row Edit still allows touching a global row.
+        if ($facilityId === 0) {
+            $scopeClause = 'facility_id = 0';
+            $params = [];
+        } else {
+            $scopeClause = 'facility_id = ?';
+            $params = [$facilityId];
+        }
+        $sql = "SELECT id, facility_id, code, name, category, price_amount
+                FROM new_fee_schedule
+                WHERE is_active = 1 AND " . $scopeClause;
+        if ($category !== '') {
+            $sql .= ' AND category = ?';
+            $params[] = $category;
+        }
+        $sql .= ' ORDER BY sort_order ASC, name ASC';
+        $rows = QueryUtils::fetchRecords($sql, $params) ?: [];
+
+        $changes = [];
+        foreach ($rows as $row) {
+            $old = round((float) ($row['price_amount'] ?? 0), 2);
+            $new = $this->applyPriceMode($old, $mode, $value);
+            if ($roundWhole) {
+                $new = round($new);
+            }
+            $new = round(max(0.0, $new), 2);
+            if ($new !== $old) {
+                $rowCategory = (string) ($row['category'] ?? '');
+                $changes[] = [
+                    'id' => (int) ($row['id'] ?? 0),
+                    'code' => (string) ($row['code'] ?? ''),
+                    'name' => (string) ($row['name'] ?? ''),
+                    'category_label' => self::CATEGORIES[$rowCategory] ?? ($rowCategory !== '' ? $rowCategory : '—'),
+                    'old_price' => $old,
+                    'new_price' => $new,
+                    'scope_label' => (int) ($row['facility_id'] ?? 0) === 0 ? 'All facilities' : 'This facility',
+                ];
+            }
+        }
+
+        if ($dryRun) {
+            return [
+                'dry_run' => true,
+                'changes' => $changes,
+                'change_count' => count($changes),
+                'total_matched' => count($rows),
+            ];
+        }
+
+        foreach ($changes as $change) {
+            sqlStatement(
+                "UPDATE new_fee_schedule SET price_amount = ? WHERE id = ? AND is_active = 1",
+                [$change['new_price'], $change['id']]
+            );
+        }
+
+        EventAuditLogger::getInstance()->newEvent(
+            'fee_schedule.bulk_price',
+            $_SESSION['authUser'] ?? 'system',
+            $_SESSION['authProvider'] ?? 'default',
+            1,
+            'bulk_price mode=' . $mode . ' value=' . $value . ' category=' . ($category !== '' ? $category : 'all')
+                . ' changed=' . count($changes) . ' uid=' . $actorUserId
+        );
+
+        $payload = $this->adminPayload($facilityId);
+        $payload['bulk_summary'] = [
+            'changed' => count($changes),
+            'total_matched' => count($rows),
+            'mode' => $mode,
+            'value' => $value,
+            'category' => $category,
+        ];
+
+        return $payload;
+    }
+
+    private function applyPriceMode(float $old, string $mode, float $value): float
+    {
+        return match ($mode) {
+            'increase_percent' => $old * (1 + ($value / 100)),
+            'decrease_percent' => $old * (1 - ($value / 100)),
+            'increase_amount' => $old + $value,
+            'decrease_amount' => $old - $value,
+            'set' => $value,
+            default => $old,
+        };
     }
 
     public static function isValidCategory(string $category): bool

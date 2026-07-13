@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ 'Patient label'|xlt }} — {{ label.display_name|text }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #111;
+            background: #fff;
+            margin: 0;
+            padding: 1rem;
+        }
+        .label-card {
+            display: inline-block;
+            border: 1px dashed #999;
+            padding: 0.6rem 0.9rem;
+            min-width: 70mm;
+        }
+        .name {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        .line {
+            font-size: 0.95rem;
+            margin-top: 0.15rem;
+        }
+        .muted {
+            color: #555;
+            font-size: 0.8rem;
+        }
+        .barcode img {
+            display: block;
+            margin: 0.4rem 0;
+            max-width: 100%;
+        }
+        .no-print {
+            margin-bottom: 1rem;
+        }
+        @media print {
+            .no-print { display: none; }
+            body { padding: 0; }
+            .label-card { border: none; padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button type="button" onclick="window.print()">{{ 'Print'|xlt }}</button>
+        <button type="button" onclick="window.close()">{{ 'Close'|xlt }}</button>
+    </div>
+
+    <div class="label-card">
+        {% if label.type == 'address' %}
+            <div class="name">{{ label.display_name|text }}</div>
+            <div class="line">{{ label.street|text }}</div>
+            <div class="line">{{ label.city_line|text }}</div>
+        {% elseif label.type == 'barcode' %}
+            <div class="name">{{ label.display_name|text }}</div>
+            <div class="barcode">
+                {% if label.barcode_data_uri %}
+                    <img src="{{ label.barcode_data_uri }}" alt="{{ 'MRN barcode'|xlt }}">
+                {% else %}
+                    <div class="muted">{{ 'Barcode unavailable'|xlt }}</div>
+                {% endif %}
+            </div>
+            <div class="line">{{ 'MRN'|xlt }}: {{ label.pubpid|text }}</div>
+        {% else %}
+            <div class="name">{{ label.display_name|text }}</div>
+            <div class="line">{{ 'DOB'|xlt }}: {{ label.dob|text }}</div>
+            <div class="line">{{ 'MRN'|xlt }}: {{ label.pubpid|text }}</div>
+            <div class="line muted">{{ 'Printed'|xlt }}: {{ label.today|text }}</div>
+        {% endif %}
+    </div>
+
+    {% if auto_print %}
+    <script>
+        window.addEventListener('load', function () {
+            window.print();
+        });
+    </script>
+    {% endif %}
+</body>
+</html>

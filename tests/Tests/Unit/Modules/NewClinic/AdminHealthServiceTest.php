@@ -28,6 +28,8 @@ class AdminHealthServiceTest extends TestCase
         $this->assertArrayHasKey('meta', $health);
         $this->assertArrayHasKey('can_run_backup', $health);
         $this->assertArrayHasKey('backup_running', $health);
+        $this->assertArrayHasKey('backup_history', $health);
+        $this->assertIsArray($health['backup_history']);
         $this->assertIsArray($health['chips']);
         $this->assertNotEmpty($health['chips']);
 

@@ -76,9 +76,19 @@ class PatientSearchService
         });
 
         $pool = array_slice($scored, 0, self::SCORE_POOL);
+        $topRows = array_slice($pool, 0, $limit);
+
+        // SCALE-1.5 — batch the per-row lookups (active visit + appointment + recall
+        // chips) into one query each, keyed by pid, instead of 3–4 queries per row.
+        $pids = array_map(static fn (array $row) => (int) $row['pid'], $topRows);
+        $facilityId = $this->visitScope->resolveDefaultFacilityId();
+        $activeVisits = $this->batchActiveVisits($pids);
+        $appointmentChips = $this->appointmentToday->chipsForPatients($pids, $facilityId);
+        $recallChips = $this->recallDue->chipsForPatients($pids, $facilityId);
+
         $patients = array_map(
-            fn (array $row) => $this->mapResultRow($row),
-            array_slice($pool, 0, $limit)
+            fn (array $row) => $this->mapResultRow($row, $activeVisits, $appointmentChips, $recallChips),
+            $topRows
         );
 
         $elapsed = (int) round((microtime(true) - $started) * 1000);
@@ -186,10 +196,49 @@ class PatientSearchService
     }
 
     /**
+     * Latest active visit per pid, in one query (SCALE-1.5). Mirrors the old
+     * per-row query: newest (highest id) active visit for each patient.
+     *
+     * @param list<int> $pids
+     * @return array<int, array<string, mixed>> pid => visit row
+     */
+    private function batchActiveVisits(array $pids): array
+    {
+        $pids = array_values(array_unique(array_filter($pids, static fn (int $p) => $p > 0)));
+        if (empty($pids)) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($pids), '?'));
+        $rows = QueryUtils::fetchRecords(
+            "SELECT v.pid, v.id AS visit_id, v.state, v.queue_number, v.chief_complaint,
+                    vt.label AS visit_type_label
+             FROM new_visit v
+             LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
+             WHERE v.pid IN ($placeholders)
+             AND v.state NOT IN ('completed', 'closed_unpaid', 'cancelled')
+             ORDER BY v.id DESC",
+            $pids
+        ) ?: [];
+
+        $map = [];
+        foreach ($rows as $row) {
+            $pid = (int) ($row['pid'] ?? 0);
+            if (!isset($map[$pid])) { // first per pid = highest id = latest, matching the old LIMIT 1
+                $map[$pid] = $row;
+            }
+        }
+
+        return $map;
+    }
+
+    /**
      * @param array<string, mixed> $row
+     * @param array<int, array<string, mixed>> $activeVisits pid => visit row
+     * @param array<int, array<string, mixed>|null> $appointmentChips pid => chip
+     * @param array<int, array<string, mixed>|null> $recallChips pid => chip
      * @return array<string, mixed>
      */
-    private function mapResultRow(array $row): array
+    private function mapResultRow(array $row, array $activeVisits, array $appointmentChips, array $recallChips): array
     {
         $pid = (int) $row['pid'];
         $phoneNorm = (string) ($row['phone_normalized'] ?? '');
@@ -198,20 +247,9 @@ class PatientSearchService
         }
 
         $completionScore = (int) ($row['completion_score'] ?? 0);
-        $activeVisit = QueryUtils::querySingleRow(
-            "SELECT v.id AS visit_id, v.state, v.queue_number, v.chief_complaint,
-                    vt.label AS visit_type_label
-             FROM new_visit v
-             LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
-             WHERE v.pid = ?
-             AND v.state NOT IN ('completed', 'closed_unpaid', 'cancelled')
-             ORDER BY v.id DESC LIMIT 1",
-            [$pid]
-        );
-
-        $facilityId = $this->visitScope->resolveDefaultFacilityId();
-        $appointmentChip = $this->appointmentToday->chipForPatient($pid, $facilityId);
-        $recallChip = $this->recallDue->chipForPatient($pid, $facilityId);
+        $activeVisit = $activeVisits[$pid] ?? null;
+        $appointmentChip = $appointmentChips[$pid] ?? null;
+        $recallChip = $recallChips[$pid] ?? null;
 
         $displayName = trim(($row['lname'] ?? '') . ', ' . ($row['fname'] ?? ''));
         $displayName = trim($displayName, ', ');

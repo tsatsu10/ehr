@@ -14,6 +14,7 @@ namespace OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\AjaxActionHandlerInterface;
 use OpenEMR\Modules\NewClinic\Controllers\AjaxController;
 use OpenEMR\Modules\NewClinic\Services\CohortSavedFilterService;
+use OpenEMR\Modules\NewClinic\Services\ExportJobService;
 use OpenEMR\Modules\NewClinic\Services\PatientCohortSearchService;
 use OpenEMR\Modules\NewClinic\Services\RegistryAuditService;
 
@@ -24,6 +25,8 @@ final class CohortActionHandler implements AjaxActionHandlerInterface
         'cohort.presets',
         'cohort.search',
         'cohort.export',
+        'cohort.export_status',
+        'cohort.export_download',
         'cohort.saved_filter',
     ];
 
@@ -65,8 +68,23 @@ final class CohortActionHandler implements AjaxActionHandlerInterface
                 $body = $this->host->readJsonBody();
                 $this->host->verifyCsrf($body);
                 try {
-                    $export = $this->host->svc(PatientCohortSearchService::class)->export($body);
+                    $export = $this->host->svc(PatientCohortSearchService::class)->requestExport($body, $userId);
                     $filters = is_array($body['filters'] ?? null) ? $body['filters'] : [];
+                    if (($export['mode'] ?? '') === 'async') {
+                        // SCALE-2.2 — large cohort deferred to the worker. Audit the
+                        // request now (estimate); the file is built off the request path.
+                        $this->host->svc(RegistryAuditService::class)->logExport(
+                            $this->host->svc(PatientCohortSearchService::class)->explainCriteria($filters),
+                            (int) ($export['row_count_estimate'] ?? 0),
+                            $userId
+                        );
+                        $this->host->respond(true, 'Export queued', [
+                            'mode' => 'async',
+                            'job_id' => (int) $export['job_id'],
+                            'row_count_estimate' => (int) ($export['row_count_estimate'] ?? 0),
+                        ]);
+                        break;
+                    }
                     $this->host->svc(RegistryAuditService::class)->logExport(
                         $this->host->svc(PatientCohortSearchService::class)->explainCriteria($filters),
                         (int) $export['row_count'],
@@ -76,6 +94,22 @@ final class CohortActionHandler implements AjaxActionHandlerInterface
                 } catch (\InvalidArgumentException $e) {
                     $this->host->respond(false, $e->getMessage(), ['code' => 'export_limit'], 400);
                 }
+                break;
+            case 'cohort.export_status':
+                $jobId = (int) ($_REQUEST['job_id'] ?? 0);
+                $this->host->svc(PatientCohortSearchService::class)->assertExportAccess();
+                $status = $this->host->svc(ExportJobService::class)->pollStatus($jobId, $userId);
+                $this->host->respond(true, 'ok', $status);
+                break;
+            case 'cohort.export_download':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $this->host->svc(PatientCohortSearchService::class)->assertExportAccess();
+                $file = $this->host->svc(ExportJobService::class)->download((int) ($body['job_id'] ?? 0), $userId);
+                $this->host->respondCsv($file['filename'], $file['content']);
                 break;
             case 'cohort.saved_filter':
                 if ($method !== 'POST') {

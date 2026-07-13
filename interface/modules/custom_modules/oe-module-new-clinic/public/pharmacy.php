@@ -18,7 +18,7 @@ $visitScope = new VisitScopeService();
 $facilityId = $visitScope->resolveDeskFacilityId();
 $pharmOpsAccess = new PharmOpsAccessService();
 
-if (!$config->isEnabled('enable_pharmacy_role', 0)) {
+if (!$config->isEnabled('enable_pharmacy_role', 0, $facilityId)) {
     http_response_code(403);
     echo xlt('Pharmacy Desk is disabled. Enable Pharmacy role in Clinic Setup.');
     exit;

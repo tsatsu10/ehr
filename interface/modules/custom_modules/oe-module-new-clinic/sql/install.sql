@@ -230,7 +230,6 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'registration_mode', 'desk_full_form'),
 (0, 'completion_required_for_billing', '70'),
 (0, 'enforce_completion_on_revisit', '1'),
-(0, 'enforce_completion_on_rx', '0'),
 (0, 'allow_billing_completion_override', '1'),
 (0, 'pediatric_exact_dob_age', '5'),
 (0, 'dup_block_threshold', '17'),
@@ -239,6 +238,8 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_pharmacy_role', '0'),
 (0, 'enable_lab_ops', '0'),
 (0, 'enable_lab_panel_order', '0'),
+(0, 'enable_native_proc_order', '0'),
+(0, 'enable_debootstrap_shell', '0'),
 (0, 'enable_pharm_ops', '0'),
 (0, 'enable_triage', '1'),
 (0, 'country_code', '233'),
@@ -257,7 +258,6 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'communications_hub_enable', '0'),
 (0, 'enable_patient_registry', '0'),
 (0, 'require_esign_before_complete_consult', '0'),
-(0, 'doctor_desk_default_filter', 'all'),
 (0, 'rate_limit_patients_search', '30'),
 (0, 'rate_limit_dup_check', '60'),
 (0, 'enable_scheduled_integration', '1'),
@@ -966,6 +966,41 @@ CREATE TABLE IF NOT EXISTS `report_hub_export_run` (
 ) ENGINE=InnoDB COMMENT='M16 export audit (V1.1-REP)';
 #EndIf
 
+#IfMissingColumn report_hub_export_run claimed_by
+ALTER TABLE `report_hub_export_run` ADD COLUMN `claimed_by` VARCHAR(64) NULL AFTER `status`;
+#EndIf
+
+#IfMissingColumn report_hub_export_run claimed_at
+ALTER TABLE `report_hub_export_run` ADD COLUMN `claimed_at` DATETIME NULL AFTER `claimed_by`;
+#EndIf
+
+#IfMissingColumn report_hub_export_run attempts
+ALTER TABLE `report_hub_export_run` ADD COLUMN `attempts` INT NOT NULL DEFAULT 0 AFTER `claimed_at`;
+#EndIf
+
+#IfNotTable new_clinic_export_job
+CREATE TABLE IF NOT EXISTS `new_clinic_export_job` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `job_type` VARCHAR(48) NOT NULL,
+    `params_json` MEDIUMTEXT NULL,
+    `facility_id` INT NOT NULL,
+    `actor_user_id` BIGINT NOT NULL,
+    `status` ENUM('running','ok','failed') NOT NULL DEFAULT 'running',
+    `claimed_by` VARCHAR(64) NULL,
+    `claimed_at` DATETIME NULL,
+    `attempts` INT NOT NULL DEFAULT 0,
+    `result_path` VARCHAR(512) NULL,
+    `result_filename` VARCHAR(255) NULL,
+    `row_count` INT NULL,
+    `message` TEXT NULL,
+    `created_at` DATETIME NOT NULL,
+    `finished_at` DATETIME NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_status` (`status`),
+    KEY `idx_actor` (`actor_user_id`)
+) ENGINE=InnoDB COMMENT='SCALE-2.2 generic background export/import jobs';
+#EndIf
+
 #IfNotTable clinical_doc_form_open
 CREATE TABLE IF NOT EXISTS `clinical_doc_form_open` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
@@ -991,11 +1026,33 @@ CREATE TABLE IF NOT EXISTS `admin_hub_backup_run` (
     `finished_at` DATETIME NULL,
     `status` ENUM('ok','failed','running') NOT NULL,
     `file_path` VARCHAR(512) NULL,
+    `size_bytes` BIGINT NULL,
     `actor_id` BIGINT NULL,
     `message` TEXT NULL,
     PRIMARY KEY (`id`),
     KEY `idx_facility_started` (`facility_id`, `started_at`)
 ) ENGINE=InnoDB COMMENT='M15 admin hub manual backup runs (V1.1-ADMIN)';
+#EndIf
+
+#IfMissingColumn admin_hub_backup_run size_bytes
+ALTER TABLE `admin_hub_backup_run` ADD COLUMN `size_bytes` BIGINT NULL AFTER `file_path`;
+#EndIf
+
+#IfMissingColumn admin_hub_backup_run kind
+ALTER TABLE `admin_hub_backup_run` ADD COLUMN `kind` ENUM('db','files') NOT NULL DEFAULT 'db' AFTER `facility_id`;
+#EndIf
+
+#IfNotTable new_clinic_maintenance_lock
+CREATE TABLE IF NOT EXISTS `new_clinic_maintenance_lock` (
+    `lock_key` VARCHAR(64) NOT NULL,
+    `locked_until` DATETIME NOT NULL,
+    `owner_token` VARCHAR(64) NOT NULL DEFAULT '',
+    PRIMARY KEY (`lock_key`)
+) ENGINE=InnoDB COMMENT='SCALE-1.3 cross-request throttle for periodic maintenance (orphan repair)';
+#EndIf
+
+#IfMissingColumn new_clinic_maintenance_lock owner_token
+ALTER TABLE `new_clinic_maintenance_lock` ADD COLUMN `owner_token` VARCHAR(64) NOT NULL DEFAULT '' AFTER `locked_until`;
 #EndIf
 
 #IfNotTable admin_hub_setup_progress
@@ -1172,6 +1229,26 @@ CREATE TABLE IF NOT EXISTS `new_referral_meta` (
 ) ENGINE=InnoDB COMMENT='Outbound referral status metadata over stock transactions (M11-F03, D-REF-1)';
 #EndIf
 
+#IfNotTable new_outreach_campaign
+CREATE TABLE IF NOT EXISTS `new_outreach_campaign` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `facility_id` INT NOT NULL DEFAULT 0,
+    `channel` VARCHAR(16) NOT NULL DEFAULT 'sms',
+    `subject` VARCHAR(255) NULL,
+    `body` TEXT NULL,
+    `filter_json` TEXT NULL,
+    `filter_summary` VARCHAR(500) NULL,
+    `recipient_count` INT NOT NULL DEFAULT 0,
+    `reachable_count` INT NOT NULL DEFAULT 0,
+    `status` VARCHAR(32) NOT NULL DEFAULT 'stubbed',
+    `delivery_note` VARCHAR(500) NULL,
+    `created_by` BIGINT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_facility_created` (`facility_id`, `created_at`)
+) ENGINE=InnoDB COMMENT='B1 batch-outreach campaign log (recorded intent; delivery via gateway adapter)';
+#EndIf
+
 #IfNotTable new_password_reset_required
 CREATE TABLE IF NOT EXISTS `new_password_reset_required` (
     `user_id` BIGINT NOT NULL,
@@ -1179,4 +1256,73 @@ CREATE TABLE IF NOT EXISTS `new_password_reset_required` (
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`user_id`)
 ) ENGINE=InnoDB COMMENT='SEC-5: staff who must change a temporary password at next login';
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key mrd_activity_feed_days
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'mrd_activity_feed_days', '90'),
+(0, 'search_all_facilities_for_admin', '1'),
+(0, 'report_hub_moh_pack', 'ghana_v1'),
+(0, 'registry_redirect_global_search', '0'),
+(0, 'clinic_logo_path', '');
+#EndIf
+
+#IfRow2D new_clinic_config facility_id 0 config_key enforce_completion_on_rx
+DELETE FROM `new_clinic_config` WHERE `config_key` IN ('enforce_completion_on_rx', 'doctor_desk_default_filter');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_letters_labels
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_letters_labels', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_vitals_trends
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_vitals_trends', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_outreach
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_outreach', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_backup
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_native_backup', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key backup_include_site_files
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'backup_include_site_files', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_duplicate_review
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_duplicate_review', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_issue_editor
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_native_issue_editor', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_proc_order
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_native_proc_order', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_debootstrap_shell
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_debootstrap_shell', '0');
+#EndIf
+
+-- App-heartbeat scheduled backup (no OS cron). The function no-ops unless native
+-- backup is on AND a backup is due, so it is safe to leave active for all installs.
+#IfNotRow background_services name nc_scheduled_backup
+INSERT INTO `background_services`
+    (`name`, `title`, `active`, `running`, `next_run`, `execute_interval`, `function`, `require_once`)
+VALUES
+    ('nc_scheduled_backup', 'New Clinic scheduled backup', 1, 0, NOW(), 60,
+     'nc_scheduled_backup_service',
+     '/interface/modules/custom_modules/oe-module-new-clinic/scripts/backup-service.php');
 #EndIf

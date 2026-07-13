@@ -18,6 +18,7 @@
 import { StrictMode, type ComponentType } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { AppToaster } from '@components/AppToaster';
+import { ensureI18nReady } from './i18n';
 import type { IslandProps } from './types';
 
 const rootRegistry = new WeakMap<HTMLElement, Root>();
@@ -48,6 +49,20 @@ export function mountIsland(
 ): void {
   const nodes = document.querySelectorAll<HTMLElement>(`[data-island="${islandName}"]`);
 
+  // D1 i18n: make sure the locale dictionary (if any) is loaded before the
+  // first render so t() calls inside components resolve translated. English
+  // (or a fetch failure) resolves immediately — islands render as before.
+  void ensureI18nReady().then(() => {
+    mountAll(nodes, Component);
+  });
+}
+
+function mountAll(
+  nodes: NodeListOf<HTMLElement>,
+  // See mountIsland: the mount boundary is untyped by design.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Component: ComponentType<any>
+): void {
   nodes.forEach((node) => {
     const existing = rootRegistry.get(node);
     if (existing !== undefined) existing.unmount();

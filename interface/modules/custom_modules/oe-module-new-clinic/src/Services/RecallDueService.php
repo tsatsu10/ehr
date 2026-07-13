@@ -45,10 +45,84 @@ class RecallDueService
             return null;
         }
 
+        return $this->buildChip(
+            $row,
+            $pid,
+            $this->clinicDate->today(),
+            $this->shell->resolveIntegrationUrls($facilityId)
+        );
+    }
+
+    /**
+     * Batch version of chipForPatient (SCALE-1.5): ONE query for the earliest due
+     * recall of ALL pids, instead of one query per pid (facility URLs resolved once).
+     * Byte-identical chips to the single-pid path.
+     *
+     * @param list<int> $pids
+     * @return array<int, array<string, mixed>|null> pid => chip (or null)
+     */
+    public function chipsForPatients(array $pids, ?int $facilityId = null): array
+    {
+        $facilityId = $this->visitScope->resolveActorFacilityId($facilityId);
+        $result = [];
+        foreach ($pids as $pid) {
+            $result[(int) $pid] = null;
+        }
+        if (
+            empty($result)
+            || !$this->scheduledIntegration->isEnabled($facilityId)
+            || !$this->schedulingAccess->isHubEnabled($facilityId)
+        ) {
+            return $result;
+        }
+
+        $ids = array_keys($result);
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $bind = array_merge($ids, [$this->clinicDate->today()]);
+        $sql = "SELECT mr.r_pid, mr.r_ID, mr.r_eventDate, mr.r_reason, mr.r_facility,
+                       COALESCE(meta.status, 'open') AS recall_status
+                FROM medex_recalls AS mr
+                INNER JOIN patient_data AS pat ON pat.pid = mr.r_pid
+                LEFT JOIN new_clinic_recall_meta AS meta ON meta.recall_id = mr.r_ID
+                WHERE mr.r_pid IN ($placeholders)
+                  AND IFNULL(pat.deceased_date, 0) = 0
+                  AND mr.r_eventDate <= ?
+                  AND COALESCE(meta.status, 'open') NOT IN ('completed', 'declined', 'unreachable')";
+        if ($facilityId > 0) {
+            $sql .= ' AND (mr.r_facility = ? OR mr.r_facility = 0)';
+            $bind[] = $facilityId;
+        }
+        // Same "earliest due" ordering as findDueRecall; grouped so the first row
+        // per pid is that pid's earliest due recall.
+        $sql .= ' ORDER BY mr.r_pid, mr.r_eventDate ASC';
+        $rows = QueryUtils::fetchRecords($sql, $bind) ?: [];
+
+        $earliest = [];
+        foreach ($rows as $row) {
+            $pid = (int) ($row['r_pid'] ?? 0);
+            if (!empty($row['r_ID']) && !isset($earliest[$pid])) {
+                $earliest[$pid] = $row;
+            }
+        }
+
         $today = $this->clinicDate->today();
+        $urls = $this->shell->resolveIntegrationUrls($facilityId);
+        foreach ($earliest as $pid => $row) {
+            $result[$pid] = $this->buildChip($row, $pid, $today, $urls);
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @param array<string, mixed> $urls
+     * @return array<string, mixed>
+     */
+    private function buildChip(array $row, int $pid, string $today, array $urls): array
+    {
         $dueDate = (string) ($row['r_eventDate'] ?? '');
         $daysDelta = $this->daysFromToday($dueDate, $today);
-        $urls = $this->shell->resolveIntegrationUrls($facilityId);
         $worklistUrl = $urls['recalls_url'] . '&pid=' . urlencode((string) $pid);
 
         return [

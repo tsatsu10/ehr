@@ -69,6 +69,16 @@ class SchedulingAccessService
     }
 
     /**
+     * Non-throwing form of assertHubAccess — for entry points (e.g. the patient
+     * chart "Flag for follow-up" button) that must render only when the user
+     * would actually be allowed to reach the recall hub.
+     */
+    public function canAccessHub(?int $facilityId = null): bool
+    {
+        return $this->isHubEnabled($facilityId) && $this->hasAnyAcl(self::HUB_READ_ACLS);
+    }
+
+    /**
      * @param list<string> $acos
      */
     private function hasAnyAcl(array $acos): bool

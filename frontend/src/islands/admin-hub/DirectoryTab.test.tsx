@@ -78,6 +78,6 @@ describe('DirectoryTab', () => {
   it('shows the empty state when there are no contacts', () => {
     render(<DirectoryTab contacts={[]} types={types} onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} />);
 
-    expect(screen.getByText('No directory contacts yet')).toBeInTheDocument();
+    expect(screen.getByText('No address book contacts yet')).toBeInTheDocument();
   });
 });

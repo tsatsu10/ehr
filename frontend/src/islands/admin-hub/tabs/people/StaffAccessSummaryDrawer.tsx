@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
 import {
   Dialog,
@@ -65,6 +66,12 @@ export function StaffAccessSummaryDrawer({
               <p><strong>{summary.display_name}</strong> (<code>{summary.username}</code>)</p>
               <p>Template: {summary.role_template?.label ?? '—'}</p>
               <p>Desk apps: {(summary.desk_apps ?? []).join(', ') || '—'}</p>
+              <p className="flex items-center gap-2">
+                Two-step sign-in:
+                <Badge variant={summary.mfa_enabled ? 'success' : 'neutral'}>
+                  {summary.mfa_enabled ? 'On' : 'Off'}
+                </Badge>
+              </p>
               <div>
                 <p className="font-medium">Groups</p>
                 <p className="text-[var(--oe-nc-text-muted)]">{(summary.groups ?? []).join(', ') || '—'}</p>

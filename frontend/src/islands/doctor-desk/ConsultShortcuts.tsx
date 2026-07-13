@@ -22,6 +22,7 @@ interface ConsultShortcutsProps {
   blocked: boolean;
   clinicalDocHubEnabled?: boolean;
   onOpenDocFavorites?: () => void;
+  onOpenPatientEducation?: () => void;
   labPanelOrderEnabled?: boolean;
   formularyRxEnabled?: boolean;
   onOpenLabPanel?: () => void;
@@ -86,6 +87,7 @@ export function ConsultShortcuts({
   blocked,
   clinicalDocHubEnabled = false,
   onOpenDocFavorites,
+  onOpenPatientEducation,
   labPanelOrderEnabled = false,
   formularyRxEnabled = false,
   onOpenLabPanel,
@@ -128,6 +130,14 @@ export function ConsultShortcuts({
       disabled: blocked,
       dataShortcut: 'rx-full',
       onClick: () => handleShortcut('rx'),
+    });
+  }
+  if (onOpenPatientEducation) {
+    moreLinks.push({
+      label: 'Patient handouts',
+      disabled: blocked,
+      dataShortcut: 'patient-education',
+      onClick: onOpenPatientEducation,
     });
   }
 

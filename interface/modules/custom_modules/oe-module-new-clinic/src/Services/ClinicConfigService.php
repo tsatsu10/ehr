@@ -17,6 +17,20 @@ class ClinicConfigService
 {
     private ?VisitScopeService $visitScope = null;
 
+    /**
+     * SCALE-1.4 — per-instance config cache: facility_id → (config_key → value).
+     * The first read for a facility loads ALL of that facility's rows in ONE query;
+     * every later get()/getInt()/getMany() for it is an array lookup. Before this,
+     * each get() ran up to 3 SELECTs and the admin page looped ~125 keys
+     * (~125–375 queries). Invalidated on every write (set/clearGlobalOverrides).
+     *
+     * @var array<int, array<string, string>>
+     */
+    private array $facilityConfig = [];
+
+    /** Resolved once per instance — resolveDefaultFacilityId() is itself a DB hit. */
+    private ?int $readerFacilityIdCache = null;
+
     private function getVisitScope(): VisitScopeService
     {
         if ($this->visitScope === null) {
@@ -27,7 +41,51 @@ class ClinicConfigService
 
     public function resolveReaderFacilityId(): int
     {
-        return $this->getVisitScope()->resolveDefaultFacilityId();
+        if ($this->readerFacilityIdCache === null) {
+            $this->readerFacilityIdCache = $this->getVisitScope()->resolveDefaultFacilityId();
+        }
+
+        return $this->readerFacilityIdCache;
+    }
+
+    /**
+     * Load (and cache) every config row for a facility as key → value. Only non-null
+     * values are stored; presence in the map means "set" (an empty string is a valid
+     * set value, matching the pre-cache behaviour of get()).
+     *
+     * @return array<string, string>
+     */
+    private function loadFacility(int $facilityId): array
+    {
+        if (!array_key_exists($facilityId, $this->facilityConfig)) {
+            $map = [];
+            $rows = QueryUtils::fetchRecords(
+                "SELECT config_key, config_value FROM new_clinic_config WHERE facility_id = ?",
+                [$facilityId]
+            ) ?: [];
+            foreach ($rows as $row) {
+                if (($row['config_value'] ?? null) !== null) {
+                    $map[(string) $row['config_key']] = (string) $row['config_value'];
+                }
+            }
+            $this->facilityConfig[$facilityId] = $map;
+        }
+
+        return $this->facilityConfig[$facilityId];
+    }
+
+    /** Cached value for exactly (facilityId, key), or null if unset there. */
+    private function cachedValue(int $facilityId, string $key): ?string
+    {
+        $map = $this->loadFacility($facilityId);
+
+        return array_key_exists($key, $map) ? $map[$key] : null;
+    }
+
+    /** Drop the cached config maps after a write so the next read reflects it. */
+    public function invalidate(): void
+    {
+        $this->facilityConfig = [];
     }
 
     public function isEnabled(string $key, int $default = 0, ?int $facilityId = null): bool
@@ -41,28 +99,26 @@ class ClinicConfigService
 
     public function get(string $key, ?string $default = null, int $facilityId = 0): ?string
     {
-        $row = QueryUtils::querySingleRow(
-            "SELECT config_value FROM new_clinic_config WHERE facility_id = ? AND config_key = ?",
-            [$facilityId, $key]
-        );
-
-        if (is_array($row) && array_key_exists('config_value', $row) && $row['config_value'] !== null) {
-            return (string) $row['config_value'];
+        // Precedence preserved exactly from the pre-cache recursion:
+        //   (requested facility) → (global facility 0) → (reader/default facility) → default.
+        $value = $this->cachedValue($facilityId, $key);
+        if ($value !== null) {
+            return $value;
         }
 
         if ($facilityId !== 0) {
-            return $this->get($key, $default, 0);
+            $value = $this->cachedValue(0, $key);
+            if ($value !== null) {
+                return $value;
+            }
         }
 
         // Per-facility saves clear global overrides; single-clinic desks often read facility_id=0.
         $readerFacilityId = $this->resolveReaderFacilityId();
         if ($readerFacilityId > 0) {
-            $facilityRow = QueryUtils::querySingleRow(
-                "SELECT config_value FROM new_clinic_config WHERE facility_id = ? AND config_key = ?",
-                [$readerFacilityId, $key]
-            );
-            if (is_array($facilityRow) && array_key_exists('config_value', $facilityRow) && $facilityRow['config_value'] !== null) {
-                return (string) $facilityRow['config_value'];
+            $value = $this->cachedValue($readerFacilityId, $key);
+            if ($value !== null) {
+                return $value;
             }
         }
 
@@ -120,6 +176,7 @@ class ClinicConfigService
                  WHERE facility_id = ? AND config_key = ?",
                 [$value, $facilityId, $key]
             );
+            $this->invalidate();
 
             return;
         }
@@ -128,6 +185,7 @@ class ClinicConfigService
             "INSERT INTO new_clinic_config (facility_id, config_key, config_value) VALUES (?, ?, ?)",
             [$facilityId, $key, $value]
         );
+        $this->invalidate();
     }
 
     /**
@@ -146,5 +204,6 @@ class ClinicConfigService
             "DELETE FROM new_clinic_config WHERE facility_id = 0 AND config_key IN ($placeholders)",
             $keys
         );
+        $this->invalidate();
     }
 }

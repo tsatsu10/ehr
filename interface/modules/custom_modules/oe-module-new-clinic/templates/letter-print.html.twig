@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ 'Letter'|xlt }}</title>
+    <style>
+        body {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 12pt;
+            color: #111;
+            background: #fff;
+            margin: 0;
+            padding: 2rem;
+        }
+        .letter-body {
+            max-width: 175mm;
+            margin: 0 auto;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        .no-print {
+            margin-bottom: 1.5rem;
+            font-family: Arial, sans-serif;
+        }
+        @media print {
+            .no-print { display: none; }
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button type="button" onclick="window.print()">{{ 'Print'|xlt }}</button>
+        <button type="button" onclick="window.close()">{{ 'Close'|xlt }}</button>
+    </div>
+
+    <div class="letter-body">{{ letter.body|text }}</div>
+
+    {% if auto_print %}
+    <script>
+        window.addEventListener('load', function () {
+            window.print();
+        });
+    </script>
+    {% endif %}
+</body>
+</html>

@@ -11,7 +11,7 @@ export const ADMIN_TABS: { id: AdminTabId; label: string }[] = [
   { id: 'system', label: 'System' },
   { id: 'types', label: 'Visit types' },
   { id: 'fees', label: 'Fees' },
-  { id: 'directory', label: 'Directory' },
+  { id: 'directory', label: 'Address Book' },
 ];
 
 export interface AdminHubProps {
@@ -233,6 +233,17 @@ export interface SystemHealthChip {
   overall_impact?: 'none' | 'warn' | 'critical';
 }
 
+/** C6 (W3) — one manual backup run for the history table. */
+export interface BackupHistoryRow {
+  id: number;
+  started_at: string;
+  finished_at: string;
+  status: string;
+  size_label?: string;
+  file_name?: string;
+  message: string;
+}
+
 export interface SystemHealthPayload {
   overall_status: 'ok' | 'warning' | 'critical';
   checked_at: string;
@@ -247,10 +258,44 @@ export interface SystemHealthPayload {
   backup_blocked_reason: string | null;
   backup_running?: boolean;
   backup_run_id?: number | null;
+  backup_history?: BackupHistoryRow[];
+  backup_schedule?: {
+    scheduled: boolean;
+    due: boolean;
+    frequency_days: number;
+    last_ok?: string | null;
+    age_days?: number | null;
+  };
+  backup_native_enabled?: boolean;
+  /** Site-files backup (design §3b) — separate incremental mirror of the documents tree. */
+  files_backup_enabled?: boolean;
+  files_backup_history?: BackupHistoryRow[];
+  files_backup_schedule?: {
+    scheduled: boolean;
+    due: boolean;
+    frequency_days: number;
+    last_ok?: string | null;
+    age_days?: number | null;
+  };
+  backup_target_local?: boolean;
+  /** Which cloud the target folder syncs to (off-site), or null. */
+  backup_target_cloud?: string | null;
+  /** Cloud sync folders detected on this box, to suggest as a target. */
+  backup_cloud_folders?: { provider: string; path: string }[];
+  /** Recovery-key custody — the drive key that decrypts every backup. Null when native backup is off. */
+  recovery_key?: {
+    present: boolean;
+    key_files: string[];
+    methods_dir: string;
+    exported_at: string | null;
+    export_warning: boolean;
+  } | null;
   backup_url: string;
   logview_url: string;
   backup_php_url: string;
   xampp_backup_hint: string;
+  /** D2 — gates the System-tab Possible-duplicates card's fetch. */
+  duplicate_review_enabled?: boolean;
 }
 
 export interface RunbookCard {

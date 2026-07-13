@@ -110,7 +110,7 @@ export function UnfiledDocumentsLens({ ajaxUrl, csrfToken }: UnfiledDocumentsLen
                 <TableCell>{doc.uploader || '—'}</TableCell>
                 <TableCell className="text-right">
                   {assigningId === doc.id ? (
-                    <div className="d-inline-block text-left" style={{ minWidth: 220 }}>
+                    <div className="inline-block text-left" style={{ minWidth: 220 }}>
                       <PatientSearchDropdown
                         ajaxUrl={ajaxUrl}
                         csrfToken={csrfToken}
@@ -148,7 +148,7 @@ export function UnfiledDocumentsLens({ ajaxUrl, csrfToken }: UnfiledDocumentsLen
           </DataTable>
 
           {hasPager && (
-            <div className="nc-reporthub-unfiled-pager d-flex justify-content-center gap-2 mt-3">
+            <div className="nc-reporthub-unfiled-pager flex justify-center gap-2 mt-3">
               <Button
                 type="button"
                 size="sm"

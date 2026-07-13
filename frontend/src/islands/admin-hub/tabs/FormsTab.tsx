@@ -9,6 +9,7 @@ import type {
 import { FormBundleBoard } from '../FormBundleBoard';
 import { FormsCatalog } from '../FormsCatalog';
 import { HisPackCard } from '../HisPackCard';
+import { ListsEditorCard } from '../ListsEditorCard';
 import { AdminSection, AdminStack } from '../adminUi';
 
 interface FormsTabProps {
@@ -38,6 +39,7 @@ export function FormsTab({
     <AdminStack>
       <FormBundleBoard board={board} {...bundleProps} />
       <HisPackCard ajaxUrl={ajaxUrl} csrfToken={csrfToken} />
+      <ListsEditorCard ajaxUrl={ajaxUrl} csrfToken={csrfToken} />
       <FormsCatalog
         catalog={catalog}
         togglingId={catalogTogglingId}

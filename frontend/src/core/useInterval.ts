@@ -16,13 +16,17 @@ export function useInterval(callback: () => void, delayMs: number | null): void 
   useEffect(() => {
     if (delayMs === null) return;
 
+    // SCALE-1.7 — ±10% jitter, fixed once per mount, so thousands of desks that all
+    // load at shift start don't fire their polls in lockstep (thundering herd).
+    const jitteredDelay = delayMs * (0.9 + Math.random() * 0.2);
+
     const tick = () => {
       if (!document.hidden) {
         savedCallback.current();
       }
     };
 
-    const id = window.setInterval(tick, delayMs);
+    const id = window.setInterval(tick, jitteredDelay);
     return () => window.clearInterval(id);
   }, [delayMs]);
 }

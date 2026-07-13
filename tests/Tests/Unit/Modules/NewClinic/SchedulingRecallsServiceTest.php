@@ -64,6 +64,59 @@ class SchedulingRecallsServiceTest extends TestCase
         $service->snoozeRecall(0, 7, 1);
     }
 
+    public function testFlagFollowUpRequiresWriteAcl(): void
+    {
+        $access = $this->createMock(SchedulingAccessService::class);
+        $access->method('assertHubAccess');
+        $access->method('canBookAppointment')->willReturn(false);
+
+        $service = new SchedulingRecallsService($access, new VisitScopeService());
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Recall write permission denied');
+        $service->flagFollowUp(1, '2026-08-01', 'Recheck BP', 1);
+    }
+
+    public function testFlagFollowUpRejectsInvalidDueDate(): void
+    {
+        $access = $this->createMock(SchedulingAccessService::class);
+        $access->method('assertHubAccess');
+        $access->method('canBookAppointment')->willReturn(true);
+
+        $service = new SchedulingRecallsService($access, new VisitScopeService());
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Valid due date is required');
+        $service->flagFollowUp(1, 'next week', 'Recheck BP', 1);
+    }
+
+    public function testFlagFollowUpRejectsImpossibleCalendarDate(): void
+    {
+        $access = $this->createMock(SchedulingAccessService::class);
+        $access->method('assertHubAccess');
+        $access->method('canBookAppointment')->willReturn(true);
+
+        $service = new SchedulingRecallsService($access, new VisitScopeService());
+
+        // Passes the YYYY-MM-DD regex but is not a real date — checkdate() must reject it.
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Valid due date is required');
+        $service->flagFollowUp(1, '2026-13-45', 'Recheck BP', 1);
+    }
+
+    public function testFlagFollowUpRejectsMissingPatient(): void
+    {
+        $access = $this->createMock(SchedulingAccessService::class);
+        $access->method('assertHubAccess');
+        $access->method('canBookAppointment')->willReturn(true);
+
+        $service = new SchedulingRecallsService($access, new VisitScopeService());
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Patient is required');
+        $service->flagFollowUp(0, '2026-08-01', 'Recheck BP', 1);
+    }
+
     public function testCompleteLinkedRecallOnCheckInReturnsFalseForInvalidIds(): void
     {
         $access = $this->createMock(SchedulingAccessService::class);

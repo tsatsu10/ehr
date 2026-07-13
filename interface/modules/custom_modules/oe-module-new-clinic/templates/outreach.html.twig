@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+
+{% block page_subtitle %}
+<div class="nc-page-heading-subtitle">{{ 'Batch SMS and email campaigns'|xlt }}</div>
+{% endblock %}
+
+{% block content %}
+<div
+    data-island="outreach"
+    data-props="{{ {
+        ajaxUrl: ajax_url,
+        csrfToken: csrf_token,
+        webroot: webroot,
+        legacyUrl: legacy_url|default('')
+    }|json_encode|e('html_attr') }}"
+></div>
+{% endblock %}
+
+{% block scripts %}
+{% include 'partials/island-assets.html.twig' %}
+{% endblock %}

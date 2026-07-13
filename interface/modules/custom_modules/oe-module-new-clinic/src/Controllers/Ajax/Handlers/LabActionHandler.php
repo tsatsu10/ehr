@@ -51,7 +51,7 @@ final class LabActionHandler implements AjaxActionHandlerInterface
                     $userId
                 );
                 $queue = $this->host->enrichQueuePayload($queue, $userId, $facilityId);
-                $this->host->respond(true, 'ok', $queue);
+                $this->host->respondQueue($queue); // SCALE-1.8 delta poll
                 break;
             case 'lab.select':
                 if ($method !== 'POST') {

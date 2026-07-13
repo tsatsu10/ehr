@@ -34,6 +34,7 @@ interface DoctorActivePaneProps {
   onOpenLabPanel: () => void;
   onOpenFormularyRx: () => void;
   onOpenDocFavorites?: () => void;
+  onOpenPatientEducation?: () => void;
   runShortcut: (shortcut: ShortcutKind) => void | Promise<void>;
   onShortcutError: (message: string) => void;
   onPrintRx?: (prescriptionId: number) => void;
@@ -56,6 +57,7 @@ export function DoctorActivePane({
   onOpenLabPanel,
   onOpenFormularyRx,
   onOpenDocFavorites,
+  onOpenPatientEducation,
   runShortcut,
   onShortcutError: _onShortcutError,
   onPrintRx,
@@ -123,6 +125,7 @@ export function DoctorActivePane({
             blocked={blocked}
             clinicalDocHubEnabled={!!payload.clinical_doc_hub_enabled}
             onOpenDocFavorites={onOpenDocFavorites}
+            onOpenPatientEducation={onOpenPatientEducation}
             labPanelOrderEnabled={labPanelOrderEnabled}
             formularyRxEnabled={formularyRxEnabled}
             onOpenLabPanel={onOpenLabPanel}

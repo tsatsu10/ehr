@@ -59,6 +59,8 @@ const islands: Record<string, string> = {
   'encounter-consult':   resolve(here, 'src/islands/encounter-consult/index.tsx'),
   'my-profile':          resolve(here, 'src/islands/my-profile/index.tsx'),
   'office-notes':        resolve(here, 'src/islands/office-notes/index.tsx'),
+  'outreach':            resolve(here, 'src/islands/outreach/index.tsx'),
+  'proc-order':          resolve(here, 'src/islands/proc-order/index.tsx'),
 };
 
 export default defineConfig({
@@ -112,5 +114,13 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
+    // Cap worker concurrency. The default (~one fork per core) spins a heavy jsdom
+    // environment per worker; on a loaded dev box (Windows + XAMPP) 12 of them
+    // starve each other's startup and Vitest aborts with non-deterministic
+    // "Timeout waiting for worker to respond" (a different file each run, never a
+    // real assertion failure). Half the cores is stable and still parallel, and
+    // scales down to 1 on a 2-core CI runner.
+    maxWorkers: '50%',
+    minWorkers: 1,
   },
 });

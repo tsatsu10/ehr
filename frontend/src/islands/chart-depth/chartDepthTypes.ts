@@ -10,6 +10,11 @@ export interface ChartDepthProps {
   visitId?: number;
   encounterId?: number;
   preset?: string;
+  /** GAP-A A4 — Letters tab on the referrals hub (enable_letters_labels). */
+  enableReferrals?: boolean;
+  enableLetters?: boolean;
+  initialView?: 'referrals' | 'letters';
+  letterPrintUrl?: string;
   chartUrl: string;
   visitBoardUrl: string;
   currencyFormat?: {
@@ -77,11 +82,32 @@ export interface ReceiptReprintPayload {
   receipt?: {
     receipt_number?: string;
     queue_number?: number;
+    /** print_queue_number_on_receipt admin setting; undefined (older payloads) means show */
+    show_queue_number?: boolean;
     amount_paid?: number;
     change_due?: number;
     paid_at_label?: string;
   };
   patient?: { display_name?: string; pubpid?: string };
+}
+
+export interface LetterTemplateOption {
+  name: string;
+}
+
+export interface LetterContactOption {
+  id: number;
+  label: string;
+}
+
+export interface LettersTemplatesData {
+  templates?: LetterTemplateOption[];
+  contacts?: LetterContactOption[];
+}
+
+export interface LetterRenderResult {
+  body?: string;
+  template?: string;
 }
 
 export interface ReferralRow {

@@ -175,7 +175,8 @@ body.body_top:has(.nc-t1) {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    min-height: 40px;
+    /* 44px min tap target for shared clinic-floor touch devices (a11y). */
+    min-height: 44px;
     padding: 0.5rem 0.75rem;
     margin-bottom: 0.125rem;
     border-radius: 0.5rem;
@@ -191,6 +192,14 @@ body.body_top:has(.nc-t1) {
     color: var(--oe-nc-text);
     background: var(--oe-nc-bg-muted);
     text-decoration: none;
+}
+
+/* Branded keyboard focus ring on the primary nav links — matches the collapse
+   and profile controls, so focus is visible and consistent (not the faint
+   browser default) for keyboard users. */
+.nc-sidebar-link:focus-visible {
+    outline: none;
+    box-shadow: var(--oe-nc-focus-ring);
 }
 
 .nc-sidebar-link.is-active {

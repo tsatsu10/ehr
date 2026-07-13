@@ -50,6 +50,8 @@ export interface StaffAccessSummary {
   role_template: { id: string | null; label: string | null; desks: string[] };
   desk_apps: string[];
   sensitive_acos: string[];
+  /** A6b (G11) — read-only two-step (MFA) enrollment status. */
+  mfa_enabled?: boolean;
   warnings: string[];
 }
 

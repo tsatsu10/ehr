@@ -13,6 +13,7 @@ namespace OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers;
 
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\AjaxActionHandlerInterface;
 use OpenEMR\Modules\NewClinic\Controllers\AjaxController;
+use OpenEMR\Modules\NewClinic\Services\PharmCatalogAdminService;
 use OpenEMR\Modules\NewClinic\Services\PharmDrugMetaService;
 use OpenEMR\Modules\NewClinic\Services\PharmOpsAccessService;
 use OpenEMR\Modules\NewClinic\Services\PharmOpsDestroyService;
@@ -41,6 +42,8 @@ final class PharmOpsActionHandler implements AjaxActionHandlerInterface
         'pharm_ops.reports_embed',
         'pharm_ops.controlled_catalog',
         'pharm_ops.controlled_catalog_save',
+        'pharm_ops.catalog_list',
+        'pharm_ops.catalog_save',
         'pharm_ops.destroy_get',
         'pharm_ops.destroy_confirm',
         'pharm_ops.rx_print_pdf',
@@ -161,6 +164,26 @@ final class PharmOpsActionHandler implements AjaxActionHandlerInterface
                     'saved' => $saved,
                     'drugs' => $this->host->svc(PharmDrugMetaService::class)->listActiveCatalogFlags(),
                 ]);
+                break;
+            case 'pharm_ops.catalog_list':
+                (new PharmOpsAccessService())->assertCatalogAccess();
+                $this->host->respond(true, 'ok', $this->host->svc(PharmCatalogAdminService::class)
+                    ->getCatalog((string) ($_REQUEST['q'] ?? '')));
+                break;
+            case 'pharm_ops.catalog_save':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                (new PharmOpsAccessService())->assertCatalogAccess();
+                try {
+                    $payload = $this->host->svc(PharmCatalogAdminService::class)
+                        ->saveDrug((array) ($body['drug'] ?? []), $userId);
+                    $this->host->respond(true, 'Drug saved', $payload);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid'], 400);
+                }
                 break;
             case 'pharm_ops.destroy_get':
                 $body = $this->host->readRequestParams($method);

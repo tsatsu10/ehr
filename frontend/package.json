@@ -13,7 +13,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "check": "npm run lint && npm run typecheck && npm test"
+    "i18n:extract": "node scripts/extract-i18n.mjs",
+    "i18n:check": "node scripts/extract-i18n.mjs --check",
+    "bs:check": "node scripts/check-bs-collisions.mjs",
+    "bs:baseline": "node scripts/check-bs-collisions.mjs --write",
+    "check": "npm run lint && npm run typecheck && npm run i18n:check && npm run bs:check && npm test"
   },
   "browserslist": [
     "last 2 Chrome versions",

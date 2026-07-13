@@ -18,6 +18,20 @@ class ReportHubExportService
 {
     private static bool $schemaEnsured = false;
 
+    /** SCALE-2.1 — a job is retried up to this many times before it is marked failed. */
+    private const MAX_ATTEMPTS = 3;
+
+    /** A claim older than this (worker died mid-job) is considered stale and reclaimable. */
+    private const STALE_CLAIM_SECONDS = 300;
+
+    /**
+     * Inline fallback only runs a job the worker hasn't picked up after this long.
+     * Kept well under the client's poll budget (~150s) so a no-worker host still
+     * completes the export before the browser gives up. For real offloading, schedule
+     * scripts/run-jobs.php and set `enable_inline_export_fallback = 0`.
+     */
+    private const INLINE_FALLBACK_AFTER_SECONDS = 10;
+
     public function __construct(
         private readonly ReportHubAccessService $access = new ReportHubAccessService(),
         private readonly ReportHubCatalogService $catalog = new ReportHubCatalogService(),
@@ -181,9 +195,17 @@ class ReportHubExportService
         $this->access->assertHubAccess();
         $row = $this->loadJobRow($jobId, $actorUserId);
 
-        if (($row['status'] ?? '') === 'running') {
-            $this->completeRunningJob($row, $actorUserId);
-            $row = $this->loadJobRow($jobId, $actorUserId);
+        // SCALE-2.1 — the poll is now a PURE read. A background worker
+        // (scripts/run-jobs.php) claims and completes 'running' jobs. The only
+        // exception is the inline fallback: on a host with no worker scheduled, once
+        // a job has sat unclaimed past the fallback window, run it here (claiming it
+        // first so retries/attempts still apply) so exports don't hang forever.
+        if (($row['status'] ?? '') === 'running' && $this->shouldRunInlineFallback($row)) {
+            $claimed = $this->claimJob($jobId);
+            if ($claimed !== null) {
+                $this->processJob($claimed, $actorUserId);
+                $row = $this->loadJobRow($jobId, $actorUserId);
+            }
         }
 
         $payload = [
@@ -312,9 +334,102 @@ class ReportHubExportService
     }
 
     /**
+     * Worker entry (scripts/run-jobs.php): claim + process pending export jobs until
+     * there are none, or the job/time budget is hit. Each iteration claims one job
+     * atomically so multiple workers never double-run the same export. SCALE-2.1.
+     *
+     * @return array{processed: int, failed: int}
+     */
+    public function runWorker(int $maxJobs = 20, int $maxSeconds = 55): array
+    {
+        $this->ensureTableExists();
+        $processed = 0;
+        $failed = 0;
+        $deadline = time() + max(1, $maxSeconds);
+
+        while (($processed + $failed) < max(1, $maxJobs) && time() < $deadline) {
+            $row = $this->claimJob();
+            if ($row === null) {
+                break; // nothing to process
+            }
+            if ($this->processJob($row, (int) ($row['actor_user_id'] ?? 0))) {
+                $processed++;
+            } else {
+                $failed++;
+            }
+        }
+
+        return ['processed' => $processed, 'failed' => $failed];
+    }
+
+    /**
+     * Atomically claim the next processable job (or a specific one), incrementing
+     * attempts. Claims an unclaimed OR stale-claimed 'running' job with retries left.
+     *
+     * Uses a unique token + read-back rather than affected-rows: OpenEMR's
+     * sqlStatement() logs each query, so affected_rows() reflects the logging insert,
+     * not the UPDATE (same reason as VisitScopeService's maintenance lock). The token
+     * is unique per call, so exactly the row this call claimed carries it.
+     *
+     * @return array<string, mixed>|null the claimed row, or null if none available
+     */
+    private function claimJob(?int $onlyJobId = null): ?array
+    {
+        $token = bin2hex(random_bytes(16));
+        $sql = "UPDATE report_hub_export_run
+                SET claimed_by = ?, claimed_at = NOW(), attempts = attempts + 1
+                WHERE status = 'running'
+                  AND attempts < ?
+                  AND (claimed_by IS NULL OR claimed_at < DATE_SUB(NOW(), INTERVAL ? SECOND))";
+        $binds = [$token, self::MAX_ATTEMPTS, self::STALE_CLAIM_SECONDS];
+        if ($onlyJobId !== null) {
+            $sql .= ' AND id = ?';
+            $binds[] = $onlyJobId;
+        }
+        $sql .= ' ORDER BY id LIMIT 1';
+        sqlStatement($sql, $binds);
+
+        $row = QueryUtils::querySingleRow(
+            "SELECT * FROM report_hub_export_run WHERE claimed_by = ? AND status = 'running' ORDER BY id LIMIT 1",
+            [$token]
+        );
+
+        return is_array($row) ? $row : null;
+    }
+
+    /**
+     * Should the status poll run this 'running' job inline (no-worker fallback)?
+     * Only when the fallback is enabled (default on), the job is unclaimed, still has
+     * retries, and has waited past the fallback window (giving a real worker first crack).
+     *
      * @param array<string, mixed> $row
      */
-    private function completeRunningJob(array $row, int $actorUserId): void
+    private function shouldRunInlineFallback(array $row): bool
+    {
+        if ($this->config->getInt('enable_inline_export_fallback', 1) !== 1) {
+            return false;
+        }
+        if (!empty($row['claimed_by'])) {
+            return false; // a worker already has it
+        }
+        if ((int) ($row['attempts'] ?? 0) >= self::MAX_ATTEMPTS) {
+            return false;
+        }
+        $startedAt = (string) ($row['started_at'] ?? '');
+        $ageSeconds = $startedAt !== '' ? (time() - (int) strtotime($startedAt)) : PHP_INT_MAX;
+
+        return $ageSeconds >= self::INLINE_FALLBACK_AFTER_SECONDS;
+    }
+
+    /**
+     * Build + write a claimed export job's file and mark it done. On failure, either
+     * release the claim for another attempt (if attempts remain) or mark it failed
+     * after the 3rd. The caller must have CLAIMED the row first (attempts already
+     * incremented). Returns true on success. SCALE-2.1.
+     *
+     * @param array<string, mixed> $row
+     */
+    private function processJob(array $row, int $actorUserId): bool
     {
         if (function_exists('set_time_limit')) {
             @set_time_limit(0);
@@ -335,13 +450,12 @@ class ReportHubExportService
                 $facilityId
             );
             $path = $this->writeExportFile($jobId, $csv['filename'], $csv['content']);
-            $now = date('Y-m-d H:i:s');
 
             sqlStatement(
                 'UPDATE report_hub_export_run
                  SET status = ?, row_count = ?, file_path = ?, finished_at = ?, message = NULL
                  WHERE id = ? AND status = ?',
-                ['ok', $csv['row_count'], $path, $now, $jobId, 'running']
+                ['ok', $csv['row_count'], $path, date('Y-m-d H:i:s'), $jobId, 'running']
             );
 
             EventAuditLogger::getInstance()->newEvent(
@@ -351,14 +465,26 @@ class ReportHubExportService
                 1,
                 'job_id=' . $jobId . ' report_key=' . $reportKey . ' row_count=' . $csv['row_count']
             );
+
+            return true;
         } catch (\Throwable $e) {
-            $now = date('Y-m-d H:i:s');
-            sqlStatement(
-                'UPDATE report_hub_export_run
-                 SET status = ?, finished_at = ?, message = ?
-                 WHERE id = ? AND status = ?',
-                ['failed', $now, $e->getMessage(), $jobId, 'running']
-            );
+            if ((int) ($row['attempts'] ?? 0) >= self::MAX_ATTEMPTS) {
+                // Out of retries — give up.
+                sqlStatement(
+                    'UPDATE report_hub_export_run
+                     SET status = ?, finished_at = ?, message = ?
+                     WHERE id = ? AND status = ?',
+                    ['failed', date('Y-m-d H:i:s'), mb_substr($e->getMessage(), 0, 480), $jobId, 'running']
+                );
+            } else {
+                // Release the claim so the next worker pass re-attempts it.
+                sqlStatement(
+                    'UPDATE report_hub_export_run SET claimed_by = NULL WHERE id = ? AND status = ?',
+                    [$jobId, 'running']
+                );
+            }
+
+            return false;
         }
     }
 
@@ -492,6 +618,9 @@ class ReportHubExportService
                 `row_count` INT NULL,
                 `file_path` VARCHAR(512) NULL,
                 `status` ENUM(\'ok\',\'failed\',\'running\') NOT NULL,
+                `claimed_by` VARCHAR(64) NULL,
+                `claimed_at` DATETIME NULL,
+                `attempts` INT NOT NULL DEFAULT 0,
                 `actor_user_id` BIGINT NOT NULL,
                 `started_at` DATETIME NOT NULL,
                 `finished_at` DATETIME NULL,

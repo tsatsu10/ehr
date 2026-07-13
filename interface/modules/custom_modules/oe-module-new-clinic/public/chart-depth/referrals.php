@@ -35,11 +35,31 @@ if (!AclMain::aclCheckCore('new_clinic', 'new_chart_depth_referral')
 
 $facilityId = (new VisitScopeService())->resolveDefaultFacilityId();
 $config = new ClinicConfigService();
-if ($config->getInt('enable_chart_depth', 0, $facilityId) !== 1
-    || $config->getInt('enable_chart_depth_referral', 0, $facilityId) !== 1) {
+
+// This hub hosts two correspondence tools: the referrals panel (chart-depth
+// referral sub-feature) and the A4 Letters composer (enable_letters_labels).
+// Either one being enabled is enough to open the hub; the island shows only
+// the panels the clinic has turned on.
+$referralsEnabled = $config->getInt('enable_chart_depth', 0, $facilityId) === 1
+    && $config->getInt('enable_chart_depth_referral', 0, $facilityId) === 1;
+$lettersEnabled = $config->getInt('enable_letters_labels', 0, $facilityId) === 1;
+
+if (!$referralsEnabled && !$lettersEnabled) {
     http_response_code(403);
-    echo xlt('Chart depth referrals are not enabled for this clinic');
+    echo xlt('Referrals and letters are not enabled for this clinic');
     exit;
+}
+
+$initialView = strtolower(trim((string) ($_GET['view'] ?? '')));
+if (!in_array($initialView, ['referrals', 'letters'], true)) {
+    // Default to whichever is available, preferring referrals when both are on.
+    $initialView = $referralsEnabled ? 'referrals' : 'letters';
+}
+if ($initialView === 'referrals' && !$referralsEnabled) {
+    $initialView = 'letters';
+}
+if ($initialView === 'letters' && !$lettersEnabled) {
+    $initialView = 'referrals';
 }
 
 try {
@@ -70,6 +90,11 @@ $reactChartDepth = $config->get('enable_react_chart_depth', '1') === '1';
         'encounter_id' => $encounterId > 0 ? $encounterId : null,
         'chart_url' => $chartUrl,
         'can_manage_referrals' => AclMain::aclCheckCore('new_clinic', 'new_chart_depth_referral'),
+        'enable_referrals' => $referralsEnabled,
+        'enable_letters' => $lettersEnabled,
+        'initial_view' => $initialView,
+        'letter_print_url' => $GLOBALS['webroot']
+            . '/interface/modules/custom_modules/oe-module-new-clinic/public/letter-print.php',
         'enable_react_chart_depth' => $reactChartDepth,
         'shell_nav_id' => 'clinicchart',
         'visit_board_url' => $GLOBALS['webroot']

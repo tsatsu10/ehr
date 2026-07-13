@@ -16,6 +16,8 @@ use OpenEMR\Modules\NewClinic\Controllers\AjaxController;
 use OpenEMR\Modules\NewClinic\Services\ClinicalExportService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalLabsSummaryService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalMedsSummaryService;
+use OpenEMR\Modules\NewClinic\Services\ClinicalVitalsSeriesService;
+use OpenEMR\Modules\NewClinic\Services\LettersService;
 use OpenEMR\Modules\NewClinic\Services\PaymentHistoryService;
 use OpenEMR\Modules\NewClinic\Services\ProfilePaymentsSummaryService;
 use OpenEMR\Modules\NewClinic\Services\ReferralCorrespondenceService;
@@ -31,12 +33,15 @@ final class ChartDepthActionHandler implements AjaxActionHandlerInterface
         'mrd.clinical_referrals_strip',
         'mrd.clinical_labs_summary',
         'mrd.clinical_meds_summary',
+        'mrd.clinical_vitals_series',
         'chart_depth.export_builder',
         'chart_depth.export_generate',
         'chart_depth.referrals_list',
         'chart_depth.referral_save',
         'chart_depth.referral_print',
         'chart_depth.referral_status',
+        'letters.templates',
+        'letters.render',
     ];
 
     public function __construct(
@@ -141,6 +146,13 @@ final class ChartDepthActionHandler implements AjaxActionHandlerInterface
                 );
                 $this->host->respond(true, 'ok', $strip);
                 break;
+            case 'mrd.clinical_vitals_series':
+                $pid = (int) ($_REQUEST['pid'] ?? 0);
+                $this->host->authorizeDeferredHandler('mrd.clinical_vitals_series', $pid);
+                $this->host->assertPatientChartPid($pid);
+                $series = $this->host->svc(ClinicalVitalsSeriesService::class)->getSeries($pid);
+                $this->host->respond(true, 'ok', $series);
+                break;
             case 'chart_depth.export_builder':
                 $pid = (int) ($_REQUEST['pid'] ?? 0);
                 $this->host->authorizeDeferredHandler('chart_depth.export_builder', $pid);
@@ -209,6 +221,30 @@ final class ChartDepthActionHandler implements AjaxActionHandlerInterface
                     (int) ($body['transaction_id'] ?? 0),
                     strtolower(trim((string) ($body['status'] ?? ''))),
                     !empty($body['result_document_id']) ? (int) $body['result_document_id'] : null,
+                    $userId
+                );
+                $this->host->respond(true, 'ok', $result);
+                break;
+            case 'letters.templates':
+                $pid = (int) ($_REQUEST['pid'] ?? 0);
+                $this->host->authorizeDeferredHandler('letters.templates', $pid);
+                $this->host->assertPatientChartPid($pid);
+                $payload = $this->host->svc(LettersService::class)->getTemplatesPayload($pid);
+                $this->host->respond(true, 'ok', $payload);
+                break;
+            case 'letters.render':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $pid = (int) ($body['pid'] ?? 0);
+                $this->host->authorizeDeferredHandler('letters.render', $pid);
+                $this->host->assertPatientChartPid($pid);
+                $result = $this->host->svc(LettersService::class)->renderLetter(
+                    $pid,
+                    trim((string) ($body['template'] ?? '')),
+                    (int) ($body['to_contact_id'] ?? 0),
                     $userId
                 );
                 $this->host->respond(true, 'ok', $result);

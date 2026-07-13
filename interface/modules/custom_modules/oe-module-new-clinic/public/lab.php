@@ -18,7 +18,7 @@ $visitScope = new VisitScopeService();
 $sessionFacility = !empty($_SESSION['facilityId']) ? (int) $_SESSION['facilityId'] : null;
 $facilityId = $visitScope->resolveDeskFacilityId($sessionFacility);
 
-if (!$config->isEnabled('enable_lab_role', 0)) {
+if (!$config->isEnabled('enable_lab_role', 0, $facilityId)) {
     http_response_code(403);
     echo xlt('Lab Desk is disabled. Enable Lab role in Clinic Setup.');
     exit;

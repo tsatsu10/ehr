@@ -16,9 +16,22 @@ use OpenEMR\Common\Logging\EventAuditLogger;
 
 class ClinicAdminService
 {
-    /** @var array<string, array{type: string, default: string, min?: int, max?: int}> */
+    /** @var array<string, array{type: string, default: string, min?: int, max?: int, maxLength?: int}> */
     private const EDITABLE_SETTINGS = [
         'enable_triage' => ['type' => 'bool', 'default' => '1'],
+        'registration_mode' => ['type' => 'string', 'default' => 'desk_full_form'],
+        'dup_block_threshold' => ['type' => 'int', 'default' => '17', 'min' => 1, 'max' => 100],
+        'dup_warn_threshold' => ['type' => 'int', 'default' => '10', 'min' => 1, 'max' => 100],
+        'phone_validation_regex' => ['type' => 'string', 'default' => '^0[235]\d{8}$', 'maxLength' => 64],
+        'country_code' => ['type' => 'string', 'default' => '233'],
+        'clinic_tz' => ['type' => 'string', 'default' => CashClinicProfileService::DEFAULT_CLINIC_TZ, 'maxLength' => 64],
+        'clinic_logo_path' => ['type' => 'string', 'default' => '', 'maxLength' => 255],
+        'search_all_facilities_for_admin' => ['type' => 'bool', 'default' => '1'],
+        'rate_limit_patients_search' => ['type' => 'int', 'default' => '30', 'min' => 1, 'max' => 1000],
+        'rate_limit_dup_check' => ['type' => 'int', 'default' => '60', 'min' => 1, 'max' => 1000],
+        'mrd_activity_feed_days' => ['type' => 'int', 'default' => '90', 'min' => 1, 'max' => 365],
+        'lab_auto_bill_on_order' => ['type' => 'bool', 'default' => '1'],
+        'report_hub_moh_pack' => ['type' => 'string', 'default' => 'ghana_v1'],
         'enable_lab_role' => ['type' => 'bool', 'default' => '0'],
         'enable_pharmacy_role' => ['type' => 'bool', 'default' => '0'],
         'enable_ancillary_services' => ['type' => 'bool', 'default' => '0'],
@@ -30,6 +43,8 @@ class ClinicAdminService
         'external_rx_max_age_days' => ['type' => 'int', 'default' => '730', 'min' => 1, 'max' => 3650],
         'enable_lab_ops' => ['type' => 'bool', 'default' => '0'],
         'enable_lab_panel_order' => ['type' => 'bool', 'default' => '0'],
+        'enable_native_proc_order' => ['type' => 'bool', 'default' => '0'],
+        'enable_debootstrap_shell' => ['type' => 'bool', 'default' => '0'],
         'enable_pharm_ops' => ['type' => 'bool', 'default' => '0'],
         'enable_pharm_rx_favorites' => ['type' => 'bool', 'default' => '0'],
         'enable_rx_print' => ['type' => 'bool', 'default' => '0'],
@@ -55,7 +70,10 @@ class ClinicAdminService
         'enable_chart_depth_finance' => ['type' => 'bool', 'default' => '0'],
         'enable_chart_depth_referral' => ['type' => 'bool', 'default' => '0'],
         'enable_chart_depth_export' => ['type' => 'bool', 'default' => '0'],
+        'enable_letters_labels' => ['type' => 'bool', 'default' => '0'],
+        'enable_vitals_trends' => ['type' => 'bool', 'default' => '0'],
         'communications_hub_enable' => ['type' => 'bool', 'default' => '0'],
+        'enable_outreach' => ['type' => 'bool', 'default' => '0'],
         'enable_patient_registry' => ['type' => 'bool', 'default' => '0'],
         'enable_scheduled_integration' => ['type' => 'bool', 'default' => '1'],
         'registry_redirect_global_search' => ['type' => 'bool', 'default' => '0'],
@@ -81,7 +99,7 @@ class ClinicAdminService
         'enable_scheduling_full_analytics' => ['type' => 'bool', 'default' => '0'],
         'print_queue_slip_on_start_visit' => ['type' => 'bool', 'default' => '1'],
         'print_queue_number_on_receipt' => ['type' => 'bool', 'default' => '1'],
-        'queue_slip_instruction_text' => ['type' => 'string', 'default' => 'Please wait to be called'],
+        'queue_slip_instruction_text' => ['type' => 'string', 'default' => 'Please wait to be called', 'maxLength' => 255],
         'reconciliation_enabled' => ['type' => 'bool', 'default' => '1'],
         'reconciliation_tolerance' => ['type' => 'string', 'default' => '0.01'],
         'reconciliation_cron_time' => ['type' => 'string', 'default' => '23:55'],
@@ -134,6 +152,12 @@ class ClinicAdminService
         'enable_react_clinical_doc_hub' => ['type' => 'bool', 'default' => '1'],
         'enable_admin_hub' => ['type' => 'bool', 'default' => '0'],
         'admin_hub_backup_retention_days' => ['type' => 'int', 'default' => '30', 'min' => 1, 'max' => 365],
+        'enable_native_backup' => ['type' => 'bool', 'default' => '0'],
+        'enable_duplicate_review' => ['type' => 'bool', 'default' => '0'],
+        'enable_native_issue_editor' => ['type' => 'bool', 'default' => '0'],
+        'backup_target_dir' => ['type' => 'string', 'default' => '', 'maxLength' => 512],
+        'backup_frequency_days' => ['type' => 'int', 'default' => '0', 'min' => 0, 'max' => 365],
+        'backup_include_site_files' => ['type' => 'bool', 'default' => '0'],
         'admin_hub_setup_complete' => ['type' => 'bool', 'default' => '0'],
         'enable_office_notes' => ['type' => 'bool', 'default' => '0'],
         'enable_documents_native' => ['type' => 'bool', 'default' => '0'],
@@ -274,6 +298,27 @@ class ClinicAdminService
         return array_merge(
             $this->getSettingsPayload($scope, $requestedFacilityId),
             ['backup_run_result' => $result]
+        );
+    }
+
+    /**
+     * Run the separate site-files backup (design §3b) and return the refreshed
+     * settings payload with the run result attached.
+     *
+     * @return array<string, mixed>
+     */
+    public function initiateFilesBackupRun(
+        string $scope,
+        int $actorUserId,
+        ?int $requestedFacilityId = null
+    ): array {
+        $facilityId = $this->resolveSettingsFacilityId($scope, $requestedFacilityId);
+        $this->assertAdminHubEnabled($facilityId);
+        $result = $this->healthService->initiateFilesBackup($facilityId, $actorUserId);
+
+        return array_merge(
+            $this->getSettingsPayload($scope, $requestedFacilityId),
+            ['files_backup_run_result' => $result]
         );
     }
 
@@ -567,6 +612,55 @@ class ClinicAdminService
                     throw new \InvalidArgumentException('encounter_note_variant_map must be valid JSON object');
                 }
             }
+            if ($key === 'clinical_doc_specialty_pack') {
+                $decoded = json_decode(trim($value), true);
+                if (!is_array($decoded)) {
+                    throw new \InvalidArgumentException('clinical_doc_specialty_pack must be a valid JSON array');
+                }
+            }
+            if (in_array($key, ['pharmacy_refer_to_opd_terminal_state', 'pharmacy_declined_terminal_state'], true)) {
+                $mode = strtolower(trim($value));
+                if (!in_array($mode, ['cancelled', 'closed_no_charge'], true)) {
+                    throw new \InvalidArgumentException($key . ' must be cancelled or closed_no_charge');
+                }
+            }
+            if ($key === 'registration_mode') {
+                if (!in_array($value, ['desk_full_form', 'progressive'], true)) {
+                    throw new \InvalidArgumentException('registration_mode must be desk_full_form or progressive');
+                }
+            }
+            if ($key === 'phone_validation_regex') {
+                // QuickAddService runs this pattern raw (no safePhoneRegex fallback), so a
+                // pattern that doesn't compile must be rejected here, not silently ignored.
+                if (@preg_match('/' . $value . '/', '') === false) {
+                    throw new \InvalidArgumentException('phone_validation_regex is not a valid regular expression');
+                }
+            }
+            if ($key === 'country_code') {
+                if (!preg_match('/^\d{1,4}$/', ltrim($value, '+'))) {
+                    throw new \InvalidArgumentException('country_code must be a 1-4 digit dialing code');
+                }
+            }
+            if ($key === 'clinic_tz') {
+                if (!in_array($value, \DateTimeZone::listIdentifiers(), true)) {
+                    throw new \InvalidArgumentException('clinic_tz must be a valid IANA timezone identifier');
+                }
+            }
+            if ($key === 'dup_warn_threshold' || $key === 'dup_block_threshold') {
+                $warn = $key === 'dup_warn_threshold'
+                    ? (int) $value
+                    : (int) (array_key_exists('dup_warn_threshold', $input)
+                        ? $this->normalizeValue('dup_warn_threshold', self::EDITABLE_SETTINGS['dup_warn_threshold'], $input['dup_warn_threshold'])
+                        : $this->config->get('dup_warn_threshold', '10', $facilityId));
+                $block = $key === 'dup_block_threshold'
+                    ? (int) $value
+                    : (int) (array_key_exists('dup_block_threshold', $input)
+                        ? $this->normalizeValue('dup_block_threshold', self::EDITABLE_SETTINGS['dup_block_threshold'], $input['dup_block_threshold'])
+                        : $this->config->get('dup_block_threshold', '17', $facilityId));
+                if ($warn > $block) {
+                    throw new \InvalidArgumentException('Duplicate warn threshold cannot exceed the block threshold');
+                }
+            }
             $previous = $this->config->get($key, $meta['default'], $facilityId);
             $this->config->set($key, $value, $facilityId);
 
@@ -675,15 +769,23 @@ class ClinicAdminService
 
         if ($meta['type'] === 'string') {
             $value = trim((string) $raw);
-            // encounter_note_lbf_export_formdir is optional -- it only matters when
-            // encounter_note_lbf_export_on_save is on, and its own declared default
-            // is '', so it must be allowed to save empty (unlike every other string
-            // setting here, which always has a real default and should never be blank).
-            if ($value === '' && $key !== 'encounter_note_lbf_export_formdir') {
+            // Optional string settings whose own declared default is '' must be allowed
+            // to save empty: encounter_note_lbf_export_formdir only matters when its
+            // companion on-save toggle is on, clinic_logo_path empty means "no logo",
+            // and backup_target_dir empty means "native backup not configured yet"
+            // (its enable_native_backup flag defaults OFF).
+            // Every other string setting has a real default and should never be blank.
+            $blankAllowed = ['encounter_note_lbf_export_formdir', 'clinic_logo_path', 'backup_target_dir'];
+            if ($value === '' && !in_array($key, $blankAllowed, true)) {
                 throw new \InvalidArgumentException('Invalid value for ' . $key);
             }
 
-            return mb_substr($value, 0, 32);
+            // Historically this truncated every 'string' setting to 32 chars regardless
+            // of what the field actually holds -- harmless for short codes (formdir names,
+            // routing weights) but silently corrupted longer values (JSON maps, free text)
+            // with no error surfaced to the admin. Per-key 'maxLength' now overrides the
+            // default for fields that legitimately need more room.
+            return mb_substr($value, 0, $meta['maxLength'] ?? 2000);
         }
 
         $intVal = (int) $raw;

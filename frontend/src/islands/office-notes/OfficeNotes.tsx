@@ -7,6 +7,7 @@ import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { RowActionsMenu, type RowActionItem } from '@components/RowActionsMenu';
 import { SegmentedControl } from '@components/SegmentedControl';
 import { WidgetCard } from '@components/WidgetCard';
+import { t } from '@core/i18n';
 import { oeFetch } from '@core/oeFetch';
 import { AdminEmptyState, AdminLoadingState } from '@islands/admin-hub/adminUi';
 import { Pin, PinOff, StickyNote } from 'lucide-react';
@@ -16,7 +17,7 @@ import type {
   OfficeNotesListResponse,
   OfficeNotesProps,
 } from './officeNotesTypes';
-import { formatNoteDateTime, OFFICE_NOTE_FILTERS } from './officeNotesUi';
+import { formatNoteDateTime, officeNoteFilters } from './officeNotesUi';
 
 export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps) {
   const [notes, setNotes] = useState<OfficeNote[]>([]);
@@ -55,7 +56,7 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
         setPageSize(data.page_size);
         setOffset(data.offset);
       } catch (err) {
-        setListError(err instanceof Error ? err.message : 'Could not load notes');
+        setListError(err instanceof Error ? err.message : t('Could not load notes'));
       } finally {
         setLoading(false);
       }
@@ -76,7 +77,7 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
   const submitCompose = async () => {
     const body = compose.trim();
     if (body === '') {
-      setComposeError('Enter a note before saving.');
+      setComposeError(t('Enter a note before saving.'));
       return;
     }
     setComposeError(null);
@@ -86,7 +87,7 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
       setCompose('');
       await loadNotes(filter, 0);
     } catch (err) {
-      setComposeError(err instanceof Error ? err.message : 'Could not save note');
+      setComposeError(err instanceof Error ? err.message : t('Could not save note'));
     } finally {
       setSavingCompose(false);
     }
@@ -102,7 +103,7 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
     if (editingId === null) return;
     const body = editBody.trim();
     if (body === '') {
-      setEditError('Note text is required.');
+      setEditError(t('Note text is required.'));
       return;
     }
     setSavingEdit(true);
@@ -112,7 +113,7 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
       setEditingId(null);
       await loadNotes(filter, offset);
     } catch (err) {
-      setEditError(err instanceof Error ? err.message : 'Could not save note');
+      setEditError(err instanceof Error ? err.message : t('Could not save note'));
     } finally {
       setSavingEdit(false);
     }
@@ -126,7 +127,7 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
       });
       await loadNotes(filter, offset);
     } catch (err) {
-      setListError(err instanceof Error ? err.message : 'Could not update note');
+      setListError(err instanceof Error ? err.message : t('Could not update note'));
     }
   };
 
@@ -139,7 +140,7 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
       // Reload from offset 0: (un)pinning changes global ordering.
       await loadNotes(filter, 0);
     } catch (err) {
-      setListError(err instanceof Error ? err.message : 'Could not update note');
+      setListError(err instanceof Error ? err.message : t('Could not update note'));
     }
   };
 
@@ -153,7 +154,7 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
       const nextOffset = notes.length === 1 && offset >= pageSize ? offset - pageSize : offset;
       await loadNotes(filter, nextOffset);
     } catch (err) {
-      setListError(err instanceof Error ? err.message : 'Could not delete note');
+      setListError(err instanceof Error ? err.message : t('Could not delete note'));
       setPendingDelete(null);
     } finally {
       setDeleting(false);
@@ -161,17 +162,17 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
   };
 
   const rowActions = (note: OfficeNote): RowActionItem[] => [
-    { id: 'edit', label: 'Edit', onClick: () => beginEdit(note) },
+    { id: 'edit', label: t('Edit'), onClick: () => beginEdit(note) },
     {
       id: 'archive',
-      label: note.active ? 'Archive' : 'Restore',
+      label: note.active ? t('Archive') : t('Restore'),
       onClick: () => {
         void toggleArchive(note);
       },
     },
     {
       id: 'delete',
-      label: 'Delete',
+      label: t('Delete'),
       destructive: true,
       onClick: () => setPendingDelete(note),
     },
@@ -187,21 +188,21 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
         <div className="nc-office-notes__intro-lead">
           <StickyNote className="h-5 w-5" aria-hidden="true" />
           <p className="nc-office-notes__intro-text mb-0">
-            Shared notes visible to all clinic staff — shift handovers, closures, reminders.
+            {t('Shared notes visible to all clinic staff — shift handovers, closures, reminders.')}
           </p>
         </div>
         {legacyUrl && (
           <a className="nc-office-notes__legacy-link" href={legacyUrl}>
-            Open classic view
+            {t('Open classic view')}
           </a>
         )}
       </header>
 
-      <WidgetCard title="Add a note" bodyPad="pad">
+      <WidgetCard title={t('Add a note')} bodyPad="pad">
         <Textarea
-          aria-label="New office note"
+          aria-label={t('New office note')}
           rows={3}
-          placeholder="Write a note for the whole clinic…"
+          placeholder={t('Write a note for the whole clinic…')}
           value={compose}
           onChange={(e) => {
             setCompose(e.target.value);
@@ -221,21 +222,25 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
               void submitCompose();
             }}
           >
-            {savingCompose ? 'Saving…' : 'Add note'}
+            {savingCompose ? t('Saving…') : t('Add note')}
           </Button>
         </div>
       </WidgetCard>
 
       <div className="nc-office-notes__toolbar">
         <SegmentedControl
-          ariaLabel="Filter office notes"
+          ariaLabel={t('Filter office notes')}
           value={filter}
           onChange={(id) => changeFilter(id as OfficeNoteFilter)}
-          segments={OFFICE_NOTE_FILTERS}
+          segments={officeNoteFilters()}
         />
         {!loading && total > 0 && (
           <span className="nc-office-notes__count">
-            Showing {pageStart}–{pageEnd} of {total}
+            {t('Showing {start}–{end} of {total}', {
+              start: pageStart,
+              end: pageEnd,
+              total,
+            })}
           </span>
         )}
       </div>
@@ -247,14 +252,14 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
       )}
 
       {loading ? (
-        <AdminLoadingState label="Loading office notes…" />
+        <AdminLoadingState label={t('Loading office notes…')} />
       ) : notes.length === 0 ? (
         <AdminEmptyState
-          title="No notes here"
+          title={t('No notes here')}
           description={
             filter === 'active'
-              ? 'Add the first note above — it will show for every staff member.'
-              : 'Nothing matches this filter yet.'
+              ? t('Add the first note above — it will show for every staff member.')
+              : t('Nothing matches this filter yet.')
           }
         />
       ) : (
@@ -268,7 +273,7 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
                 {editingId === note.id ? (
                   <div className="nc-office-notes__edit">
                     <Textarea
-                      aria-label="Edit office note"
+                      aria-label={t('Edit office note')}
                       rows={4}
                       value={editBody}
                       onChange={(e) => {
@@ -293,7 +298,7 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
                           void submitEdit();
                         }}
                       >
-                        {savingEdit ? 'Saving…' : 'Save'}
+                        {savingEdit ? t('Saving…') : t('Save')}
                       </Button>
                       <Button
                         type="button"
@@ -302,7 +307,7 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
                         disabled={savingEdit}
                         onClick={() => setEditingId(null)}
                       >
-                        Cancel
+                        {t('Cancel')}
                       </Button>
                     </div>
                   </div>
@@ -313,22 +318,22 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
                         {note.pinned && (
                           <Badge className="nc-office-notes__pinned-badge">
                             <Pin className="h-3 w-3" aria-hidden="true" />
-                            Pinned
+                            {t('Pinned')}
                           </Badge>
                         )}
-                        <span className="nc-office-notes__author">{note.user || 'Unknown'}</span>
+                        <span className="nc-office-notes__author">{note.user || t('Unknown')}</span>
                         <span className="nc-office-notes__date">
                           {formatNoteDateTime(note.date)}
                         </span>
-                        {!note.active && <Badge variant="neutral">Archived</Badge>}
+                        {!note.active && <Badge variant="neutral">{t('Archived')}</Badge>}
                       </div>
                       <div className="nc-office-notes__card-actions">
                         <button
                           type="button"
                           className="nc-office-notes__pin-btn"
                           aria-pressed={note.pinned}
-                          aria-label={note.pinned ? 'Unpin note' : 'Pin note'}
-                          title={note.pinned ? 'Unpin' : 'Pin to top'}
+                          aria-label={note.pinned ? t('Unpin note') : t('Pin note')}
+                          title={note.pinned ? t('Unpin') : t('Pin to top')}
                           onClick={() => {
                             void togglePin(note);
                           }}
@@ -340,7 +345,9 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
                           )}
                         </button>
                         <RowActionsMenu
-                          label={`Actions for note by ${note.user || 'unknown'}`}
+                          label={t('Actions for note by {name}', {
+                            name: note.user || t('Unknown'),
+                          })}
                           items={rowActions(note)}
                         />
                       </div>
@@ -365,7 +372,7 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
               void loadNotes(filter, Math.max(0, offset - pageSize));
             }}
           >
-            Previous
+            {t('Previous')}
           </Button>
           <Button
             type="button"
@@ -376,7 +383,7 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
               void loadNotes(filter, offset + pageSize);
             }}
           >
-            Next
+            {t('Next')}
           </Button>
         </div>
       )}
@@ -384,17 +391,17 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
       <ConfirmModal
         open={pendingDelete !== null}
         onClose={() => setPendingDelete(null)}
-        title="Delete this note?"
-        confirmLabel="Delete note"
+        title={t('Delete this note?')}
+        confirmLabel={t('Delete note')}
         confirmVariant="danger"
         submitting={deleting}
-        submittingLabel="Deleting…"
+        submittingLabel={t('Deleting…')}
         onConfirm={() => {
           void confirmDelete();
         }}
       >
         <p className="mb-0">
-          This permanently removes the note for all staff. To hide it instead, use Archive.
+          {t('This permanently removes the note for all staff. To hide it instead, use Archive.')}
         </p>
       </ConfirmModal>
     </div>

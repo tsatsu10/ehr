@@ -25,6 +25,7 @@ class PatientChartClinicalService
         private readonly ClinicalDocHubLinkService $docHubLinks = new ClinicalDocHubLinkService(),
         private readonly HistoryEditorWrapService $historyEditorWrap = new HistoryEditorWrapService(),
         private readonly EncounterNoteService $encounterNote = new EncounterNoteService(),
+        private readonly ClinicConfigService $config = new ClinicConfigService(),
     ) {
     }
 
@@ -41,6 +42,9 @@ class PatientChartClinicalService
 
         return [
             'active_encounter_id' => $encounterId > 0 ? $encounterId : null,
+            // D4 — when on, the Clinical tab edits problems/allergies/meds in a native
+            // drawer instead of the stock add_edit_issue.php popup.
+            'native_issue_editor' => $this->config->isEnabled('enable_native_issue_editor', 0, $facilityId),
             'background' => $this->buildBackgroundSection($pid, $webroot),
             'problems' => $this->buildListSection($pid, 'medical_problem', $webroot, 'clinical-problems'),
             'allergies' => $this->buildAllergySection($pid, $webroot),
@@ -230,6 +234,7 @@ class PatientChartClinicalService
 
         return [
             'anchor' => 'clinical-allergies',
+            'type' => 'allergy',
             'items' => $items,
             'none_known' => $noneKnown && $items === [],
             'undocumented' => $undocumented,
@@ -271,6 +276,7 @@ class PatientChartClinicalService
 
         return [
             'anchor' => $anchor,
+            'type' => $type,
             'items' => $items,
             'empty' => $items === [],
             'editor_url' => $webroot

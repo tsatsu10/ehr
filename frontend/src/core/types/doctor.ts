@@ -125,6 +125,12 @@ export interface DoctorReopenableRow {
 /** Response from ?action=doctor.queue */
 export interface DoctorQueueData {
   visits: DoctorQueueCard[];
+  /** SCALE-1.2 — true when the queue hit its row cap; show QueueTruncationBanner. */
+  queue_truncated?: boolean;
+  queue_cap?: number;
+  /** SCALE-1.8 — delta-poll token; `unchanged` responses carry only these two. */
+  revision?: string;
+  unchanged?: boolean;
   claim_lost_cards?: DoctorQueueCard[];
   counts: { waiting: number; done_today: number; reopenable_today: number };
   active_consult?: DoctorQueueCard | null;
@@ -165,6 +171,8 @@ export interface DoctorDeskProps {
   labResultsToastEnabled?: boolean;
   /** Emergency Rx when allergies undocumented (`new_rx_undocumented_allergy_override`). */
   canRxAllergyOverride?: boolean;
+  /** B3 (G7) — clinic-configured patient-education resources for the handout quick action. */
+  patientEducationResources?: { title: string; url: string }[];
 }
 
 /** Provider row from doctor.search_providers */

@@ -30,6 +30,19 @@ export interface PatientChartProps {
   registrationMode: string;
   enableInChartPatientSearch?: boolean;
   enableDocuments?: boolean;
+  /** GAP-A A4 — chart/address/barcode label prints (enable_letters_labels). */
+  enableLabels?: boolean;
+  labelPrintUrl?: string;
+  /** GAP-A A4 — deep link to the referral-letter composer (Letters hub view). */
+  lettersHubUrl?: string;
+  /**
+   * G5 — show the "Flag for follow-up" action (creates a recall in the S1 Recalls
+   * worklist). True only when scheduling is enabled and the user has recall-write
+   * access, matching SchedulingRecallsService::flagFollowUp()'s server-side gates.
+   */
+  canFlagFollowUp?: boolean;
+  /** B2 (G9) — enable the Clinical-tab Vitals Trends panel (enable_vitals_trends). */
+  enableVitalsTrends?: boolean;
 }
 
 export interface PatientDocument {
@@ -195,7 +208,20 @@ export interface PaymentsStripData {
   payment_history_url?: string;
   balance_due_amount?: number | null;
   currency_symbol?: string;
-  last_receipt?: string | null;
+  /**
+   * ProfilePaymentsSummaryService returns an object, not a string — the old
+   * `string | null` type let PaymentsStrip render it as a React child, which
+   * crashed the whole chart island for any patient with a receipt (2026-07-11
+   * A4 smoke finding).
+   */
+  last_receipt?: {
+    id?: number;
+    receipt_number?: string;
+    amount_paid?: number;
+    at?: string;
+    cashier?: string | null;
+    visit_id?: number;
+  } | null;
 }
 
 export interface ChartVisitRow {
@@ -222,12 +248,15 @@ export interface ChartVisitsData {
 }
 
 export interface ClinicalListItem {
+  id?: number;
   title?: string;
   detail?: string;
 }
 
 export interface ClinicalListSection {
   anchor?: string;
+  /** Issue type (medical_problem | allergy | medication) — present on natively-editable sections. */
+  type?: string;
   editor_url?: string;
   items?: ClinicalListItem[];
   undocumented?: boolean;
@@ -303,11 +332,16 @@ export interface ClinicalData {
   active_encounter_id?: number | null;
   /** MRD §17.6 — sections hidden via the legacy hide_dashboard_cards global. */
   hidden_sections?: string[];
+  /** D4 — edit problems/allergies/meds in a native drawer instead of the stock popup. */
+  native_issue_editor?: boolean;
 }
 
 export interface ClinicalReferralsStrip {
   hidden?: boolean;
   open_referrals_url?: string;
+  /** Stock transactions screen — the reachable path to non-referral transaction
+   *  types (records requests, legal, billing) when the stock menu item is hidden. */
+  stock_transactions_url?: string;
   items?: { label?: string; status?: string; occurred_at?: string }[];
 }
 
@@ -327,6 +361,41 @@ export interface ClinicalMedsStrip {
   meds_strip_label?: string;
   pharm_ops_url?: string;
   view_meds_anchor?: string;
+}
+
+/** B2 (G9) — longitudinal vitals series for the Clinical "Trends" panel. */
+export interface VitalsSeriesPoint {
+  iso: string;
+  label: string;
+  value: number;
+  encounter_id?: number;
+}
+
+export interface VitalsSeriesLine {
+  name: string;
+  points: VitalsSeriesPoint[];
+}
+
+export interface VitalsSeriesReading {
+  iso: string;
+  label: string;
+  display: string;
+  encounter_id?: number;
+}
+
+export interface VitalsSeriesMeasure {
+  key: string;
+  label: string;
+  unit: string;
+  series: VitalsSeriesLine[];
+  readings: VitalsSeriesReading[];
+}
+
+export interface VitalsSeriesData {
+  enabled: boolean;
+  measures: VitalsSeriesMeasure[];
+  /** W11 — deep link to the stock CDC/WHO growth chart; set only for pediatric patients. */
+  growth_chart_url?: string | null;
 }
 
 export interface ChartMessageRow {

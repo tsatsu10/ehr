@@ -32,6 +32,7 @@ import { useDoctorRoster } from './useDoctorRoster';
 import { DoctorActivePane, type ActiveMode } from './DoctorActivePane';
 import { DoctorWalkInModal } from './DoctorWalkInModal';
 import { DeskInterruptBanner } from '@components/DeskInterruptBanner';
+import { QueueTruncationBanner } from '@components/QueueTruncationBanner';
 import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import { NativeSelect } from '@components/ui/native-select';
@@ -55,6 +56,7 @@ import { postDoctorAction } from './postDoctorAction';
 import { useNarrowDoctorDesk } from './useNarrowDoctorDesk';
 import { useDoctorDeskQueue } from './useDoctorDeskQueue';
 import { DoctorDeskModals } from './DoctorDeskModals';
+import { PatientEducationSlideOver } from './PatientEducationSlideOver';
 
 const STORAGE_KEY = 'doctor_desk_active_visit_id';
 
@@ -73,6 +75,7 @@ export function DoctorDesk({
   currencyFormat,
   labResultsToastEnabled = false,
   canRxAllergyOverride = false,
+  patientEducationResources = [],
 }: DoctorDeskProps) {
   useEffect(() => {
     if (currencyFormat) {
@@ -111,6 +114,7 @@ export function DoctorDesk({
   const [labPanelOpen, setLabPanelOpen] = useState(false);
   const [formularyRxOpen, setFormularyRxOpen] = useState(false);
   const [docFavoritesOpen, setDocFavoritesOpen] = useState(false);
+  const [patientEducationOpen, setPatientEducationOpen] = useState(false);
   const [reopenTarget, setReopenTarget] = useState<DoctorReopenableRow | null>(null);
   const [overrideCard, setOverrideCard] = useState<DoctorQueueCard | null>(null);
   const [overrideSubmitting, setOverrideSubmitting] = useState(false);
@@ -720,6 +724,8 @@ export function DoctorDesk({
         />
       )}
 
+      <QueueTruncationBanner truncated={queue.queueTruncated} cap={200} />
+
       <DeskQueueStatusBar
         id="nc-doctor-status-bar"
         ariaLabel="Doctor desk status"
@@ -757,6 +763,9 @@ export function DoctorDesk({
               onOpenFormularyRx={() => setFormularyRxOpen(true)}
               onOpenDocFavorites={
                 consultPayload?.clinical_doc_hub_enabled ? () => setDocFavoritesOpen(true) : undefined
+              }
+              onOpenPatientEducation={
+                patientEducationResources.length > 0 ? () => setPatientEducationOpen(true) : undefined
               }
               runShortcut={shortcutNav.runShortcut}
               onShortcutError={(msg) => showDeskToast(msg, 'danger')}
@@ -806,6 +815,12 @@ export function DoctorDesk({
           />
         </>
       )}
+
+      <PatientEducationSlideOver
+        open={patientEducationOpen}
+        onClose={() => setPatientEducationOpen(false)}
+        resources={patientEducationResources}
+      />
 
       <DoctorDeskModals
         ajaxUrl={ajaxUrl}

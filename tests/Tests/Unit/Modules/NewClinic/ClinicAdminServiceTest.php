@@ -313,4 +313,192 @@ class ClinicAdminServiceTest extends TestCase
 
         $this->assertIsArray($result);
     }
+
+    /**
+     * Regression guard for the 2026-07-11 "dont assume check and fix" audit:
+     * report_hub_async_export_threshold, lab_intake_formdir, pharmacy_service_formdir,
+     * pharmacy_refer_to_opd_terminal_state, pharmacy_declined_terminal_state, and
+     * clinical_doc_specialty_pack were already in EDITABLE_SETTINGS (so saveable via a
+     * hand-crafted request) but had no adminFieldDefs.ts entry, so no real admin could
+     * ever reach them. This confirms the backend side of the fix keeps working now that
+     * they're wired to the UI.
+     */
+    public function testSaveAcceptsPreviouslyOrphanedSettings(): void
+    {
+        $service = new ClinicAdminService();
+
+        $result = $service->saveSettings('global', [
+            'report_hub_async_export_threshold' => '2500',
+            'lab_intake_formdir' => 'lab_intake',
+            'pharmacy_service_formdir' => 'pharmacy_service',
+            'pharmacy_refer_to_opd_terminal_state' => 'closed_no_charge',
+            'pharmacy_declined_terminal_state' => 'closed_no_charge',
+            'clinical_doc_specialty_pack' => '["eye_mag","painmap"]',
+        ], 1);
+
+        $this->assertIsArray($result);
+
+        // Restore defaults so this test leaves no residue for later tests/smokes.
+        $service->saveSettings('global', [
+            'report_hub_async_export_threshold' => '5000',
+            'pharmacy_refer_to_opd_terminal_state' => 'cancelled',
+            'pharmacy_declined_terminal_state' => 'cancelled',
+            'clinical_doc_specialty_pack' => '[]',
+        ], 1);
+    }
+
+    public function testSaveRejectsInvalidPharmacyTerminalState(): void
+    {
+        $service = new ClinicAdminService();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('pharmacy_refer_to_opd_terminal_state must be cancelled or closed_no_charge');
+        $service->saveSettings('global', [
+            'pharmacy_refer_to_opd_terminal_state' => 'voided',
+        ], 1);
+    }
+
+    public function testSaveRejectsInvalidSpecialtyPackJson(): void
+    {
+        $service = new ClinicAdminService();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('clinical_doc_specialty_pack must be a valid JSON array');
+        $service->saveSettings('global', [
+            'clinical_doc_specialty_pack' => 'not json',
+        ], 1);
+    }
+
+    /**
+     * Regression guard for a silent-corruption bug found while adding
+     * clinical_doc_specialty_pack to the UI (2026-07-11): normalizeValue()'s generic
+     * 'string' branch truncated every string setting to 32 chars with no error, which
+     * would have silently mangled JSON values like this pack list or
+     * encounter_note_variant_map. Confirms values over the old 32-char cap now
+     * round-trip intact.
+     */
+    public function testSaveDoesNotTruncateLongJsonStringSettings(): void
+    {
+        $service = new ClinicAdminService();
+        $pack = '["eye_mag","bronchitis","ankleinjury","painmap","CAMOS"]';
+        $variantMap = '{"Referral consult":"referral_consult","Follow-up":"follow_up"}';
+
+        $service->saveSettings('global', [
+            'clinical_doc_specialty_pack' => $pack,
+            'encounter_note_variant_map' => $variantMap,
+        ], 1);
+
+        $payload = $service->getSettingsPayload('global', 1);
+        $this->assertSame($pack, $payload['settings']['clinical_doc_specialty_pack']);
+        $this->assertSame($variantMap, $payload['settings']['encounter_note_variant_map']);
+
+        // Restore defaults so this test leaves no residue for later tests/smokes.
+        $service->saveSettings('global', [
+            'clinical_doc_specialty_pack' => '[]',
+            'encounter_note_variant_map' => '{}',
+        ], 1);
+    }
+
+    /**
+     * Second batch of the same audit (2026-07-11, full codebase sweep): these keys were
+     * consumed by real services (duplicate detection, phone validation/normalization,
+     * lab auto-billing, MoH pack, registration mode, timezone, rate limits, branding)
+     * but were missing from EDITABLE_SETTINGS entirely -- no Admin Hub field, no setup
+     * wizard, no write path anywhere. Only a direct DB edit could change them.
+     */
+    public function testSaveAcceptsSecondBatchOfPreviouslyOrphanedSettings(): void
+    {
+        $service = new ClinicAdminService();
+
+        $result = $service->saveSettings('global', [
+            'registration_mode' => 'progressive',
+            'dup_warn_threshold' => '8',
+            'dup_block_threshold' => '20',
+            'phone_validation_regex' => '^0\d{9}$',
+            'country_code' => '234',
+            'clinic_tz' => 'Africa/Lagos',
+            'clinic_logo_path' => '',
+            'search_all_facilities_for_admin' => '1',
+            'rate_limit_patients_search' => '45',
+            'rate_limit_dup_check' => '90',
+            'mrd_activity_feed_days' => '120',
+            'lab_auto_bill_on_order' => '0',
+            'report_hub_moh_pack' => 'ghana_v1',
+        ], 1);
+
+        $this->assertIsArray($result);
+
+        // Restore defaults so this test leaves no residue for later tests/smokes.
+        $service->saveSettings('global', [
+            'registration_mode' => 'desk_full_form',
+            'dup_warn_threshold' => '10',
+            'dup_block_threshold' => '17',
+            'phone_validation_regex' => '^0[235]\d{8}$',
+            'country_code' => '233',
+            'clinic_tz' => 'Africa/Accra',
+            'rate_limit_patients_search' => '30',
+            'rate_limit_dup_check' => '60',
+            'mrd_activity_feed_days' => '90',
+            'lab_auto_bill_on_order' => '1',
+        ], 1);
+    }
+
+    public function testSaveRejectsUnknownRegistrationMode(): void
+    {
+        $service = new ClinicAdminService();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('registration_mode must be desk_full_form or progressive');
+        $service->saveSettings('global', ['registration_mode' => 'kiosk'], 1);
+    }
+
+    public function testSaveRejectsInvalidPhoneRegex(): void
+    {
+        $service = new ClinicAdminService();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('phone_validation_regex is not a valid regular expression');
+        $service->saveSettings('global', ['phone_validation_regex' => '^0[23'], 1);
+    }
+
+    public function testSaveRejectsNonNumericCountryCode(): void
+    {
+        $service = new ClinicAdminService();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('country_code must be a 1-4 digit dialing code');
+        $service->saveSettings('global', ['country_code' => 'GH'], 1);
+    }
+
+    public function testSaveRejectsInvalidClinicTimezone(): void
+    {
+        $service = new ClinicAdminService();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('clinic_tz must be a valid IANA timezone identifier');
+        $service->saveSettings('global', ['clinic_tz' => 'Accra'], 1);
+    }
+
+    public function testSaveRejectsWarnThresholdAboveBlockThreshold(): void
+    {
+        $service = new ClinicAdminService();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Duplicate warn threshold cannot exceed the block threshold');
+        $service->saveSettings('global', [
+            'dup_warn_threshold' => '30',
+            'dup_block_threshold' => '17',
+        ], 1);
+    }
+
+    public function testSaveRespectsExplicitMaxLengthForQueueSlipText(): void
+    {
+        $service = new ClinicAdminService();
+        $longText = str_repeat('a', 300);
+
+        $service->saveSettings('global', [
+            'queue_slip_instruction_text' => $longText,
+        ], 1);
+
+        $payload = $service->getSettingsPayload('global', 1);
+        $this->assertSame(255, strlen((string) $payload['settings']['queue_slip_instruction_text']));
+
+        // Restore the default so this test leaves no residue for later tests/smokes.
+        $service->saveSettings('global', [
+            'queue_slip_instruction_text' => 'Please wait to be called',
+        ], 1);
+    }
 }

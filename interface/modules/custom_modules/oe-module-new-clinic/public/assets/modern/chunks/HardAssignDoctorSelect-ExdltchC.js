@@ -1,0 +1,2 @@
+import{b as e,m as t}from"./dist-DIKAfs_x.js";import{t as n}from"./native-select-DnQ1OUb4.js";var r=e();function i({id:e,doctors:i,value:a,onChange:o,disabled:s=!1,className:c}){return(0,r.jsxs)(n,{id:e,className:t(`h-8`,c),value:a,disabled:s,onChange:e=>o(e.target.value),children:[(0,r.jsx)(`option`,{value:``,children:`Shared pool — no hard assignment`}),i.map(e=>(0,r.jsxs)(`option`,{value:String(e.user_id),children:[e.display_name,e.taking_patients?``:` (not taking patients)`]},e.user_id))]})}export{i as t};
+//# sourceMappingURL=HardAssignDoctorSelect-ExdltchC.js.map

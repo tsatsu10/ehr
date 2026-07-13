@@ -35,7 +35,12 @@ export function PaymentsStrip({ data }: PaymentsStripProps) {
       )}
       {data.last_receipt && (
         <p className="mb-0 mt-2 text-sm text-[var(--oe-nc-text-muted)]">
-          Last receipt: {data.last_receipt}
+          Last receipt: #{data.last_receipt.receipt_number ?? '—'}
+          {' · '}
+          {data.currency_symbol ?? ''}
+          {data.last_receipt.amount_paid ?? 0}
+          {data.last_receipt.at ? ` · ${data.last_receipt.at}` : ''}
+          {data.last_receipt.cashier ? ` · ${data.last_receipt.cashier}` : ''}
         </p>
       )}
     </ChartSection>

@@ -48,12 +48,10 @@ class AdminPeopleLegacyWrapService
             'acl' => 'acl',
             'advanced' => true,
         ],
-        'facility_user' => [
-            'title' => 'Facility user information',
-            'sub' => 'facilities',
-            'path' => '/interface/usergroup/facility_user.php',
-            'acl' => 'users',
-        ],
+        // 'facility_user' (stock /interface/usergroup/facility_user.php) retired
+        // 2026-07-11 (C5/W1): the native Admin Hub facility×user matrix + panel
+        // (FacilityUserMatrix / FacilityUserPanel, admin.facility_user.*) fully
+        // replace it. Removing it from the allow-list closes the legacy path.
         'help_acl' => [
             'title' => 'ACL help',
             'sub' => 'help',

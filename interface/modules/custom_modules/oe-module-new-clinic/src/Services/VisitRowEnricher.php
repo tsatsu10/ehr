@@ -63,6 +63,12 @@ class VisitRowEnricher
         $waitMins = self::waitMinutes($row['started_at'] ?? null);
         $row['wait_minutes'] = $waitMins;
         $row['wait_label'] = self::formatWaitLabel($waitMins);
+        // SCALE-1.8 follow-up — stable Unix epoch of the start time (tz-agnostic), so
+        // the client can compute a LIVE wait without a network refresh. Absolute time
+        // point → correct regardless of the browser's timezone. This lets the delta
+        // poll drop the volatile wait_minutes/wait_label from its hash.
+        $startedEpoch = !empty($row['started_at']) ? strtotime((string) $row['started_at']) : false;
+        $row['started_at_epoch'] = $startedEpoch !== false ? $startedEpoch : null;
         if ($skippedTriageMap !== null) {
             $row['skipped_triage'] = !empty($skippedTriageMap[$visitId]);
         } else {

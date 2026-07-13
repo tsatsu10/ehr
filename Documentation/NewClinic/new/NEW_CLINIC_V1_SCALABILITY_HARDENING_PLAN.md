@@ -218,6 +218,11 @@ Guiding rules for ALL future code in this module:
 - **Do:** One sub-task per export type, same recipe as SCALE-2.1: enqueue → poll status → download by job id. Keep small results (<~500 rows, measured) synchronous — add a row-count pre-check that decides sync vs job. Frontend: reuse the existing export-polling UX from `reportHubExport.ts` (extract a shared `useExportJob` hook in `frontend/src/core/` and use it in all four surfaces — grep for each action name to find every consumer).
 - **Verify:** each export type: small = instant, large = queued + completes via worker; PHP worker never blocked >2 s serving the poll (check NC_PERF log from SCALE-0.1).
 
+- **Status (2026-07-13): DONE for the one surface that actually needs it; the other three re-scoped after reading the code (trust-code-over-plan).**
+  - **Cohort CSV export — DONE.** Generic `ExportJobService` + `new_clinic_export_job` table + `run-jobs.php` drains it; `PatientCohortSearchService::requestExport()` does the sync(≤500)/async pre-check; shared `frontend/src/core/exportJobPolling.ts` (`pollExportJobToDownload`) handles the async download. **Security fix during audit:** the session-less worker must apply the requester's facility scope (captured at enqueue), or a scoped user's large export would leak all facilities' patients — fixed + proven; client cannot inject the scope field.
+  - **`ClinicalExportService::preparePdfExport()` / `chart_depth.export_generate` — NOT NEEDED.** It does no inline PDF work: it returns a `post_url` + fields and the browser POSTs to **stock** `interface/patient_file/report/custom_report.php`, which renders the PDF. The heavy work is OpenEMR core, not the module request path; offloading it would mean reimplementing stock report generation (a Tier-3 non-goal). Module part is already light.
+  - **Admin config import — NOT NEEDED (and a poor fit).** `AdminConfigImportService` writes a clinic's OWN config snapshot (dozens–low-hundreds of fees/visit-types + ~130 settings) — bounded and fast, not a >2 s job. It is also a MUTATION with no downloadable result, so the enqueue→poll→download pattern doesn't apply; moving a config write to the session-less worker would re-introduce the facility/session scoping hazards fixed above for zero benefit.
+
 ### SCALE-2.3 — Export files off local disk (multi-server safe)
 
 - **Problem:** CSVs written to `{OE_SITE_DIR}/documents/nc_report_exports/` — 404s behind a load balancer.
@@ -231,6 +236,12 @@ Guiding rules for ALL future code in this module:
 - **Do:** Grep module for `SELECT v.*` / `v.\*`. For each, list the columns the PHP mapper + frontend actually consume (read the mapper and the island's TypeScript types in `frontend/src/`), and select exactly those. One shared column-list constant per service. This shrinks payloads AND lets MySQL use covering indexes later.
 - **Watch out:** enrichers (`VisitRowEnricher`) may read extra columns — grep its field access before trimming.
 - **Verify:** JSON payloads before/after are identical for a seeded queue (capture and diff); all desks render correctly; Vitest + `verify-module.php`.
+
+- **Status (2026-07-13): DEFERRED after assessment — high risk, now-diminished value, and the stated verification doesn't hold.**
+  - **Value diminished by earlier tasks.** SCALE-1.2 caps the row count (≤200) and SCALE-1.8 delta-polls, so the full payload is only shipped on a *changed* poll of an already-bounded list. The marginal bandwidth win from trimming ~32-col `v.*` shrank a lot.
+  - **The "byte-identical" verify is impossible as written.** `enrichVisitRow()` mutates and returns the RAW row, so the card payload already CONTAINS every `v.*` column (measured: a doctor-queue card = **53 keys**, incl. `row_version`/`created_by`/`created_at`/`cancel_reason`/`appt_date`/`pc_eid`/`routing_method`/`referred_to_visit_id`). Trimming necessarily CHANGES the payload keys, so a before/after diff can't be identical — the real test is "did any desk feature break," which needs full per-desk QA.
+  - **Can't reliably tell which columns are safe to drop.** A name grep across `frontend/src` + module `src` is too noisy (most column names also appear in unrelated contexts). Only `created_by` + `routing_method` are provably unused everywhere — trimming just those from 53 keys is negligible. A safe version needs a per-desk *whitelist* built from each card's TS type + every enricher's field reads, verified by exercising each desk — a sizeable, QA-heavy task.
+  - **Recommendation:** do it later as its own focused effort with per-desk column audits + visual QA, or via an output whitelist (send only fields declared in the card types). Not worth a risky hot-path change whose upside 1.2/1.8 already largely captured.
 
 ### SCALE-2.5 — Fix remaining per-row subqueries and mini-N+1s
 
