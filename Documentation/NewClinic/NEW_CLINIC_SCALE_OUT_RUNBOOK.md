@@ -1,6 +1,6 @@
 # New Clinic — Scale-Out Runbook (1 → N servers)
 
-**Version:** 1.1.0 (SCALE-5.2 consolidated + SCALE-6.2 connection-ceiling step)
+**Version:** 1.2.0 (SCALE-5.2 consolidated + SCALE-6.2 connection ceiling + SCALE-6.3 retention)
 **Date:** 2026-07-13
 **Audience:** the ops person taking a single-box New Clinic install to multiple web servers,
 or an operator responding to a live incident on any box. Each stage below says what breaks at
@@ -327,6 +327,21 @@ this table undercounted at "33" and was missing 4 real tables — fixed here):
 
 A backup you've never test-restored is a hope, not a guarantee.
 
+**History-table retention (SCALE-6.3).** The append-only history tables are pruned by the job
+worker per config keys in `new_clinic_config` (facility 0), `<key> = 0` means never auto-purge:
+
+| Table | Config key | Default | Note |
+|---|---|---|---|
+| `new_config_log` | `retention_config_log_days` | 730 | config-change audit, low volume |
+| `new_visit_notify_log` | `retention_notify_log_days` | 730 | already bounded (one row per visit+recipient) |
+| `new_visit_state_log` | `retention_state_log_days` | **0 (OFF)** | **the visit-FSM transition audit — a clinical/compliance record.** It is NOT auto-purged by default. Turning it on (setting a day count) is a **records-retention policy decision the clinic must sign off**, matching your medical-record retention obligation — never flip it for performance reasons alone. |
+
+Deletes are bounded/batched (a large backlog drains over successive worker passes), so enabling a
+cutoff on a long-running clinic won't lock the table. If volumes ever make batched DELETE too slow
+(unlikely at clinic scale), the future option is RANGE-partition-by-date (near-instant
+`DROP PARTITION`) — but that needs the date column in the primary key, i.e. a schema
+re-architecture, and is explicitly not V1.
+
 ## 7. Beyond N servers — what's next, and what's explicitly NOT ready
 
 - **Server-Sent Events** (SCALE-5.1, design-only): could cut poll *frequency* the same way
@@ -350,5 +365,6 @@ A backup you've never test-restored is a hope, not a guarantee.
 | 0.1.0 | 2026-07-13 | Initial runbook: sessions, local-state audit, cache, worker, replica-readiness (SCALE-3.4 + SCALE-3.5) |
 | 0.1.1 | 2026-07-13 | §7 (old numbering): request budgets (SCALE-4.2) + perf visibility panel (SCALE-4.5) |
 | 1.0.0 | 2026-07-13 | SCALE-5.2 consolidation: restructured into an explicit Stage 0 → Stage 1 (1→2 servers, 7 ordered steps with a verification per step) → Stage 2 (read replica) → incident-response section → backup/restore → "beyond N servers" pointer to SCALE-5.1's SSE design doc and SCALE-5.3. Added the `load-test.php` step (was documented as a tool but never wired into the runbook's own checklist) and a suggested incident-response sequence tying the health/levers/budgets/perf-panel pieces together. No technical content changed from 0.1.1 — this is the "merge all fragments" pass the plan called for. **Cold-read test (fresh subagent, no prior context):** correctly identified step 3 and the incident sequence unassisted; flagged 4 minor polish items (health-endpoint description duplicated between §1.5/§5, Stage 2 not visually distinguished as non-actionable, `load-test.php`'s cookie step unexplained inline, a dangling "old numbering" note) — all four fixed in this same version. Rated 4/5 followability before the fixes; the remaining gap is inherent ops-domain knowledge (session backends, LB config) this doc reasonably assumes rather than teaches. |
+| 1.2.0 | 2026-07-13 | SCALE-6.3: §6 gains the history-table retention table (config keys + defaults); `new_visit_state_log` documented as compliance-gated (default OFF). |
 | 1.1.0 | 2026-07-13 | SCALE-6.2: new Stage-1 step §1.8 (DB connection ceiling — `ThreadsPerChild`/`pm.max_children` vs `max_connections`, ProxySQL option, the WinNT 150-vs-151 near-coincidence); `health.php` now returns `db_conns`/`db_conns_limit` and §5 + the "done when" criteria reference them. Stage 1 is now 8 steps. |
 | 1.0.1 | 2026-07-13 | Audit fixes: §6's module-table-loss-impact table undercounted at "33" and was missing 4 real tables entirely (`new_office_note_meta`, `new_referral_meta`, `new_outreach_campaign`, `new_password_reset_required`) — found by cross-checking `install.sql`'s 37 `#IfNotTable` guards and a live `SHOW TABLES` against the table; corrected to 37, all four classified (three Moderate, `new_password_reset_required` Severe since losing it silently drops a forced-password-change security requirement rather than just costing re-entry time). §1.5's promise that the health endpoint's "full response shape... are in §5" was false — §5 never actually stated the JSON shape; added it (`{ok, db_ms, cache_ms, worker_last_seen}` / `503 {ok:false}` / `429 {ok:false, error:"rate_limited"}`, matching `public/health.php`'s docblock exactly). |

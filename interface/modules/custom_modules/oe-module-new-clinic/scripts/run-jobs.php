@@ -60,6 +60,7 @@ use OpenEMR\Modules\NewClinic\Services\ExportStorageService;
 use OpenEMR\Modules\NewClinic\Services\RateLimitService;
 use OpenEMR\Modules\NewClinic\Services\CacheService;
 use OpenEMR\Modules\NewClinic\Services\PerfCounterService;
+use OpenEMR\Modules\NewClinic\Services\HistoryRetentionService;
 
 @set_time_limit(0);
 
@@ -108,12 +109,21 @@ try {
         $perfRollup = 'error: ' . $e->getMessage();
     }
 
+    // SCALE-6.3: prune append-only history tables per configured retention
+    // (state_log defaults to OFF — a compliance decision, not a default).
+    try {
+        $historyPurged = (new HistoryRetentionService())->purgeAll();
+    } catch (\Throwable $e) {
+        $historyPurged = 'error: ' . $e->getMessage();
+    }
+
     $out = [
         'report_exports' => $reports,
         'export_jobs' => $exports,
         'purged_files' => $purged,
         'purged_rate_windows' => $ratePurged,
         'perf_rollup' => $perfRollup,
+        'history_purged' => $historyPurged,
         // SCALE-3.3: expired DB cache rows are dead weight; drop them each pass.
         'purged_cache_rows' => (new CacheService())->purgeExpired(),
     ];

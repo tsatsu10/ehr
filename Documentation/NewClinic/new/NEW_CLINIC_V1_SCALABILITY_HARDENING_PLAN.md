@@ -522,6 +522,24 @@ Guiding rules for ALL future code in this module:
   is in both `install.sql` and the runbook §6; the new index exists.
 - **Size:** medium — one guarded index migration + a worker purge pass + config keys + tests.
 
+- **Status (2026-07-13): DONE.** `HistoryRetentionService::purgeAll()` prunes the three
+  append-only history tables per facility-0 config, wired into `run-jobs.php` (`history_purged` in
+  the worker output). **Per-table, NOT one-size-fits-all:** `new_visit_state_log`
+  (`retention_state_log_days`, **default 0 = never auto-purge** — it's the visit-FSM transition
+  audit, a clinical/compliance record; enabling a cutoff is a records-policy sign-off, never a
+  perf default), `new_config_log` (`retention_config_log_days`, 730) on its `applied_at`,
+  `new_visit_notify_log` (`retention_notify_log_days`, 730) on `notified_at` (already bounded).
+  Deletes are bounded/batched (pre-count with the index, then a capped loop of `DELETE … LIMIT
+  2000`; termination is count-driven since affected_rows is unreliable under query logging; a big
+  backlog drains over passes) and fail soft. Guarded `#IfNotIndex` migration adds
+  `new_idx_vsl_created` on `new_visit_state_log(created_at)` (BP-9); three `#IfNotRow2D` config
+  seeds; index + rows applied to the dev DB. RANGE-partitioning noted as the future option (PK
+  re-architecture, not V1). Table/column names come only from a fixed allowlist (injection-safe).
+  5 new unit tests (disabled/unknown-table/older-than-cutoff/nothing-to-purge/purgeAll-defaults);
+  1054 module tests green; `composer verify:new-clinic` PASS. Live: worker prints
+  `history_purged: {new_visit_state_log:"disabled", new_config_log:0, new_visit_notify_log:0}`.
+  Runbook v1.2.0 §6 documents it. Backend-only, no asset bump. **Next in Phase 6: SCALE-6.4 (last).**
+
 ### SCALE-6.4 — Turn monitoring from passive to active (alerting)
 
 - **Problem:** `health.php` and the perf panel exist, but both are **pull** — someone must look.

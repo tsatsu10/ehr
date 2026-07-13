@@ -1365,3 +1365,33 @@ CREATE TABLE IF NOT EXISTS `new_clinic_perf_daily` (
     PRIMARY KEY (`day`, `action`)
 ) ENGINE=InnoDB COMMENT='SCALE-4.5 per-day per-action request counters (latency histogram; p95 filled by worker rollup)';
 #EndIf
+
+-- SCALE-6.3 — retention for append-only history tables. Index new_visit_state_log
+-- on created_at so the age-based purge is a range scan, not a full-table scan (BP-9).
+#IfNotIndex new_visit_state_log new_idx_vsl_created
+CREATE INDEX `new_idx_vsl_created` ON `new_visit_state_log` (`created_at`);
+#EndIf
+
+-- SCALE-6.3 retention config (days; 0 = never auto-purge). The job worker prunes
+-- rows older than these in bounded batches. DEFAULTS ARE SAFE:
+--   retention_state_log_days = 0  → new_visit_state_log is the visit-FSM transition
+--       audit (a clinical/compliance record). It is NOT auto-purged by default;
+--       turning this on is a COMPLIANCE decision the clinic's records-retention
+--       policy must sign off, never a performance default.
+--   retention_config_log_days = 730 → config-change audit, low volume, 2-year keep.
+--   retention_notify_log_days = 730 → doctor-ready notify debounce; already bounded
+--       (UNIQUE per visit+recipient), so this is belt-and-braces, long keep.
+#IfNotRow2D new_clinic_config facility_id 0 config_key retention_state_log_days
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'retention_state_log_days', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key retention_config_log_days
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'retention_config_log_days', '730');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key retention_notify_log_days
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'retention_notify_log_days', '730');
+#EndIf
