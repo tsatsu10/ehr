@@ -155,8 +155,11 @@ class VisitQueueService
             return $result;
         });
 
+        // Defensive (BP-8): remember() returns the producer's array on every real
+        // path, but a corrupt/foreign cache wrapper (non-array nc_v) must degrade
+        // soft, not fatal array_map(). Such a row self-expires within the hard TTL.
         /** @var array<string, int> $counts */
-        return array_map('intval', $counts);
+        return array_map('intval', is_array($counts) ? $counts : []);
     }
 
     public function getVisitById(int $visitId): ?array

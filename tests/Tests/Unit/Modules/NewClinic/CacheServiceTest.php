@@ -179,6 +179,35 @@ class CacheServiceTest extends TestCase
         $this->assertSame(0, $calls);            // producer NOT stampeded
     }
 
+    /**
+     * Contract: remember() returns nc_v exactly as stored, with NO type coercion
+     * — a fresh hit hands back whatever the wrapper holds. So a corrupt/foreign
+     * wrapper (non-array nc_v) flows straight to the caller, which is why the hot
+     * call sites (getCounts, loadFacility) type-guard the result (BP-8). This test
+     * pins that behaviour so a future "helpful" coercion in remember() is caught.
+     */
+    public function testRememberReturnsFreshValueAsIsWithoutCoercion(): void
+    {
+        $cache = new CacheService();
+        // Fresh wrapper whose nc_v is a scalar, not the array a caller expects.
+        $wrapper = json_encode(['v' => ['nc_v' => 'not-an-array', 'nc_f' => time() + 100]]);
+        sqlStatement(
+            "INSERT INTO new_clinic_cache (cache_key, cache_value, expires_at)
+             VALUES ('nc:nc-test-rem-scalar', ?, DATE_ADD(NOW(), INTERVAL 1 MINUTE))",
+            [$wrapper]
+        );
+
+        $calls = 0;
+        $result = $cache->remember('nc-test-rem-scalar', 5, 30, static function () use (&$calls) {
+            $calls++;
+
+            return ['ok' => true];
+        });
+
+        $this->assertSame('not-an-array', $result); // returned as-is, no coercion
+        $this->assertSame(0, $calls);               // fresh → producer not run
+    }
+
     public function testRememberRebuildsWhenStaleAndLockFree(): void
     {
         $cache = new CacheService();

@@ -433,7 +433,15 @@ Guiding rules for ALL future code in this module:
   under a concurrent burst; a general-log-instrumented 12-request burst measured 2 GROUP-BY
   executions (down from up-to-12), corroborating the reduction — the rigorous guarantee is the
   unit test, since Windows loopback caps a clean simultaneous burst. Backend-only (no UI / asset
-  bump). Adds BP-13 to the charter. **Next in Phase 6: SCALE-6.2.**
+  bump). Adds BP-13 to the charter. **Audit follow-up (same day):** a self-review found the
+  serve-stale rewrite had dropped the old `is_array($cached)` guard at both call sites, so a
+  corrupt/foreign cache wrapper (non-array `nc_v`) could fatal `getCounts` (`array_map` on a
+  non-array) and `loadFacility` (`array_key_exists` on a non-array — and it's on nearly every
+  request). No user path writes `cache_value` so likelihood is low, but it was a real
+  defensiveness regression (BP-8); restored the guard at both sites (degrade to empty, self-heals
+  on TTL) + a test pinning that `remember()` returns `nc_v` un-coerced. Live-proven: a poisoned
+  counts wrapper now returns 200 `{counts:[]}`, not 500. 1048 tests green. **Next in Phase 6:
+  SCALE-6.2.**
 
 ### SCALE-6.2 — DB connection ceiling: size it, surface it, measure it
 

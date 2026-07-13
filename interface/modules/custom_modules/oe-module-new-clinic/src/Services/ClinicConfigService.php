@@ -108,8 +108,13 @@ class ClinicConfigService
                     return $out;
                 }
             );
+            // Defensive (BP-8): remember() returns the producer's map on every real
+            // path, but a corrupt/foreign cache wrapper (non-array nc_v) must not
+            // fatal downstream array_key_exists()/array reads — degrade to an empty
+            // map (all flags read as default) for this request; the row self-expires
+            // within the hard TTL. loadFacility() is on nearly every request path.
             /** @var array<string, string> $map */
-            $this->facilityConfig[$facilityId] = $map;
+            $this->facilityConfig[$facilityId] = is_array($map) ? $map : [];
         }
 
         return $this->facilityConfig[$facilityId];
