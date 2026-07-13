@@ -88,8 +88,20 @@ defeating the entire cost argument for SSE. Before this can be built, a **cheap,
 "something in this facility's operational state changed" signal** needs to exist — candidates,
 cheapest first:
 
-1. A single `updated_at` bump on `new_visit` (already present) — `SELECT MAX(updated_at) FROM
-   new_visit WHERE facility_id = ?` is one indexed aggregate, cacheable 1–2 s.
+1. A single `updated_at` bump on `new_visit` (already present, `ON UPDATE CURRENT_TIMESTAMP`) —
+   **but naively:** `SELECT MAX(updated_at) FROM new_visit WHERE facility_id = ?` is
+   **NOT actually cheap as written**. `new_visit`'s indexes (`idx_facility_date_state`,
+   `idx_queue_sort`) cover `facility_id` as a prefix but neither carries `updated_at`, so MySQL
+   can only use `facility_id` to narrow the range and must then scan every matching row to find
+   the max — and with no date bound, "every matching row" is the facility's **entire visit
+   history since go-live**, growing unboundedly for the life of the clinic (exactly the R1
+   unbounded-query pattern this hardening plan exists to prevent). Fixing this needs one of:
+   (a) bound the query to a recent window, e.g. `AND visit_date >= CURDATE() - INTERVAL 1 DAY`
+   (cheap, matches what a live queue actually cares about — nothing older is "current" queue
+   state anyway), or (b) add a covering index, e.g. `KEY idx_facility_updated (facility_id,
+   updated_at)`, which needs its own SCALE-task-sized change (new index = a migration, BP-9).
+   Do not build option 1 without (a) at minimum; (b) is the more correct fix if this channel
+   ships.
 2. A dedicated `new_clinic_queue_touch (facility_id, channel, touched_at)` row, written by every
    mutation that would move a queue (visit state transitions, triage/doctor/lab/pharmacy/cashier
    actions) — more precise (per-channel), more invasive (every mutation site needs the touch), and
@@ -123,11 +135,16 @@ es.onerror = () => { es.close(); /* fall back to useInterval at the normal pollM
 
 ### 2.5 Config
 
-`enable_sse` (facility + global, default **OFF**), read the same way every other governing flag
-is (`ClinicConfigService`, cached, `enable_*` global-scope exception per repo convention). OFF =
-today's `useInterval`-only behavior, byte-for-byte — no half-built chrome, consistent with the
-PRD §5.6 invariant. `sse_channels` could gate which channels are eligible (start with `queue`
-only; scheduling flow-board/calendar could follow once queue is proven).
+`enable_sse` (facility + global, default **OFF**), read via `ClinicConfigService` (cached) and
+resolved **at the request's actual facility, not the facility-0 default** — this is the normal
+rule for governing flags (a documented gotcha: public bootstraps that skip facility resolution
+make admin toggles silently not take effect); `enable_sse` is not a candidate for the narrow
+`enable_react_*`-style global-only exception, since per-facility opt-in is exactly the rollout
+control this flag needs to be useful (§3's worker-count math is a per-deployment, not
+per-install, decision). OFF = today's `useInterval`-only behavior, byte-for-byte — no half-built
+chrome, consistent with the PRD §5.6 invariant. `sse_channels` could gate which channels are
+eligible (start with `queue` only; scheduling flow-board/calendar could follow once queue is
+proven).
 
 ## 3. Apache/XAMPP worker-exhaustion caveat (the actual go/no-go gate)
 
@@ -196,7 +213,9 @@ facility deployment is landing on (1) or (2) first.
 - No change to any ajax action, `AjaxActionPolicy`, `QueueRevision`, or `respondQueue()`.
 - No change to `useInterval`'s poll-backoff/jitter/hidden-tab logic — SSE sits *above* it as an
   optional accelerant, never a replacement.
-- No new database tables in v1 (Option 1 in §2.3 reuses `new_visit.updated_at`).
+- No new database **tables** in v1 (Option 1 in §2.3 reuses `new_visit.updated_at`) — but see
+  §2.3's fix note: a bounded query or a new covering index is still required before that reuse
+  is actually cheap, so "no schema change at all" is not guaranteed.
 - No change to session/ACL/CSRF handling — `events.php` uses the exact same bootstrap and auth
   gate as every other module public page.
 
@@ -220,3 +239,4 @@ Per the plan's Phase-1 framing, SSE is "the next order of magnitude" after polli
 | Version | Date | Change |
 |---|---|---|
 | 0.1.0 | 2026-07-13 | Initial design doc (SCALE-5.1) — design only, not implemented. |
+| 0.1.1 | 2026-07-13 | Audit fix: §2.3's proposed `SELECT MAX(updated_at) FROM new_visit WHERE facility_id = ?` was not actually cheap as written — no existing index carries `updated_at`, and with no date bound it would scan a facility's entire visit history, growing unboundedly (the R1 anti-pattern this whole plan exists to prevent). Now specifies a required date bound or a new covering index before this option can be built. §2.5's `enable_sse` scoping guidance corrected — it previously implied all `enable_*` flags follow a "global-scope exception" convention; the verified convention is the opposite (facility-scoped resolution is the norm, `enable_react_*` is the sole deliberate global exception), and `enable_sse` should follow the norm. §5's "no schema change" bullet updated to not contradict the §2.3 fix. Apache MPM claim in §3 (WinNT MPM, `ThreadsPerChild=150`, `mod_php`) re-verified against `httpd.conf`'s actual `Include` chain and `LoadModule php_module` line — confirmed accurate, no change needed. |

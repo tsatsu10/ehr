@@ -1,6 +1,6 @@
 # New Clinic — Scale-Out Runbook (1 → N servers)
 
-**Version:** 1.0.0 (SCALE-5.2 — consolidated; supersedes the 0.1.x fragments)
+**Version:** 1.0.1 (SCALE-5.2 — consolidated; supersedes the 0.1.x fragments)
 **Date:** 2026-07-13
 **Audience:** the ops person taking a single-box New Clinic install to multiple web servers,
 or an operator responding to a live incident on any box. Each stage below says what breaks at
@@ -209,8 +209,10 @@ Bookmark this section now, not during an incident.
 
 **Health endpoint** (`public/health.php?site=<site>`): no auth, no session, no OpenEMR
 bootstrap — raw mysqli against the site's sqlconf, so it answers honestly even when the app
-tier is sick. `worker_last_seen` goes `null` within ~10 min of the job worker dying (heartbeat
-TTL). Point the LB / uptime monitor at it; 503 = pull the node. Per-IP limited to 30/min.
+tier is sick. Returns `200 {ok, db_ms, cache_ms, worker_last_seen}` when healthy, `503 {ok:
+false}` when the DB is unreachable, `429 {ok: false, error: "rate_limited"}` past the per-IP
+budget (30/min). `worker_last_seen` goes `null` within ~10 min of the job worker dying
+(heartbeat TTL). Point the LB / uptime monitor at 200-vs-not; 503 = pull the node.
 
 **Incident levers** (SCALE-4.3) — two flags an operator flips **in the DB**
 (`new_clinic_config`, facility 0), no deploy, effective within one config-cache TTL (≤30 s) or
@@ -259,13 +261,15 @@ stable, flip both back and confirm via the perf panel that error/latency numbers
 guards — never manual DDL in prod. Every new FK/WHERE column gets an index in the same change
 (BP-9).
 
-**Module tables by loss impact** (33 custom tables):
+**Module tables by loss impact** (37 custom tables — count verified against `install.sql`'s
+37 `#IfNotTable` guards and cross-checked live via `SHOW TABLES`, 2026-07-13; a prior version of
+this table undercounted at "33" and was missing 4 real tables — fixed here):
 
 | Impact | Tables | Why |
 |---|---|---|
 | **Catastrophic** (clinical/financial record) | `new_visit`, `new_visit_state_log`, `new_receipt`, `new_receipt_counter`, `new_cashier_payment_request`, `nc_encounter_note`, `new_patient_meta`, `new_lab_order_meta`, `new_drug_meta` | visits, audit trail, money, clinical notes — restore is mandatory |
-| **Severe** (operational config, rebuildable only by hand) | `new_clinic_config`, `new_visit_type`, `new_fee_schedule`, `new_condition_map`, `new_doctor_availability`, `new_completion_field_weight`, `new_config_log`, `new_clinic_recall_meta` | the clinic's setup; hours of manual re-entry |
-| **Moderate** (history/derived, annoying to lose) | `new_patient_completion`, `new_visit_queue_counter`, `new_visit_notify_log`, `new_reconciliation_run`, `queue_bridge_exception_snapshot`, `report_hub_export_run`, `new_clinic_export_job`, `clinical_doc_form_open`, `admin_hub_backup_run`, `admin_hub_setup_progress`, `new_cohort_saved_filter`, `new_clinic_flowboard_lane_prefs`, `new_clinic_flowboard_lane_map` | audit/history/prefs; system keeps working without them |
+| **Severe** (operational config / security state, rebuildable only by hand) | `new_clinic_config`, `new_visit_type`, `new_fee_schedule`, `new_condition_map`, `new_doctor_availability`, `new_completion_field_weight`, `new_config_log`, `new_clinic_recall_meta`, `new_password_reset_required` | the clinic's setup; hours of manual re-entry. `new_password_reset_required` (SEC-5) is the forced-password-change flag for staff on temporary passwords — losing it silently drops that security requirement rather than just costing re-entry time |
+| **Moderate** (history/derived, annoying to lose) | `new_patient_completion`, `new_visit_queue_counter`, `new_visit_notify_log`, `new_reconciliation_run`, `queue_bridge_exception_snapshot`, `report_hub_export_run`, `new_clinic_export_job`, `clinical_doc_form_open`, `admin_hub_backup_run`, `admin_hub_setup_progress`, `new_cohort_saved_filter`, `new_clinic_flowboard_lane_prefs`, `new_clinic_flowboard_lane_map`, `new_office_note_meta`, `new_referral_meta`, `new_outreach_campaign` | audit/history/prefs; system keeps working without them. `new_referral_meta` tracks a referral's status/destination on top of the underlying core `transactions` record, which is untouched by this table's loss; `new_office_note_meta` is pin-state only (the notes themselves are core `pnotes`); `new_outreach_campaign` is SMS/comms campaign history |
 | **Disposable** (infrastructure, self-rebuilding) | `new_clinic_maintenance_lock`, `new_clinic_rate_limit`, `new_clinic_cache`, `new_clinic_perf_daily` | locks/counters/cache/perf stats — exclude from restores freely |
 
 **Restore drill** (do this quarterly, and before any risky migration):
@@ -303,3 +307,4 @@ A backup you've never test-restored is a hope, not a guarantee.
 | 0.1.0 | 2026-07-13 | Initial runbook: sessions, local-state audit, cache, worker, replica-readiness (SCALE-3.4 + SCALE-3.5) |
 | 0.1.1 | 2026-07-13 | §7 (old numbering): request budgets (SCALE-4.2) + perf visibility panel (SCALE-4.5) |
 | 1.0.0 | 2026-07-13 | SCALE-5.2 consolidation: restructured into an explicit Stage 0 → Stage 1 (1→2 servers, 7 ordered steps with a verification per step) → Stage 2 (read replica) → incident-response section → backup/restore → "beyond N servers" pointer to SCALE-5.1's SSE design doc and SCALE-5.3. Added the `load-test.php` step (was documented as a tool but never wired into the runbook's own checklist) and a suggested incident-response sequence tying the health/levers/budgets/perf-panel pieces together. No technical content changed from 0.1.1 — this is the "merge all fragments" pass the plan called for. **Cold-read test (fresh subagent, no prior context):** correctly identified step 3 and the incident sequence unassisted; flagged 4 minor polish items (health-endpoint description duplicated between §1.5/§5, Stage 2 not visually distinguished as non-actionable, `load-test.php`'s cookie step unexplained inline, a dangling "old numbering" note) — all four fixed in this same version. Rated 4/5 followability before the fixes; the remaining gap is inherent ops-domain knowledge (session backends, LB config) this doc reasonably assumes rather than teaches. |
+| 1.0.1 | 2026-07-13 | Audit fixes: §6's module-table-loss-impact table undercounted at "33" and was missing 4 real tables entirely (`new_office_note_meta`, `new_referral_meta`, `new_outreach_campaign`, `new_password_reset_required`) — found by cross-checking `install.sql`'s 37 `#IfNotTable` guards and a live `SHOW TABLES` against the table; corrected to 37, all four classified (three Moderate, `new_password_reset_required` Severe since losing it silently drops a forced-password-change security requirement rather than just costing re-entry time). §1.5's promise that the health endpoint's "full response shape... are in §5" was false — §5 never actually stated the JSON shape; added it (`{ok, db_ms, cache_ms, worker_last_seen}` / `503 {ok:false}` / `429 {ok:false, error:"rate_limited"}`, matching `public/health.php`'s docblock exactly). |
