@@ -64,6 +64,7 @@ use OpenEMR\Modules\NewClinic\Services\SchedulingAccessService;
 use OpenEMR\Modules\NewClinic\Services\VisitClaimLostService;
 use OpenEMR\Modules\NewClinic\Services\SimilarSurnameQueueService;
 use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
+use OpenEMR\Modules\NewClinic\Services\PerfCounterService;
 use OpenEMR\Modules\NewClinic\Services\QueryBudgetService;
 use OpenEMR\Modules\NewClinic\Services\QueueRevision;
 
@@ -1050,6 +1051,11 @@ class AjaxController
             $status = http_response_code();
             $status = is_int($status) ? $status : 200;
             $errored = $status >= 400;
+
+            // SCALE-4.5 — EVERY request lands one counter upsert (fail-open,
+            // NoLog), so the Admin Hub perf panel sees the full distribution,
+            // not just the slow tail that earns an NC_PERF line.
+            (new PerfCounterService())->record($action, $ms, $errored);
 
             // Only slow OR errored requests are worth a line — keep the log clean.
             if ($ms <= 500 && !$errored) {

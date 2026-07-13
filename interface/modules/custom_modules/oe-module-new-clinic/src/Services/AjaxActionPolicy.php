@@ -131,6 +131,7 @@ class AjaxActionPolicy
         'chart_depth.referral_print' => 'new_chart_depth_referral',
         'chart_depth.referral_status' => 'new_chart_depth_referral',
         'admin.health_status' => 'new_admin',
+        'admin.perf.summary' => 'new_admin',
         'admin.backup.run' => 'new_admin',
         'admin.backup.run_files' => 'new_admin',
         'admin.backup.complete' => 'new_admin',
@@ -650,6 +651,7 @@ class AjaxActionPolicy
         'admin.facility_user.list' => true,
         'admin.facility_user.matrix' => true,
         'admin.his_pack_status' => true,
+        'admin.perf.summary' => true,
     ];
 
     /**

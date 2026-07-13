@@ -117,20 +117,34 @@ bootstrap — raw mysqli against the site's sqlconf. `worker_last_seen` goes `nu
 within ~10 min of the job worker dying (heartbeat TTL). Point the LB / uptime
 monitor at it; 503 = pull the node. Per-IP limited to 30/min.
 
+**Request budgets (SCALE-4.2), nothing to configure:** budgeted read actions carry a
+10 s DB statement kill (`max_statement_time` on MariaDB, `max_execution_time` on
+MySQL — auto-selected per connection) and a 15 s PHP execution ceiling; either death
+returns a clean 503 `timeout` envelope and logs `NC_PERF … status=503`. A node whose
+error log fills with those lines has a slow-query problem, not a crash — check the
+perf panel below before restarting anything. Mutations are never budget-killed.
+
+**Perf visibility (SCALE-4.5):** every ajax request lands in `new_clinic_perf_daily`
+(per day+action: calls, errors, latency histogram; 90-day retention, rollup/purge by
+the job worker). Operators read it in **Admin Hub → System → Performance**
+(yesterday/today slowest actions by p95 + error counts) — check it during incidents
+and after every scale step. SQL access works too:
+`SELECT * FROM new_clinic_perf_daily WHERE day = CURDATE() ORDER BY errors DESC;`
+
 ## 8. Backup, restore & migration safety (SCALE-4.6)
 
 **Schema rule:** ALL module DDL goes through `sql/install.sql` `#IfNotTable` /
 `#IfMissingColumn` guards — never manual DDL in prod. Every new FK/WHERE column gets
 an index in the same change (BP-9).
 
-**Module tables by loss impact** (32 custom tables):
+**Module tables by loss impact** (33 custom tables):
 
 | Impact | Tables | Why |
 |---|---|---|
 | **Catastrophic** (clinical/financial record) | `new_visit`, `new_visit_state_log`, `new_receipt`, `new_receipt_counter`, `new_cashier_payment_request`, `nc_encounter_note`, `new_patient_meta`, `new_lab_order_meta`, `new_drug_meta` | visits, audit trail, money, clinical notes — restore is mandatory |
 | **Severe** (operational config, rebuildable only by hand) | `new_clinic_config`, `new_visit_type`, `new_fee_schedule`, `new_condition_map`, `new_doctor_availability`, `new_completion_field_weight`, `new_config_log`, `new_clinic_recall_meta` | the clinic's setup; hours of manual re-entry |
 | **Moderate** (history/derived, annoying to lose) | `new_patient_completion`, `new_visit_queue_counter`, `new_visit_notify_log`, `new_reconciliation_run`, `queue_bridge_exception_snapshot`, `report_hub_export_run`, `new_clinic_export_job`, `clinical_doc_form_open`, `admin_hub_backup_run`, `admin_hub_setup_progress`, `new_cohort_saved_filter`, `new_clinic_flowboard_lane_prefs`, `new_clinic_flowboard_lane_map` | audit/history/prefs; system keeps working without them |
-| **Disposable** (infrastructure, self-rebuilding) | `new_clinic_maintenance_lock`, `new_clinic_rate_limit`, `new_clinic_cache` | locks/counters/cache — exclude from restores freely |
+| **Disposable** (infrastructure, self-rebuilding) | `new_clinic_maintenance_lock`, `new_clinic_rate_limit`, `new_clinic_cache`, `new_clinic_perf_daily` | locks/counters/cache/perf stats — exclude from restores freely |
 
 **Restore drill** (do this quarterly, and before any risky migration):
 
@@ -153,3 +167,4 @@ A backup you've never test-restored is a hope, not a guarantee.
 | Version | Date | Change |
 |---|---|---|
 | 0.1.0 | 2026-07-13 | Initial runbook: sessions, local-state audit, cache, worker, replica-readiness (SCALE-3.4 + SCALE-3.5) |
+| 0.1.1 | 2026-07-13 | §7: request budgets (SCALE-4.2) + perf visibility panel (SCALE-4.5); §8 table list still current (new `new_clinic_perf_daily` → Disposable bucket, added there) |

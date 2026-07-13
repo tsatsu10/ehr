@@ -13,5 +13,5 @@ namespace OpenEMR\Modules\NewClinic;
 
 class ModuleAssetVersion
 {
-    public const VERSION = '20260713pollbudget';
+    public const VERSION = '20260713perfpanel';
 }

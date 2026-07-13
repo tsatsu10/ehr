@@ -1346,3 +1346,22 @@ CREATE TABLE IF NOT EXISTS `new_clinic_cache` (
     KEY `idx_expires_at` (`expires_at`)
 ) ENGINE=InnoDB COMMENT='SCALE-3.3 cross-request cache + TTL locks (db driver of CacheService)';
 #EndIf
+
+#IfNotTable new_clinic_perf_daily
+CREATE TABLE IF NOT EXISTS `new_clinic_perf_daily` (
+    `day` DATE NOT NULL,
+    `action` VARCHAR(64) NOT NULL,
+    `calls` INT NOT NULL DEFAULT 0,
+    `errors` INT NOT NULL DEFAULT 0,
+    `total_ms` BIGINT NOT NULL DEFAULT 0,
+    `max_ms` INT NOT NULL DEFAULT 0,
+    `b_100` INT NOT NULL DEFAULT 0,
+    `b_250` INT NOT NULL DEFAULT 0,
+    `b_500` INT NOT NULL DEFAULT 0,
+    `b_1000` INT NOT NULL DEFAULT 0,
+    `b_2500` INT NOT NULL DEFAULT 0,
+    `b_over` INT NOT NULL DEFAULT 0,
+    `p95_ms` INT NULL,
+    PRIMARY KEY (`day`, `action`)
+) ENGINE=InnoDB COMMENT='SCALE-4.5 per-day per-action request counters (latency histogram; p95 filled by worker rollup)';
+#EndIf

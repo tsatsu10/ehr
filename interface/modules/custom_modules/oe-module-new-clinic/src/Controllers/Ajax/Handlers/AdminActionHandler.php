@@ -20,6 +20,7 @@ use OpenEMR\Modules\NewClinic\Services\FacilityUserAdminService;
 use OpenEMR\Modules\NewClinic\Services\FeeScheduleAdminService;
 use OpenEMR\Modules\NewClinic\Services\GeoService;
 use OpenEMR\Modules\NewClinic\Services\HisPackImportService;
+use OpenEMR\Modules\NewClinic\Services\PerfCounterService;
 use OpenEMR\Modules\NewClinic\Services\ReconciliationService;
 use OpenEMR\Modules\NewClinic\Services\AdminBackupService;
 use OpenEMR\Modules\NewClinic\Services\AdminDuplicateReviewService;
@@ -89,6 +90,7 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
         'admin.his_pack_status',
         'admin.his_pack_import',
         'admin.health_status',
+        'admin.perf.summary',
         'admin.backup.run',
         'admin.backup.run_files',
         'admin.backup.complete',
@@ -717,6 +719,14 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                             $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
                         ),
                     ]);
+                    break;
+                case 'admin.perf.summary':
+                    // SCALE-4.5 — read-only perf visibility for the Admin Hub
+                    // System tab. Day defaults to yesterday in the service.
+                    $params = $this->host->readRequestParams($method);
+                    $this->host->respond(true, 'ok', $this->host->svc(PerfCounterService::class)->summary(
+                        (string) ($params['day'] ?? '')
+                    ));
                     break;
                 case 'admin.backup.run':
                     if ($method !== 'POST') {

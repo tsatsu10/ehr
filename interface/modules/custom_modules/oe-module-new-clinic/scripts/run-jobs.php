@@ -59,6 +59,7 @@ use OpenEMR\Modules\NewClinic\Services\ExportJobService;
 use OpenEMR\Modules\NewClinic\Services\ExportStorageService;
 use OpenEMR\Modules\NewClinic\Services\RateLimitService;
 use OpenEMR\Modules\NewClinic\Services\CacheService;
+use OpenEMR\Modules\NewClinic\Services\PerfCounterService;
 
 @set_time_limit(0);
 
@@ -100,11 +101,19 @@ try {
         $ratePurged = 'error: ' . $e->getMessage();
     }
 
+    // SCALE-4.5: freeze p95 into completed days' perf counters, drop old rows.
+    try {
+        $perfRollup = (new PerfCounterService())->rollupAndPurge();
+    } catch (\Throwable $e) {
+        $perfRollup = 'error: ' . $e->getMessage();
+    }
+
     $out = [
         'report_exports' => $reports,
         'export_jobs' => $exports,
         'purged_files' => $purged,
         'purged_rate_windows' => $ratePurged,
+        'perf_rollup' => $perfRollup,
         // SCALE-3.3: expired DB cache rows are dead weight; drop them each pass.
         'purged_cache_rows' => (new CacheService())->purgeExpired(),
     ];

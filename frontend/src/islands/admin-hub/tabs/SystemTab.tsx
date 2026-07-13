@@ -12,6 +12,7 @@ import type { ConfigExportMeta, ConfigImportResult } from '../adminTypes';
 import { AdminStack } from '../adminUi';
 import { AuditLogCard } from '../AuditLogCard';
 import { DuplicatesCard } from '../DuplicatesCard';
+import { PerfPanelCard } from '../PerfPanelCard';
 
 interface SystemTabProps {
   ajaxUrl: string;
@@ -118,6 +119,7 @@ export function SystemTab({
         </>
       )}
       <DuplicatesCard ajaxUrl={ajaxUrl} csrfToken={csrfToken} enabled={health.duplicate_review_enabled ?? false} />
+      <PerfPanelCard ajaxUrl={ajaxUrl} csrfToken={csrfToken} />
       <AuditLogCard ajaxUrl={ajaxUrl} csrfToken={csrfToken} />
     </AdminStack>
   );
