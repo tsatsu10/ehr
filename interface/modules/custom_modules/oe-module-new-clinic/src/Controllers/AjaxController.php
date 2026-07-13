@@ -389,7 +389,7 @@ class AjaxController
             'lab_ops_read_acl' => $this->requireLabOpsReadAcl(),
             'lab_ops_enter_acl' => $this->requireLabOpsEnterAcl(),
             'lab_ops_release_acl' => $this->requireLabOpsReleaseAcl(),
-            'lab_ops_catalog_acl' => $this->requireLabOpsEnterAcl(),
+            'lab_ops_catalog_acl' => $this->requireLabOpsCatalogAcl(),
             'pharm_ops_read_acl' => $this->requirePharmOpsReadAcl(),
             'pharm_ops_dispense_acl' => $this->requirePharmOpsDispenseAcl(),
             'pharm_ops_receive_acl' => $this->requirePharmOpsReceiveAcl(),
@@ -513,6 +513,15 @@ class AjaxController
     {
         try {
             (new LabOpsAccessService())->assertReleaseAccess();
+        } catch (\RuntimeException $e) {
+            $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requireLabOpsCatalogAcl(): void
+    {
+        try {
+            (new LabOpsAccessService())->assertCatalogAccess();
         } catch (\RuntimeException $e) {
             $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
         }

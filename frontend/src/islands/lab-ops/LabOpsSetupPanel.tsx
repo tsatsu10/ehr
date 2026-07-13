@@ -156,7 +156,7 @@ export function LabOpsSetupPanel({
 
       {setup.needs_sendout_provider && setup.sendout_provider_id && !setup.needs_inhouse_provider ? (
         <div className="text-sm text-[var(--oe-nc-text-muted)] mt-2">
-          Load send-out test codes via Advanced → Procedure providers (core).
+          Send-out test codes are loaded by an OpenEMR administrator (Administration → Lab providers, core screen).
         </div>
       ) : setup.needs_inhouse_provider && setup.has_starter_panel && !setup.fees_mapped && (setup.unmapped_fee_count ?? 0) > 0 ? (
         <div className="text-sm text-[var(--oe-nc-text-muted)] mt-2">

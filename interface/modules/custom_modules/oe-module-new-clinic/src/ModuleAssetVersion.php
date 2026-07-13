@@ -13,5 +13,5 @@ namespace OpenEMR\Modules\NewClinic;
 
 class ModuleAssetVersion
 {
-    public const VERSION = '20260713gapw5fix';
+    public const VERSION = '20260713labopsaudit';
 }

@@ -21,16 +21,11 @@ const mockFetch = oeFetch as ReturnType<typeof vi.fn>;
 const props = {
   ajaxUrl: '/mock/ajax',
   csrfToken: 'test-token',
-  moduleUrl: '/module',
-  labDeskUrl: '/lab',
-  visitBoardUrl: '/visit-board',
   facilityId: 1,
   initialTab: 'pending' as const,
   canEnter: true,
   canRelease: true,
   canManageCatalog: false,
-  canShowAdvanced: false,
-  webroot: '/openemr',
 };
 
 describe('LabOpsHub', () => {

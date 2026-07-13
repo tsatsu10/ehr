@@ -52,16 +52,11 @@
     data-props="{{ {
         ajaxUrl: ajax_url,
         csrfToken: csrf_token,
-        moduleUrl: module_url,
-        labDeskUrl: lab_desk_url,
-        visitBoardUrl: visit_board_url,
         facilityId: desk_facility_id|default(0)|number_format(0, '', ''),
         initialTab: initial_tab,
         canEnter: can_enter ? true : false,
         canRelease: can_release ? true : false,
-        canManageCatalog: can_manage_catalog ? true : false,
-        canShowAdvanced: can_show_advanced ? true : false,
-        webroot: webroot
+        canManageCatalog: can_manage_catalog ? true : false
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}

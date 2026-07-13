@@ -5,16 +5,11 @@ export type SetupModel = 'in_house' | 'hybrid' | 'send_out_only';
 export interface LabOpsHubProps {
   ajaxUrl: string;
   csrfToken: string;
-  moduleUrl: string;
-  labDeskUrl: string;
-  visitBoardUrl?: string;
   facilityId?: number | string;
   initialTab: LabOpsTab;
   canEnter: boolean;
   canRelease: boolean;
   canManageCatalog: boolean;
-  canShowAdvanced: boolean;
-  webroot: string;
 }
 
 export interface WorklistCounts {

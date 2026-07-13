@@ -11,7 +11,6 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
-use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Logging\EventAuditLogger;
 
@@ -87,8 +86,7 @@ class LabOpsSetupService
             'has_starter_panel' => $testCount >= 5,
             'unmapped_fee_count' => $unmappedFeeCount,
             'fees_mapped' => $testCount > 0 && $unmappedFeeCount === 0,
-            'can_manage_catalog' => AclMain::aclCheckCore('new_clinic', 'new_lab_ops_catalog')
-                || AclMain::aclCheckCore('new_clinic', 'new_admin'),
+            'can_manage_catalog' => $this->access->canManageCatalog(),
             'starter_csv_available' => is_readable(
                 dirname(__DIR__, 6) . '/Documentation/NewClinic/samples/opd_lab_panel_starter.csv'
             ),
@@ -369,12 +367,6 @@ class LabOpsSetupService
 
     private function assertCatalogAccess(): void
     {
-        $this->access->assertHubEnabled();
-        if (
-            !AclMain::aclCheckCore('new_clinic', 'new_lab_ops_catalog')
-            && !AclMain::aclCheckCore('new_clinic', 'new_admin')
-        ) {
-            throw new \RuntimeException('Forbidden', 403);
-        }
+        $this->access->assertCatalogAccess();
     }
 }

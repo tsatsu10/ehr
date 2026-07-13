@@ -39,6 +39,12 @@ class LabOpsAccessService
         'new_admin',
     ];
 
+    /** @var array<int, string> */
+    public const CATALOG_ACLS = [
+        'new_lab_ops_catalog',
+        'new_admin',
+    ];
+
     /** @var callable|null */
     private $aclChecker;
 
@@ -82,6 +88,11 @@ class LabOpsAccessService
         return $this->hasAnyAcl(self::RELEASE_ACLS);
     }
 
+    public function canManageCatalog(): bool
+    {
+        return $this->hasAnyAcl(self::CATALOG_ACLS);
+    }
+
     public function assertHubAccess(): void
     {
         $this->assertHubEnabled();
@@ -102,6 +113,14 @@ class LabOpsAccessService
     {
         $this->assertHubEnabled();
         if (!$this->canReleaseResults()) {
+            throw new \RuntimeException('Forbidden', 403);
+        }
+    }
+
+    public function assertCatalogAccess(): void
+    {
+        $this->assertHubEnabled();
+        if (!$this->canManageCatalog()) {
             throw new \RuntimeException('Forbidden', 403);
         }
     }

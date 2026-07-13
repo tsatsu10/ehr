@@ -11,7 +11,6 @@
 
 require_once dirname(__DIR__) . '/bootstrap.php';
 
-use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Modules\NewClinic\Controllers\PageController;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\LabOpsAccessService;
@@ -62,10 +61,7 @@ $reactLabOps = $config->get('enable_react_lab_ops', '1') === '1';
             : 'pending',
         'can_enter' => $access->canEnterResults(),
         'can_release' => $access->canReleaseResults(),
-        'can_manage_catalog' => AclMain::aclCheckCore('new_clinic', 'new_lab_ops_catalog')
-            || AclMain::aclCheckCore('new_clinic', 'new_admin'),
-        'can_show_advanced' => AclMain::aclCheckCore('new_clinic', 'new_admin')
-            || AclMain::aclCheckCore('admin', 'super'),
+        'can_manage_catalog' => $access->canManageCatalog(),
         'enable_react_lab_ops' => $reactLabOps,
     ]
 );
