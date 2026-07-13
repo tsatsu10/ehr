@@ -63,7 +63,7 @@ final class SchedulingActionHandler implements AjaxActionHandlerInterface
                     try {
                         $board = $this->host->svc(SchedulingFlowBoardService::class)->getBoard(
                             $facilityId,
-                            (string) ($_REQUEST['date'] ?? date('Y-m-d')),
+                            $this->host->validDay($_REQUEST['date'] ?? '', date('Y-m-d')),
                             $this->host->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null),
                         );
                         $this->host->respond(true, 'ok', $board);
@@ -76,7 +76,7 @@ final class SchedulingActionHandler implements AjaxActionHandlerInterface
                     try {
                         $board = $this->host->svc(SchedulingFlowBoardService::class)->pollBoard(
                             $facilityId,
-                            (string) ($_REQUEST['date'] ?? date('Y-m-d')),
+                            $this->host->validDay($_REQUEST['date'] ?? '', date('Y-m-d')),
                             $this->host->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null),
                             (string) ($_REQUEST['revision'] ?? ''),
                         );
@@ -101,7 +101,7 @@ final class SchedulingActionHandler implements AjaxActionHandlerInterface
                         );
                         $board = $this->host->svc(SchedulingFlowBoardService::class)->getBoard(
                             $facilityId,
-                            (string) ($body['date'] ?? date('Y-m-d')),
+                            $this->host->validDay($body['date'] ?? '', date('Y-m-d')),
                             $this->host->parseOptionalPositiveInt($body['provider_id'] ?? null),
                         );
                         $this->host->respond(true, 'ok', $board);
@@ -127,7 +127,7 @@ final class SchedulingActionHandler implements AjaxActionHandlerInterface
                         );
                         $board = $this->host->svc(SchedulingFlowBoardService::class)->getBoard(
                             $facilityId,
-                            (string) ($body['date'] ?? date('Y-m-d')),
+                            $this->host->validDay($body['date'] ?? '', date('Y-m-d')),
                             $this->host->parseOptionalPositiveInt($body['provider_id'] ?? null),
                         );
                         $this->host->respond(true, 'ok', $board);
@@ -194,7 +194,7 @@ final class SchedulingActionHandler implements AjaxActionHandlerInterface
                         $view = (string) ($_REQUEST['view'] ?? 'day');
                         $range = $this->host->svc(SchedulingCalendarService::class)->getRangeView(
                             $facilityId,
-                            (string) ($_REQUEST['date'] ?? date('Y-m-d')),
+                            $this->host->validDay($_REQUEST['date'] ?? '', date('Y-m-d')),
                             $view,
                             $this->host->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null),
                         );
@@ -209,7 +209,7 @@ final class SchedulingActionHandler implements AjaxActionHandlerInterface
                         $view = (string) ($_REQUEST['view'] ?? 'day');
                         $range = $this->host->svc(SchedulingCalendarService::class)->pollRangeView(
                             $facilityId,
-                            (string) ($_REQUEST['date'] ?? date('Y-m-d')),
+                            $this->host->validDay($_REQUEST['date'] ?? '', date('Y-m-d')),
                             $view,
                             $this->host->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null),
                             (string) ($_REQUEST['revision'] ?? ''),
@@ -404,7 +404,7 @@ final class SchedulingActionHandler implements AjaxActionHandlerInterface
                     try {
                         $result = $this->host->svc(SchedulingRecallsService::class)->flagFollowUp(
                             $pid,
-                            (string) ($body['due_date'] ?? ''),
+                            $this->host->validDay($body['due_date'] ?? ''),
                             (string) ($body['reason'] ?? ''),
                             $userId,
                         );

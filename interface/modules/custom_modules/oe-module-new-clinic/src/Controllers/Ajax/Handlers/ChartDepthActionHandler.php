@@ -85,8 +85,8 @@ final class ChartDepthActionHandler implements AjaxActionHandlerInterface
                     $limit,
                     $visitId > 0 ? $visitId : null,
                     $filter !== '' ? $filter : 'all_visits',
-                    trim((string) ($_REQUEST['date_from'] ?? '')) ?: null,
-                    trim((string) ($_REQUEST['date_to'] ?? '')) ?: null,
+                    $this->host->validDayOrNull($_REQUEST['date_from'] ?? null),
+                    $this->host->validDayOrNull($_REQUEST['date_to'] ?? null),
                 );
                 $this->host->respond(true, 'ok', $list);
                 break;

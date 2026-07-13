@@ -19,6 +19,8 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
+use OpenEMR\Modules\NewClinic\Support\Sanitize;
+
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Logging\EventAuditLogger;
 
@@ -46,7 +48,7 @@ class PharmCatalogAdminService
      */
     private function listDrugs(string $query): array
     {
-        $query = trim($query);
+        $query = Sanitize::searchToken($query);
         $forms = $this->optionTitleMap('drug_form');
         $routes = $this->optionTitleMap('drug_route');
         $units = $this->optionTitleMap('drug_units');

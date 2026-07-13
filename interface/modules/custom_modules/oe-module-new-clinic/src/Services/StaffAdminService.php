@@ -11,6 +11,8 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
+use OpenEMR\Modules\NewClinic\Support\Sanitize;
+
 use OpenEMR\Common\Acl\AclExtended;
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Auth\AuthUtils;
@@ -60,6 +62,7 @@ class StaffAdminService
             $where[] = 'u.active = 0';
         }
 
+        $search = Sanitize::searchToken($search);
         if ($search !== '') {
             $where[] = '(u.username LIKE ? OR u.fname LIKE ? OR u.lname LIKE ?)';
             $like = '%' . $search . '%';

@@ -11,6 +11,8 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
+use OpenEMR\Modules\NewClinic\Support\Sanitize;
+
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Logging\EventAuditLogger;
 use OpenEMR\Common\Acl\AclMain;
@@ -43,7 +45,7 @@ class BillOpsPaymentsSearchService
             throw new \InvalidArgumentException('date_from cannot be after date_to');
         }
 
-        $query = trim($query);
+        $query = Sanitize::searchToken($query);
         $bind = [$facilityId, $dateFrom, $dateTo . ' 23:59:59'];
         $searchSql = '';
 

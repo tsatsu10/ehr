@@ -46,7 +46,7 @@ final class TriageActionHandler implements AjaxActionHandlerInterface
         switch ($action) {
             case 'triage.queue':
                 $facilityId = $this->host->resolveRequestFacilityId();
-                $visitDate = trim((string) ($_REQUEST['visit_date'] ?? ''));
+                $visitDate = $this->host->validDay($_REQUEST['visit_date'] ?? '');
                 $queue = $this->host->svc(TriageService::class)->getTriageQueue(
                     $facilityId,
                     $visitDate !== '' ? $visitDate : null,

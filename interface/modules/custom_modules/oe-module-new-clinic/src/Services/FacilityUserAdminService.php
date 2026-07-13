@@ -11,6 +11,8 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
+use OpenEMR\Modules\NewClinic\Support\Sanitize;
+
 use OpenEMR\Common\Database\QueryUtils;
 
 class FacilityUserAdminService
@@ -141,7 +143,7 @@ class FacilityUserAdminService
 
         $where = ["username != ''", 'username IS NOT NULL', 'active = 1'];
         $binds = [];
-        $search = trim($search);
+        $search = Sanitize::searchToken($search);
         if ($search !== '') {
             $where[] = '(username LIKE ? OR fname LIKE ? OR lname LIKE ?)';
             $like = '%' . $search . '%';

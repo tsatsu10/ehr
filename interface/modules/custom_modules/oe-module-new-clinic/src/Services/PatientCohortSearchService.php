@@ -11,6 +11,8 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
+use OpenEMR\Modules\NewClinic\Support\Sanitize;
+
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Database\QueryUtils;
 
@@ -623,7 +625,7 @@ class PatientCohortSearchService
             $bind[] = (int) $filters['age_today_max'];
         }
 
-        $name = trim((string) ($filters['name_contains'] ?? ''));
+        $name = Sanitize::searchToken((string) ($filters['name_contains'] ?? ''));
         if ($name !== '') {
             $where[] = '(pd.fname LIKE ? OR pd.lname LIKE ? OR CONCAT(pd.fname, " ", pd.lname) LIKE ?)';
             $like = '%' . $name . '%';
@@ -632,26 +634,26 @@ class PatientCohortSearchService
             $bind[] = $like;
         }
 
-        $mrn = trim((string) ($filters['mrn'] ?? ''));
+        $mrn = Sanitize::searchToken((string) ($filters['mrn'] ?? ''));
         if ($mrn !== '') {
             $where[] = 'pd.pubpid LIKE ?';
             $bind[] = '%' . $mrn . '%';
         }
 
-        $phone = $this->phoneNormalizer->normalize(trim((string) ($filters['phone'] ?? '')));
+        $phone = $this->phoneNormalizer->normalize(Sanitize::searchToken((string) ($filters['phone'] ?? '')));
         if ($phone !== '') {
             $where[] = '(pd.phone_normalized LIKE ? OR pd.phone_cell LIKE ?)';
             $bind[] = '%' . $phone . '%';
             $bind[] = '%' . $phone . '%';
         }
 
-        $nationalId = trim((string) ($filters['national_id'] ?? ''));
+        $nationalId = Sanitize::searchToken((string) ($filters['national_id'] ?? ''));
         if ($nationalId !== '') {
             $where[] = 'pd.ss LIKE ?';
             $bind[] = '%' . $nationalId . '%';
         }
 
-        $nhis = trim((string) ($filters['nhis_number'] ?? ''));
+        $nhis = Sanitize::searchToken((string) ($filters['nhis_number'] ?? ''));
         if ($nhis !== '') {
             $where[] = 'pm.nhis_number LIKE ?';
             $bind[] = '%' . $nhis . '%';
@@ -934,7 +936,7 @@ class PatientCohortSearchService
      */
     private function applyAllergyMedicationFilters(array $filters, array &$where, array &$bind): void
     {
-        $allergy = trim((string) ($filters['allergy_substance_contains'] ?? ''));
+        $allergy = Sanitize::searchToken((string) ($filters['allergy_substance_contains'] ?? ''));
         if ($allergy !== '') {
             $where[] = "EXISTS (
                 SELECT 1 FROM lists la
@@ -946,7 +948,7 @@ class PatientCohortSearchService
             $bind[] = '%' . $allergy . '%';
         }
 
-        $medication = trim((string) ($filters['medication_contains'] ?? ''));
+        $medication = Sanitize::searchToken((string) ($filters['medication_contains'] ?? ''));
         if ($medication !== '') {
             $where[] = "EXISTS (
                 SELECT 1 FROM lists lm
@@ -1020,15 +1022,15 @@ class PatientCohortSearchService
     private function resolveClinicalTerms(array $filters): ?array
     {
         $titleTerms = [];
-        $manualTitle = trim((string) ($filters['problem_title_contains'] ?? ''));
+        $manualTitle = Sanitize::searchToken((string) ($filters['problem_title_contains'] ?? ''));
         if ($manualTitle !== '') {
             $titleTerms[] = $manualTitle;
         }
 
-        $labTest = trim((string) ($filters['lab_test_contains'] ?? ''));
+        $labTest = Sanitize::searchToken((string) ($filters['lab_test_contains'] ?? ''));
 
         $icdPrefixes = [];
-        $manualIcd = trim((string) ($filters['icd_prefix'] ?? ''));
+        $manualIcd = Sanitize::searchToken((string) ($filters['icd_prefix'] ?? ''));
         if ($manualIcd !== '') {
             $icdPrefixes[] = $manualIcd;
         }
@@ -1061,8 +1063,8 @@ class PatientCohortSearchService
             'source' => $source,
             'title_terms' => $titleTerms,
             'icd_prefixes' => $icdPrefixes,
-            'diag_from' => trim((string) ($filters['diagnosis_date_from'] ?? '')),
-            'diag_to' => trim((string) ($filters['diagnosis_date_to'] ?? '')),
+            'diag_from' => Sanitize::dayOrNull($filters['diagnosis_date_from'] ?? '') ?? '',
+            'diag_to' => Sanitize::dayOrNull($filters['diagnosis_date_to'] ?? '') ?? '',
             'lab_test' => $labTest,
             'condition_label' => $conditionLabel,
         ];

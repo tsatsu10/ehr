@@ -109,7 +109,7 @@ final class BillOpsActionHandler implements AjaxActionHandlerInterface
                 $params = $this->host->readRequestParams($method);
                 $daysheet = $this->host->svc(BillOpsDaysheetService::class)->getDaysheet(
                     (int) ($params['facility_id'] ?? 0),
-                    (string) ($params['date'] ?? '')
+                    $this->host->validDay($params['date'] ?? '')
                 );
                 $this->host->respond(true, 'ok', $daysheet);
                 break;
@@ -121,7 +121,7 @@ final class BillOpsActionHandler implements AjaxActionHandlerInterface
                 $this->host->verifyCsrf($body);
                 $exported = $this->host->svc(BillOpsDaysheetService::class)->recordExport(
                     (int) ($body['facility_id'] ?? 0),
-                    (string) ($body['date'] ?? ''),
+                    $this->host->validDay($body['date'] ?? ''),
                     $userId
                 );
                 $this->host->respond(true, 'ok', $exported);

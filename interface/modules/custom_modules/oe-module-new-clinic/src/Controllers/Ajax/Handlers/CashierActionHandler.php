@@ -45,7 +45,7 @@ final class CashierActionHandler implements AjaxActionHandlerInterface
                 $facilityId = $this->host->resolveRequestFacilityId();
                 $queue = $this->host->svc(CashierService::class)->getCashierQueue(
                     $facilityId,
-                    $_REQUEST['visit_date'] ?? date('Y-m-d'),
+                    $this->host->validDay($_REQUEST['visit_date'] ?? '', date('Y-m-d')),
                     $userId
                 );
                 $queue = $this->host->enrichQueuePayload($queue, $userId, $facilityId);

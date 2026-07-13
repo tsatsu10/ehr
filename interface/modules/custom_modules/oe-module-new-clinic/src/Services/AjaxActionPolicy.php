@@ -655,6 +655,24 @@ class AjaxActionPolicy
     ];
 
     /**
+     * SCALE-4.1 — actions that legitimately carry a large request body
+     * (multipart file uploads, CSV/pack/config imports). Every other action's
+     * body is capped at AjaxController::MAX_JSON_BODY_BYTES (1 MB) — no form
+     * save or filter payload comes anywhere near that.
+     *
+     * @var array<string, true>
+     */
+    private const LARGE_BODY_ACTIONS = [
+        'documents.upload' => true,
+        'front_desk.upload_referral' => true,
+        'lab_ops.panel_import' => true,
+        'admin.fee.import' => true,
+        'pharm_ops.formulary_import' => true,
+        'admin.config.import' => true,
+        'admin.his_pack_import' => true,
+    ];
+
+    /**
      * SCALE-4.2 — read-only actions exempt from the request execution budgets
      * (set_time_limit + DB statement kill): their handlers may legitimately run
      * bounded batch work inline (the export-status inline fallback builds the
@@ -957,6 +975,25 @@ class AjaxActionPolicy
     public function readOnlyActions(): array
     {
         return array_keys(self::READONLY_ACTIONS);
+    }
+
+    /**
+     * SCALE-4.1 — may this action carry a large (upload/import-sized) body?
+     */
+    public function allowsLargeBody(string $action): bool
+    {
+        return isset(self::LARGE_BODY_ACTIONS[$this->normalizeAction($action)]);
+    }
+
+    /**
+     * The large-body allowlist (SCALE-4.1). Exposed for the guardrail test
+     * that asserts every entry is a real dispatchable action.
+     *
+     * @return array<int, string>
+     */
+    public function largeBodyActions(): array
+    {
+        return array_keys(self::LARGE_BODY_ACTIONS);
     }
 
     /**

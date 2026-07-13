@@ -177,8 +177,8 @@ final class CommunicationsActionHandler implements AjaxActionHandlerInterface
                     'sent_by' => $_REQUEST['sent_by'] ?? null,
                     'sent_to' => $_REQUEST['sent_to'] ?? null,
                     'processed' => $_REQUEST['processed'] ?? null,
-                    'date_from' => $_REQUEST['date_from'] ?? null,
-                    'date_to' => $_REQUEST['date_to'] ?? null,
+                    'date_from' => $this->host->validDayOrNull($_REQUEST['date_from'] ?? null),
+                    'date_to' => $this->host->validDayOrNull($_REQUEST['date_to'] ?? null),
                 ];
                 $log = $this->host->svc(CommunicationsHubService::class)->listReminderLog($userId, $filters);
                 $this->host->respond(true, 'ok', $log);

@@ -62,7 +62,7 @@ final class DoctorActionHandler implements AjaxActionHandlerInterface
                 $facilityId = $this->host->resolveRequestFacilityId();
                 $queue = $this->host->svc(DoctorService::class)->getDoctorQueue(
                     $facilityId,
-                    $_REQUEST['visit_date'] ?? date('Y-m-d'),
+                    $this->host->validDay($_REQUEST['visit_date'] ?? '', date('Y-m-d')),
                     $userId,
                     (string) ($_REQUEST['scope'] ?? 'me')
                 );
@@ -83,7 +83,7 @@ final class DoctorActionHandler implements AjaxActionHandlerInterface
                 $this->host->respond(true, 'ok', $rosterService->getRosterPayload(
                     $facilityId,
                     $userId,
-                    isset($_REQUEST['visit_date']) ? (string) $_REQUEST['visit_date'] : null
+                    isset($_REQUEST['visit_date']) ? $this->host->validDay($_REQUEST['visit_date']) : null
                 ));
                 break;
             case 'doctor.roster.set_taking':

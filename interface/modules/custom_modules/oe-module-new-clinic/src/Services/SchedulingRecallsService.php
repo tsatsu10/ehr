@@ -11,6 +11,8 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
+use OpenEMR\Modules\NewClinic\Support\Sanitize;
+
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Modules\NewClinic\Services\RecallMessaging\RecallMessagingFactory;
 use OpenEMR\Modules\NewClinic\Services\RecallMessaging\RecallMessagingPort;
@@ -412,6 +414,7 @@ class SchedulingRecallsService
             $where[] = 'mr.r_pid = ?';
             $bind[] = $pid;
         }
+        $search = Sanitize::searchToken($search);
         if ($search !== '') {
             $like = '%' . $search . '%';
             $where[] = '(pat.fname LIKE ? OR pat.lname LIKE ? OR pat.pubpid LIKE ? OR mr.r_reason LIKE ?)';

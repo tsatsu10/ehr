@@ -11,6 +11,8 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
+use OpenEMR\Modules\NewClinic\Support\Sanitize;
+
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Modules\NewClinic\Exceptions\VisitNotTakeableException;
@@ -740,7 +742,7 @@ class DoctorService
      */
     public function searchProviders(string $query, int $facilityId, int $excludeUserId): array
     {
-        $query = trim($query);
+        $query = Sanitize::searchToken($query);
         if ($query === '') {
             return [];
         }

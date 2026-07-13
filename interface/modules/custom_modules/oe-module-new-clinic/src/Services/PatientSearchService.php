@@ -11,6 +11,8 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
+use OpenEMR\Modules\NewClinic\Support\Sanitize;
+
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Modules\NewClinic\Dto\SearchResultDto;
 
@@ -30,7 +32,8 @@ class PatientSearchService
 
     public function normalizeQuery(string $q): string
     {
-        return trim(preg_replace('/\s+/', ' ', $q) ?? '');
+        // SCALE-4.1: length cap + control-char strip before the LIKE scans.
+        return Sanitize::searchToken(preg_replace('/\s+/', ' ', $q) ?? '');
     }
 
     public function search(string $q, int $limit = 8, ?int $actorUserId = null): SearchResultDto

@@ -67,9 +67,19 @@ use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 use OpenEMR\Modules\NewClinic\Services\PerfCounterService;
 use OpenEMR\Modules\NewClinic\Services\QueryBudgetService;
 use OpenEMR\Modules\NewClinic\Services\QueueRevision;
+use OpenEMR\Modules\NewClinic\Support\Sanitize;
 
 class AjaxController
 {
+    /**
+     * SCALE-4.1 — request-body budgets. 1 MB covers every form save / filter
+     * payload with two orders of magnitude to spare; upload/import actions
+     * (AjaxActionPolicy::LARGE_BODY_ACTIONS) get the upload ceiling instead.
+     * The hard ceiling is checked BEFORE the body is ever read into memory.
+     */
+    private const MAX_JSON_BODY_BYTES = 1_000_000;
+    private const MAX_UPLOAD_BODY_BYTES = 32_000_000;
+
     /** @var array<string, mixed>|null */
     private ?array $jsonBodyCache = null;
     /** @var array<string, object> */
@@ -103,9 +113,26 @@ class AjaxController
             $this->respond(false, 'Unauthorized', ['code' => 'unauthorized'], 401);
         }
 
+        // SCALE-4.1 — hard body ceiling, enforced before resolveRequestAction()
+        // can read the body into memory. Nothing legitimate is this big.
+        $contentLength = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+        if ($contentLength > self::MAX_UPLOAD_BODY_BYTES) {
+            $this->respond(false, 'Request body too large', ['code' => 'payload_too_large'], 413);
+        }
+
         $action = $this->resolveRequestAction();
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         $userId = (int) $_SESSION['authUserID'];
+
+        // SCALE-4.1 — per-action body budget: only vetted upload/import actions
+        // may exceed 1 MB. Devil-proofing for memory (readJsonBody slurps
+        // php://input) and for absurd oversized field values in ordinary saves.
+        if (
+            $contentLength > self::MAX_JSON_BODY_BYTES
+            && !$this->svc(AjaxActionPolicy::class)->allowsLargeBody($action)
+        ) {
+            $this->respond(false, 'Request body too large', ['code' => 'payload_too_large'], 413);
+        }
 
         // SCALE-0.1 — server-side perf baseline. Logs ONE structured line for slow
         // (>500 ms) or errored requests only (never per-fast-request → no log spam).
@@ -762,6 +789,24 @@ class AjaxController
     /**
      * Treat missing, blank, or JS "undefined"/"null" query values as absent optional ints.
      */
+    /**
+     * SCALE-4.1 — boundary guard for Y-m-d day params: empty/missing → the
+     * caller's default, malformed → InvalidArgumentException (the dispatch
+     * catch maps it to a clean 400 validation envelope). Rejecting beats
+     * silently substituting today: a report for a mistyped day must not
+     * quietly show a different day's data.
+     */
+    public function validDay(mixed $raw, string $default = ''): string
+    {
+        return Sanitize::dayOrDefault($raw, $default);
+    }
+
+    /** Nullable flavour of validDay() for optional range filters. */
+    public function validDayOrNull(mixed $raw): ?string
+    {
+        return Sanitize::dayOrNull($raw);
+    }
+
     public function parseOptionalPositiveInt(mixed $value): ?int
     {
         if ($value === null) {

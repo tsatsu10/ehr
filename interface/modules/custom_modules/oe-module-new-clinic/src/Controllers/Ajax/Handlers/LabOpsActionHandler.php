@@ -54,7 +54,7 @@ final class LabOpsActionHandler implements AjaxActionHandlerInterface
                 $body = $this->host->readRequestParams($method);
                 $worklist = $this->host->svc(LabOpsWorklistService::class)->worklist([
                     'tab' => $body['tab'] ?? LabOpsWorklistService::TAB_PENDING,
-                    'date' => $body['date'] ?? '',
+                    'date' => $this->host->validDay($body['date'] ?? ''),
                     'facility_id' => $body['facility_id'] ?? 0,
                     'fulfillment' => $body['fulfillment'] ?? 'all',
                     'urgent_first' => $body['urgent_first'] ?? true,

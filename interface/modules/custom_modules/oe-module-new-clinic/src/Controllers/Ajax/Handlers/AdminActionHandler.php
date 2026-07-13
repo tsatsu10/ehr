@@ -642,7 +642,7 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                     $body = $this->host->readJsonBody();
                     $this->host->verifyCsrf($body);
                     $facilityId = $this->host->resolveRequestFacilityId();
-                    $runDate = (string) ($body['run_date'] ?? date('Y-m-d'));
+                    $runDate = $this->host->validDay($body['run_date'] ?? '', date('Y-m-d'));
                     $result = $this->host->svc(ReconciliationService::class)->run($facilityId, $runDate, 'manual', $userId);
                     $this->host->respond(true, 'Reconciliation complete', $result);
                     break;

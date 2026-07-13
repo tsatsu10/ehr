@@ -11,6 +11,8 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
+use OpenEMR\Modules\NewClinic\Support\Sanitize;
+
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Logging\EventAuditLogger;
 
@@ -82,9 +84,10 @@ class FeeScheduleAdminService
         }
 
         $limit = max(1, min($limit, 50));
-        $like = '%' . trim($query) . '%';
+        $query = Sanitize::searchToken($query);
+        $like = '%' . $query . '%';
 
-        if (trim($query) === '') {
+        if ($query === '') {
             $rows = QueryUtils::fetchRecords(
                 "SELECT c.code, c.code_text, c.fee
                  FROM codes c

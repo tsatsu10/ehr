@@ -69,7 +69,7 @@ final class PharmOpsActionHandler implements AjaxActionHandlerInterface
                 $body = $this->host->readRequestParams($method);
                 $pharmWorklist = $this->host->svc(PharmOpsWorklistService::class)->worklist([
                     'tab' => $body['tab'] ?? PharmOpsWorklistService::TAB_PENDING_DISPENSE,
-                    'date' => $body['date'] ?? '',
+                    'date' => $this->host->validDay($body['date'] ?? ''),
                     'facility_id' => $body['facility_id'] ?? 0,
                     'filters' => is_array($body['filters'] ?? null) ? $body['filters'] : [],
                     'urgent_first' => $body['urgent_first'] ?? true,

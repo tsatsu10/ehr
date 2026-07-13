@@ -57,7 +57,7 @@ final class VisitActionHandler implements AjaxActionHandlerInterface
                 $facilityId = $this->host->resolveRequestFacilityId();
                 $board = $this->host->svc(VisitBoardService::class)->getBoard(
                     $facilityId,
-                    $_REQUEST['visit_date'] ?? date('Y-m-d')
+                    $this->host->validDay($_REQUEST['visit_date'] ?? '', date('Y-m-d'))
                 );
                 $board = $this->host->svc(SimilarSurnameQueueService::class)->annotateBoard($board, $facilityId);
                 // SCALE-1.8 — delta poll (shared helper): tiny "unchanged" reply when
@@ -175,7 +175,7 @@ final class VisitActionHandler implements AjaxActionHandlerInterface
                 $result = $this->host->svc(VisitQueueService::class)->startVisitFromAppointment(
                     (int) ($body['pid'] ?? 0),
                     (int) ($body['pc_eid'] ?? 0),
-                    (string) ($body['appt_date'] ?? ''),
+                    $this->host->validDay($body['appt_date'] ?? ''),
                     $userId,
                     isset($body['visit_type_id']) ? (int) $body['visit_type_id'] : null,
                     $this->host->resolveRequestFacilityId(),

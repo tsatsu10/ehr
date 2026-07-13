@@ -47,7 +47,7 @@ final class LabActionHandler implements AjaxActionHandlerInterface
                 $facilityId = $this->host->resolveRequestFacilityId();
                 $queue = $this->host->svc(LabService::class)->getLabQueue(
                     $facilityId,
-                    $_REQUEST['visit_date'] ?? date('Y-m-d'),
+                    $this->host->validDay($_REQUEST['visit_date'] ?? '', date('Y-m-d')),
                     $userId
                 );
                 $queue = $this->host->enrichQueuePayload($queue, $userId, $facilityId);

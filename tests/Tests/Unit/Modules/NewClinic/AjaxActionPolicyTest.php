@@ -244,6 +244,32 @@ class AjaxActionPolicyTest extends TestCase
         }
     }
 
+    // ---- SCALE-4.1: large-body allowlist -----------------------------------
+
+    public function testOnlyUploadAndImportActionsAllowLargeBodies(): void
+    {
+        require_once dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/lib/ajax-action-crosscheck.php';
+        $catalog = array_flip(moduleVerifyExtractControllerActions());
+        $policy = new AjaxActionPolicy();
+
+        // Every allowlist entry must be a real dispatchable action (typo guard).
+        foreach ($policy->largeBodyActions() as $action) {
+            $this->assertArrayHasKey(
+                $action,
+                $catalog,
+                "LARGE_BODY_ACTIONS entry '$action' is not a dispatchable controller action"
+            );
+        }
+
+        $this->assertTrue($policy->allowsLargeBody('documents.upload'));
+        $this->assertTrue($policy->allowsLargeBody('admin.config.import'));
+        // Ordinary saves and searches stay under the 1 MB cap.
+        foreach (['cashier.pay', 'patients.search', 'encounter_note.save', 'visit.board'] as $action) {
+            $this->assertFalse($policy->allowsLargeBody($action), "$action must NOT allow large bodies");
+        }
+    }
+
     // ---- SCALE-4.2: read-request execution budgets ------------------------
 
     public function testReadOnlyActionsCarryTheReadBudget(): void

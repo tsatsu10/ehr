@@ -16,6 +16,8 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
+use OpenEMR\Modules\NewClinic\Support\Sanitize;
+
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Database\QueryUtils;
 
@@ -153,12 +155,12 @@ class AuditLogService
             $where[] = 'date <= ?';
             $bind[] = $dateTo . ' 23:59:59';
         }
-        $user = trim((string) ($request['user'] ?? ''));
+        $user = Sanitize::searchToken((string) ($request['user'] ?? ''));
         if ($user !== '') {
             $where[] = 'user LIKE ?';
             $bind[] = '%' . $user . '%';
         }
-        $q = trim((string) ($request['q'] ?? ''));
+        $q = Sanitize::searchToken((string) ($request['q'] ?? ''));
         if ($q !== '') {
             $where[] = '(event LIKE ? OR category LIKE ? OR comments LIKE ?)';
             $like = '%' . $q . '%';

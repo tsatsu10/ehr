@@ -59,19 +59,19 @@ final class ReportsActionHandler implements AjaxActionHandlerInterface
                     $facilityId = $this->host->resolveRequestFacilityId();
                     $report = $this->host->svc(ReportsService::class)->getDailyReport(
                         $facilityId,
-                        $_REQUEST['visit_date'] ?? date('Y-m-d')
+                        $this->host->validDay($_REQUEST['visit_date'] ?? '', date('Y-m-d'))
                     );
                     $this->host->respond(true, 'ok', $report);
                     break;
                 case 'reports.scheduling':
                     $facilityId = $this->host->resolveRequestFacilityId();
-                    $visitDate = (string) ($_REQUEST['visit_date'] ?? date('Y-m-d'));
+                    $visitDate = $this->host->validDay($_REQUEST['visit_date'] ?? '', date('Y-m-d'));
                     $this->host->respond(true, 'ok', $this->host->svc(ReportsSchedulingService::class)->getReport($facilityId, $visitDate));
                     break;
                 case 'reports.ancillary':
                     $facilityId = $this->host->resolveRequestFacilityId();
-                    $startDate = (string) ($_REQUEST['start_date'] ?? $_REQUEST['visit_date'] ?? date('Y-m-d'));
-                    $endDate = (string) ($_REQUEST['end_date'] ?? $startDate);
+                    $startDate = $this->host->validDay($_REQUEST['start_date'] ?? $_REQUEST['visit_date'] ?? '', date('Y-m-d'));
+                    $endDate = $this->host->validDay($_REQUEST['end_date'] ?? '', $startDate);
                     try {
                         $this->host->respond(true, 'ok', $this->host->svc(ReportsAncillaryService::class)->getReport($facilityId, $startDate, $endDate));
                     } catch (\InvalidArgumentException $e) {
@@ -80,8 +80,8 @@ final class ReportsActionHandler implements AjaxActionHandlerInterface
                     break;
                 case 'reports.ancillary_export':
                     $facilityId = $this->host->resolveRequestFacilityId();
-                    $startDate = (string) ($_REQUEST['start_date'] ?? $_REQUEST['visit_date'] ?? date('Y-m-d'));
-                    $endDate = (string) ($_REQUEST['end_date'] ?? $startDate);
+                    $startDate = $this->host->validDay($_REQUEST['start_date'] ?? $_REQUEST['visit_date'] ?? '', date('Y-m-d'));
+                    $endDate = $this->host->validDay($_REQUEST['end_date'] ?? '', $startDate);
                     try {
                         $export = $this->host->svc(ReportsAncillaryService::class)->exportCsv($facilityId, $startDate, $endDate);
                         $this->host->respondCsv($export['filename'], $export['content']);
@@ -93,8 +93,8 @@ final class ReportsActionHandler implements AjaxActionHandlerInterface
                     break;
                 case 'reports.documentation_integrity':
                     $facilityId = $this->host->resolveRequestFacilityId();
-                    $startDate = (string) ($_REQUEST['start_date'] ?? $_REQUEST['visit_date'] ?? date('Y-m-d'));
-                    $endDate = (string) ($_REQUEST['end_date'] ?? $startDate);
+                    $startDate = $this->host->validDay($_REQUEST['start_date'] ?? $_REQUEST['visit_date'] ?? '', date('Y-m-d'));
+                    $endDate = $this->host->validDay($_REQUEST['end_date'] ?? '', $startDate);
                     try {
                         $this->host->respond(true, 'ok', $this->host->svc(ReportsDocumentationIntegrityService::class)->getReport(
                             $facilityId,
@@ -107,8 +107,8 @@ final class ReportsActionHandler implements AjaxActionHandlerInterface
                     break;
                 case 'reports.documentation_integrity_export':
                     $facilityId = $this->host->resolveRequestFacilityId();
-                    $startDate = (string) ($_REQUEST['start_date'] ?? $_REQUEST['visit_date'] ?? date('Y-m-d'));
-                    $endDate = (string) ($_REQUEST['end_date'] ?? $startDate);
+                    $startDate = $this->host->validDay($_REQUEST['start_date'] ?? $_REQUEST['visit_date'] ?? '', date('Y-m-d'));
+                    $endDate = $this->host->validDay($_REQUEST['end_date'] ?? '', $startDate);
                     try {
                         $export = $this->host->svc(ReportsDocumentationIntegrityService::class)->exportCsv($facilityId, $startDate, $endDate);
                         $this->host->respondCsv($export['filename'], $export['content']);
@@ -118,7 +118,7 @@ final class ReportsActionHandler implements AjaxActionHandlerInterface
                     break;
                 case 'reports.reconciliation':
                     $facilityId = $this->host->resolveRequestFacilityId();
-                    $runDate = (string) ($_REQUEST['run_date'] ?? date('Y-m-d'));
+                    $runDate = $this->host->validDay($_REQUEST['run_date'] ?? '', date('Y-m-d'));
                     $this->host->respond(true, 'ok', [
                         'latest_run' => $this->host->svc(ReconciliationService::class)->getLatestRun($facilityId),
                         'totals' => $this->host->svc(ReconciliationService::class)->fetchTotals($facilityId, $runDate),
@@ -127,7 +127,7 @@ final class ReportsActionHandler implements AjaxActionHandlerInterface
                 case 'reports.hub_summary':
                     $this->host->svc(ReportHubAccessService::class)->assertHubAccess();
                     $facilityId = $this->host->resolveRequestFacilityId();
-                    $visitDate = (string) ($_REQUEST['visit_date'] ?? date('Y-m-d'));
+                    $visitDate = $this->host->validDay($_REQUEST['visit_date'] ?? '', date('Y-m-d'));
                     $daily = $this->host->svc(ReportsService::class)->getDailyReport($facilityId, $visitDate);
                     $visits = is_array($daily['visits'] ?? null) ? $daily['visits'] : [];
                     $cash = is_array($daily['cash'] ?? null) ? $daily['cash'] : [];

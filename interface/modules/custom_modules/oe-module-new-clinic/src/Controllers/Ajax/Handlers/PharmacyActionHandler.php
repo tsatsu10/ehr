@@ -48,7 +48,7 @@ final class PharmacyActionHandler implements AjaxActionHandlerInterface
                 $facilityId = $this->host->resolveRequestFacilityId();
                 $queue = $this->host->svc(PharmacyService::class)->getPharmacyQueue(
                     $facilityId,
-                    $_REQUEST['visit_date'] ?? date('Y-m-d'),
+                    $this->host->validDay($_REQUEST['visit_date'] ?? '', date('Y-m-d')),
                     $userId
                 );
                 $queue = $this->host->enrichQueuePayload($queue, $userId, $facilityId);

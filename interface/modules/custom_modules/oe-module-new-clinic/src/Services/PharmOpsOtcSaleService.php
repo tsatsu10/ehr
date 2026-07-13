@@ -11,6 +11,8 @@
 
 namespace OpenEMR\Modules\NewClinic\Services;
 
+use OpenEMR\Modules\NewClinic\Support\Sanitize;
+
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Logging\EventAuditLogger;
 use OpenEMR\Services\DrugSalesService;
@@ -33,7 +35,7 @@ class PharmOpsOtcSaleService
     {
         $this->access->assertHubAccess();
 
-        $query = trim($query);
+        $query = Sanitize::searchToken($query);
         if (mb_strlen($query) < 2) {
             return ['rows' => [], 'query' => $query];
         }
