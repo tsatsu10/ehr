@@ -53,7 +53,6 @@ $reactLabOps = $config->get('enable_react_lab_ops', '1') === '1';
     [
         'island_entry' => 'lab-ops',
         'shell_nav_id' => 'cliniclabops',
-        'module_url' => $moduleUrl,
         'lab_desk_url' => $moduleUrl . '/lab.php',
         'visit_board_url' => $moduleUrl . '/visit-board.php',
         'initial_tab' => in_array((string) ($_GET['tab'] ?? ''), ['pending', 'in_progress', 'send_out'], true)

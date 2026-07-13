@@ -32,9 +32,7 @@ $reactLabDesk = $config->get('enable_react_lab_desk', '1') === '1';
 (new PageController())->renderDesk('lab.html.twig', 'new_lab', [
     'island_entry' => 'lab-desk',
     'desk_id' => 'lab',
-    'module_url' => $moduleUrl,
     'visit_board_url' => $moduleUrl . '/visit-board.php',
-    'webroot' => $GLOBALS['webroot'],
     'can_skip_to_payment' => AclMain::aclCheckCore('new_clinic', 'new_visit_skip_queue'),
     'lab_ops_url' => $labOpsEnabled ? $moduleUrl . '/lab-ops/index.php' : null,
     'lab_ops_enabled' => $labOpsEnabled,

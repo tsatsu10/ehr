@@ -137,6 +137,58 @@ describe('LabDesk', () => {
     expect(screen.getByRole('button', { name: /Lab complete/i })).toBeInTheDocument();
   });
 
+  it('primary Enter results shortcut opens the order that still needs results, not just the first one', async () => {
+    // Regression guard (2026-07-13 audit): the oldest order in a visit's list is
+    // often already complete when a visit has more than one lab test -- the
+    // primary shortcut must skip it and target the order still needing work.
+    const multiOrderSelectData: LabSelectData = {
+      ...selectData,
+      lab_orders: [
+        { id: 101, title: 'Malaria RDT', code: 'MAL_RDT', status: 'complete' },
+        { id: 102, title: 'Full blood count', code: 'FBC', status: 'pending' },
+      ],
+    };
+
+    mockFetch
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [waitingVisit],
+        counts: { waiting: 1, in_lab: 0, total: 1 },
+      })
+      .mockResolvedValueOnce({
+        visit: { ...multiOrderSelectData.visit, state: 'ready_for_lab' as const, row_version: 1 },
+        preview: multiOrderSelectData.preview,
+        lab_orders: [],
+      })
+      .mockResolvedValueOnce(multiOrderSelectData)
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [{ ...waitingVisit, state: 'in_lab' as const }],
+        counts: { waiting: 0, in_lab: 1, total: 1 },
+        has_active_work: true,
+      })
+      .mockResolvedValueOnce({ lines: [] });
+
+    render(<LabDesk {...props} labOpsEnabled canEnterResults />);
+
+    await waitFor(() => screen.getByText(/Kofi Asante/));
+    fireEvent.click(screen.getByText(/Kofi Asante/));
+
+    const enterResultsBtn = await waitFor(() => {
+      const btn = document.getElementById('nc-lab-enter-results-primary');
+      if (!btn) throw new Error('primary Enter results shortcut not rendered yet');
+      return btn;
+    });
+    fireEvent.click(enterResultsBtn);
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        'lab_ops.result_get',
+        expect.objectContaining({ json: { procedure_order_id: 102 } })
+      );
+    });
+  });
+
   it('shows skip to payment when permitted and submits skip action', async () => {
     mockFetch
       .mockResolvedValueOnce({

@@ -78,7 +78,14 @@ export function LabActivePane({
     && (data.visit.state === 'ready_for_lab' || inLab);
   const labDirectIntake = data.lab_direct_intake;
   const showCoreOrders = !labDirectIntake?.enabled || !labDirectIntake.can_create_orders;
-  const firstOrderId = data.lab_orders[0]?.id;
+  // Prefer an order that still needs attention (not yet complete/canceled, or has
+  // saved-but-unreleased results) over the literal first order, which is often the
+  // oldest and already done when a visit has more than one lab test.
+  const nextOrderNeedingResults = data.lab_orders.find((order) => {
+    const status = order.status.toLowerCase();
+    return !['complete', 'canceled', 'cancelled'].includes(status) || (order.unreleased_count ?? 0) > 0;
+  });
+  const firstOrderId = nextOrderNeedingResults?.id ?? data.lab_orders[0]?.id;
 
   const heroTitle = inLab
     ? `Active lab work · #${data.visit.queue_number} ${data.preview.identity.display_name}`
