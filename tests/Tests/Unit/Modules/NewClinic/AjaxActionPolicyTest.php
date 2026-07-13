@@ -268,6 +268,31 @@ class AjaxActionPolicyTest extends TestCase
         $this->assertFalse($policy->hasReadBudget('cohort.export_status'));
     }
 
+    /**
+     * SCALE-4.5 audit guardrail: every dispatchable action must be describable
+     * by the policy. Two things depend on this: authorizeAction() 400s
+     * unknown-described actions BEFORE dispatch (an undescribed real action
+     * would be dead code), and the perf counter collapses unknown-described
+     * actions to one '(unknown)' bucket (an undescribed real action would
+     * vanish from the perf panel).
+     */
+    public function testEveryDispatchableActionIsDescribable(): void
+    {
+        require_once dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/lib/ajax-action-crosscheck.php';
+        $policy = new AjaxActionPolicy();
+
+        foreach (moduleVerifyExtractControllerActions() as $action) {
+            $this->assertNotSame(
+                'unknown',
+                $policy->describe($action)['type'],
+                "dispatchable action '$action' is not describable — it would be 400'd before dispatch"
+            );
+        }
+        // And garbage stays unknown (the perf counter's '(unknown)' bucket test).
+        $this->assertSame('unknown', $policy->describe('no.such_action')['type']);
+    }
+
     public function testReadOnlyActionsAreNormalizedAndUnique(): void
     {
         $policy = new AjaxActionPolicy();

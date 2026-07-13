@@ -43,14 +43,6 @@ function fmtMs(ms: number): string {
   return `${ms} ms`;
 }
 
-function localDay(daysAgo: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const dayOfMonth = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${month}-${dayOfMonth}`;
-}
-
 /**
  * SCALE-4.5 — read-only performance panel for the System tab: yesterday's (or
  * today's) slowest requests and error counts from the daily perf counters.
@@ -66,10 +58,12 @@ export function PerfPanelCard({ ajaxUrl, csrfToken }: PerfPanelCardProps) {
     setLoading(true);
     setError(null);
     try {
+      // Day tokens resolve on the server clock — a workstation with a wrong
+      // timezone/date still sees the day the counters actually wrote.
       const result = await oeFetch<PerfSummary>('admin.perf.summary', {
         ajaxUrl,
         csrfToken,
-        params: { day: localDay(dayChoice === 'yesterday' ? 1 : 0) },
+        params: { day: dayChoice },
       });
       setData(result);
     } catch (err) {

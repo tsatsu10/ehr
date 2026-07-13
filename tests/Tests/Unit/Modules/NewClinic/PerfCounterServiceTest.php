@@ -102,6 +102,16 @@ class PerfCounterServiceTest extends TestCase
         (new PerfCounterService())->summary('not-a-date');
     }
 
+    public function testSummaryResolvesDayTokensOnTheServerClock(): void
+    {
+        $svc = new PerfCounterService();
+
+        $this->assertSame(date('Y-m-d'), $svc->summary('today')['day']);
+        $this->assertSame(date('Y-m-d', strtotime('-1 day')), $svc->summary('yesterday')['day']);
+        $this->assertSame(date('Y-m-d', strtotime('-1 day')), $svc->summary('')['day']);
+        $this->assertSame(date('Y-m-d'), $svc->summary('Today')['day']);
+    }
+
     public function testRollupFreezesP95ForCompletedDays(): void
     {
         $svc = new PerfCounterService();

@@ -1046,6 +1046,17 @@ class AjaxController
             : microtime(true);
         $facilityId = (int) ($_SESSION['facilityId'] ?? 0);
 
+        // Devil-proofing (SCALE-4.5 audit): $action is client-supplied. Actions
+        // the policy can't describe never dispatch (authorizeAction 400s them),
+        // so collapsing them to one '(unknown)' bucket costs no signal — and
+        // stops a hostile client from growing new_clinic_perf_daily one row per
+        // garbage name per day, or forging NC_PERF log lines with control chars.
+        if ($action === '') {
+            $action = '(none)';
+        } elseif ($this->svc(AjaxActionPolicy::class)->describe($action)['type'] === 'unknown') {
+            $action = '(unknown)';
+        }
+
         register_shutdown_function(static function () use ($t0, $action, $userId, $facilityId): void {
             $ms = (int) round((microtime(true) - $t0) * 1000);
             $status = http_response_code();
@@ -1064,7 +1075,7 @@ class AjaxController
 
             error_log(sprintf(
                 'NC_PERF action=%s ms=%d user=%d facility=%d%s',
-                $action !== '' ? $action : '(none)',
+                $action,
                 $ms,
                 $userId,
                 $facilityId,

@@ -111,9 +111,14 @@ class PerfCounterService
      */
     public function summary(string $day = '', int $limit = 10): array
     {
-        $day = trim($day);
-        if ($day === '') {
+        // 'today'/'yesterday' tokens resolve on the SERVER clock — the panel
+        // sends these so a clinic PC with a wrong timezone/date can't ask for
+        // a day the counters never wrote (audit follow-up).
+        $day = strtolower(trim($day));
+        if ($day === '' || $day === 'yesterday') {
             $day = date('Y-m-d', strtotime('-1 day'));
+        } elseif ($day === 'today') {
+            $day = date('Y-m-d');
         }
         $parsed = \DateTimeImmutable::createFromFormat('Y-m-d', $day);
         if ($parsed === false || $parsed->format('Y-m-d') !== $day) {

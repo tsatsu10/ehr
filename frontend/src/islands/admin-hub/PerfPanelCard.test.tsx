@@ -38,9 +38,10 @@ describe('PerfPanelCard', () => {
     // Latency formatting: sub-second in ms, seconds with one decimal.
     expect(screen.getAllByText('500 ms').length).toBeGreaterThan(0);
     expect(screen.getAllByText('2.1 s').length).toBeGreaterThan(0);
+    // Day tokens (not client-computed dates) — the server clock decides.
     expect(mockedFetch).toHaveBeenCalledWith(
       'admin.perf.summary',
-      expect.objectContaining({ params: expect.objectContaining({ day: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) }) }),
+      expect.objectContaining({ params: { day: 'yesterday' } }),
     );
   });
 
@@ -52,9 +53,8 @@ describe('PerfPanelCard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Today' }));
     await waitFor(() => expect(mockedFetch).toHaveBeenCalledTimes(2));
-    const secondDay = (mockedFetch.mock.calls[1]?.[1] as { params: { day: string } }).params.day;
-    const firstDay = (mockedFetch.mock.calls[0]?.[1] as { params: { day: string } }).params.day;
-    expect(secondDay > firstDay).toBe(true);
+    expect((mockedFetch.mock.calls[0]?.[1] as { params: { day: string } }).params.day).toBe('yesterday');
+    expect((mockedFetch.mock.calls[1]?.[1] as { params: { day: string } }).params.day).toBe('today');
   });
 
   it('shows an error callout when the fetch fails', async () => {
