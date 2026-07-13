@@ -571,7 +571,14 @@ Guiding rules for ALL future code in this module:
   missing` on stderr, exit 1; restored → exit 0. `php -l` clean; `composer verify:new-clinic` PASS.
   Backend/ops only, no asset bump. **Phase 6 complete (6.1–6.4); the SCALE plan (Phases 0–6) is
   DONE** except the standing-deferred SCALE-5.3 (optional, measurement-gated) and the offline-first
-  V2 product item.
+  V2 product item. **Audit follow-up (same day):** the first cut of `health-alert.php` bootstrapped
+  OpenEMR to use `QueryUtils` — but a DB-down bootstrap dies via `die()`/`HelpfulDie()`, and
+  exit-with-a-message returns status 0, so the monitor could have reported "healthy" (exit 0)
+  exactly when the DB was down. Rewrote it to the no-bootstrap raw-mysqli pattern (mirroring
+  `health.php`), so DB-unreachable is a deterministic exit 1 (live-proven via a throwaway
+  bad-port site); also made `--worker-max-minutes` authoritative by dropping the TTL filter on the
+  heartbeat read (stale heartbeat now reports precise age, live-proven "20 min ago"), and fixed an
+  invalid cron example (`*5` → `*/5`) in the docblock.
 
 ### Offline / connectivity resilience — DECIDED (not a SCALE task; deliverable is the Outage Runbook)
 
