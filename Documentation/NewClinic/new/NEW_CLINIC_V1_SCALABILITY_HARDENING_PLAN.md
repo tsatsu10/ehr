@@ -473,9 +473,12 @@ Guiding rules for ALL future code in this module:
   step reviewed; a saturation load-test row appended to the baseline worksheet.
 - **Size:** small-medium — mostly docs + a few lines in `health.php`; no architectural change.
 
-- **Status (2026-07-13): DONE.** `health.php` now returns `db_conns` (`Threads_connected`) and
-  `db_conns_limit` (`max_connections`) — two cheap status reads, still no PHI/config/version leak,
-  best-effort/nullable. Runbook v1.1.0 adds Stage-1 step **§1.8**: the sizing rule (max concurrent
+- **Status (2026-07-13): DONE.** `health.php` returns `db_conns_pct` — live connection usage as a
+  percentage of `max_connections`, computed server-side. **(Security-review follow-up, same day:**
+  the first cut exposed raw `db_conns` + `db_conns_limit`, but this endpoint is unauthenticated and
+  scrapeable and its own charter is "give the devil nothing" — leaking the absolute `max_connections`
+  ceiling hands an attacker the exact connection-exhaustion target. Reduced to a coarse percent,
+  which is all the alerting monitor needs; raw numbers are read directly on the DB during tuning.) Runbook v1.1.0 adds Stage-1 step **§1.8**: the sizing rule (max concurrent
   PHP workers + headroom ≤ `max_connections`), the WinNT `ThreadsPerChild=150` vs MariaDB
   `max_connections=151` near-coincidence (thin headroom out of the box; safe on a single on-prem
   box at ~6–12 real sessions, dangerous if `ThreadsPerChild` is raised without raising the DB
@@ -485,7 +488,8 @@ Guiding rules for ALL future code in this module:
   `db_conns≈42` idle — confirming the near-collision is real. **Deliberately did NOT run a forced
   saturation ramp** (it intentionally exhausts connections; belongs on staging, not the live dev
   box) — the per-hardware ceiling number gets recorded at the first pilot/staging load-test.
-  Docs + health surfacing; no architectural change. **Next in Phase 6: SCALE-6.3.**
+  Docs + health surfacing; no architectural change. `db_conns_pct` live-verified (≈28% on this
+  box: 42 of 151). **Next in Phase 6: SCALE-6.3.**
 
 ### SCALE-6.3 — Retention for append-only history tables (NOT one-size-fits-all)
 

@@ -169,18 +169,23 @@ The rule: **max concurrent PHP workers + headroom ≤ MySQL `max_connections`.**
   `pm.max_children` can exceed `max_connections` safely. Standard answer at higher concurrency;
   not needed for a single clinic.
 
-**Watch it, don't guess it:** `health.php` now returns `db_conns` (live `Threads_connected`) and
-`db_conns_limit` (`max_connections`). Point the alerting monitor (§5) at the ratio — alert when
-`db_conns` exceeds, say, 80% of `db_conns_limit`, so you widen the limit *before* it refuses.
+**Watch it, don't guess it:** `health.php` returns `db_conns_pct` — the live connection usage as
+a percentage of `max_connections`. (It deliberately does **not** expose the raw count or the
+absolute limit: the endpoint is unauthenticated and scrapeable, and leaking the ceiling would
+hand an attacker the exact target for a connection-exhaustion attack.) Point the alerting monitor
+(§5) at it — alert when `db_conns_pct` is ≥ 80, so you widen `max_connections` (and check your
+worker sizing) *before* it starts refusing connections. For the raw numbers during tuning, read
+`SHOW STATUS LIKE 'Threads_connected'` / `SHOW VARIABLES LIKE 'max_connections'` directly on the
+DB (you have access there; the public endpoint stays minimal).
 
 **Measure the real number** on staging with the `load-test.php` ramp (§1.7): increase
-`--concurrency` until `db_conns` (via `health.php`) approaches the limit, and record where p95
+`--concurrency` until `db_conns_pct` (via `health.php`) climbs toward 100, and record where p95
 degrades. Do this on a **test/staging box, never the live clinic** — the point is to find the
 ceiling, which means briefly hitting it.
 
 **Stage 1 is done when:** all 8 steps above are verified, `health.php` returns 200 from every
-node, `db_conns` sits comfortably below `db_conns_limit`, and a `load-test.php` run against the
-LB shows p95 latency you're comfortable with.
+node, `db_conns_pct` sits comfortably below 80, and a `load-test.php` run against the LB shows
+p95 latency you're comfortable with.
 
 ---
 
@@ -245,11 +250,12 @@ Bookmark this section now, not during an incident.
 
 **Health endpoint** (`public/health.php?site=<site>`): no auth, no session, no OpenEMR
 bootstrap — raw mysqli against the site's sqlconf, so it answers honestly even when the app
-tier is sick. Returns `200 {ok, db_ms, cache_ms, worker_last_seen, db_conns, db_conns_limit}`
+tier is sick. Returns `200 {ok, db_ms, cache_ms, worker_last_seen, db_conns_pct}`
 when healthy, `503 {ok: false}` when the DB is unreachable, `429 {ok: false, error:
 "rate_limited"}` past the per-IP budget (30/min). `worker_last_seen` goes `null` within ~10 min
-of the job worker dying (heartbeat TTL); `db_conns`/`db_conns_limit` (SCALE-6.2) are the live
-connection headroom — see §1.8. Point the LB / uptime monitor at 200-vs-not; 503 = pull the node.
+of the job worker dying (heartbeat TTL); `db_conns_pct` (SCALE-6.2) is the live connection usage
+as a % of `max_connections` — coarse on purpose (no raw count/limit leaked to an anonymous
+endpoint), see §1.8. Point the LB / uptime monitor at 200-vs-not; 503 = pull the node.
 
 **Incident levers** (SCALE-4.3) — two flags an operator flips **in the DB**
 (`new_clinic_config`, facility 0), no deploy, effective within one config-cache TTL (≤30 s) or

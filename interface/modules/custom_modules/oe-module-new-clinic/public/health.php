@@ -5,7 +5,8 @@
  *
  * GET .../oe-module-new-clinic/public/health.php[?site=default]
  *   200 {"ok":true,"db_ms":1.2,"cache_ms":0.8,"worker_last_seen":"...",
- *        "db_conns":7,"db_conns_limit":151}   db_conns/limit = SCALE-6.2 headroom
+ *        "db_conns_pct":28}   coarse connection-headroom % (SCALE-6.2; never the
+ *                             raw count/limit — see note below)
  *   503 {"ok":false}                          when the DB is unreachable
  *   429 {"ok":false,"error":"rate_limited"}   past the per-IP budget
  *
@@ -125,22 +126,21 @@ if ($hb !== false) {
 // --- DB connection headroom (SCALE-6.2) — the classic PHP+MySQL ceiling: each
 // Apache worker/thread holds its own connection, so a fleet that outgrows
 // max_connections starts refusing NEW requests (incl. logins) while old ones
-// hang. Surfaced here (two cheap status reads, no PHI) so the alerting monitor
-// and an operator can watch headroom BEFORE it saturates. Best-effort/nullable.
-$dbConns = null;
-$dbConnsLimit = null;
+// hang. We expose only a COARSE PERCENT here, never the raw count or the
+// max_connections ceiling: this endpoint is unauthenticated and scrapeable, and
+// leaking the absolute limit would hand an attacker the exact target for a
+// connection-exhaustion DoS (keeping with this file's "give the devil nothing"
+// rule). The percent is all the alerting monitor needs — alert at >= 80%.
+$dbConnsPct = null;
 $cRes = $db->query("SHOW STATUS LIKE 'Threads_connected'");
-if ($cRes !== false) {
-    $r = $cRes->fetch_assoc();
-    if (is_array($r) && isset($r['Value'])) {
-        $dbConns = (int) $r['Value'];
-    }
-}
 $lRes = $db->query("SHOW VARIABLES LIKE 'max_connections'");
-if ($lRes !== false) {
-    $r = $lRes->fetch_assoc();
-    if (is_array($r) && isset($r['Value'])) {
-        $dbConnsLimit = (int) $r['Value'];
+if ($cRes !== false && $lRes !== false) {
+    $cr = $cRes->fetch_assoc();
+    $lr = $lRes->fetch_assoc();
+    $used = is_array($cr) && isset($cr['Value']) ? (int) $cr['Value'] : null;
+    $limit = is_array($lr) && isset($lr['Value']) ? (int) $lr['Value'] : null;
+    if ($used !== null && $limit > 0) {
+        $dbConnsPct = (int) round($used / $limit * 100);
     }
 }
 
@@ -149,6 +149,5 @@ healthRespond(200, [
     'db_ms' => $dbMs,
     'cache_ms' => $cacheMs,
     'worker_last_seen' => $workerLastSeen,
-    'db_conns' => $dbConns,
-    'db_conns_limit' => $dbConnsLimit,
+    'db_conns_pct' => $dbConnsPct,
 ]);
