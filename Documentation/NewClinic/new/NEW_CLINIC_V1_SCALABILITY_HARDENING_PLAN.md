@@ -1,8 +1,8 @@
 # New Clinic V1 — Scalability & Hardening Plan
 
-**Version:** 1.0.0
-**Date:** 2026-07-06 (last status update 2026-07-13)
-**Status:** Phases 0–5 executed (5.3 deliberately deferred — optional, measurement-gated). Trust each task's inline **Status** block over this header; SCALE-4.1's own audit found and fixed a follow-up bug in the same session (see its worksheet), which is the expected steady-state for this plan now — new findings get their own SCALE task or a documented audit fix, not a plan rewrite.
+**Version:** 1.1.0
+**Date:** 2026-07-06 (last update 2026-07-13)
+**Status:** Phases 0–5 executed (5.3 deliberately deferred — optional, measurement-gated). **Phase 6 (§8A) ADDED but NOT yet executed** — four post-audit hardening tasks (SCALE-6.1–6.4) from a 2026-07-13 online-research review, plus a separately-tracked offline-first product decision that routes to a PRD amendment. Trust each task's inline **Status** block over this header; new findings get their own SCALE task or a documented audit fix, not a plan rewrite.
 **Audience:** Any developer or AI agent (including small models / Cursor iOS app). Every task is self-contained: it says WHERE to change, WHAT to change, and HOW TO VERIFY. Execute tasks one at a time, in order, unless a task says it is independent.
 
 ---
@@ -371,6 +371,160 @@ Guiding rules for ALL future code in this module:
 
 ---
 
+## 8A. Phase 6 — Post-audit hardening (from the 2026-07-13 online-research review)
+
+> **Why this phase exists.** After Phases 0–5 were complete, we deliberately went looking for
+> blind spots — cross-checking our design against external scaling best-practice (PHP+MySQL
+> connection limits, cache-stampede literature, MySQL retention/partitioning, offline-first EMR
+> practice for the West Africa segment) and re-verifying the claims against our own code. Five
+> gaps surfaced. Four are in-scope hardening tasks (SCALE-6.1–6.4 below). The fifth —
+> offline/connectivity resilience — is a **product-scope decision, not a hardening task**, and
+> is called out separately so it goes through a PRD amendment rather than being silently built.
+> Sources and severity are in `Documentation/NewClinic/worksheets/SCALABILITY_BASELINE.md`'s
+> audit rows and the assessment that prompted this phase.
+
+### SCALE-6.1 — Cache-stampede protection on hot reads (serve-stale-while-one-rebuilds)
+
+- **Problem (verified in code):** `VisitQueueService::getCounts()` does a bare `get` → miss →
+  rebuild → `set(…, 5)` with **no lock**, even though `CacheService::withLock()` already exists.
+  All open shell tabs poll `queue.counts` in near-lockstep (shift start; our ±10% `useInterval`
+  jitter barely spreads them), so at every 5 s expiry **all** tabs miss and re-run the GROUP BY +
+  `repairOrphanVisits` read simultaneously — the exact "5 s cache absorbs fleet load almost
+  entirely" claim SCALE-3.3 makes fails precisely at each expiry boundary. Same shape applies to
+  `ClinicConfigService::loadFacility()`'s cross-request cache (30 s), though its blast radius is
+  smaller.
+- **Do:** Add a serve-stale helper to `CacheService` (e.g. `getOrRebuild($key, $freshTtl,
+  $hardTtl, $producer)`): store the value with a **hard** `expires_at` (e.g. 30 s) but a shorter
+  **soft/fresh** window (5 s) recorded alongside the value (`{v, fresh_until}`). On read: if
+  within the fresh window, return it; if past fresh but before hard-expiry, the **first** caller
+  to win `withLock()` recomputes and refreshes while **every other concurrent caller instantly
+  returns the still-present stale value** — no worker blocks, no stampede. Only a genuinely cold
+  cache (no row at all) falls back to a single lock-guarded compute; lock losers on a cold start
+  do one bounded direct compute (rare, first-request-of-the-day only). **PHP single-thread
+  caveat (from the research): we cannot refresh "in the background after the response" the way
+  HTTP `stale-while-revalidate` does — the lock-winner recomputes synchronously in its own
+  request, but because only ONE request does and all others serve stale, the stampede is still
+  eliminated.** Fail open throughout (BP-8): any cache error → compute directly. Route
+  `getCounts()` and `loadFacility()` through the new helper; leave one-shot reads alone.
+- **Verify:** unit test that under a simulated concurrent soft-expiry only one `producer` runs
+  (the lock winner) and the rest receive the stale value; live: open ~10 tabs against one
+  facility, watch the general query log — the `queue.counts` GROUP BY fires at most ~once per 5 s
+  **across the expiry boundary**, not once per tab (today it fires N times at each boundary).
+  Paste before/after query-count into `SCALABILITY_BASELINE.md` (BP-7).
+- **Size:** small — the locking machinery already exists; this is a wrapper + two call-site
+  changes + tests. **Recommended first task of the phase.**
+
+### SCALE-6.2 — DB connection ceiling: size it, surface it, measure it
+
+- **Problem:** nothing in Phases 0–5 addresses MySQL `max_connections`. On this box, Apache
+  WinNT MPM `ThreadsPerChild=150` vs MySQL default `max_connections=151` means the connection
+  ceiling and the worker ceiling nearly coincide — and exhaustion is an ugly failure (new
+  requests, including logins, fail while existing ones hang). Everything we built shortens how
+  long a connection is *held*; none of it addresses or documents the ceiling itself.
+- **Do:** (1) **Runbook** (§1 Stage 1): add the sizing rule as an explicit step — WinNT
+  `ThreadsPerChild` (or Linux php-fpm `pm.max_children`) must be sized against MySQL
+  `max_connections` with headroom for the worker + backups + the occasional admin session;
+  document ProxySQL as the multiplexer option for when workers must legitimately exceed
+  connections (per the research, the standard answer at higher concurrency). (2) **`health.php`:**
+  add `db_conns` (`SHOW STATUS LIKE 'Threads_connected'`) and `db_conns_limit` (`SHOW VARIABLES
+  LIKE 'max_connections'`) to the JSON so an operator or the alerting monitor can see live
+  headroom — two cheap status reads, still no PHI/config/version leak. (3) **Measure:** a
+  `load-test.php` ramp that increases concurrency until connections saturate, the real number
+  recorded in `SCALABILITY_BASELINE.md` (replaces the current theoretical headroom estimate with
+  a measured one).
+- **Verify:** `health.php` returns `db_conns`/`db_conns_limit` with sane values; runbook Stage-1
+  step reviewed; a saturation load-test row appended to the baseline worksheet.
+- **Size:** small-medium — mostly docs + a few lines in `health.php`; no architectural change.
+
+### SCALE-6.3 — Retention for append-only history tables (NOT one-size-fits-all)
+
+- **Problem:** every *infrastructure* table got self-purge (rate-limit, cache, perf-daily, export
+  files/jobs), but the append-only **history** tables have none and grow with clinic activity
+  forever. **They are not equal, and the plan must treat them differently:**
+  - `new_visit_state_log` — **clinical / compliance audit** ("who moved this visit through the
+    FSM"). High-ish volume (~5–8 rows/visit) but this is a **medical-record-adjacent audit trail;
+    do NOT default-purge it on a short window.** Its retention is a *policy/legal* decision (match
+    the clinic's medical-record retention — years — or archive rather than delete). Has
+    `created_at` but **no index on it** (only `idx_visit_id`), so any age-based query needs an
+    index first (BP-9).
+  - `new_config_log` — config-change audit, low volume, indexed `(config_key, applied_at)`. Long
+    retention, safe to prune eventually.
+  - `new_visit_notify_log` — already **bounded** (UNIQUE `(visit_id, recipient_user_id)` → one
+    row per visit+recipient, grows with visits not unboundedly per visit). Lowest priority.
+- **Do:** (1) Add the missing `created_at` index to `new_visit_state_log` (guarded migration,
+  BP-9). (2) Add a config-gated batched purge to `run-jobs.php` (`DELETE … WHERE created_at <
+  cutoff LIMIT <batch>` in a loop, same pattern as the rate-limit/cache purges — bounded, never a
+  giant single DELETE). (3) **Per-table retention config keys with SAFE defaults:**
+  `retention_config_log_days` (default long, e.g. 730), `retention_notify_log_days` (default long
+  or off — it's bounded anyway), and for `new_visit_state_log` a **`retention_state_log_days`
+  that defaults to OFF (0 = never auto-purge)** with a prominent comment that turning it on is a
+  compliance decision the clinic's records policy must sign off, not a performance default. (4)
+  Note MySQL **RANGE-partition-by-date** as the *future* option if a real clinic's volumes ever
+  make batched DELETE too slow — but flag the gotcha from the research (the partition column must
+  be in the primary key, so it's a PK re-architecture / schema migration, explicitly **not** V1).
+- **Verify:** worker prunes rows past each configured cutoff in bounded batches (unit-test the
+  cutoff + batch math); `new_visit_state_log` defaults to no auto-purge and the compliance note
+  is in both `install.sql` and the runbook §6; the new index exists.
+- **Size:** medium — one guarded index migration + a worker purge pass + config keys + tests.
+
+### SCALE-6.4 — Turn monitoring from passive to active (alerting)
+
+- **Problem:** `health.php` and the perf panel exist, but both are **pull** — someone must look.
+  The realistic clinic failure mode is silent: the job worker dies, `worker_last_seen` goes
+  `null`, and nobody notices until exports stop appearing. No page, no alert.
+- **Do:** Primarily a **deployment/runbook** step, not module code: runbook §5 gains a concrete
+  "wire an external uptime monitor (e.g. UptimeRobot / BetterStack, or a cron+curl on a *different*
+  box) at `health.php` and alert on HTTP 503, on `ok:false`, or on `worker_last_seen` older than N
+  minutes." Emphasize the monitor must be **external** so it still fires when the box itself is
+  down. **Optional** module code: a tiny `scripts/health-alert.php` a local cron can run to push
+  an alert through the clinic's existing SMS/email channel when health is bad — but the external
+  monitor is the primary recommendation (a local alerter dies with the box).
+- **Verify:** runbook §5 has the alerting step with concrete thresholds; if `health-alert.php`
+  ships, a dry-run that detects a stopped worker (or DB) and reports it would alert.
+- **Size:** small — mostly runbook; optional tiny script.
+
+### PRODUCT DECISION REQUIRED (not a SCALE task) — Offline / connectivity resilience
+
+- **This is deliberately NOT SCALE-6.5.** It is a **product-scope question that must go through a
+  PRD amendment**, not a hardening task folded in silently (the flags-invariant + non-goals
+  guardrails require a scope owner to decide this, not engineering to just build it).
+- **The gap:** the entire architecture assumes a reachable server — islands `oeFetch` on every
+  interaction, poll every 10–30 s, and keep no durable local state. In the West Africa clinic
+  segment, competitors (Bahmni, ClinikEHR, EasyClinic) **lead** with offline-first because power
+  and internet outages are routine; on a flaky 2G link or during an outage our UI degrades to
+  unusable. This is not a "more users" problem — it's a "does it work at all when the link drops
+  mid-shift" problem. **Offline is currently in neither the CLAUDE.md non-goals nor
+  `OPENEMR_AREAS_NOT_ADDRESSED.txt`** — it is genuinely undecided, which is exactly why it needs
+  an explicit decision.
+- **Options (from the research, honest about cost):**
+  1. **Full offline-first** — service worker + IndexedDB local store as source of truth +
+     optimistic writes + a sync queue + conflict resolution (last-write-wins on timestamp, with a
+     409 "both versions" path for true concurrent edits). This is the competitor-parity answer and
+     a **multi-quarter build** that partly conflicts with the strangler model where PHP owns
+     session/state/CSRF/ACL — every mutation path would need a local-first mirror.
+  2. **Narrow "outage-resilient" scope** — a much smaller spike: cache the active patient's chart
+     read-only for continuity when the link drops, and queue *check-in* offline to sync on
+     reconnect. Buys the highest-value slice (a doctor can still see the patient in front of them;
+     reception can still take the next patient) without the full local-first rewrite.
+  3. **Explicitly accept online-only for V1** — a legitimate choice if the pilot sites have
+     reliable-enough power/internet, but it must be a *recorded decision* with the competitive
+     tradeoff stated, not a silent omission.
+- **Required next step (not code):** a PRD amendment (or a gap-analysis entry feeding one) that
+  picks a lane, and — if lane 1 or 2 — a time-boxed spike on the narrowest high-value surface
+  before any island work. Bring it through `nc-brainstorm` / `nc-write-spec`, not this plan.
+
+### Phase 6 charter additions
+
+- **BP-13 Hot reads serve stale, never stampede.** A cache read on a hot poll path uses the
+  serve-stale-while-one-rebuilds helper (SCALE-6.1), never a bare `get`→miss→`set` — the naive
+  pattern re-stampedes at every TTL boundary.
+- **BP-14 Every new append-only table declares its retention.** A new history/audit/log table
+  ships with a retention decision in the same PR: a config-gated batched purge for prunable data,
+  or an explicit "retain indefinitely / compliance record" note (like `new_visit_state_log`).
+  Never add an append-only table with no retention answer.
+
+---
+
 ## 9. Best-practices charter (apply to ALL new code from now on)
 
 These are the standing rules that keep the system scalable as it grows into "the core of a bigger project". Add this section's ID to PR review checklists.
@@ -399,9 +553,10 @@ Phase 2: 2.1 → 2.2 → 2.3 (needs 2.1) ; 2.4, 2.5 independent — can interlea
 Phase 3: 3.1 (needs 1.1) → 3.2 → 3.3 (needs 1.4) → 3.4 → 3.5
 Phase 4: 4.1–4.6 independent of each other; 4.3 needs 1.4; 4.5 needs 0.1
 Phase 5: 5.1 needs 1.8 + 3.3 ; 5.2 needs 3.4/3.5/4.3/4.6 ; 5.3 needs Phase 1 measurements
+Phase 6: 6.1 (uses withLock from 3.3) → 6.2, 6.3, 6.4 independent ; offline decision gates any offline work (PRD, not this plan)
 ```
 
-Rough sizing: Phase 0 ≈ 1 day · Phase 1 ≈ 1–2 weeks · Phase 2 ≈ 1 week · Phase 3 ≈ 1 week · Phase 4 ≈ 1 week · Phase 5 ≈ as needed.
+Rough sizing: Phase 0 ≈ 1 day · Phase 1 ≈ 1–2 weeks · Phase 2 ≈ 1 week · Phase 3 ≈ 1 week · Phase 4 ≈ 1 week · Phase 5 ≈ as needed · Phase 6 ≈ 6.1 small / 6.2 small-med / 6.3 medium / 6.4 small (~1 week total); offline-first is separately scoped via a PRD amendment.
 
 ---
 

@@ -62,7 +62,7 @@ Read in this order for a full picture:
 | [FRONTEND_2026_MODERNIZATION_PLAN.md](./FRONTEND_2026_MODERNIZATION_PLAN.md) | OpenEMR-wide modernization strategy; **New Clinic React islands shipped** |
 | [FRONTEND_MODULE_GUIDE.md](../FRONTEND_MODULE_GUIDE.md) | How to build and wire React islands (Vite, `oeFetch`, tokens) |
 | [MOBILE_IOS_CURSOR_CHECKLIST.md](./new/MOBILE_IOS_CURSOR_CHECKLIST.md) | Post-session verify checklist when coding from **Cursor iOS** (CI + desktop gates) |
-| [NEW_CLINIC_V1_SCALABILITY_HARDENING_PLAN.md](./new/NEW_CLINIC_V1_SCALABILITY_HARDENING_PLAN.md) | SCALE-* performance hardening tasks + R1–R8 rules — Phases 0–5 all executed, statuses inline (5.3 deliberately deferred, measurement-gated) |
+| [NEW_CLINIC_V1_SCALABILITY_HARDENING_PLAN.md](./new/NEW_CLINIC_V1_SCALABILITY_HARDENING_PLAN.md) | SCALE-* performance hardening tasks + R1–R8 rules — Phases 0–5 executed; **Phase 6 (§8A) added from a post-launch online-research review — SCALE-6.1–6.4 not yet built** + an offline-first product decision routed to a PRD amendment (v1.1.0) |
 | [NEW_CLINIC_SCALE_OUT_RUNBOOK.md](./NEW_CLINIC_SCALE_OUT_RUNBOOK.md) | 1→N-server ops runbook: Stage 0/1/2 progression, incident response, backup/restore (v1.0.1, SCALE-5.2 consolidated) |
 | [NEW_CLINIC_SSE_DESIGN.md](./NEW_CLINIC_SSE_DESIGN.md) | Design-only doc for Server-Sent Events queue invalidation — worker-count math, go/no-go criteria; not implemented (v0.1.1, SCALE-5.1) |
 | [NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md](./done/NEW_CLINIC_CODEBASE_AUDIT_AND_REFACTOR_ROADMAP.md) | Full-codebase audit 2026-07-07 — verified endpoint/feature inventory, gap analysis, file dispositions, AUDIT-1..15 refactoring roadmap (v0.1.3, all tasks closed) |
