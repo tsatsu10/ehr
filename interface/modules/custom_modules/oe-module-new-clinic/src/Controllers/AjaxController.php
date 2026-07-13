@@ -913,7 +913,21 @@ class AjaxController
             return $this->svc(AjaxActionPolicy::class)->normalizeAction($action);
         }
 
-        if (strcasecmp((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'), 'POST') === 0) {
+        // SCALE-4.1 audit follow-up: every real caller (oeFetch, legacy
+        // postJson()) puts `action` in the query string, so this fallback only
+        // exists for hypothetical body-only callers — but without it, a
+        // crafted request that omits `action` from the URL could force
+        // readJsonBody() to slurp an oversized body into memory BEFORE the
+        // per-action budget below ever runs (we can't know the action, hence
+        // the allowlist, until the body is parsed). Gate the fallback itself
+        // by the same 1 MB budget: an action-in-body caller with a body that
+        // large isn't a real one, so failing to resolve here (→ empty action
+        // → clean 400 "Unknown action") is the correct, cheap outcome.
+        $contentLength = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+        if (
+            strcasecmp((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'), 'POST') === 0
+            && $contentLength <= self::MAX_JSON_BODY_BYTES
+        ) {
             $fromBody = trim((string) ($this->readJsonBody()['action'] ?? ''));
             if ($fromBody !== '') {
                 return $this->svc(AjaxActionPolicy::class)->normalizeAction($fromBody);

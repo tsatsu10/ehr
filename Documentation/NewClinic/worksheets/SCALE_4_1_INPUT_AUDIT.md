@@ -29,3 +29,33 @@
 negative visit_id → 400; pid=99999999999 → 200 empty; 10 KB `q` via POST → 200 (capped, 0.31 s); 6 KB GET searches → 200 fast (Apache's own `LimitRequestLine` 414s anything ≥ 8 KB in a URL before PHP runs); `page_size=999999` → 200 clamped; `limit=999999&offset=-5` → 200 clamped; 3 malformed/overflow dates → 400 validation envelopes; valid date → 200; 1.5 MB body on `cashier.pay` → 413. No PHP warnings/HTML in any response.
 
 **Known cost (accepted):** `admin.audit.query` free-text search scans core `log` (~11 s on this box) even with the capped needle — the table is huge because OpenEMR logs every query, and the triple-LIKE can't use an index. Bounded by the SCALE-4.2 10 s per-statement budget (2 statements → ≤ ~20 s worst case), admin-only, rate-limited. An index/limit change on core `log` is out of module scope.
+
+## Follow-up self-audit (2026-07-13, same day) — 1 finding, fixed
+
+Re-reviewed the SCALE-4.1 diff end-to-end line by line (not just the checklist) looking for
+ordering bugs in the new body-budget code specifically, since that logic runs earliest in the
+request lifecycle and is easiest to get an ordering wrong in.
+
+**Found (Medium):** `AjaxController::resolveRequestAction()`'s fallback path — used when `action`
+isn't in `$_REQUEST` and the caller instead embeds it in the JSON body — called `readJsonBody()`
+(a `file_get_contents('php://input')` slurp) **before** the new 1 MB per-action budget check ran,
+because the budget check needs to know the action first to consult `LARGE_BODY_ACTIONS`, and the
+fallback exists precisely to *find* the action. A crafted POST with `action` omitted from the URL
+and a large JSON body would bypass the 1 MB budget's "never read more than 1 MB into memory for
+an ordinary action" guarantee (still bounded by the outer 32 MB hard `CONTENT_LENGTH` ceiling and
+PHP's own `post_max_size`, so not a full memory-exhaustion path — but it defeated the specific
+devil-proofing invariant this task exists to establish). Every real caller (`oeFetch`, legacy
+`postJson()`) always puts `action` in the query string, so this only affects a caller that
+deliberately skips that convention.
+
+**Fix:** gate the fallback body read itself by the same `CONTENT_LENGTH` check — if it exceeds
+1 MB, skip the read (action resolves to `''`, which the existing size check then rejects with a
+clean `413 payload_too_large` — a better response than the `400 Unknown action` a hypothetical
+huge-but-under-the-cap body-only call would have produced anyway). No real caller is affected,
+since none rely on this fallback in the first place.
+
+**Verified live:** a small action-only-in-body POST still resolves and dispatches correctly
+(200, `queue.counts`); a 1.5 MB action-only-in-body POST returns `413 payload_too_large` in
+0.22 s instead of parsing the full body first. `composer verify:new-clinic` PASS; 1044 module
+tests green (no regressions — this path had no prior unit coverage, consistent with the rest of
+`AjaxController`'s HTTP-only-testable surface).
