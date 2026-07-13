@@ -1,6 +1,6 @@
 # New Clinic — OpenEMR Coverage Gap Analysis & Comprehensive React Redesign Plan
 
-**Version:** v0.1.33 · **Date:** 2026-07-13 · **Status:** GAP-A COMPLETE (G1–G5, G11); GAP-B core done. **GAP-C COMPLETE** — C1 audit (W4), C2 fee bulk-price CRUD (W5), C3 scoped lists editor (W7), C4 drug-catalog CRUD (W8), C5 people/access (W1), C6 backup engine + recovery-key custody + **separate incremental site-files backup** (W3). **GAP-D essentially COMPLETE** — D1 i18n foundation (G8 mechanism; French seeded, `t()` string sweep **PAUSED at 3/25 islands** — office-notes, proc-order, my-profile — resume tracker in §5), D2 merge guardrail (G10), D3 native proc-order form (W2 top slice; full native form behind `enable_native_proc_order`, write-path signed off via live-DB smoke), D4 native issue editor (W10), D5 record-request reachability (W12) done; **D6 de-Bootstrap resolved to the worthwhile extent — collision bug fixed + `bs:check`-guarded, Twig clean; wholesale theme cutover deferred by decision (module borrows FontAwesome + base font from the theme; not worth rebuilding the base layer since the actual bug is already gone). Toggle retained as a dev tool**. New: `NEW_CLINIC_BACKUP_SYSTEM_DESIGN.md` (v0.5.0 — site files now backed up as a **separate incremental per-file-encrypted mirror**, closing the last backup gap). Deferred: real SMS gateway, outreach wizard/scheduling, native growth overlay (LMS data) · D6 in GAP-D
+**Version:** v0.1.34 · **Date:** 2026-07-13 · **Status:** GAP-A COMPLETE (G1–G5, G11); GAP-B core done. **GAP-C COMPLETE** — C1 audit (W4), C2 fee bulk-price CRUD (W5), C3 scoped lists editor (W7), C4 drug-catalog CRUD (W8), C5 people/access (W1), C6 backup engine + recovery-key custody + **separate incremental site-files backup** (W3). **GAP-D essentially COMPLETE** — D1 i18n foundation (G8 mechanism; French seeded, `t()` string sweep **PAUSED at 3/25 islands** — office-notes, proc-order, my-profile — resume tracker in §5), D2 merge guardrail (G10), D3 native proc-order form (W2 top slice; full native form behind `enable_native_proc_order`, write-path signed off via live-DB smoke), D4 native issue editor (W10), D5 record-request reachability (W12) done; **D6 de-Bootstrap resolved to the worthwhile extent — collision bug fixed + `bs:check`-guarded, Twig clean; wholesale theme cutover deferred by decision (module borrows FontAwesome + base font from the theme; not worth rebuilding the base layer since the actual bug is already gone). Toggle retained as a dev tool**. New: `NEW_CLINIC_BACKUP_SYSTEM_DESIGN.md` (v0.5.0 — site files now backed up as a **separate incremental per-file-encrypted mirror**, closing the last backup gap). Deferred: real SMS gateway, outreach wizard/scheduling, native growth overlay (LMS data) · D6 in GAP-D
 **v0.1.1:** second-pass audit added off-menu surfaces (MFA, login/auth, issue editor, growth charts, authorizations, record request, background-service monitors) — see G11, W10–W11, A6.
 **v0.1.2:** re-verified A1 (Office Notes) against current code before build start — corrected the
 `onotes` schema/UI claims, the ACL story, and the page-count headcount; see the A1 entry in §5 and
@@ -428,17 +428,42 @@ deliberately stricter.*
 - **Toggle:** `enable_vitals_trends` (default OFF), wired in all three places (install.sql,
   `EDITABLE_SETTINGS`, `adminFieldDefs` allowlist + field) — the panel is fetched only when on
   (no wasted request otherwise).
-- **B2b — DEEP LINK BUILT (2026-07-11); native overlay still deferred.** Research killed the
-  planned approach: the plan assumed "WHO/CDC reference data ships with stock growth charts," but the
-  repo ships those curves **only as PNG images** (`interface/forms/vitals/growthchart/*.png`) — the
-  stock `chart.php` overlays the patient's dots on the images by hardcoded pixel math; there is **no
-  numeric LMS/percentile data** to reuse. A native SVG percentile overlay would require bundling a
-  WHO/CDC LMS dataset, which must be *sourced and verified*, not fabricated — wrong growth
-  percentiles are a real patient-safety risk. So what shipped is the **safe** half: a **"Growth
-  chart" deep link** from the Vitals Trends panel for patients under 20 (`ClinicalVitalsSeriesService`
-  computes age from DOB and returns a CSRF-tokened `growth_chart_url` to the stock chart, which draws
-  the *real* CDC/WHO curves + this patient's points in a new tab). The fully-native overlay remains a
-  future task, explicitly **gated on obtaining a verified LMS reference dataset** — do not hand-type it.
+- **B2b — DEEP LINK BUILT (2026-07-11); native overlay re-researched 2026-07-13, still correctly
+  NOT built — but the blocking reason has changed and this needs a real decision, not more
+  engineering.** Original finding stood on re-check: the repo ships growth curves **only as PNG
+  images** (`interface/forms/vitals/growthchart/*.png`), no bundled numeric LMS data.
+  **What's new:** a fresh external-data research pass (prompted by a "build the remaining Tier-2
+  items" request) found the earlier framing — "no numeric growth-reference data exists" — was
+  **wrong**. Both WHO and CDC publish official, structured, verifiable numeric LMS tables for free
+  download (WHO: [child-growth-standards/standards](https://www.who.int/tools/child-growth-standards/standards),
+  per-indicator Excel/CSV z-score + percentile tables by sex, 0–5 years — confirmed live on the
+  weight-for-age page; CDC: [growthcharts/cdc-data-files.htm](https://www.cdc.gov/growthcharts/cdc-data-files.htm),
+  CSV LMS tables, 2–20 years). **The actual blocker is licensing, not data availability:**
+  - WHO's growth-standards publications are **CC BY-NC-SA 3.0 IGO — non-commercial**. New Clinic is
+    a commercial subscription product (see the market expansion plan's pricing model), so bundling
+    WHO's numeric tables into the shipped codebase without WHO's separate written commercial
+    permission would be a licensing violation. WHO's own commercial-permission request form:
+    <https://www.who.int/about/policies/publishing/permissions>.
+  - CDC's 2000 growth-chart data, as a US federal government work, is generally public domain in
+    the US (with a real caveat: US-government-work status doesn't automatically carry the same
+    protection in other jurisdictions — a genuine cross-border question for a West-Africa-market
+    product, not resolved by this research). **Separately, CDC's charts are US-population
+    references** — clinically the wrong standard for this market even if the licensing were clean;
+    WHO's international standards exist specifically because population growth norms differ, and
+    are the reference African health systems actually use.
+  - So there is no "just use the other one" shortcut: CDC dodges the license problem but is the
+    clinically wrong reference for this market; WHO is the clinically right reference but needs a
+    business decision (request commercial permission) before its numbers can ship in the product.
+  **This is a product/licensing decision for a human to make, not an engineering task** — same
+  shape as the offline-first product question resolved earlier in this plan. Options, in order of
+  effort: (1) request WHO's commercial-use permission (concrete, doable, response time unknown);
+  (2) stay on the current safe deep-link indefinitely — it already shows the real WHO/CDC curves
+  via the stock screen, just not natively overlaid; (3) ship a percentile-free enhancement instead
+  — the existing Vitals Trends panel already charts the patient's *own* trajectory over time
+  (flattening/dropping is itself a real failure-to-thrive signal) without needing any licensed
+  reference dataset at all. **Do not hand-type or fabricate any LMS value under any
+  circumstance** — if WHO permission is granted, the values must be pulled programmatically from
+  WHO's own file and checksummed, never manually transcribed.
 - **Backend note:** `track_anything` form aggregation was scoped out of the first cut — `form_vitals`
   covers the high-value BP/weight/SpO₂ series clinics actually chart; track_anything can extend the
   same service later.
@@ -901,6 +926,7 @@ Net-new shared components required: **one** (SVG trend chart — shared by B2 tr
 2. **Documents storage quota/virus scanning** — accept core defaults, or gate uploads by size/type in the module?
 3. **i18n target locales** — **DECIDED: French first** (Francophone West Africa — Senegal, Côte d'Ivoire, Mali, Burkina Faso, Guinea…). `fr.json` seeded 2026-07-12 for the swept islands (office-notes + proc-order, 65 keys); a French user (`language_choice` → `lang_code fr`) now sees those screens in French. **Caveat: the French is a solid first pass but should get a native-speaker/clinical review before production.** Remaining locale coverage grows as the desk-by-desk `t()` sweep proceeds.
 4. **Proc-order parity bar** — which fields of stock `procedure_order` are mandatory for D3 sign-off vs dropped as unused?
+5. **B2b native growth-percentile overlay — request WHO's commercial-use permission, or not?** (2026-07-13) The data genuinely exists (official WHO/CDC LMS tables) and the engineering is otherwise straightforward; the sole blocker is that WHO's growth-standards data is CC BY-NC-SA (non-commercial) and New Clinic is a paid product. Request permission via <https://www.who.int/about/policies/publishing/permissions>, accept the current safe deep-link indefinitely, or ship the licence-free alternative (the existing Vitals Trends panel's own-trajectory view) instead. See B2b in §5 for the full tradeoff.
 
 ---
 
@@ -908,6 +934,7 @@ Net-new shared components required: **one** (SVG trend chart — shared by B2 tr
 
 | Version | Date | Change |
 |---|---|---|
+| v0.1.34 | 2026-07-13 | **B2b re-researched with external (WHO/CDC) sources — the earlier "no numeric growth data exists" finding was itself wrong, corrected here.** Official, verifiable, freely-downloadable WHO and CDC LMS growth-reference tables do exist; confirmed live at who.int and cdc.gov. The real blocker is licensing, not data availability: WHO's data is CC BY-NC-SA (non-commercial) and New Clinic is a paid product, so shipping it needs WHO's separate commercial permission; CDC's US-public-domain data is the wrong clinical reference for a West Africa market regardless. Reclassified as open product question #5 (§9) with a concrete permission-request URL and three ordered options. No code written — correctly a decision point, not an engineering task, matching this session's "never fabricate reference data" bar. |
 | v0.1.33 | 2026-07-13 | **W5, W7, W8 re-verified against current code and resolved — the whole "build the remaining Tier 2 items" ask turned out to be mostly doc rot, not open engineering work**, exactly why the fresh-research-not-recall discipline mattered here: the §0 TL;DR/header already claimed GAP-C (C2=W5, C3=W7, C4=W8) complete, while the Tier-2 table §3 still described them as open recommendations — the header was right, the table was stale. All three CRUD features are genuinely built and confirmed working. Two real, narrowly-scoped bugs found and fixed along the way: (1) W5 — the Fees tab's "Codes admin" escape-hatch link pointed at the wrong stock screen (`layout_service_codes.php` instead of `superbill_custom_full.php`); (2) W7 — considered adding `abook_type` (directory contact categories) to the native lists editor, but research found its `option_value` column is load-bearing in stock `addrbook_edit.php` (person-vs-company field rendering) and the editor's write path can't set it safely, so it was deliberately left out with a pinning test, not shipped half-safe. |
 | v0.1.32 | 2026-07-13 | **W12 resolved as a doc error, not a gap** — fresh research (triggered by a "build the remaining Tier 2 items" pass) found `record_request.php` isn't a `transactions`-table entry at all; it's a US Meaningful Use AMC compliance flag toggle, out of this product's market, and the real underlying need (patient record copies) already ships as M11/CDc Chart Depth export. Row corrected; no code follows. Also fixed the stale §0 TL;DR line still listing G4/G5/G11 as open when the gap table has shown them Closed since 2026-07-11. |
 | v0.1.31 | 2026-07-12 | **B1 outreach — email delivery is now REAL** (was a pure stub). New `EmailOutreachGateway` (first real `OutreachGatewayPort` adapter) sends patient outreach email through OpenEMR's canonical `MyMailer` (clinic's configured SMTP) — **no third-party provider account/decision needed**. Gated on mail transport + a clinic sender email (`patient_reminder_sender_email`) being set, else it honestly falls back to the stub; one email per recipient (no shared To/Cc — PHI privacy); SMS channel still stubs until its own provider adapter. Factory routes to it automatically; the `outreach` island already respects `gateway_configured`, so the "nothing sent" banner/toast flips to real success with no frontend change. `EmailOutreachGatewayTest` (channel guard, availability gate, factory fallback) + `OutreachServiceTest` green (6/6); verify 298 actions/0 cycles. Backend-only — no asset bump. Live send needs the clinic's real SMTP configured (deployment step). |
