@@ -18,6 +18,7 @@
  * FLAGS:
  *   --max-jobs=N      max jobs to process this run (default 20)
  *   --max-seconds=N   soft time budget in seconds (default 55, for a 1-min cron)
+ *   --site=NAME       OpenEMR site id (default "default"); one worker per site
  *
  * Until a worker is scheduled, the status poll still finishes stale jobs inline
  * (config `enable_inline_export_fallback`, default on). Turn that off once this
@@ -34,21 +35,28 @@ if (PHP_SAPI !== 'cli') {
     exit;
 }
 
-$ignoreAuth = true;
-require_once dirname(__DIR__, 4) . '/globals.php';
-
-use OpenEMR\Modules\NewClinic\Services\ReportHubExportService;
-use OpenEMR\Modules\NewClinic\Services\ExportJobService;
-
+// Site resolution must happen BEFORE the globals bootstrap (which dies without it
+// under CLI — there is no HTTP host to infer the site from).
 $maxJobs = 20;
 $maxSeconds = 55;
+$site = 'default';
 foreach (array_slice($argv, 1) as $arg) {
     if (preg_match('/^--max-jobs=(\d+)$/', $arg, $m)) {
         $maxJobs = max(1, (int) $m[1]);
     } elseif (preg_match('/^--max-seconds=(\d+)$/', $arg, $m)) {
         $maxSeconds = max(1, (int) $m[1]);
+    } elseif (preg_match('/^--site=([A-Za-z0-9_-]+)$/', $arg, $m)) {
+        $site = $m[1];
     }
 }
+$_GET['site'] = $site;
+
+$ignoreAuth = true;
+require_once dirname(__DIR__, 4) . '/globals.php';
+
+use OpenEMR\Modules\NewClinic\Services\ReportHubExportService;
+use OpenEMR\Modules\NewClinic\Services\ExportJobService;
+use OpenEMR\Modules\NewClinic\Services\ExportStorageService;
 
 @set_time_limit(0);
 
@@ -56,7 +64,19 @@ try {
     // Report exports (SCALE-2.1) and generic export jobs (SCALE-2.2) share the budget.
     $reports = (new ReportHubExportService())->runWorker($maxJobs, $maxSeconds);
     $exports = (new ExportJobService())->runWorker($maxJobs, $maxSeconds);
-    $out = ['report_exports' => $reports, 'export_jobs' => $exports];
+
+    // SCALE-2.3: purge expired PHI-bearing export files every pass, so retention
+    // holds even when no new exports are being written.
+    $purged = [];
+    foreach ([ReportHubExportService::STORAGE_NAMESPACE, ExportJobService::STORAGE_NAMESPACE] as $namespace) {
+        try {
+            $purged[$namespace] = (new ExportStorageService($namespace))->purgeOlderThan();
+        } catch (\Throwable $e) {
+            $purged[$namespace] = 'error: ' . $e->getMessage();
+        }
+    }
+
+    $out = ['report_exports' => $reports, 'export_jobs' => $exports, 'purged_files' => $purged];
     fwrite(STDOUT, json_encode($out) . "\n");
     $failed = (int) ($reports['failed'] ?? 0) + (int) ($exports['failed'] ?? 0);
     exit($failed > 0 ? 1 : 0);

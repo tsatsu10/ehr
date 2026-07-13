@@ -426,7 +426,9 @@ class AdminBackupService
 
     /**
      * Paths (relative to the documents root) the files backup must never copy:
-     * our own backup outputs (avoid backing up backups), the temp scratch dir, and
+     * our own backup outputs (avoid backing up backups), the temp scratch dir,
+     * transient export files (SCALE-2.3 — disposable, regenerable, and SEC-6 says
+     * they expire in 24h; backing them up would extend PHI retention), and
      * — critically — the encryption key dir. Anchored to the documents root so an
      * unrelated ancestor segment (e.g. an install under a "temp" path) can't
      * accidentally exclude the whole tree.
@@ -435,7 +437,7 @@ class AdminBackupService
     {
         $rel = ltrim(str_replace('\\', '/', $rel), '/');
 
-        return (bool) preg_match('~^(nc_backups|temp)(/|$)~i', $rel)
+        return (bool) preg_match('~^(nc_backups|temp|nc_report_exports|nc_export_jobs)(/|$)~i', $rel)
             || (bool) preg_match('~^nc-files-[^/]*(/|$)~i', $rel)
             || (bool) preg_match('~^logs_and_misc/methods(/|$)~i', $rel);
     }

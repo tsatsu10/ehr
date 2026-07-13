@@ -32,12 +32,16 @@ class ReportHubExportService
      */
     private const INLINE_FALLBACK_AFTER_SECONDS = 10;
 
+    /** SCALE-2.3 — all export files go through the storage abstraction. */
+    public const STORAGE_NAMESPACE = 'nc_report_exports';
+
     public function __construct(
         private readonly ReportHubAccessService $access = new ReportHubAccessService(),
         private readonly ReportHubCatalogService $catalog = new ReportHubCatalogService(),
         private readonly ReportHubNativeReportService $nativeReports = new ReportHubNativeReportService(),
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
+        private readonly ExportStorageService $storage = new ExportStorageService(self::STORAGE_NAMESPACE),
     ) {
     }
 
@@ -237,14 +241,7 @@ class ReportHubExportService
         }
 
         $path = (string) ($row['file_path'] ?? '');
-        if ($path === '' || !is_readable($path)) {
-            throw new \RuntimeException('Export file is missing', 404);
-        }
-
-        $content = file_get_contents($path);
-        if ($content === false) {
-            throw new \RuntimeException('Unable to read export file', 500);
-        }
+        $content = $this->storage->read($path); // SCALE-2.3: containment-checked read
 
         return [
             'filename' => basename($path),
@@ -488,49 +485,10 @@ class ReportHubExportService
         }
     }
 
-    /** SEC-6: export files hold PHI — expire them so they don't accumulate at rest. */
-    private const EXPORT_RETENTION_SECONDS = 86400;
-
+    /** SCALE-2.3: storage owns the directory, permissions, and SEC-6 retention purge. */
     private function writeExportFile(int $jobId, string $filename, string $content): string
     {
-        $dir = $this->exportDirectory();
-        // SEC-6: owner-only dir (0700) — these CSVs contain patient data.
-        if (!is_dir($dir) && !mkdir($dir, 0700, true) && !is_dir($dir)) {
-            throw new \RuntimeException('Unable to create export directory');
-        }
-        @chmod($dir, 0700);
-        $this->purgeExpiredExports($dir);
-
-        $safeName = preg_replace('/[^A-Za-z0-9._-]+/', '-', basename($filename)) ?: 'report.csv';
-        $path = $dir . '/job-' . $jobId . '-' . $safeName;
-        if (file_put_contents($path, $content) === false) {
-            throw new \RuntimeException('Unable to write export file');
-        }
-        // SEC-6: owner-only file (0600).
-        @chmod($path, 0600);
-
-        return $path;
-    }
-
-    /** Delete export files older than the retention window (best-effort). */
-    private function purgeExpiredExports(string $dir): void
-    {
-        $cutoff = time() - self::EXPORT_RETENTION_SECONDS;
-        foreach (glob($dir . '/job-*') ?: [] as $file) {
-            if (is_file($file) && @filemtime($file) < $cutoff) {
-                @unlink($file);
-            }
-        }
-    }
-
-    private function exportDirectory(): string
-    {
-        $siteDir = $GLOBALS['OE_SITE_DIR'] ?? null;
-        if (!is_string($siteDir) || $siteDir === '') {
-            throw new \RuntimeException('Site directory is not configured');
-        }
-
-        return $siteDir . '/documents/nc_report_exports';
+        return $this->storage->put('job-' . $jobId . '-' . $filename, $content);
     }
 
     /**

@@ -29,11 +29,13 @@ class ExportJobService
     private const MAX_ATTEMPTS = 3;
     private const STALE_CLAIM_SECONDS = 300;
     private const INLINE_FALLBACK_AFTER_SECONDS = 10;
-    /** PHI-bearing result files expire so they don't accumulate at rest (SEC-6). */
-    private const RESULT_RETENTION_SECONDS = 86400;
+
+    /** SCALE-2.3 — all result files go through the storage abstraction. */
+    public const STORAGE_NAMESPACE = 'nc_export_jobs';
 
     public function __construct(
         private readonly ClinicConfigService $config = new ClinicConfigService(),
+        private readonly ExportStorageService $storage = new ExportStorageService(self::STORAGE_NAMESPACE),
     ) {
     }
 
@@ -121,13 +123,7 @@ class ExportJobService
             throw new \RuntimeException('Export is not ready', 409);
         }
         $path = (string) ($row['result_path'] ?? '');
-        if ($path === '' || !is_readable($path)) {
-            throw new \RuntimeException('Export file is missing', 404);
-        }
-        $content = file_get_contents($path);
-        if ($content === false) {
-            throw new \RuntimeException('Unable to read export file', 500);
-        }
+        $content = $this->storage->read($path); // SCALE-2.3: containment-checked read
 
         return [
             'filename' => (string) ($row['result_filename'] ?? basename($path)),
@@ -268,36 +264,9 @@ class ExportJobService
         return $row;
     }
 
+    /** SCALE-2.3: storage owns the directory, permissions, and SEC-6 retention purge. */
     private function writeResultFile(int $jobId, string $filename, string $content): string
     {
-        $siteDir = $GLOBALS['OE_SITE_DIR'] ?? null;
-        if (!is_string($siteDir) || $siteDir === '') {
-            throw new \RuntimeException('Site directory is not configured');
-        }
-        $dir = $siteDir . '/documents/nc_export_jobs';
-        if (!is_dir($dir) && !mkdir($dir, 0700, true) && !is_dir($dir)) {
-            throw new \RuntimeException('Unable to create export directory');
-        }
-        @chmod($dir, 0700);
-        $this->purgeExpired($dir);
-
-        $safe = preg_replace('/[^A-Za-z0-9._-]+/', '-', basename($filename)) ?: 'export.csv';
-        $path = $dir . '/job-' . $jobId . '-' . $safe;
-        if (file_put_contents($path, $content) === false) {
-            throw new \RuntimeException('Unable to write export file');
-        }
-        @chmod($path, 0600);
-
-        return $path;
-    }
-
-    private function purgeExpired(string $dir): void
-    {
-        $cutoff = time() - self::RESULT_RETENTION_SECONDS;
-        foreach (glob($dir . '/job-*') ?: [] as $file) {
-            if (is_file($file) && (int) @filemtime($file) < $cutoff) {
-                @unlink($file);
-            }
-        }
+        return $this->storage->put('job-' . $jobId . '-' . $filename, $content);
     }
 }
