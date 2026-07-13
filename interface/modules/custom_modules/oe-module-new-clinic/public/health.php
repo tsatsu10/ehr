@@ -4,7 +4,8 @@
  * Load-balancer health & readiness endpoint (SCALE-4.4).
  *
  * GET .../oe-module-new-clinic/public/health.php[?site=default]
- *   200 {"ok":true,"db_ms":1.2,"cache_ms":0.8,"worker_last_seen":"2026-07-13T09:00:00+00:00"}
+ *   200 {"ok":true,"db_ms":1.2,"cache_ms":0.8,"worker_last_seen":"...",
+ *        "db_conns":7,"db_conns_limit":151}   db_conns/limit = SCALE-6.2 headroom
  *   503 {"ok":false}                          when the DB is unreachable
  *   429 {"ok":false,"error":"rate_limited"}   past the per-IP budget
  *
@@ -121,9 +122,33 @@ if ($hb !== false) {
     }
 }
 
+// --- DB connection headroom (SCALE-6.2) — the classic PHP+MySQL ceiling: each
+// Apache worker/thread holds its own connection, so a fleet that outgrows
+// max_connections starts refusing NEW requests (incl. logins) while old ones
+// hang. Surfaced here (two cheap status reads, no PHI) so the alerting monitor
+// and an operator can watch headroom BEFORE it saturates. Best-effort/nullable.
+$dbConns = null;
+$dbConnsLimit = null;
+$cRes = $db->query("SHOW STATUS LIKE 'Threads_connected'");
+if ($cRes !== false) {
+    $r = $cRes->fetch_assoc();
+    if (is_array($r) && isset($r['Value'])) {
+        $dbConns = (int) $r['Value'];
+    }
+}
+$lRes = $db->query("SHOW VARIABLES LIKE 'max_connections'");
+if ($lRes !== false) {
+    $r = $lRes->fetch_assoc();
+    if (is_array($r) && isset($r['Value'])) {
+        $dbConnsLimit = (int) $r['Value'];
+    }
+}
+
 healthRespond(200, [
     'ok' => true,
     'db_ms' => $dbMs,
     'cache_ms' => $cacheMs,
     'worker_last_seen' => $workerLastSeen,
+    'db_conns' => $dbConns,
+    'db_conns_limit' => $dbConnsLimit,
 ]);

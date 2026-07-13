@@ -473,6 +473,20 @@ Guiding rules for ALL future code in this module:
   step reviewed; a saturation load-test row appended to the baseline worksheet.
 - **Size:** small-medium — mostly docs + a few lines in `health.php`; no architectural change.
 
+- **Status (2026-07-13): DONE.** `health.php` now returns `db_conns` (`Threads_connected`) and
+  `db_conns_limit` (`max_connections`) — two cheap status reads, still no PHI/config/version leak,
+  best-effort/nullable. Runbook v1.1.0 adds Stage-1 step **§1.8**: the sizing rule (max concurrent
+  PHP workers + headroom ≤ `max_connections`), the WinNT `ThreadsPerChild=150` vs MariaDB
+  `max_connections=151` near-coincidence (thin headroom out of the box; safe on a single on-prem
+  box at ~6–12 real sessions, dangerous if `ThreadsPerChild` is raised without raising the DB
+  limit), the php-fpm `pm.max_children` equivalent, ProxySQL as the multiplexer when workers must
+  exceed connections, and "watch the ratio via `health.php`, alert at ~80%." §5 + the Stage-1
+  "done when" criteria reference the new fields. **Live-measured on this box:** `db_conns_limit=151`,
+  `db_conns≈42` idle — confirming the near-collision is real. **Deliberately did NOT run a forced
+  saturation ramp** (it intentionally exhausts connections; belongs on staging, not the live dev
+  box) — the per-hardware ceiling number gets recorded at the first pilot/staging load-test.
+  Docs + health surfacing; no architectural change. **Next in Phase 6: SCALE-6.3.**
+
 ### SCALE-6.3 — Retention for append-only history tables (NOT one-size-fits-all)
 
 - **Problem:** every *infrastructure* table got self-purge (rate-limit, cache, perf-daily, export

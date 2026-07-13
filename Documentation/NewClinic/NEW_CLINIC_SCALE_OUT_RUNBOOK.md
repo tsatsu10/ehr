@@ -1,6 +1,6 @@
 # New Clinic — Scale-Out Runbook (1 → N servers)
 
-**Version:** 1.0.1 (SCALE-5.2 — consolidated; supersedes the 0.1.x fragments)
+**Version:** 1.1.0 (SCALE-5.2 consolidated + SCALE-6.2 connection-ceiling step)
 **Date:** 2026-07-13
 **Audience:** the ops person taking a single-box New Clinic install to multiple web servers,
 or an operator responding to a live incident on any box. Each stage below says what breaks at
@@ -143,8 +143,44 @@ Defaults to `--dry-run` (prints the plan, sends nothing) — pass `--run` to act
 Point it only at a test/staging box, never production. Paste the result row into
 `Documentation/NewClinic/worksheets/SCALABILITY_BASELINE.md`.
 
-**Stage 1 is done when:** all 7 steps above are verified, `health.php` returns 200 from every
-node, and a `load-test.php` run against the LB shows p95 latency you're comfortable with.
+### 1.8 Size the DB connection ceiling (the classic PHP+MySQL wall)
+
+This is the bottleneck the whole hardening plan reduces the *pressure* on but never removes:
+**every Apache worker/thread holds its own MySQL connection**, so if your web tier can run more
+concurrent PHP processes than MySQL will accept, you hit `max_connections` and MySQL starts
+**refusing new connections** — which means new requests, *including logins*, fail while existing
+ones hang. It's an ugly, confusing outage, and it's avoidable with arithmetic.
+
+The rule: **max concurrent PHP workers + headroom ≤ MySQL `max_connections`.**
+
+- **Windows / XAMPP (`mod_php`, WinNT MPM):** the ceiling is `ThreadsPerChild`
+  (`apache/conf/extra/httpd-mpm.conf`, default **150**). MySQL/MariaDB default `max_connections`
+  is **151**. So out of the box they nearly coincide — 150 busy threads = 150 connections ≈ the
+  limit, with almost no headroom for the job worker, backups, or an admin session. **On a single
+  on-prem box** (the default deployment) real concurrency is far below 150 (a clinic has ~6–12
+  active sessions), so this is not a live risk — but if you ever raise `ThreadsPerChild`, raise
+  `max_connections` to match, plus ~20 headroom.
+- **Linux / php-fpm (the scale-out target):** the ceiling is `pm.max_children`. Size it so that
+  `pm.max_children` (per web node × node count) + the worker + backups + headroom ≤
+  `max_connections`. Setting `pm.max_children` higher than the DB will accept just moves the
+  failure from "slow" to "refused."
+- **When workers must legitimately exceed connections** (many nodes, spiky load): put **ProxySQL**
+  in front — it multiplexes many app connections onto a small pool of real MySQL connections, so
+  `pm.max_children` can exceed `max_connections` safely. Standard answer at higher concurrency;
+  not needed for a single clinic.
+
+**Watch it, don't guess it:** `health.php` now returns `db_conns` (live `Threads_connected`) and
+`db_conns_limit` (`max_connections`). Point the alerting monitor (§5) at the ratio — alert when
+`db_conns` exceeds, say, 80% of `db_conns_limit`, so you widen the limit *before* it refuses.
+
+**Measure the real number** on staging with the `load-test.php` ramp (§1.7): increase
+`--concurrency` until `db_conns` (via `health.php`) approaches the limit, and record where p95
+degrades. Do this on a **test/staging box, never the live clinic** — the point is to find the
+ceiling, which means briefly hitting it.
+
+**Stage 1 is done when:** all 8 steps above are verified, `health.php` returns 200 from every
+node, `db_conns` sits comfortably below `db_conns_limit`, and a `load-test.php` run against the
+LB shows p95 latency you're comfortable with.
 
 ---
 
@@ -209,10 +245,11 @@ Bookmark this section now, not during an incident.
 
 **Health endpoint** (`public/health.php?site=<site>`): no auth, no session, no OpenEMR
 bootstrap — raw mysqli against the site's sqlconf, so it answers honestly even when the app
-tier is sick. Returns `200 {ok, db_ms, cache_ms, worker_last_seen}` when healthy, `503 {ok:
-false}` when the DB is unreachable, `429 {ok: false, error: "rate_limited"}` past the per-IP
-budget (30/min). `worker_last_seen` goes `null` within ~10 min of the job worker dying
-(heartbeat TTL). Point the LB / uptime monitor at 200-vs-not; 503 = pull the node.
+tier is sick. Returns `200 {ok, db_ms, cache_ms, worker_last_seen, db_conns, db_conns_limit}`
+when healthy, `503 {ok: false}` when the DB is unreachable, `429 {ok: false, error:
+"rate_limited"}` past the per-IP budget (30/min). `worker_last_seen` goes `null` within ~10 min
+of the job worker dying (heartbeat TTL); `db_conns`/`db_conns_limit` (SCALE-6.2) are the live
+connection headroom — see §1.8. Point the LB / uptime monitor at 200-vs-not; 503 = pull the node.
 
 **Incident levers** (SCALE-4.3) — two flags an operator flips **in the DB**
 (`new_clinic_config`, facility 0), no deploy, effective within one config-cache TTL (≤30 s) or
@@ -307,4 +344,5 @@ A backup you've never test-restored is a hope, not a guarantee.
 | 0.1.0 | 2026-07-13 | Initial runbook: sessions, local-state audit, cache, worker, replica-readiness (SCALE-3.4 + SCALE-3.5) |
 | 0.1.1 | 2026-07-13 | §7 (old numbering): request budgets (SCALE-4.2) + perf visibility panel (SCALE-4.5) |
 | 1.0.0 | 2026-07-13 | SCALE-5.2 consolidation: restructured into an explicit Stage 0 → Stage 1 (1→2 servers, 7 ordered steps with a verification per step) → Stage 2 (read replica) → incident-response section → backup/restore → "beyond N servers" pointer to SCALE-5.1's SSE design doc and SCALE-5.3. Added the `load-test.php` step (was documented as a tool but never wired into the runbook's own checklist) and a suggested incident-response sequence tying the health/levers/budgets/perf-panel pieces together. No technical content changed from 0.1.1 — this is the "merge all fragments" pass the plan called for. **Cold-read test (fresh subagent, no prior context):** correctly identified step 3 and the incident sequence unassisted; flagged 4 minor polish items (health-endpoint description duplicated between §1.5/§5, Stage 2 not visually distinguished as non-actionable, `load-test.php`'s cookie step unexplained inline, a dangling "old numbering" note) — all four fixed in this same version. Rated 4/5 followability before the fixes; the remaining gap is inherent ops-domain knowledge (session backends, LB config) this doc reasonably assumes rather than teaches. |
+| 1.1.0 | 2026-07-13 | SCALE-6.2: new Stage-1 step §1.8 (DB connection ceiling — `ThreadsPerChild`/`pm.max_children` vs `max_connections`, ProxySQL option, the WinNT 150-vs-151 near-coincidence); `health.php` now returns `db_conns`/`db_conns_limit` and §5 + the "done when" criteria reference them. Stage 1 is now 8 steps. |
 | 1.0.1 | 2026-07-13 | Audit fixes: §6's module-table-loss-impact table undercounted at "33" and was missing 4 real tables entirely (`new_office_note_meta`, `new_referral_meta`, `new_outreach_campaign`, `new_password_reset_required`) — found by cross-checking `install.sql`'s 37 `#IfNotTable` guards and a live `SHOW TABLES` against the table; corrected to 37, all four classified (three Moderate, `new_password_reset_required` Severe since losing it silently drops a forced-password-change security requirement rather than just costing re-entry time). §1.5's promise that the health endpoint's "full response shape... are in §5" was false — §5 never actually stated the JSON shape; added it (`{ok, db_ms, cache_ms, worker_last_seen}` / `503 {ok:false}` / `429 {ok:false, error:"rate_limited"}`, matching `public/health.php`'s docblock exactly). |
