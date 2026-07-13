@@ -229,11 +229,19 @@ foreach ($extraGrants as $group => $keys) {
 // wrapped pat_ledger.php stays reachable until Chart Depth finance replaces it.
 // D-EXP-11 — pilot stock Report path: reception groups need patients/pat_rep so
 // the wrapped patient_report.php stays reachable until Chart Depth export ships.
+// W5 (2026-07-13 gap-analysis audit) — Fees tab's "Open OpenEMR Codes admin"
+// link targets stock superbill_custom_full.php, which gates on core
+// admin/superbill (see Installer.class.php's Administrators/Back Office seed
+// grants). New Clinic's own `new_admin` GACL group only holds `new_clinic`
+// section ACOs, so without this bridge the link 403s for every
+// properly-provisioned New Clinic Admin user — the same gap this pattern
+// already closes for cashier/reception below.
 $coreGrants = [
     'new_cashier' => [['acct', 'Accounting', 'rep', 'Financial Reporting - my encounters']],
     'new_cashier_lead' => [['acct', 'Accounting', 'rep', 'Financial Reporting - my encounters']],
     'new_reception' => [['patients', 'Patients', 'pat_rep', 'Patient Report']],
     'new_reception_lead' => [['patients', 'Patients', 'pat_rep', 'Patient Report']],
+    'new_admin' => [['admin', 'Administration', 'superbill', 'Superbill Codes Administration']],
 ];
 
 foreach ($coreGrants as $group => $grants) {
