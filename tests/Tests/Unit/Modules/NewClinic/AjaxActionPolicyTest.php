@@ -194,6 +194,36 @@ class AjaxActionPolicyTest extends TestCase
         }
     }
 
+    /**
+     * SCALE-3.5 guardrail: every entry in the read-only allowlist (the future
+     * read-replica set) and the poll set must be a REAL dispatchable action.
+     * These are allowlists matched by string — a typo would silently never
+     * match, which for READONLY_ACTIONS means an intended optimisation quietly
+     * missing, and for a future replica split means a misrouted action.
+     */
+    public function testReadOnlyAndPollSetsContainOnlyRealActions(): void
+    {
+        require_once dirname(__DIR__, 5)
+            . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/lib/ajax-action-crosscheck.php';
+        $catalog = array_flip(moduleVerifyExtractControllerActions());
+        $policy = new AjaxActionPolicy();
+
+        foreach ($policy->readOnlyActions() as $action) {
+            $this->assertArrayHasKey(
+                $action,
+                $catalog,
+                "READONLY_ACTIONS entry '$action' is not a dispatchable controller action"
+            );
+        }
+        foreach ($policy->pollActions() as $action) {
+            $this->assertArrayHasKey(
+                $action,
+                $catalog,
+                "POLL_ACTIONS entry '$action' is not a dispatchable controller action"
+            );
+        }
+    }
+
     public function testReadOnlyActionsAreNormalizedAndUnique(): void
     {
         $policy = new AjaxActionPolicy();

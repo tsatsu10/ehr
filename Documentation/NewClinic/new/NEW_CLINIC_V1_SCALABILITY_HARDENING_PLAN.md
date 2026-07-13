@@ -287,10 +287,14 @@ Guiding rules for ALL future code in this module:
 - **Do:** Write `Documentation/NewClinic/NEW_CLINIC_SCALE_OUT_RUNBOOK.md` covering, concretely for this codebase: moving PHP sessions to Redis (`session.save_handler = redis` — an OpenEMR-level php.ini concern, no module code change), which module features assume local disk (export storage → SCALE-2.3 driver), confirming no other module-local file writes exist (grep `file_put_contents|fopen.*w` in `src/` and list findings), and the LB health-check endpoint (SCALE-4.4). This is the checklist an ops person follows to go from 1 → N servers.
 - **Verify:** the grep audit table in the doc is complete (every write call site listed with verdict safe/unsafe).
 
+- **Status (2026-07-13): DONE (v0.1.0).** Runbook written with the TL;DR 1→2-server checklist, the full file-write grep audit (verdicts: `ExportStorageService` = the safe seam, `AdminBackupService` = node-pinned by design, everything else `php://temp`/`php://memory`), a static-state sweep (all in-process statics are safe-when-duplicated memos), cache/worker placement, and pending-section stubs for 4.3/4.4/4.6 (merged at SCALE-5.2). Also records that APCu + opcache belong in every server's php.ini.
+
 ### SCALE-3.5 — Read/write DB split readiness (documentation + tagging task)
 
 - **Do:** Do NOT build replica routing now. Instead: (1) in `AjaxActionPolicy`, the `isReadOnly` flag from SCALE-1.1 already classifies every action — verify completeness; (2) add a section to the scale-out runbook explaining that read-only actions can later be pointed at a replica via ADODB config, and which actions must NEVER be (anything reading data it just wrote in the same user flow — list cashier payment status, visit state transitions); (3) note replication-lag hazards for the queue board (a just-moved visit may bounce back for 1 poll) and the mitigation (route queue reads to primary OR accept 1-poll staleness — decide when the replica actually exists).
 - **Verify:** doc section exists; `AjaxActionPolicyTest` asserts 100 % of actions carry the flag.
+
+- **Status (2026-07-13): DONE.** Runbook §5 documents the replica plan: `READONLY_ACTIONS` = the future replica set, the never-replicate list (cashier payment flows, visit state transitions, `admin.config.save` echo), and the queue replication-lag decision (route queue reads to primary, decided when a replica exists). The "100% of actions carry the flag" verify was re-interpreted for the shipped allowlist design (default-locked means every action trivially carries a value): the REAL hazard is a typo'd allowlist entry silently never matching, so `AjaxActionPolicyTest::testReadOnlyAndPollSetsContainOnlyRealActions` asserts every `READONLY_ACTIONS` + `POLL_ACTIONS` entry is a real dispatchable action (reuses the verify-module action-catalog extractor). **Phase 3 complete (5/5).**
 
 ---
 
