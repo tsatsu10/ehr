@@ -1,6 +1,6 @@
 # New Clinic — Scale-Out Runbook (1 → N servers)
 
-**Version:** 1.2.0 (SCALE-5.2 consolidated + SCALE-6.2 connection ceiling + SCALE-6.3 retention)
+**Version:** 1.3.0 (SCALE-5.2 consolidated + SCALE-6.2 connection ceiling + 6.3 retention + 6.4 alerting)
 **Date:** 2026-07-13
 **Audience:** the ops person taking a single-box New Clinic install to multiple web servers,
 or an operator responding to a live incident on any box. Each stage below says what breaks at
@@ -257,6 +257,27 @@ of the job worker dying (heartbeat TTL); `db_conns_pct` (SCALE-6.2) is the live 
 as a % of `max_connections` — coarse on purpose (no raw count/limit leaked to an anonymous
 endpoint), see §1.8. Point the LB / uptime monitor at 200-vs-not; 503 = pull the node.
 
+**Alerting — make monitoring active, not passive (SCALE-6.4).** The health endpoint and the perf
+panel are *pull*: they only help if someone looks. The realistic clinic failure is the silent one
+— the job worker dies, `worker_last_seen` goes `null`, and nobody notices until exports and
+retention purges quietly stop. Wire **two** layers so a human actually gets told:
+
+1. **PRIMARY — an EXTERNAL uptime monitor** (must be off the clinic box, so it still fires when
+   the box itself is down): the bundled VPS replica is the natural home (the market plan already
+   makes it "our remote support/monitoring point"), or a cloud uptime service (UptimeRobot,
+   BetterStack) if the box is reachable. Point it at `health.php?site=<site>` and alert (SMS/email)
+   on **any of:** HTTP not-200, `ok:false`, `worker_last_seen` null or older than ~15 min, or
+   `db_conns_pct ≥ 80`. This is the layer that catches a dead box, a dead Apache, or a dead DB.
+2. **SECONDARY — a local cron** running `scripts/health-alert.php --site=<site>` every ~5 min. It
+   exits non-zero with a diagnostic when the worker heartbeat is stale or `db_conns_pct` is high,
+   so cron-mail / Task Scheduler "notify on failure" / a monitoring agent turns that into an alert
+   through the deployment's existing channel. It catches "worker died / DB strained while the box
+   is up" — but because it's *on* the box, it can't tell you the box is down; that's what layer 1
+   is for. It sends nothing itself (channel-agnostic by design).
+
+On a single on-prem box, layer 2 + the bundled-VPS layer-1 monitor together cover both failure
+shapes. Don't rely on layer 2 alone.
+
 **Incident levers** (SCALE-4.3) — two flags an operator flips **in the DB**
 (`new_clinic_config`, facility 0), no deploy, effective within one config-cache TTL (≤30 s) or
 next page load:
@@ -365,6 +386,7 @@ re-architecture, and is explicitly not V1.
 | 0.1.0 | 2026-07-13 | Initial runbook: sessions, local-state audit, cache, worker, replica-readiness (SCALE-3.4 + SCALE-3.5) |
 | 0.1.1 | 2026-07-13 | §7 (old numbering): request budgets (SCALE-4.2) + perf visibility panel (SCALE-4.5) |
 | 1.0.0 | 2026-07-13 | SCALE-5.2 consolidation: restructured into an explicit Stage 0 → Stage 1 (1→2 servers, 7 ordered steps with a verification per step) → Stage 2 (read replica) → incident-response section → backup/restore → "beyond N servers" pointer to SCALE-5.1's SSE design doc and SCALE-5.3. Added the `load-test.php` step (was documented as a tool but never wired into the runbook's own checklist) and a suggested incident-response sequence tying the health/levers/budgets/perf-panel pieces together. No technical content changed from 0.1.1 — this is the "merge all fragments" pass the plan called for. **Cold-read test (fresh subagent, no prior context):** correctly identified step 3 and the incident sequence unassisted; flagged 4 minor polish items (health-endpoint description duplicated between §1.5/§5, Stage 2 not visually distinguished as non-actionable, `load-test.php`'s cookie step unexplained inline, a dangling "old numbering" note) — all four fixed in this same version. Rated 4/5 followability before the fixes; the remaining gap is inherent ops-domain knowledge (session backends, LB config) this doc reasonably assumes rather than teaches. |
+| 1.3.0 | 2026-07-13 | SCALE-6.4: §5 gains the two-layer alerting section (external monitor on `health.php` as primary; local `scripts/health-alert.php` cron as the secondary "worker died while box up" net). Completes Phase 6 / the SCALE plan. |
 | 1.2.0 | 2026-07-13 | SCALE-6.3: §6 gains the history-table retention table (config keys + defaults); `new_visit_state_log` documented as compliance-gated (default OFF). |
 | 1.1.0 | 2026-07-13 | SCALE-6.2: new Stage-1 step §1.8 (DB connection ceiling — `ThreadsPerChild`/`pm.max_children` vs `max_connections`, ProxySQL option, the WinNT 150-vs-151 near-coincidence); `health.php` now returns `db_conns`/`db_conns_limit` and §5 + the "done when" criteria reference them. Stage 1 is now 8 steps. |
 | 1.0.1 | 2026-07-13 | Audit fixes: §6's module-table-loss-impact table undercounted at "33" and was missing 4 real tables entirely (`new_office_note_meta`, `new_referral_meta`, `new_outreach_campaign`, `new_password_reset_required`) — found by cross-checking `install.sql`'s 37 `#IfNotTable` guards and a live `SHOW TABLES` against the table; corrected to 37, all four classified (three Moderate, `new_password_reset_required` Severe since losing it silently drops a forced-password-change security requirement rather than just costing re-entry time). §1.5's promise that the health endpoint's "full response shape... are in §5" was false — §5 never actually stated the JSON shape; added it (`{ok, db_ms, cache_ms, worker_last_seen}` / `503 {ok:false}` / `429 {ok:false, error:"rate_limited"}`, matching `public/health.php`'s docblock exactly). |

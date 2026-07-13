@@ -2,7 +2,7 @@
 
 **Version:** 1.1.0
 **Date:** 2026-07-06 (last update 2026-07-13)
-**Status:** Phases 0–5 executed (5.3 deliberately deferred — optional, measurement-gated). **Phase 6 (§8A) ADDED but NOT yet executed** — four post-audit hardening tasks (SCALE-6.1–6.4) from a 2026-07-13 online-research review. The fifth finding (offline/connectivity) was resolved by a brainstorm into a docs deliverable — the **Outage Runbook** (`NEW_CLINIC_OUTAGE_RUNBOOK.md`, written) — since the decided on-prem posture already tolerates internet loss; an offline-capture app stays a V2/PRD-gated item. Trust each task's inline **Status** block over this header; new findings get their own SCALE task or a documented audit fix, not a plan rewrite.
+**Status:** **Phases 0–6 all executed** (SCALE-5.3 stays deliberately deferred — optional, measurement-gated). Phase 6 (§8A, from a 2026-07-13 post-launch online-research review) is complete: SCALE-6.1 cache-stampede, 6.2 connection ceiling, 6.3 history retention, 6.4 alerting — all built + live-verified. The fifth review finding (offline/connectivity) resolved via brainstorm to the **Outage Runbook** (`NEW_CLINIC_OUTAGE_RUNBOOK.md`) since the decided on-prem posture already tolerates internet loss; an offline-capture app stays a V2/PRD-gated item. Trust each task's inline **Status** block over this header; new findings get their own SCALE task or a documented audit fix, not a plan rewrite.
 **Audience:** Any developer or AI agent (including small models / Cursor iOS app). Every task is self-contained: it says WHERE to change, WHAT to change, and HOW TO VERIFY. Execute tasks one at a time, in order, unless a task says it is independent.
 
 ---
@@ -555,6 +555,23 @@ Guiding rules for ALL future code in this module:
 - **Verify:** runbook §5 has the alerting step with concrete thresholds; if `health-alert.php`
   ships, a dry-run that detects a stopped worker (or DB) and reports it would alert.
 - **Size:** small — mostly runbook; optional tiny script.
+
+- **Status (2026-07-13): DONE.** Runbook §5 (v1.3.0) documents **two alerting layers**: (1)
+  PRIMARY — an **external** uptime monitor on `health.php` (the bundled VPS replica, which the
+  market plan already designates the remote monitoring point, or a cloud uptime service), alerting
+  on not-200 / `ok:false` / `worker_last_seen` null-or-stale / `db_conns_pct ≥ 80` — this is the
+  layer that catches a dead box/Apache/DB; (2) SECONDARY — a local cron running the new
+  `scripts/health-alert.php`, which exits non-zero with a diagnostic when the worker heartbeat is
+  stale or connections are high, so cron-mail / Task-Scheduler-notify-on-failure / a monitoring
+  agent raises the alert through the deployment's existing channel (it sends nothing itself —
+  channel-agnostic by design; being on the box, it can't report the box being down, hence layer 1).
+  `health-alert.php` mirrors `run-jobs.php`'s bootstrap, reads the worker heartbeat + `db_conns_pct`
+  via `QueryUtils`, and takes `--site` / `--worker-max-minutes` (15) / `--conns-warn-pct` (80).
+  Live-proven: healthy → `OK … nominal` exit 0; heartbeat removed → `ALERT … worker heartbeat
+  missing` on stderr, exit 1; restored → exit 0. `php -l` clean; `composer verify:new-clinic` PASS.
+  Backend/ops only, no asset bump. **Phase 6 complete (6.1–6.4); the SCALE plan (Phases 0–6) is
+  DONE** except the standing-deferred SCALE-5.3 (optional, measurement-gated) and the offline-first
+  V2 product item.
 
 ### Offline / connectivity resilience — DECIDED (not a SCALE task; deliverable is the Outage Runbook)
 
