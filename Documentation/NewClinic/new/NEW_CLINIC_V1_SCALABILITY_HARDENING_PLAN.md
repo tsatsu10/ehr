@@ -2,7 +2,7 @@
 
 **Version:** 1.1.0
 **Date:** 2026-07-06 (last update 2026-07-13)
-**Status:** Phases 0–5 executed (5.3 deliberately deferred — optional, measurement-gated). **Phase 6 (§8A) ADDED but NOT yet executed** — four post-audit hardening tasks (SCALE-6.1–6.4) from a 2026-07-13 online-research review, plus a separately-tracked offline-first product decision that routes to a PRD amendment. Trust each task's inline **Status** block over this header; new findings get their own SCALE task or a documented audit fix, not a plan rewrite.
+**Status:** Phases 0–5 executed (5.3 deliberately deferred — optional, measurement-gated). **Phase 6 (§8A) ADDED but NOT yet executed** — four post-audit hardening tasks (SCALE-6.1–6.4) from a 2026-07-13 online-research review. The fifth finding (offline/connectivity) was resolved by a brainstorm into a docs deliverable — the **Outage Runbook** (`NEW_CLINIC_OUTAGE_RUNBOOK.md`, written) — since the decided on-prem posture already tolerates internet loss; an offline-capture app stays a V2/PRD-gated item. Trust each task's inline **Status** block over this header; new findings get their own SCALE task or a documented audit fix, not a plan rewrite.
 **Audience:** Any developer or AI agent (including small models / Cursor iOS app). Every task is self-contained: it says WHERE to change, WHAT to change, and HOW TO VERIFY. Execute tasks one at a time, in order, unless a task says it is independent.
 
 ---
@@ -378,10 +378,12 @@ Guiding rules for ALL future code in this module:
 > connection limits, cache-stampede literature, MySQL retention/partitioning, offline-first EMR
 > practice for the West Africa segment) and re-verifying the claims against our own code. Five
 > gaps surfaced. Four are in-scope hardening tasks (SCALE-6.1–6.4 below). The fifth —
-> offline/connectivity resilience — is a **product-scope decision, not a hardening task**, and
-> is called out separately so it goes through a PRD amendment rather than being silently built.
-> Sources and severity are in `Documentation/NewClinic/worksheets/SCALABILITY_BASELINE.md`'s
-> audit rows and the assessment that prompted this phase.
+> offline/connectivity resilience — turned out **not to be an open engineering gap at all** once
+> grounded in the decided on-prem hosting posture (a brainstorm corrected my initial framing); it
+> resolved to a docs deliverable (the Outage Runbook) plus a parked V2, detailed at the end of
+> this section. Sources and severity are in
+> `Documentation/NewClinic/worksheets/SCALABILITY_BASELINE.md`'s audit rows and the assessment
+> that prompted this phase.
 
 ### SCALE-6.1 — Cache-stampede protection on hot reads (serve-stale-while-one-rebuilds)
 
@@ -483,35 +485,37 @@ Guiding rules for ALL future code in this module:
   ships, a dry-run that detects a stopped worker (or DB) and reports it would alert.
 - **Size:** small — mostly runbook; optional tiny script.
 
-### PRODUCT DECISION REQUIRED (not a SCALE task) — Offline / connectivity resilience
+### Offline / connectivity resilience — DECIDED (not a SCALE task; deliverable is the Outage Runbook)
 
-- **This is deliberately NOT SCALE-6.5.** It is a **product-scope question that must go through a
-  PRD amendment**, not a hardening task folded in silently (the flags-invariant + non-goals
-  guardrails require a scope owner to decide this, not engineering to just build it).
-- **The gap:** the entire architecture assumes a reachable server — islands `oeFetch` on every
-  interaction, poll every 10–30 s, and keep no durable local state. In the West Africa clinic
-  segment, competitors (Bahmni, ClinikEHR, EasyClinic) **lead** with offline-first because power
-  and internet outages are routine; on a flaky 2G link or during an outage our UI degrades to
-  unusable. This is not a "more users" problem — it's a "does it work at all when the link drops
-  mid-shift" problem. **Offline is currently in neither the CLAUDE.md non-goals nor
-  `OPENEMR_AREAS_NOT_ADDRESSED.txt`** — it is genuinely undecided, which is exactly why it needs
-  an explicit decision.
-- **Options (from the research, honest about cost):**
-  1. **Full offline-first** — service worker + IndexedDB local store as source of truth +
-     optimistic writes + a sync queue + conflict resolution (last-write-wins on timestamp, with a
-     409 "both versions" path for true concurrent edits). This is the competitor-parity answer and
-     a **multi-quarter build** that partly conflicts with the strangler model where PHP owns
-     session/state/CSRF/ACL — every mutation path would need a local-first mirror.
-  2. **Narrow "outage-resilient" scope** — a much smaller spike: cache the active patient's chart
-     read-only for continuity when the link drops, and queue *check-in* offline to sync on
-     reconnect. Buys the highest-value slice (a doctor can still see the patient in front of them;
-     reception can still take the next patient) without the full local-first rewrite.
-  3. **Explicitly accept online-only for V1** — a legitimate choice if the pilot sites have
-     reliable-enough power/internet, but it must be a *recorded decision* with the competitive
-     tradeoff stated, not a silent omission.
-- **Required next step (not code):** a PRD amendment (or a gap-analysis entry feeding one) that
-  picks a lane, and — if lane 1 or 2 — a time-boxed spike on the narrowest high-value surface
-  before any island work. Bring it through `nc-brainstorm` / `nc-write-spec`, not this plan.
+- **This is NOT SCALE-6.5, and after a brainstorm grounded in the market plan it is no longer an
+  open question.** My initial scaling assessment framed offline as an undecided gap with three
+  lanes — that framing was wrong, because it hadn't reconciled against the **already-decided
+  hosting posture**. Correcting it here so this plan does not contradict the canonical
+  `NEW_CLINIC_MARKET_EXPANSION_MASTER_PLAN.md`.
+- **Why the "offline app" gap mostly isn't real:** the decided default deployment (market plan
+  §7.2, 2026-07-09) is **on-premise — a mini-PC + UPS in the clinic is the primary and the only
+  place writes happen; desks talk to it over the local network.** So an **internet** outage does
+  not stop the clinic (LAN keeps working); only SMS, off-site backup, and the owner's remote
+  reports pause, and they self-heal on reconnect. The browser-offline machinery (IndexedDB + sync
+  queue) I originally scoped as "lane 2" is aimed at a threat this architecture already neutralizes.
+- **Why building it would also be wrong on its own terms:** the market plan **explicitly rules
+  offline-first sync clients out for V1** — "merge conflicts on clinical + cash data are
+  unacceptable… an append-only offline *capture* app is a possible V2, [PRD amendment required]."
+  Queuing a check-in (or a payment) offline and merging it against a server that also moved is
+  exactly that conflict class. There is also a patient-safety cost to the read-only half: a
+  **stale cached clinical chart looks authoritative** — a clinician acting on a cached allergy
+  list missing a just-added entry is a real hazard paper doesn't have.
+- **What the actual gap was, and the deliverable that closes it:** a **written** degraded-operation
+  drill — the thing the market plan §3.0 already flags as the missing W1 pilot-pack item. Now
+  written: **`Documentation/NewClinic/NEW_CLINIC_OUTAGE_RUNBOOK.md`** (per-deployment; what
+  keeps working vs stops by outage type × on-prem/VPS flavor, UPS sizing, power-loss recovery,
+  the server-dead **paper fallback + same-day back-entry**, and the recovery checklist that reuses
+  `health.php`). The paper fallback **is** V1's offline mode, and for a clinic that ran on paper
+  before us, it's a good one.
+- **What stays parked:** an **append-only offline capture app** (register/queue only, no two-way
+  merge) is a legitimate **V2** — gated on a PRD amendment, and only moves up in priority if pilot
+  sites turn out to be **VPS-primary** (internet-dependent) rather than on-prem. On the on-prem
+  default it stays parked. Bring it through `nc-brainstorm` / `nc-write-spec` if/when that changes.
 
 ### Phase 6 charter additions
 

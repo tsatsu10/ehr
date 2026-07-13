@@ -126,7 +126,9 @@ Things that are not "a market" but shape all of them — surfaced by second-pass
   missing is the documented drill: UPS sizing, what stops working offline (SMS, off-site
   backup), power-loss recovery steps, and the "server dead" fallback (paper forms + same-day
   re-entry). Deliverable: a one-page **Outage Runbook** per deployment (docs, not code) —
-  part of the E0 pilot pack.
+  part of the E0 pilot pack. **Written 2026-07-13: [`NEW_CLINIC_OUTAGE_RUNBOOK.md`](../NEW_CLINIC_OUTAGE_RUNBOOK.md)**
+  (produced when the scaling review's "offline" finding was re-grounded here — the real gap was
+  this written drill, not an offline app; offline-first sync stays the decided V1 non-goal per §7.2).
 - **Data rescue is an onboarding asset.** Facilities stranded by the LHIMS shutdown and
   clinics on dying local systems need their data moved, not just a fresh install.
   - `MKT-MIG-1` — Reusable migration kit: patient demographics + balances importer (CSV
@@ -349,7 +351,7 @@ One backlog, three sources: existing GAP-A–D plan (platform completeness), SCA
 
 | Wave | Contents | Why this order |
 |---|---|---|
-| **W1 — Pilot enablement** | Pilot readiness pack items; **MKT-MOMO-1 tender types + per-tender reconciliation**; MKT-GHCARD-1 Ghana Card field; MKT-MIG-1 migration kit; Outage Runbook (docs); GAP-A1 office notes, GAP-A2 documents, GAP-A5 patient follow-ups, GAP-A6 MFA | Everything a single live clinic needs day-to-day; MoMo tender is pilot-blocking (week-one reality); A2 (documents) is the highest daily-value gap |
+| **W1 — Pilot enablement** | Pilot readiness pack items; **MKT-MOMO-1 tender types + per-tender reconciliation**; MKT-GHCARD-1 Ghana Card field; MKT-MIG-1 migration kit; Outage Runbook (docs — **delivered**, `NEW_CLINIC_OUTAGE_RUNBOOK.md`); GAP-A1 office notes, GAP-A2 documents, GAP-A5 patient follow-ups, GAP-A6 MFA | Everything a single live clinic needs day-to-day; MoMo tender is pilot-blocking (week-one reality); A2 (documents) is the highest daily-value gap |
 | **W2 — Retention & outreach** | GAP-B1 outreach/SMS (with provider decision, §9-Q1 of gap plan), GAP-A3 address book, GAP-A4 letters/labels, GAP-B2 trends | SMS recalls/campaigns are the killer regional feature and feed T2 (ANC recall) directly |
 | **W3 — Chain & admin depth** | MKT-CHAIN-1..3, GAP-C1 audit browser, GAP-C2 codes CRUD, GAP-C3 lists, GAP-C4 formulary | T1 sales need roll-ups; C2/C4 are prerequisites for chain price-push and NHIS tariffs |
 | **W4 — NHIS** | MKT-NHIS-1..5 (after discovery + PRD amendment) | The domestic unlock; deliberately after the platform is stable under real use |
