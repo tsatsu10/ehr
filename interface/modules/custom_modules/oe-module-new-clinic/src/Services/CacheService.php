@@ -118,6 +118,60 @@ class CacheService
     }
 
     /**
+     * SCALE-6.1 — serve-stale-while-one-rebuilds. Prevents the cache-stampede
+     * that a bare get→miss→set has: when a hot key expires and N pollers hit it
+     * at once, ALL of them recompute simultaneously. Here the value carries a
+     * SOFT "fresh" window shorter than its HARD row TTL:
+     *   - within the fresh window → return it, no work;
+     *   - past fresh but before the hard TTL → the ONE caller that wins the
+     *     rebuild lock recomputes and refreshes while every other concurrent
+     *     caller instantly returns the still-present STALE value (no stampede,
+     *     no blocked worker);
+     *   - cold (no row / hard-expired) → the lock winner computes; a caller that
+     *     loses the lock on a cold key computes directly once (rare, first-hit).
+     *
+     * PHP single-thread caveat: unlike HTTP stale-while-revalidate we cannot
+     * refresh "after the response" — the lock winner recomputes synchronously in
+     * its own request — but because only ONE request does and the rest serve
+     * stale, the stampede is still eliminated. Everything fails OPEN (BP-8): any
+     * cache/lock failure degrades to computing directly (today's behaviour).
+     *
+     * Keep hardSeconds ≤ 30 (BP-5) so cross-server (apcu) staleness stays bounded;
+     * freshSeconds < hardSeconds gives the stale-serve window its room.
+     */
+    public function remember(string $key, int $freshSeconds, int $hardSeconds, callable $producer): mixed
+    {
+        $freshSeconds = max(1, $freshSeconds);
+        $hardSeconds = max($freshSeconds, $hardSeconds);
+        $now = time();
+
+        $wrapped = $this->get($key);
+        $haveStale = is_array($wrapped)
+            && array_key_exists('nc_v', $wrapped)
+            && array_key_exists('nc_f', $wrapped);
+
+        if ($haveStale && $now < (int) $wrapped['nc_f']) {
+            return $wrapped['nc_v']; // fresh hit — no work
+        }
+
+        // Stale or cold: exactly one caller rebuilds (whoever wins the lock).
+        $rebuilt = $this->withLock($key, $hardSeconds, function () use ($key, $freshSeconds, $hardSeconds, $now, $producer) {
+            $value = $producer();
+            $this->set($key, ['nc_v' => $value, 'nc_f' => $now + $freshSeconds], $hardSeconds);
+
+            return ['nc_rebuilt' => true, 'nc_v' => $value];
+        });
+        if (is_array($rebuilt) && ($rebuilt['nc_rebuilt'] ?? false)) {
+            return $rebuilt['nc_v']; // we were the rebuilder
+        }
+
+        // Lost the rebuild lock. If we have a stale value, serve it (the whole
+        // point — no stampede). Cold + lost lock is the only case that computes
+        // directly (and does NOT store, leaving the lock winner authoritative).
+        return $haveStale ? $wrapped['nc_v'] : $producer();
+    }
+
+    /**
      * Run $fn only if this call wins the named lock (cross-request, TTL-bounded);
      * returns $fn's result, or null when another holder has the lock. The lock is
      * released after $fn unless it expired mid-run.

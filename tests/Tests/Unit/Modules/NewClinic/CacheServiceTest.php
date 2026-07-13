@@ -126,4 +126,75 @@ class CacheServiceTest extends TestCase
         $row = sqlQuery("SELECT COUNT(*) AS n FROM new_clinic_cache WHERE cache_key = 'nc:nc-test-old'");
         $this->assertSame(0, (int) ($row['n'] ?? -1));
     }
+
+    // ---- SCALE-6.1: remember() serve-stale-while-one-rebuilds --------------
+
+    public function testRememberComputesOnceThenServesFresh(): void
+    {
+        $cache = new CacheService();
+        $calls = 0;
+        $producer = static function () use (&$calls): array {
+            $calls++;
+
+            return ['n' => $calls];
+        };
+
+        $first = $cache->remember('nc-test-rem', 5, 30, $producer);
+        $second = $cache->remember('nc-test-rem', 5, 30, $producer);
+
+        $this->assertSame(['n' => 1], $first);
+        $this->assertSame(['n' => 1], $second); // fresh hit — not recomputed
+        $this->assertSame(1, $calls);
+    }
+
+    /**
+     * The core anti-stampede guarantee: value is present but past its fresh
+     * window, and ANOTHER caller already holds the rebuild lock → serve the
+     * stale value instantly and do NOT run the producer (no stampede).
+     */
+    public function testRememberServesStaleWhileAnotherRebuilds(): void
+    {
+        $cache = new CacheService();
+        // Present-but-stale wrapper (nc_f in the past, row not hard-expired).
+        $wrapper = json_encode(['v' => ['nc_v' => ['n' => 42], 'nc_f' => time() - 100]]);
+        sqlStatement(
+            "INSERT INTO new_clinic_cache (cache_key, cache_value, expires_at)
+             VALUES ('nc:nc-test-rem-stale', ?, DATE_ADD(NOW(), INTERVAL 1 MINUTE))",
+            [$wrapper]
+        );
+        // Someone else holds the rebuild lock.
+        sqlStatement(
+            "INSERT INTO new_clinic_cache (cache_key, cache_value, expires_at)
+             VALUES ('nc:lock:nc-test-rem-stale', 'other-owner', DATE_ADD(NOW(), INTERVAL 1 MINUTE))"
+        );
+
+        $calls = 0;
+        $result = $cache->remember('nc-test-rem-stale', 5, 30, static function () use (&$calls): array {
+            $calls++;
+
+            return ['n' => 999];
+        });
+
+        $this->assertSame(['n' => 42], $result); // served stale
+        $this->assertSame(0, $calls);            // producer NOT stampeded
+    }
+
+    public function testRememberRebuildsWhenStaleAndLockFree(): void
+    {
+        $cache = new CacheService();
+        $wrapper = json_encode(['v' => ['nc_v' => ['n' => 1], 'nc_f' => time() - 100]]);
+        sqlStatement(
+            "INSERT INTO new_clinic_cache (cache_key, cache_value, expires_at)
+             VALUES ('nc:nc-test-rem-rb', ?, DATE_ADD(NOW(), INTERVAL 1 MINUTE))",
+            [$wrapper]
+        );
+
+        // Stale + no competing lock → this caller rebuilds.
+        $result = $cache->remember('nc-test-rem-rb', 5, 30, static fn (): array => ['n' => 2]);
+        $this->assertSame(['n' => 2], $result);
+
+        // The refreshed value is now fresh — a follow-up serves it, no recompute.
+        $again = $cache->remember('nc-test-rem-rb', 5, 30, static fn (): array => ['n' => 3]);
+        $this->assertSame(['n' => 2], $again);
+    }
 }

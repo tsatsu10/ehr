@@ -111,46 +111,52 @@ class VisitQueueService
         // AFTER facility resolution (facility scoping is per-actor), date included
         // so midnight rollover and explicit-date callers never mix buckets. A ≤5 s
         // stale badge is invisible next to the 30 s poll interval.
+        //
+        // SCALE-6.1 — served via remember() (serve-stale-while-one-rebuilds), not a
+        // bare get/set: without it, all open tabs miss together at each 5 s expiry
+        // and re-run the GROUP BY + repair simultaneously (a stampede). Now only the
+        // lock winner rebuilds; the rest serve the ≤5 s-stale value. 5 s fresh /
+        // 30 s hard (hard ≤ 30 s keeps cross-server staleness bounded, BP-5; polls
+        // every ~30 s always trigger the rebuild well before the hard ceiling, so
+        // the badge stays ~5 s fresh in practice).
         $cacheKey = 'counts:' . $facilityId . ':' . $canonicalDate;
-        $cache = new CacheService();
-        $cached = $cache->get($cacheKey);
-        if (is_array($cached)) {
-            /** @var array<string, int> $cached */
-            return array_map('intval', $cached);
-        }
+        $counts = (new CacheService())->remember($cacheKey, 5, 30, function () use ($facilityId, $canonicalDate): array {
+            // Repair runs only for the rebuilder now (not every miss); it has its
+            // own SCALE-1.3 maintenance-lock throttle regardless.
+            $this->visitScope->repairOrphanVisits($facilityId, $canonicalDate);
 
-        $this->visitScope->repairOrphanVisits($facilityId, $canonicalDate);
+            // Counts cover all open visits (no date cap) + date-bounded terminal
+            // states so the stats strip accurately reflects the live workload.
+            $rows = QueryUtils::fetchRecords(
+                "SELECT state, COUNT(*) AS cnt FROM new_visit
+                 WHERE facility_id = ? AND (
+                     state NOT IN ('completed', 'closed_unpaid', 'cancelled')
+                     OR visit_date = ?
+                 )
+                 GROUP BY state",
+                [$facilityId, $canonicalDate]
+            ) ?: [];
 
-        // Counts cover all open visits (no date cap) + date-bounded terminal states
-        // so the stats strip accurately reflects the live workload.
-        $rows = QueryUtils::fetchRecords(
-            "SELECT state, COUNT(*) AS cnt FROM new_visit
-             WHERE facility_id = ? AND (
-                 state NOT IN ('completed', 'closed_unpaid', 'cancelled')
-                 OR visit_date = ?
-             )
-             GROUP BY state",
-            [$facilityId, $canonicalDate]
-        ) ?: [];
-
-        $byState = [];
-        foreach ($rows as $row) {
-            $byState[(string) $row['state']] = (int) $row['cnt'];
-        }
-
-        $counts = [];
-        foreach (VisitBoardService::COLUMN_STATES as $key => $states) {
-            $counts[$key] = 0;
-            foreach ($states as $state) {
-                $counts[$key] += $byState[$state] ?? 0;
+            $byState = [];
+            foreach ($rows as $row) {
+                $byState[(string) $row['state']] = (int) $row['cnt'];
             }
-        }
-        $counts['cancelled'] = $byState['cancelled'] ?? 0;
-        $counts['closed_unpaid'] = $byState['closed_unpaid'] ?? 0;
 
-        $cache->set($cacheKey, $counts, 5);
+            $result = [];
+            foreach (VisitBoardService::COLUMN_STATES as $key => $states) {
+                $result[$key] = 0;
+                foreach ($states as $state) {
+                    $result[$key] += $byState[$state] ?? 0;
+                }
+            }
+            $result['cancelled'] = $byState['cancelled'] ?? 0;
+            $result['closed_unpaid'] = $byState['closed_unpaid'] ?? 0;
 
-        return $counts;
+            return $result;
+        });
+
+        /** @var array<string, int> $counts */
+        return array_map('intval', $counts);
     }
 
     public function getVisitById(int $visitId): ?array

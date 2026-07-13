@@ -15,8 +15,17 @@ use OpenEMR\Common\Database\QueryUtils;
 
 class ClinicConfigService
 {
-    /** SCALE-3.3 — cross-request config-map cache TTL (BP-5: TTL ≤ 30 s). */
+    /** SCALE-3.3 — cross-request config-map cache HARD TTL (BP-5: TTL ≤ 30 s). */
     private const CACHE_TTL_SECONDS = 30;
+
+    /**
+     * SCALE-6.1 — soft "fresh" window for the serve-stale rebuild. Shorter than
+     * the hard TTL so a rebuild is triggered before the row hard-expires; the gap
+     * (25→30 s) is the window in which one caller rebuilds while others serve the
+     * still-valid map. Config is low-churn and writes invalidate immediately, so a
+     * few seconds of serve-stale here is harmless.
+     */
+    private const CACHE_FRESH_SECONDS = 25;
 
     private ?VisitScopeService $visitScope = null;
     private ?CacheService $cache = null;
@@ -75,26 +84,32 @@ class ClinicConfigService
             // 30 s per server instead of once per request. Writes delete the key
             // (see set()/clearGlobalOverrides), so same-request read-after-write
             // still sees fresh values; cross-server staleness is bounded by the TTL.
-            $cached = $this->getCache()->get('cfg:' . $facilityId);
-            if (is_array($cached)) {
-                /** @var array<string, string> $cached */
-                $this->facilityConfig[$facilityId] = $cached;
+            //
+            // SCALE-6.1 — served via remember() (serve-stale-while-one-rebuilds) so a
+            // burst of requests at the 30 s expiry boundary (e.g. after a restart)
+            // doesn't all re-query config at once; one rebuilds, the rest serve the
+            // still-valid map.
+            $map = $this->getCache()->remember(
+                'cfg:' . $facilityId,
+                self::CACHE_FRESH_SECONDS,
+                self::CACHE_TTL_SECONDS,
+                function () use ($facilityId): array {
+                    $out = [];
+                    $rows = QueryUtils::fetchRecords(
+                        "SELECT config_key, config_value FROM new_clinic_config WHERE facility_id = ?",
+                        [$facilityId]
+                    ) ?: [];
+                    foreach ($rows as $row) {
+                        if (($row['config_value'] ?? null) !== null) {
+                            $out[(string) $row['config_key']] = (string) $row['config_value'];
+                        }
+                    }
 
-                return $this->facilityConfig[$facilityId];
-            }
-
-            $map = [];
-            $rows = QueryUtils::fetchRecords(
-                "SELECT config_key, config_value FROM new_clinic_config WHERE facility_id = ?",
-                [$facilityId]
-            ) ?: [];
-            foreach ($rows as $row) {
-                if (($row['config_value'] ?? null) !== null) {
-                    $map[(string) $row['config_key']] = (string) $row['config_value'];
+                    return $out;
                 }
-            }
+            );
+            /** @var array<string, string> $map */
             $this->facilityConfig[$facilityId] = $map;
-            $this->getCache()->set('cfg:' . $facilityId, $map, self::CACHE_TTL_SECONDS);
         }
 
         return $this->facilityConfig[$facilityId];

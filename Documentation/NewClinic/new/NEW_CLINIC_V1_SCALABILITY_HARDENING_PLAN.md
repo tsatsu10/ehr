@@ -416,6 +416,25 @@ Guiding rules for ALL future code in this module:
 - **Size:** small — the locking machinery already exists; this is a wrapper + two call-site
   changes + tests. **Recommended first task of the phase.**
 
+- **Status (2026-07-13): DONE.** `CacheService::remember($key, $freshTtl, $hardTtl, $producer)`
+  stores `{nc_v, nc_f}` with a hard row TTL and a shorter soft window: fresh → return; stale but
+  not hard-expired → the one caller that wins `withLock()` recomputes+refreshes while every other
+  concurrent caller returns the still-present stale value; cold+lost-lock → compute directly once.
+  Fails open (BP-8): any cache/lock error → compute directly (today's behaviour). Wired:
+  `VisitQueueService::getCounts()` (5 s fresh / 30 s hard — hard ≤30 s keeps cross-server staleness
+  bounded, BP-5; the ~30 s poll cadence always triggers a rebuild well before the hard ceiling so
+  the badge stays ~5 s fresh) and `ClinicConfigService::loadFacility()` (25 s / 30 s). **PHP
+  single-thread caveat documented:** the lock winner recomputes synchronously in its own request
+  (no true async background refresh), but because only one does and the rest serve stale, the
+  stampede is gone. 3 new unit tests deterministically prove the mechanism (fresh hit → no
+  recompute; stale + lock-held → serve stale, producer NOT called; stale + lock-free → rebuild +
+  refresh); 1047 module tests green; `composer verify:new-clinic` PASS (no ctor cycles). Live:
+  real `queue.counts` returns correct counts via the serve-stale wrapper and stays consistent
+  under a concurrent burst; a general-log-instrumented 12-request burst measured 2 GROUP-BY
+  executions (down from up-to-12), corroborating the reduction — the rigorous guarantee is the
+  unit test, since Windows loopback caps a clean simultaneous burst. Backend-only (no UI / asset
+  bump). Adds BP-13 to the charter. **Next in Phase 6: SCALE-6.2.**
+
 ### SCALE-6.2 — DB connection ceiling: size it, surface it, measure it
 
 - **Problem:** nothing in Phases 0–5 addresses MySQL `max_connections`. On this box, Apache
