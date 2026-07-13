@@ -27,6 +27,12 @@ class AdminListEditorServiceTest extends TestCase
         $this->assertArrayHasKey('note_type', AdminListEditorService::EDITABLE_LISTS);
         // payment_method is hardcoded by the cashier — must NOT be offered here.
         $this->assertArrayNotHasKey('payment_method', AdminListEditorService::EDITABLE_LISTS);
+        // abook_type's option_value drives person-vs-company rendering in stock
+        // addrbook_edit.php (2026-07-13 W7 research finding); this service's
+        // saveOption() never sets option_value, so a clinic-created category
+        // would silently misrender there. Must stay off this allow-list until
+        // the editor gains an option_value control for this specific list.
+        $this->assertArrayNotHasKey('abook_type', AdminListEditorService::EDITABLE_LISTS);
     }
 
     public function testGetOptionsRejectsNonEditableList(): void

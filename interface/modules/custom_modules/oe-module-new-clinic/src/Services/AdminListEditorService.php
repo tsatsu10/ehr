@@ -33,7 +33,20 @@ class AdminListEditorService
      *   - note_type / message_status → CommunicationsHubService (patient messaging)
      * Deliberately NOT `payment_method`: the cashier hardcodes cash/MoMo
      * (CashierService), so editing that stock list would be a misleading no-op.
-     * Pharmacy sig lists (drug_*) stay in C4's pharm-ops home.
+     * Deliberately NOT `abook_type` (2026-07-13 gap-analysis research, W7):
+     * `option_value` on this list is load-bearing in stock `addrbook_edit.php`
+     * (`option_value == 3` → "company-centric" contact fields, else
+     * person-centric — see `interface/usergroup/addrbook_edit.php` ~L419-436).
+     * This editor's create/update path (`saveOption()`) only writes
+     * title/seq/activity, so a clinic-created category would carry an unset
+     * `option_value` and silently misrender on the stock screen the moment
+     * anyone opens that contact there — exactly the risk this allow-list's own
+     * "no option_value semantics the module depends on" bar exists to catch.
+     * New categories stay in stock `edit_list.php`; renaming/reordering the 12
+     * stock-seeded categories is safe (title/seq only) but wasn't judged
+     * valuable enough on its own to special-case.
+     * Pharmacy sig lists (drug_*) stay in C4's pharm-ops home; `warehouse` is a
+     * dedicated table (not list_options), owned by pharm-ops setup.
      *
      * @var array<string, string>
      */

@@ -54,7 +54,7 @@ export function FeesTab({
         </ul>
         <Button variant="outline" size="sm" asChild>
           <a
-            href={`${webroot}/interface/super/layout_service_codes.php`}
+            href={`${webroot}/interface/patient_file/encounter/superbill_custom_full.php`}
             target="_blank"
             rel="noopener noreferrer"
           >
