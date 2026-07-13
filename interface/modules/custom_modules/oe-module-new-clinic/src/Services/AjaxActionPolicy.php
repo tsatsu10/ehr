@@ -653,6 +653,18 @@ class AjaxActionPolicy
     ];
 
     /**
+     * SCALE-4.2 — read-only actions exempt from the request execution budgets
+     * (set_time_limit + DB statement kill): their handlers may legitimately run
+     * bounded batch work inline (the export-status inline fallback builds the
+     * export in-request until the job worker is scheduled).
+     *
+     * @var array<string, true>
+     */
+    private const BUDGET_EXEMPT = [
+        'cohort.export_status' => true,
+    ];
+
+    /**
      * SCALE-3.2 — actions the frontend hits on a RECURRING TIMER (desk/board
      * polls, shell badge refresh, export-status loops). These carry a generous
      * per-user-per-action rate budget (`rate_limit_poll_per_minute`, default 90 —
@@ -943,6 +955,19 @@ class AjaxActionPolicy
     public function readOnlyActions(): array
     {
         return array_keys(self::READONLY_ACTIONS);
+    }
+
+    /**
+     * SCALE-4.2 — does this action get the tight read-request budgets
+     * (15 s PHP execution limit + 10 s DB statement kill)? Read-only actions
+     * only, minus the few that run bounded batch work inline. Mutations never
+     * get a budget: killing a write mid-flight is worse than a slow write.
+     */
+    public function hasReadBudget(string $action): bool
+    {
+        $action = $this->normalizeAction($action);
+
+        return isset(self::READONLY_ACTIONS[$action]) && !isset(self::BUDGET_EXEMPT[$action]);
     }
 
     /**

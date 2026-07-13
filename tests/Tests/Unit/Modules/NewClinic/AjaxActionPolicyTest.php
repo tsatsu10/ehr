@@ -244,6 +244,30 @@ class AjaxActionPolicyTest extends TestCase
         }
     }
 
+    // ---- SCALE-4.2: read-request execution budgets ------------------------
+
+    public function testReadOnlyActionsCarryTheReadBudget(): void
+    {
+        $policy = new AjaxActionPolicy();
+
+        foreach (['queue.counts', 'visit.board', 'patients.search', 'admin.config'] as $action) {
+            $this->assertTrue($policy->hasReadBudget($action), "$action should carry the read budget");
+        }
+    }
+
+    public function testMutationsAndInlineBatchReadsHaveNoReadBudget(): void
+    {
+        $policy = new AjaxActionPolicy();
+
+        // Mutations: killing a write mid-flight is worse than a slow write.
+        foreach (['cashier.pay', 'visit.start', 'admin.config.save'] as $action) {
+            $this->assertFalse($policy->hasReadBudget($action), "$action must NOT carry the read budget");
+        }
+        // Read-only but may run the inline export fallback in-request.
+        $this->assertTrue((new AjaxActionPolicy())->isReadOnly('cohort.export_status'));
+        $this->assertFalse($policy->hasReadBudget('cohort.export_status'));
+    }
+
     public function testReadOnlyActionsAreNormalizedAndUnique(): void
     {
         $policy = new AjaxActionPolicy();

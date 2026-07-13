@@ -64,6 +64,7 @@ use OpenEMR\Modules\NewClinic\Services\SchedulingAccessService;
 use OpenEMR\Modules\NewClinic\Services\VisitClaimLostService;
 use OpenEMR\Modules\NewClinic\Services\SimilarSurnameQueueService;
 use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
+use OpenEMR\Modules\NewClinic\Services\QueryBudgetService;
 use OpenEMR\Modules\NewClinic\Services\QueueRevision;
 
 class AjaxController
@@ -92,6 +93,10 @@ class AjaxController
     public function handleRequest(): void
     {
         header('Content-Type: application/json');
+
+        // SCALE-4.2 — registered FIRST so its shutdown hook runs before the
+        // NC_PERF logger and the logger sees the corrected HTTP status.
+        $this->registerFailsafeEnvelope();
 
         if (empty($_SESSION['authUserID'])) {
             $this->respond(false, 'Unauthorized', ['code' => 'unauthorized'], 401);
@@ -131,6 +136,18 @@ class AjaxController
             && session_status() === PHP_SESSION_ACTIVE
             && $this->svc(AjaxActionPolicy::class)->isReadOnly($action)) {
             session_write_close();
+        }
+
+        // SCALE-4.2 — execution budgets for read requests: a pathological read
+        // self-kills at the DB after ~10 s (MariaDB max_statement_time / MySQL
+        // max_execution_time) instead of pinning an Apache worker, and PHP gets
+        // a 15 s ceiling for compute loops (on Linux the PHP timer excludes DB
+        // wait, so the DB-side kill is the guard that matters for slow queries).
+        // Both deaths surface as the failsafe JSON envelope above. Mutations
+        // keep the default budget — killing a write mid-flight is worse.
+        if ($action !== '' && $this->svc(AjaxActionPolicy::class)->hasReadBudget($action)) {
+            @set_time_limit(15);
+            $this->svc(QueryBudgetService::class)->applyReadBudget();
         }
 
         // SCALE-4.3 — incident switch: with panic_readonly_mode=1 (flipped in DB,
@@ -967,6 +984,50 @@ class AjaxController
         return $this->svc(QuickAddService::class)->create($patient, $userId);
     }
 
+
+    /**
+     * SCALE-4.2 — failsafe: this endpoint must ALWAYS answer JSON. Two death
+     * modes bypass respond(): a PHP fatal (e.g. the 15 s execution budget) and
+     * core HelpfulDie() (echoes an HTML error page and exits when a query fails
+     * — which is how the 10 s DB statement kill surfaces through sqlStatement).
+     * All output is buffered; when the request died one of those deaths, the
+     * buffer is discarded and replaced with a clean error envelope — which also
+     * keeps HelpfulDie()'s SQL statement text off the wire at this boundary.
+     * Healthy output (JSON/CSV/PDF) flushes untouched at engine shutdown.
+     */
+    private function registerFailsafeEnvelope(): void
+    {
+        ob_start();
+        register_shutdown_function(static function (): void {
+            $err = error_get_last();
+            $isFatal = $err !== null
+                && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true);
+            $buffered = ob_get_level() > 0 ? (string) ob_get_contents() : '';
+            $isSqlDie = str_starts_with(ltrim($buffered), '<h2>'); // HelpfulDie()'s first echo
+            if (!$isFatal && !$isSqlDie) {
+                return;
+            }
+
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+
+            $timedOut = str_contains($buffered, 'max_statement_time')
+                || str_contains($buffered, 'Query execution was interrupted')
+                || ($isFatal && str_contains((string) $err['message'], 'Maximum execution time'));
+            if (!headers_sent()) {
+                http_response_code($timedOut ? 503 : 500);
+                header('Content-Type: application/json');
+            }
+            echo json_encode([
+                'success' => false,
+                'message' => $timedOut
+                    ? 'This request took too long and was stopped. Please try again, or narrow what you asked for.'
+                    : 'Server error',
+                'data' => ['code' => $timedOut ? 'timeout' : 'server_error'],
+            ]);
+        });
+    }
 
     /**
      * SCALE-0.1 — one-line perf log for slow/errored ajax requests.
