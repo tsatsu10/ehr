@@ -34,6 +34,54 @@ class ClinicConfigServiceTest extends TestCase
         $this->assertSame(30000, $service->resolveQueuePollIntervalMs(0));
     }
 
+    /**
+     * SCALE-4.3 — panic_poll_multiplier scales every pollMs handed to Twig.
+     */
+    public function testPanicPollMultiplierScalesTheInterval(): void
+    {
+        $service = $this->getMockBuilder(ClinicConfigService::class)
+            ->onlyMethods(['getInt'])
+            ->getMock();
+        $service->method('getInt')->willReturnCallback(static function (string $key, int $default): int {
+            return match ($key) {
+                'panic_poll_multiplier' => 4,
+                'enable_faster_queue_interrupts' => 0,
+                default => $default,
+            };
+        });
+
+        $this->assertSame(120000, $service->resolveQueuePollIntervalMs(0));
+    }
+
+    public function testPanicPollMultiplierIsClampedToTen(): void
+    {
+        $service = $this->getMockBuilder(ClinicConfigService::class)
+            ->onlyMethods(['getInt'])
+            ->getMock();
+        $service->method('getInt')->willReturnCallback(static function (string $key, int $default): int {
+            return match ($key) {
+                'panic_poll_multiplier' => 999,
+                'enable_faster_queue_interrupts' => 1,
+                'faster_queue_interrupt_poll_seconds' => 10,
+                default => $default,
+            };
+        });
+
+        $this->assertSame(10 * 1000 * 10, $service->resolveQueuePollIntervalMs(0));
+    }
+
+    public function testPanicPollMultiplierDefaultChangesNothing(): void
+    {
+        $service = $this->getMockBuilder(ClinicConfigService::class)
+            ->onlyMethods(['getInt'])
+            ->getMock();
+        $service->method('getInt')->willReturnCallback(
+            static fn (string $key, int $default): int => $default
+        );
+
+        $this->assertSame(30000, $service->resolveQueuePollIntervalMs(0));
+    }
+
     public function testIsEnabledAcceptsExplicitFacilityId(): void
     {
         $service = $this->getMockBuilder(ClinicConfigService::class)

@@ -162,6 +162,26 @@ class AjaxActionPolicyTest extends TestCase
         }
     }
 
+    // ---- SCALE-4.3: panic readonly mode ----------------------------------
+
+    public function testPanicReadonlyBlocksMutationsButNeverReads(): void
+    {
+        $policy = new AjaxActionPolicy();
+
+        // Mutations (POST) are blocked.
+        foreach (['cashier.pay', 'visit.start', 'patients.create', 'admin.config.save'] as $action) {
+            $this->assertTrue(
+                $policy->isBlockedInReadonlyPanic($action, 'POST'),
+                "$action must be blocked in panic readonly mode"
+            );
+        }
+        // GET reads and allowlisted POST-shaped reads keep working.
+        $this->assertFalse($policy->isBlockedInReadonlyPanic('visit.board', 'GET'));
+        $this->assertFalse($policy->isBlockedInReadonlyPanic('patients.chart.visits', 'GET'));
+        $this->assertFalse($policy->isBlockedInReadonlyPanic('patients.search', 'POST'));
+        $this->assertFalse($policy->isBlockedInReadonlyPanic('queue.counts', 'GET'));
+    }
+
     // ---- SCALE-3.2: poll-action rate budget ------------------------------
 
     public function testRecurringPollsCarryThePollBudget(): void

@@ -133,6 +133,20 @@ class AjaxController
             session_write_close();
         }
 
+        // SCALE-4.3 — incident switch: with panic_readonly_mode=1 (flipped in DB,
+        // no deploy) every mutation gets a clean maintenance envelope while reads
+        // keep working, so an operator can stop writes during e.g. a botched
+        // migration or replication incident without taking the clinic dark.
+        if (
+            $action !== '' && $action !== 'health'
+            && $this->svc(AjaxActionPolicy::class)->isBlockedInReadonlyPanic($action, $method)
+            && $this->svc(ClinicConfigService::class)->getInt('panic_readonly_mode', 0) === 1
+        ) {
+            $this->respond(false, 'The system is briefly in maintenance mode — changes are paused. Please try again in a few minutes.', [
+                'code' => 'maintenance_readonly',
+            ], 503);
+        }
+
         // SCALE-3.2 — devil-proofing: recurring poll actions carry a generous
         // per-user-per-action budget so a stuck client, a devtools loop, or a
         // stolen session can't melt the DB. Runs after the session close (the

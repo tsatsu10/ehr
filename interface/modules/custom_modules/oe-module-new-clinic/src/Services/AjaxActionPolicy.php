@@ -946,6 +946,24 @@ class AjaxActionPolicy
     }
 
     /**
+     * SCALE-4.3 — should this request be refused while `panic_readonly_mode` is
+     * on? Allowed: GET requests (module mutations are POST-only — CSRF is
+     * enforced on POST — so a mutating GET cannot exist) and the vetted
+     * read-only allowlist (covers the POST-shaped reads like patients.search).
+     * Everything else gets the maintenance envelope. Never allows a mutation;
+     * the cost is that a few POST-shaped reads outside the allowlist are also
+     * paused during an incident.
+     */
+    public function isBlockedInReadonlyPanic(string $action, string $method): bool
+    {
+        if (strtoupper($method) === 'GET') {
+            return false;
+        }
+
+        return !$this->isReadOnly($action);
+    }
+
+    /**
      * SCALE-3.2 — is this a recurring-timer poll action that carries the generous
      * per-user poll rate budget?
      */

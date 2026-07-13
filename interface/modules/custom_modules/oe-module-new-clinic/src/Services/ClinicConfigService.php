@@ -174,16 +174,23 @@ class ClinicConfigService
 
     /**
      * Desk queue poll interval — 30s default; 10–30s when faster interrupts enabled (M0-F34).
+     *
+     * SCALE-4.3 — `panic_poll_multiplier` (default 1, clamped 1–10) multiplies the
+     * interval every island receives from Twig. Flipping it in the DB slows the
+     * whole fleet's polling within one page reload, no deploy — the incident lever
+     * when the DB is drowning. This method is the single choke point for pollMs.
      */
     public function resolveQueuePollIntervalMs(int $facilityId = 0): int
     {
+        $multiplier = max(1, min(10, $this->getInt('panic_poll_multiplier', 1, $facilityId)));
+
         if ($this->getInt('enable_faster_queue_interrupts', 0, $facilityId) !== 1) {
-            return 30000;
+            return 30000 * $multiplier;
         }
 
         $seconds = $this->getInt('faster_queue_interrupt_poll_seconds', 10, $facilityId);
 
-        return max(10, min(30, $seconds)) * 1000;
+        return max(10, min(30, $seconds)) * 1000 * $multiplier;
     }
 
     /**
