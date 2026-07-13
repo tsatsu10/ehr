@@ -117,8 +117,34 @@ bootstrap — raw mysqli against the site's sqlconf. `worker_last_seen` goes `nu
 within ~10 min of the job worker dying (heartbeat TTL). Point the LB / uptime
 monitor at it; 503 = pull the node. Per-IP limited to 30/min.
 
-Still pending for SCALE-5.2 consolidation: backup/restore drill + table loss-impact
-list (SCALE-4.6).
+## 8. Backup, restore & migration safety (SCALE-4.6)
+
+**Schema rule:** ALL module DDL goes through `sql/install.sql` `#IfNotTable` /
+`#IfMissingColumn` guards — never manual DDL in prod. Every new FK/WHERE column gets
+an index in the same change (BP-9).
+
+**Module tables by loss impact** (32 custom tables):
+
+| Impact | Tables | Why |
+|---|---|---|
+| **Catastrophic** (clinical/financial record) | `new_visit`, `new_visit_state_log`, `new_receipt`, `new_receipt_counter`, `new_cashier_payment_request`, `nc_encounter_note`, `new_patient_meta`, `new_lab_order_meta`, `new_drug_meta` | visits, audit trail, money, clinical notes — restore is mandatory |
+| **Severe** (operational config, rebuildable only by hand) | `new_clinic_config`, `new_visit_type`, `new_fee_schedule`, `new_condition_map`, `new_doctor_availability`, `new_completion_field_weight`, `new_config_log`, `new_clinic_recall_meta` | the clinic's setup; hours of manual re-entry |
+| **Moderate** (history/derived, annoying to lose) | `new_patient_completion`, `new_visit_queue_counter`, `new_visit_notify_log`, `new_reconciliation_run`, `queue_bridge_exception_snapshot`, `report_hub_export_run`, `new_clinic_export_job`, `clinical_doc_form_open`, `admin_hub_backup_run`, `admin_hub_setup_progress`, `new_cohort_saved_filter`, `new_clinic_flowboard_lane_prefs`, `new_clinic_flowboard_lane_map` | audit/history/prefs; system keeps working without them |
+| **Disposable** (infrastructure, self-rebuilding) | `new_clinic_maintenance_lock`, `new_clinic_rate_limit`, `new_clinic_cache` | locks/counters/cache — exclude from restores freely |
+
+**Restore drill** (do this quarterly, and before any risky migration):
+
+1. Restore the encrypted dump to a **scratch** DB (never over prod):
+   Admin Hub → Backups → verify decrypts; or decrypt + `mysql scratch < dump.sql`.
+2. Point a scratch site config at it and run
+   `php .../scripts/verify-module.php --bootstrap` — must PASS.
+3. Load the visit board and one desk against the scratch DB; confirm today's-ish
+   visits render.
+4. Confirm the backup **excludes** the transient export dirs and includes the
+   encryption-key custody step (see the SEC-6 runbook — a backup you can't decrypt
+   is not a backup).
+
+A backup you've never test-restored is a hope, not a guarantee.
 
 ---
 

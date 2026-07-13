@@ -337,6 +337,8 @@ Guiding rules for ALL future code in this module:
 - **Do:** In the scale-out runbook add: list of ALL module tables (28 custom tables — copy the table list from the audit section of this plan's appendix) with a one-line "loss impact" per table (e.g. `new_visit` = catastrophic, `new_clinic_perf_daily` = disposable); the statement that ALL schema changes go through `sql/install.sql` `#IfNotTable/#IfMissingColumn` guards (never manual DDL in prod — this repo's existing convention); and a restore-drill checklist (restore dump to scratch DB, run `verify-module.php`, load visit board).
 - **Verify:** doc section complete; every custom table listed.
 
+- **Status (2026-07-13): DONE.** Runbook §8: all 32 module tables (28 original + the 4 added by SCALE work) bucketed by loss impact (catastrophic → disposable), the guarded-migration rule restated, and a 4-step quarterly restore drill (scratch DB → verify-module → board smoke → key-custody check).
+
 ---
 
 ## 8. Phase 5 — Real-time transport & long-term posture (only after Phases 1–4)
