@@ -17,7 +17,7 @@
 | 5 | Point export storage at a **shared location** | `export_storage_driver` | today only `local` exists; on 2+ servers use a shared volume for `sites/<site>/documents/`, or build the objstore driver (the seam is `ExportStorageService`) |
 | 6 | Run **backups on exactly ONE node** | module backup schedule | backup outputs + encryption keys are node-local by design — see §2 |
 | 7 | Keep **`sites/<site>/documents/` shared** (NFS/SMB/EFS) between nodes | infra | stock OpenEMR requirement (uploaded documents), not just a module one |
-| 8 | LB health checks | `public/health.php` | **pending — SCALE-4.4 not built yet**; until then use `/interface/login/login.php?site=default` HTTP 200 as a weak check |
+| 8 | LB health checks | `public/health.php` | live (SCALE-4.4): `GET .../oe-module-new-clinic/public/health.php?site=<site>` → 200 `{ok,db_ms,cache_ms,worker_last_seen}`, 503 on DB failure; per-IP limited 30/min |
 
 ---
 
@@ -99,12 +99,26 @@ DB-backed (`new_clinic_rate_limit`), keyed user+action — N servers share one b
 automatically. Knobs: `rate_limit_patients_search` (30/min), `rate_limit_dup_check`
 (60/min), `rate_limit_poll_per_minute` (90/min). Nothing to flip at scale-out.
 
-## 7. Degradation + health (pending sections)
+## 7. Incident levers (SCALE-4.3) & health endpoint (SCALE-4.4)
 
-- `panic_readonly_mode` / `panic_poll_multiplier` — SCALE-4.3, not built yet.
-- `public/health.php` LB endpoint — SCALE-4.4, not built yet.
-- Backup/restore drill + table loss-impact list — SCALE-4.6, not written yet.
-These get merged here by SCALE-5.2.
+Two flags an operator flips **in the DB** (`new_clinic_config`, facility 0) during an
+incident — no deploy, effective within one config-cache TTL (≤30 s) / next page load:
+
+- `panic_readonly_mode = 1` — every mutating ajax request gets a clean 503
+  "maintenance mode — changes are paused" envelope; reads keep working (GET requests
+  + the vetted read-only allowlist; a few POST-shaped reads outside the allowlist
+  also pause — acceptable during an incident, never a lost write).
+- `panic_poll_multiplier = N` (1–10) — multiplies the poll interval every island
+  receives at page load. `panic_poll_multiplier=4` turns the fleet's 30 s polls into
+  2-minute polls. Flip back to 1 (or delete the row) to restore.
+
+Health endpoint (`public/health.php?site=<site>`): no auth, no session, no OpenEMR
+bootstrap — raw mysqli against the site's sqlconf. `worker_last_seen` goes `null`
+within ~10 min of the job worker dying (heartbeat TTL). Point the LB / uptime
+monitor at it; 503 = pull the node. Per-IP limited to 30/min.
+
+Still pending for SCALE-5.2 consolidation: backup/restore drill + table loss-impact
+list (SCALE-4.6).
 
 ---
 

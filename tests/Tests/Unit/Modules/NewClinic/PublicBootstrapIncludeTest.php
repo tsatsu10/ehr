@@ -37,6 +37,13 @@ class PublicBootstrapIncludeTest extends TestCase
             if ($basename === 'bootstrap') {
                 continue;
             }
+            // SCALE-4.4 — health.php deliberately bootstraps NOTHING: no session
+            // (lock-free), no auth, raw mysqli. It must stay honest when the app
+            // tier is sick, and it exposes no PHI, so the bootstrap rule does not
+            // apply. Every OTHER public entry point still must bootstrap.
+            if ($basename === 'health') {
+                continue;
+            }
 
             $contents = (string) file_get_contents($fileInfo->getPathname());
             if (!str_contains($contents, 'bootstrap.php')) {

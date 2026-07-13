@@ -78,6 +78,21 @@ try {
         }
     }
 
+    // SCALE-4.4: heartbeat for public/health.php — written directly to the DB
+    // cache table (NOT via CacheService: a CLI apcu driver would make the
+    // heartbeat invisible to the web tier). 10-min TTL, so a dead worker shows
+    // up as worker_last_seen=null on the health endpoint within minutes.
+    try {
+        sqlStatement(
+            "INSERT INTO new_clinic_cache (cache_key, cache_value, expires_at)
+             VALUES ('nc:worker:heartbeat', ?, DATE_ADD(NOW(), INTERVAL 600 SECOND))
+             ON DUPLICATE KEY UPDATE cache_value = VALUES(cache_value), expires_at = VALUES(expires_at)",
+            [json_encode(['v' => date('c')])]
+        );
+    } catch (\Throwable $e) {
+        // heartbeat is best-effort
+    }
+
     // SCALE-3.1: drop rate-limit counter rows whose minute window is long gone.
     try {
         $ratePurged = (new RateLimitService())->purgeOldWindows();
