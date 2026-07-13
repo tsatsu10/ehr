@@ -34,6 +34,14 @@ class CacheService
     /** Namespace prefix — APCu memory may be shared with other apps. */
     private const PREFIX = 'nc:';
 
+    /**
+     * SCALE-6.1 audit — TTL for the invalidation timestamp used to stop a
+     * remember() rebuild from re-caching stale data after a concurrent
+     * invalidate(). Must exceed the longest hardSeconds (a rebuild finishes in
+     * ms; 60 s is ample) so the stamp outlives any in-flight rebuild.
+     */
+    private const INVAL_STAMP_TTL = 60;
+
     /** Resolved once per request (one PK read at most). */
     private static ?string $resolvedDriver = null;
 
@@ -155,9 +163,21 @@ class CacheService
         }
 
         // Stale or cold: exactly one caller rebuilds (whoever wins the lock).
-        $rebuilt = $this->withLock($key, $hardSeconds, function () use ($key, $freshSeconds, $hardSeconds, $now, $producer) {
+        // SCALE-6.1 audit — capture the start instant so the rebuilder can refuse
+        // to store if markInvalidated($key) fires DURING the produce (a concurrent
+        // write outracing this rebuild); otherwise we'd re-cache pre-write data.
+        $startedAt = microtime(true);
+        $rebuilt = $this->withLock($key, $hardSeconds, function () use ($key, $freshSeconds, $hardSeconds, $now, $startedAt, $producer) {
             $value = $producer();
-            $this->set($key, ['nc_v' => $value, 'nc_f' => $now + $freshSeconds], $hardSeconds);
+
+            // Only cache if no invalidation landed after we began producing. A
+            // stamp at-or-before $startedAt means our produce already reflects it
+            // (safe to store); a later stamp means our value may be stale → skip
+            // the store, leaving the key absent so the next read rebuilds fresh.
+            $invAt = $this->invalidatedAt($key);
+            if ($invAt === null || $invAt <= $startedAt) {
+                $this->set($key, ['nc_v' => $value, 'nc_f' => $now + $freshSeconds], $hardSeconds);
+            }
 
             return ['nc_rebuilt' => true, 'nc_v' => $value];
         });
@@ -169,6 +189,27 @@ class CacheService
         // point — no stampede). Cold + lost lock is the only case that computes
         // directly (and does NOT store, leaving the lock winner authoritative).
         return $haveStale ? $wrapped['nc_v'] : $producer();
+    }
+
+    /**
+     * SCALE-6.1 audit — record that $key's underlying data just changed, so an
+     * in-flight remember() rebuild that STARTED before this call won't re-cache
+     * the pre-change value (closes the rebuild-outraces-invalidate race for
+     * explicitly-invalidated keys, e.g. config on a write). Callers that manage
+     * their own invalidation call this alongside delete(); TTL-only keys (e.g.
+     * queue counts) never call it, so their path is unchanged. Best-effort.
+     */
+    public function markInvalidated(string $key): void
+    {
+        $this->set('inval:' . $key, microtime(true), self::INVAL_STAMP_TTL);
+    }
+
+    /** Unix-float instant $key was last marked invalidated, or null if not/expired. */
+    private function invalidatedAt(string $key): ?float
+    {
+        $v = $this->get('inval:' . $key);
+
+        return is_numeric($v) ? (float) $v : null;
     }
 
     /**

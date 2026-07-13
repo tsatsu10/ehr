@@ -31,6 +31,7 @@ class CacheServiceTest extends TestCase
     {
         sqlStatement("DELETE FROM new_clinic_cache WHERE cache_key LIKE 'nc:nc-test-%'");
         sqlStatement("DELETE FROM new_clinic_cache WHERE cache_key LIKE 'nc:lock:nc-test-%'");
+        sqlStatement("DELETE FROM new_clinic_cache WHERE cache_key LIKE 'nc:inval:nc-test-%'");
         CacheService::resetDriverResolution();
     }
 
@@ -225,5 +226,36 @@ class CacheServiceTest extends TestCase
         // The refreshed value is now fresh — a follow-up serves it, no recompute.
         $again = $cache->remember('nc-test-rem-rb', 5, 30, static fn (): array => ['n' => 3]);
         $this->assertSame(['n' => 2], $again);
+    }
+
+    /**
+     * SCALE-6.1 audit — a rebuild must NOT re-cache stale data if an invalidation
+     * lands mid-produce (a write outracing the rebuild). We simulate the
+     * concurrent write by calling markInvalidated() inside the producer: the
+     * caller still gets its produced value, but it is NOT stored, so the next
+     * read rebuilds fresh instead of serving the just-invalidated value.
+     */
+    public function testRememberSkipsStoreWhenInvalidatedMidRebuild(): void
+    {
+        $cache = new CacheService();
+        $rebuilds = 0;
+
+        $out = $cache->remember('nc-test-rem-inval', 5, 30, static function () use ($cache, &$rebuilds): array {
+            $rebuilds++;
+            usleep(2000); // ensure the invalidation instant is strictly after remember()'s $startedAt
+            $cache->markInvalidated('nc-test-rem-inval'); // a concurrent write lands mid-produce
+
+            return ['n' => $rebuilds];
+        });
+        $this->assertSame(['n' => 1], $out); // caller still gets its produced value
+
+        // It was NOT cached (invalidated mid-rebuild) → the next call rebuilds.
+        $out2 = $cache->remember('nc-test-rem-inval', 5, 30, static function () use (&$rebuilds): array {
+            $rebuilds++;
+
+            return ['n' => $rebuilds];
+        });
+        $this->assertSame(['n' => 2], $out2); // recomputed, not served the stale value
+        $this->assertSame(2, $rebuilds);
     }
 }

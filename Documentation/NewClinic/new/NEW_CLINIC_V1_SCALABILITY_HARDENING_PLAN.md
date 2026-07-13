@@ -440,8 +440,16 @@ Guiding rules for ALL future code in this module:
   request). No user path writes `cache_value` so likelihood is low, but it was a real
   defensiveness regression (BP-8); restored the guard at both sites (degrade to empty, self-heals
   on TTL) + a test pinning that `remember()` returns `nc_v` un-coerced. Live-proven: a poisoned
-  counts wrapper now returns 200 `{counts:[]}`, not 500. 1048 tests green. **Next in Phase 6:
-  SCALE-6.2.**
+  counts wrapper now returns 200 `{counts:[]}`, not 500. **Second audit fix (same day):** closed
+  the rebuild-outraces-invalidate race (pre-existing since SCALE-3.3, not introduced by 6.1, but
+  fixed on request) — a config rebuild that started before a concurrent write could re-cache the
+  pre-write value after the write's `invalidate()`, i.e. an admin toggle appearing not to take
+  effect for ≤TTL. `remember()` now captures `$startedAt` and the rebuilder skips its store if a
+  `markInvalidated($key)` stamp landed after it began producing (leaving the key absent so the
+  next read rebuilds fresh); `ClinicConfigService::invalidate()` stamps on every write. The
+  fresh-hit hot path is untouched (the stamp read only happens on a rebuild). Counts (TTL-only,
+  never invalidated) is unaffected. Deterministic unit test proves the store-skip; config +
+  counts read paths live-verified healthy. 1049 tests green. **Next in Phase 6: SCALE-6.2.**
 
 ### SCALE-6.2 — DB connection ceiling: size it, surface it, measure it
 

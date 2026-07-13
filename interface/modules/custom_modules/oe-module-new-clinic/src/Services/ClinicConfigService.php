@@ -134,6 +134,10 @@ class ClinicConfigService
      * facilities passed (SCALE-3.3 watch-out: a write must delete the facility
      * key AND the global key, or stale flags linger for up to the TTL).
      *
+     * SCALE-6.1 audit — also stamps each key invalidated so a serve-stale rebuild
+     * that started before this write can't re-cache the pre-write value after our
+     * delete (the "admin toggle doesn't take effect for ≤TTL" race).
+     *
      * @param array<int, int> $facilityIds
      */
     public function invalidate(array $facilityIds = []): void
@@ -142,6 +146,7 @@ class ClinicConfigService
         $cache = $this->getCache();
         foreach (array_unique(array_merge($facilityIds, [0])) as $facilityId) {
             $cache->delete('cfg:' . (int) $facilityId);
+            $cache->markInvalidated('cfg:' . (int) $facilityId);
         }
     }
 
