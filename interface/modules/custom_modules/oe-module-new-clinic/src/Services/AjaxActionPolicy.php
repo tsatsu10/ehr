@@ -558,16 +558,17 @@ class AjaxActionPolicy
      * MEMBERSHIP RULE (safety): an action belongs here ONLY if its handler + service
      * chain performs NO `$_SESSION` writes (a write after close is silently dropped)
      * and does no mutation. Verified against every `$_SESSION[...] =` site in the
-     * module: the writers are patient-search/dup rate-limiting, encounter/patient
-     * context binding (take/select/restore), MFA enrol, product-reg dismiss, session
-     * role switch, and the (now guarded) desk-facility fallback — none of which are
-     * listed here. DEFAULT IS LOCKED: anything not in this set keeps the lock, so a
-     * forgotten new action is merely un-optimised, never incorrect.
+     * module: the writers are encounter/patient context binding (take/select/restore),
+     * MFA enrol, product-reg dismiss, session role switch, and the (now guarded)
+     * desk-facility fallback — none of which are listed here. DEFAULT IS LOCKED:
+     * anything not in this set keeps the lock, so a forgotten new action is merely
+     * un-optimised, never incorrect.
      *
-     * Deliberately EXCLUDED for now (revisit later): `patients.search` /
-     * `patients.dup_check` (session-based rate limiter — SCALE-3.1), the chart/patient
-     * reads that bind `$_SESSION['pid']`, and `reports.export_status` (still runs work
-     * inline — SCALE-2.1).
+     * SCALE-3.1: `patients.search` / `patients.dup_check` joined the set once the
+     * rate limiter moved off `$_SESSION` onto `new_clinic_rate_limit` (the DB
+     * counter write is fine after session close). Still deliberately EXCLUDED:
+     * the chart/patient reads that bind `$_SESSION['pid']`, and
+     * `reports.export_status` (inline fallback may run work — SCALE-2.1).
      *
      * @var array<string, true>
      */
@@ -619,6 +620,9 @@ class AjaxActionPolicy
         'pharm_ops.controlled_catalog' => true,
         // Export-job status polls (pure read; inline fallback writes DB/files, not $_SESSION).
         'cohort.export_status' => true,
+        // Rate-limited searches (SCALE-3.1: limiter counts in DB, not $_SESSION).
+        'patients.search' => true,
+        'patients.dup_check' => true,
         // Report hub + clinical-doc reads.
         'reports.hub_summary' => true,
         'reports.catalog' => true,

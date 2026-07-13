@@ -125,6 +125,8 @@ class AjaxActionPolicyTest extends TestCase
                 'cashier.queue', 'lab.queue', 'pharmacy.queue', 'doctor.roster',
                 'queue_bridge.list', 'scheduling.flow_board.poll', 'admin.config',
                 'communications.hub_counts', 'documents.list',
+                // SCALE-3.1: read-only since the rate limiter moved off $_SESSION.
+                'patients.search', 'patients.dup_check',
             ] as $action
         ) {
             $this->assertTrue($policy->isReadOnly($action), "$action should be read-only");
@@ -146,8 +148,7 @@ class AjaxActionPolicyTest extends TestCase
                 'visit.start', 'visit.cancel', 'doctor.take', 'doctor.complete',
                 'triage.save_vitals', 'triage.send_doctor', 'lab.take', 'pharmacy.take',
                 // patient/session context + writes
-                'patients.create', 'patients.search', 'patients.dup_check',
-                'patients.preview', 'patients.chart.visits',
+                'patients.create', 'patients.preview', 'patients.chart.visits',
                 // config/admin writes
                 'admin.config.save', 'admin.fee.save', 'admin.backup.run',
                 // clinical writes + exports (inline work / session pid)

@@ -57,6 +57,7 @@ require_once dirname(__DIR__, 4) . '/globals.php';
 use OpenEMR\Modules\NewClinic\Services\ReportHubExportService;
 use OpenEMR\Modules\NewClinic\Services\ExportJobService;
 use OpenEMR\Modules\NewClinic\Services\ExportStorageService;
+use OpenEMR\Modules\NewClinic\Services\RateLimitService;
 
 @set_time_limit(0);
 
@@ -76,7 +77,19 @@ try {
         }
     }
 
-    $out = ['report_exports' => $reports, 'export_jobs' => $exports, 'purged_files' => $purged];
+    // SCALE-3.1: drop rate-limit counter rows whose minute window is long gone.
+    try {
+        $ratePurged = (new RateLimitService())->purgeOldWindows();
+    } catch (\Throwable $e) {
+        $ratePurged = 'error: ' . $e->getMessage();
+    }
+
+    $out = [
+        'report_exports' => $reports,
+        'export_jobs' => $exports,
+        'purged_files' => $purged,
+        'purged_rate_windows' => $ratePurged,
+    ];
     fwrite(STDOUT, json_encode($out) . "\n");
     $failed = (int) ($reports['failed'] ?? 0) + (int) ($exports['failed'] ?? 0);
     exit($failed > 0 ? 1 : 0);

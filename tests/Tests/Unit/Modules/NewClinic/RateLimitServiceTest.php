@@ -1,6 +1,12 @@
 <?php
 
 /**
+ * Tests for the DB-backed fixed-window rate limiter (SEC06, SCALE-3.1)
+ *
+ * Runs against the live dev DB (like the other *IntegrationTest files): the
+ * limiter's correctness IS its atomic SQL upsert, so mocking the DB would test
+ * nothing. Uses a dedicated test action name + far-future windows and cleans up.
+ *
  * @package   OpenEMR
  * @link      https://www.open-emr.org
  * @copyright Copyright (c) 2026 OpenEMR contributors
@@ -17,13 +23,21 @@ use PHPUnit\Framework\TestCase;
 
 class RateLimitServiceTest extends TestCase
 {
-    protected function setUp(): void
+    private const ACTION = 'nc_test.rate_limit';
+    private const OTHER_ACTION = 'nc_test.rate_limit_other';
+    private const USER_A = 990001;
+    private const USER_B = 990002;
+
+    protected function tearDown(): void
     {
-        foreach (array_keys($_SESSION ?? []) as $key) {
-            if (str_starts_with((string) $key, 'new_clinic_rate_')) {
-                unset($_SESSION[$key]);
-            }
-        }
+        sqlStatement(
+            'DELETE FROM new_clinic_rate_limit WHERE bucket_key LIKE ?',
+            ['nc_test.rate_limit%']
+        );
+        sqlStatement(
+            'DELETE FROM new_clinic_rate_limit WHERE bucket_key LIKE ?',
+            ['patients.search:u9900%']
+        );
     }
 
     private function makeService(int $limit): RateLimitService
@@ -34,55 +48,78 @@ class RateLimitServiceTest extends TestCase
         return new RateLimitService($config);
     }
 
-    public function testAllowsCallsUpToConfiguredLimit(): void
+    public function testNewWindowStartsAtOneAndIncrements(): void
     {
-        $service = $this->makeService(3);
+        $service = new RateLimitService();
 
-        $service->assertWithinLimit('patients.search', 1);
-        $service->assertWithinLimit('patients.search', 1);
-        $service->assertWithinLimit('patients.search', 1);
-
-        $this->assertSame(3, (int) $_SESSION['new_clinic_rate_patients.search']['count']);
+        $this->assertSame(1, $service->consume(self::ACTION, self::USER_A, '209901010000'));
+        $this->assertSame(2, $service->consume(self::ACTION, self::USER_A, '209901010000'));
+        $this->assertSame(3, $service->consume(self::ACTION, self::USER_A, '209901010000'));
     }
 
-    public function testThrows429WhenLimitExceeded(): void
+    public function testNextWindowResetsTheCount(): void
     {
-        $service = $this->makeService(2);
-        $service->assertWithinLimit('patients.search', 1);
-        $service->assertWithinLimit('patients.search', 1);
+        $service = new RateLimitService();
+        $service->consume(self::ACTION, self::USER_A, '209901010000');
+        $service->consume(self::ACTION, self::USER_A, '209901010000');
 
-        try {
-            $service->assertWithinLimit('patients.search', 1);
-            $this->fail('Expected RuntimeException');
-        } catch (\RuntimeException $e) {
-            $this->assertSame(429, $e->getCode());
-            $this->assertSame('Rate limit exceeded', $e->getMessage());
-        }
+        $this->assertSame(1, $service->consume(self::ACTION, self::USER_A, '209901010001'));
     }
 
-    public function testCounterResetsOnNewMinute(): void
+    public function testUsersHaveIndependentBuckets(): void
     {
-        $service = $this->makeService(2);
-        $_SESSION['new_clinic_rate_patients.search'] = [
-            'minute' => '2000-01-01 00:00',
-            'count' => 999,
-        ];
+        $service = new RateLimitService();
+        $service->consume(self::ACTION, self::USER_A, '209901010000');
+        $service->consume(self::ACTION, self::USER_A, '209901010000');
 
-        $service->assertWithinLimit('patients.search', 1);
-
-        $this->assertSame(1, (int) $_SESSION['new_clinic_rate_patients.search']['count']);
-        $this->assertSame(date('Y-m-d H:i'), $_SESSION['new_clinic_rate_patients.search']['minute']);
+        $this->assertSame(1, $service->consume(self::ACTION, self::USER_B, '209901010000'));
     }
 
     public function testActionsAreRateLimitedIndependently(): void
     {
-        $service = $this->makeService(1);
-        $service->assertWithinLimit('patients.search', 1);
+        $service = new RateLimitService();
+        $service->consume(self::ACTION, self::USER_A, '209901010000');
 
-        // Exhausting one bucket must not consume the other action's bucket.
-        $service->assertWithinLimit('patients.dup_check', 1);
+        $this->assertSame(1, $service->consume(self::OTHER_ACTION, self::USER_A, '209901010000'));
+    }
 
-        $this->assertSame(1, (int) $_SESSION['new_clinic_rate_patients.search']['count']);
-        $this->assertSame(1, (int) $_SESSION['new_clinic_rate_patients.dup_check']['count']);
+    public function testThrows429WhenLimitExceeded(): void
+    {
+        // The limiter is keyed by user+action, NOT session: no $_SESSION involved.
+        // 'patients.search' so the mocked per-action config limit applies.
+        $service = $this->makeService(2);
+        $service->assertWithinLimit('patients.search', self::USER_A);
+        $service->assertWithinLimit('patients.search', self::USER_A);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionCode(429);
+        $this->expectExceptionMessage('Rate limit exceeded');
+        $service->assertWithinLimit('patients.search', self::USER_A);
+    }
+
+    public function testPurgeOldWindowsDropsOnlyStaleRows(): void
+    {
+        $service = new RateLimitService();
+        $service->consume(self::ACTION, self::USER_A, '209901010000');
+        // Backdate one bucket past the purge horizon; keep the other fresh.
+        sqlStatement(
+            'UPDATE new_clinic_rate_limit SET window_start = DATE_SUB(NOW(), INTERVAL 2 HOUR)
+             WHERE bucket_key = ?',
+            [self::ACTION . ':u' . self::USER_A . ':209901010000']
+        );
+        $service->consume(self::ACTION, self::USER_B, '209901010000');
+
+        $service->purgeOldWindows();
+
+        $stale = sqlQuery(
+            'SELECT COUNT(*) AS n FROM new_clinic_rate_limit WHERE bucket_key = ?',
+            [self::ACTION . ':u' . self::USER_A . ':209901010000']
+        );
+        $fresh = sqlQuery(
+            'SELECT COUNT(*) AS n FROM new_clinic_rate_limit WHERE bucket_key = ?',
+            [self::ACTION . ':u' . self::USER_B . ':209901010000']
+        );
+        $this->assertSame(0, (int) ($stale['n'] ?? -1));
+        $this->assertSame(1, (int) ($fresh['n'] ?? -1));
     }
 }

@@ -1326,3 +1326,13 @@ VALUES
      'nc_scheduled_backup_service',
      '/interface/modules/custom_modules/oe-module-new-clinic/scripts/backup-service.php');
 #EndIf
+
+#IfNotTable new_clinic_rate_limit
+CREATE TABLE IF NOT EXISTS `new_clinic_rate_limit` (
+    `bucket_key` VARCHAR(128) NOT NULL,
+    `window_start` DATETIME NOT NULL,
+    `count` INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (`bucket_key`),
+    KEY `idx_window_start` (`window_start`)
+) ENGINE=InnoDB COMMENT='SCALE-3.1 fixed-window rate-limit counters (user+action, cross-server)';
+#EndIf
