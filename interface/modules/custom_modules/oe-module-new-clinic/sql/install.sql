@@ -1336,3 +1336,13 @@ CREATE TABLE IF NOT EXISTS `new_clinic_rate_limit` (
     KEY `idx_window_start` (`window_start`)
 ) ENGINE=InnoDB COMMENT='SCALE-3.1 fixed-window rate-limit counters (user+action, cross-server)';
 #EndIf
+
+#IfNotTable new_clinic_cache
+CREATE TABLE IF NOT EXISTS `new_clinic_cache` (
+    `cache_key` VARCHAR(160) NOT NULL,
+    `cache_value` MEDIUMTEXT NULL,
+    `expires_at` DATETIME NOT NULL,
+    PRIMARY KEY (`cache_key`),
+    KEY `idx_expires_at` (`expires_at`)
+) ENGINE=InnoDB COMMENT='SCALE-3.3 cross-request cache + TTL locks (db driver of CacheService)';
+#EndIf

@@ -58,6 +58,7 @@ use OpenEMR\Modules\NewClinic\Services\ReportHubExportService;
 use OpenEMR\Modules\NewClinic\Services\ExportJobService;
 use OpenEMR\Modules\NewClinic\Services\ExportStorageService;
 use OpenEMR\Modules\NewClinic\Services\RateLimitService;
+use OpenEMR\Modules\NewClinic\Services\CacheService;
 
 @set_time_limit(0);
 
@@ -89,6 +90,8 @@ try {
         'export_jobs' => $exports,
         'purged_files' => $purged,
         'purged_rate_windows' => $ratePurged,
+        // SCALE-3.3: expired DB cache rows are dead weight; drop them each pass.
+        'purged_cache_rows' => (new CacheService())->purgeExpired(),
     ];
     fwrite(STDOUT, json_encode($out) . "\n");
     $failed = (int) ($reports['failed'] ?? 0) + (int) ($exports['failed'] ?? 0);

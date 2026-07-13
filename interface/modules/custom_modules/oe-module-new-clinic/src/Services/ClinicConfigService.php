@@ -15,7 +15,11 @@ use OpenEMR\Common\Database\QueryUtils;
 
 class ClinicConfigService
 {
+    /** SCALE-3.3 — cross-request config-map cache TTL (BP-5: TTL ≤ 30 s). */
+    private const CACHE_TTL_SECONDS = 30;
+
     private ?VisitScopeService $visitScope = null;
+    private ?CacheService $cache = null;
 
     /**
      * SCALE-1.4 — per-instance config cache: facility_id → (config_key → value).
@@ -39,6 +43,14 @@ class ClinicConfigService
         return $this->visitScope;
     }
 
+    private function getCache(): CacheService
+    {
+        if ($this->cache === null) {
+            $this->cache = new CacheService();
+        }
+        return $this->cache;
+    }
+
     public function resolveReaderFacilityId(): int
     {
         if ($this->readerFacilityIdCache === null) {
@@ -58,6 +70,19 @@ class ClinicConfigService
     private function loadFacility(int $facilityId): array
     {
         if (!array_key_exists($facilityId, $this->facilityConfig)) {
+            // SCALE-3.3 — cross-request cache in front of the per-request map, so a
+            // busy fleet re-reads each facility's config from MySQL at most every
+            // 30 s per server instead of once per request. Writes delete the key
+            // (see set()/clearGlobalOverrides), so same-request read-after-write
+            // still sees fresh values; cross-server staleness is bounded by the TTL.
+            $cached = $this->getCache()->get('cfg:' . $facilityId);
+            if (is_array($cached)) {
+                /** @var array<string, string> $cached */
+                $this->facilityConfig[$facilityId] = $cached;
+
+                return $this->facilityConfig[$facilityId];
+            }
+
             $map = [];
             $rows = QueryUtils::fetchRecords(
                 "SELECT config_key, config_value FROM new_clinic_config WHERE facility_id = ?",
@@ -69,6 +94,7 @@ class ClinicConfigService
                 }
             }
             $this->facilityConfig[$facilityId] = $map;
+            $this->getCache()->set('cfg:' . $facilityId, $map, self::CACHE_TTL_SECONDS);
         }
 
         return $this->facilityConfig[$facilityId];
@@ -82,10 +108,21 @@ class ClinicConfigService
         return array_key_exists($key, $map) ? $map[$key] : null;
     }
 
-    /** Drop the cached config maps after a write so the next read reflects it. */
-    public function invalidate(): void
+    /**
+     * Drop the cached config maps after a write so the next read reflects it.
+     * Clears the in-process map, plus the cross-request cache keys for the
+     * facilities passed (SCALE-3.3 watch-out: a write must delete the facility
+     * key AND the global key, or stale flags linger for up to the TTL).
+     *
+     * @param array<int, int> $facilityIds
+     */
+    public function invalidate(array $facilityIds = []): void
     {
         $this->facilityConfig = [];
+        $cache = $this->getCache();
+        foreach (array_unique(array_merge($facilityIds, [0])) as $facilityId) {
+            $cache->delete('cfg:' . (int) $facilityId);
+        }
     }
 
     public function isEnabled(string $key, int $default = 0, ?int $facilityId = null): bool
@@ -176,7 +213,7 @@ class ClinicConfigService
                  WHERE facility_id = ? AND config_key = ?",
                 [$value, $facilityId, $key]
             );
-            $this->invalidate();
+            $this->invalidate([$facilityId]);
 
             return;
         }
@@ -185,7 +222,7 @@ class ClinicConfigService
             "INSERT INTO new_clinic_config (facility_id, config_key, config_value) VALUES (?, ?, ?)",
             [$facilityId, $key, $value]
         );
-        $this->invalidate();
+        $this->invalidate([$facilityId]);
     }
 
     /**

@@ -105,6 +105,19 @@ class VisitQueueService
     {
         $facilityId = $this->visitScope->resolveActorFacilityId($facilityId > 0 ? $facilityId : null);
         $canonicalDate = $visitDate ?? $this->clinicDate->today();
+
+        // SCALE-3.3 — every open shell polls queue.counts every 30 s; a 5 s
+        // per-facility cache absorbs that fleet-wide load almost entirely. Keyed
+        // AFTER facility resolution (facility scoping is per-actor), date included
+        // so midnight rollover and explicit-date callers never mix buckets. A ≤5 s
+        // stale badge is invisible next to the 30 s poll interval.
+        $cacheKey = 'counts:' . $facilityId . ':' . $canonicalDate;
+        $cached = (new CacheService())->get($cacheKey);
+        if (is_array($cached)) {
+            /** @var array<string, int> $cached */
+            return array_map('intval', $cached);
+        }
+
         $this->visitScope->repairOrphanVisits($facilityId, $canonicalDate);
 
         // Counts cover all open visits (no date cap) + date-bounded terminal states
@@ -133,6 +146,8 @@ class VisitQueueService
         }
         $counts['cancelled'] = $byState['cancelled'] ?? 0;
         $counts['closed_unpaid'] = $byState['closed_unpaid'] ?? 0;
+
+        (new CacheService())->set($cacheKey, $counts, 5);
 
         return $counts;
     }
