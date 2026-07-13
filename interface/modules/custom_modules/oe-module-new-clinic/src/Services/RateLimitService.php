@@ -96,6 +96,15 @@ class RateLimitService
             [$bucketKey]
         );
 
+        // Audit follow-up (SCALE-3.1): the worker purges dead windows, but a
+        // worker is not guaranteed to be scheduled (the inline-export fallback
+        // exists for exactly that deployment) — and health.php writes per-IP
+        // rows into this table too. Amortized self-cleaning keeps the table
+        // bounded either way: ~1 request in 200 pays one indexed DELETE.
+        if (random_int(1, 200) === 1) {
+            $this->purgeOldWindows();
+        }
+
         return (int) ($row['count'] ?? 1);
     }
 

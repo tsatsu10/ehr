@@ -112,7 +112,8 @@ class VisitQueueService
         // so midnight rollover and explicit-date callers never mix buckets. A ≤5 s
         // stale badge is invisible next to the 30 s poll interval.
         $cacheKey = 'counts:' . $facilityId . ':' . $canonicalDate;
-        $cached = (new CacheService())->get($cacheKey);
+        $cache = new CacheService();
+        $cached = $cache->get($cacheKey);
         if (is_array($cached)) {
             /** @var array<string, int> $cached */
             return array_map('intval', $cached);
@@ -147,7 +148,7 @@ class VisitQueueService
         $counts['cancelled'] = $byState['cancelled'] ?? 0;
         $counts['closed_unpaid'] = $byState['closed_unpaid'] ?? 0;
 
-        (new CacheService())->set($cacheKey, $counts, 5);
+        $cache->set($cacheKey, $counts, 5);
 
         return $counts;
     }
