@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { oeFetch, withCsrfBody, OeFetchError } from './oeFetch';
+import { isPollBackoffActive, resetPollBackoff } from './pollBackoff';
 
 describe('withCsrfBody', () => {
   it('adds csrf_token_form to POST JSON objects', () => {
@@ -97,5 +98,30 @@ describe('oeFetch', () => {
       status: 403,
       code: 'csrf',
     } satisfies Partial<OeFetchError>);
+  });
+
+  it('exposes retry_after_ms and arms the poll backoff on 429 (SCALE-3.2)', async () => {
+    resetPollBackoff();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      statusText: 'Too Many Requests',
+      text: async () => JSON.stringify({
+        success: false,
+        message: 'Too many requests — slowing down',
+        data: { code: 'rate_limited', retry_after_ms: 12_000 },
+      }),
+    }));
+
+    await expect(
+      oeFetch('doctor.queue', { ajaxUrl: '/ajax.php' })
+    ).rejects.toMatchObject({
+      status: 429,
+      code: 'rate_limited',
+      retryAfterMs: 12_000,
+    } satisfies Partial<OeFetchError>);
+
+    expect(isPollBackoffActive()).toBe(true);
+    resetPollBackoff();
   });
 });

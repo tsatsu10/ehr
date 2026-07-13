@@ -28,6 +28,13 @@ class RateLimitService
     /** Windows are one minute; anything older than this is unreachable garbage. */
     private const PURGE_AFTER_SECONDS = 3600;
 
+    /**
+     * SCALE-3.2 — default budget for recurring poll actions, per user per action
+     * per minute. Deliberately generous: legitimate desk polling is ~6/min per tab
+     * and export-status loops peak at 60/min; this only stops runaway clients.
+     */
+    public const POLL_LIMIT_PER_MINUTE_DEFAULT = 90;
+
     public function __construct(
         private readonly ClinicConfigService $config = new ClinicConfigService()
     ) {
@@ -44,6 +51,28 @@ class RateLimitService
         if ($this->consume($action, $userId, $this->currentWindow()) > $limit) {
             throw new \RuntimeException('Rate limit exceeded', 429);
         }
+    }
+
+    /**
+     * SCALE-3.2 — generous devil-proofing budget for poll actions. Buckets are
+     * prefixed 'poll.' so they never collide with an action's own tighter limit.
+     */
+    public function assertPollWithinLimit(string $action, int $userId): void
+    {
+        $limit = max(1, $this->config->getInt(
+            'rate_limit_poll_per_minute',
+            self::POLL_LIMIT_PER_MINUTE_DEFAULT
+        ));
+
+        if ($this->consume('poll.' . $action, $userId, $this->currentWindow()) > $limit) {
+            throw new \RuntimeException('Rate limit exceeded', 429);
+        }
+    }
+
+    /** How long until the current fixed window rolls over (for retry_after_ms). */
+    public static function msUntilNextWindow(): int
+    {
+        return max(1000, (60 - (int) date('s')) * 1000);
     }
 
     /**

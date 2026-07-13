@@ -653,6 +653,48 @@ class AjaxActionPolicy
     ];
 
     /**
+     * SCALE-3.2 — actions the frontend hits on a RECURRING TIMER (desk/board
+     * polls, shell badge refresh, export-status loops). These carry a generous
+     * per-user-per-action rate budget (`rate_limit_poll_per_minute`, default 90 —
+     * legitimate use is ~6/min per tab, export-status loops peak at 60/min) so a
+     * stuck client, a devtools loop, or a stolen session can't melt the DB.
+     * Islands receive `retry_after_ms` on 429 and back off for one cycle.
+     *
+     * @var array<string, true>
+     */
+    private const POLL_ACTIONS = [
+        // Shell badge refresh (every 30 s from every open shell page).
+        'queue.counts' => true,
+        // Desk queues + board (every 10–30 s per open desk).
+        'visit.board' => true,
+        'triage.queue' => true,
+        'doctor.queue' => true,
+        'cashier.queue' => true,
+        'lab.queue' => true,
+        'pharmacy.queue' => true,
+        'outreach.queue' => true,
+        'doctor.roster' => true,
+        'lab_ops.worklist' => true,
+        'pharm_ops.worklist' => true,
+        'queue_bridge.list' => true,
+        // Scheduling delta polls.
+        'scheduling.flow_board.poll' => true,
+        'scheduling.calendar.poll' => true,
+        // Communications hub refresh.
+        'communications.hub_counts' => true,
+        'communications.messages_list' => true,
+        'communications.reminders_list' => true,
+        // Daily-reports auto-refresh.
+        'reports.daily' => true,
+        'reports.scheduling' => true,
+        'reports.ancillary' => true,
+        'reports.documentation_integrity' => true,
+        // Export-status loops (1/s while an export runs, ≤150 attempts).
+        'cohort.export_status' => true,
+        'reports.export_status' => true,
+    ];
+
+    /**
      * @return array{type: string, acl?: string, acls?: array<int, string>, deprecated?: bool}
      */
     public function describe(string $action): array
@@ -901,6 +943,25 @@ class AjaxActionPolicy
     public function readOnlyActions(): array
     {
         return array_keys(self::READONLY_ACTIONS);
+    }
+
+    /**
+     * SCALE-3.2 — is this a recurring-timer poll action that carries the generous
+     * per-user poll rate budget?
+     */
+    public function isPollAction(string $action): bool
+    {
+        return isset(self::POLL_ACTIONS[$this->normalizeAction($action)]);
+    }
+
+    /**
+     * The poll-action set (SCALE-3.2). Exposed for guardrail tests.
+     *
+     * @return array<int, string>
+     */
+    public function pollActions(): array
+    {
+        return array_keys(self::POLL_ACTIONS);
     }
 
     public function requiresSingleAcl(string $action): ?string

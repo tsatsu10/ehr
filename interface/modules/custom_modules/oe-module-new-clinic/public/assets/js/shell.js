@@ -7,6 +7,9 @@
     var REFRESH_MS = 30000;
     var SIDEBAR_COLLAPSED_KEY = 'nc-sidebar-collapsed';
     var SIDEBAR_COLLAPSED_KEY_LEGACY = 'oe-nc-sidebar-collapsed';
+    // SCALE-3.2 — when the server rate-limits queue.counts (429 + retry_after_ms),
+    // pause the badge poll until the budget window rolls over.
+    var pollBackoffUntil = 0;
 
     function init(root) {
         if (!root) {
@@ -400,12 +403,20 @@
         if (!ajaxUrl) {
             return;
         }
+        if (Date.now() < pollBackoffUntil) {
+            return; // SCALE-3.2 — server asked us to slow down
+        }
 
         var suffix = window.NewClinicUI ? window.NewClinicUI.facilityQuerySuffix(root) : '';
         var url = ajaxUrl + '?action=queue.counts' + suffix;
         window.NewClinicUI.getJson(url)
             .then(function (result) {
                 var payload = result.payload;
+                if (result.status === 429) {
+                    var retryMs = payload && payload.data && payload.data.retry_after_ms;
+                    pollBackoffUntil = Date.now() + Math.min(Math.max(Number(retryMs) || 30000, 1000), 120000);
+                    return;
+                }
                 if (!payload.success || !payload.data || !payload.data.counts) {
                     return;
                 }

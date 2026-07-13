@@ -1,0 +1,2 @@
+import{m as e,x as t}from"./dist-tbPPP6CB.js";import{n}from"./badge-BAR8CqVl.js";var r=t();function i(e){return e===`severe`?`danger`:`warning`}function a({chips:t,className:a,style:o}){return t.length?(0,r.jsx)(`div`,{className:e(`flex flex-wrap gap-1.5`,a),style:o,children:t.map(e=>{let t=n({variant:i(e.variant)});return e.href?(0,r.jsx)(`a`,{href:e.href,target:`_blank`,rel:`noopener noreferrer`,className:t,children:e.label},e.label):(0,r.jsx)(`span`,{className:t,children:e.label},e.label)})}):null}export{a as t};
+//# sourceMappingURL=ChipCloud-CjblF0np.js.map

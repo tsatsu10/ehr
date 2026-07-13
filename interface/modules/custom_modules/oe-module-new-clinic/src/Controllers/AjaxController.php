@@ -47,6 +47,7 @@ use OpenEMR\Modules\NewClinic\Exceptions\UndispensedRxException;
 use OpenEMR\Modules\NewClinic\Exceptions\UnsignedEncounterException;
 use OpenEMR\Modules\NewClinic\Exceptions\VisitNotTakeableException;
 use OpenEMR\Modules\NewClinic\Services\AjaxActionPolicy;
+use OpenEMR\Modules\NewClinic\Services\RateLimitService;
 use OpenEMR\Modules\NewClinic\Services\PatientCohortSearchService;
 use OpenEMR\Modules\NewClinic\Services\BillOpsAccessService;
 use OpenEMR\Modules\NewClinic\Services\LabOpsAccessService;
@@ -130,6 +131,22 @@ class AjaxController
             && session_status() === PHP_SESSION_ACTIVE
             && $this->svc(AjaxActionPolicy::class)->isReadOnly($action)) {
             session_write_close();
+        }
+
+        // SCALE-3.2 — devil-proofing: recurring poll actions carry a generous
+        // per-user-per-action budget so a stuck client, a devtools loop, or a
+        // stolen session can't melt the DB. Runs after the session close (the
+        // counter lives in the DB, not the session); islands read retry_after_ms
+        // and back off for one cycle.
+        if ($action !== '' && $this->svc(AjaxActionPolicy::class)->isPollAction($action)) {
+            try {
+                $this->svc(RateLimitService::class)->assertPollWithinLimit($action, $userId);
+            } catch (\RuntimeException) {
+                $this->respond(false, 'Too many requests — slowing down', [
+                    'code' => 'rate_limited',
+                    'retry_after_ms' => RateLimitService::msUntilNextWindow(),
+                ], 429);
+            }
         }
 
         try {

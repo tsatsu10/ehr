@@ -270,6 +270,8 @@ Guiding rules for ALL future code in this module:
 - **Why:** a stuck client, a hostile script with a stolen session, or a devtools loop cannot melt the DB.
 - **Verify:** script 100 polls/min → limited; normal desk usage never hits it (soak a desk for 10 min, zero limit errors in the log).
 
+- **Status (2026-07-13): DONE.** 24 recurring-timer actions classified in `AjaxActionPolicy::POLL_ACTIONS` (desk queues, board, shell `queue.counts`, ops worklists, scheduling delta polls, comms refresh, daily-reports auto-refresh, export-status loops); `AjaxController` enforces `RateLimitService::assertPollWithinLimit()` on them centrally (`poll.`-prefixed buckets so an action's own tighter limit stays independent). Budget `rate_limit_poll_per_minute` default **90** (not the plan's 30 — export-status loops legitimately poll 60/min at 1 Hz; desk polls are ~6/min per tab, so 90 still stops any runaway). 429 envelope carries `retry_after_ms` (ms to window rollover). Client: `oeFetch` arms a tab-wide backoff on 429+retry_after_ms (`core/pollBackoff.ts`); `useInterval` skips network-poll ticks while armed (client-only ticks opt out via `respectPollBackoff: false`); shell.js has the same guard for the badge poll. Live-proven: 95 hammer calls → exactly 90 ok + 5 limited. 16 frontend + 5 PHP new tests; asset `20260713pollbudget`.
+
 ### SCALE-3.3 — Cache layer abstraction (Redis-ready, APCu/DB first)
 
 - **Files (new):** `src/Services/CacheService.php`.

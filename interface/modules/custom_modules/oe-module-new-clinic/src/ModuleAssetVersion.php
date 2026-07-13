@@ -13,5 +13,5 @@ namespace OpenEMR\Modules\NewClinic;
 
 class ModuleAssetVersion
 {
-    public const VERSION = '20260712cohortjob';
+    public const VERSION = '20260713pollbudget';
 }

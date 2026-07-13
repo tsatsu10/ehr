@@ -38,6 +38,10 @@ class RateLimitServiceTest extends TestCase
             'DELETE FROM new_clinic_rate_limit WHERE bucket_key LIKE ?',
             ['patients.search:u9900%']
         );
+        sqlStatement(
+            'DELETE FROM new_clinic_rate_limit WHERE bucket_key LIKE ?',
+            ['poll.nc_test.rate_limit%']
+        );
     }
 
     private function makeService(int $limit): RateLimitService
@@ -95,6 +99,36 @@ class RateLimitServiceTest extends TestCase
         $this->expectExceptionCode(429);
         $this->expectExceptionMessage('Rate limit exceeded');
         $service->assertWithinLimit('patients.search', self::USER_A);
+    }
+
+    public function testPollBucketsAreSeparateFromTheActionOwnBucket(): void
+    {
+        // SCALE-3.2 — 'poll.' prefix: exhausting an action's own budget must not
+        // consume its poll budget, and vice versa.
+        $service = new RateLimitService();
+        $service->consume(self::ACTION, self::USER_A, '209901010000');
+        $service->consume(self::ACTION, self::USER_A, '209901010000');
+
+        $this->assertSame(1, $service->consume('poll.' . self::ACTION, self::USER_A, '209901010000'));
+    }
+
+    public function testAssertPollWithinLimitThrows429PastBudget(): void
+    {
+        $service = $this->makeService(2); // mocked rate_limit_poll_per_minute = 2
+        $service->assertPollWithinLimit(self::ACTION, self::USER_A);
+        $service->assertPollWithinLimit(self::ACTION, self::USER_A);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionCode(429);
+        $service->assertPollWithinLimit(self::ACTION, self::USER_A);
+    }
+
+    public function testMsUntilNextWindowIsWithinTheMinute(): void
+    {
+        $ms = RateLimitService::msUntilNextWindow();
+
+        $this->assertGreaterThanOrEqual(1000, $ms);
+        $this->assertLessThanOrEqual(60000, $ms);
     }
 
     public function testPurgeOldWindowsDropsOnlyStaleRows(): void

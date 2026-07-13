@@ -13,6 +13,7 @@
  */
 
 import { readPageContext } from './types';
+import { notePollRateLimited } from './pollBackoff';
 
 export interface OeFetchOptions extends Omit<RequestInit, 'body'> {
   /** Object body — will be JSON-encoded automatically. */
@@ -49,13 +50,24 @@ export type OeEnvelope<T> = OeEnvelopeSuccess<T> | OeEnvelopeError;
 export class OeFetchError extends Error {
   public readonly status: number;
   public readonly code: string;
+  /** Present on rate-limit (429) responses — ms until the budget window rolls over. */
+  public readonly retryAfterMs?: number;
 
-  public constructor(message: string, status: number, code: string) {
+  public constructor(message: string, status: number, code: string, retryAfterMs?: number) {
     super(message);
     this.name = 'OeFetchError';
     this.status = status;
     this.code = code;
+    this.retryAfterMs = retryAfterMs;
   }
+}
+
+function envelopeRetryAfterMs(data: unknown): number | undefined {
+  if (data !== null && typeof data === 'object' && 'retry_after_ms' in data) {
+    const ms = (data as { retry_after_ms?: unknown }).retry_after_ms;
+    if (typeof ms === 'number' && Number.isFinite(ms) && ms > 0) return ms;
+  }
+  return undefined;
 }
 
 function envelopeErrorCode(data: unknown): string {
@@ -156,7 +168,15 @@ export async function oeFetch<T>(
     const code = envelope && envelope.success === false
       ? envelopeErrorCode(envelope.data)
       : 'http_error';
-    throw new OeFetchError(message, response.status, code);
+    const retryAfterMs = envelope && envelope.success === false
+      ? envelopeRetryAfterMs(envelope.data)
+      : undefined;
+    // SCALE-3.2 — a 429 carrying retry_after_ms is the poll limiter: pause
+    // recurring polls tab-wide until the budget window rolls over.
+    if (response.status === 429 && retryAfterMs !== undefined) {
+      notePollRateLimited(retryAfterMs);
+    }
+    throw new OeFetchError(message, response.status, code, retryAfterMs);
   }
 
   if (!envelope || !envelope.success) {

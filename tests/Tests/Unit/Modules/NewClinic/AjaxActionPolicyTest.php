@@ -162,6 +162,38 @@ class AjaxActionPolicyTest extends TestCase
         }
     }
 
+    // ---- SCALE-3.2: poll-action rate budget ------------------------------
+
+    public function testRecurringPollsCarryThePollBudget(): void
+    {
+        $policy = new AjaxActionPolicy();
+
+        foreach (
+            [
+                'queue.counts', 'visit.board', 'triage.queue', 'doctor.queue',
+                'cashier.queue', 'lab.queue', 'pharmacy.queue', 'doctor.roster',
+                'lab_ops.worklist', 'pharm_ops.worklist', 'queue_bridge.list',
+                'scheduling.flow_board.poll', 'scheduling.calendar.poll',
+                'communications.hub_counts', 'cohort.export_status',
+                'reports.export_status',
+            ] as $action
+        ) {
+            $this->assertTrue($policy->isPollAction($action), "$action should be a poll action");
+        }
+    }
+
+    public function testMutationsAndOneShotReadsAreNotPollActions(): void
+    {
+        $policy = new AjaxActionPolicy();
+
+        foreach (
+            ['cashier.pay', 'visit.start', 'patients.search', 'patients.create',
+                'admin.config', 'visit.detail'] as $action
+        ) {
+            $this->assertFalse($policy->isPollAction($action), "$action must NOT be a poll action");
+        }
+    }
+
     public function testReadOnlyActionsAreNormalizedAndUnique(): void
     {
         $policy = new AjaxActionPolicy();

@@ -1,2 +1,0 @@
-import{C as e,w as t}from"./dist-DIKAfs_x.js";var n=t(e(),1);function r(e){let t=n.useRef(e);return n.useEffect(()=>{t.current=e}),n.useMemo(()=>((...e)=>t.current?.(...e)),[])}export{r as t};
-//# sourceMappingURL=dist-DJeSOuFK.js.map

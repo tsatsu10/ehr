@@ -152,7 +152,7 @@ export function FlowBoardLens({
       }
       return { ...current, lanes: tickFlowBoardWaitTimes(current.lanes) };
     });
-  }, 60_000);
+  }, 60_000, { respectPollBackoff: false }); // client-only wait-time tick, no network
 
   const toggleLaneCollapse = useCallback((status: string) => {
     setCollapsedLanes((current) => {
