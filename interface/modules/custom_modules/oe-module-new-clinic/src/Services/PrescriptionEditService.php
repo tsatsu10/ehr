@@ -65,7 +65,7 @@ class PrescriptionEditService
             $facilityId = $this->visitScope->resolveDeskFacilityId();
         }
 
-        $existing = $prescriptionId > 0 ? $this->loadPrescription($prescriptionId, $pid) : null;
+        $existing = $prescriptionId > 0 ? $this->loadPrescription($prescriptionId, $pid, $encounter) : null;
 
         return [
             'visit_id' => $visitId,
@@ -86,13 +86,23 @@ class PrescriptionEditService
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function searchDrugs(int $pid, string $query): array
+    public function searchDrugs(int $visitId, string $query): array
     {
         $this->assertAccess();
 
         $query = Sanitize::searchToken($query);
         if (mb_strlen($query) < 2) {
             return [];
+        }
+
+        // Derive pid from the visit server-side (never trust a client-supplied
+        // pid for scoping) -- otherwise an arbitrary pid would let a caller
+        // probe another, possibly inaccessible, patient's allergy list via the
+        // allergy_match flag on each result row.
+        $visit = $this->queueService->getVisitForActor($visitId);
+        $pid = (int) ($visit['pid'] ?? 0);
+        if ($pid > 0) {
+            $this->facilityScope->assertPatientAccessible($pid);
         }
 
         $allergies = $pid > 0 ? $this->loadAllergies($pid) : [];
@@ -141,6 +151,16 @@ class PrescriptionEditService
         if ($drugName === '') {
             throw new \InvalidArgumentException('A medication name is required');
         }
+
+        // Mirrors PharmOpsDispenseService::confirmDispense()'s server-side gate --
+        // the frontend disables Save while an allergy warning is unacknowledged,
+        // but that alone is a client-side-only guard; a direct API call must be
+        // rejected the same way a direct dispense-confirm call already is.
+        $allergies = $this->loadAllergies($pid);
+        if (PharmOpsSafetyService::hasDrugAllergyWarning($drugName, $allergies) && empty($input['allergy_acknowledged'])) {
+            throw new \InvalidArgumentException('Acknowledge allergy warning before saving');
+        }
+
         $drugId = (int) ($input['drug_id'] ?? 0);
         $dosage = mb_substr(trim((string) ($input['dosage'] ?? '')), 0, 100);
         $quantity = mb_substr(trim((string) ($input['quantity'] ?? '')), 0, 25);
@@ -160,7 +180,7 @@ class PrescriptionEditService
         $providerId = $this->resolveProviderId($pid, $encounter, $actorUserId);
 
         if ($prescriptionId > 0) {
-            $this->assertPrescriptionBelongsToPatient($prescriptionId, $pid);
+            $this->assertPrescriptionBelongsToVisit($prescriptionId, $pid, $encounter);
             QueryUtils::sqlStatementThrowException(
                 'UPDATE prescriptions
                  SET drug = ?, drug_id = ?, dosage = ?, quantity = ?, route = ?, `interval` = ?,
@@ -225,14 +245,14 @@ class PrescriptionEditService
     /**
      * @return array<string, mixed>|null
      */
-    private function loadPrescription(int $prescriptionId, int $pid): ?array
+    private function loadPrescription(int $prescriptionId, int $pid, int $encounter): ?array
     {
         $row = QueryUtils::querySingleRow(
             'SELECT id, drug, drug_id, dosage, quantity, route, `interval`, refills, note,
                     drug_dosage_instructions, prn, start_date, end_date
              FROM prescriptions
-             WHERE id = ? AND patient_id = ? AND active = 1',
-            [$prescriptionId, $pid]
+             WHERE id = ? AND patient_id = ? AND encounter = ? AND active = 1',
+            [$prescriptionId, $pid, $encounter]
         );
 
         if (!is_array($row)) {
@@ -256,14 +276,19 @@ class PrescriptionEditService
         ];
     }
 
-    private function assertPrescriptionBelongsToPatient(int $prescriptionId, int $pid): void
+    /**
+     * Scoped to the visit's own encounter, not just the patient -- a prescription
+     * from a different (e.g. older) encounter for the same patient must never be
+     * silently rewritten by this visit's Add Rx form.
+     */
+    private function assertPrescriptionBelongsToVisit(int $prescriptionId, int $pid, int $encounter): void
     {
         $row = QueryUtils::querySingleRow(
-            'SELECT id FROM prescriptions WHERE id = ? AND patient_id = ?',
-            [$prescriptionId, $pid]
+            'SELECT id FROM prescriptions WHERE id = ? AND patient_id = ? AND encounter = ?',
+            [$prescriptionId, $pid, $encounter]
         );
         if (!is_array($row) || empty($row['id'])) {
-            throw new \InvalidArgumentException('Prescription does not belong to this patient');
+            throw new \InvalidArgumentException('Prescription does not belong to this visit');
         }
     }
 

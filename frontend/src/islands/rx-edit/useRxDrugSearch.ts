@@ -3,7 +3,7 @@ import { oeFetch } from '@core/oeFetch';
 import type { DrugSearchRow } from './rxEditTypes';
 
 interface UseRxDrugSearchOptions {
-  pid: number;
+  visitId: number;
   query: string;
   ajaxUrl: string;
   csrfToken: string;
@@ -11,7 +11,7 @@ interface UseRxDrugSearchOptions {
 }
 
 export function useRxDrugSearch({
-  pid,
+  visitId,
   query,
   ajaxUrl,
   csrfToken,
@@ -39,7 +39,7 @@ export function useRxDrugSearch({
       setError(null);
       void oeFetch<{ rows: DrugSearchRow[] }>('pharmacy.rx_search_drugs', {
         ...fetchOptions,
-        params: { pid: String(pid), query: trimmed },
+        params: { visit_id: String(visitId), query: trimmed },
       })
         .then((data) => {
           if (seq !== searchSeq.current) return;
@@ -56,7 +56,7 @@ export function useRxDrugSearch({
     }, 250);
 
     return () => window.clearTimeout(timer);
-  }, [fetchOptions, minLength, pid, query]);
+  }, [fetchOptions, minLength, visitId, query]);
 
   return { results, loading, error };
 }

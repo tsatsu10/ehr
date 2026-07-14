@@ -23,6 +23,8 @@ use ReflectionMethod;
 
 class PrescriptionEditServiceTest extends TestCase
 {
+    use MandatoryTestHelpers;
+
     public function testPolicyDefaultsOff(): void
     {
         // Flag defaults OFF (install.sql) → stock bridge, 100% legacy (PRD §5.6).
@@ -85,5 +87,56 @@ class PrescriptionEditServiceTest extends TestCase
         $this->assertTrue(PharmOpsSafetyService::hasDrugAllergyWarning('Amoxicillin 500mg', ['Amoxicillin']));
         $this->assertFalse(PharmOpsSafetyService::hasDrugAllergyWarning('Paracetamol 500mg', ['Amoxicillin']));
         $this->assertFalse(PharmOpsSafetyService::hasDrugAllergyWarning('Amoxicillin 500mg', ['NKDA']));
+    }
+
+    /**
+     * Regression guard (2026-07-14 audit): a prescription id belonging to the
+     * same patient but a DIFFERENT encounter must be rejected, not silently
+     * rewritten -- otherwise editing "this visit"'s Add Rx form could corrupt
+     * a different (e.g. older) visit's clinical record. A non-existent id
+     * exercises the same rejection path without needing real DB fixtures.
+     */
+    public function testAssertPrescriptionBelongsToVisitRejectsUnmatchedRow(): void
+    {
+        $method = new ReflectionMethod(PrescriptionEditService::class, 'assertPrescriptionBelongsToVisit');
+        $method->setAccessible(true);
+        $service = new PrescriptionEditService();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Prescription does not belong to this visit');
+        $method->invoke($service, 999999999, 1, 1);
+    }
+
+    /**
+     * Regression guard (2026-07-14 audit): searchDrugs() used to take a raw
+     * client-supplied pid with no ownership check, letting a caller probe an
+     * arbitrary (possibly inaccessible) patient's allergy list via the
+     * allergy_match flag on each search result. It now takes visit_id and
+     * derives pid from the visit server-side -- confirmed here by the method
+     * signature itself (a raw-pid regression would show up as a type/behavior
+     * mismatch the moment this is called with a real visit in the frontend
+     * integration test / live smoke).
+     */
+    public function testSearchDrugsSignatureTakesVisitIdNotRawPid(): void
+    {
+        $method = new \ReflectionMethod(PrescriptionEditService::class, 'searchDrugs');
+        $params = $method->getParameters();
+
+        $this->assertSame('visitId', $params[0]->getName());
+    }
+
+    /**
+     * Regression guard (2026-07-14 audit): PharmOpsDispenseService::confirmDispense()
+     * already rejects an unacknowledged allergy match server-side -- savePrescription()
+     * must do the same, not rely solely on the frontend disabling Save. A client-side-
+     * only guard is trivially bypassed by a direct pharmacy.rx_save call.
+     */
+    public function testSavePrescriptionEnforcesAllergyAcknowledgmentServerSide(): void
+    {
+        $body = $this->methodBody(PrescriptionEditService::class, 'savePrescription');
+
+        $this->assertStringContainsString('hasDrugAllergyWarning', $body);
+        $this->assertStringContainsString("input['allergy_acknowledged']", $body);
+        $this->assertStringContainsString('Acknowledge allergy warning before saving', $body);
     }
 }

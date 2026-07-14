@@ -12,6 +12,7 @@ import { showDeskToast } from '@components/deskToast';
 import { t } from '@core/i18n';
 import { oeFetch } from '@core/oeFetch';
 import { useRxDrugSearch } from './useRxDrugSearch';
+import { hasDrugAllergyWarning } from './rxAllergyMatch';
 import type {
   DrugSearchRow,
   ExistingPrescription,
@@ -54,9 +55,8 @@ export function RxEditForm({ ajaxUrl, csrfToken, visitId, prescriptionId = 0, re
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const pid = data?.pid ?? 0;
   const { results: drugResults, loading: searching } = useRxDrugSearch({
-    pid,
+    visitId,
     query: drugQuery,
     ajaxUrl,
     csrfToken,
@@ -105,7 +105,7 @@ export function RxEditForm({ ajaxUrl, csrfToken, visitId, prescriptionId = 0, re
     };
   }, [fetchOptions, prescriptionId, visitId]);
 
-  const allergies = data?.allergies ?? [];
+  const allergies = useMemo(() => data?.allergies ?? [], [data]);
   const isEdit = draft.prescriptionId > 0;
 
   const pickDrug = useCallback((row: DrugSearchRow) => {
@@ -115,10 +115,13 @@ export function RxEditForm({ ajaxUrl, csrfToken, visitId, prescriptionId = 0, re
     setAllergyAck(false);
   }, []);
 
-  const selectedAllergyMatch = useMemo(() => {
-    if (!draft.drugName) return false;
-    return drugResults.some((row) => row.display_name === draft.drugName && row.allergy_match);
-  }, [draft.drugName, drugResults]);
+  // Checked against the typed drug name directly (not just catalog search
+  // hits) so a free-text / non-formulary medication -- explicitly supported
+  // by this form -- still gets an allergy check, not only a formulary pick.
+  const selectedAllergyMatch = useMemo(
+    () => hasDrugAllergyWarning(draft.drugName, allergies),
+    [draft.drugName, allergies],
+  );
 
   const canSave = draft.drugName.trim() !== '' && (!selectedAllergyMatch || allergyAck);
 
@@ -151,6 +154,7 @@ export function RxEditForm({ ajaxUrl, csrfToken, visitId, prescriptionId = 0, re
           prn: draft.prn,
           start_date: draft.startDate,
           end_date: draft.endDate || null,
+          allergy_acknowledged: allergyAck,
         },
       });
       setExistingRx(result.existing_prescriptions ?? []);

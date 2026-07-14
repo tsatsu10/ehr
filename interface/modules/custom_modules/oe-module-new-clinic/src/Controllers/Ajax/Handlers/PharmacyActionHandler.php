@@ -161,9 +161,9 @@ final class PharmacyActionHandler implements AjaxActionHandlerInterface
                 $this->host->respond(true, 'ok', $formData);
                 break;
             case 'pharmacy.rx_search_drugs':
-                $pid = (int) ($_REQUEST['pid'] ?? 0);
+                $searchVisitId = (int) ($_REQUEST['visit_id'] ?? 0);
                 $query = (string) ($_REQUEST['query'] ?? '');
-                $rows = $this->host->svc(PrescriptionEditService::class)->searchDrugs($pid, $query);
+                $rows = $this->host->svc(PrescriptionEditService::class)->searchDrugs($searchVisitId, $query);
                 $this->host->respond(true, 'ok', ['rows' => $rows]);
                 break;
             case 'pharmacy.rx_save':

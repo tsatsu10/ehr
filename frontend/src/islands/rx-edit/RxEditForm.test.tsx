@@ -77,6 +77,11 @@ describe('RxEditForm', () => {
             visit_id: 10,
             drug_name: 'Amoxicillin',
             dosage: '500mg',
+            // Regression guard (2026-07-14 audit): the server now enforces
+            // this flag independently (PrescriptionEditServiceTest::
+            // testSavePrescriptionEnforcesAllergyAcknowledgmentServerSide) --
+            // the client must actually send it, not just gate the button.
+            allergy_acknowledged: false,
           }),
         }),
       ),
@@ -86,7 +91,7 @@ describe('RxEditForm', () => {
   it('requires the allergy acknowledgment before saving when the selected drug matches a documented allergy', async () => {
     mockedFetch.mockImplementation((action) => {
       if (action === 'pharmacy.rx_form_data') {
-        return Promise.resolve(formData({ allergies: ['Penicillin'] }) as never);
+        return Promise.resolve(formData({ allergies: ['Amoxicillin'] }) as never);
       }
       if (action === 'pharmacy.rx_search_drugs') {
         return Promise.resolve({
@@ -117,6 +122,31 @@ describe('RxEditForm', () => {
 
     fireEvent.click(screen.getByLabelText('I verified allergies with the patient'));
     expect(screen.getByRole('button', { name: 'Add prescription' })).toBeEnabled();
+  });
+
+  it('requires the allergy acknowledgment for a free-typed drug name too, not just a formulary pick', async () => {
+    // Regression guard (2026-07-14 audit): the allergy check originally only
+    // looked at the server's precomputed flag on formulary SEARCH RESULTS --
+    // a drug typed freehand (no formulary match, explicitly supported by
+    // this form) never got checked at all.
+    mockedFetch.mockImplementation((action) => {
+      if (action === 'pharmacy.rx_form_data') {
+        return Promise.resolve(formData({ allergies: ['Sulfamethoxazole'] }) as never);
+      }
+      if (action === 'pharmacy.rx_search_drugs') {
+        return Promise.resolve({ rows: [] } as never);
+      }
+      return Promise.resolve(saveResult as never);
+    });
+    render(<RxEditForm {...baseProps()} />);
+    await screen.findByText('Ama Owusu');
+
+    fireEvent.change(screen.getByLabelText('Drug name'), {
+      target: { value: 'Sulfamethoxazole-Trimethoprim' },
+    });
+
+    expect(await screen.findByText('Allergy warning')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add prescription' })).toBeDisabled();
   });
 
   it('pre-fills an existing prescription in edit mode', async () => {
