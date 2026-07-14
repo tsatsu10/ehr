@@ -53,6 +53,24 @@ export interface PharmDestroyedReport {
   items: PharmDestroyedRow[];
 }
 
+export interface PharmActivityRow {
+  drug_id: number;
+  drug_name: string;
+  sales: number;
+  distributions: number;
+  purchases: number;
+  transfers: number;
+  adjustments: number;
+  on_hand: number;
+}
+
+export interface PharmActivityReport {
+  from: string;
+  to: string;
+  generated_at: string;
+  items: PharmActivityRow[];
+}
+
 export interface PharmOpsHubProps {
   ajaxUrl: string;
   csrfToken: string;

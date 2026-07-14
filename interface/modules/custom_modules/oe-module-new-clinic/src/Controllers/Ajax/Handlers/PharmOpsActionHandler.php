@@ -42,6 +42,7 @@ final class PharmOpsActionHandler implements AjaxActionHandlerInterface
         'pharm_ops.reports_embed',
         'pharm_ops.inventory.reorder',
         'pharm_ops.inventory.destroyed',
+        'pharm_ops.inventory.activity',
         'pharm_ops.controlled_catalog',
         'pharm_ops.controlled_catalog_save',
         'pharm_ops.catalog_list',
@@ -160,6 +161,16 @@ final class PharmOpsActionHandler implements AjaxActionHandlerInterface
                     true,
                     'ok',
                     $this->host->svc(PharmOpsReportsService::class)->destroyedReport(
+                        isset($_REQUEST['from']) ? (string) $_REQUEST['from'] : null,
+                        isset($_REQUEST['to']) ? (string) $_REQUEST['to'] : null
+                    )
+                );
+                break;
+            case 'pharm_ops.inventory.activity':
+                $this->host->respond(
+                    true,
+                    'ok',
+                    $this->host->svc(PharmOpsReportsService::class)->activityReport(
                         isset($_REQUEST['from']) ? (string) $_REQUEST['from'] : null,
                         isset($_REQUEST['to']) ? (string) $_REQUEST['to'] : null
                     )

@@ -5,6 +5,7 @@ import { Button } from '@components/ui/button';
 import { NativeSelect } from '@components/ui/native-select';
 import { PharmOpsReorderReport } from './PharmOpsReorderReport';
 import { PharmOpsDestroyedReport } from './PharmOpsDestroyedReport';
+import { PharmOpsActivityReport } from './PharmOpsActivityReport';
 import type { PharmOpsReportCatalog, PharmOpsReportItem } from './pharmOpsTypes';
 
 interface PharmOpsReportsPaneProps {
@@ -112,6 +113,15 @@ export function PharmOpsReportsPane({ ajaxUrl, csrfToken }: PharmOpsReportsPaneP
         if (selectedReport.native && selectedReport.id === 'destroyed') {
           return (
             <PharmOpsDestroyedReport
+              ajaxUrl={ajaxUrl}
+              csrfToken={csrfToken}
+              fallbackUrl={selectedReport.embed_url}
+            />
+          );
+        }
+        if (selectedReport.native && selectedReport.id === 'activity') {
+          return (
+            <PharmOpsActivityReport
               ajaxUrl={ajaxUrl}
               csrfToken={csrfToken}
               fallbackUrl={selectedReport.embed_url}

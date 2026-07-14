@@ -182,6 +182,94 @@ class PharmOpsReportsService
         ];
     }
 
+    /**
+     * Native inventory-activity movement summary: per-product units moved in the
+     * period by derived transaction type (sale / distribution / transfer /
+     * purchase / adjustment) plus current on-hand. Type is derived exactly as the
+     * stock report does (pid → sale, distributor_id → distribution,
+     * xfer_inventory_id → transfer, fee ≠ 0 → purchase, else adjustment) and
+     * quantities use the stock report's -quantity display sign (out = negative).
+     *
+     * Deliberately does NOT back-derive a start/end balance (the sign-sensitive
+     * accounting piece) — the stock report stays available for full parity.
+     *
+     * @return array{from: string, to: string, generated_at: string, items: list<array<string, mixed>>}
+     */
+    public function activityReport(?string $from = null, ?string $to = null): array
+    {
+        $this->access->assertHubAccess();
+
+        $today = new \DateTimeImmutable('today');
+        $toDate = $this->normalizeDate($to) ?? $today->format('Y-m-d');
+        $fromDate = $this->normalizeDate($from)
+            ?? $today->modify('-' . self::DESTROYED_LOOKBACK_DAYS . ' days')->format('Y-m-d');
+        if ($fromDate > $toDate) {
+            [$fromDate, $toDate] = [$toDate, $fromDate];
+        }
+
+        $rows = QueryUtils::fetchRecords(
+            "SELECT d.drug_id, d.name,
+                -SUM(CASE WHEN ds.pid <> 0 THEN ds.quantity ELSE 0 END) AS sales,
+                -SUM(CASE WHEN ds.pid = 0 AND COALESCE(ds.distributor_id, 0) <> 0 THEN ds.quantity ELSE 0 END) AS distributions,
+                -SUM(CASE WHEN ds.pid = 0 AND COALESCE(ds.distributor_id, 0) = 0 AND COALESCE(ds.xfer_inventory_id, 0) <> 0 THEN ds.quantity ELSE 0 END) AS transfers,
+                -SUM(CASE WHEN ds.pid = 0 AND COALESCE(ds.distributor_id, 0) = 0 AND COALESCE(ds.xfer_inventory_id, 0) = 0 AND ds.fee <> 0 THEN ds.quantity ELSE 0 END) AS purchases,
+                -SUM(CASE WHEN ds.pid = 0 AND COALESCE(ds.distributor_id, 0) = 0 AND COALESCE(ds.xfer_inventory_id, 0) = 0 AND ds.fee = 0 THEN ds.quantity ELSE 0 END) AS adjustments
+             FROM drug_sales ds
+             INNER JOIN drugs d ON d.drug_id = ds.drug_id
+             WHERE ds.sale_date >= ? AND ds.sale_date <= ?
+             GROUP BY d.drug_id, d.name
+             ORDER BY d.name ASC
+             LIMIT " . self::REPORT_ROW_CAP,
+            [$fromDate, $toDate]
+        ) ?: [];
+
+        $onHand = $this->currentOnHandMap();
+
+        $items = array_map(static function (array $row) use ($onHand): array {
+            $drugId = (int) ($row['drug_id'] ?? 0);
+
+            return [
+                'drug_id' => $drugId,
+                'drug_name' => trim((string) ($row['name'] ?? 'Medication')),
+                'sales' => (int) round((float) ($row['sales'] ?? 0)),
+                'distributions' => (int) round((float) ($row['distributions'] ?? 0)),
+                'purchases' => (int) round((float) ($row['purchases'] ?? 0)),
+                'transfers' => (int) round((float) ($row['transfers'] ?? 0)),
+                'adjustments' => (int) round((float) ($row['adjustments'] ?? 0)),
+                'on_hand' => $onHand[$drugId] ?? 0,
+            ];
+        }, $rows);
+
+        return [
+            'from' => $fromDate,
+            'to' => $toDate,
+            'generated_at' => date('c'),
+            'items' => $items,
+        ];
+    }
+
+    /**
+     * Current live on-hand per drug (non-destroyed lots), keyed by drug_id.
+     *
+     * @return array<int, int>
+     */
+    private function currentOnHandMap(): array
+    {
+        $rows = QueryUtils::fetchRecords(
+            "SELECT drug_id, SUM(on_hand) AS on_hand
+             FROM drug_inventory
+             WHERE destroy_date IS NULL
+             GROUP BY drug_id"
+        ) ?: [];
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int) ($row['drug_id'] ?? 0)] = (int) round((float) ($row['on_hand'] ?? 0));
+        }
+
+        return $map;
+    }
+
     private function normalizeDate(?string $value): ?string
     {
         $value = trim((string) $value);
@@ -218,6 +306,7 @@ class PharmOpsReportsService
                     'label' => 'Inventory activity',
                     'description' => 'Summary of stock movements for the selected period.',
                     'embed_url' => $webroot . '/interface/reports/inventory_activity.php',
+                    'native' => true,
                 ],
                 [
                     'id' => self::REPORT_TRANSACTIONS,
