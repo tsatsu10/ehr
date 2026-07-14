@@ -46,6 +46,24 @@ class PrescriptionEditService
     }
 
     /**
+     * PharmacyShortcutService::preflight() already requires 'in_pharmacy'
+     * before it ever builds the redirect to this page, so under normal
+     * navigation visit_id is guaranteed to be at that state -- but a stale
+     * tab or bookmarked rx-edit.php URL can still present an old visit_id
+     * that has since moved on (or never reached pharmacy at all). Without
+     * this check, that would silently attach a new prescription to the
+     * wrong encounter instead of the one currently at the pharmacy desk.
+     *
+     * @param array<string, mixed> $visit
+     */
+    private function assertVisitInPharmacy(array $visit): void
+    {
+        if (($visit['state'] ?? '') !== 'in_pharmacy') {
+            throw new \InvalidArgumentException('Visit is not in active pharmacy work');
+        }
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function getFormData(int $visitId, int $prescriptionId = 0): array
@@ -53,6 +71,7 @@ class PrescriptionEditService
         $this->assertAccess();
 
         $visit = $this->queueService->getVisitForActor($visitId);
+        $this->assertVisitInPharmacy($visit);
         $pid = (int) ($visit['pid'] ?? 0);
         $encounter = (int) ($visit['encounter'] ?? 0);
         if ($pid <= 0) {
@@ -140,6 +159,7 @@ class PrescriptionEditService
 
         $visitId = (int) ($input['visit_id'] ?? 0);
         $visit = $this->queueService->getVisitForActor($visitId);
+        $this->assertVisitInPharmacy($visit);
         $pid = (int) ($visit['pid'] ?? 0);
         $encounter = (int) ($visit['encounter'] ?? 0);
         if ($pid <= 0 || $encounter <= 0) {

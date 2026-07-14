@@ -139,4 +139,45 @@ class PrescriptionEditServiceTest extends TestCase
         $this->assertStringContainsString("input['allergy_acknowledged']", $body);
         $this->assertStringContainsString('Acknowledge allergy warning before saving', $body);
     }
+
+    /**
+     * Regression guard (2026-07-14, live-diagnosed): a prescription got
+     * created against a visit still sitting 'with_doctor' from days earlier
+     * instead of the visit actually 'in_pharmacy' right now -- a stale
+     * rx-edit.php tab/bookmark can carry an old visit_id, and neither
+     * getFormData() nor savePrescription() checked the visit's state before
+     * this fix (PharmacyShortcutService::preflight() only checks it at
+     * redirect-build time, which a stale tab bypasses entirely).
+     */
+    public function testAssertVisitInPharmacyRejectsOtherStates(): void
+    {
+        $method = new ReflectionMethod(PrescriptionEditService::class, 'assertVisitInPharmacy');
+        $method->setAccessible(true);
+        $service = new PrescriptionEditService();
+
+        foreach (['with_doctor', 'ready_for_pharmacy', 'completed', ''] as $state) {
+            try {
+                $method->invoke($service, ['state' => $state]);
+                $this->fail("Expected rejection for state '{$state}'");
+            } catch (\InvalidArgumentException $e) {
+                $this->assertSame('Visit is not in active pharmacy work', $e->getMessage());
+            }
+        }
+
+        // Does not throw for the one state this form is actually reachable from.
+        $method->invoke($service, ['state' => 'in_pharmacy']);
+        $this->addToAssertionCount(1);
+    }
+
+    public function testGetFormDataAndSavePrescriptionCheckVisitStateBeforeTouchingData(): void
+    {
+        foreach (['getFormData', 'savePrescription'] as $methodName) {
+            $body = $this->methodBody(PrescriptionEditService::class, $methodName);
+            $this->assertStringContainsString(
+                'assertVisitInPharmacy',
+                $body,
+                "{$methodName} must check the visit is in_pharmacy before reading/writing prescriptions"
+            );
+        }
+    }
 }
