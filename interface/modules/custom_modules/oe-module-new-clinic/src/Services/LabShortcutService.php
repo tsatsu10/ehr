@@ -23,6 +23,7 @@ class LabShortcutService
         private readonly ProcedureOrderDeepLinkService $procedureOrderLinks = new ProcedureOrderDeepLinkService(),
         private readonly EncounterIdentityStripService $identityStrip = new EncounterIdentityStripService(),
         private readonly LabDirectService $labDirectService = new LabDirectService(),
+        private readonly ProcedureOrderEnginePolicy $procedureOrderPolicy = new ProcedureOrderEnginePolicy(),
     ) {
     }
 
@@ -55,11 +56,13 @@ class LabShortcutService
         $modulePublic = ($GLOBALS['webroot'] ?? '') . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
 
         $redirectUrl = match ($shortcut) {
-            'orders' => $this->procedureOrderLinks->buildNewOrderUrl(
-                $pid,
-                $encounter,
-                $modulePublic . 'lab.php'
-            ),
+            'orders' => $this->procedureOrderPolicy->isNativeProcOrderEnabled((int) ($visit['facility_id'] ?? 0))
+                ? $modulePublic . 'proc-order.php?visit_id=' . urlencode((string) $visitId) . '&return_to=lab'
+                : $this->procedureOrderLinks->buildNewOrderUrl(
+                    $pid,
+                    $encounter,
+                    $modulePublic . 'lab.php'
+                ),
             'results' => ($GLOBALS['webroot'] ?? '') . '/interface/patient_file/summary/labdata.php?set_pid=' . urlencode((string) $pid),
         };
 

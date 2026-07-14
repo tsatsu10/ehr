@@ -75,15 +75,21 @@ if ($formsRowId > 0) {
 
 $returnTo = strtolower(trim((string) ($_GET['return_to'] ?? 'hub')));
 $returnTab = trim((string) ($_GET['tab'] ?? 'orders'));
-$returnUrl = $returnTo === 'doctor'
-    ? $moduleUrl . '/doctor.php'
-    : $moduleUrl . '/clinical-doc/index.php?visit_id=' . urlencode((string) $visitId)
-        . '&tab=' . urlencode($returnTab !== '' ? $returnTab : 'orders');
+$returnUrl = match ($returnTo) {
+    'doctor' => $moduleUrl . '/doctor.php',
+    'lab' => $moduleUrl . '/lab.php',
+    default => $moduleUrl . '/clinical-doc/index.php?visit_id=' . urlencode((string) $visitId)
+        . '&tab=' . urlencode($returnTab !== '' ? $returnTab : 'orders'),
+};
 
+// Lab Desk's own "Orders" shortcut reaches this page too (LabShortcutService) --
+// lab staff need to place orders here just like they could via the old stock
+// bridge, so this entry point's ACL is a superset of the Clinical Doc Hub's
+// orders lens, not a re-scope of that shared constant.
 (new PageController())->renderForAnyAcl(
     'proc-order/index.html.twig',
     'Lab / procedure order',
-    ClinicalDocAccessService::ORDERS_ACLS,
+    [...ClinicalDocAccessService::ORDERS_ACLS, 'new_lab', 'new_lab_lead'],
     [
         'island_entry' => 'proc-order',
         'shell_nav_id' => 'clinicdochub',
