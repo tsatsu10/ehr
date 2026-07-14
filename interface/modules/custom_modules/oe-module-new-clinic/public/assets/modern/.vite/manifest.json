@@ -87,12 +87,12 @@
       "_ConfirmModal-DCBAu4kU.js"
     ]
   },
-  "_FindPatientDrawer-BRMknNGS.js": {
-    "file": "chunks/FindPatientDrawer-BRMknNGS.js",
+  "_FindPatientDrawer-CJep6D-5.js": {
+    "file": "chunks/FindPatientDrawer-CJep6D-5.js",
     "name": "FindPatientDrawer",
     "imports": [
       "_dist-tbPPP6CB.js",
-      "_PatientSearchWidget-C4AyyyAY.js",
+      "_PatientSearchWidget-DfTwzhZm.js",
       "_SlideOver-DCsmcdqp.js"
     ]
   },
@@ -159,8 +159,8 @@
       "_usePatientSearch-DnW1bcUM.js"
     ]
   },
-  "_PatientSearchWidget-C4AyyyAY.js": {
-    "file": "chunks/PatientSearchWidget-C4AyyyAY.js",
+  "_PatientSearchWidget-DfTwzhZm.js": {
+    "file": "chunks/PatientSearchWidget-DfTwzhZm.js",
     "name": "PatientSearchWidget",
     "imports": [
       "_dist-tbPPP6CB.js",
@@ -176,6 +176,7 @@
       "_search-BeeyDJW2.js",
       "_user-plus-Dn-Pmuel.js",
       "_x-kMBuji7a.js",
+      "_zap-B8qXv54N.js",
       "_patientBannerUtils--Wf2pVIG.js",
       "_dialog-AraDuUFl.js",
       "_usePatientSearch-DnW1bcUM.js"
@@ -942,6 +943,13 @@
       "_createLucideIcon-KYOmVplY.js"
     ]
   },
+  "_zap-B8qXv54N.js": {
+    "file": "chunks/zap-B8qXv54N.js",
+    "name": "zap",
+    "imports": [
+      "_createLucideIcon-KYOmVplY.js"
+    ]
+  },
   "src/islands/admin-hub/index.tsx": {
     "file": "admin-hub.js",
     "name": "admin-hub",
@@ -1156,7 +1164,7 @@
       "_SlideOver-DCsmcdqp.js",
       "_useSharedDeviceSession-B5LEs0fH.js",
       "_deskConflict-CDME5CEJ.js",
-      "_FindPatientDrawer-BRMknNGS.js",
+      "_FindPatientDrawer-CJep6D-5.js",
       "_bannerPreviewProps-D7kf4PzH.js",
       "_label-rdO-R48J.js",
       "_textarea-CGK9aPKU.js",
@@ -1227,7 +1235,7 @@
       "_calendar-check-DQ_lAib8.js",
       "_circle-x-B95IoX3k.js",
       "_loader-circle-ColUJYSX.js",
-      "_PatientSearchWidget-C4AyyyAY.js",
+      "_PatientSearchWidget-DfTwzhZm.js",
       "_triangle-alert-W4dnT5Gz.js",
       "_user-round-nJnDpjGC.js",
       "_chevron-left-BmoFbzaE.js",
@@ -1590,7 +1598,14 @@
     "isEntry": true,
     "imports": [
       "_dist-tbPPP6CB.js",
+      "_badge-BAR8CqVl.js",
+      "_createLucideIcon-KYOmVplY.js",
+      "_loader-circle-ColUJYSX.js",
       "_checkbox-CO2qwb_g.js",
+      "_clipboard-list-_hwVTT2d.js",
+      "_flask-conical-D1PP443x.js",
+      "_zap-B8qXv54N.js",
+      "_SegmentedControl-Br4FDvZV.js",
       "_deskCalloutStyles-6nEYeUuL.js",
       "_label-rdO-R48J.js",
       "_textarea-CGK9aPKU.js",
@@ -1707,7 +1722,7 @@
       "_SlideOver-DCsmcdqp.js",
       "_useSharedDeviceSession-B5LEs0fH.js",
       "_deskConflict-CDME5CEJ.js",
-      "_FindPatientDrawer-BRMknNGS.js",
+      "_FindPatientDrawer-CJep6D-5.js",
       "_bannerPreviewProps-D7kf4PzH.js",
       "_label-rdO-R48J.js",
       "_textarea-CGK9aPKU.js",
