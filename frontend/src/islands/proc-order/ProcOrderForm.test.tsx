@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { oeFetch } from '@core/oeFetch';
 import { ProcOrderForm } from './ProcOrderForm';
@@ -85,6 +85,23 @@ describe('ProcOrderForm', () => {
     );
   });
 
+  it('selects a test by clicking anywhere on its row, not just the checkbox', async () => {
+    // Regression guard (2026-07-14 audit): the redesign wraps each test row in
+    // a <label> so the whole card is clickable, not just the checkbox itself.
+    // Confirm the row text actually forwards the click to the checkbox.
+    mockedFetch.mockResolvedValue(formData() as never);
+    render(<ProcOrderForm {...baseProps()} />);
+
+    await screen.findByText('Malaria RDT');
+    const checkbox = screen.getByLabelText(/Malaria RDT/);
+    expect(checkbox).not.toBeChecked();
+
+    fireEvent.click(screen.getByText('Malaria RDT'));
+
+    expect(checkbox).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Place order' })).toBeEnabled();
+  });
+
   it('posts the selected tests, priority and lab to proc_order.save', async () => {
     mockedFetch.mockImplementation((action) =>
       Promise.resolve((action === 'proc_order.form_data' ? formData() : saveResult) as never),
@@ -134,5 +151,35 @@ describe('ProcOrderForm', () => {
     expect(screen.getByLabelText(/Full Blood Count/)).not.toBeChecked();
     // Save button reflects edit mode.
     expect(screen.getByRole('button', { name: 'Save order' })).toBeEnabled();
+  });
+
+  it('shows the Urgent badge for the default "high"-id priority option', async () => {
+    // Regression guard (2026-07-14 audit): the shipped default Order_Priority
+    // list has id "high" / title "Urgent" (ProcedureOrderFormService::
+    // DEFAULT_PRIORITIES) -- matching only on the id missed this real-world
+    // case entirely, since "high" doesn't contain "urgent".
+    mockedFetch.mockResolvedValue(
+      formData({
+        priority_options: [
+          { id: 'normal', title: 'Routine' },
+          { id: 'high', title: 'Urgent' },
+          { id: 'stat', title: 'STAT' },
+        ],
+        order: {
+          procedure_order_id: 55,
+          lab_id: 1,
+          order_priority: 'high',
+          specimen_type: '',
+          specimen_volume: '',
+          clinical_hx: '',
+          order_diagnosis: '',
+          codes: [],
+        },
+      }) as never,
+    );
+    render(<ProcOrderForm {...baseProps()} procedureOrderId={55} />);
+
+    await screen.findByText('Edit lab / procedure order');
+    expect(within(screen.getByRole('banner')).getByText('Urgent')).toBeInTheDocument();
   });
 });

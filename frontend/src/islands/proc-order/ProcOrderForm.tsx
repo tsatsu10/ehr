@@ -187,7 +187,12 @@ export function ProcOrderForm({
   if (!data) return null;
 
   const selectedCount = selected.size;
-  const isUrgentPriority = /urgent|stat|asap/i.test(priority);
+  // Match on the option's display title, not its id -- the default "Urgent"
+  // priority ships with id "high" (ProcedureOrderFormService::DEFAULT_PRIORITIES),
+  // and a clinic can re-key Order_Priority list_options to anything. The title
+  // is the only part meant to read as English regardless of the stored id.
+  const priorityTitle = data.priority_options.find((opt) => opt.id === priority)?.title ?? '';
+  const isUrgentPriority = /urgent|stat|asap|high/i.test(priorityTitle);
 
   return (
     <div className="nc-proc-order">
