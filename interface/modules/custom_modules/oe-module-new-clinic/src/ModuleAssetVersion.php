@@ -13,5 +13,5 @@ namespace OpenEMR\Modules\NewClinic;
 
 class ModuleAssetVersion
 {
-    public const VERSION = '20260714rxeditaudit';
+    public const VERSION = '20260714dispenseprintfix';
 }

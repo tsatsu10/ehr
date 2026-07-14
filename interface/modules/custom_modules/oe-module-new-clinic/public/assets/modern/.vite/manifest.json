@@ -182,8 +182,8 @@
       "_usePatientSearch-DnW1bcUM.js"
     ]
   },
-  "_PharmacyPrescriptionsTable-pdJcc2X6.js": {
-    "file": "chunks/PharmacyPrescriptionsTable-pdJcc2X6.js",
+  "_PharmacyPrescriptionsTable-DElbquBL.js": {
+    "file": "chunks/PharmacyPrescriptionsTable-DElbquBL.js",
     "name": "PharmacyPrescriptionsTable",
     "imports": [
       "_dist-tbPPP6CB.js",
@@ -1174,7 +1174,7 @@
       "_deskToast-DqOKiMck.js",
       "_SupervisorCombobox-BGjUecL_.js",
       "_pharmOpsPrintRx-BDpbvmPl.js",
-      "_PharmacyPrescriptionsTable-pdJcc2X6.js",
+      "_PharmacyPrescriptionsTable-DElbquBL.js",
       "_postDeskAction-CAl4SHwG.js",
       "_LabPanelModal-6JtNHYvH.js",
       "_clinicalDocApi-BP5mKvBs.js"
@@ -1576,7 +1576,7 @@
       "_textarea-CGK9aPKU.js",
       "_ConfirmModal-DCBAu4kU.js",
       "_pharmOpsPrintRx-BDpbvmPl.js",
-      "_PharmacyPrescriptionsTable-pdJcc2X6.js",
+      "_PharmacyPrescriptionsTable-DElbquBL.js",
       "_postDeskAction-CAl4SHwG.js",
       "_clinicalDocApi-BP5mKvBs.js",
       "_EsignOverrideModal-C1foyYy7.js",

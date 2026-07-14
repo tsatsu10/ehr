@@ -14,6 +14,10 @@ interface PharmacyShortcutsProps {
   rxListUrl?: string;
   showPharmacyService?: boolean;
   pharmacyServiceStarted?: boolean;
+  /** At least one prescription with a "to dispense" line exists right now. */
+  hasDispensable?: boolean;
+  /** At least one prescription exists to print. */
+  hasPrintable?: boolean;
   onDispense: () => void;
   onAddRx: () => void;
   onPrintRx?: () => void;
@@ -26,16 +30,18 @@ interface PrimaryActionProps {
   label: string;
   disabled: boolean;
   id?: string;
+  title?: string;
   onClick: () => void;
 }
 
-function PrimaryAction({ icon: Icon, label, disabled, id, onClick }: PrimaryActionProps) {
+function PrimaryAction({ icon: Icon, label, disabled, id, title, onClick }: PrimaryActionProps) {
   return (
     <button
       type="button"
       id={id}
       className="nc-pharmacy-shortcut-primary"
       disabled={disabled}
+      title={title}
       onClick={onClick}
     >
       <Icon className="nc-pharmacy-shortcut-primary__icon h-4 w-4" aria-hidden="true" />
@@ -94,6 +100,8 @@ export function PharmacyShortcuts({
   rxListUrl,
   showPharmacyService = false,
   pharmacyServiceStarted = false,
+  hasDispensable = true,
+  hasPrintable = true,
   onDispense,
   onAddRx,
   onPrintRx,
@@ -137,7 +145,8 @@ export function PharmacyShortcuts({
         <PrimaryAction
           icon={Pill}
           label="Dispense"
-          disabled={disabled}
+          disabled={disabled || !hasDispensable}
+          title={!disabled && !hasDispensable ? 'Nothing to dispense yet — add a prescription first' : undefined}
           id="nc-pharmacy-dispense-primary"
           onClick={onDispense}
         />
@@ -152,7 +161,8 @@ export function PharmacyShortcuts({
           <PrimaryAction
             icon={Printer}
             label="Print Rx"
-            disabled={disabled}
+            disabled={disabled || !hasPrintable}
+            title={!disabled && !hasPrintable ? 'No prescriptions to print yet — add one first' : undefined}
             onClick={onPrintRx}
           />
         )}

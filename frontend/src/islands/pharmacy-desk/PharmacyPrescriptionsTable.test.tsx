@@ -46,4 +46,22 @@ describe('PharmacyPrescriptionsTable', () => {
     fireEvent.click(screen.getByRole('button', { name: /Dispense/i }));
     expect(onDispense).toHaveBeenCalledWith(42);
   });
+
+  it('offers an Add Rx shortcut in the empty state instead of pointing at a stock screen', () => {
+    // Regression guard (2026-07-14): this callout used to say "Doctor
+    // creates Rx in core" with no way forward from the Pharmacy Desk itself
+    // -- now that a native Add Rx page exists, the empty state should offer
+    // it directly.
+    const onAddRx = vi.fn();
+    render(<PharmacyPrescriptionsTable prescriptions={[]} onAddRx={onAddRx} />);
+
+    expect(screen.queryByText(/creates Rx in core/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add Rx' }));
+    expect(onAddRx).toHaveBeenCalled();
+  });
+
+  it('omits the Add Rx button when the desk is not ready to open it', () => {
+    render(<PharmacyPrescriptionsTable prescriptions={[]} />);
+    expect(screen.queryByRole('button', { name: 'Add Rx' })).not.toBeInTheDocument();
+  });
 });

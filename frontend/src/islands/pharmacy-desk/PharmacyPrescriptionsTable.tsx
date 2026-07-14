@@ -21,6 +21,8 @@ interface PharmacyPrescriptionsTableProps {
   dispenseBlocked?: boolean;
   onDispense?: (prescriptionId: number) => void;
   onPrintRx?: (prescriptionId: number) => void;
+  /** Present + defined only when the desk is ready to open Add Rx right now. */
+  onAddRx?: () => void;
 }
 
 function rxStatusBadgeVariant(status: string): 'success' | 'warning' {
@@ -39,11 +41,17 @@ export function PharmacyPrescriptionsTable({
   dispenseBlocked = false,
   onDispense,
   onPrintRx,
+  onAddRx,
 }: PharmacyPrescriptionsTableProps) {
   if (!prescriptions.length) {
     return (
-      <div className={deskCalloutClass('info', 'py-2 mb-0')}>
-        No prescriptions on this encounter yet. Doctor creates Rx in core.
+      <div className={deskCalloutClass('info', 'py-2 mb-0 flex flex-wrap items-center justify-between gap-2')}>
+        <span>No prescriptions on this encounter yet.</span>
+        {onAddRx ? (
+          <Button type="button" size="sm" onClick={onAddRx}>
+            Add Rx
+          </Button>
+        ) : null}
       </div>
     );
   }

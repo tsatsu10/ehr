@@ -90,6 +90,7 @@ export function PharmacyActivePane({
   const walkinTriage = data.walkin_triage;
   const needsWalkinOutcome = !!walkinTriage?.enabled;
   const completeBlocked = needsWalkinOutcome && !walkinOutcome;
+  const hasPrescriptions = (data.prescriptions?.length ?? 0) > 0;
   const firstUndispensedId = data.prescriptions?.find((line) => line.status === 'to_dispense')?.id;
   const firstPrintableId = data.prescriptions?.[0]?.id;
 
@@ -102,7 +103,16 @@ export function PharmacyActivePane({
       onDispenseRx(firstUndispensedId);
       return;
     }
-    onOpenDispense();
+    // When Pharmacy Operations is on but there's nothing eligible to
+    // dispense, the button is disabled (see hasDispensable below) rather
+    // than falling back to the stock encounter page -- with zero
+    // prescriptions there's nothing there to dispense either, so that
+    // "fallback" was a dead end, not a real escape hatch. When Pharmacy
+    // Operations is off there's no native path at all, so the stock page
+    // stays the only option regardless of prescriptions (unchanged).
+    if (!pharmOpsEnabled || hasPrescriptions) {
+      onOpenDispense();
+    }
   };
 
   const handlePrintPrimary = () => {
@@ -147,6 +157,7 @@ export function PharmacyActivePane({
             dispenseBlocked={blocked || !inPharmacy}
             onDispense={onDispenseRx}
             onPrintRx={onPrintRx}
+            onAddRx={inPharmacy && !blocked ? onOpenRxEdit : undefined}
           />
         </PharmacyActiveSection>
 
@@ -161,6 +172,8 @@ export function PharmacyActivePane({
               walkinOutcome === 'external_rx_dispensed' && !!walkinTriage?.external_rx
             }
             pharmacyServiceStarted={walkinTriage?.external_rx?.pharmacy_service_started}
+            hasDispensable={!pharmOpsEnabled || !!firstUndispensedId}
+            hasPrintable={hasPrescriptions}
             onDispense={handleDispensePrimary}
             onAddRx={onOpenRxEdit}
             onPrintRx={data.can_print_rx ? handlePrintPrimary : undefined}
