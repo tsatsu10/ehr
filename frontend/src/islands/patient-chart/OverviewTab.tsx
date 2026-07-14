@@ -32,6 +32,7 @@ interface OverviewTabProps {
   visitBoardUrl: string;
   activityItems: ActivityFeedItem[];
   activityHasMore: boolean;
+  activityLoading?: boolean;
   lookbackDays?: number;
   olderHistoryMessage?: string | null;
   loadingMore: boolean;
@@ -292,6 +293,7 @@ export function OverviewTab({
   visitBoardUrl,
   activityItems,
   activityHasMore,
+  activityLoading = false,
   lookbackDays = 90,
   olderHistoryMessage = null,
   loadingMore,
@@ -398,7 +400,13 @@ export function OverviewTab({
         bodyClassName="pt-2"
       >
         {activityItems.length === 0 ? (
-          <ChartEmptyState title="No recent visit activity" />
+          activityLoading ? (
+            <p className="mb-0 py-2 text-sm text-[var(--oe-nc-text-muted)]">
+              Loading recent activity…
+            </p>
+          ) : (
+            <ChartEmptyState title="No recent visit activity" />
+          )
         ) : (
           <div id="nc-chart-activity-feed-list" className="nc-chart-feed-list">
             {activityItems.map((item, idx) => {

@@ -98,6 +98,7 @@ export function PatientChart({
   const [activityItems, setActivityItems] = useState<ActivityFeedItem[]>([]);
   const [activityOffset, setActivityOffset] = useState(0);
   const [activityHasMore, setActivityHasMore] = useState(false);
+  const [activityLoading, setActivityLoading] = useState(true);
   const [activityLoadingMore, setActivityLoadingMore] = useState(false);
   const [lookbackDays, setLookbackDays] = useState(90);
   const [canExtendLookback, setCanExtendLookback] = useState(false);
@@ -166,19 +167,27 @@ export function PatientChart({
         json: { pid, context: 'patient-chart' },
       });
       setPreview(data);
-
-      if (visitIdFilter > 0) {
-        const feed = await fetchActivityFeed(0, data.activity_feed?.lookback_days ?? 90);
-        applyActivityFeed(feed);
-      } else {
-        applyActivityFeed(data.activity_feed ?? {});
-      }
     } catch (err) {
       setPreviewError(err instanceof Error ? err.message : 'Could not load chart.');
-    } finally {
       setPreviewLoading(false);
+      setActivityLoading(false);
+      return;
     }
-  }, [applyActivityFeed, fetchActivityFeed, fetchOptions, pid, visitIdFilter]);
+    // Banner is ready — stop the blocking spinner before the heavy activity
+    // feed loads, so first paint no longer waits on it.
+    setPreviewLoading(false);
+
+    setActivityLoading(true);
+    try {
+      // 0 = let the server resolve the clinic's configured lookback window.
+      const feed = await fetchActivityFeed(0, 0);
+      applyActivityFeed(feed);
+    } catch {
+      /* non-fatal — banner and the rest of the overview still render */
+    } finally {
+      setActivityLoading(false);
+    }
+  }, [applyActivityFeed, fetchActivityFeed, fetchOptions, pid]);
 
   const reloadChecklist = useCallback(async () => {
     try {
@@ -650,6 +659,7 @@ export function PatientChart({
                     visitBoardUrl={visitBoardUrl}
                     activityItems={activityItems}
                     activityHasMore={activityHasMore}
+                    activityLoading={activityLoading}
                     lookbackDays={lookbackDays}
                     olderHistoryMessage={olderHistoryMessage}
                     loadingMore={activityLoadingMore}

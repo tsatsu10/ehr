@@ -24,6 +24,24 @@ class PatientActivityFeedService
 
     public const OLDER_HISTORY_MESSAGE = 'Older history — use Visits tab';
 
+    /**
+     * Safety headroom added to the per-source row cap so that suppression
+     * (action-required de-dupe) can never starve a page below its limit.
+     */
+    private const FEED_SUPPRESS_MARGIN = 20;
+
+    /**
+     * Per-pid memoization for the two lookups that would otherwise run
+     * multiple times in a single chart load (resolveActiveVisit up to 3x,
+     * buildActionRequired up to 2x).
+     *
+     * @var array<int, array<string, mixed>|null>
+     */
+    private array $activeVisitCache = [];
+
+    /** @var array<int, array<int, array<string, mixed>>> */
+    private array $actionRequiredCache = [];
+
     public function __construct(
         private readonly FacilityScopeService $facilityScope = new FacilityScopeService(),
         private readonly EncounterSignService $signService = new EncounterSignService(),
@@ -44,6 +62,22 @@ class PatientActivityFeedService
             'action_required' => $this->buildActionRequired($pid),
             'activity_feed' => $this->getActivityFeed($pid, 0, self::PAGE_SIZE, true),
         ];
+    }
+
+    /**
+     * The "action required" banner block only — the cheap half of the overview.
+     * Kept in the blocking preview so the banner paints without waiting on the
+     * heavy activity feed (which the chart fetches separately).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getActionRequired(int $pid, bool $patientAlreadyVerified = false): array
+    {
+        if (!$patientAlreadyVerified) {
+            $this->facilityScope->assertPatientAccessible($pid);
+        }
+
+        return $this->buildActionRequired($pid);
     }
 
     /**
@@ -69,23 +103,33 @@ class PatientActivityFeedService
             ->format('Y-m-d 00:00:00');
         $facilityFilter = $this->facilityScope->getVisitFacilityFilterClause('v');
 
+        // Only the newest (offset + limit) rows from any single source can ever
+        // reach the merged page, so cap each source there (+ margin for the
+        // suppression pass) instead of pulling a flat 500/200. The cap scales
+        // with offset, so "load more" stays correct. The visit-filtered path
+        // keeps the old ceilings because it post-filters rows in PHP.
+        $isVisitFiltered = $visitId !== null && $visitId > 0;
+        $scaleCap = $offset + $limit + self::FEED_SUPPRESS_MARGIN;
+        $tableCap = $isVisitFiltered ? 500 : (int) min(500, $scaleCap);
+        $logCap = $isVisitFiltered ? 200 : (int) min(200, $scaleCap);
+
         $actionRequired = $this->buildActionRequired($pid);
         $suppressKeys = $this->buildFeedSuppressKeys($pid, $actionRequired);
 
         $merged = array_merge(
-            $this->fetchStateLogItems($pid, $since, $facilityFilter, $visitId),
-            $this->fetchVitalsSavedItems($pid, $since, $facilityFilter, $visitId),
-            $this->fetchLabOrderedItems($pid, $since, $facilityFilter, $visitId),
-            $this->fetchLabResultReadyItems($pid, $since, $facilityFilter, $visitId),
-            $this->fetchRxPrescribedItems($pid, $since, $facilityFilter, $visitId),
-            $this->fetchPharmacyDispensedItems($pid, $since, $facilityFilter, $visitId),
-            $this->fetchPaymentPostedItems($pid, $since, $facilityFilter, $visitId),
-            $this->fetchEncounterSignedItems($pid, $since, $facilityFilter, $visitId),
-            $this->fetchEncounterNoteSignedItems($pid, $since, $visitId),
-            $this->fetchEncounterDocumentSavedItems($pid, $since, $facilityFilter, $visitId),
-            $this->fetchCompletionOverrideItems($pid, $since, $visitId),
-            $this->fetchEsignOverrideItems($pid, $since, $facilityFilter, $visitId),
-            $this->fetchHardAssignedItems($pid, $since, $facilityFilter, $visitId),
+            $this->fetchStateLogItems($pid, $since, $facilityFilter, $visitId, $tableCap),
+            $this->fetchVitalsSavedItems($pid, $since, $facilityFilter, $visitId, $tableCap),
+            $this->fetchLabOrderedItems($pid, $since, $facilityFilter, $visitId, $tableCap),
+            $this->fetchLabResultReadyItems($pid, $since, $facilityFilter, $visitId, $tableCap),
+            $this->fetchRxPrescribedItems($pid, $since, $facilityFilter, $visitId, $tableCap),
+            $this->fetchPharmacyDispensedItems($pid, $since, $facilityFilter, $visitId, $tableCap),
+            $this->fetchPaymentPostedItems($pid, $since, $facilityFilter, $visitId, $tableCap),
+            $this->fetchEncounterSignedItems($pid, $since, $facilityFilter, $visitId, $tableCap),
+            $this->fetchEncounterNoteSignedItems($pid, $since, $visitId, $logCap),
+            $this->fetchEncounterDocumentSavedItems($pid, $since, $facilityFilter, $visitId, $tableCap),
+            $this->fetchCompletionOverrideItems($pid, $since, $visitId, $logCap),
+            $this->fetchEsignOverrideItems($pid, $since, $facilityFilter, $visitId, $logCap),
+            $this->fetchHardAssignedItems($pid, $since, $facilityFilter, $visitId, $logCap),
         );
 
         usort($merged, static function (array $a, array $b): int {
@@ -183,6 +227,10 @@ class PatientActivityFeedService
      */
     private function resolveActiveVisit(int $pid): ?array
     {
+        if (array_key_exists($pid, $this->activeVisitCache)) {
+            return $this->activeVisitCache[$pid];
+        }
+
         $visit = QueryUtils::querySingleRow(
             "SELECT id, pid, state, queue_number, encounter, facility_id
              FROM new_visit
@@ -192,7 +240,7 @@ class PatientActivityFeedService
             [$pid]
         );
 
-        return is_array($visit) && !empty($visit['id']) ? $visit : null;
+        return $this->activeVisitCache[$pid] = (is_array($visit) && !empty($visit['id']) ? $visit : null);
     }
 
     /**
@@ -204,6 +252,7 @@ class PatientActivityFeedService
         string $since,
         array $facilityFilter,
         ?int $visitId,
+        int $cap,
     ): array {
         $visitSql = $visitId !== null && $visitId > 0 ? ' AND v.id = ?' : '';
         $bind = array_merge([$pid, $since], $facilityFilter['bind']);
@@ -220,7 +269,7 @@ class PatientActivityFeedService
              LEFT JOIN users u ON u.id = l.actor_user_id
              WHERE v.pid = ? AND l.created_at >= ?{$facilityFilter['sql']}{$visitSql}
              ORDER BY l.created_at DESC, l.id DESC
-             LIMIT 500",
+             LIMIT {$cap}",
             $bind
         ) ?: [];
 
@@ -236,6 +285,7 @@ class PatientActivityFeedService
         string $since,
         array $facilityFilter,
         ?int $visitId,
+        int $cap,
     ): array {
         $visitSql = $visitId !== null && $visitId > 0 ? ' AND nv.id = ?' : '';
         $bind = array_merge([$pid, $since], $facilityFilter['bind']);
@@ -254,7 +304,7 @@ class PatientActivityFeedService
              LEFT JOIN users u ON u.username = f.user
              WHERE f.pid = ? AND fv.date >= ?{$facilityFilter['sql']}{$visitSql}
              ORDER BY fv.date DESC, fv.id DESC
-             LIMIT 500",
+             LIMIT {$cap}",
             $bind
         ) ?: [];
 
@@ -270,6 +320,7 @@ class PatientActivityFeedService
         string $since,
         array $facilityFilter,
         ?int $visitId,
+        int $cap,
     ): array {
         $visitSql = $visitId !== null && $visitId > 0 ? ' AND nv.id = ?' : '';
         $bind = array_merge([$pid, $since], $facilityFilter['bind']);
@@ -287,7 +338,7 @@ class PatientActivityFeedService
              LEFT JOIN new_visit nv ON nv.pid = po.patient_id AND nv.encounter = po.encounter_id
              WHERE po.patient_id = ? AND po.activity = 1 AND po.date_ordered >= DATE(?){$facilityFilter['sql']}{$visitSql}
              ORDER BY po.date_ordered DESC, po.procedure_order_id DESC
-             LIMIT 500",
+             LIMIT {$cap}",
             $bind
         ) ?: [];
 
@@ -303,6 +354,7 @@ class PatientActivityFeedService
         string $since,
         array $facilityFilter,
         ?int $visitId,
+        int $cap,
     ): array {
         $visitSql = $visitId !== null && $visitId > 0 ? ' AND nv.id = ?' : '';
         $bind = array_merge([$pid, $since], $facilityFilter['bind']);
@@ -324,7 +376,7 @@ class PatientActivityFeedService
              WHERE po.patient_id = ? AND pr.review_status = 'reviewed'
                AND pr.date_report >= ?{$facilityFilter['sql']}{$visitSql}
              ORDER BY pr.date_report DESC, pr.procedure_report_id DESC
-             LIMIT 500",
+             LIMIT {$cap}",
             $bind
         ) ?: [];
 
@@ -340,6 +392,7 @@ class PatientActivityFeedService
         string $since,
         array $facilityFilter,
         ?int $visitId,
+        int $cap,
     ): array {
         $visitSql = $visitId !== null && $visitId > 0 ? ' AND nv.id = ?' : '';
         $bind = array_merge([$pid, $since], $facilityFilter['bind']);
@@ -355,7 +408,7 @@ class PatientActivityFeedService
              LEFT JOIN new_visit nv ON nv.pid = rx.patient_id AND nv.encounter = rx.encounter
              WHERE rx.patient_id = ? AND rx.active = 1 AND rx.date_added >= DATE(?){$facilityFilter['sql']}{$visitSql}
              ORDER BY rx.date_added DESC, rx.id DESC
-             LIMIT 500",
+             LIMIT {$cap}",
             $bind
         ) ?: [];
 
@@ -371,6 +424,7 @@ class PatientActivityFeedService
         string $since,
         array $facilityFilter,
         ?int $visitId,
+        int $cap,
     ): array {
         $visitSql = $visitId !== null && $visitId > 0 ? ' AND nv.id = ?' : '';
         $bind = array_merge([$pid, $since], $facilityFilter['bind']);
@@ -389,7 +443,7 @@ class PatientActivityFeedService
              WHERE ds.pid = ? AND ds.prescription_id > 0 AND ds.trans_type = 1
                AND ds.sale_date >= DATE(?){$facilityFilter['sql']}{$visitSql}
              ORDER BY ds.sale_date DESC, ds.sale_id DESC
-             LIMIT 500",
+             LIMIT {$cap}",
             $bind
         ) ?: [];
 
@@ -405,6 +459,7 @@ class PatientActivityFeedService
         string $since,
         array $facilityFilter,
         ?int $visitId,
+        int $cap,
     ): array {
         $visitSql = $visitId !== null && $visitId > 0 ? ' AND r.visit_id = ?' : '';
         $bind = array_merge([$pid, $since], $facilityFilter['bind']);
@@ -420,7 +475,7 @@ class PatientActivityFeedService
              LEFT JOIN users u ON u.id = r.actor_user_id
              WHERE r.pid = ? AND r.created_at >= ?{$facilityFilter['sql']}{$visitSql}
              ORDER BY r.created_at DESC, r.id DESC
-             LIMIT 500",
+             LIMIT {$cap}",
             $bind
         ) ?: [];
 
@@ -436,6 +491,7 @@ class PatientActivityFeedService
         string $since,
         array $facilityFilter,
         ?int $visitId,
+        int $cap,
     ): array {
         $visitSql = $visitId !== null && $visitId > 0 ? ' AND nv.id = ?' : '';
         $bind = array_merge([$pid, $since], $facilityFilter['bind']);
@@ -458,7 +514,7 @@ class PatientActivityFeedService
                AND LOWER(f.formdir) <> '" . EncounterNoteEnginePolicy::NATIVE_FORMDIR . "'"
             . "{$facilityFilter['sql']}{$visitSql}
              ORDER BY es.datetime DESC, es.id DESC
-             LIMIT 500",
+             LIMIT {$cap}",
             $bind
         ) ?: [];
 
@@ -482,6 +538,7 @@ class PatientActivityFeedService
         string $since,
         array $facilityFilter,
         ?int $visitId,
+        int $cap,
     ): array {
         $excluded = implode("','", self::DOCUMENT_FEED_EXCLUDED_FORMDIRS);
         $visitSql = $visitId !== null && $visitId > 0 ? ' AND nv.id = ?' : '';
@@ -501,7 +558,7 @@ class PatientActivityFeedService
                AND LOWER(f.formdir) NOT IN ('{$excluded}')
                AND f.date >= ?{$facilityFilter['sql']}{$visitSql}
              ORDER BY f.date DESC, f.id DESC
-             LIMIT 500",
+             LIMIT {$cap}",
             $bind
         ) ?: [];
 
@@ -511,7 +568,7 @@ class PatientActivityFeedService
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function fetchCompletionOverrideItems(int $pid, string $since, ?int $visitId): array
+    private function fetchCompletionOverrideItems(int $pid, string $since, ?int $visitId, int $cap): array
     {
         $rows = QueryUtils::fetchRecords(
             "SELECT l.id, l.date AS occurred_at, l.user, l.comments
@@ -521,7 +578,7 @@ class PatientActivityFeedService
                AND l.comments LIKE ?
                AND l.date >= ?
              ORDER BY l.date DESC, l.id DESC
-             LIMIT 200",
+             LIMIT {$cap}",
             ['pid=' . $pid . ';%', $since]
         ) ?: [];
 
@@ -555,6 +612,7 @@ class PatientActivityFeedService
         string $since,
         array $facilityFilter,
         ?int $visitId,
+        int $cap,
     ): array {
         $rows = QueryUtils::fetchRecords(
             "SELECT l.id, l.date AS occurred_at, l.user, l.groupname, l.success, l.comments
@@ -564,7 +622,7 @@ class PatientActivityFeedService
                AND l.comments LIKE ?
                AND l.date >= ?
              ORDER BY l.date DESC, l.id DESC
-             LIMIT 200",
+             LIMIT {$cap}",
             ['pid=' . $pid . ';%', $since]
         ) ?: [];
 
@@ -603,6 +661,7 @@ class PatientActivityFeedService
         string $since,
         array $facilityFilter,
         ?int $visitId,
+        int $cap,
     ): array {
         $rows = QueryUtils::fetchRecords(
             "SELECT l.id, l.date AS occurred_at, l.comments, l.user
@@ -612,7 +671,7 @@ class PatientActivityFeedService
                AND l.comments LIKE ?
                AND l.date >= ?
              ORDER BY l.date DESC, l.id DESC
-             LIMIT 200",
+             LIMIT {$cap}",
             ['pid=' . $pid . ';%', $since]
         ) ?: [];
 
@@ -655,9 +714,13 @@ class PatientActivityFeedService
      */
     private function buildActionRequired(int $pid): array
     {
+        if (array_key_exists($pid, $this->actionRequiredCache)) {
+            return $this->actionRequiredCache[$pid];
+        }
+
         $visit = $this->resolveActiveVisit($pid);
         if ($visit === null) {
-            return [];
+            return $this->actionRequiredCache[$pid] = [];
         }
 
         $visitId = (int) ($visit['id'] ?? 0);
@@ -751,7 +814,7 @@ class PatientActivityFeedService
             }
         }
 
-        return $items;
+        return $this->actionRequiredCache[$pid] = $items;
     }
 
     /**
@@ -1408,7 +1471,7 @@ class PatientActivityFeedService
      *
      * @return array<int, array<string, mixed>>
      */
-    private function fetchEncounterNoteSignedItems(int $pid, string $since, ?int $visitId): array
+    private function fetchEncounterNoteSignedItems(int $pid, string $since, ?int $visitId, int $cap): array
     {
         $rows = QueryUtils::fetchRecords(
             "SELECT l.id, l.date AS occurred_at, l.groupname, l.comments,
@@ -1420,7 +1483,7 @@ class PatientActivityFeedService
                AND l.patient_id = ?
                AND l.date >= ?
              ORDER BY l.date DESC, l.id DESC
-             LIMIT 200",
+             LIMIT {$cap}",
             [$pid, $since]
         ) ?: [];
 

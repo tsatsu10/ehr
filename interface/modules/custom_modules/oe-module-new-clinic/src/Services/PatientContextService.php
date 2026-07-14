@@ -272,9 +272,11 @@ class PatientContextService
         $payload = $this->enrichVitalsToday($payload, $pid);
 
         if ($context === 'patient-chart') {
-            $overview = $this->activityFeed->getOverviewBlocks($pid, true);
-            $payload['action_required'] = $overview['action_required'];
-            $payload['activity_feed'] = $overview['activity_feed'];
+            // Keep the cheap "action required" block in the blocking preview so
+            // the banner paints immediately; the heavy activity feed is fetched
+            // separately by the chart (patients.chart.activity_feed) so it never
+            // gates first paint.
+            $payload['action_required'] = $this->activityFeed->getActionRequired($pid, true);
 
             $chargesLabel = $this->buildVisitChargesChip($pid, $activeVisit);
             if ($chargesLabel !== null && is_array($payload['active_visit'])) {
