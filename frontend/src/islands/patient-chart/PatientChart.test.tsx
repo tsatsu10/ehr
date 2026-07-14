@@ -75,7 +75,28 @@ describe('PatientChart', () => {
     expect(screen.getByText('No active visit today.')).toBeInTheDocument();
   });
 
-  it('switches to profile tab', async () => {
+  it('gates profile editing behind the Edit button for editors', async () => {
+    render(<PatientChart {...props} canEditProfile />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: /Profile/i }));
+    });
+
+    // Read-only by default — the form is not mounted until Edit is clicked.
+    expect(screen.queryByTestId('registration-form')).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Edit profile/i }));
+    });
+
+    expect(await screen.findByTestId('registration-form')).toBeInTheDocument();
+  });
+
+  it('hides the Edit button on the profile tab for non-editors', async () => {
     render(<PatientChart {...props} />);
 
     await act(async () => {
@@ -86,7 +107,8 @@ describe('PatientChart', () => {
       fireEvent.click(screen.getByRole('tab', { name: /Profile/i }));
     });
 
-    expect(await screen.findByTestId('registration-form')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Edit profile/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('registration-form')).not.toBeInTheDocument();
   });
 
   it('shows in-chart search when enabled', async () => {

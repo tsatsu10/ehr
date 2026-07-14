@@ -81,6 +81,7 @@ export function PatientChart({
   lettersHubUrl = '',
   canFlagFollowUp = false,
   enableVitalsTrends = false,
+  canEditProfile = false,
 }: PatientChartProps) {
   const resolvedInitialTab =
     isValidChartTab(initialTab) && (initialTab !== 'documents' || enableDocuments)
@@ -680,6 +681,7 @@ export function PatientChart({
                   registrationMode={registrationMode}
                   checklist={checklist}
                   payments={payments}
+                  canEditProfile={canEditProfile}
                   onProfileSaved={handleProfileSaved}
                 />
               </ChartTabPanel>

@@ -11,6 +11,7 @@
 
 require_once __DIR__ . '/bootstrap.php';
 
+use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Modules\NewClinic\Controllers\PageController;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalExportService;
@@ -71,6 +72,14 @@ $reactPatientChart = $config->get('enable_react_patient_chart', '1') === '1';
 $schedulingAccess = new SchedulingAccessService();
 $canFlagFollowUp = $schedulingAccess->canAccessHub($facilityId) && $schedulingAccess->canBookAppointment();
 
+// Profile (demographics) editing is limited to the front-of-house roles that own
+// registration data: front desk, nurse, admin. Everyone else gets a read-only
+// profile (no Edit button). Server-side, patients.update enforces the same set
+// (AjaxActionPolicy::PROFILE_EDIT_ACL_ANY) — this only gates the UI affordance.
+$canEditProfile = AclMain::aclCheckCore('new_clinic', 'new_reception')
+    || AclMain::aclCheckCore('new_clinic', 'new_nurse')
+    || AclMain::aclCheckCore('new_clinic', 'new_admin');
+
 (new PageController())->renderForAnyClinicRole(
     'patient-chart.html.twig',
     'Patient chart',
@@ -87,6 +96,7 @@ $canFlagFollowUp = $schedulingAccess->canAccessHub($facilityId) && $schedulingAc
         'enable_labels' => $config->getInt('enable_letters_labels', 0, $facilityId) === 1,
         'enable_vitals_trends' => $config->getInt('enable_vitals_trends', 0, $facilityId) === 1,
         'can_flag_follow_up' => $canFlagFollowUp,
+        'can_edit_profile' => $canEditProfile,
         'label_print_url' => $GLOBALS['webroot']
             . '/interface/modules/custom_modules/oe-module-new-clinic/public/patient-label.php',
         'letters_hub_url' => $GLOBALS['webroot']

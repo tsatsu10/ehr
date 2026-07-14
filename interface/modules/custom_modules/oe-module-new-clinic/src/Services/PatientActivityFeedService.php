@@ -727,7 +727,10 @@ class PatientActivityFeedService
         $encounterId = (int) ($visit['encounter'] ?? 0);
         $state = (string) ($visit['state'] ?? '');
         $facilityId = (int) ($visit['facility_id'] ?? 0);
-        $webroot = $GLOBALS['webroot'] ?? '';
+        // Route to the native consult page when the native engine is on for this
+        // facility (falls back to the stock encounter screen otherwise) — the raw
+        // buildEncounterUrl() always pointed at the stock page.
+        $encounterUrl = $this->signService->buildOpenUrlForVisit($visit);
         $items = [];
 
         if (
@@ -746,7 +749,7 @@ class PatientActivityFeedService
                 'visit_id' => $visitId,
                 'entity_id' => $encounterId,
                 'queue_number' => (int) ($visit['queue_number'] ?? 0),
-                'action_url' => EncounterSignService::buildEncounterUrl($webroot, $pid, $encounterId),
+                'action_url' => $encounterUrl,
             ];
         }
 
@@ -777,11 +780,7 @@ class PatientActivityFeedService
                     'visit_id' => $visitId,
                     'entity_id' => $orderId,
                     'queue_number' => (int) ($visit['queue_number'] ?? 0),
-                    'action_url' => EncounterSignService::buildEncounterUrl(
-                        $webroot,
-                        $pid,
-                        $encounterId
-                    ),
+                    'action_url' => $encounterUrl,
                 ];
             }
 
@@ -805,11 +804,7 @@ class PatientActivityFeedService
                     'visit_id' => $visitId,
                     'entity_id' => $rxId,
                     'queue_number' => (int) ($visit['queue_number'] ?? 0),
-                    'action_url' => EncounterSignService::buildEncounterUrl(
-                        $webroot,
-                        $pid,
-                        $encounterId
-                    ),
+                    'action_url' => $encounterUrl,
                 ];
             }
         }
