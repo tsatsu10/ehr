@@ -5,11 +5,52 @@ export interface PharmOpsReportItem {
   label: string;
   description?: string;
   embed_url: string;
+  /** When true the report renders as a native pane; embed_url is the fallback link. */
+  native?: boolean;
 }
 
 export interface PharmOpsReportCatalog {
   default_report_id?: string;
   reports: PharmOpsReportItem[];
+}
+
+export interface PharmReorderRow {
+  drug_id: number;
+  drug_name: string;
+  on_hand: number;
+  reorder_point: number;
+  sold_qty: number;
+  avg_per_day: number;
+  days_of_supply: number | null;
+  suggested_order_qty: number;
+  stock_status: 'out_of_stock' | 'low' | 'in_stock';
+  status_label: string;
+}
+
+export interface PharmReorderReport {
+  window_days: number;
+  target_days: number;
+  generated_at: string;
+  items: PharmReorderRow[];
+}
+
+export interface PharmDestroyedRow {
+  inventory_id: number;
+  drug_id: number;
+  drug_name: string;
+  lot_number: string;
+  quantity: number;
+  destroy_date: string;
+  method: string;
+  witness: string;
+  notes: string;
+}
+
+export interface PharmDestroyedReport {
+  from: string;
+  to: string;
+  generated_at: string;
+  items: PharmDestroyedRow[];
 }
 
 export interface PharmOpsHubProps {

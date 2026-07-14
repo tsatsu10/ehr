@@ -40,6 +40,8 @@ final class PharmOpsActionHandler implements AjaxActionHandlerInterface
         'pharm_ops.receive_save',
         'pharm_ops.setup_status',
         'pharm_ops.reports_embed',
+        'pharm_ops.inventory.reorder',
+        'pharm_ops.inventory.destroyed',
         'pharm_ops.controlled_catalog',
         'pharm_ops.controlled_catalog_save',
         'pharm_ops.catalog_list',
@@ -144,6 +146,24 @@ final class PharmOpsActionHandler implements AjaxActionHandlerInterface
             case 'pharm_ops.reports_embed':
                 $reportsEmbed = $this->host->svc(PharmOpsReportsService::class)->embedCatalog();
                 $this->host->respond(true, 'ok', $reportsEmbed);
+                break;
+            case 'pharm_ops.inventory.reorder':
+                $reorderWindow = (int) ($_REQUEST['window_days'] ?? PharmOpsReportsService::REORDER_WINDOW_DAYS);
+                $this->host->respond(
+                    true,
+                    'ok',
+                    $this->host->svc(PharmOpsReportsService::class)->reorderReport($reorderWindow)
+                );
+                break;
+            case 'pharm_ops.inventory.destroyed':
+                $this->host->respond(
+                    true,
+                    'ok',
+                    $this->host->svc(PharmOpsReportsService::class)->destroyedReport(
+                        isset($_REQUEST['from']) ? (string) $_REQUEST['from'] : null,
+                        isset($_REQUEST['to']) ? (string) $_REQUEST['to'] : null
+                    )
+                );
                 break;
             case 'pharm_ops.controlled_catalog':
                 (new PharmOpsAccessService())->assertCatalogAccess();

@@ -3,6 +3,8 @@ import { oeFetch } from '@core/oeFetch';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Button } from '@components/ui/button';
 import { NativeSelect } from '@components/ui/native-select';
+import { PharmOpsReorderReport } from './PharmOpsReorderReport';
+import { PharmOpsDestroyedReport } from './PharmOpsDestroyedReport';
 import type { PharmOpsReportCatalog, PharmOpsReportItem } from './pharmOpsTypes';
 
 interface PharmOpsReportsPaneProps {
@@ -92,20 +94,45 @@ export function PharmOpsReportsPane({ ajaxUrl, csrfToken }: PharmOpsReportsPaneP
           <p className="text-(--oe-nc-text-muted) text-sm mb-0 mt-2">{selectedReport.description}</p>
         ) : null}
       </div>
-      {selectedReport ? (
-        <div className="nc-pharmops-reports-external">
-          <i className="fa fa-file-text nc-pharmops-reports-external-icon" aria-hidden="true" />
-          <p className="nc-pharmops-reports-external-msg">
-            This report opens in a new browser tab.
-          </p>
-          <Button asChild size="sm">
-            <a href={selectedReport.embed_url} target="_blank" rel="noopener noreferrer">
-              <i className="fa fa-external-link mr-1" aria-hidden="true" />
-              Open report
-            </a>
-          </Button>
-        </div>
-      ) : null}
+      {(() => {
+        if (!selectedReport) {
+          return null;
+        }
+        // Native panes dispatch by report id; a native-flagged report without a
+        // handler falls through to the stock-embed link below (safe default).
+        if (selectedReport.native && selectedReport.id === 'reorder') {
+          return (
+            <PharmOpsReorderReport
+              ajaxUrl={ajaxUrl}
+              csrfToken={csrfToken}
+              fallbackUrl={selectedReport.embed_url}
+            />
+          );
+        }
+        if (selectedReport.native && selectedReport.id === 'destroyed') {
+          return (
+            <PharmOpsDestroyedReport
+              ajaxUrl={ajaxUrl}
+              csrfToken={csrfToken}
+              fallbackUrl={selectedReport.embed_url}
+            />
+          );
+        }
+        return (
+          <div className="nc-pharmops-reports-external">
+            <i className="fa fa-file-text nc-pharmops-reports-external-icon" aria-hidden="true" />
+            <p className="nc-pharmops-reports-external-msg">
+              This report opens in a new browser tab.
+            </p>
+            <Button asChild size="sm">
+              <a href={selectedReport.embed_url} target="_blank" rel="noopener noreferrer">
+                <i className="fa fa-external-link mr-1" aria-hidden="true" />
+                Open report
+              </a>
+            </Button>
+          </div>
+        );
+      })()}
     </div>
   );
 }
