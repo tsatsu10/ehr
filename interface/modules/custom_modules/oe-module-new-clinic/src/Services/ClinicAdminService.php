@@ -44,6 +44,7 @@ class ClinicAdminService
         'enable_lab_ops' => ['type' => 'bool', 'default' => '0'],
         'enable_lab_panel_order' => ['type' => 'bool', 'default' => '0'],
         'enable_native_proc_order' => ['type' => 'bool', 'default' => '0'],
+        'enable_native_rx_edit' => ['type' => 'bool', 'default' => '0'],
         'enable_debootstrap_shell' => ['type' => 'bool', 'default' => '0'],
         'enable_pharm_ops' => ['type' => 'bool', 'default' => '0'],
         'enable_pharm_rx_favorites' => ['type' => 'bool', 'default' => '0'],

@@ -56,6 +56,7 @@ export default tseslint.config(
       'src/islands/office-notes/**/*.{ts,tsx}',
       'src/islands/proc-order/**/*.{ts,tsx}',
       'src/islands/my-profile/**/*.{ts,tsx}',
+      'src/islands/rx-edit/**/*.{ts,tsx}',
     ],
     ignores: ['**/*.test.{ts,tsx}'],
     rules: {

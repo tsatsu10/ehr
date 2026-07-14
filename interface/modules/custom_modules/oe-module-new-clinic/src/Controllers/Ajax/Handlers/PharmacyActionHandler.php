@@ -16,6 +16,7 @@ use OpenEMR\Modules\NewClinic\Controllers\AjaxController;
 use OpenEMR\Modules\NewClinic\Services\EncounterSessionService;
 use OpenEMR\Modules\NewClinic\Services\PharmacyService;
 use OpenEMR\Modules\NewClinic\Services\PharmacyShortcutService;
+use OpenEMR\Modules\NewClinic\Services\PrescriptionEditService;
 
 final class PharmacyActionHandler implements AjaxActionHandlerInterface
 {
@@ -29,6 +30,9 @@ final class PharmacyActionHandler implements AjaxActionHandlerInterface
         'pharmacy.skip_to_payment',
         'pharmacy.shortcut_preflight',
         'pharmacy.restore_session',
+        'pharmacy.rx_form_data',
+        'pharmacy.rx_search_drugs',
+        'pharmacy.rx_save',
     ];
 
     public function __construct(
@@ -149,6 +153,27 @@ final class PharmacyActionHandler implements AjaxActionHandlerInterface
                     $userId
                 );
                 $this->host->respond(true, 'Session restored', ['session' => $session->toArray()]);
+                break;
+            case 'pharmacy.rx_form_data':
+                $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                $prescriptionId = (int) ($_REQUEST['prescription_id'] ?? 0);
+                $formData = $this->host->svc(PrescriptionEditService::class)->getFormData($visitId, $prescriptionId);
+                $this->host->respond(true, 'ok', $formData);
+                break;
+            case 'pharmacy.rx_search_drugs':
+                $pid = (int) ($_REQUEST['pid'] ?? 0);
+                $query = (string) ($_REQUEST['query'] ?? '');
+                $rows = $this->host->svc(PrescriptionEditService::class)->searchDrugs($pid, $query);
+                $this->host->respond(true, 'ok', ['rows' => $rows]);
+                break;
+            case 'pharmacy.rx_save':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $saved = $this->host->svc(PrescriptionEditService::class)->savePrescription($body, $userId);
+                $this->host->respond(true, 'ok', $saved);
                 break;
             default:
                 $this->host->respond(false, 'Unknown action', ['code' => 'not_found'], 404);

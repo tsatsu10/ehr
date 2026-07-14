@@ -1,0 +1,233 @@
+/* Native Add/Edit Rx form — island styles (token-based BEM). */
+
+.nc-rx-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.nc-rx-edit--status {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 1.5rem;
+  color: var(--oe-nc-text-muted);
+  font-size: 0.875rem;
+}
+
+/* Hero -------------------------------------------------------------------- */
+
+.nc-rx-edit__hero {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 1.125rem 1.25rem;
+  border-radius: var(--oe-nc-radius-lg);
+  background: linear-gradient(135deg, var(--oe-nc-role-pharmacy) 0%, var(--oe-nc-primary) 100%);
+  box-shadow: var(--shadow-md);
+}
+
+.nc-rx-edit__hero-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--oe-nc-surface) 16%, transparent);
+  color: var(--oe-nc-surface);
+}
+
+.nc-rx-edit__hero-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.nc-rx-edit__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--oe-nc-surface);
+  line-height: 1.25;
+}
+
+.nc-rx-edit__patient {
+  margin: 0.1rem 0 0;
+  color: color-mix(in srgb, var(--oe-nc-surface) 78%, transparent);
+  font-size: 0.8125rem;
+}
+
+.nc-rx-edit__hero-badge {
+  flex-shrink: 0;
+}
+
+/* Cards --------------------------------------------------------------------- */
+
+.nc-rx-edit__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1.125rem 1.25rem;
+  border: 1px solid var(--oe-nc-border);
+  border-radius: var(--oe-nc-radius-lg);
+  background: var(--oe-nc-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.nc-rx-edit__card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--oe-nc-role-pharmacy);
+}
+
+.nc-rx-edit__card-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--oe-nc-text);
+  flex: 1;
+}
+
+.nc-rx-edit__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.nc-rx-edit__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  position: relative;
+}
+
+.nc-rx-edit__field--checkbox {
+  justify-content: flex-end;
+}
+
+.nc-rx-edit__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+/* Existing prescriptions ---------------------------------------------------- */
+
+.nc-rx-edit__existing-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.nc-rx-edit__existing-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--oe-nc-border);
+  border-radius: var(--oe-nc-radius);
+}
+
+.nc-rx-edit__existing-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.nc-rx-edit__existing-meta {
+  font-size: 0.75rem;
+  color: var(--oe-nc-text-muted);
+}
+
+/* Drug search --------------------------------------------------------------- */
+
+.nc-rx-edit__drug-search {
+  position: relative;
+}
+
+.nc-rx-edit__drug-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin-top: 0.25rem;
+  max-height: 15rem;
+  overflow-y: auto;
+  border: 1px solid var(--oe-nc-border);
+  border-radius: var(--oe-nc-radius);
+  background: var(--oe-nc-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.nc-rx-edit__drug-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 0.875rem;
+  color: var(--oe-nc-text);
+  cursor: pointer;
+}
+
+.nc-rx-edit__drug-result:hover {
+  background: var(--oe-nc-bg-tint);
+}
+
+.nc-rx-edit__drug-result--muted {
+  color: var(--oe-nc-text-muted);
+  cursor: default;
+}
+
+.nc-rx-edit__drug-result--muted:hover {
+  background: transparent;
+}
+
+.nc-rx-edit__drug-result-badge {
+  flex-shrink: 0;
+}
+
+.nc-rx-edit__allergy-warning {
+  margin: 0;
+}
+
+.nc-rx-edit__status {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--oe-nc-text-muted);
+}
+
+/* Actions ----------------------------------------------------------------- */
+
+.nc-rx-edit__actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.875rem 0;
+  background: linear-gradient(to top, var(--oe-nc-bg) 60%, transparent);
+}
+
+@media (max-width: 40rem) {
+  .nc-rx-edit__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

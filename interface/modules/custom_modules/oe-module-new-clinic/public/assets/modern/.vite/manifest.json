@@ -1667,6 +1667,32 @@
       "report-hub.css"
     ]
   },
+  "src/islands/rx-edit/index.tsx": {
+    "file": "rx-edit.js",
+    "name": "rx-edit",
+    "src": "src/islands/rx-edit/index.tsx",
+    "isEntry": true,
+    "imports": [
+      "_dist-tbPPP6CB.js",
+      "_badge-BAR8CqVl.js",
+      "_createLucideIcon-KYOmVplY.js",
+      "_loader-circle-ColUJYSX.js",
+      "_triangle-alert-W4dnT5Gz.js",
+      "_calendar-days-ue_WBJ5Z.js",
+      "_checkbox-CO2qwb_g.js",
+      "_clipboard-list-_hwVTT2d.js",
+      "_pill-BBuR-xIc.js",
+      "_deskCalloutStyles-6nEYeUuL.js",
+      "_label-rdO-R48J.js",
+      "_textarea-CGK9aPKU.js",
+      "_input-BaoxRaTG.js",
+      "_native-select--GAeIt5y.js",
+      "_deskToast-DqOKiMck.js"
+    ],
+    "css": [
+      "rx-edit.css"
+    ]
+  },
   "src/islands/scheduling/index.tsx": {
     "file": "scheduling.js",
     "name": "scheduling",

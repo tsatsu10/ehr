@@ -21,6 +21,7 @@ class PharmacyShortcutService
         private readonly EncounterSessionService $encounterSession = new EncounterSessionService(),
         private readonly VisitQueueService $queueService = new VisitQueueService(),
         private readonly EncounterIdentityStripService $identityStrip = new EncounterIdentityStripService(),
+        private readonly PrescriptionEditPolicy $rxEditPolicy = new PrescriptionEditPolicy(),
     ) {
     }
 
@@ -45,10 +46,13 @@ class PharmacyShortcutService
 
         $pid = (int) $visit['pid'];
         $webroot = $GLOBALS['webroot'] ?? '';
+        $modulePublic = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
 
         $redirectUrl = match ($shortcut) {
             'dispense' => $webroot . '/interface/patient_file/encounter/encounter_top.php',
-            'rx_edit' => $webroot . '/controller.php?prescription&edit&id=&pid=' . urlencode((string) $pid),
+            'rx_edit' => $this->rxEditPolicy->isNativeRxEditEnabled((int) ($visit['facility_id'] ?? 0))
+                ? $modulePublic . 'rx-edit.php?visit_id=' . urlencode((string) $visitId) . '&return_to=pharmacy'
+                : $webroot . '/controller.php?prescription&edit&id=&pid=' . urlencode((string) $pid),
         };
 
         $this->identityStrip->markFromShortcut($visitId, 'pharmacy', $shortcut);

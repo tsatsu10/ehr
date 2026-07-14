@@ -94,12 +94,10 @@ $returnUrl = match ($returnTo) {
         'island_entry' => 'proc-order',
         'shell_nav_id' => 'clinicdochub',
         'shell_minimal' => true,
-        'module_url' => $moduleUrl,
         'visit_id' => $visitId,
         'procedure_order_id' => $procedureOrderId,
         'facility_id' => $facilityId,
         'return_url' => $returnUrl,
         'return_to' => $returnTo,
-        'webroot' => $webroot,
     ]
 );

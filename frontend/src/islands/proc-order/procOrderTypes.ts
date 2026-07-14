@@ -67,11 +67,9 @@ export interface ProcOrderSaveResult {
 export interface ProcOrderProps {
   ajaxUrl: string;
   csrfToken: string;
-  moduleUrl?: string;
   visitId: number;
   procedureOrderId?: number;
   facilityId: number;
   returnUrl: string;
   returnTo?: string;
-  webroot?: string;
 }

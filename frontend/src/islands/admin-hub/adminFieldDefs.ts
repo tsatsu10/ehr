@@ -72,6 +72,7 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'enable_pharm_ops',
   'pharmacy_service_formdir',
   'enable_pharm_rx_favorites',
+  'enable_native_rx_edit',
   'enable_rx_print',
   'enable_dispense_label',
   'pharm_expiry_warn_days',
@@ -296,6 +297,13 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         type: 'bool',
         label: 'Print Rx pack (community pharmacy)',
         hint: 'Type A Rx PDF for external pharmacies. Independent of Pharmacy Operations hub.',
+        indent: 1,
+      },
+      {
+        key: 'enable_native_rx_edit',
+        type: 'bool',
+        label: 'Native Add/Edit Rx form',
+        hint: 'Replaces the stock prescription editor with a native React form (drug search, allergy warning, dosage/route/refills) for the Pharmacy Desk\'s "Add Rx" shortcut. OFF = stock form. Independent of Pharmacy Operations hub.',
         indent: 1,
       },
       {

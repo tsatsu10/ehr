@@ -5,23 +5,21 @@
 {% block page_heading_actions %}
 <div class="nc-flex nc-flex-wrap nc-items-center nc-gap-2">
     <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary" href="{{ return_url|attr }}">
-        {{ 'Back to documentation'|xlt }}
+        {{ 'Back to Pharmacy Desk'|xlt }}
     </a>
 </div>
 {% endblock %}
 
 {% block content %}
 <div
-    id="nc-proc-order"
-    data-island="proc-order"
+    id="nc-rx-edit"
+    data-island="rx-edit"
     data-props="{{ {
         ajaxUrl: ajax_url,
         csrfToken: csrf_token,
         visitId: visit_id,
-        procedureOrderId: procedure_order_id|default(0),
-        facilityId: facility_id,
-        returnUrl: return_url,
-        returnTo: return_to
+        prescriptionId: prescription_id|default(0),
+        returnUrl: return_url
     }|json_encode|e('html_attr') }}"
 ></div>
 {% endblock %}

@@ -61,6 +61,7 @@ const islands: Record<string, string> = {
   'office-notes':        resolve(here, 'src/islands/office-notes/index.tsx'),
   'outreach':            resolve(here, 'src/islands/outreach/index.tsx'),
   'proc-order':          resolve(here, 'src/islands/proc-order/index.tsx'),
+  'rx-edit':             resolve(here, 'src/islands/rx-edit/index.tsx'),
 };
 
 export default defineConfig({

@@ -239,6 +239,7 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_lab_ops', '0'),
 (0, 'enable_lab_panel_order', '0'),
 (0, 'enable_native_proc_order', '0'),
+(0, 'enable_native_rx_edit', '0'),
 (0, 'enable_debootstrap_shell', '0'),
 (0, 'enable_pharm_ops', '0'),
 (0, 'enable_triage', '1'),
@@ -1309,6 +1310,11 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_proc_order
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_native_proc_order', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_rx_edit
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_native_rx_edit', '0');
 #EndIf
 
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_debootstrap_shell
