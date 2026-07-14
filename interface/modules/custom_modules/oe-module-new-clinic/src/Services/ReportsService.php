@@ -58,6 +58,39 @@ class ReportsService
     }
 
     /**
+     * Lightweight "today at a glance" figures for the Report Hub summary strip
+     * (cash collected, visits started, receipt count).
+     *
+     * Deliberately does NOT call getDailyReport()/repairOrphanVisits(): the strip
+     * only needs three numbers, and the embedded Daily Reports lens already runs
+     * the full report on the same tab. Building the whole report here just to read
+     * three fields doubled the DB work on every hub load.
+     *
+     * @return array<string, mixed>
+     */
+    public function getHubSummary(int $facilityId, ?string $visitDate): array
+    {
+        $visitDate = self::normalizeVisitDate($visitDate);
+        $facilityId = $this->visitScope->resolveDeskFacilityId($facilityId > 0 ? $facilityId : null);
+
+        $startedRow = QueryUtils::querySingleRow(
+            "SELECT COUNT(*) AS cnt FROM new_visit
+             WHERE facility_id = ? AND visit_date = ? AND state <> 'cancelled'",
+            [$facilityId, $visitDate]
+        );
+        $cash = $this->cashTotals($facilityId, $visitDate);
+        $currency = $this->moneyFormat->getFormatPayload($facilityId);
+
+        return [
+            'visit_date' => $visitDate,
+            'visits_started' => (int) (is_array($startedRow) ? ($startedRow['cnt'] ?? 0) : 0),
+            'cash_total' => $cash['total_collected'],
+            'receipt_count' => $cash['receipt_count'],
+            'currency_symbol' => (string) (is_array($currency) ? ($currency['currency_symbol'] ?? 'GH₵') : 'GH₵'),
+        ];
+    }
+
+    /**
      * @param array<int, array<string, mixed>> $openVisits
      * @return array<string, array{count: int, oldest_wait_minutes: int}>
      */
@@ -264,9 +297,14 @@ class ReportsService
             [$facilityId, $visitDate, $threshold]
         ) ?: [];
 
+        // Sargable date range (not DATE(l.date) = ?) so an index on log.date can be
+        // used — the audit log grows unbounded, and a function-wrapped column forces
+        // a full scan on every daily-report load.
+        $dayStart = $visitDate . ' 00:00:00';
+        $dayEnd = (new \DateTimeImmutable($visitDate))->modify('+1 day')->format('Y-m-d 00:00:00');
         $dupRow = QueryUtils::querySingleRow(
             "SELECT COUNT(DISTINCT l.id) AS cnt FROM log l
-             WHERE DATE(l.date) = ? AND l.event = 'new_patient' AND l.category = 'dup_override'
+             WHERE l.date >= ? AND l.date < ? AND l.event = 'new_patient' AND l.category = 'dup_override'
              AND (
                 l.patient_id = 0
                 OR EXISTS (
@@ -274,7 +312,7 @@ class ReportsService
                     WHERE v.pid = l.patient_id AND v.facility_id = ? AND v.visit_date = ?
                 )
              )",
-            [$visitDate, $facilityId, $visitDate]
+            [$dayStart, $dayEnd, $facilityId, $visitDate]
         );
 
         return [
@@ -343,6 +381,23 @@ class ReportsService
      */
     private function cashSummary(int $facilityId, string $visitDate): array
     {
+        $totals = $this->cashTotals($facilityId, $visitDate);
+
+        return [
+            'receipt_count' => $totals['receipt_count'],
+            'total_collected' => $totals['total_collected'],
+            'by_category' => $this->cashByCategory($facilityId, $visitDate),
+        ];
+    }
+
+    /**
+     * Receipt count + total cash collected for the day, without the per-category
+     * breakdown. Shared by the full daily report and the lightweight hub summary.
+     *
+     * @return array{receipt_count: int, total_collected: float}
+     */
+    private function cashTotals(int $facilityId, string $visitDate): array
+    {
         $row = QueryUtils::querySingleRow(
             "SELECT COUNT(*) AS receipt_count,
                     COALESCE(SUM(visit_paid.amount), 0) AS total_collected
@@ -360,7 +415,6 @@ class ReportsService
         return [
             'receipt_count' => is_array($row) ? (int) ($row['receipt_count'] ?? 0) : 0,
             'total_collected' => round((float) (is_array($row) ? ($row['total_collected'] ?? 0) : 0), 2),
-            'by_category' => $this->cashByCategory($facilityId, $visitDate),
         ];
     }
 

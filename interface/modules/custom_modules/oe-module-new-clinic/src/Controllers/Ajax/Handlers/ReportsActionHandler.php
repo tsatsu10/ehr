@@ -128,19 +128,13 @@ final class ReportsActionHandler implements AjaxActionHandlerInterface
                     $this->host->svc(ReportHubAccessService::class)->assertHubAccess();
                     $facilityId = $this->host->resolveRequestFacilityId();
                     $visitDate = $this->host->validDay($_REQUEST['visit_date'] ?? '', date('Y-m-d'));
-                    $daily = $this->host->svc(ReportsService::class)->getDailyReport($facilityId, $visitDate);
-                    $visits = is_array($daily['visits'] ?? null) ? $daily['visits'] : [];
-                    $cash = is_array($daily['cash'] ?? null) ? $daily['cash'] : [];
-                    $currency = is_array($daily['currency'] ?? null)
-                        ? (string) ($daily['currency']['currency_symbol'] ?? 'GH₵')
-                        : 'GH₵';
-                    $this->host->respond(true, 'ok', [
-                        'visit_date' => (string) ($daily['visit_date'] ?? $visitDate),
-                        'visits_started' => (int) ($visits['started'] ?? 0),
-                        'cash_total' => (float) ($cash['total_collected'] ?? 0),
-                        'receipt_count' => (int) ($cash['receipt_count'] ?? 0),
-                        'currency_symbol' => $currency,
-                    ]);
+                    // Lightweight: 3 figures without recomputing the whole daily report
+                    // (the embedded Daily Reports lens already runs the full report).
+                    $this->host->respond(
+                        true,
+                        'ok',
+                        $this->host->svc(ReportsService::class)->getHubSummary($facilityId, $visitDate)
+                    );
                     break;
                 case 'reports.catalog':
                     $this->host->svc(ReportHubAccessService::class)->assertHubAccess();
