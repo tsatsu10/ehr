@@ -16,6 +16,14 @@ import type {
   OtcSaleInitialContext,
 } from './pharmOpsTypes';
 
+/** Round to cents for the fee input; empty string for anything not a positive amount. */
+function moneyString(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) {
+    return '';
+  }
+  return String(Math.round(value * 100) / 100);
+}
+
 interface PharmOpsOtcSaleDrawerProps {
   open: boolean;
   ajaxUrl: string;
@@ -44,6 +52,8 @@ export function PharmOpsOtcSaleDrawer({
   const [form, setForm] = useState<OtcSaleForm | null>(null);
   const [quantity, setQuantity] = useState('1');
   const [fee, setFee] = useState('');
+  // Fee defaults to unit price x quantity; once the pharmacist edits it, stop auto-recomputing.
+  const [feeEdited, setFeeEdited] = useState(false);
   const [allergyAck, setAllergyAck] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -74,6 +84,7 @@ export function PharmOpsOtcSaleDrawer({
     setForm(null);
     setQuantity('1');
     setFee('');
+    setFeeEdited(false);
     setAllergyAck(false);
     setLoadError(null);
     setSubmitError(null);
@@ -109,7 +120,10 @@ export function PharmOpsOtcSaleDrawer({
       setEncounterId(data.encounter_id > 0 ? data.encounter_id : null);
       const defaultQty = data.drug?.default_quantity ?? 1;
       setQuantity(String(defaultQty));
-      setFee(String(data.fee?.amount ?? 0));
+      // Fee defaults to unit price x quantity (falls back to the flat amount if no unit price).
+      const unit = data.fee?.unit_amount ?? data.fee?.amount ?? 0;
+      setFee(moneyString(unit * defaultQty));
+      setFeeEdited(false);
       setAllergyAck(false);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Could not load sale form');
@@ -123,6 +137,16 @@ export function PharmOpsOtcSaleDrawer({
     if (!open || !pid || !selectedDrug) return;
     void loadSaleForm(pid, selectedDrug.drug_id, encounterId);
   }, [encounterId, loadSaleForm, open, pid, selectedDrug]);
+
+  // Keep the fee in step with quantity (unit price x qty) until the pharmacist overrides it.
+  useEffect(() => {
+    if (!form || feeEdited) return;
+    const unit = form.fee?.unit_amount ?? form.fee?.amount ?? 0;
+    const qty = Number(quantity);
+    if (unit > 0 && Number.isFinite(qty) && qty > 0) {
+      setFee(moneyString(unit * qty));
+    }
+  }, [quantity, form, feeEdited]);
 
   const handleSelectPatient = useCallback((nextPid: number, row?: { display_name?: string }) => {
     setPid(nextPid);
@@ -181,6 +205,11 @@ export function PharmOpsOtcSaleDrawer({
       ? { display_name: patientLabel || 'Patient' }
       : null;
 
+  const onHand = form?.inventory?.on_hand ?? 0;
+  const qtyNum = Number(quantity);
+  const feeNum = Number(fee);
+  const overStock = form != null && Number.isFinite(qtyNum) && qtyNum > 0 && qtyNum > onHand;
+
   const canSubmit = canDispense
     && !loadingForm
     && !success
@@ -188,7 +217,9 @@ export function PharmOpsOtcSaleDrawer({
     && selectedDrug != null
     && form != null
     && !form.encounter_required
-    && Number(quantity) > 0
+    && qtyNum > 0
+    && !overStock
+    && feeNum > 0
     && (form.inventory?.can_fulfill !== false)
     && (!form.safety?.allergy_warning || allergyAck);
 
@@ -253,6 +284,9 @@ export function PharmOpsOtcSaleDrawer({
                 disabled={!pid}
                 onChange={(e) => {
                   setDrugQuery(e.target.value);
+                  // Open the results as the user types — onFocus alone never fires once results
+                  // arrive, so the list would otherwise stay hidden on the first search.
+                  setDrugOpen(e.target.value.trim().length >= 2);
                   setSelectedDrug(null);
                   setForm(null);
                 }}
@@ -340,6 +374,11 @@ export function PharmOpsOtcSaleDrawer({
                       value={quantity}
                       onChange={(e) => setQuantity(e.target.value)}
                     />
+                    {overStock ? (
+                      <div className="text-[var(--oe-nc-danger,#dc2626)] text-sm mt-1" role="alert">
+                        Only {onHand} in stock.
+                      </div>
+                    ) : null}
                   </div>
                   <div className="nc-form-group col-span-12 md:col-span-6">
                     <label htmlFor="nc-pharmops-otc-fee">Fee ({currency})</label>
@@ -350,7 +389,7 @@ export function PharmOpsOtcSaleDrawer({
                       step="0.01"
                       className="h-8"
                       value={fee}
-                      onChange={(e) => setFee(e.target.value)}
+                      onChange={(e) => { setFee(e.target.value); setFeeEdited(true); }}
                     />
                   </div>
                 </div>

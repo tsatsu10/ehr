@@ -10,11 +10,24 @@
 namespace OpenEMR\Tests\Unit\Modules\NewClinic;
 
 use OpenEMR\Modules\NewClinic\Services\AjaxActionPolicy;
+use OpenEMR\Modules\NewClinic\Services\PharmOpsAccessService;
 use OpenEMR\Modules\NewClinic\Services\PharmOpsOtcSaleService;
 use PHPUnit\Framework\TestCase;
 
 class PharmOpsOtcSaleServiceTest extends TestCase
 {
+    public function testConfirmSaleRejectsZeroFee(): void
+    {
+        // OTC is a cash sale — a zero fee must be rejected before any inventory is touched.
+        $access = $this->createMock(PharmOpsAccessService::class);
+        $access->method('assertDispenseAccess');
+        $service = new PharmOpsOtcSaleService($access);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Sale fee must be greater than zero');
+        $service->confirmSale(['pid' => 1, 'drug_id' => 1, 'quantity' => 1, 'fee' => 0], 7);
+    }
+
     public function testFormatDrugLabelIncludesSizeAndUnit(): void
     {
         $label = PharmOpsOtcSaleService::formatDrugLabel([

@@ -166,8 +166,10 @@ class PharmOpsOtcSaleService
         if ($quantity <= 0) {
             throw new \InvalidArgumentException('Sale quantity must be greater than zero');
         }
-        if ($fee < 0) {
-            throw new \InvalidArgumentException('Fee cannot be negative');
+        // OTC is a cash sale — a zero fee is a revenue leak (free give-aways go through dispensing,
+        // not the OTC counter). The client also blocks this, but the server is authoritative.
+        if ($fee <= 0) {
+            throw new \InvalidArgumentException('Sale fee must be greater than zero');
         }
 
         $this->facilityScope->assertPatientAccessible($pid);
