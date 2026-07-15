@@ -51,6 +51,16 @@ class PharmOpsReportsService
             ) latest ON latest.drug_id = ds.drug_id AND latest.max_id = ds.sale_id
          ) cost ON cost.drug_id = di.drug_id";
 
+    // Per-drug consumption over the reorder window (units dispensed to patients). Joined as
+    // `sold.sold_qty`; drives days-of-supply in the browser (INV-4), same source as the reorder report.
+    private const CONSUMPTION_JOIN =
+        "LEFT JOIN (
+            SELECT drug_id, SUM(quantity) AS sold_qty
+            FROM drug_sales
+            WHERE pid != 0 AND sale_date >= DATE_SUB(CURDATE(), INTERVAL " . self::REORDER_WINDOW_DAYS . " DAY)
+            GROUP BY drug_id
+         ) sold ON sold.drug_id = di.drug_id";
+
     public function __construct(
         private readonly PharmOpsAccessService $access = new PharmOpsAccessService(),
         private readonly MoneyFormatService $money = new MoneyFormatService(),
@@ -554,10 +564,11 @@ class PharmOpsReportsService
 
         $rows = QueryUtils::fetchRecords(
             "SELECT di.inventory_id, di.drug_id, di.lot_number, di.on_hand, di.expiration,
-                    d.name AS drug_name, d.reorder_point, cost.unit_cost
+                    d.name AS drug_name, d.reorder_point, cost.unit_cost, sold.sold_qty
              FROM drug_inventory di
              INNER JOIN drugs d ON d.drug_id = di.drug_id
              " . self::COST_JOIN . "
+             " . self::CONSUMPTION_JOIN . "
              WHERE {$where}
              ORDER BY d.name ASC, di.expiration ASC, di.lot_number ASC
              LIMIT " . ($limit + 1) . " OFFSET " . $offset,
@@ -591,6 +602,8 @@ class PharmOpsReportsService
             $unitCost = isset($row['unit_cost']) && $row['unit_cost'] !== null
                 ? round((float) $row['unit_cost'], 2)
                 : null;
+            // Average daily consumption over the reorder window (INV-4), per drug.
+            $avgPerDay = round((float) ($row['sold_qty'] ?? 0) / self::REORDER_WINDOW_DAYS, 3);
 
             return [
                 'inventory_id' => (int) ($row['inventory_id'] ?? 0),
@@ -603,6 +616,8 @@ class PharmOpsReportsService
                 // Stock valuation (INV-1): unit cost from the latest purchase; null = cost unknown.
                 'unit_cost' => $unitCost,
                 'value' => $unitCost !== null ? round($onHand * $unitCost, 2) : null,
+                // Consumption velocity (INV-4): units/day, per drug (same on every lot of the drug).
+                'avg_per_day' => $avgPerDay,
             ];
         }, $rows);
 

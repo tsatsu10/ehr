@@ -77,6 +77,26 @@ describe('PharmOpsInventoryBrowser', () => {
     expect(screen.getByText('LOT-B')).toBeInTheDocument();
   });
 
+  it('shows days-of-supply per drug from consumption velocity (INV-4)', async () => {
+    mockFetch.mockResolvedValue({
+      offset: 0,
+      has_more: false,
+      summary,
+      currency_symbol: 'GH₵',
+      generated_at: '',
+      items: [lot(1, { on_hand: 100, avg_per_day: 5 })], // 100 / 5 = 20 days
+    });
+
+    render(<PharmOpsInventoryBrowser ajaxUrl="/mock/ajax" csrfToken="t" />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Days-left shows on the drug rollup row (visible without expanding).
+    expect(screen.getByText('20d')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Days left' })).toBeInTheDocument();
+  });
+
   it('shows lot value and stock-value totals (INV-1)', async () => {
     mockFetch.mockResolvedValue({
       offset: 0,

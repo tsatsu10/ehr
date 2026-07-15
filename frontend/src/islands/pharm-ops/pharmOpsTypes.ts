@@ -11,6 +11,8 @@ export interface PharmStockRow {
   /** INV-1 valuation: unit cost from the latest purchase (null = cost unknown), and lot value. */
   unit_cost?: number | null;
   value?: number | null;
+  /** INV-4: per-drug average daily consumption (units/day) over the reorder window. */
+  avg_per_day?: number;
 }
 
 export interface PharmStockSummary {

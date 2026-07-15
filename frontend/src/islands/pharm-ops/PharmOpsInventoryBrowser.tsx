@@ -36,6 +36,7 @@ interface DrugGroup {
   totalOnHand: number;
   totalValue: number | null;
   worstStatus: 'expired' | 'expiring' | 'ok';
+  avgPerDay: number;
 }
 
 function groupLots(rows: PharmStockRow[]): DrugGroup[] {
@@ -44,7 +45,15 @@ function groupLots(rows: PharmStockRow[]): DrugGroup[] {
   for (const r of rows) {
     let g = byId.get(r.drug_id);
     if (!g) {
-      g = { drug_id: r.drug_id, drug_name: r.drug_name, lots: [], totalOnHand: 0, totalValue: null, worstStatus: 'ok' };
+      g = {
+        drug_id: r.drug_id,
+        drug_name: r.drug_name,
+        lots: [],
+        totalOnHand: 0,
+        totalValue: null,
+        worstStatus: 'ok',
+        avgPerDay: r.avg_per_day ?? 0,
+      };
       byId.set(r.drug_id, g);
       order.push(r.drug_id);
     }
@@ -55,6 +64,18 @@ function groupLots(rows: PharmStockRow[]): DrugGroup[] {
     else if (r.expiry_status === 'expiring' && g.worstStatus !== 'expired') g.worstStatus = 'expiring';
   }
   return order.map((id) => byId.get(id) as DrugGroup);
+}
+
+/** Days of stock left at the current consumption rate, and a health tone for it (INV-4). */
+function supplyInfo(group: DrugGroup): { days: number | null; tone?: 'danger' | 'warning' | 'muted' } {
+  if (group.avgPerDay <= 0) {
+    return { days: null };
+  }
+  const days = Math.round(group.totalOnHand / group.avgPerDay);
+  if (days <= 7) return { days, tone: 'danger' };
+  if (days <= 30) return { days, tone: 'warning' };
+  if (days > 120) return { days, tone: 'muted' };
+  return { days };
 }
 
 interface PharmOpsInventoryBrowserProps {
@@ -507,6 +528,7 @@ export function PharmOpsInventoryBrowser({
                   <th style={LEFT}>Lot</th>
                   <th style={RIGHT}>On hand</th>
                   <th style={RIGHT}>Value</th>
+                  <th style={RIGHT}>Days left</th>
                   <th style={LEFT}>Expiry</th>
                   <th style={LEFT}>Status</th>
                   {showActions ? <th style={RIGHT}>Actions</th> : null}
@@ -536,6 +558,22 @@ export function PharmOpsInventoryBrowser({
                           {g.totalValue != null
                             ? formatMoney(g.totalValue, { currency_symbol: currencySymbol })
                             : <span className="text-(--oe-nc-text-muted)">—</span>}
+                        </td>
+                        <td style={RIGHT} className="tabular-nums">
+                          {(() => {
+                            const s = supplyInfo(g);
+                            if (s.days == null) {
+                              return <span className="text-(--oe-nc-text-muted)">—</span>;
+                            }
+                            const color = s.tone === 'danger'
+                              ? 'var(--oe-nc-danger)'
+                              : s.tone === 'warning'
+                                ? 'var(--oe-nc-warning, #b45309)'
+                                : s.tone === 'muted'
+                                  ? 'var(--oe-nc-text-muted)'
+                                  : undefined;
+                            return <span style={color ? { color } : undefined} title={`~${g.avgPerDay}/day`}>{s.days}d</span>;
+                          })()}
                         </td>
                         <td style={LEFT} className="text-(--oe-nc-text-muted)">—</td>
                         <td style={LEFT}>
@@ -599,6 +637,7 @@ export function PharmOpsInventoryBrowser({
                         ? formatMoney(row.value, { currency_symbol: currencySymbol })
                         : <span className="text-(--oe-nc-text-muted)">—</span>}
                     </td>
+                    <td style={RIGHT} aria-hidden />
                     <td style={LEFT} className="tabular-nums">{ddmmyyyy(row.expiration)}</td>
                     <td style={LEFT}>
                       {row.expiry_status === 'ok' ? (
