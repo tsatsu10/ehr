@@ -212,3 +212,37 @@ button.nc-pharmops-inv-summary-stat:hover {
   margin: 0;
   font-weight: 500;
 }
+
+/* INV-5: printing the purchase-order list — hide chrome outside the reorder report, keep the
+   order-qty inputs readable as plain values (an editable input box doesn't print its typed value
+   reliably in every browser), and stop the table splitting a row across a page break. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .nc-pharmops-reorder,
+  .nc-pharmops-reorder * {
+    visibility: visible;
+  }
+
+  .nc-pharmops-reorder {
+    position: absolute;
+    inset: 0;
+  }
+
+  .nc-pharmops-reorder-toolbar {
+    display: none;
+  }
+
+  .nc-pharmops-reorder-qty-cell input {
+    border: none;
+    background: none;
+    padding: 0;
+    width: auto;
+  }
+
+  .nc-pharmops-report-table tr {
+    break-inside: avoid;
+  }
+}

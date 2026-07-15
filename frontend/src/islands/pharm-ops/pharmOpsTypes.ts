@@ -62,11 +62,15 @@ export interface PharmReorderRow {
   suggested_order_qty: number;
   stock_status: 'out_of_stock' | 'low' | 'in_stock';
   status_label: string;
+  /** INV-5 purchase-order estimate: unit cost from the latest purchase (null = unknown). */
+  unit_cost?: number | null;
+  estimated_cost?: number | null;
 }
 
 export interface PharmReorderReport {
   window_days: number;
   target_days: number;
+  currency_symbol?: string;
   generated_at: string;
   items: PharmReorderRow[];
 }

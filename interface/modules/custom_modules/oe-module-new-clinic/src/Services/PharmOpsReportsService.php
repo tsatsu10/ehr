@@ -37,10 +37,15 @@ class PharmOpsReportsService
     private const TRANSACTION_MAX_OFFSET = 100000;
     private const REPORT_ROW_CAP = 500;
 
-    // Per-drug unit cost = the most recent purchase (trans_type 2, negative qty/fee) unit price.
-    // Joined as `cost.unit_cost`; NULL when the drug has never been received through the module.
-    private const COST_JOIN =
-        "LEFT JOIN (
+    /**
+     * Per-drug unit cost = the most recent purchase (trans_type 2, negative qty/fee) unit price.
+     * Joined as `cost.unit_cost`; NULL when the drug has never been received through the module.
+     * $alias is the table/alias holding drug_id in the outer query (drug_inventory in the stock
+     * browser, drugs in the reorder report).
+     */
+    private static function costJoin(string $alias = 'di'): string
+    {
+        return "LEFT JOIN (
             SELECT ds.drug_id, ABS(ds.fee / ds.quantity) AS unit_cost
             FROM drug_sales ds
             INNER JOIN (
@@ -49,7 +54,8 @@ class PharmOpsReportsService
                 WHERE trans_type = 2 AND quantity <> 0 AND drug_id > 0
                 GROUP BY drug_id
             ) latest ON latest.drug_id = ds.drug_id AND latest.max_id = ds.sale_id
-         ) cost ON cost.drug_id = di.drug_id";
+         ) cost ON cost.drug_id = {$alias}.drug_id";
+    }
 
     // Per-drug consumption over the reorder window (units dispensed to patients). Joined as
     // `sold.sold_qty`; drives days-of-supply in the browser (INV-4), same source as the reorder report.
@@ -100,7 +106,8 @@ class PharmOpsReportsService
         $rows = QueryUtils::fetchRecords(
             "SELECT d.drug_id, d.name, d.reorder_point,
                     COALESCE(inv.on_hand, 0) AS on_hand,
-                    COALESCE(sold.qty, 0) AS sold_qty
+                    COALESCE(sold.qty, 0) AS sold_qty,
+                    cost.unit_cost
              FROM drugs d
              LEFT JOIN (
                  SELECT drug_id, SUM(on_hand) AS on_hand
@@ -114,6 +121,7 @@ class PharmOpsReportsService
                  WHERE sale_date >= ? AND pid != 0
                  GROUP BY drug_id
              ) sold ON sold.drug_id = d.drug_id
+             " . self::costJoin('d') . "
              WHERE d.active = 1 AND d.dispensable = 1
              ORDER BY COALESCE(inv.on_hand, 0) ASC, d.name ASC
              LIMIT " . self::REPORT_ROW_CAP,
@@ -135,6 +143,9 @@ class PharmOpsReportsService
             }
 
             $suggested = (int) max(0, (int) ceil($targetDays * $avgPerDay) - (int) round($onHand));
+            $unitCost = isset($row['unit_cost']) && $row['unit_cost'] !== null
+                ? round((float) $row['unit_cost'], 2)
+                : null;
 
             $items[] = [
                 'drug_id' => (int) ($row['drug_id'] ?? 0),
@@ -151,12 +162,18 @@ class PharmOpsReportsService
                     'low' => 'Low stock',
                     default => 'Watch',
                 },
+                // Purchase-order estimate (INV-5): unit cost from the latest purchase; null = unknown.
+                'unit_cost' => $unitCost,
+                'estimated_cost' => $unitCost !== null ? round($unitCost * $suggested, 2) : null,
             ];
         }
+
+        $currency = $this->money->getFormatPayload($this->visitScope->resolveDefaultFacilityId());
 
         return [
             'window_days' => $windowDays,
             'target_days' => $targetDays,
+            'currency_symbol' => (string) (is_array($currency) ? ($currency['currency_symbol'] ?? '') : ''),
             'generated_at' => date('c'),
             'items' => $items,
         ];
@@ -567,7 +584,7 @@ class PharmOpsReportsService
                     d.name AS drug_name, d.reorder_point, cost.unit_cost, sold.sold_qty
              FROM drug_inventory di
              INNER JOIN drugs d ON d.drug_id = di.drug_id
-             " . self::COST_JOIN . "
+             " . self::costJoin() . "
              " . self::CONSUMPTION_JOIN . "
              WHERE {$where}
              ORDER BY d.name ASC, di.expiration ASC, di.lot_number ASC
@@ -657,7 +674,7 @@ class PharmOpsReportsService
                          THEN di.on_hand * cost.unit_cost ELSE 0 END), 0) AS value_expired
              FROM drug_inventory di
              INNER JOIN drugs d ON d.drug_id = di.drug_id
-             " . self::COST_JOIN . "
+             " . self::costJoin() . "
              WHERE di.destroy_date IS NULL AND d.active = 1"
         );
 
