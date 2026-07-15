@@ -231,12 +231,18 @@ class ReconciliationService
      */
     public function fetchTotals(int $facilityId, string $runDate): array
     {
+        // Half-open [runDate, nextDay) range so new_receipt's idx_receipt_facility_date
+        // (facility_id, created_at) can be used — DATE(created_at) = ? wraps the column and
+        // forces a scan of every receipt at this facility, not just the run date (same fix
+        // already applied in BillOpsDaysheetService::getDaysheet(), which calls this method).
+        $nextDay = date('Y-m-d', strtotime($runDate . ' +1 day'));
+
         $moduleRow = QueryUtils::querySingleRow(
             "SELECT COALESCE(SUM(r.amount_paid), 0) AS module_total
              FROM new_receipt r
              INNER JOIN new_visit v ON v.id = r.visit_id
-             WHERE r.facility_id = ? AND DATE(r.created_at) = ? AND v.closed_no_charge = 0",
-            [$facilityId, $runDate]
+             WHERE r.facility_id = ? AND r.created_at >= ? AND r.created_at < ? AND v.closed_no_charge = 0",
+            [$facilityId, $runDate, $nextDay]
         );
 
         $coreRow = QueryUtils::querySingleRow(
@@ -244,14 +250,14 @@ class ReconciliationService
              FROM new_receipt r
              INNER JOIN new_visit v ON v.id = r.visit_id
              INNER JOIN payments p ON p.id = r.posted_payment_id
-             WHERE r.facility_id = ? AND DATE(r.created_at) = ? AND v.closed_no_charge = 0
+             WHERE r.facility_id = ? AND r.created_at >= ? AND r.created_at < ? AND v.closed_no_charge = 0
              AND r.posted_payment_id IS NOT NULL AND r.posted_payment_id > 0
              AND EXISTS (
                 SELECT 1 FROM ar_activity aa
                 WHERE aa.pid = r.pid AND aa.encounter = r.encounter
                 AND aa.account_code = 'PP' AND aa.pay_amount > 0
              )",
-            [$facilityId, $runDate]
+            [$facilityId, $runDate, $nextDay]
         );
 
         return [
