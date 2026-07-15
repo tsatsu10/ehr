@@ -105,6 +105,28 @@ describe('PharmOpsOtcSaleDrawer', () => {
     await waitFor(() => expect(document.getElementById('nc-pharmops-otc-patient')).toBeInTheDocument());
   });
 
+  it('allows a discount (below list) but never above list when the toggle is on', async () => {
+    mockRoutes(saleForm({ allow_discount: true })); // unit price 5
+    render(<PharmOpsOtcSaleDrawer {...baseProps} />);
+    await selectDrugAndLoadForm();
+
+    fireEvent.change(qtyInput(), { target: { value: '10' } }); // list = 50
+    await waitFor(() => expect(feeInput().value).toBe('50'));
+
+    // A discount keeps the quantity and just lowers the amount.
+    fireEvent.change(feeInput(), { target: { value: '40' } });
+    fireEvent.blur(feeInput());
+    await waitFor(() => expect(feeInput().value).toBe('40'));
+    expect(qtyInput().value).toBe('10');
+    expect(screen.getByRole('button', { name: 'Confirm sale' })).toBeEnabled();
+
+    // Above list is clamped down to the list price on blur, and blocked in the meantime.
+    fireEvent.change(feeInput(), { target: { value: '80' } });
+    expect(screen.getByRole('button', { name: 'Confirm sale' })).toBeDisabled();
+    fireEvent.blur(feeInput());
+    await waitFor(() => expect(feeInput().value).toBe('50'));
+  });
+
   it('blocks the sale on a zero fee or overselling stock', async () => {
     mockRoutes(saleForm({ inventory: { on_hand: 8, can_fulfill: true } }));
     render(<PharmOpsOtcSaleDrawer {...baseProps} />);

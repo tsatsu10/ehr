@@ -243,6 +243,7 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_native_rx_history', '0'),
 (0, 'enable_debootstrap_shell', '0'),
 (0, 'enable_pharm_ops', '0'),
+(0, 'enable_otc_manual_discount', '0'),
 (0, 'enable_triage', '1'),
 (0, 'country_code', '233'),
 (0, 'currency_code', 'GHS'),
@@ -831,6 +832,11 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_insurance_scheme
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_insurance_scheme', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_otc_manual_discount
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_otc_manual_discount', '0');
 #EndIf
 
 -- CBILL-3 — one insurance scheme claim per visit that used the scheme-split at the cashier.
@@ -1498,6 +1504,11 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_immunization_editor
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_native_immunization_editor', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_referral_editor
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_native_referral_editor', '0');
 #EndIf
 
 -- D-IMM-1 — Ghana EPI vaccine set seeded into the stock `immunizations` list (option_ids 500+

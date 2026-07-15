@@ -132,6 +132,8 @@ class PharmOpsOtcSaleService
                 'unit_amount' => $unitFee,
                 'currency_symbol' => (string) $this->config->get('currency_symbol', 'GH₵', $facilityId),
             ],
+            // When on, the pharmacist may lower the amount below the listed price (a discount).
+            'allow_discount' => $this->config->get('enable_otc_manual_discount', '0', $facilityId) === '1',
             'safety' => [
                 'allergies' => $allergies,
                 'allergy_warning' => PharmOpsSafetyService::hasDrugAllergyWarning($drugName, $allergies),
@@ -175,6 +177,23 @@ class PharmOpsOtcSaleService
         $this->facilityScope->assertPatientAccessible($pid);
         $drug = $this->loadDrugRow($drugId);
         $drugName = self::formatDrugLabel($drug);
+
+        // Price guard (server-authoritative): the amount can never exceed quantity x unit price,
+        // and — unless the discount toggle is on — must equal it. Skipped only when the product has
+        // no configured price (then the pharmacist prices it by hand). Complements the client link.
+        $facilityId = $this->visitScope->resolveDeskFacilityId();
+        $unitFee = $this->resolveUnitFee($drugId, $facilityId);
+        if ($unitFee > 0) {
+            $listPrice = round($unitFee * $quantity, 2);
+            $allowDiscount = $this->config->get('enable_otc_manual_discount', '0', $facilityId) === '1';
+            if ($fee > $listPrice + 0.01) {
+                throw new \InvalidArgumentException('Amount cannot be more than the listed price');
+            }
+            if (!$allowDiscount && $fee < $listPrice - 0.01) {
+                throw new \InvalidArgumentException('Amount must match the listed price');
+            }
+        }
+
         $encounter = $this->resolveEncounterContext($pid, $encounterId > 0 ? $encounterId : null);
         $resolvedEncounterId = (int) ($encounter['encounter_id'] ?? 0);
         if ($resolvedEncounterId <= 0) {

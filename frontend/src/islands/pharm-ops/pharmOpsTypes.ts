@@ -411,6 +411,8 @@ export interface OtcSaleForm {
     unit_amount?: number;
     currency_symbol?: string;
   };
+  /** When true, the pharmacist may lower the amount below the listed price (a discount). */
+  allow_discount?: boolean;
   safety?: {
     allergies?: string[];
     allergy_warning?: boolean;

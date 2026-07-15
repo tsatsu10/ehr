@@ -135,11 +135,9 @@ export function PharmOpsOtcSaleDrawer({
   }, [encounterId, loadSaleForm, open, pid, selectedDrug]);
 
   const unitPrice = form?.fee?.unit_amount ?? form?.fee?.amount ?? 0;
+  const allowDiscount = form?.allow_discount === true;
 
-  // Quantity and fee are linked by the unit price so the charge always equals qty x unit — a
-  // pharmacist can never over- or under-charge for the units dispensed.
-  // Typing a quantity sets the fee; typing an amount (the money the patient has) sets how many
-  // whole units that buys, then snaps the fee to the exact cost (never above the amount entered).
+  // Quantity sets the fee (qty x unit) — the listed price, and the starting point in discount mode.
   const handleQuantityChange = useCallback((value: string) => {
     setQuantity(value);
     const qty = Number(value);
@@ -148,14 +146,23 @@ export function PharmOpsOtcSaleDrawer({
     }
   }, [unitPrice]);
 
+  // Editing the amount: with the discount toggle ON it is a manual price, clamped so it can never
+  // exceed the listed price (a discount only). With the toggle OFF it is a budget — the amount sets
+  // how many whole units it buys, then snaps to the exact cost (never above the amount entered).
   const handleFeeBlur = useCallback(() => {
     const amount = Number(fee);
-    if (unitPrice > 0 && Number.isFinite(amount) && amount > 0) {
-      const qty = Math.max(1, Math.floor(amount / unitPrice));
-      setQuantity(String(qty));
-      setFee(moneyString(unitPrice * qty));
+    if (unitPrice <= 0 || !Number.isFinite(amount) || amount <= 0) {
+      return;
     }
-  }, [fee, unitPrice]);
+    if (allowDiscount) {
+      const listPrice = unitPrice * Math.max(1, Number(quantity) || 1);
+      setFee(moneyString(Math.min(amount, listPrice)));
+      return;
+    }
+    const qty = Math.max(1, Math.floor(amount / unitPrice));
+    setQuantity(String(qty));
+    setFee(moneyString(unitPrice * qty));
+  }, [allowDiscount, fee, quantity, unitPrice]);
 
   const handleSelectPatient = useCallback((nextPid: number, row?: { display_name?: string }) => {
     setPid(nextPid);
@@ -230,6 +237,9 @@ export function PharmOpsOtcSaleDrawer({
   const qtyNum = Number(quantity);
   const feeNum = Number(fee);
   const overStock = form != null && Number.isFinite(qtyNum) && qtyNum > 0 && qtyNum > onHand;
+  // The amount can never exceed the listed price (quantity x unit); a discount only ever lowers it.
+  const listPrice = unitPrice > 0 && qtyNum > 0 ? unitPrice * qtyNum : Infinity;
+  const overListPrice = feeNum > listPrice + 0.01;
 
   const canSubmit = canDispense
     && !loadingForm
@@ -241,6 +251,7 @@ export function PharmOpsOtcSaleDrawer({
     && qtyNum > 0
     && !overStock
     && feeNum > 0
+    && !overListPrice
     && (form.inventory?.can_fulfill !== false)
     && (!form.safety?.allergy_warning || allergyAck);
 
@@ -425,7 +436,15 @@ export function PharmOpsOtcSaleDrawer({
                     />
                     {unitPrice > 0 ? (
                       <div className="text-[var(--oe-nc-text-muted)] text-sm mt-1">
-                        {currency}{moneyString(unitPrice)} each — the amount sets how many units.
+                        {currency}{moneyString(unitPrice)} each · list {currency}{moneyString(unitPrice * (qtyNum > 0 ? qtyNum : 1))}
+                        {allowDiscount
+                          ? ' — you can lower it (discount)'
+                          : ' — the amount sets how many units'}
+                      </div>
+                    ) : null}
+                    {overListPrice ? (
+                      <div className="text-[var(--oe-nc-danger,#dc2626)] text-sm mt-1" role="alert">
+                        Amount can’t be more than the listed price.
                       </div>
                     ) : null}
                   </div>
