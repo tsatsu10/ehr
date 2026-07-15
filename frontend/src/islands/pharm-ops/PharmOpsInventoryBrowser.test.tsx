@@ -63,6 +63,29 @@ describe('PharmOpsInventoryBrowser', () => {
     expect(screen.getAllByText((t) => t.includes('GH₵')).length).toBeGreaterThan(0);
   });
 
+  it('filters to expired lots when the Expired tile is clicked (INV-2)', async () => {
+    mockFetch.mockResolvedValue({
+      offset: 0,
+      has_more: false,
+      summary: { ...summary, expired: 3, value_expired: 100, total_value: 5000 },
+      currency_symbol: 'GH₵',
+      generated_at: '',
+      items: [lot(1)],
+    });
+
+    render(<PharmOpsInventoryBrowser ajaxUrl="/mock/ajax" csrfToken="t" />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Expired lots/i }));
+    });
+
+    const lastCall = mockFetch.mock.calls[mockFetch.mock.calls.length - 1];
+    expect(lastCall[1].params.expiry).toBe('expired');
+  });
+
   it('pages with Load more', async () => {
     mockFetch
       .mockResolvedValueOnce({ offset: 0, has_more: true, summary, generated_at: '', items: [lot(1)] })

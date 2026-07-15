@@ -68,37 +68,74 @@ function expiryText(status: PharmStockRow['expiry_status']): string {
   return 'OK';
 }
 
-function StockSummaryStrip({ summary, currencySymbol }: { summary: PharmStockSummary; currencySymbol: string }) {
+interface SummaryStat {
+  label: string;
+  value: string;
+  tone?: 'danger' | 'warning';
+  /** When set, the tile is a button that filters the browser to that expiry slice. */
+  filter?: 'expiring' | 'expired';
+}
+
+function StockSummaryStrip({
+  summary,
+  currencySymbol,
+  expiry,
+  onExpiryFilter,
+}: {
+  summary: PharmStockSummary;
+  currencySymbol: string;
+  expiry: string;
+  onExpiryFilter: (value: string) => void;
+}) {
   const money = (n?: number) => formatMoney(n ?? 0, { currency_symbol: currencySymbol });
   const valueAtRisk = (summary.value_expiring ?? 0) + (summary.value_expired ?? 0);
 
-  const stats: Array<{ label: string; value: string; tone?: 'danger' | 'warning' }> = [
+  const stats: SummaryStat[] = [
     { label: 'Stock value', value: money(summary.total_value) },
-    { label: 'Value at risk', value: money(valueAtRisk), tone: valueAtRisk > 0 ? 'warning' : undefined },
-    { label: 'Wastage rate', value: `${summary.wastage_rate_pct ?? 0}%`, tone: (summary.wastage_rate_pct ?? 0) >= 5 ? 'danger' : undefined },
+    { label: 'Value at risk', value: money(valueAtRisk), tone: valueAtRisk > 0 ? 'warning' : undefined, filter: 'expiring' },
+    { label: 'Wastage rate', value: `${summary.wastage_rate_pct ?? 0}%`, tone: (summary.wastage_rate_pct ?? 0) >= 5 ? 'danger' : undefined, filter: 'expired' },
     { label: 'In-stock SKUs', value: String(summary.sku_count) },
     { label: 'Out of stock', value: String(summary.out_of_stock), tone: summary.out_of_stock > 0 ? 'danger' : undefined },
     { label: 'At reorder', value: String(summary.at_reorder), tone: summary.at_reorder > 0 ? 'warning' : undefined },
-    { label: 'Expiring ≤ 90d', value: String(summary.expiring) },
-    { label: 'Expired lots', value: String(summary.expired), tone: summary.expired > 0 ? 'danger' : undefined },
+    { label: 'Expiring ≤ 90d', value: String(summary.expiring), filter: 'expiring' },
+    { label: 'Expired lots', value: String(summary.expired), tone: summary.expired > 0 ? 'danger' : undefined, filter: 'expired' },
   ];
+
   return (
     <div className="nc-pharmops-inv-summary mb-3" role="group" aria-label="Stockroom health">
-      {stats.map((s) => (
-        <div key={s.label} className="nc-pharmops-inv-summary-stat">
-          <span
-            className="nc-pharmops-inv-summary-value tabular-nums"
-            style={s.tone === 'danger'
-              ? { color: 'var(--oe-nc-danger)' }
-              : s.tone === 'warning'
-                ? { color: 'var(--oe-nc-warning, #b45309)' }
-                : undefined}
-          >
-            {s.value}
-          </span>
-          <span className="nc-pharmops-inv-summary-label">{s.label}</span>
-        </div>
-      ))}
+      {stats.map((s) => {
+        const active = s.filter !== undefined && expiry === s.filter;
+        const valueStyle = s.tone === 'danger'
+          ? { color: 'var(--oe-nc-danger)' }
+          : s.tone === 'warning'
+            ? { color: 'var(--oe-nc-warning, #b45309)' }
+            : undefined;
+        const inner = (
+          <>
+            <span className="nc-pharmops-inv-summary-value tabular-nums" style={valueStyle}>{s.value}</span>
+            <span className="nc-pharmops-inv-summary-label">{s.label}</span>
+          </>
+        );
+        if (s.filter !== undefined) {
+          return (
+            <button
+              key={s.label}
+              type="button"
+              className={`nc-pharmops-inv-summary-stat${active ? ' is-active' : ''}`}
+              aria-pressed={active}
+              title={active ? 'Clear filter' : `Show ${s.label.toLowerCase()}`}
+              onClick={() => onExpiryFilter(active ? 'all' : s.filter as string)}
+            >
+              {inner}
+            </button>
+          );
+        }
+        return (
+          <div key={s.label} className="nc-pharmops-inv-summary-stat">
+            {inner}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -395,7 +432,14 @@ export function PharmOpsInventoryBrowser({
         </div>
       ) : null}
 
-      {summary ? <StockSummaryStrip summary={summary} currencySymbol={currencySymbol} /> : null}
+      {summary ? (
+        <StockSummaryStrip
+          summary={summary}
+          currencySymbol={currencySymbol}
+          expiry={expiry}
+          onExpiryFilter={setExpiry}
+        />
+      ) : null}
 
       {loading ? (
         <div className="nc-pharmops-empty nc-pharmops-empty--loading">Loading inventory…</div>
