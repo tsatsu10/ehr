@@ -37,6 +37,7 @@ interface CashierActivePaneProps {
   canMarkUnpaid?: boolean;
   canPartialPay?: boolean;
   enablePartialPayment?: boolean;
+  enableInsuranceScheme?: boolean;
   esignOverrideAllowed?: boolean;
   blocked: boolean;
   posting: boolean;
@@ -44,6 +45,7 @@ interface CashierActivePaneProps {
   onStagedChange: (lines: CashierStagedLine[]) => void;
   onPostCharges: () => void;
   onPartialPay: () => void;
+  onSchemeSplit: () => void;
   onTakePayment: (
     amountReceived: number,
     receiptNote: string,
@@ -123,6 +125,7 @@ export function CashierActivePane({
   canMarkUnpaid = false,
   canPartialPay = false,
   enablePartialPayment = false,
+  enableInsuranceScheme = false,
   esignOverrideAllowed = false,
   blocked,
   posting,
@@ -134,6 +137,7 @@ export function CashierActivePane({
   onMarkUnpaid,
   onCloseZero,
   onPartialPay,
+  onSchemeSplit,
 }: CashierActivePaneProps) {
   const [cashReceived, setCashReceived] = useState('0.00');
   const [receiptNote, setReceiptNote] = useState('');
@@ -194,6 +198,9 @@ export function CashierActivePane({
   // CBILL-2 — partial pay is offered only when a full payment would also be allowed
   // (signed, completion satisfied) so the modal only needs amount + reason.
   const showPartial = enablePartialPayment && canPartialPay && !zeroCharge
+    && payBlockReason === null && !data.completion_blocked;
+  // CBILL-3 — scheme-split offered under the same "clean to pay" gate as partial.
+  const showScheme = enableInsuranceScheme && !zeroCharge
     && payBlockReason === null && !data.completion_blocked;
   const momoEnabled = !!data.enable_momo_payment;
   const isMomo = momoEnabled && paymentMethod === 'momo';
@@ -339,7 +346,7 @@ export function CashierActivePane({
         )}
 
         <CashierShortcuts
-          feeSheetUrl={data.advanced_billing_url || data.fee_sheet_url}
+          feeSheetUrl={data.advanced_billing_url}
           feeSheetLabel={data.advanced_billing_label}
           feeSheetExternal={data.advanced_billing_external !== false}
           frontPaymentUrl={data.front_payment_url}
@@ -405,6 +412,17 @@ export function CashierActivePane({
             onClick={onPartialPay}
           >
             Partial payment
+          </Button>
+        )}
+        {showScheme && (
+          <Button
+            type="button"
+            variant="outline"
+            id="nc-cashier-scheme-btn"
+            disabled={blocked}
+            onClick={onSchemeSplit}
+          >
+            Scheme split
           </Button>
         )}
         {canMarkUnpaid && (

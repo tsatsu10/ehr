@@ -15,6 +15,7 @@ import { DeskSharedDeviceBanner } from '@components/DeskSharedDeviceBanner';
 import { DeskQueueStatusBar } from '@components/DeskQueueStatusBar';
 import { QueueTruncationBanner } from '@components/QueueTruncationBanner';
 import type {
+  CashierCoverageLine,
   CashierDeskProps,
   CashierPaymentMethod,
   CashierPayResult,
@@ -31,6 +32,7 @@ import { CashierDeskLayout } from './cashierDeskUi';
 import { CashierMobileQueueBar, CashierMobileQueueSheet } from './CashierMobileQueueSheet';
 import { PayConfirmModal } from './PayConfirmModal';
 import { PartialPayModal } from './PartialPayModal';
+import { SchemeSplitModal } from './SchemeSplitModal';
 import { ReceiptModal } from './ReceiptModal';
 import { CloseZeroModal } from './CloseZeroModal';
 import { DiscountConfirmModal } from './DiscountConfirmModal';
@@ -98,6 +100,7 @@ export function CashierDesk({
   canEsignOverride = false,
   enablePartialPayment = false,
   canPartialPay = false,
+  enableInsuranceScheme = false,
   sharedDeviceWarning = false,
   currencyFormat,
 }: CashierDeskProps) {
@@ -160,6 +163,9 @@ export function CashierDesk({
   const [partialOpen, setPartialOpen] = useState(false);
   const [partialError, setPartialError] = useState<string | null>(null);
   const [partialSubmitting, setPartialSubmitting] = useState(false);
+  const [schemeOpen, setSchemeOpen] = useState(false);
+  const [schemeError, setSchemeError] = useState<string | null>(null);
+  const [schemeSubmitting, setSchemeSubmitting] = useState(false);
   const [mobileQueueOpen, setMobileQueueOpen] = useState(false);
   const narrowDesk = useNarrowCashierDesk();
 
@@ -216,6 +222,7 @@ export function CashierDesk({
       || closeZeroOpen
       || markUnpaidOpen
       || partialOpen
+      || schemeOpen
       || mobileQueueOpen
       || receipt !== null;
   }, [
@@ -227,6 +234,7 @@ export function CashierDesk({
     closeZeroOpen,
     markUnpaidOpen,
     partialOpen,
+    schemeOpen,
     mobileQueueOpen,
     receipt,
   ]);
@@ -621,6 +629,52 @@ export function CashierDesk({
     void fetchQueueRef.current();
   }, [ajaxUrl, csrfToken, facilityId, partialSubmitting, resetActivePane, selectData]);
 
+  const handleConfirmScheme = useCallback(async (
+    schemeId: number,
+    membership: string,
+    coverageLines: CashierCoverageLine[],
+    amountReceived: number,
+    paymentMethod: CashierPaymentMethod,
+    momoReference: string,
+  ) => {
+    if (!selectData || schemeSubmitting) return;
+
+    setSchemeSubmitting(true);
+    setSchemeError(null);
+
+    const result = await postCashierAction<CashierPayResult>({
+      ajaxUrl,
+      csrfToken,
+      facilityId,
+      action: 'cashier.scheme.pay',
+      body: {
+        visit_id: selectData.visit.id,
+        row_version: selectData.visit.row_version ?? 0,
+        scheme_id: schemeId,
+        membership_number: membership,
+        coverage_lines: coverageLines,
+        amount_received: amountReceived,
+        payment_method: paymentMethod,
+        ...(paymentMethod === 'momo' ? { momo_reference: momoReference } : {}),
+        client_request_id: newClientRequestId(),
+      },
+    });
+
+    setSchemeSubmitting(false);
+
+    if (!result.ok) {
+      setSchemeError(result.message || 'Scheme payment failed');
+      return;
+    }
+
+    setSchemeOpen(false);
+    setReceiptPreview(selectData.preview);
+    setReceipt(result.data.receipt);
+    setReceiptHistoryUrl(result.data.payment_history_url ?? null);
+    resetActivePane();
+    void fetchQueueRef.current();
+  }, [ajaxUrl, csrfToken, facilityId, schemeSubmitting, resetActivePane, selectData]);
+
   const mergedSelectData = selectData
     ? mergeSelectData(selectData, canSkipCompletion, canApplyDiscount)
     : null;
@@ -681,6 +735,7 @@ export function CashierDesk({
               canMarkUnpaid={canMarkUnpaid}
               canPartialPay={canPartialPay}
               enablePartialPayment={enablePartialPayment}
+              enableInsuranceScheme={enableInsuranceScheme}
               esignOverrideAllowed={esignOverrideAllowed}
               blocked={sharedSession.blocked}
               posting={posting}
@@ -692,6 +747,7 @@ export function CashierDesk({
               onMarkUnpaid={() => setMarkUnpaidOpen(true)}
               onCloseZero={() => setCloseZeroOpen(true)}
               onPartialPay={() => setPartialOpen(true)}
+              onSchemeSplit={() => setSchemeOpen(true)}
             />
           )}
           queue={(
@@ -857,6 +913,25 @@ export function CashierDesk({
           setPartialError(null);
         }}
         onConfirm={(amount, reason, method, momoRef) => void handleConfirmPartial(amount, reason, method, momoRef)}
+      />
+
+      <SchemeSplitModal
+        open={schemeOpen}
+        preview={mergedSelectData?.preview ?? null}
+        visit={mergedSelectData?.visit ?? null}
+        charges={mergedSelectData?.charges ?? []}
+        drugCharges={mergedSelectData?.drug_charges ?? []}
+        momoEnabled={!!mergedSelectData?.enable_momo_payment}
+        ajaxUrl={ajaxUrl}
+        csrfToken={csrfToken}
+        submitting={schemeSubmitting}
+        error={schemeError}
+        onClose={() => {
+          setSchemeOpen(false);
+          setSchemeError(null);
+        }}
+        onConfirm={(schemeId, membership, coverageLines, amount, method, momoRef) =>
+          void handleConfirmScheme(schemeId, membership, coverageLines, amount, method, momoRef)}
       />
     </div>
   );

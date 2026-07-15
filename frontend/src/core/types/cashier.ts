@@ -117,7 +117,6 @@ export interface CashierSelectData {
   completion_blocked: boolean;
   can_skip_completion: boolean;
   can_close_without_charge: boolean;
-  fee_sheet_url?: string;
   advanced_billing_url?: string;
   advanced_billing_label?: string;
   advanced_billing_external?: boolean;
@@ -146,6 +145,24 @@ export interface CashierReceipt {
   /** CBILL-2 — set on a partial payment; remainder owed after this payment */
   balance_due?: number;
   partial?: boolean;
+  /** CBILL-3 — set on a scheme-split; amount owed by the scheme (the claim) */
+  scheme_owed?: number;
+  scheme_split?: boolean;
+}
+
+/** CBILL-3 — a payer/scheme option for the picker */
+export interface CashierScheme {
+  id: number;
+  name: string;
+}
+
+/** CBILL-3 — one charge line with its scheme/patient coverage flag */
+export interface CashierCoverageLine {
+  source: 'billing' | 'drug';
+  source_id: number;
+  description: string;
+  amount: number;
+  covered: boolean;
 }
 
 /** Response from cashier.pay */
@@ -220,6 +237,8 @@ export interface CashierDeskProps {
   /** CBILL-2 — partial payment feature flag + permission */
   enablePartialPayment?: boolean;
   canPartialPay?: boolean;
+  /** CBILL-3 — insurance scheme-split feature flag */
+  enableInsuranceScheme?: boolean;
   sharedDeviceWarning?: boolean;
   currencyFormat?: {
     currency_code?: string;

@@ -32,5 +32,6 @@ $canMarkUnpaid = AclMain::aclCheckCore('new_clinic', 'new_visit_mark_outstanding
     'can_esign_override' => AclMain::aclCheckCore('new_clinic', 'new_esign_skip_complete'),
     'enable_partial_payment' => $config->getInt('enable_partial_payment', 0, $deskFacilityId) === 1,
     'can_partial_pay' => $canMarkUnpaid,
+    'enable_insurance_scheme' => $config->getInt('enable_insurance_scheme', 0, $deskFacilityId) === 1,
     'enable_react_cashier_desk' => $reactCashierDesk,
 ]);

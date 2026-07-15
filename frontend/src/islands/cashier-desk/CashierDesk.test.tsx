@@ -221,6 +221,48 @@ describe('CashierDesk', () => {
     expect(screen.getByRole('button', { name: /Take partial payment/i })).toBeInTheDocument();
   });
 
+  it('offers scheme split when enabled and opens the modal (CBILL-3)', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [waitingVisit],
+        counts: { waiting: 1, paid_today: 0, closed_unpaid: 0 },
+      })
+      .mockResolvedValueOnce(selectData)
+      .mockResolvedValueOnce({ schemes: [{ id: 1, name: 'NHIS' }] });
+
+    render(<CashierDesk {...props} enableInsuranceScheme />);
+
+    await waitFor(() => screen.getByText(/Ama Boateng/));
+    fireEvent.click(screen.getByText(/Ama Boateng/));
+
+    await waitFor(() => screen.getByRole('button', { name: /Scheme split/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Scheme split/i }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Membership number/i)).toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: /Take scheme payment/i })).toBeInTheDocument();
+  });
+
+  it('hides scheme split when the flag is off', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [waitingVisit],
+        counts: { waiting: 1, paid_today: 0, closed_unpaid: 0 },
+      })
+      .mockResolvedValueOnce(selectData);
+
+    render(<CashierDesk {...props} />);
+
+    await waitFor(() => screen.getByText(/Ama Boateng/));
+    fireEvent.click(screen.getByText(/Ama Boateng/));
+
+    await waitFor(() => screen.getByRole('button', { name: /Take payment/i }));
+    expect(screen.queryByRole('button', { name: /Scheme split/i })).not.toBeInTheDocument();
+  });
+
   it('hides partial payment when the flag is off', async () => {
     mockFetch
       .mockResolvedValueOnce({

@@ -14,6 +14,7 @@ namespace OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\AjaxActionHandlerInterface;
 use OpenEMR\Modules\NewClinic\Controllers\AjaxController;
 use OpenEMR\Modules\NewClinic\Services\CashierService;
+use OpenEMR\Modules\NewClinic\Services\SchemeClaimService;
 
 final class CashierActionHandler implements AjaxActionHandlerInterface
 {
@@ -25,6 +26,8 @@ final class CashierActionHandler implements AjaxActionHandlerInterface
         'cashier.charges.post',
         'cashier.pay',
         'cashier.pay_partial',
+        'cashier.scheme.list',
+        'cashier.scheme.pay',
         'cashier.mark_unpaid',
         'cashier.close_zero',
     ];
@@ -131,6 +134,32 @@ final class CashierActionHandler implements AjaxActionHandlerInterface
                     isset($body['momo_reference']) ? (string) $body['momo_reference'] : null,
                 );
                 $this->host->respond(true, 'Partial payment recorded', $result);
+                break;
+            case 'cashier.scheme.list':
+                $this->host->respond(true, 'ok', [
+                    'schemes' => $this->host->svc(SchemeClaimService::class)->getSchemes(),
+                ]);
+                break;
+            case 'cashier.scheme.pay':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $result = $this->host->svc(CashierService::class)->recordSchemePayment(
+                    (int) ($body['visit_id'] ?? 0),
+                    $userId,
+                    (int) ($body['row_version'] ?? 0),
+                    (int) ($body['scheme_id'] ?? 0),
+                    (string) ($body['membership_number'] ?? ''),
+                    (array) ($body['coverage_lines'] ?? []),
+                    (float) ($body['amount_received'] ?? 0),
+                    $this->host->esignOverrideReason($body),
+                    isset($body['client_request_id']) ? (string) $body['client_request_id'] : null,
+                    isset($body['payment_method']) ? (string) $body['payment_method'] : 'cash',
+                    isset($body['momo_reference']) ? (string) $body['momo_reference'] : null,
+                );
+                $this->host->respond(true, 'Scheme payment recorded', $result);
                 break;
             case 'cashier.mark_unpaid':
                 if ($method !== 'POST') {

@@ -77,6 +77,12 @@ export function ReceiptModal({ open, preview, receipt, historyUrl, onClose }: Re
                   <br />
                 </>
               ) : null}
+              {receipt.scheme_owed !== undefined && receipt.scheme_owed > 0 ? (
+                <>
+                  Scheme owes: {formatMoney(receipt.scheme_owed)}
+                  <br />
+                </>
+              ) : null}
               {receipt.payment_method === 'momo' && receipt.momo_reference ? (
                 <>
                   MoMo ref: {receipt.momo_reference}
