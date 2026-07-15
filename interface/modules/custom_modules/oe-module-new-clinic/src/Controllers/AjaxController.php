@@ -273,12 +273,14 @@ class AjaxController
             $code = match ($e->getCode()) {
                 404 => 404,
                 403 => 403,
+                409 => 409,
                 429 => 429,
                 default => 500,
             };
             $errorCode = match ($code) {
                 404 => 'not_found',
                 403 => 'forbidden',
+                409 => 'conflict',
                 429 => 'rate_limited',
                 default => 'server_error',
             };

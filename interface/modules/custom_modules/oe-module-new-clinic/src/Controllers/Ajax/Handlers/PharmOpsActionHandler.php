@@ -226,7 +226,8 @@ final class PharmOpsActionHandler implements AjaxActionHandlerInterface
                         (int) ($body['inventory_id'] ?? 0),
                         (int) ($body['counted_on_hand'] ?? 0),
                         (string) ($body['reason'] ?? ''),
-                        $userId
+                        $userId,
+                        isset($body['expected_on_hand']) ? (int) $body['expected_on_hand'] : null
                     );
                     $this->host->respond(true, 'ok', $adjusted);
                 } catch (\InvalidArgumentException $e) {

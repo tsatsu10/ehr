@@ -25,15 +25,36 @@ class PharmOpsAdjustService
     }
 
     /**
+     * The drug_sales ledger quantity for an adjustment, matching the stock
+     * report's sign convention: out = positive stored (displayed negative), in =
+     * negative stored (displayed positive). Pure + static so the accounting-
+     * sensitive sign is unit-testable without a DB.
+     */
+    public static function adjustmentQuantity(int $current, int $counted): int
+    {
+        return 0 - ($counted - $current);
+    }
+
+    /**
      * Set a lot's on-hand to a counted value, recording the change as an
      * adjustment ledger row (drug_sales.quantity = -(counted - current), fee 0),
      * matching the stock report's sign convention. Backs both the row-level
      * Adjust action and the stock-take flow. No-op (no ledger row) when unchanged.
      *
+     * $expectedOnHand (optimistic concurrency): when provided, the write is
+     * refused with a 409 if the lot's on-hand changed since the caller read it
+     * (e.g. a dispense landed between a physical count and Apply), so a stale
+     * count can't silently overwrite a real movement.
+     *
      * @return array{inventory_id: int, drug_id: int, on_hand: int, delta: int}
      */
-    public function adjustLot(int $inventoryId, int $countedOnHand, string $reason, int $actorUserId): array
-    {
+    public function adjustLot(
+        int $inventoryId,
+        int $countedOnHand,
+        string $reason,
+        int $actorUserId,
+        ?int $expectedOnHand = null
+    ): array {
         $this->access->assertReceiveAccess();
 
         $lot = QueryUtils::querySingleRow(
@@ -48,6 +69,14 @@ class PharmOpsAdjustService
 
         $drugId = (int) ($lot['drug_id'] ?? 0);
         $current = (int) round((float) ($lot['on_hand'] ?? 0));
+
+        if ($expectedOnHand !== null && $expectedOnHand !== $current) {
+            throw new \RuntimeException(
+                'Stock changed since it was read — recount this lot before adjusting.',
+                409
+            );
+        }
+
         $counted = max(0, $countedOnHand);
         $delta = $counted - $current;
         $reason = mb_substr(trim($reason), 0, 250);
@@ -69,7 +98,7 @@ class PharmOpsAdjustService
                     $inventoryId,
                     $user,
                     date('Y-m-d'),
-                    (0 - $delta),
+                    self::adjustmentQuantity($current, $counted),
                     $reason,
                     self::TRANS_TYPE_ADJUSTMENT,
                 ]

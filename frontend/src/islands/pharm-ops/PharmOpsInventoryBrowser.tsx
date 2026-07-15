@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { oeFetch } from '@core/oeFetch';
+import { oeFetch, OeFetchError } from '@core/oeFetch';
+import { ConfirmModal } from '@components/ConfirmModal';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { showDeskToast } from '@components/deskToast';
 import { Badge } from '@components/ui/badge';
@@ -7,6 +8,24 @@ import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { NativeSelect } from '@components/ui/native-select';
 import type { PharmStockBrowser, PharmStockRow, PharmStockSummary } from './pharmOpsTypes';
+
+// A count that swings on-hand by this many units, or by at least half the
+// current on-hand, is treated as "large" and asks for a second confirmation —
+// a fat-fingered stock-take shouldn't silently rewrite the shelf.
+const LARGE_VARIANCE_ABS = 100;
+
+function isLargeVariance(counted: number, onHand: number): boolean {
+  const delta = Math.abs(counted - onHand);
+  if (delta >= LARGE_VARIANCE_ABS) return true;
+  return onHand > 0 && delta >= onHand * 0.5;
+}
+
+interface PendingConfirm {
+  title: string;
+  body: string;
+  confirmLabel: string;
+  run: () => void;
+}
 
 interface PharmOpsInventoryBrowserProps {
   ajaxUrl: string;
@@ -92,11 +111,17 @@ export function PharmOpsInventoryBrowser({
   const [adjustValue, setAdjustValue] = useState('');
   const [adjustReason, setAdjustReason] = useState('');
   const [adjustBusy, setAdjustBusy] = useState(false);
+  // On-hand the row showed when Adjust was opened — sent as the optimistic-
+  // concurrency guard so a dispense that landed since then can't be overwritten.
+  const [adjustExpected, setAdjustExpected] = useState<number | null>(null);
 
   // Stock-take (physical count) mode.
   const [stocktake, setStocktake] = useState(false);
   const [counts, setCounts] = useState<Record<number, string>>({});
   const [applying, setApplying] = useState(false);
+
+  // Large-variance second confirmation (adjust or stock-take).
+  const [confirm, setConfirm] = useState<PendingConfirm | null>(null);
 
   const canAdjust = canReceive;
   const showActions = (canReceive || canDestroy || canAdjust) && !stocktake;
@@ -135,9 +160,10 @@ export function PharmOpsInventoryBrowser({
     void load();
   }, [load]);
 
-  // Reload when the hub signals a receive/destroy happened.
+  // Reload when the hub signals a receive/destroy happened — but never mid
+  // stock-take, or the reload would wipe counts the user has already entered.
   useEffect(() => {
-    if (refreshToken > 0) {
+    if (refreshToken > 0 && !stocktake) {
       void load();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -159,22 +185,23 @@ export function PharmOpsInventoryBrowser({
   const openAdjust = useCallback((row: PharmStockRow) => {
     setAdjustId(row.inventory_id);
     setAdjustValue(String(row.on_hand));
+    setAdjustExpected(row.on_hand);
     setAdjustReason('');
   }, []);
 
-  const applyAdjust = useCallback(
-    async (inventoryId: number) => {
-      const counted = Number(adjustValue);
-      if (!Number.isFinite(counted) || counted < 0) {
-        showDeskToast('Enter a valid count', 'danger');
-        return;
-      }
+  const doAdjust = useCallback(
+    async (inventoryId: number, counted: number, expected: number) => {
       setAdjustBusy(true);
       try {
         await oeFetch('pharm_ops.inventory.adjust', {
           ...fetchOptions,
           method: 'POST',
-          json: { inventory_id: inventoryId, counted_on_hand: counted, reason: adjustReason },
+          json: {
+            inventory_id: inventoryId,
+            counted_on_hand: counted,
+            reason: adjustReason,
+            expected_on_hand: expected,
+          },
         });
         showDeskToast('Stock adjusted', 'success');
         setAdjustId(null);
@@ -185,7 +212,31 @@ export function PharmOpsInventoryBrowser({
         setAdjustBusy(false);
       }
     },
-    [adjustValue, adjustReason, fetchOptions, load],
+    [adjustReason, fetchOptions, load],
+  );
+
+  const applyAdjust = useCallback(
+    (inventoryId: number) => {
+      const counted = Number(adjustValue);
+      if (!Number.isFinite(counted) || counted < 0) {
+        showDeskToast('Enter a valid count', 'danger');
+        return;
+      }
+      const expected = adjustExpected ?? counted;
+      if (isLargeVariance(counted, expected)) {
+        setConfirm({
+          title: 'Large stock change',
+          body: `This changes on-hand from ${expected} to ${counted} (a difference of ${counted - expected}). Apply this adjustment?`,
+          confirmLabel: 'Apply adjustment',
+          run: () => {
+            void doAdjust(inventoryId, counted, expected);
+          },
+        });
+        return;
+      }
+      void doAdjust(inventoryId, counted, expected);
+    },
+    [adjustValue, adjustExpected, doAdjust],
   );
 
   const startStocktake = useCallback(() => {
@@ -213,33 +264,61 @@ export function PharmOpsInventoryBrowser({
     [rows, counts],
   );
 
-  const applyStocktake = useCallback(async () => {
-    if (changedCounts.length === 0) {
-      cancelStocktake();
-      return;
-    }
+  const doStocktake = useCallback(async () => {
     setApplying(true);
     const results = await Promise.allSettled(
       changedCounts.map((r) =>
         oeFetch('pharm_ops.inventory.adjust', {
           ...fetchOptions,
           method: 'POST',
-          json: { inventory_id: r.inventory_id, counted_on_hand: Number(counts[r.inventory_id]), reason: 'Stock-take' },
+          json: {
+            inventory_id: r.inventory_id,
+            counted_on_hand: Number(counts[r.inventory_id]),
+            reason: 'Stock-take',
+            expected_on_hand: r.on_hand,
+          },
         }),
       ),
     );
-    const failed = results.filter((x) => x.status === 'rejected').length;
-    const ok = changedCounts.length - failed;
+    const rejected = results.filter((x) => x.status === 'rejected');
+    const conflicts = rejected.filter(
+      (x) => x.reason instanceof OeFetchError && x.reason.status === 409,
+    ).length;
+    const otherFailed = rejected.length - conflicts;
+    const ok = changedCounts.length - rejected.length;
     setApplying(false);
     setStocktake(false);
     setCounts({});
-    if (failed > 0) {
-      showDeskToast(`${ok} lot(s) adjusted, ${failed} failed`, 'warning');
-    } else {
+    if (rejected.length === 0) {
       showDeskToast(`${ok} lot(s) adjusted`, 'success');
+    } else {
+      const parts = [`${ok} adjusted`];
+      if (conflicts > 0) parts.push(`${conflicts} changed mid-count — recount`);
+      if (otherFailed > 0) parts.push(`${otherFailed} failed`);
+      showDeskToast(parts.join(', '), 'warning');
     }
     await load();
-  }, [changedCounts, counts, fetchOptions, load, cancelStocktake]);
+  }, [changedCounts, counts, fetchOptions, load]);
+
+  const applyStocktake = useCallback(() => {
+    if (changedCounts.length === 0) {
+      cancelStocktake();
+      return;
+    }
+    const big = changedCounts.filter((r) => isLargeVariance(Number(counts[r.inventory_id]), r.on_hand));
+    if (big.length > 0) {
+      setConfirm({
+        title: 'Large stock changes',
+        body: `${big.length} of ${changedCounts.length} lot(s) change by a large amount. Apply all ${changedCounts.length} counts anyway?`,
+        confirmLabel: `Apply ${changedCounts.length} counts`,
+        run: () => {
+          void doStocktake();
+        },
+      });
+      return;
+    }
+    void doStocktake();
+  }, [changedCounts, counts, cancelStocktake, doStocktake]);
 
   return (
     <div className="nc-pharmops-inventory">
@@ -448,6 +527,23 @@ export function PharmOpsInventoryBrowser({
           ) : null}
         </>
       )}
+
+      {confirm ? (
+        <ConfirmModal
+          open
+          title={confirm.title}
+          confirmLabel={confirm.confirmLabel}
+          confirmVariant="warning"
+          onClose={() => setConfirm(null)}
+          onConfirm={() => {
+            const run = confirm.run;
+            setConfirm(null);
+            run();
+          }}
+        >
+          <p className="text-sm text-(--oe-nc-text)">{confirm.body}</p>
+        </ConfirmModal>
+      ) : null}
     </div>
   );
 }

@@ -92,6 +92,42 @@ describe('PharmOpsInventoryBrowser', () => {
     );
   });
 
+  it('asks for confirmation on a large adjustment and sends expected_on_hand', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ offset: 0, has_more: false, summary, generated_at: '', items: [lot(1, { on_hand: 200 })] })
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ offset: 0, has_more: false, summary, generated_at: '', items: [lot(1, { on_hand: 40 })] });
+
+    render(<PharmOpsInventoryBrowser ajaxUrl="/mock/ajax" csrfToken="t" canReceive />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^Adjust$/i }));
+    });
+    fireEvent.change(screen.getByLabelText('Counted on hand'), { target: { value: '40' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^Apply$/i }));
+    });
+
+    // A 200 → 40 swing is large, so the write is gated behind a confirm modal.
+    expect(await screen.findByText('Large stock change')).toBeInTheDocument();
+    expect(mockFetch).not.toHaveBeenCalledWith('pharm_ops.inventory.adjust', expect.anything());
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Apply adjustment/i }));
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'pharm_ops.inventory.adjust',
+      expect.objectContaining({
+        method: 'POST',
+        json: expect.objectContaining({ inventory_id: 1, counted_on_hand: 40, expected_on_hand: 200 }),
+      }),
+    );
+  });
+
   it('runs a stock-take: counts a lot and applies the adjustment', async () => {
     mockFetch
       .mockResolvedValueOnce({
