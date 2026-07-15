@@ -173,6 +173,9 @@ class EncounterSignService
         };
     }
 
+    /** @var array<int, string> facility_id => consult formdir, memoized per request (see consultNoteFormdir()). */
+    private array $consultNoteFormdirCache = [];
+
     /**
      * @param array<string, mixed> $visit
      * @return list<array{formdir: string, title: string}>
@@ -191,10 +194,28 @@ class EncounterSignService
                 'title' => 'Pharmacy service note',
             ]],
             default => [[
-                'formdir' => $this->catalog->getCatalog(null, $facilityId)['consult_note_formdir'] ?? 'soap',
+                'formdir' => $this->consultNoteFormdir($facilityId),
                 'title' => 'Consult note',
             ]],
         };
+    }
+
+    /**
+     * getCatalog() rebuilds ACL-gated lens/card data from scratch on every call — wasteful when
+     * this is invoked once per visit row in a report loop that shares one facility. Memoize the
+     * single field actually needed for the lifetime of this service instance (a fresh instance
+     * per request, so no stale-after-config-change risk).
+     */
+    private function consultNoteFormdir(int $facilityId): string
+    {
+        if (isset($this->consultNoteFormdirCache[$facilityId])) {
+            return $this->consultNoteFormdirCache[$facilityId];
+        }
+
+        $formdir = (string) ($this->catalog->getCatalog(null, $facilityId)['consult_note_formdir'] ?? 'soap');
+        $this->consultNoteFormdirCache[$facilityId] = $formdir;
+
+        return $formdir;
     }
 
     public function isFormdirSignedOnEncounter(int $encounterId, int $pid, string $formdir): bool

@@ -128,7 +128,7 @@ class ReportsService
                     (SELECT l.reason FROM new_visit_state_log l
                      WHERE l.visit_id = v.id AND l.to_state = 'closed_unpaid'
                      ORDER BY l.id DESC LIMIT 1) AS unpaid_reason,
-                    (SELECT COALESCE(SUM(b.fee * GREATEST(b.units, 1)), 0)
+                    (SELECT COALESCE(SUM(b.fee), 0)
                      FROM billing b
                      WHERE b.pid = v.pid AND b.encounter = v.encounter AND b.activity = 1) AS charges_total
              FROM new_visit v
@@ -139,14 +139,13 @@ class ReportsService
             [$facilityId, $visitDate]
         ) ?: [];
 
-        return array_map(function (array $row): array {
-            $enriched = $this->rowEnricher->enrichVisitRow($row);
-
+        // Batched (not one query per row) — see VisitRowEnricher::enrichVisitRows().
+        return array_map(static function (array $enriched): array {
             return array_merge($enriched, [
-                'unpaid_reason' => (string) ($row['unpaid_reason'] ?? ''),
-                'charges_total' => round((float) ($row['charges_total'] ?? 0), 2),
+                'unpaid_reason' => (string) ($enriched['unpaid_reason'] ?? ''),
+                'charges_total' => round((float) ($enriched['charges_total'] ?? 0), 2),
             ]);
-        }, $rows);
+        }, $this->rowEnricher->enrichVisitRows($rows));
     }
 
     /**
@@ -176,18 +175,20 @@ class ReportsService
             $params
         ) ?: [];
 
-        $webroot = $GLOBALS['webroot'] ?? '';
         $unsigned = [];
         $signedMap = $this->signService->batchVisitDocumentationSigned($rows);
+        // Batched (not one query per row) — see VisitRowEnricher::enrichVisitRows(). Enriching
+        // rows that turn out to be already-signed and get skipped below is fine: the batch
+        // queries run once regardless, and the per-row work after that is pure array lookups.
+        $enrichedRows = $this->rowEnricher->enrichVisitRows($rows);
 
-        foreach ($rows as $row) {
+        foreach ($rows as $index => $row) {
             $encounterId = (int) ($row['encounter'] ?? 0);
             if ($signedMap[$encounterId] ?? false) {
                 continue;
             }
 
-            $visitId = (int) ($row['id'] ?? 0);
-            $enriched = $this->rowEnricher->enrichVisitRow($row, $visitId);
+            $enriched = $enrichedRows[$index];
             $providerName = trim(($row['provider_fname'] ?? '') . ' ' . ($row['provider_lname'] ?? ''));
             $hoursUnsigned = self::hoursSinceTimestamp(
                 (string) ($row['consult_ended_at'] ?? $row['started_at'] ?? '')
@@ -196,11 +197,8 @@ class ReportsService
             $unsigned[] = array_merge($enriched, [
                 'provider_name' => $providerName !== '' ? $providerName : null,
                 'hours_unsigned' => $hoursUnsigned,
-                'encounter_url' => EncounterSignService::buildEncounterUrl(
-                    $webroot,
-                    (int) ($row['pid'] ?? 0),
-                    $encounterId
-                ),
+                // Native consult page when the native engine is on (stock fallback inside).
+                'encounter_url' => $this->signService->buildOpenUrlForVisit($row),
                 'service_profile' => (string) ($row['service_profile'] ?? 'full_opd'),
             ]);
         }
@@ -425,7 +423,7 @@ class ReportsService
     {
         $rows = QueryUtils::fetchRecords(
             "SELECT COALESCE(fs.category, 'other') AS category_key,
-                    COALESCE(SUM(b.fee * GREATEST(b.units, 1)), 0) AS amount
+                    COALESCE(SUM(b.fee), 0) AS amount
              FROM new_visit v
              INNER JOIN billing b ON b.pid = v.pid AND b.encounter = v.encounter AND b.activity = 1
              LEFT JOIN new_fee_schedule fs ON fs.id = (
@@ -500,22 +498,35 @@ class ReportsService
              FROM (
                  SELECT pd.pid,
                         COALESCE(
+                            -- First registration event via MIN(id) on the patient_id index.
+                            -- The old ORDER BY l.date LIMIT 1 form let the optimizer walk the
+                            -- log(date) index across the whole 1.4M-row audit log for every
+                            -- patient with NO matching event (4M rows examined, ~10 s). MIN(id)
+                            -- only ever reads that patient's own index entries; ids are
+                            -- auto-increment so MIN(id) is the chronologically first event.
                             (SELECT l.user FROM log l
-                             WHERE l.patient_id = pd.pid
-                             AND l.event IN ('new_patient', 'patient_record_add')
-                             ORDER BY l.date ASC, l.id ASC
-                             LIMIT 1),
+                             WHERE l.id = (
+                                 SELECT MIN(l2.id) FROM log l2
+                                 WHERE l2.patient_id = pd.pid
+                                 AND l2.event IN ('new_patient', 'patient_record_add')
+                             )),
                             ''
                         ) AS registrar_username
                  FROM patient_data pd
                  INNER JOIN new_visit v ON v.pid = pd.pid AND v.facility_id = ? AND v.visit_date = ?
-                 WHERE DATE(pd.regdate) = ?
+                 WHERE pd.regdate >= ? AND pd.regdate < ?
              ) reg
              LEFT JOIN new_patient_completion pc ON pc.pid = reg.pid
              LEFT JOIN users u ON u.username = reg.registrar_username
              GROUP BY reg.registrar_username, u.fname, u.lname
              ORDER BY patients_registered DESC, u.lname ASC, reg.registrar_username ASC",
-            [$facilityId, $visitDate, $visitDate]
+            [
+                $facilityId,
+                $visitDate,
+                // Sargable day bounds (regdate is a datetime) — DATE(pd.regdate) = ? blocks the index.
+                $visitDate . ' 00:00:00',
+                (new \DateTimeImmutable($visitDate))->modify('+1 day')->format('Y-m-d 00:00:00'),
+            ]
         ) ?: [];
 
         return array_map(static function (array $row): array {
@@ -553,17 +564,10 @@ class ReportsService
                 ORDER BY v.is_urgent DESC, v.started_at ASC";
 
         $rows = QueryUtils::fetchRecords($sql, $params) ?: [];
-        $visitIds = array_map(fn (array $row) => (int) ($row['id'] ?? 0), $rows);
-        $skippedMap = $this->rowEnricher->batchSkippedTriage($visitIds);
 
-        return array_map(
-            fn (array $row) => $this->rowEnricher->enrichVisitRow(
-                $row,
-                (int) ($row['id'] ?? 0),
-                $skippedMap
-            ),
-            $rows
-        );
+        // Batched (not one query per row) — also picks up the referred-to-OPD badge that this
+        // call site was missing (only skipped-triage was batched here before).
+        return $this->rowEnricher->enrichVisitRows($rows);
     }
 
     public static function normalizeVisitDate(?string $visitDate): string

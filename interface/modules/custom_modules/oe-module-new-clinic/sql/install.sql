@@ -327,6 +327,14 @@ CREATE INDEX `idx_visit_from_state` ON `new_visit_state_log` (`visit_id`, `from_
 CREATE INDEX `new_idx_log_date` ON `log` (`date`);
 #EndIf
 
+# Core `billing` ships with only PRIMARY KEY(id) and KEY(pid). The daily-reports
+# unpaid-visits charges total and the cash-by-category breakdown both join/filter on
+# (pid, encounter, activity) per visit — with only a pid index, a long-tenured
+# patient's ENTIRE billing history gets scanned to find one encounter's rows.
+#IfNotIndex billing new_idx_billing_pid_encounter_activity
+CREATE INDEX `new_idx_billing_pid_encounter_activity` ON `billing` (`pid`, `encounter`, `activity`);
+#EndIf
+
 #IfNotRow2D new_completion_field_weight field_key fname level 1
 INSERT INTO `new_completion_field_weight` (`field_key`, `level`, `weight`, `is_active`) VALUES
 ('fname', 1, 15, 1),
@@ -1509,6 +1517,27 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_referral_editor
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_native_referral_editor', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_cashier_other_payments
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_cashier_other_payments', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_patient_notes
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_native_patient_notes', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_lab_followup_views
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_lab_followup_views', '0');
+#EndIf
+
+-- CP-2 — deposits have no visit: receipts must allow a NULL visit_id. MODIFY is
+-- idempotent, so the #IfColumn guard (runs whenever the column exists) is safe.
+#IfColumn new_receipt visit_id
+ALTER TABLE `new_receipt` MODIFY `visit_id` BIGINT NULL;
 #EndIf
 
 -- D-IMM-1 — Ghana EPI vaccine set seeded into the stock `immunizations` list (option_ids 500+
