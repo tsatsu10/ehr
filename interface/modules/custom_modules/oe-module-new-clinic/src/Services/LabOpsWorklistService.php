@@ -63,8 +63,10 @@ class LabOpsWorklistService
           static fn (array $raw): int => (int) ($raw['procedure_order_id'] ?? 0),
           $rawRows
       ))));
-      if ($orderIds !== []) {
-          $this->orderMeta->batchEnsureFulfillmentMeta($orderIds);
+      if ($orderIds !== [] && $this->orderMeta->batchEnsureFulfillmentMeta($orderIds)) {
+          // Only re-fetch when the backfill actually changed a meta row — steady-state
+          // polls (the common case) write nothing, so this doubled query used to run
+          // on every 45s tick for no reason.
           $rawRows = $this->fetchOrderRows($facilityIds, $visitDate);
       }
       $rows = [];

@@ -342,8 +342,7 @@ class LabService
         foreach ($rows as $row) {
             $missingMetaIds[] = (int) ($row['procedure_order_id'] ?? 0);
         }
-        if ($missingMetaIds !== []) {
-            $this->orderMeta->batchEnsureFulfillmentMeta($missingMetaIds);
+        if ($missingMetaIds !== [] && $this->orderMeta->batchEnsureFulfillmentMeta($missingMetaIds)) {
             $rows = QueryUtils::fetchRecords(
                 "SELECT po.procedure_order_id, po.order_status, po.date_ordered, po.lab_id,
                         poc.procedure_order_title, poc.procedure_code,

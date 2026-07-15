@@ -259,18 +259,81 @@ class LabOpsOrderMetaService
     }
 
     /**
+     * Was a per-order loop calling ensureFulfillmentMeta() (2-3 SELECTs each) despite the
+     * name — the worklist calls this once per hub load AND every poll tick, so it multiplied
+     * into hundreds of round trips a minute on a busy day. Batches the two reads that used to
+     * run per order; only the (normally rare) rows that actually need a write still hit the DB
+     * individually, since MySQL has no portable batched UPSERT-with-conditional-logic here.
+     *
      * @param array<int, int> $procedureOrderIds
+     * @return bool True if any meta row was inserted/updated (caller can skip a re-fetch otherwise).
      */
-    public function batchEnsureFulfillmentMeta(array $procedureOrderIds): void
+    public function batchEnsureFulfillmentMeta(array $procedureOrderIds): bool
     {
+        $procedureOrderIds = array_values(array_unique(array_filter(
+            array_map('intval', $procedureOrderIds),
+            static fn (int $id): bool => $id > 0
+        )));
+        if ($procedureOrderIds === []) {
+            return false;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($procedureOrderIds), '?'));
+
+        $orders = QueryUtils::fetchRecords(
+            "SELECT procedure_order_id, lab_id, patient_id, encounter_id
+             FROM procedure_order
+             WHERE procedure_order_id IN ($placeholders) AND activity = 1",
+            $procedureOrderIds
+        ) ?: [];
+        $ordersById = [];
+        foreach ($orders as $order) {
+            $ordersById[(int) ($order['procedure_order_id'] ?? 0)] = $order;
+        }
+
+        $existingRows = QueryUtils::fetchRecords(
+            "SELECT id, procedure_order_id, fulfillment FROM new_lab_order_meta
+             WHERE procedure_order_id IN ($placeholders)",
+            $procedureOrderIds
+        ) ?: [];
+        $existingByOrderId = [];
+        foreach ($existingRows as $row) {
+            $existingByOrderId[(int) ($row['procedure_order_id'] ?? 0)] = $row;
+        }
+
+        $wrote = false;
         foreach ($procedureOrderIds as $procedureOrderId) {
-            $procedureOrderId = (int) $procedureOrderId;
-            if ($procedureOrderId <= 0) {
+            $order = $ordersById[$procedureOrderId] ?? null;
+            if ($order === null) {
+                // Not found or inactive — same net effect as the old per-row exception path
+                // (caught, logged, skipped); both real callers already filter to active orders.
                 continue;
             }
 
             try {
-                $this->ensureFulfillmentMeta($procedureOrderId);
+                $existing = $existingByOrderId[$procedureOrderId] ?? null;
+                $resolved = $this->resolveFulfillment(
+                    is_array($existing) ? (string) ($existing['fulfillment'] ?? '') : null,
+                    (int) ($order['lab_id'] ?? 0)
+                );
+
+                if (is_array($existing) && !empty($existing['id'])) {
+                    $stored = (string) ($existing['fulfillment'] ?? '');
+                    if ($stored !== $resolved) {
+                        QueryUtils::sqlStatementThrowException(
+                            'UPDATE new_lab_order_meta SET fulfillment = ? WHERE procedure_order_id = ?',
+                            [$resolved, $procedureOrderId]
+                        );
+                        $wrote = true;
+                    }
+                    continue;
+                }
+
+                $pid = (int) ($order['patient_id'] ?? 0);
+                $encounterId = (int) ($order['encounter_id'] ?? 0);
+                $visitId = $this->resolveVisitId($pid, $encounterId);
+                $this->upsertMeta($procedureOrderId, $pid, $visitId, null, null, 0, $resolved);
+                $wrote = true;
             } catch (\Throwable $e) {
                 error_log(
                     'Lab ops fulfillment meta backfill failed for order '
@@ -278,6 +341,8 @@ class LabOpsOrderMetaService
                 );
             }
         }
+
+        return $wrote;
     }
 
     public function inferFulfillmentFromProviderId(int $labId): string
