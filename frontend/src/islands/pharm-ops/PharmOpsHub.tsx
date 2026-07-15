@@ -97,6 +97,8 @@ export function PharmOpsHub({
   const [receiveContext, setReceiveContext] = useState<ReceiveInitialContext | null>(null);
   const [destroyDrawerOpen, setDestroyDrawerOpen] = useState(false);
   const [destroyContext, setDestroyContext] = useState<DestroyLotContext | null>(null);
+  // Bumped after a receive/destroy drawer saves so the Inventory browser reloads.
+  const [inventoryRefreshToken, setInventoryRefreshToken] = useState(0);
   const [setup, setSetup] = useState<PharmSetupStatus | null>(null);
   const [setupOpen, setSetupOpen] = useState(false);
 
@@ -246,7 +248,21 @@ export function PharmOpsHub({
       {tab === 'reports' && canViewReports ? (
         <PharmOpsReportsPane ajaxUrl={ajaxUrl} csrfToken={csrfToken} />
       ) : tab === 'inventory' ? (
-        <PharmOpsInventoryBrowser ajaxUrl={ajaxUrl} csrfToken={csrfToken} />
+        <PharmOpsInventoryBrowser
+          ajaxUrl={ajaxUrl}
+          csrfToken={csrfToken}
+          canReceive={runtimeCanReceive}
+          canDestroy={runtimeCanDestroy}
+          refreshToken={inventoryRefreshToken}
+          onReceive={(drugId, drugName) => {
+            setReceiveContext({ drugId, drugName });
+            setReceiveDrawerOpen(true);
+          }}
+          onDestroy={(drugId, inventoryId, drugName, lotNumber) => {
+            setDestroyContext({ drugId, inventoryId, drugName, lotNumber });
+            setDestroyDrawerOpen(true);
+          }}
+        />
       ) : (
         <PharmOpsWorklist
           tab={tab}
@@ -312,6 +328,7 @@ export function PharmOpsHub({
             }}
             onReceived={() => {
               void loadWorklist();
+              setInventoryRefreshToken((t) => t + 1);
             }}
           />
         </Suspense>
@@ -330,6 +347,7 @@ export function PharmOpsHub({
             }}
             onDestroyed={() => {
               void loadWorklist();
+              setInventoryRefreshToken((t) => t + 1);
             }}
           />
         </Suspense>

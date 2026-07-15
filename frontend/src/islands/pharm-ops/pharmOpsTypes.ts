@@ -10,7 +10,18 @@ export interface PharmStockRow {
   expiry_status: 'expired' | 'expiring' | 'ok';
 }
 
+export interface PharmStockSummary {
+  sku_count: number;
+  expiring: number;
+  expired: number;
+  out_of_stock: number;
+  at_reorder: number;
+}
+
 export interface PharmStockBrowser {
+  offset: number;
+  has_more: boolean;
+  summary: PharmStockSummary | null;
   generated_at: string;
   items: PharmStockRow[];
 }

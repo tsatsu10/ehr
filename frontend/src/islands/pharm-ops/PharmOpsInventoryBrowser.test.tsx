@@ -1,4 +1,4 @@
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import { vi } from 'vitest';
 import { PharmOpsInventoryBrowser } from './PharmOpsInventoryBrowser';
 
@@ -7,48 +7,125 @@ vi.mock('@core/oeFetch', () => ({ oeFetch: vi.fn() }));
 import { oeFetch } from '@core/oeFetch';
 const mockFetch = oeFetch as ReturnType<typeof vi.fn>;
 
+const summary = { sku_count: 12, expiring: 3, expired: 1, out_of_stock: 2, at_reorder: 4 };
+
+function lot(id: number, over: Record<string, unknown> = {}) {
+  return {
+    inventory_id: id,
+    drug_id: 6,
+    drug_name: 'Ibuprofen',
+    lot_number: `LOT-${id}`,
+    on_hand: 200,
+    expiration: '2026-08-01',
+    expiry_status: 'expiring',
+    ...over,
+  };
+}
+
 describe('PharmOpsInventoryBrowser', () => {
   afterEach(() => {
     vi.resetAllMocks();
   });
 
-  it('renders lots with on-hand and an expiry status badge', async () => {
-    mockFetch.mockResolvedValue({
-      generated_at: '',
-      items: [
-        {
-          inventory_id: 1,
-          drug_id: 6,
-          drug_name: 'Ibuprofen',
-          lot_number: 'LOT-A',
-          on_hand: 200,
-          expiration: '2026-08-01',
-          expiry_status: 'expiring',
-        },
-        {
-          inventory_id: 2,
-          drug_id: 6,
-          drug_name: 'Ibuprofen',
-          lot_number: 'LOT-B',
-          on_hand: 0,
-          expiration: '',
-          expiry_status: 'ok',
-        },
-      ],
-    });
+  it('renders the summary strip and lots with an expiry badge', async () => {
+    mockFetch.mockResolvedValue({ offset: 0, has_more: false, summary, generated_at: '', items: [lot(1)] });
 
     render(<PharmOpsInventoryBrowser ajaxUrl="/mock/ajax" csrfToken="t" />);
     await act(async () => {
       await Promise.resolve();
     });
 
-    expect(await screen.findByText('LOT-A')).toBeInTheDocument();
+    expect(await screen.findByText('LOT-1')).toBeInTheDocument();
     expect(screen.getByText('Expiring')).toBeInTheDocument();
-    expect(screen.getByText('200')).toBeInTheDocument();
+    expect(screen.getByText('In-stock SKUs')).toBeInTheDocument();
+    expect(screen.getByText('12')).toBeInTheDocument();
+  });
+
+  it('pages with Load more', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ offset: 0, has_more: true, summary, generated_at: '', items: [lot(1)] })
+      .mockResolvedValueOnce({
+        offset: 1,
+        has_more: false,
+        summary: null,
+        generated_at: '',
+        items: [lot(2, { lot_number: 'LOT-NEXT' })],
+      });
+
+    render(<PharmOpsInventoryBrowser ajaxUrl="/mock/ajax" csrfToken="t" />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Load more/i }));
+    });
+
+    expect(await screen.findByText('LOT-NEXT')).toBeInTheDocument();
+  });
+
+  it('adjusts a lot via the Adjust action when the user can receive', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ offset: 0, has_more: false, summary, generated_at: '', items: [lot(1, { on_hand: 50 })] })
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ offset: 0, has_more: false, summary, generated_at: '', items: [lot(1, { on_hand: 40 })] });
+
+    render(<PharmOpsInventoryBrowser ajaxUrl="/mock/ajax" csrfToken="t" canReceive />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^Adjust$/i }));
+    });
+    fireEvent.change(screen.getByLabelText('Counted on hand'), { target: { value: '40' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^Apply$/i }));
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'pharm_ops.inventory.adjust',
+      expect.objectContaining({
+        method: 'POST',
+        json: expect.objectContaining({ inventory_id: 1, counted_on_hand: 40 }),
+      }),
+    );
+  });
+
+  it('runs a stock-take: counts a lot and applies the adjustment', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        offset: 0,
+        has_more: false,
+        summary,
+        generated_at: '',
+        items: [lot(1, { on_hand: 50 }), lot(2, { lot_number: 'LOT-2', on_hand: 20 })],
+      })
+      .mockResolvedValue({});
+
+    render(<PharmOpsInventoryBrowser ajaxUrl="/mock/ajax" csrfToken="t" canReceive />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Start stock-take/i }));
+    });
+    fireEvent.change(screen.getByLabelText(/Counted Ibuprofen LOT-1/i), { target: { value: '45' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Apply counts/i }));
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'pharm_ops.inventory.adjust',
+      expect.objectContaining({
+        json: expect.objectContaining({ inventory_id: 1, counted_on_hand: 45, reason: 'Stock-take' }),
+      }),
+    );
   });
 
   it('shows the empty state', async () => {
-    mockFetch.mockResolvedValue({ generated_at: '', items: [] });
+    mockFetch.mockResolvedValue({ offset: 0, has_more: false, summary, generated_at: '', items: [] });
 
     render(<PharmOpsInventoryBrowser ajaxUrl="/mock/ajax" csrfToken="t" />);
     await act(async () => {

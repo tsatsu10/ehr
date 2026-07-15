@@ -31,7 +31,9 @@ class PharmOpsReportsService
     public const PRESCRIPTIONS_LOOKBACK_DAYS = 90;
     /** Page size for the inventory-transactions ledger. */
     public const TRANSACTION_PAGE_SIZE = 50;
-    /** Upper bound on the ledger paging offset (sane cap; deep paging returns empty). */
+    /** Page size for the inventory-management stock browser. */
+    public const INVENTORY_PAGE_SIZE = 50;
+    /** Upper bound on paging offsets (sane cap; deep paging returns empty). */
     private const TRANSACTION_MAX_OFFSET = 100000;
     private const REPORT_ROW_CAP = 500;
 
@@ -507,11 +509,12 @@ class PharmOpsReportsService
     /**
      * Native inventory-management stock browser: live lots (non-destroyed) with
      * on-hand and expiry status. Replaces drug_inventory.php. Filterable by drug
-     * name, empty lots, and expiry bucket. Bounded (R1).
+     * name, empty lots, and expiry bucket. Paginated (R1); a stockroom-health
+     * summary accompanies the first page.
      *
-     * @return array{generated_at: string, items: list<array<string, mixed>>}
+     * @return array{offset: int, has_more: bool, summary: array<string, int>|null, generated_at: string, items: list<array<string, mixed>>}
      */
-    public function stockBrowser(string $search = '', bool $showEmpty = false, string $expiry = 'all'): array
+    public function stockBrowser(string $search = '', bool $showEmpty = false, string $expiry = 'all', int $offset = 0): array
     {
         $this->access->assertHubAccess();
 
@@ -532,6 +535,9 @@ class PharmOpsReportsService
                 . ' AND di.expiration <= DATE_ADD(CURDATE(), INTERVAL 90 DAY)';
         }
 
+        $offset = min(max(0, $offset), self::TRANSACTION_MAX_OFFSET);
+        $limit = self::INVENTORY_PAGE_SIZE;
+
         $rows = QueryUtils::fetchRecords(
             "SELECT di.inventory_id, di.drug_id, di.lot_number, di.on_hand, di.expiration,
                     d.name AS drug_name, d.reorder_point
@@ -539,9 +545,12 @@ class PharmOpsReportsService
              INNER JOIN drugs d ON d.drug_id = di.drug_id
              WHERE {$where}
              ORDER BY d.name ASC, di.expiration ASC, di.lot_number ASC
-             LIMIT " . self::REPORT_ROW_CAP,
+             LIMIT " . ($limit + 1) . " OFFSET " . $offset,
             $binds
         ) ?: [];
+
+        $hasMore = count($rows) > $limit;
+        $rows = array_slice($rows, 0, $limit);
 
         $today = new \DateTimeImmutable('today');
         $soon = $today->modify('+90 days');
@@ -575,8 +584,54 @@ class PharmOpsReportsService
         }, $rows);
 
         return [
+            'offset' => $offset,
+            'has_more' => $hasMore,
+            // Only compute the stockroom-health summary on the first page.
+            'summary' => $offset === 0 ? $this->stockSummary() : null,
             'generated_at' => date('c'),
             'items' => $items,
+        ];
+    }
+
+    /**
+     * Stockroom-health counts for the inventory summary strip: distinct in-stock
+     * SKUs, lots expiring within 90 days, expired lots, out-of-stock active
+     * dispensable drugs, and drugs at/below their reorder point.
+     *
+     * @return array<string, int>
+     */
+    private function stockSummary(): array
+    {
+        $row = QueryUtils::querySingleRow(
+            "SELECT
+                COUNT(DISTINCT CASE WHEN di.on_hand <> 0 THEN di.drug_id END) AS sku_count,
+                SUM(CASE WHEN di.expiration IS NOT NULL AND di.expiration >= CURDATE()
+                         AND di.expiration <= DATE_ADD(CURDATE(), INTERVAL 90 DAY) THEN 1 ELSE 0 END) AS expiring,
+                SUM(CASE WHEN di.expiration IS NOT NULL AND di.expiration < CURDATE() THEN 1 ELSE 0 END) AS expired
+             FROM drug_inventory di
+             INNER JOIN drugs d ON d.drug_id = di.drug_id
+             WHERE di.destroy_date IS NULL AND d.active = 1"
+        );
+
+        // Out-of-stock + at-reorder are per-drug (aggregate on-hand vs reorder point).
+        $reorderRow = QueryUtils::querySingleRow(
+            "SELECT
+                SUM(CASE WHEN oh.on_hand <= 0 THEN 1 ELSE 0 END) AS out_of_stock,
+                SUM(CASE WHEN d.reorder_point > 0 AND oh.on_hand <= d.reorder_point THEN 1 ELSE 0 END) AS at_reorder
+             FROM drugs d
+             LEFT JOIN (
+                 SELECT drug_id, SUM(on_hand) AS on_hand
+                 FROM drug_inventory WHERE destroy_date IS NULL GROUP BY drug_id
+             ) oh ON oh.drug_id = d.drug_id
+             WHERE d.active = 1 AND d.dispensable = 1"
+        );
+
+        return [
+            'sku_count' => (int) (is_array($row) ? ($row['sku_count'] ?? 0) : 0),
+            'expiring' => (int) (is_array($row) ? ($row['expiring'] ?? 0) : 0),
+            'expired' => (int) (is_array($row) ? ($row['expired'] ?? 0) : 0),
+            'out_of_stock' => (int) (is_array($reorderRow) ? ($reorderRow['out_of_stock'] ?? 0) : 0),
+            'at_reorder' => (int) (is_array($reorderRow) ? ($reorderRow['at_reorder'] ?? 0) : 0),
         ];
     }
 

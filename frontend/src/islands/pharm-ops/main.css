@@ -115,6 +115,35 @@
   background: var(--oe-nc-bg, #f4f6f8);
 }
 
+/* Inventory stockroom-health summary strip */
+.nc-pharmops-inv-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.nc-pharmops-inv-summary-stat {
+  display: flex;
+  flex-direction: column;
+  min-width: 6rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--oe-nc-border, #dee2e6);
+  border-radius: 0.35rem;
+  background: var(--oe-nc-surface, #fff);
+}
+
+.nc-pharmops-inv-summary-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--oe-nc-text, #1c2733);
+  line-height: 1.2;
+}
+
+.nc-pharmops-inv-summary-label {
+  font-size: 0.75rem;
+  color: var(--oe-nc-text-muted, #6c757d);
+}
+
 .nc-pharmops-reports-external-icon {
   font-size: 1.75rem;
   color: var(--oe-nc-text-muted, #9ca3af);

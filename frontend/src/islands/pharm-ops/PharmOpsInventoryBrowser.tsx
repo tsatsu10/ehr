@@ -1,14 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { showDeskToast } from '@components/deskToast';
 import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { NativeSelect } from '@components/ui/native-select';
-import type { PharmStockBrowser, PharmStockRow } from './pharmOpsTypes';
+import type { PharmStockBrowser, PharmStockRow, PharmStockSummary } from './pharmOpsTypes';
 
 interface PharmOpsInventoryBrowserProps {
   ajaxUrl: string;
   csrfToken: string;
+  canReceive?: boolean;
+  canDestroy?: boolean;
+  onReceive?: (drugId: number, drugName: string) => void;
+  onDestroy?: (drugId: number, inventoryId: number, drugName: string, lotNumber: string) => void;
+  /** Bumped by the hub after a receive/destroy drawer saves, to force a reload. */
+  refreshToken?: number;
 }
 
 // Inline alignment: the BS4-colliding alignment utilities are pinned by the
@@ -40,38 +48,198 @@ function expiryText(status: PharmStockRow['expiry_status']): string {
   return 'OK';
 }
 
-export function PharmOpsInventoryBrowser({ ajaxUrl, csrfToken }: PharmOpsInventoryBrowserProps) {
+function StockSummaryStrip({ summary }: { summary: PharmStockSummary }) {
+  const stats: Array<{ label: string; value: number }> = [
+    { label: 'In-stock SKUs', value: summary.sku_count },
+    { label: 'Expiring ≤ 90d', value: summary.expiring },
+    { label: 'Expired lots', value: summary.expired },
+    { label: 'Out of stock', value: summary.out_of_stock },
+    { label: 'At reorder', value: summary.at_reorder },
+  ];
+  return (
+    <div className="nc-pharmops-inv-summary mb-3" role="group" aria-label="Stockroom health">
+      {stats.map((s) => (
+        <div key={s.label} className="nc-pharmops-inv-summary-stat">
+          <span className="nc-pharmops-inv-summary-value tabular-nums">{s.value}</span>
+          <span className="nc-pharmops-inv-summary-label">{s.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function PharmOpsInventoryBrowser({
+  ajaxUrl,
+  csrfToken,
+  canReceive = false,
+  canDestroy = false,
+  onReceive,
+  onDestroy,
+  refreshToken = 0,
+}: PharmOpsInventoryBrowserProps) {
   const [search, setSearch] = useState('');
   const [showEmpty, setShowEmpty] = useState(false);
   const [expiry, setExpiry] = useState('all');
-  const [data, setData] = useState<PharmStockBrowser | null>(null);
+  const [rows, setRows] = useState<PharmStockRow[]>([]);
+  const [summary, setSummary] = useState<PharmStockSummary | null>(null);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Inline single-lot adjust.
+  const [adjustId, setAdjustId] = useState<number | null>(null);
+  const [adjustValue, setAdjustValue] = useState('');
+  const [adjustReason, setAdjustReason] = useState('');
+  const [adjustBusy, setAdjustBusy] = useState(false);
+
+  // Stock-take (physical count) mode.
+  const [stocktake, setStocktake] = useState(false);
+  const [counts, setCounts] = useState<Record<number, string>>({});
+  const [applying, setApplying] = useState(false);
+
+  const canAdjust = canReceive;
+  const showActions = (canReceive || canDestroy || canAdjust) && !stocktake;
+
   const fetchOptions = useMemo(() => ({ ajaxUrl, csrfToken }), [ajaxUrl, csrfToken]);
+
+  const fetchPage = useCallback(
+    (offset: number) =>
+      oeFetch<PharmStockBrowser>('pharm_ops.inventory.stock_list', {
+        ...fetchOptions,
+        params: { search, show_empty: showEmpty ? 1 : 0, expiry, offset },
+      }),
+    [fetchOptions, search, showEmpty, expiry],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setAdjustId(null);
     try {
-      const res = await oeFetch<PharmStockBrowser>('pharm_ops.inventory.stock_list', {
-        ...fetchOptions,
-        params: { search, show_empty: showEmpty ? 1 : 0, expiry },
-      });
-      setData(res);
+      const res = await fetchPage(0);
+      setRows(res.items ?? []);
+      setSummary(res.summary ?? null);
+      setHasMore(!!res.has_more);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load inventory');
-      setData(null);
+      setRows([]);
+      setSummary(null);
+      setHasMore(false);
     } finally {
       setLoading(false);
     }
-  }, [fetchOptions, search, showEmpty, expiry]);
+  }, [fetchPage]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const items = data?.items ?? [];
+  // Reload when the hub signals a receive/destroy happened.
+  useEffect(() => {
+    if (refreshToken > 0) {
+      void load();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshToken]);
+
+  const loadMore = useCallback(async () => {
+    setLoadingMore(true);
+    try {
+      const res = await fetchPage(rows.length);
+      setRows((prev) => [...prev, ...(res.items ?? [])]);
+      setHasMore(!!res.has_more);
+    } catch {
+      /* keep what we have */
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [fetchPage, rows.length]);
+
+  const openAdjust = useCallback((row: PharmStockRow) => {
+    setAdjustId(row.inventory_id);
+    setAdjustValue(String(row.on_hand));
+    setAdjustReason('');
+  }, []);
+
+  const applyAdjust = useCallback(
+    async (inventoryId: number) => {
+      const counted = Number(adjustValue);
+      if (!Number.isFinite(counted) || counted < 0) {
+        showDeskToast('Enter a valid count', 'danger');
+        return;
+      }
+      setAdjustBusy(true);
+      try {
+        await oeFetch('pharm_ops.inventory.adjust', {
+          ...fetchOptions,
+          method: 'POST',
+          json: { inventory_id: inventoryId, counted_on_hand: counted, reason: adjustReason },
+        });
+        showDeskToast('Stock adjusted', 'success');
+        setAdjustId(null);
+        await load();
+      } catch (err) {
+        showDeskToast(err instanceof Error ? err.message : 'Adjust failed', 'danger');
+      } finally {
+        setAdjustBusy(false);
+      }
+    },
+    [adjustValue, adjustReason, fetchOptions, load],
+  );
+
+  const startStocktake = useCallback(() => {
+    const initial: Record<number, string> = {};
+    rows.forEach((r) => {
+      initial[r.inventory_id] = String(r.on_hand);
+    });
+    setCounts(initial);
+    setAdjustId(null);
+    setStocktake(true);
+  }, [rows]);
+
+  const cancelStocktake = useCallback(() => {
+    setStocktake(false);
+    setCounts({});
+  }, []);
+
+  const changedCounts = useMemo(
+    () =>
+      rows.filter((r) => {
+        const raw = counts[r.inventory_id];
+        const n = Number(raw);
+        return raw !== undefined && raw !== '' && Number.isFinite(n) && n >= 0 && n !== r.on_hand;
+      }),
+    [rows, counts],
+  );
+
+  const applyStocktake = useCallback(async () => {
+    if (changedCounts.length === 0) {
+      cancelStocktake();
+      return;
+    }
+    setApplying(true);
+    const results = await Promise.allSettled(
+      changedCounts.map((r) =>
+        oeFetch('pharm_ops.inventory.adjust', {
+          ...fetchOptions,
+          method: 'POST',
+          json: { inventory_id: r.inventory_id, counted_on_hand: Number(counts[r.inventory_id]), reason: 'Stock-take' },
+        }),
+      ),
+    );
+    const failed = results.filter((x) => x.status === 'rejected').length;
+    const ok = changedCounts.length - failed;
+    setApplying(false);
+    setStocktake(false);
+    setCounts({});
+    if (failed > 0) {
+      showDeskToast(`${ok} lot(s) adjusted, ${failed} failed`, 'warning');
+    } else {
+      showDeskToast(`${ok} lot(s) adjusted`, 'success');
+    }
+    await load();
+  }, [changedCounts, counts, fetchOptions, load, cancelStocktake]);
 
   return (
     <div className="nc-pharmops-inventory">
@@ -101,48 +269,184 @@ export function PharmOpsInventoryBrowser({ ajaxUrl, csrfToken }: PharmOpsInvento
         </label>
       </div>
 
+      {canAdjust && rows.length > 0 && !loading && !error ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          {stocktake ? (
+            <>
+              <Button
+                type="button"
+                size="sm"
+                disabled={applying}
+                onClick={() => {
+                  void applyStocktake();
+                }}
+              >
+                {applying ? 'Applying…' : `Apply counts (${changedCounts.length})`}
+              </Button>
+              <Button type="button" variant="ghost" size="sm" disabled={applying} onClick={cancelStocktake}>
+                Cancel
+              </Button>
+              <span className="text-sm text-(--oe-nc-text-muted)">
+                Enter the counted quantity for each lot — changed rows show the variance.
+              </span>
+            </>
+          ) : (
+            <Button type="button" variant="outline" size="sm" onClick={startStocktake}>
+              Start stock-take
+            </Button>
+          )}
+        </div>
+      ) : null}
+
+      {summary ? <StockSummaryStrip summary={summary} /> : null}
+
       {loading ? (
         <div className="nc-pharmops-empty nc-pharmops-empty--loading">Loading inventory…</div>
       ) : error ? (
         <div className={deskCalloutClass('warn')} role="alert">
           {error}
         </div>
-      ) : items.length === 0 ? (
+      ) : rows.length === 0 ? (
         <div className="nc-pharmops-empty-card">
           <div className="nc-pharmops-empty-card-title">No stock</div>
           <div className="nc-pharmops-empty-card-body">No lots match the current filters.</div>
         </div>
       ) : (
-        <div className="nc-pharmops-report-table-wrap" style={{ overflowX: 'auto' }}>
-          <table className="nc-pharmops-report-table w-full">
-            <thead>
-              <tr>
-                <th style={LEFT}>Drug</th>
-                <th style={LEFT}>Lot</th>
-                <th style={RIGHT}>On hand</th>
-                <th style={LEFT}>Expiry</th>
-                <th style={LEFT}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((row) => (
-                <tr key={row.inventory_id}>
-                  <td style={LEFT}>{row.drug_name}</td>
-                  <td style={LEFT}>{row.lot_number || '—'}</td>
-                  <td style={RIGHT} className="tabular-nums">{row.on_hand}</td>
-                  <td style={LEFT} className="tabular-nums">{ddmmyyyy(row.expiration)}</td>
-                  <td style={LEFT}>
-                    {row.expiry_status === 'ok' ? (
-                      <span className="text-(--oe-nc-text-muted)">OK</span>
-                    ) : (
-                      <Badge variant={expiryVariant(row.expiry_status)}>{expiryText(row.expiry_status)}</Badge>
-                    )}
-                  </td>
+        <>
+          <div className="nc-pharmops-report-table-wrap" style={{ overflowX: 'auto' }}>
+            <table className="nc-pharmops-report-table w-full">
+              <thead>
+                <tr>
+                  <th style={LEFT}>Drug</th>
+                  <th style={LEFT}>Lot</th>
+                  <th style={RIGHT}>On hand</th>
+                  <th style={LEFT}>Expiry</th>
+                  <th style={LEFT}>Status</th>
+                  {showActions ? <th style={RIGHT}>Actions</th> : null}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.inventory_id}>
+                    <td style={LEFT}>{row.drug_name}</td>
+                    <td style={LEFT}>{row.lot_number || '—'}</td>
+                    <td style={RIGHT} className="tabular-nums">
+                      {stocktake ? (
+                        (() => {
+                          const raw = counts[row.inventory_id] ?? '';
+                          const n = Number(raw);
+                          const variance = raw !== '' && Number.isFinite(n) ? n - row.on_hand : 0;
+                          return (
+                            <span className="inline-flex items-center justify-end gap-2">
+                              <Input
+                                type="number"
+                                min={0}
+                                className="h-7 w-20 inline-block"
+                                value={raw}
+                                onChange={(e) => setCounts((prev) => ({ ...prev, [row.inventory_id]: e.target.value }))}
+                                aria-label={`Counted ${row.drug_name} ${row.lot_number}`}
+                              />
+                              <span
+                                style={{ color: variance === 0 ? 'var(--oe-nc-text-muted)' : variance < 0 ? 'var(--oe-nc-danger)' : 'var(--oe-nc-cta)' }}
+                              >
+                                {variance === 0 ? `was ${row.on_hand}` : variance > 0 ? `+${variance}` : variance}
+                              </span>
+                            </span>
+                          );
+                        })()
+                      ) : adjustId === row.inventory_id ? (
+                        <Input
+                          type="number"
+                          min={0}
+                          className="h-7 w-20 inline-block"
+                          value={adjustValue}
+                          onChange={(e) => setAdjustValue(e.target.value)}
+                          aria-label="Counted on hand"
+                        />
+                      ) : (
+                        row.on_hand
+                      )}
+                    </td>
+                    <td style={LEFT} className="tabular-nums">{ddmmyyyy(row.expiration)}</td>
+                    <td style={LEFT}>
+                      {row.expiry_status === 'ok' ? (
+                        <span className="text-(--oe-nc-text-muted)">OK</span>
+                      ) : (
+                        <Badge variant={expiryVariant(row.expiry_status)}>{expiryText(row.expiry_status)}</Badge>
+                      )}
+                    </td>
+                    {showActions ? (
+                      <td style={RIGHT}>
+                        {adjustId === row.inventory_id ? (
+                          <span className="inline-flex flex-wrap items-center justify-end gap-1">
+                            <Input
+                              type="text"
+                              className="h-7 w-32 inline-block"
+                              placeholder="Reason"
+                              value={adjustReason}
+                              onChange={(e) => setAdjustReason(e.target.value)}
+                              aria-label="Adjustment reason"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={adjustBusy}
+                              onClick={() => {
+                                void applyAdjust(row.inventory_id);
+                              }}
+                            >
+                              {adjustBusy ? 'Saving…' : 'Apply'}
+                            </Button>
+                            <Button type="button" variant="ghost" size="sm" disabled={adjustBusy} onClick={() => setAdjustId(null)}>
+                              Cancel
+                            </Button>
+                          </span>
+                        ) : (
+                          <span className="inline-flex flex-wrap items-center justify-end gap-1">
+                            {canReceive && onReceive ? (
+                              <Button type="button" variant="outline" size="sm" onClick={() => onReceive(row.drug_id, row.drug_name)}>
+                                Receive
+                              </Button>
+                            ) : null}
+                            {canAdjust ? (
+                              <Button type="button" variant="outline" size="sm" onClick={() => openAdjust(row)}>
+                                Adjust
+                              </Button>
+                            ) : null}
+                            {canDestroy && onDestroy && row.on_hand > 0 ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onDestroy(row.drug_id, row.inventory_id, row.drug_name, row.lot_number)}
+                              >
+                                Destroy
+                              </Button>
+                            ) : null}
+                          </span>
+                        )}
+                      </td>
+                    ) : null}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {hasMore ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              disabled={loadingMore}
+              onClick={() => {
+                void loadMore();
+              }}
+            >
+              {loadingMore ? 'Loading…' : 'Load more'}
+            </Button>
+          ) : null}
+        </>
       )}
     </div>
   );

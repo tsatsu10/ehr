@@ -20,6 +20,7 @@ use OpenEMR\Modules\NewClinic\Services\PharmOpsDestroyService;
 use OpenEMR\Modules\NewClinic\Services\PharmOpsDispenseLabelService;
 use OpenEMR\Modules\NewClinic\Services\PharmOpsDispenseService;
 use OpenEMR\Modules\NewClinic\Services\PharmOpsOtcSaleService;
+use OpenEMR\Modules\NewClinic\Services\PharmOpsAdjustService;
 use OpenEMR\Modules\NewClinic\Services\PharmOpsReceiveService;
 use OpenEMR\Modules\NewClinic\Services\PharmOpsReportsService;
 use OpenEMR\Modules\NewClinic\Services\PharmOpsRxPrintService;
@@ -46,6 +47,7 @@ final class PharmOpsActionHandler implements AjaxActionHandlerInterface
         'pharm_ops.inventory.transactions',
         'pharm_ops.inventory.prescriptions',
         'pharm_ops.inventory.stock_list',
+        'pharm_ops.inventory.adjust',
         'pharm_ops.controlled_catalog',
         'pharm_ops.controlled_catalog_save',
         'pharm_ops.catalog_list',
@@ -208,9 +210,28 @@ final class PharmOpsActionHandler implements AjaxActionHandlerInterface
                     $this->host->svc(PharmOpsReportsService::class)->stockBrowser(
                         isset($_REQUEST['search']) ? (string) $_REQUEST['search'] : '',
                         !empty($_REQUEST['show_empty']),
-                        isset($_REQUEST['expiry']) ? (string) $_REQUEST['expiry'] : 'all'
+                        isset($_REQUEST['expiry']) ? (string) $_REQUEST['expiry'] : 'all',
+                        (int) ($_REQUEST['offset'] ?? 0)
                     )
                 );
+                break;
+            case 'pharm_ops.inventory.adjust':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                try {
+                    $adjusted = $this->host->svc(PharmOpsAdjustService::class)->adjustLot(
+                        (int) ($body['inventory_id'] ?? 0),
+                        (int) ($body['counted_on_hand'] ?? 0),
+                        (string) ($body['reason'] ?? ''),
+                        $userId
+                    );
+                    $this->host->respond(true, 'ok', $adjusted);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid'], (int) ($e->getCode() ?: 400));
+                }
                 break;
             case 'pharm_ops.controlled_catalog':
                 (new PharmOpsAccessService())->assertCatalogAccess();
