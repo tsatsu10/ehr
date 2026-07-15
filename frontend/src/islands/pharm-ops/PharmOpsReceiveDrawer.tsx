@@ -45,6 +45,10 @@ export function PharmOpsReceiveDrawer({
   const [quantity, setQuantity] = useState('1');
   const [unitCost, setUnitCost] = useState('0');
   const [notes, setNotes] = useState('');
+  // Supplier (INV-7): pick an existing address-book vendor, or type a new one inline.
+  const [vendorId, setVendorId] = useState('');
+  const [addingVendor, setAddingVendor] = useState(false);
+  const [newVendorName, setNewVendorName] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -83,6 +87,9 @@ export function PharmOpsReceiveDrawer({
     setQuantity('1');
     setUnitCost('0');
     setNotes('');
+    setVendorId('');
+    setAddingVendor(false);
+    setNewVendorName('');
     setLoadError(null);
     setSubmitError(null);
     setSuccess(null);
@@ -153,6 +160,11 @@ export function PharmOpsReceiveDrawer({
           quantity: Number(quantity),
           unit_cost: Number(unitCost),
           notes,
+          ...(addingVendor
+            ? { new_vendor_name: newVendorName.trim() }
+            : vendorId
+              ? { vendor_id: Number(vendorId) }
+              : {}),
         },
       });
       setSuccess(result);
@@ -165,15 +177,18 @@ export function PharmOpsReceiveDrawer({
       setSubmitting(false);
     }
   }, [
+    addingVendor,
     expiration,
     fetchOptions,
     lotNumber,
     manufacturer,
+    newVendorName,
     notes,
     onReceived,
     quantity,
     selectedDrug,
     unitCost,
+    vendorId,
     warehouseId,
   ]);
 
@@ -187,7 +202,8 @@ export function PharmOpsReceiveDrawer({
     && warehouseId !== ''
     && lotNumber.trim() !== ''
     && expiration !== ''
-    && Number(quantity) > 0;
+    && Number(quantity) > 0
+    && (!addingVendor || newVendorName.trim() !== '');
 
   return (
     <>
@@ -341,6 +357,58 @@ export function PharmOpsReceiveDrawer({
               />
             </div>
 
+            <div className="nc-form-group">
+              <label htmlFor={addingVendor ? 'nc-pharmops-receive-vendor-new' : 'nc-pharmops-receive-vendor'}>
+                Supplier (optional)
+              </label>
+              {addingVendor ? (
+                <span className="flex items-center gap-2">
+                  <Input
+                    id="nc-pharmops-receive-vendor-new"
+                    className="h-8"
+                    autoFocus
+                    autoComplete="off"
+                    value={newVendorName}
+                    onChange={(e) => setNewVendorName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); }
+                    }}
+                    placeholder="New supplier name"
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => { setAddingVendor(false); setNewVendorName(''); }}
+                  >
+                    Cancel
+                  </Button>
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <NativeSelect
+                    id="nc-pharmops-receive-vendor"
+                    className="h-8"
+                    value={vendorId}
+                    onChange={(e) => setVendorId(e.target.value)}
+                  >
+                    <option value="">— No supplier on record —</option>
+                    {(form.vendors ?? []).map((v) => (
+                      <option key={v.id} value={String(v.id)}>{v.display_name}</option>
+                    ))}
+                  </NativeSelect>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setAddingVendor(true); setVendorId(''); }}
+                  >
+                    + New supplier
+                  </Button>
+                </span>
+              )}
+            </div>
+
             <div className="grid grid-cols-12 gap-3">
               <div className="nc-form-group col-span-12 md:col-span-4">
                 <label htmlFor="nc-pharmops-receive-qty">Qty received</label>
@@ -418,6 +486,15 @@ export function PharmOpsReceiveDrawer({
             Warehouse:
             {' '}
             {(form?.warehouses ?? []).find((w) => w.id === warehouseId)?.title ?? warehouseId}
+          </p>
+        ) : null}
+        {addingVendor && newVendorName.trim() !== '' ? (
+          <p className="text-sm text-[var(--oe-nc-text-muted)] mb-0">
+            Supplier: {newVendorName.trim()} (new)
+          </p>
+        ) : vendorId ? (
+          <p className="text-sm text-[var(--oe-nc-text-muted)] mb-0">
+            Supplier: {(form?.vendors ?? []).find((v) => String(v.id) === vendorId)?.display_name ?? vendorId}
           </p>
         ) : null}
       </ConfirmModal>

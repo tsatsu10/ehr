@@ -13,6 +13,8 @@ export interface PharmStockRow {
   value?: number | null;
   /** INV-4: per-drug average daily consumption (units/day) over the reorder window. */
   avg_per_day?: number;
+  /** INV-7: supplier of the latest purchase; null/undefined = no supplier on record. */
+  supplier_name?: string | null;
 }
 
 export interface PharmStockSummary {
@@ -70,6 +72,8 @@ export interface PharmReorderRow {
   /** INV-5 purchase-order estimate: unit cost from the latest purchase (null = unknown). */
   unit_cost?: number | null;
   estimated_cost?: number | null;
+  /** INV-7: supplier of the latest purchase; null/undefined = no supplier on record. */
+  supplier_name?: string | null;
 }
 
 export interface PharmReorderReport {
@@ -261,6 +265,12 @@ export interface ReceiveWarehouse {
   title: string;
 }
 
+/** INV-7 — a supplier is an address-book contact (abook_type='vendor'), not a real login. */
+export interface ReceiveVendor {
+  id: number;
+  display_name: string;
+}
+
 export interface ReceiveForm {
   warehouses: ReceiveWarehouse[];
   default_warehouse_id?: string;
@@ -270,6 +280,7 @@ export interface ReceiveForm {
     drug_name: string;
     on_hand?: number;
   } | null;
+  vendors?: ReceiveVendor[];
   can_receive?: boolean;
 }
 

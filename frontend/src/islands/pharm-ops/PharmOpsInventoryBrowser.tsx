@@ -37,6 +37,8 @@ interface DrugGroup {
   totalValue: number | null;
   worstStatus: 'expired' | 'expiring' | 'ok';
   avgPerDay: number;
+  /** INV-7: supplier of the drug's latest purchase (same value on every lot row of the drug). */
+  supplierName: string | null;
 }
 
 function groupLots(rows: PharmStockRow[]): DrugGroup[] {
@@ -53,6 +55,7 @@ function groupLots(rows: PharmStockRow[]): DrugGroup[] {
         totalValue: null,
         worstStatus: 'ok',
         avgPerDay: r.avg_per_day ?? 0,
+        supplierName: r.supplier_name ?? null,
       };
       byId.set(r.drug_id, g);
       order.push(r.drug_id);
@@ -619,6 +622,9 @@ export function PharmOpsInventoryBrowser({
                             <strong>{g.drug_name}</strong>
                             <span className="text-(--oe-nc-text-muted)"> · {g.lots.length} lot{g.lots.length === 1 ? '' : 's'}</span>
                           </button>
+                          <div className="nc-pharmops-inv-supplier text-(--oe-nc-text-muted) text-sm">
+                            {g.supplierName ? `Supplier: ${g.supplierName}` : 'Supplier: —'}
+                          </div>
                         </td>
                         <td style={LEFT} className="text-(--oe-nc-text-muted)">—</td>
                         <td style={RIGHT} className="tabular-nums">{g.totalOnHand}</td>

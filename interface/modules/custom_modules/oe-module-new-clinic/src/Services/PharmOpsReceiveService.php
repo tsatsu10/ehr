@@ -17,6 +17,10 @@ use OpenEMR\Common\Logging\EventAuditLogger;
 class PharmOpsReceiveService
 {
     private const TRANS_TYPE_PURCHASE = 2;
+    // Vendor entries are address-book contacts (users table), the same store the core
+    // add_edit_lot.php screen and the module's Directory tab (DirectoryContactService) use —
+    // never a real staff login. abook_type = 'vendor' is the core option_id for suppliers.
+    private const CONTACT_GUARD = "(username = '' OR username IS NULL)";
 
     public function __construct(
         private readonly PharmOpsAccessService $access = new PharmOpsAccessService(),
@@ -57,8 +61,96 @@ class PharmOpsReceiveService
             'default_warehouse_id' => $defaultWarehouseId,
             'currency_symbol' => (string) $this->config->get('currency_symbol', 'GH₵', $facilityId),
             'drug' => $drug,
+            // Supplier tracking (INV-7): existing vendor contacts; the form also lets the
+            // pharmacist add a new one inline (a plain name is enough — full contact details
+            // stay a Directory-tab job).
+            'vendors' => $this->listVendors(),
             'can_receive' => $this->access->canReceive(),
         ];
+    }
+
+    /**
+     * @return array<int, array{id: int, display_name: string}>
+     */
+    private function listVendors(): array
+    {
+        $rows = QueryUtils::fetchRecords(
+            "SELECT id, organization, fname, lname
+             FROM users
+             WHERE abook_type = 'vendor' AND active = 1 AND " . self::CONTACT_GUARD . "
+             ORDER BY COALESCE(NULLIF(organization, ''), CONCAT(lname, fname))"
+        ) ?: [];
+
+        $vendors = [];
+        foreach ($rows as $row) {
+            $organization = trim((string) ($row['organization'] ?? ''));
+            $personName = trim(($row['fname'] ?? '') . ' ' . ($row['lname'] ?? ''));
+            $vendors[] = [
+                'id' => (int) ($row['id'] ?? 0),
+                'display_name' => $organization !== '' ? $organization : ($personName !== '' ? $personName : 'Supplier'),
+            ];
+        }
+
+        return $vendors;
+    }
+
+    /**
+     * Resolve a vendor id from the receive payload: an existing vendor_id, a brand-new supplier
+     * name (created here as a company-type address-book contact), or 0 (supplier optional).
+     *
+     * @param array<string, mixed> $body
+     */
+    private function resolveVendorId(array $body, int $actorUserId): int
+    {
+        $newName = trim((string) ($body['new_vendor_name'] ?? ''));
+        if ($newName !== '') {
+            // Reuse an existing vendor with the same name (case-insensitive) instead of creating a
+            // duplicate contact — a pharmacist retyping a supplier's name shouldn't fork the record.
+            $existingByName = QueryUtils::querySingleRow(
+                "SELECT id FROM users
+                 WHERE abook_type = 'vendor' AND active = 1 AND " . self::CONTACT_GUARD . "
+                   AND LOWER(organization) = LOWER(?)
+                 LIMIT 1",
+                [$newName]
+            );
+            if (is_array($existingByName) && (int) ($existingByName['id'] ?? 0) > 0) {
+                return (int) $existingByName['id'];
+            }
+
+            return $this->createVendor($newName, $actorUserId);
+        }
+
+        $vendorId = (int) ($body['vendor_id'] ?? 0);
+        if ($vendorId <= 0) {
+            return 0;
+        }
+        $exists = QueryUtils::querySingleRow(
+            "SELECT id FROM users WHERE id = ? AND abook_type = 'vendor' AND " . self::CONTACT_GUARD,
+            [$vendorId]
+        );
+
+        return is_array($exists) ? $vendorId : 0;
+    }
+
+    private function createVendor(string $name, int $actorUserId): int
+    {
+        $organization = mb_substr($name, 0, 255);
+        $vendorId = (int) QueryUtils::sqlInsert(
+            "INSERT INTO users
+                (username, password, authorized, active, abook_type, organization)
+             VALUES ('', '', 0, 1, 'vendor', ?)",
+            [$organization]
+        );
+
+        EventAuditLogger::getInstance()->newEvent(
+            'new_clinic',
+            'directory_contact',
+            $actorUserId,
+            1,
+            'created id=' . $vendorId . ' (pharmacy quick-add supplier)'
+        );
+
+        return $vendorId;
     }
 
     /**
@@ -103,14 +195,24 @@ class PharmOpsReceiveService
             throw new \InvalidArgumentException('Invalid warehouse');
         }
 
+        // Supplier tracking (INV-7): optional — an existing vendor, a brand-new one typed in,
+        // or none. Stored on both the lot (drug_inventory.vendor_id) and the purchase ledger row
+        // (drug_sales.distributor_id) so "who supplied this" is traceable either way. On a restock
+        // that doesn't specify a vendor, resolveOrCreateLot() carries forward the lot's existing
+        // vendor rather than leaving it — the returned $vendorId reflects that carried-forward
+        // value, so the new purchase-ledger row (the "last purchase" the reports read from) stays
+        // in sync with the lot instead of going blank.
+        $requestedVendorId = $this->resolveVendorId($body, $actorUserId);
+
         $totalCost = round($unitCost * $quantity, 2);
-        $lotId = $this->resolveOrCreateLot(
+        [$lotId, $vendorId] = $this->resolveOrCreateLot(
             $drugId,
             $warehouseId,
             $lotNumber,
             $expiration,
             $manufacturer,
-            $quantity
+            $quantity,
+            $requestedVendorId
         );
 
         $saleDate = date('Y-m-d');
@@ -119,7 +221,7 @@ class PharmOpsReceiveService
             'INSERT INTO drug_sales (
                 drug_id, inventory_id, prescription_id, pid, encounter, user, sale_date,
                 quantity, fee, xfer_inventory_id, distributor_id, notes, trans_type
-             ) VALUES (?, ?, 0, 0, 0, ?, ?, ?, ?, 0, 0, ?, ?)',
+             ) VALUES (?, ?, 0, 0, 0, ?, ?, ?, ?, 0, ?, ?, ?)',
             [
                 $drugId,
                 $lotId,
@@ -127,6 +229,7 @@ class PharmOpsReceiveService
                 $saleDate,
                 (0 - $quantity),
                 (0 - $totalCost),
+                $vendorId,
                 $notes,
                 self::TRANS_TYPE_PURCHASE,
             ]
@@ -232,16 +335,23 @@ class PharmOpsReceiveService
         return $row;
     }
 
+    /**
+     * @return array{0: int, 1: int} [inventory_id, effective vendor_id]. On a restock the
+     *         effective vendor is the requested one, or — when none was given — the lot's
+     *         existing vendor, carried forward so the caller's purchase-ledger row stays in
+     *         sync with the lot instead of recording "no supplier" for a supplier that's known.
+     */
     private function resolveOrCreateLot(
         int $drugId,
         string $warehouseId,
         string $lotNumber,
         string $expiration,
         string $manufacturer,
-        float $quantity
-    ): int {
+        float $quantity,
+        int $vendorId = 0
+    ): array {
         $existing = QueryUtils::querySingleRow(
-            'SELECT inventory_id, on_hand, expiration, manufacturer
+            'SELECT inventory_id, on_hand, expiration, manufacturer, vendor_id
              FROM drug_inventory
              WHERE drug_id = ?
                AND warehouse_id = ?
@@ -257,9 +367,11 @@ class PharmOpsReceiveService
             $lotId = (int) ($existing['inventory_id'] ?? 0);
             $expirationValue = $expiration !== '' ? $expiration : ($existing['expiration'] ?? null);
             $manufacturerValue = $manufacturer !== '' ? $manufacturer : ($existing['manufacturer'] ?? '');
+            $effectiveVendorId = $vendorId > 0 ? $vendorId : (int) ($existing['vendor_id'] ?? 0);
             QueryUtils::sqlStatementThrowException(
                 'UPDATE drug_inventory
-                 SET lot_number = ?, manufacturer = ?, expiration = ?, warehouse_id = ?, on_hand = on_hand + ?
+                 SET lot_number = ?, manufacturer = ?, expiration = ?, warehouse_id = ?, on_hand = on_hand + ?,
+                     vendor_id = ?
                  WHERE drug_id = ? AND inventory_id = ?',
                 [
                     $lotNumber,
@@ -267,12 +379,13 @@ class PharmOpsReceiveService
                     $expirationValue,
                     $warehouseId,
                     $quantity,
+                    $effectiveVendorId,
                     $drugId,
                     $lotId,
                 ]
             );
 
-            return $lotId;
+            return [$lotId, $effectiveVendorId];
         }
 
         $duplicate = QueryUtils::querySingleRow(
@@ -290,7 +403,7 @@ class PharmOpsReceiveService
             throw new \InvalidArgumentException('A matching lot already exists — use a different lot number or expiry');
         }
 
-        return (int) QueryUtils::sqlInsert(
+        $lotId = (int) QueryUtils::sqlInsert(
             'INSERT INTO drug_inventory (drug_id, lot_number, manufacturer, expiration, vendor_id, warehouse_id, on_hand)
              VALUES (?, ?, ?, ?, ?, ?, ?)',
             [
@@ -298,10 +411,12 @@ class PharmOpsReceiveService
                 $lotNumber,
                 $manufacturer,
                 $expiration,
-                '',
+                $vendorId,
                 $warehouseId,
                 $quantity,
             ]
         );
+
+        return [$lotId, $vendorId];
     }
 }

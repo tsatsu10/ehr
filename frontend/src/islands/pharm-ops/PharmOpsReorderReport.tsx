@@ -135,6 +135,7 @@ export function PharmOpsReorderReport({ ajaxUrl, csrfToken }: PharmOpsReorderRep
             <thead>
               <tr>
                 <th style={LEFT}>Product</th>
+                <th style={LEFT}>Supplier</th>
                 <th style={RIGHT}>QOH</th>
                 <th style={RIGHT}>Reorder pt</th>
                 <th style={RIGHT}>Sold</th>
@@ -154,6 +155,9 @@ export function PharmOpsReorderReport({ ajaxUrl, csrfToken }: PharmOpsReorderRep
                 return (
                   <tr key={row.drug_id}>
                     <td style={LEFT}>{row.drug_name}</td>
+                    <td style={LEFT}>
+                      {row.supplier_name ?? <span className="text-(--oe-nc-text-muted)">—</span>}
+                    </td>
                     <td style={RIGHT} className="tabular-nums">{row.on_hand}</td>
                     <td style={RIGHT} className="tabular-nums">{row.reorder_point || '—'}</td>
                     <td style={RIGHT} className="tabular-nums">{row.sold_qty}</td>
@@ -192,7 +196,9 @@ export function PharmOpsReorderReport({ ajaxUrl, csrfToken }: PharmOpsReorderRep
             </tbody>
             <tfoot>
               <tr>
-                <td style={LEFT} colSpan={6} className="font-semibold">Total</td>
+                {/* Total spans Product..Suggested (8 cols); the remaining 4 line up with
+                    Order qty / Unit cost / Est. cost / Status. */}
+                <td style={LEFT} colSpan={8} className="font-semibold">Total</td>
                 <td style={RIGHT} className="tabular-nums font-semibold">{totals.orderUnits}</td>
                 <td style={RIGHT} />
                 <td style={RIGHT} className="tabular-nums font-semibold">
@@ -203,7 +209,7 @@ export function PharmOpsReorderReport({ ajaxUrl, csrfToken }: PharmOpsReorderRep
               </tr>
               {!totals.costKnown ? (
                 <tr>
-                  <td colSpan={9} className="text-(--oe-nc-text-muted) text-sm">
+                  <td colSpan={12} className="text-(--oe-nc-text-muted) text-sm">
                     * Partial — some products have no purchase cost on record.
                   </td>
                 </tr>

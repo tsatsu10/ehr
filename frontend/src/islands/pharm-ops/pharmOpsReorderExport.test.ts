@@ -42,4 +42,32 @@ describe('reorderToCsv', () => {
     expect(csv).toContain("'=SUM(A1)");
     expect(csv).toContain('Estimated total (partial — some costs unknown),GH₵0.00');
   });
+
+  it('groups rows by supplier, alphabetically, with drugs missing a supplier trailing (INV-7)', () => {
+    const csv = reorderToCsv(
+      [
+        row({ drug_id: 1, drug_name: 'Zinc Sulfate', supplier_name: 'Zenith Pharma', unit_cost: 2, estimated_cost: 40 }),
+        row({ drug_id: 2, drug_name: 'Amoxicillin 500 mg', supplier_name: 'Ernest Chemists', unit_cost: 3, estimated_cost: 60 }),
+        row({ drug_id: 3, drug_name: 'ORS', supplier_name: null, unit_cost: 1, estimated_cost: 20 }),
+      ],
+      {},
+      'GH₵',
+    );
+    const lines = csv.split('\n');
+
+    const ernestIdx = lines.indexOf('Supplier: Ernest Chemists');
+    const zenithIdx = lines.indexOf('Supplier: Zenith Pharma');
+    const noneIdx = lines.indexOf('Supplier: No supplier on record');
+    expect(ernestIdx).toBeGreaterThan(-1);
+    expect(zenithIdx).toBeGreaterThan(ernestIdx); // alphabetical
+    expect(noneIdx).toBeGreaterThan(zenithIdx); // no-supplier group trails
+
+    // Each drug lands under its own supplier's section, with a subtotal line after it.
+    expect(lines[ernestIdx + 1]).toContain('Amoxicillin 500 mg');
+    expect(lines[ernestIdx + 2]).toBe('Subtotal,,,,,,60.00,');
+    expect(lines[zenithIdx + 1]).toContain('Zinc Sulfate');
+    expect(lines[noneIdx + 1]).toContain('ORS');
+
+    expect(csv).toContain('Estimated total,GH₵120.00');
+  });
 });

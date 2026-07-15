@@ -38,15 +38,17 @@ class PharmOpsReportsService
     private const REPORT_ROW_CAP = 500;
 
     /**
-     * Per-drug unit cost = the most recent purchase (trans_type 2, negative qty/fee) unit price.
-     * Joined as `cost.unit_cost`; NULL when the drug has never been received through the module.
+     * Per-drug unit cost AND supplier (INV-7) from the most recent purchase (trans_type 2,
+     * negative qty/fee): `cost.unit_cost` and `vendor.organization`/`vendor.fname`/`vendor.lname`
+     * (build a display name from those — see stockRowSupplierName()). Both are NULL when the drug
+     * has never been received through the module, or the purchase had no supplier recorded.
      * $alias is the table/alias holding drug_id in the outer query (drug_inventory in the stock
      * browser, drugs in the reorder report).
      */
     private static function costJoin(string $alias = 'di'): string
     {
         return "LEFT JOIN (
-            SELECT ds.drug_id, ABS(ds.fee / ds.quantity) AS unit_cost
+            SELECT ds.drug_id, ABS(ds.fee / ds.quantity) AS unit_cost, ds.distributor_id
             FROM drug_sales ds
             INNER JOIN (
                 SELECT drug_id, MAX(sale_id) AS max_id
@@ -54,7 +56,22 @@ class PharmOpsReportsService
                 WHERE trans_type = 2 AND quantity <> 0 AND drug_id > 0
                 GROUP BY drug_id
             ) latest ON latest.drug_id = ds.drug_id AND latest.max_id = ds.sale_id
-         ) cost ON cost.drug_id = {$alias}.drug_id";
+         ) cost ON cost.drug_id = {$alias}.drug_id
+         LEFT JOIN users vendor ON vendor.id = cost.distributor_id AND vendor.abook_type = 'vendor'";
+    }
+
+    /**
+     * @param array<string, mixed> $row a row selected with vendor.organization/fname/lname
+     */
+    private static function supplierName(array $row): ?string
+    {
+        $organization = trim((string) ($row['vendor_organization'] ?? ''));
+        if ($organization !== '') {
+            return $organization;
+        }
+        $personName = trim(($row['vendor_fname'] ?? '') . ' ' . ($row['vendor_lname'] ?? ''));
+
+        return $personName !== '' ? $personName : null;
     }
 
     // Per-drug consumption over the reorder window (units dispensed to patients). Joined as
@@ -107,7 +124,9 @@ class PharmOpsReportsService
             "SELECT d.drug_id, d.name, d.reorder_point,
                     COALESCE(inv.on_hand, 0) AS on_hand,
                     COALESCE(sold.qty, 0) AS sold_qty,
-                    cost.unit_cost
+                    cost.unit_cost,
+                    vendor.organization AS vendor_organization,
+                    vendor.fname AS vendor_fname, vendor.lname AS vendor_lname
              FROM drugs d
              LEFT JOIN (
                  SELECT drug_id, SUM(on_hand) AS on_hand
@@ -165,6 +184,8 @@ class PharmOpsReportsService
                 // Purchase-order estimate (INV-5): unit cost from the latest purchase; null = unknown.
                 'unit_cost' => $unitCost,
                 'estimated_cost' => $unitCost !== null ? round($unitCost * $suggested, 2) : null,
+                // Supplier (INV-7): from the latest purchase; null = no supplier on record.
+                'supplier_name' => self::supplierName($row),
             ];
         }
 
@@ -589,7 +610,9 @@ class PharmOpsReportsService
 
         $rows = QueryUtils::fetchRecords(
             "SELECT di.inventory_id, di.drug_id, di.lot_number, di.on_hand, di.expiration,
-                    d.name AS drug_name, d.reorder_point, cost.unit_cost, sold.sold_qty
+                    d.name AS drug_name, d.reorder_point, cost.unit_cost, sold.sold_qty,
+                    vendor.organization AS vendor_organization,
+                    vendor.fname AS vendor_fname, vendor.lname AS vendor_lname
              FROM drug_inventory di
              INNER JOIN drugs d ON d.drug_id = di.drug_id
              " . self::costJoin() . "
@@ -643,6 +666,8 @@ class PharmOpsReportsService
                 'value' => $unitCost !== null ? round($onHand * $unitCost, 2) : null,
                 // Consumption velocity (INV-4): units/day, per drug (same on every lot of the drug).
                 'avg_per_day' => $avgPerDay,
+                // Supplier (INV-7): from the latest purchase; null = no supplier on record.
+                'supplier_name' => self::supplierName($row),
             ];
         }, $rows);
 
