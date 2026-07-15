@@ -70,6 +70,15 @@ export interface CashierChargeLine {
   amount: number;
 }
 
+/** CBILL-1 — one dispensed medicine on the cashier bill (from drug_sales) */
+export interface CashierDrugChargeLine {
+  sale_id: number;
+  drug_id: number;
+  description: string;
+  quantity: number;
+  amount: number;
+}
+
 export interface CashierFeeScheduleItem {
   id: number;
   code: string;
@@ -99,6 +108,9 @@ export interface CashierSelectData {
   visit: CashierVisit;
   preview: PatientPreview;
   charges: CashierChargeLine[];
+  /** CBILL-1 — dispensed medicines, present only when pharmacy auto-bill is on */
+  drug_charges?: CashierDrugChargeLine[];
+  /** Grand total: posted charges + dispensed medicines */
   charges_total: number;
   fee_schedule: CashierFeeScheduleItem[];
   suggested_fees: CashierFeeScheduleItem[];

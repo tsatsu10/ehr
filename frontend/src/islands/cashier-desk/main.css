@@ -159,8 +159,8 @@
 }
 
 .nc-cashier-unpaid-btn {
-  border-color: #fca5a5;
-  color: #b91c1c;
+  border-color: color-mix(in srgb, var(--color-oe-danger, #b42318) 45%, var(--oe-nc-border, #cbd5e1));
+  color: var(--color-oe-danger, #b42318);
 }
 
 /* Patient banner */
@@ -210,7 +210,12 @@
 
 .nc-cashier-completion__blocked {
   font-size: 0.875rem;
-  color: #dc2626;
+  color: var(--color-oe-danger, #b42318);
+}
+
+/* CBILL-1 — right-align numeric cells without the Bootstrap-colliding text-right utility. */
+.nc-cashier-cell-num {
+  text-align: right;
 }
 
 /* Payment fields */
@@ -355,8 +360,8 @@
 }
 
 .nc-cashier-queue-card--urgent {
-  border-color: color-mix(in srgb, #ea580c 45%, var(--oe-nc-border));
-  background: color-mix(in srgb, #ea580c 4%, white);
+  border-color: color-mix(in srgb, var(--color-oe-warning, #b54708) 45%, var(--oe-nc-border));
+  background: color-mix(in srgb, var(--color-oe-warning, #b54708) 4%, white);
 }
 
 .nc-cashier-queue-card--disabled {

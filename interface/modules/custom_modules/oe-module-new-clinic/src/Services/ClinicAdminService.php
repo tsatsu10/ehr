@@ -31,6 +31,7 @@ class ClinicAdminService
         'rate_limit_dup_check' => ['type' => 'int', 'default' => '60', 'min' => 1, 'max' => 1000],
         'mrd_activity_feed_days' => ['type' => 'int', 'default' => '90', 'min' => 1, 'max' => 365],
         'lab_auto_bill_on_order' => ['type' => 'bool', 'default' => '1'],
+        'pharmacy_auto_bill_on_dispense' => ['type' => 'bool', 'default' => '0'],
         'report_hub_moh_pack' => ['type' => 'string', 'default' => 'ghana_v1'],
         'enable_lab_role' => ['type' => 'bool', 'default' => '0'],
         'enable_pharmacy_role' => ['type' => 'bool', 'default' => '0'],

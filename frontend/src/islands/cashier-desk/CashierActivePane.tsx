@@ -14,6 +14,7 @@ import type {
 } from '@core/types';
 import { ChargePicker } from './ChargePicker';
 import { ChargesTable } from './ChargesTable';
+import { DrugChargesTable } from './DrugChargesTable';
 import { CashierPatientBanner } from './CashierPatientBanner';
 import { CashierShortcuts } from './CashierShortcuts';
 import {
@@ -163,6 +164,12 @@ export function CashierActivePane({
   }
 
   const { visit, preview, charges, charges_total: total } = data;
+  // CBILL-1 — medicines ride alongside posted charges; the backend already folds their
+  // total into charges_total, so payment math is unchanged. We show them in their own
+  // section and give ChargesTable the billing-only subtotal so its footer stays honest.
+  const drugCharges = data.drug_charges ?? [];
+  const chargesSubtotal = charges.reduce((sum, line) => sum + line.amount, 0);
+  const drugSubtotal = drugCharges.reduce((sum, line) => sum + line.amount, 0);
   const unsigned = !signMeta.encounter_signed;
   const zeroCharge = total <= 0;
   const payBlockReason =
@@ -232,8 +239,14 @@ export function CashierActivePane({
         </CashierActiveSection>
 
         <CashierActiveSection title="Posted charges">
-          <ChargesTable charges={charges} total={total} />
+          <ChargesTable charges={charges} total={chargesSubtotal} />
         </CashierActiveSection>
+
+        {drugCharges.length > 0 && (
+          <CashierActiveSection title="Medicines">
+            <DrugChargesTable lines={drugCharges} total={drugSubtotal} />
+          </CashierActiveSection>
+        )}
 
         {zeroCharge ? (
           <div className={deskCalloutClass('info', 'text-sm')}>No charges on this visit.</div>

@@ -129,6 +129,51 @@ describe('CashierDesk', () => {
     expect(screen.getByRole('button', { name: /Take payment/i })).toBeInTheDocument();
   });
 
+  it('shows a Medicines section with dispensed drug charges when present (CBILL-1)', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [waitingVisit],
+        counts: { waiting: 1, paid_today: 0, closed_unpaid: 0 },
+      })
+      .mockResolvedValueOnce({
+        ...selectData,
+        drug_charges: [
+          { sale_id: 11, drug_id: 4, description: 'Paracetamol 500mg', quantity: 20, amount: 12 },
+        ],
+        charges_total: 57,
+      });
+
+    render(<CashierDesk {...props} />);
+
+    await waitFor(() => screen.getByText(/Ama Boateng/));
+    fireEvent.click(screen.getByText(/Ama Boateng/));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /^Medicines$/i })).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Paracetamol 500mg/)).toBeInTheDocument();
+    expect(screen.getByText(/Medicines subtotal/i)).toBeInTheDocument();
+  });
+
+  it('shows no Medicines section when drug_charges is absent (flag off)', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [waitingVisit],
+        counts: { waiting: 1, paid_today: 0, closed_unpaid: 0 },
+      })
+      .mockResolvedValueOnce(selectData);
+
+    render(<CashierDesk {...props} />);
+
+    await waitFor(() => screen.getByText(/Ama Boateng/));
+    fireEvent.click(screen.getByText(/Ama Boateng/));
+
+    await waitFor(() => screen.getByRole('heading', { name: /^Posted charges$/i }));
+    expect(screen.queryByRole('heading', { name: /^Medicines$/i })).not.toBeInTheDocument();
+  });
+
   it('opens pay confirm modal when Take payment is clicked', async () => {
     mockFetch
       .mockResolvedValueOnce({

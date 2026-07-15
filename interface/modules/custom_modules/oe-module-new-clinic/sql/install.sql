@@ -809,6 +809,11 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'lab_auto_bill_on_order', '1');
 #EndIf
 
+#IfNotRow2D new_clinic_config facility_id 0 config_key pharmacy_auto_bill_on_dispense
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'pharmacy_auto_bill_on_dispense', '0');
+#EndIf
+
 #IfNotTable new_lab_order_meta
 CREATE TABLE IF NOT EXISTS `new_lab_order_meta` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,

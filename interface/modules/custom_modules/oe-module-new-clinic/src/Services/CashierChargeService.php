@@ -13,7 +13,6 @@ namespace OpenEMR\Modules\NewClinic\Services;
 
 use OpenEMR\Billing\BillingUtilities;
 use OpenEMR\Common\Acl\AclMain;
-use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Logging\EventAuditLogger;
 
 class CashierChargeService
@@ -101,10 +100,11 @@ class CashierChargeService
             'visit_id=' . $visitId . ' charges_posted=' . $posted
         );
 
+        // The only caller (CashierService::postCharges) reads posted_count and then
+        // re-fetches fresh charge state via selectVisit(), so returning charge rows
+        // here just burns two throwaway queries per post — omit them.
         return [
             'posted_count' => $posted,
-            'charges' => $this->fetchEncounterCharges($pid, $encounter),
-            'charges_total' => CashierService::sumChargeLines($this->fetchEncounterCharges($pid, $encounter)),
         ];
     }
 
@@ -216,37 +216,5 @@ class CashierChargeService
             '',
             ''
         );
-    }
-
-    /**
-     * @return array<int, array<string, mixed>>
-     */
-    private function fetchEncounterCharges(int $pid, int $encounter): array
-    {
-        $rows = QueryUtils::fetchRecords(
-            "SELECT id, code_type, code, code_text, units, fee, modifier
-             FROM billing
-             WHERE pid = ? AND encounter = ? AND activity = 1
-             ORDER BY id ASC",
-            [$pid, $encounter]
-        ) ?: [];
-
-        return array_map(static function (array $row): array {
-            $units = (int) ($row['units'] ?? 1);
-            if ($units < 1) {
-                $units = 1;
-            }
-            $fee = (float) ($row['fee'] ?? 0);
-
-            return [
-                'id' => (int) ($row['id'] ?? 0),
-                'code_type' => (string) ($row['code_type'] ?? ''),
-                'code' => (string) ($row['code'] ?? ''),
-                'description' => (string) ($row['code_text'] ?? ''),
-                'units' => $units,
-                'unit_price' => $units > 0 ? round($fee / $units, 2) : $fee,
-                'amount' => $fee,
-            ];
-        }, $rows);
     }
 }

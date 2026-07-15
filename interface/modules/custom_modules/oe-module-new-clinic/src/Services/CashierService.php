@@ -42,11 +42,13 @@ class CashierService
         $visitDate = $visitDate ?? $this->clinicDate->today();
         $this->visitScope->repairOrphanVisits($facilityId, $visitDate);
 
+        $drugChargeExpr = $this->drugChargeSubquery($facilityId);
         $sql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid, pd.sex, pd.DOB,
                        vt.label AS visit_type_label,
-                       (SELECT COALESCE(SUM(b.fee * GREATEST(b.units, 1)), 0)
+                       ((SELECT COALESCE(SUM(b.fee * GREATEST(b.units, 1)), 0)
                         FROM billing b
-                        WHERE b.pid = v.pid AND b.encounter = v.encounter AND b.activity = 1) AS charges_total
+                        WHERE b.pid = v.pid AND b.encounter = v.encounter AND b.activity = 1)"
+                        . $drugChargeExpr . ") AS charges_total
                 FROM new_visit v
                 INNER JOIN patient_data pd ON pd.pid = v.pid
                 LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
@@ -104,6 +106,10 @@ class CashierService
         $completionGate = $this->assessCompletionGate((int) $visit['pid'], false);
         $picker = $this->chargeService->buildPickerPayload($visitId);
         $facilityId = (int) ($visit['facility_id'] ?? 0);
+        // CBILL-1 — fold dispensed medicines into the bill when pharmacy auto-bill is on.
+        $drugCharges = $this->pharmacyAutoBillEnabled($facilityId)
+            ? $this->getEncounterDrugCharges((int) $visit['pid'], (int) $visit['encounter'])
+            : [];
         $advancedBilling = $this->billOpsAccess->advancedBillingLink(
             $visitId,
             (int) $visit['encounter'],
@@ -114,7 +120,8 @@ class CashierService
             'visit' => $detail['visit'],
             'preview' => $preview,
             'charges' => $charges,
-            'charges_total' => $this->sumCharges($charges),
+            'drug_charges' => $drugCharges,
+            'charges_total' => round($this->sumCharges($charges) + $this->sumDrugCharges($drugCharges), 2),
             'fee_schedule' => $picker['fee_schedule'] ?? [],
             'suggested_fees' => $picker['suggested_fees'] ?? [],
             'completion_blocked' => $completionGate['blocked'],
@@ -154,9 +161,10 @@ class CashierService
 
         $readySql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid, pd.sex, pd.DOB,
                             vt.label AS visit_type_label,
-                            (SELECT COALESCE(SUM(b.fee * GREATEST(b.units, 1)), 0)
+                            ((SELECT COALESCE(SUM(b.fee * GREATEST(b.units, 1)), 0)
                              FROM billing b
-                             WHERE b.pid = v.pid AND b.encounter = v.encounter AND b.activity = 1) AS charges_total
+                             WHERE b.pid = v.pid AND b.encounter = v.encounter AND b.activity = 1)"
+                             . $this->drugChargeSubquery($facilityId) . ") AS charges_total
                      FROM new_visit v
                      INNER JOIN patient_data pd ON pd.pid = v.pid
                      LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
@@ -248,7 +256,10 @@ class CashierService
         $encounter = (int) $visit['encounter'];
         $facilityId = (int) ($visit['facility_id'] ?? 0);
         $charges = $this->getEncounterCharges($pid, $encounter);
-        $totalDue = $this->sumCharges($charges);
+        // CBILL-1 — dispensed medicines count toward the amount due when auto-bill is on.
+        $autoBillDrugs = $this->pharmacyAutoBillEnabled($facilityId);
+        $drugCharges = $autoBillDrugs ? $this->getEncounterDrugCharges($pid, $encounter) : [];
+        $totalDue = round($this->sumCharges($charges) + $this->sumDrugCharges($drugCharges), 2);
 
         if ($totalDue <= 0) {
             throw new \InvalidArgumentException('No charges on this visit — add fees before taking payment');
@@ -313,6 +324,10 @@ class CashierService
                 'cash_payment_repair'
             );
 
+            if ($autoBillDrugs) {
+                $this->markDrugSalesBilled($pid, $encounter);
+            }
+
             $response = $this->buildPaymentResponse($visit, $updated, $totalDue, $amountReceived);
             return $this->finalizePaymentResponse($response, $clientRequestId, $visitId, $actorUserId);
         }
@@ -337,6 +352,9 @@ class CashierService
                 $expectedVersion,
                 $method === 'momo' ? 'momo_payment' : 'cash_payment'
             );
+            if ($autoBillDrugs) {
+                $this->markDrugSalesBilled($pid, $encounter);
+            }
             sqlCommitTrans(true);
             $committed = true;
         } catch (\Throwable $e) {
@@ -570,20 +588,6 @@ class CashierService
     }
 
     /**
-     * @param array<string, mixed> $row
-     * @return array<string, mixed>
-     */
-    private function enrichPaymentRow(array $row): array
-    {
-        $row = $this->rowEnricher->enrichVisitRow($row);
-        $pid = (int) ($row['pid'] ?? 0);
-        $encounter = (int) ($row['encounter'] ?? 0);
-        $row['charges_total'] = $this->sumCharges($this->getEncounterCharges($pid, $encounter));
-
-        return $row;
-    }
-
-    /**
      * @return array<int, array<string, mixed>>
      */
     private function getEncounterCharges(int $pid, int $encounter): array
@@ -613,6 +617,84 @@ class CashierService
                 'amount' => $fee,
             ];
         }, $rows);
+    }
+
+    /**
+     * CBILL-1 — is pharmacy auto-bill (medicines on the cashier bill) on for this facility?
+     */
+    private function pharmacyAutoBillEnabled(int $facilityId): bool
+    {
+        return $this->configService->getInt('pharmacy_auto_bill_on_dispense', 0, $facilityId) === 1;
+    }
+
+    /**
+     * CBILL-1 — SQL fragment adding an encounter's unbilled medicine total to a
+     * charges_total subquery, or '' when pharmacy auto-bill is off. The correlated
+     * subquery references the outer `v` (new_visit) alias.
+     */
+    private function drugChargeSubquery(int $facilityId): string
+    {
+        if (!$this->pharmacyAutoBillEnabled($facilityId)) {
+            return '';
+        }
+
+        return " + (SELECT COALESCE(SUM(ds.fee), 0) FROM drug_sales ds
+                    WHERE ds.pid = v.pid AND ds.encounter = v.encounter AND ds.billed = 0)";
+    }
+
+    /**
+     * CBILL-1 — unbilled dispensed medicines for this encounter, read from drug_sales
+     * (where the pharmacy dispense already records them). Products live in drug_sales,
+     * not billing, so we surface them here rather than writing a duplicate billing line.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function getEncounterDrugCharges(int $pid, int $encounter): array
+    {
+        $rows = QueryUtils::fetchRecords(
+            "SELECT ds.sale_id, ds.drug_id, d.name AS drug_name, ds.quantity, ds.fee
+             FROM drug_sales ds
+             LEFT JOIN drugs d ON d.drug_id = ds.drug_id
+             WHERE ds.pid = ? AND ds.encounter = ? AND ds.billed = 0
+             ORDER BY ds.sale_id ASC",
+            [$pid, $encounter]
+        ) ?: [];
+
+        return array_map(static function (array $row): array {
+            return [
+                'sale_id' => (int) ($row['sale_id'] ?? 0),
+                'drug_id' => (int) ($row['drug_id'] ?? 0),
+                'description' => (string) ($row['drug_name'] ?? ''),
+                'quantity' => (int) ($row['quantity'] ?? 0),
+                'amount' => round((float) ($row['fee'] ?? 0), 2),
+            ];
+        }, $rows);
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $lines
+     */
+    private function sumDrugCharges(array $lines): float
+    {
+        $sum = 0.0;
+        foreach ($lines as $line) {
+            $sum += (float) ($line['amount'] ?? 0);
+        }
+
+        return round($sum, 2);
+    }
+
+    /**
+     * CBILL-1 — mark this encounter's dispensed medicines as posted to accounting once
+     * the cashier has collected them (mirrors the billing.billed flag).
+     */
+    private function markDrugSalesBilled(int $pid, int $encounter): void
+    {
+        QueryUtils::sqlStatementThrowException(
+            "UPDATE drug_sales SET billed = 1, bill_date = NOW()
+             WHERE pid = ? AND encounter = ? AND billed = 0",
+            [$pid, $encounter]
+        );
     }
 
     /**
@@ -733,20 +815,6 @@ class CashierService
         }
 
         return 'New Clinic cashier';
-    }
-
-    private function postCashPayment(
-        int $pid,
-        int $encounter,
-        float $amount,
-        int $actorUserId,
-        ?string $receiptNote
-    ): int {
-        $reference = $receiptNote !== null && trim($receiptNote) !== ''
-            ? mb_substr(trim($receiptNote), 0, 255)
-            : 'New Clinic cashier';
-
-        return $this->postPatientPayment($pid, $encounter, $amount, $actorUserId, 'cash', $reference);
     }
 
     private function feeSheetUrl(int $pid, int $encounter): string

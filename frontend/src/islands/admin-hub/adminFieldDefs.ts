@@ -70,6 +70,7 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'pharmacy_refer_to_opd_terminal_state',
   'pharmacy_declined_terminal_state',
   'enable_pharm_ops',
+  'pharmacy_auto_bill_on_dispense',
   'pharmacy_service_formdir',
   'enable_pharm_rx_favorites',
   'enable_native_rx_edit',
@@ -276,6 +277,13 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         type: 'bool',
         label: 'Enable Pharmacy Operations hub (M13)',
         hint: 'Requires Pharmacy desk and OpenEMR in-house pharmacy. Shows Pharm Ops in the sidebar and clinic-wide pending dispense worklist.',
+        indent: 1,
+      },
+      {
+        key: 'pharmacy_auto_bill_on_dispense',
+        type: 'bool',
+        label: 'Show dispensed medicines on the cashier bill (CBILL-1)',
+        hint: 'When on, medicines dispensed on a visit are added to the cashier total, payment, and are marked paid at checkout. When off, medicine sales are collected separately and never appear at the cashier.',
         indent: 1,
       },
       {
