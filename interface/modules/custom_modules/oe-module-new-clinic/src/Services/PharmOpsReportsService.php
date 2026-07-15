@@ -29,6 +29,8 @@ class PharmOpsReportsService
     public const DESTROYED_LOOKBACK_DAYS = 365;
     /** Page size for the inventory-transactions ledger. */
     public const TRANSACTION_PAGE_SIZE = 50;
+    /** Upper bound on the ledger paging offset (sane cap; deep paging returns empty). */
+    private const TRANSACTION_MAX_OFFSET = 100000;
     private const REPORT_ROW_CAP = 500;
 
     public function __construct(
@@ -227,7 +229,8 @@ class PharmOpsReportsService
             [$fromDate, $toDate]
         ) ?: [];
 
-        $onHand = $this->currentOnHandMap();
+        $drugIds = array_map(static fn (array $row): int => (int) ($row['drug_id'] ?? 0), $rows);
+        $onHand = $this->currentOnHandMap($drugIds);
 
         $items = array_map(static function (array $row) use ($onHand): array {
             $drugId = (int) ($row['drug_id'] ?? 0);
@@ -270,20 +273,18 @@ class PharmOpsReportsService
         if ($fromDate > $toDate) {
             [$fromDate, $toDate] = [$toDate, $fromDate];
         }
-        $offset = max(0, $offset);
+        $offset = min(max(0, $offset), self::TRANSACTION_MAX_OFFSET);
         $limit = self::TRANSACTION_PAGE_SIZE;
 
         $rows = QueryUtils::fetchRecords(
             "SELECT ds.sale_id, ds.sale_date, ds.quantity, ds.fee, ds.pid,
-                    ds.distributor_id, ds.xfer_inventory_id, ds.billed, ds.notes,
+                    ds.distributor_id, ds.xfer_inventory_id, ds.notes,
                     d.name AS drug_name, di.lot_number,
-                    lo.title AS warehouse,
                     pd.fname AS pfname, pd.lname AS plname,
                     du.organization AS dorg, du.fname AS dfname, du.lname AS dlname
              FROM drug_sales ds
              INNER JOIN drugs d ON d.drug_id = ds.drug_id
              LEFT JOIN drug_inventory di ON di.inventory_id = ds.inventory_id
-             LEFT JOIN list_options lo ON lo.list_id = 'warehouse' AND lo.option_id = di.warehouse_id
              LEFT JOIN patient_data pd ON pd.pid = ds.pid
              LEFT JOIN users du ON du.id = ds.distributor_id
              WHERE ds.sale_date >= ? AND ds.sale_date <= ?" . $this->transactionTypeClause($type) . "
@@ -296,7 +297,7 @@ class PharmOpsReportsService
         $rows = array_slice($rows, 0, $limit);
 
         $items = array_map(function (array $row): array {
-            $rowType = $this->deriveTxType($row);
+            $rowType = self::classifyTransactionType($row);
 
             return [
                 'sale_id' => (int) ($row['sale_id'] ?? 0),
@@ -305,12 +306,10 @@ class PharmOpsReportsService
                 'type_label' => ucfirst($rowType),
                 'drug_name' => trim((string) ($row['drug_name'] ?? 'Medication')),
                 'lot_number' => trim((string) ($row['lot_number'] ?? '')),
-                'warehouse' => trim((string) ($row['warehouse'] ?? '')),
                 'who' => $this->deriveTxWho($row, $rowType),
                 // Stock report display sign: out = negative.
                 'quantity' => -(int) round((float) ($row['quantity'] ?? 0)),
                 'amount' => round((float) ($row['fee'] ?? 0), 2),
-                'billed' => !empty($row['billed']),
                 'notes' => trim((string) ($row['notes'] ?? '')),
             ];
         }, $rows);
@@ -330,11 +329,14 @@ class PharmOpsReportsService
     }
 
     /**
-     * Derived transaction type, matching the stock report's if/elseif priority.
+     * Derived transaction type, matching the stock report's if/elseif priority
+     * (pid → sale, distributor_id → distribution, xfer_inventory_id → transfer,
+     * fee ≠ 0 → purchase, else adjustment). Public + static so the accounting-
+     * sensitive derivation is unit-testable without a DB round-trip.
      *
      * @param array<string, mixed> $row
      */
-    private function deriveTxType(array $row): string
+    public static function classifyTransactionType(array $row): string
     {
         if ((int) ($row['pid'] ?? 0) !== 0) {
             return 'sale';
@@ -374,7 +376,14 @@ class PharmOpsReportsService
         return '';
     }
 
-    /** SQL fragment filtering by derived transaction type (static, injection-safe). */
+    /**
+     * SQL fragment filtering by derived transaction type (static, injection-safe).
+     *
+     * Deliberately STRICTER than the stock report's per-type filters: each clause
+     * carries the full derived-type conditions so the FILTER equals the DISPLAYED
+     * type. (Stock filters "transfer" as just xfer_inventory_id != 0, which could
+     * include a row that displays as "sale"; here filter and display always agree.)
+     */
     private function transactionTypeClause(string $type): string
     {
         return match ($type) {
@@ -388,17 +397,29 @@ class PharmOpsReportsService
     }
 
     /**
-     * Current live on-hand per drug (non-destroyed lots), keyed by drug_id.
+     * Current live on-hand (non-destroyed lots) for the given drugs, keyed by
+     * drug_id. Scoped to the report's drug set (R1) rather than the whole catalog.
      *
+     * @param array<int, int> $drugIds
      * @return array<int, int>
      */
-    private function currentOnHandMap(): array
+    private function currentOnHandMap(array $drugIds): array
     {
+        $drugIds = array_values(array_unique(array_filter(
+            array_map('intval', $drugIds),
+            static fn (int $id): bool => $id > 0
+        )));
+        if ($drugIds === []) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($drugIds), '?'));
         $rows = QueryUtils::fetchRecords(
             "SELECT drug_id, SUM(on_hand) AS on_hand
              FROM drug_inventory
-             WHERE destroy_date IS NULL
-             GROUP BY drug_id"
+             WHERE destroy_date IS NULL AND drug_id IN ($placeholders)
+             GROUP BY drug_id",
+            $drugIds
         ) ?: [];
 
         $map = [];
@@ -417,7 +438,9 @@ class PharmOpsReportsService
         }
         $dt = \DateTimeImmutable::createFromFormat('Y-m-d', $value);
 
-        return $dt !== false ? $dt->format('Y-m-d') : null;
+        // Strict: reject values that don't round-trip (createFromFormat rolls
+        // 2026-02-30 over to 2026-03-02) so a bad date falls back to the default.
+        return ($dt !== false && $dt->format('Y-m-d') === $value) ? $dt->format('Y-m-d') : null;
     }
 
     /**

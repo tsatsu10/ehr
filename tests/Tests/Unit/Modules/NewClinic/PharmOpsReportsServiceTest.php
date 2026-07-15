@@ -53,4 +53,59 @@ class PharmOpsReportsServiceTest extends TestCase
 
         $this->assertContains(PharmOpsReportsService::REPORT_CONTROLLED, $ids);
     }
+
+    public function testEmbedCatalogMarksTheFourReportViewsNative(): void
+    {
+        $GLOBALS['webroot'] = '/openemr';
+        $reflection = new \ReflectionMethod(PharmOpsReportsService::class, 'buildCatalog');
+        $reflection->setAccessible(true);
+
+        /** @var array{reports: list<array{id: string, native?: bool}>} $catalog */
+        $catalog = $reflection->invoke(new PharmOpsReportsService());
+        $native = [];
+        foreach ($catalog['reports'] as $report) {
+            if (!empty($report['native'])) {
+                $native[] = $report['id'];
+            }
+        }
+
+        sort($native);
+        $this->assertSame(['activity', 'destroyed', 'reorder', 'transactions'], $native);
+    }
+
+    /**
+     * The transaction-type derivation is the accounting-sensitive part of the
+     * activity + transactions reports; it must match the stock report's
+     * if/elseif priority exactly.
+     */
+    public function testClassifyTransactionTypeFollowsStockPriority(): void
+    {
+        // pid wins even when other fields are also set (sale takes priority).
+        $this->assertSame('sale', PharmOpsReportsService::classifyTransactionType([
+            'pid' => 42, 'distributor_id' => 5, 'xfer_inventory_id' => 9, 'fee' => 10.0,
+        ]));
+
+        // distributor_id -> distribution (no pid).
+        $this->assertSame('distribution', PharmOpsReportsService::classifyTransactionType([
+            'pid' => 0, 'distributor_id' => 5, 'xfer_inventory_id' => 9, 'fee' => 10.0,
+        ]));
+
+        // xfer_inventory_id -> transfer (no pid, no distributor).
+        $this->assertSame('transfer', PharmOpsReportsService::classifyTransactionType([
+            'pid' => 0, 'distributor_id' => 0, 'xfer_inventory_id' => 9, 'fee' => 10.0,
+        ]));
+
+        // fee != 0 -> purchase.
+        $this->assertSame('purchase', PharmOpsReportsService::classifyTransactionType([
+            'pid' => 0, 'distributor_id' => 0, 'xfer_inventory_id' => 0, 'fee' => 12.5,
+        ]));
+
+        // Everything zero -> adjustment.
+        $this->assertSame('adjustment', PharmOpsReportsService::classifyTransactionType([
+            'pid' => 0, 'distributor_id' => 0, 'xfer_inventory_id' => 0, 'fee' => 0.0,
+        ]));
+
+        // A sparse/empty row defaults to adjustment (no crash on missing keys).
+        $this->assertSame('adjustment', PharmOpsReportsService::classifyTransactionType([]));
+    }
 }

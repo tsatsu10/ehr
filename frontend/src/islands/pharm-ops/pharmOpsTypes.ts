@@ -78,11 +78,9 @@ export interface PharmTransactionRow {
   type_label: string;
   drug_name: string;
   lot_number: string;
-  warehouse: string;
   who: string;
   quantity: number;
   amount: number;
-  billed: boolean;
   notes: string;
 }
 
