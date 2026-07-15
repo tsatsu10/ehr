@@ -22,6 +22,13 @@ function lot(id: number, over: Record<string, unknown> = {}) {
   };
 }
 
+// INV-3: lots are collapsed under a per-drug row; expand the group to see individual lots.
+async function expandDrug() {
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: /Ibuprofen/i }));
+  });
+}
+
 describe('PharmOpsInventoryBrowser', () => {
   afterEach(() => {
     vi.resetAllMocks();
@@ -35,10 +42,39 @@ describe('PharmOpsInventoryBrowser', () => {
       await Promise.resolve();
     });
 
+    await expandDrug();
     expect(await screen.findByText('LOT-1')).toBeInTheDocument();
-    expect(screen.getByText('Expiring')).toBeInTheDocument();
+    // "Expiring" now shows on both the drug rollup badge and the lot badge.
+    expect(screen.getAllByText('Expiring').length).toBeGreaterThan(0);
     expect(screen.getByText('In-stock SKUs')).toBeInTheDocument();
     expect(screen.getByText('12')).toBeInTheDocument();
+  });
+
+  it('groups lots under a per-drug row and expands on click (INV-3)', async () => {
+    mockFetch.mockResolvedValue({
+      offset: 0,
+      has_more: false,
+      summary,
+      currency_symbol: 'GH₵',
+      generated_at: '',
+      items: [
+        lot(1, { lot_number: 'LOT-A', on_hand: 30, value: 90 }),
+        lot(2, { lot_number: 'LOT-B', on_hand: 20, value: 60 }),
+      ],
+    });
+
+    render(<PharmOpsInventoryBrowser ajaxUrl="/mock/ajax" csrfToken="t" />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // One drug rollup row for the two lots; the lots are hidden until expanded.
+    expect(screen.getByRole('button', { name: /Ibuprofen.*2 lots/i })).toBeInTheDocument();
+    expect(screen.queryByText('LOT-A')).toBeNull();
+
+    await expandDrug();
+    expect(screen.getByText('LOT-A')).toBeInTheDocument();
+    expect(screen.getByText('LOT-B')).toBeInTheDocument();
   });
 
   it('shows lot value and stock-value totals (INV-1)', async () => {
@@ -106,6 +142,7 @@ describe('PharmOpsInventoryBrowser', () => {
       fireEvent.click(screen.getByRole('button', { name: /Load more/i }));
     });
 
+    await expandDrug();
     expect(await screen.findByText('LOT-NEXT')).toBeInTheDocument();
   });
 
@@ -120,6 +157,7 @@ describe('PharmOpsInventoryBrowser', () => {
       await Promise.resolve();
     });
 
+    await expandDrug();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /^Adjust$/i }));
     });
@@ -148,6 +186,7 @@ describe('PharmOpsInventoryBrowser', () => {
       await Promise.resolve();
     });
 
+    await expandDrug();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /^Adjust$/i }));
     });

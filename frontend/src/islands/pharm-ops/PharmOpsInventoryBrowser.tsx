@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { oeFetch, OeFetchError } from '@core/oeFetch';
 import { formatMoney } from '@core/formatMoney';
 import { ConfirmModal } from '@components/ConfirmModal';
@@ -26,6 +26,35 @@ interface PendingConfirm {
   body: string;
   confirmLabel: string;
   run: () => void;
+}
+
+// INV-3: roll the flat lot list up into one group per drug (lots kept in FEFO order from the API).
+interface DrugGroup {
+  drug_id: number;
+  drug_name: string;
+  lots: PharmStockRow[];
+  totalOnHand: number;
+  totalValue: number | null;
+  worstStatus: 'expired' | 'expiring' | 'ok';
+}
+
+function groupLots(rows: PharmStockRow[]): DrugGroup[] {
+  const byId = new Map<number, DrugGroup>();
+  const order: number[] = [];
+  for (const r of rows) {
+    let g = byId.get(r.drug_id);
+    if (!g) {
+      g = { drug_id: r.drug_id, drug_name: r.drug_name, lots: [], totalOnHand: 0, totalValue: null, worstStatus: 'ok' };
+      byId.set(r.drug_id, g);
+      order.push(r.drug_id);
+    }
+    g.lots.push(r);
+    g.totalOnHand += r.on_hand;
+    if (r.value != null) g.totalValue = (g.totalValue ?? 0) + r.value;
+    if (r.expiry_status === 'expired') g.worstStatus = 'expired';
+    else if (r.expiry_status === 'expiring' && g.worstStatus !== 'expired') g.worstStatus = 'expiring';
+  }
+  return order.map((id) => byId.get(id) as DrugGroup);
 }
 
 interface PharmOpsInventoryBrowserProps {
@@ -179,6 +208,22 @@ export function PharmOpsInventoryBrowser({
 
   const canAdjust = canReceive;
   const showActions = (canReceive || canDestroy || canAdjust) && !stocktake;
+
+  // Drug-grouped view (INV-3): collapse lots under a per-drug row that rolls up on-hand + value.
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const toggleGroup = useCallback((drugId: number) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(drugId)) {
+        next.delete(drugId);
+      } else {
+        next.add(drugId);
+      }
+      return next;
+    });
+  }, []);
+
+  const groups = useMemo(() => groupLots(rows), [rows]);
 
   const fetchOptions = useMemo(() => ({ ajaxUrl, csrfToken }), [ajaxUrl, csrfToken]);
 
@@ -468,9 +513,49 @@ export function PharmOpsInventoryBrowser({
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
-                  <tr key={row.inventory_id}>
-                    <td style={LEFT}>{row.drug_name}</td>
+                {groups.map((g) => {
+                  const open = stocktake || expanded.has(g.drug_id) || g.lots.some((l) => l.inventory_id === adjustId);
+                  return (
+                    <Fragment key={g.drug_id}>
+                      <tr className="nc-pharmops-inv-drug-row">
+                        <td style={LEFT}>
+                          <button
+                            type="button"
+                            className="nc-pharmops-inv-toggle"
+                            aria-expanded={open}
+                            onClick={() => toggleGroup(g.drug_id)}
+                          >
+                            <span className="nc-pharmops-inv-caret" aria-hidden="true">{open ? '▾' : '▸'}</span>
+                            <strong>{g.drug_name}</strong>
+                            <span className="text-(--oe-nc-text-muted)"> · {g.lots.length} lot{g.lots.length === 1 ? '' : 's'}</span>
+                          </button>
+                        </td>
+                        <td style={LEFT} className="text-(--oe-nc-text-muted)">—</td>
+                        <td style={RIGHT} className="tabular-nums">{g.totalOnHand}</td>
+                        <td style={RIGHT} className="tabular-nums">
+                          {g.totalValue != null
+                            ? formatMoney(g.totalValue, { currency_symbol: currencySymbol })
+                            : <span className="text-(--oe-nc-text-muted)">—</span>}
+                        </td>
+                        <td style={LEFT} className="text-(--oe-nc-text-muted)">—</td>
+                        <td style={LEFT}>
+                          {g.worstStatus === 'ok'
+                            ? <span className="text-(--oe-nc-text-muted)">OK</span>
+                            : <Badge variant={expiryVariant(g.worstStatus)}>{expiryText(g.worstStatus)}</Badge>}
+                        </td>
+                        {showActions ? (
+                          <td style={RIGHT}>
+                            {canReceive && onReceive ? (
+                              <Button type="button" variant="outline" size="sm" onClick={() => onReceive(g.drug_id, g.drug_name)}>
+                                Receive
+                              </Button>
+                            ) : null}
+                          </td>
+                        ) : null}
+                      </tr>
+                      {open ? g.lots.map((row) => (
+                  <tr key={row.inventory_id} className="nc-pharmops-inv-lot-row">
+                    <td style={LEFT} className="nc-pharmops-inv-lot-indent" />
                     <td style={LEFT}>{row.lot_number || '—'}</td>
                     <td style={RIGHT} className="tabular-nums">
                       {stocktake ? (
@@ -550,11 +635,6 @@ export function PharmOpsInventoryBrowser({
                           </span>
                         ) : (
                           <span className="inline-flex flex-wrap items-center justify-end gap-1">
-                            {canReceive && onReceive ? (
-                              <Button type="button" variant="outline" size="sm" onClick={() => onReceive(row.drug_id, row.drug_name)}>
-                                Receive
-                              </Button>
-                            ) : null}
                             {canAdjust ? (
                               <Button type="button" variant="outline" size="sm" onClick={() => openAdjust(row)}>
                                 Adjust
@@ -575,7 +655,10 @@ export function PharmOpsInventoryBrowser({
                       </td>
                     ) : null}
                   </tr>
-                ))}
+                      )) : null}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
