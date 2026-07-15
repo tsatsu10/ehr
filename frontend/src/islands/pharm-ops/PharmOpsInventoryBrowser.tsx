@@ -1,14 +1,31 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  CalendarX,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Package,
+  PackageX,
+  Plus,
+  ShoppingCart,
+  Trash2,
+  TrendingDown,
+  Wallet,
+} from 'lucide-react';
 import { oeFetch, OeFetchError } from '@core/oeFetch';
 import { formatMoney } from '@core/formatMoney';
 import { ConfirmModal } from '@components/ConfirmModal';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { showDeskToast } from '@components/deskToast';
+import { StatCard } from '@components/StatCard';
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
+import { Card, CardContent } from '@components/ui/card';
 import { Input } from '@components/ui/input';
 import { NativeSelect } from '@components/ui/native-select';
 import type { PharmStockBrowser, PharmStockRow, PharmStockSummary } from './pharmOpsTypes';
+
+const STAT_ICON_SIZE = 18;
 
 // A count that swings on-hand by this many units, or by at least half the
 // current on-hand, is treated as "large" and asks for a second confirmation —
@@ -69,8 +86,10 @@ function groupLots(rows: PharmStockRow[]): DrugGroup[] {
   return order.map((id) => byId.get(id) as DrugGroup);
 }
 
-// INV-6: near-expiry triage — three forward-looking horizons, most urgent first, each clickable
-// to filter the lot list to that window. Complements the KPI strip's single 90-day "at risk" tile.
+// INV-6: near-expiry triage — every expiry-driven count lives here (30/60/90 days out, plus
+// already-expired), most urgent first, each clickable to filter the lot list to that window.
+// This is the ONE place expiry counts appear — the KPI grid above deliberately has no expiry
+// count tiles of its own, so a pharmacist never sees the same number twice under two labels.
 function ExpiryBreakdown({
   summary,
   currencySymbol,
@@ -83,46 +102,53 @@ function ExpiryBreakdown({
   onExpiryFilter: (value: string) => void;
 }) {
   const money = (n?: number) => formatMoney(n ?? 0, { currency_symbol: currencySymbol });
-  const tiers: Array<{ filter: string; label: string; count: number; value: number; tone: 'danger' | 'warning' | 'neutral' }> = [
+  const tiers: Array<{ filter: string; label: string; count: number; value: number; tone: 'danger' | 'warning' | 'neutral' | 'expired' }> = [
     { filter: '30', label: '≤ 30 days', count: summary.expiring_30 ?? 0, value: summary.value_expiring_30 ?? 0, tone: 'danger' },
     { filter: '60', label: '≤ 60 days', count: summary.expiring_60 ?? 0, value: summary.value_expiring_60 ?? 0, tone: 'warning' },
     { filter: 'expiring', label: '≤ 90 days', count: summary.expiring ?? 0, value: summary.value_expiring ?? 0, tone: 'neutral' },
+    { filter: 'expired', label: 'Already expired', count: summary.expired ?? 0, value: summary.value_expired ?? 0, tone: 'expired' },
   ];
 
   return (
-    <div className="nc-pharmops-inv-expiry-breakdown mb-3">
-      <div className="nc-pharmops-inv-expiry-breakdown-head">
-        <strong>Near-expiry triage</strong>
-        <span className="text-(--oe-nc-text-muted) text-sm">
-          {' '}— dispense the earliest-expiring lot first (FEFO); expand a drug below to see its lots in that order.
-        </span>
-      </div>
-      <div className="nc-pharmops-inv-expiry-tiers" role="group" aria-label="Expiry horizons">
-        {tiers.map((t) => {
-          const active = expiry === t.filter;
-          const color = t.tone === 'danger'
-            ? 'var(--oe-nc-danger)'
-            : t.tone === 'warning'
-              ? 'var(--oe-nc-warning, #b45309)'
-              : undefined;
-          return (
-            <button
-              key={t.filter}
-              type="button"
-              className={`nc-pharmops-inv-expiry-tier${active ? ' is-active' : ''}`}
-              aria-pressed={active}
-              onClick={() => onExpiryFilter(active ? 'all' : t.filter)}
-            >
-              <span className="nc-pharmops-inv-expiry-tier-count tabular-nums" style={color ? { color } : undefined}>
-                {t.count}
-              </span>
-              <span className="nc-pharmops-inv-expiry-tier-label">{t.label}</span>
-              <span className="nc-pharmops-inv-expiry-tier-value tabular-nums">{money(t.value)}</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
+    <Card className="nc-pharmops-inv-expiry-breakdown mb-3">
+      <CardContent className="p-4">
+        <div className="nc-pharmops-inv-expiry-breakdown-head">
+          <strong>Near-expiry triage</strong>
+          <span className="text-(--oe-nc-text-muted) text-sm">
+            {' '}— dispense the earliest-expiring lot first (FEFO); expand a drug below to see its lots in that order.
+          </span>
+        </div>
+        <div className="nc-pharmops-inv-expiry-tiers" role="group" aria-label="Expiry horizons">
+          {tiers.map((t) => {
+            const active = expiry === t.filter;
+            const color = t.tone === 'danger' || t.tone === 'expired'
+              ? 'var(--oe-nc-danger)'
+              : t.tone === 'warning'
+                ? 'var(--oe-nc-warning, #b45309)'
+                : undefined;
+            const Icon = t.tone === 'expired' ? CalendarX : Clock;
+            return (
+              <button
+                key={t.filter}
+                type="button"
+                className={`nc-pharmops-inv-expiry-tier nc-pharmops-inv-expiry-tier--${t.tone}${active ? ' is-active' : ''}`}
+                aria-pressed={active}
+                onClick={() => onExpiryFilter(active ? 'all' : t.filter)}
+              >
+                <span className="nc-pharmops-inv-expiry-tier-top">
+                  <Icon size={14} aria-hidden="true" style={color ? { color } : undefined} />
+                  <span className="nc-pharmops-inv-expiry-tier-count tabular-nums" style={color ? { color } : undefined}>
+                    {t.count}
+                  </span>
+                </span>
+                <span className="nc-pharmops-inv-expiry-tier-label">{t.label}</span>
+                <span className="nc-pharmops-inv-expiry-tier-value tabular-nums">{money(t.value)}</span>
+              </button>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -183,11 +209,14 @@ function expiryText(status: PharmStockRow['expiry_status']): string {
 interface SummaryStat {
   label: string;
   value: string;
+  icon: ReactNode;
   tone?: 'danger' | 'warning';
   /** When set, the tile is a button that filters the browser to that expiry slice. */
   filter?: 'expiring' | 'expired';
 }
 
+// Money + stock-health only — expiry COUNTS live exclusively in the triage panel below, so a
+// number is never shown twice on this page under two different labels.
 function StockSummaryStrip({
   summary,
   currencySymbol,
@@ -203,49 +232,79 @@ function StockSummaryStrip({
   const valueAtRisk = (summary.value_expiring ?? 0) + (summary.value_expired ?? 0);
 
   const stats: SummaryStat[] = [
-    { label: 'Stock value', value: money(summary.total_value) },
-    { label: 'Value at risk', value: money(valueAtRisk), tone: valueAtRisk > 0 ? 'warning' : undefined, filter: 'expiring' },
-    { label: 'Wastage rate', value: `${summary.wastage_rate_pct ?? 0}%`, tone: (summary.wastage_rate_pct ?? 0) >= 5 ? 'danger' : undefined, filter: 'expired' },
-    { label: 'In-stock SKUs', value: String(summary.sku_count) },
-    { label: 'Out of stock', value: String(summary.out_of_stock), tone: summary.out_of_stock > 0 ? 'danger' : undefined },
-    { label: 'At reorder', value: String(summary.at_reorder), tone: summary.at_reorder > 0 ? 'warning' : undefined },
-    { label: 'Expiring ≤ 90d', value: String(summary.expiring), filter: 'expiring' },
-    { label: 'Expired lots', value: String(summary.expired), tone: summary.expired > 0 ? 'danger' : undefined, filter: 'expired' },
+    { label: 'Stock value', value: money(summary.total_value), icon: <Wallet size={STAT_ICON_SIZE} aria-hidden="true" /> },
+    {
+      label: 'Value at risk',
+      value: money(valueAtRisk),
+      icon: <TrendingDown size={STAT_ICON_SIZE} aria-hidden="true" />,
+      tone: valueAtRisk > 0 ? 'warning' : undefined,
+      filter: 'expiring',
+    },
+    {
+      label: 'Wastage rate',
+      value: `${summary.wastage_rate_pct ?? 0}%`,
+      icon: <Trash2 size={STAT_ICON_SIZE} aria-hidden="true" />,
+      tone: (summary.wastage_rate_pct ?? 0) >= 5 ? 'danger' : undefined,
+      filter: 'expired',
+    },
+    { label: 'In-stock SKUs', value: String(summary.sku_count), icon: <Package size={STAT_ICON_SIZE} aria-hidden="true" /> },
+    {
+      label: 'Out of stock',
+      value: String(summary.out_of_stock),
+      icon: <PackageX size={STAT_ICON_SIZE} aria-hidden="true" />,
+      tone: summary.out_of_stock > 0 ? 'danger' : undefined,
+    },
+    {
+      label: 'At reorder',
+      value: String(summary.at_reorder),
+      icon: <ShoppingCart size={STAT_ICON_SIZE} aria-hidden="true" />,
+      tone: summary.at_reorder > 0 ? 'warning' : undefined,
+    },
   ];
 
   return (
-    <div className="nc-pharmops-inv-summary mb-3" role="group" aria-label="Stockroom health">
+    <div
+      className="nc-pharmops-inv-summary mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6"
+      role="group"
+      aria-label="Stockroom health"
+    >
       {stats.map((s) => {
         const active = s.filter !== undefined && expiry === s.filter;
-        const valueStyle = s.tone === 'danger'
-          ? { color: 'var(--oe-nc-danger)' }
-          : s.tone === 'warning'
-            ? { color: 'var(--oe-nc-warning, #b45309)' }
-            : undefined;
-        const inner = (
-          <>
-            <span className="nc-pharmops-inv-summary-value tabular-nums" style={valueStyle}>{s.value}</span>
-            <span className="nc-pharmops-inv-summary-label">{s.label}</span>
-          </>
+        const valueNode = (
+          <span
+            style={
+              s.tone === 'danger'
+                ? { color: 'var(--oe-nc-danger)' }
+                : s.tone === 'warning'
+                  ? { color: 'var(--oe-nc-warning, #b45309)' }
+                  : undefined
+            }
+          >
+            {s.value}
+          </span>
         );
-        if (s.filter !== undefined) {
-          return (
-            <button
-              key={s.label}
-              type="button"
-              className={`nc-pharmops-inv-summary-stat${active ? ' is-active' : ''}`}
-              aria-pressed={active}
-              title={active ? 'Clear filter' : `Show ${s.label.toLowerCase()}`}
-              onClick={() => onExpiryFilter(active ? 'all' : s.filter as string)}
-            >
-              {inner}
-            </button>
-          );
+        const card = (
+          <StatCard
+            label={s.label}
+            value={valueNode}
+            icon={s.icon}
+            className={active ? 'shadow-[0_0_0_2px_var(--oe-nc-cta)]' : undefined}
+          />
+        );
+        if (s.filter === undefined) {
+          return <div key={s.label}>{card}</div>;
         }
         return (
-          <div key={s.label} className="nc-pharmops-inv-summary-stat">
-            {inner}
-          </div>
+          <button
+            key={s.label}
+            type="button"
+            className="nc-pharmops-stat-btn"
+            aria-pressed={active}
+            title={active ? 'Clear filter' : `Show ${s.label.toLowerCase()}`}
+            onClick={() => onExpiryFilter(active ? 'all' : s.filter as string)}
+          >
+            {card}
+          </button>
         );
       })}
     </div>
@@ -626,13 +685,17 @@ export function PharmOpsInventoryBrowser({
                             aria-expanded={open}
                             onClick={() => toggleGroup(g.drug_id)}
                           >
-                            <span className="nc-pharmops-inv-caret" aria-hidden="true">{open ? '▾' : '▸'}</span>
+                            <span className="nc-pharmops-inv-caret" aria-hidden="true">
+                              {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                            </span>
                             <strong>{g.drug_name}</strong>
                             <span className="text-(--oe-nc-text-muted)"> · {g.lots.length} lot{g.lots.length === 1 ? '' : 's'}</span>
                           </button>
-                          <div className="nc-pharmops-inv-supplier text-(--oe-nc-text-muted) text-sm">
-                            {g.supplierName ? `Supplier: ${g.supplierName}` : 'Supplier: —'}
-                          </div>
+                          {g.supplierName ? (
+                            <div className="nc-pharmops-inv-supplier text-(--oe-nc-text-muted) text-sm">
+                              Supplier: {g.supplierName}
+                            </div>
+                          ) : null}
                         </td>
                         <td style={LEFT} className="text-(--oe-nc-text-muted)">—</td>
                         <td style={RIGHT} className="tabular-nums">{g.totalOnHand}</td>
@@ -659,15 +722,22 @@ export function PharmOpsInventoryBrowser({
                         </td>
                         <td style={LEFT} className="text-(--oe-nc-text-muted)">—</td>
                         <td style={LEFT}>
-                          {g.worstStatus === 'ok'
-                            ? <span className="text-(--oe-nc-text-muted)">OK</span>
-                            : <Badge variant={expiryVariant(g.worstStatus)}>{expiryText(g.worstStatus)}</Badge>}
+                          <Badge variant={g.worstStatus === 'ok' ? 'neutral' : expiryVariant(g.worstStatus)}>
+                            {expiryText(g.worstStatus)}
+                          </Badge>
                         </td>
                         {showActions ? (
                           <td style={RIGHT}>
                             {canReceive && onReceive ? (
-                              <Button type="button" variant="outline" size="sm" onClick={() => onReceive(g.drug_id, g.drug_name)}>
-                                Receive
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                aria-label={`Receive stock for ${g.drug_name}`}
+                                title="Receive stock"
+                                onClick={() => onReceive(g.drug_id, g.drug_name)}
+                              >
+                                <Plus size={16} aria-hidden="true" />
                               </Button>
                             ) : null}
                           </td>
@@ -725,11 +795,9 @@ export function PharmOpsInventoryBrowser({
                     <td style={RIGHT} className="text-(--oe-nc-text-muted)">—</td>
                     <td style={LEFT} className="tabular-nums">{ddmmyyyy(row.expiration)}</td>
                     <td style={LEFT}>
-                      {row.expiry_status === 'ok' ? (
-                        <span className="text-(--oe-nc-text-muted)">OK</span>
-                      ) : (
-                        <Badge variant={expiryVariant(row.expiry_status)}>{expiryText(row.expiry_status)}</Badge>
-                      )}
+                      <Badge variant={row.expiry_status === 'ok' ? 'neutral' : expiryVariant(row.expiry_status)}>
+                        {expiryText(row.expiry_status)}
+                      </Badge>
                     </td>
                     {showActions ? (
                       <td style={RIGHT}>

@@ -115,66 +115,43 @@
   background: var(--oe-nc-bg, #f4f6f8);
 }
 
-/* Inventory stockroom-health summary strip */
+/* Inventory stockroom-health KPI grid — tiles are the shared StatCard; this class only
+   supplies the grid rhythm (column layout comes from Tailwind classes in the JSX). */
 .nc-pharmops-inv-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
+  align-items: stretch;
 }
 
-.nc-pharmops-inv-summary-stat {
-  display: flex;
-  flex-direction: column;
-  min-width: 6rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--oe-nc-border, #dee2e6);
-  border-radius: 0.35rem;
-  background: var(--oe-nc-surface, #fff);
-}
-
-button.nc-pharmops-inv-summary-stat {
-  cursor: pointer;
+/* Wraps a StatCard to make it clickable (StatCard itself has no onClick) — reset the button
+   chrome and let the wrapped Card supply all the visible styling; hover/focus add a CTA ring
+   that matches the `.is-active` ring applied via the Card's own className when selected. */
+.nc-pharmops-stat-btn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
   text-align: left;
-  font: inherit;
-  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  cursor: pointer;
+  border-radius: 0.75rem;
 }
 
-button.nc-pharmops-inv-summary-stat:hover {
-  border-color: var(--oe-nc-cta, #2563eb);
+.nc-pharmops-stat-btn:hover > * {
+  box-shadow: 0 0 0 2px var(--oe-nc-cta, #2563eb);
 }
 
-.nc-pharmops-inv-summary-stat.is-active {
-  border-color: var(--oe-nc-cta, #2563eb);
-  box-shadow: inset 0 0 0 1px var(--oe-nc-cta, #2563eb);
+.nc-pharmops-stat-btn:focus-visible {
+  outline: 2px solid var(--oe-nc-cta, #2563eb);
+  outline-offset: 2px;
 }
 
-.nc-pharmops-inv-summary-value {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--oe-nc-text, #1c2733);
-  line-height: 1.2;
-}
-
-.nc-pharmops-inv-summary-label {
-  font-size: 0.75rem;
-  color: var(--oe-nc-text-muted, #6c757d);
-}
-
-/* INV-6: near-expiry triage panel. */
-.nc-pharmops-inv-expiry-breakdown {
-  padding: 0.75rem;
-  border: 1px solid var(--oe-nc-border, #dee2e6);
-  border-radius: 0.35rem;
-  background: var(--oe-nc-surface, #fff);
-}
-
+/* INV-6: near-expiry triage panel — the single place all expiry counts live. */
 .nc-pharmops-inv-expiry-breakdown-head {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .nc-pharmops-inv-expiry-tiers {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
   gap: 0.75rem;
 }
 
@@ -182,20 +159,26 @@ button.nc-pharmops-inv-summary-stat:hover {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  min-width: 8rem;
-  padding: 0.5rem 0.75rem;
+  gap: 0.15rem;
+  padding: 0.6rem 0.85rem;
   border: 1px solid var(--oe-nc-border, #dee2e6);
-  border-radius: 0.35rem;
+  border-radius: 0.6rem;
   background: var(--oe-nc-surface-muted, #f8f9fa);
   cursor: pointer;
   font: inherit;
   color: inherit;
   text-align: left;
-  transition: border-color 0.12s ease;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
 }
 
 .nc-pharmops-inv-expiry-tier:hover {
   border-color: var(--oe-nc-cta, #2563eb);
+  transform: translateY(-1px);
+}
+
+.nc-pharmops-inv-expiry-tier:focus-visible {
+  outline: 2px solid var(--oe-nc-cta, #2563eb);
+  outline-offset: 1px;
 }
 
 .nc-pharmops-inv-expiry-tier.is-active {
@@ -203,9 +186,27 @@ button.nc-pharmops-inv-summary-stat:hover {
   box-shadow: inset 0 0 0 1px var(--oe-nc-cta, #2563eb);
 }
 
+/* Left accent bar communicates urgency ordering at a glance (30 days = most severe). */
+.nc-pharmops-inv-expiry-tier--danger,
+.nc-pharmops-inv-expiry-tier--expired {
+  border-left: 3px solid var(--oe-nc-danger, #dc2626);
+}
+
+.nc-pharmops-inv-expiry-tier--warning {
+  border-left: 3px solid var(--oe-nc-warning, #b45309);
+}
+
+.nc-pharmops-inv-expiry-tier-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--oe-nc-text-muted, #6c757d);
+}
+
 .nc-pharmops-inv-expiry-tier-count {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 700;
+  color: var(--oe-nc-text, #1c2733);
 }
 
 .nc-pharmops-inv-expiry-tier-label {
@@ -218,29 +219,55 @@ button.nc-pharmops-inv-summary-stat:hover {
   font-weight: 600;
 }
 
-/* INV-3: drug-grouped inventory rows. */
+/* INV-3: drug-grouped inventory rows — extra top padding + rule gives each drug block room to
+   breathe so 50+ rows don't blur into one wall of text. */
 .nc-pharmops-inv-drug-row > td {
   background: var(--oe-nc-surface-muted, #f8f9fa);
+  padding-top: 0.65rem;
+  padding-bottom: 0.65rem;
+  border-top: 1px solid var(--oe-nc-border, #dee2e6);
 }
 
 .nc-pharmops-inv-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   background: none;
   border: 0;
-  padding: 0;
+  padding: 0.2rem 0.35rem;
+  margin: -0.2rem -0.35rem;
+  border-radius: 0.35rem;
   cursor: pointer;
   font: inherit;
   color: inherit;
   text-align: left;
 }
 
+.nc-pharmops-inv-toggle:hover {
+  background: var(--oe-nc-border, #dee2e6);
+}
+
+.nc-pharmops-inv-toggle:focus-visible {
+  outline: 2px solid var(--oe-nc-cta, #2563eb);
+  outline-offset: 1px;
+}
+
 .nc-pharmops-inv-caret {
-  display: inline-block;
-  width: 1rem;
+  display: inline-flex;
   color: var(--oe-nc-text-muted, #6c757d);
+}
+
+.nc-pharmops-inv-supplier {
+  margin-top: 0.15rem;
 }
 
 .nc-pharmops-inv-lot-indent {
   width: 1.5rem;
+}
+
+.nc-pharmops-inv-lot-row > td {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
 }
 
 .nc-pharmops-reports-external-icon {

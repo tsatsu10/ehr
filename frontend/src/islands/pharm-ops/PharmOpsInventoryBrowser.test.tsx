@@ -168,7 +168,7 @@ describe('PharmOpsInventoryBrowser', () => {
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Expired lots/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Already expired/i }));
     });
 
     const lastCall = mockFetch.mock.calls[mockFetch.mock.calls.length - 1];
@@ -194,7 +194,7 @@ describe('PharmOpsInventoryBrowser', () => {
 
     fireEvent.change(screen.getByLabelText('Search'), { target: { value: 'amoxicillin' } });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Expired lots/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Already expired/i }));
     });
 
     expect(screen.getByLabelText('Search')).toHaveValue('');
