@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 1.20.51 |
+| **Document version** | 1.20.53 |
 | **Minimum OpenEMR** | 7.0.3+ (PHP 8.2+; see Q7 closed §24.1) |
 | **V1 product name (user-facing)** | New Clinic |
 | **Status** | Draft for review — **§5.6 implementation status matrix**; **[Implementation scorecard](./NEW_CLINIC_V1_IMPLEMENTATION_SCORECARD.md)** (living % tracker); Phase 1 companion specs approved for COM and M1a |
@@ -191,7 +191,7 @@ These problems drive **Module M1 (Front Desk)** and the closed registration deci
 |----|------|----------------------|----------------------|
 | G1 | Reduce clicks on golden path | ≥30% fewer navigations vs stock OpenEMR | Stock baseline measured in **week 0** of pilot using a fixed task script (10 tasks: search, register, start visit, vitals, consult, lab order, Rx, payment, receipt, daily report) recorded with a click-counter browser extension on three trained users; same script re-run in week 4 of pilot |
 | G2 | Role-based home screens | 100% of pilot users land on role dashboard (7 roles when enabled), not default menu | Verified by login telemetry (`new_session.role_switched` and landing route) |
-| G3 | Cash-only checkout | Zero insurance claim screens in role menus | Manual menu audit per role at end of week 1 |
+| G3 | Cash-only checkout | Zero insurance claim screens in role menus **by default** (the optional `enable_insurance_scheme` scheme-split is opt-in per facility, default OFF — D-BILL-8) | Manual menu audit per role at end of week 1 |
 | G4 | Visit visibility | Staff can see queue by stage in &lt;2 seconds | Visit Board page-load timing reported via browser performance API |
 | G5 | Safe extension | No core fork; installable module; audit trail preserved | Code review checklist + clean Module Manager install/uninstall test |
 | G6 | Pilot readiness | 1 clinic runs 2 weeks live on V1; staff training for **enabled roles** completed in **≤10 hours** total (curriculum §17.2; ~8h instruction if all roles + S1, ≤10h with practice buffer) | Training log signed by trainer |
@@ -208,7 +208,7 @@ These problems drive **Module M1 (Front Desk)** and the closed registration deci
 
 | ID | Non-goal |
 |----|----------|
-| NG1 | NHIS claims, pre-authorization, insurer APIs |
+| NG1 | NHIS claims, pre-authorization, insurer APIs — **optional softening (D-BILL-8):** post-pilot **CBILL-3** may enable a flag-gated **manual** insurance scheme-split at M5 (`enable_insurance_scheme` = 1, default OFF) — mark lines scheme-covered vs patient-pay, collect the patient part, track the scheme part as a **manual** claim register; **automated** claims / pre-auth / insurer APIs remain out of scope |
 | NG2 | Credit accounts, aging, collections as **primary** workflow — **optional softening (closed D-BILL-6):** post-pilot **V1.2-BILL+** may enable M14-F04 simplified “owed to clinic” call list when `enable_bill_ops_outstanding` = 1; does **not** change M5 full-pay checkout or NG3 insurance backlog rules |
 | NG3 | X12/EDI, ERA (835), 270/271 eligibility |
 | NG4 | Inpatient (IPD), theatre, ward management |
@@ -228,7 +228,7 @@ These problems drive **Module M1 (Front Desk)** and the closed registration deci
 
 1. **Tasks over menus** — Show queues and next actions, not feature trees.
 2. **Core for depth, module for speed** — New UI for frequent paths; deep link to core for complex clinical/billing actions until replaced.
-3. **Cash truth** — If it’s not paid in V1, it’s “pending payment,” not “insurance pending.”
+3. **Cash truth** — If it’s not paid in V1, it’s “pending payment,” not “insurance pending.” **(Amended D-BILL-7/8):** the default is unchanged. When the optional `enable_partial_payment` is on, a completed visit may carry a **patient-owed** balance on the “owed to clinic” list; when the optional `enable_insurance_scheme` is on, it may also carry a **scheme-owed** portion tracked as a manual claim. Both are opt-in, default OFF.
 4. **One unfinished visit at a time** — A patient may have **many visits in one day**, but only **one open visit** on the queue at once (§6.5.0). Start the next visit after the previous one is finished.
 5. **Fail safe clinically** — Never skip audit logs; never bypass ACL; never delete clinical data silently; **never reach payment with unsigned documentation** unless logged override (§6.1.1, G10).
 6. **Region-ready** — Country config packs later; V1 ships launch-region defaults (currency, phone, timezone) with extension hooks.
@@ -3178,9 +3178,9 @@ Slip is a separate print action from the cashier receipt (no payment lines). Use
 
 #### M5 Financial rules (V1)
 
-- **No partial payments (closed D-BILL-2):** one **full** cash post per visit checkout — no split tender, no “pay registration now, balance later” at the cashier UI. Patient leaves owing → **Left without paying** (`closed_unpaid`, M5-F13) or manager **charge correction** after pay (M14-F01 when `enable_bill_ops` = 1). Optional M14-F04 tracks debt — it is **not** a partial checkout path (O-BILL-2).
+- **Partial payments — default off (D-BILL-2, amended D-BILL-7):** the default is still one **full** cash post per visit checkout — no split tender, no “pay registration now, balance later” at the cashier UI. **Post-pilot CBILL-2** may enable a flag-gated **partial payment** (`enable_partial_payment`, **default OFF**): a manager (holding `new_visit_mark_outstanding`) collects less than the full total with a required reason; the visit **completes** and the remainder becomes an **outstanding balance** on the M14 “owed to clinic” list (visible when `enable_bill_ops_outstanding` = 1). Flag OFF = 100% D-BILL-2 behaviour. This does **not** add split-tender within one payment nor a “pay-now-balance-later registration” path (O-BILL-2 intact). Built + validated 2026-07-15 (see [Cashier Billing Completion Plan](../new/NEW_CLINIC_CASHIER_BILLING_COMPLETION_PLAN.md) §5).
 - **No refunds UI** (handle manually in core if needed; audit).
-- **No insurance line items.**
+- **Insurance line items — default off (amends “No insurance line items”, D-BILL-8):** the default is still cash-only with **zero** insurance chrome. **Post-pilot CBILL-3** may enable a flag-gated **insurance scheme-split** (`enable_insurance_scheme`, **default OFF**) for the launch region: each charge line is marked **scheme-covered** or **patient-pay**; the patient part is collected at M5 now; the scheme part is recorded as a **manual claim register** to submit outside the system. Reuses core `insurance_data` / `insurance_companies` (no schema fork). **Still non-goals:** automated NHIS claims / pre-authorisation / insurer APIs (NG1) and X12/EDI/ERA (835) / 270-271 eligibility (NG3) — the split is a manual register, not a claims engine. Flag OFF matches `enable_insurance = false` (no insurance UI). Grounded in launch-region scheme research (plan §6); **not yet built.**
 
 ---
 
@@ -6219,7 +6219,9 @@ Registration, completion, and related engineering choices (defaults in [§12.4](
 | D-REG-3 | **Admin-configurable clinic currency (closed):** M6-F27 — `currency_code` / `currency_symbol` / `currency_decimals` / `currency_symbol_position`; `formatMoney()` everywhere; one currency per facility V1; fee schedule amounts in clinic currency |
 | D-STAFF-1 | **Lead ACL groups at install (closed):** `acl_setup.php` creates `new_*_lead` groups for reception, nurse, lab, pharmacy, cashier; §4.2.1 solo-bench = base + lead on one login; split-bench = separate accounts when needed; stock receive / lab release / pharmacy overrides on lead groups |
 | D-BILL-1 | **Three-layer billing model (closed):** M5 = visit cash checkout; M11 = patient payment history (read); M14 = billing back office (write corrections, payment search, daysheet, optional outstanding + admin insurance vault); no parallel ledger; NG2/NG3 remain non-goals for golden path |
-| D-BILL-2 | **No partial checkout (closed):** M5 collects **full** visit total in one post; no split tender at cashier; debt via `closed_unpaid` (M5-F13 / M7-F14) or optional M14-F04 — not partial payment UI (O-BILL-2) |
+| D-BILL-2 | **Full checkout is the default (closed; amended D-BILL-7):** M5 collects the **full** visit total in one post by default; no split tender; debt via `closed_unpaid` (M5-F13 / M7-F14) or optional M14-F04. Partial payment is now an **opt-in exception** — see D-BILL-7 |
+| D-BILL-7 | **Partial payment opt-in (closed):** flag-gated `enable_partial_payment` (default **OFF**) lets a manager (`new_visit_mark_outstanding`) collect less than the full total with a reason; visit completes, remainder → M14 "owed to clinic" list. Amends D-BILL-2; O-BILL-2 (no split-tender-within-one-payment) intact. CBILL-2, built + validated 2026-07-15 |
+| D-BILL-8 | **Insurance scheme-split opt-in (closed):** flag-gated `enable_insurance_scheme` (default **OFF**) permits a **manual** scheme-split at M5 — lines marked scheme-covered vs patient-pay, patient part collected now, scheme part tracked as a manual claim register (reuses core `insurance_data`/`insurance_companies`). Amends NG1 + "no insurance line items" + G3 + principle 3. **Automated** claims/pre-auth/insurer APIs (NG1) and X12/EDI/ERA/eligibility (NG3) stay non-goals. CBILL-3, not yet built |
 | D-BILL-3 | **M7 vs M14 close-of-day (closed):** M7-F01/F10 = report archive + scheduled reconciliation; M14-F03 = manager operator close-day tab — same underlying data (O-BILL-4) |
 | D-BILL-4 | **Unpaid vs outstanding reports (closed):** M7-F14 = terminal `closed_unpaid` visit audit; M14-F04 = AR balance / credit call list — different audiences |
 | D-BILL-5 | **Correction reopen visit (closed):** `bill_ops_reopen_on_correction` default **0** — underpaid correction does not auto-return visit to `ready_for_payment`; manager sends patient to cashier manually (O-BILL-1) |
@@ -6396,7 +6398,7 @@ Complete with clinical lead + owner; snapshot M6 settings and attach to training
 | **M8** | Open procedure order / results | **REQUIRE** | **BIND** before link | Core lab screens §11.6 | **Block** if no encounter |
 | **M8** | Lab complete | **REQUIRE** | No | FSM; E-Sign for `lab_direct` (M8-F09) | Block if unsigned (profile) |
 | **M9** | Take patient (pharmacy) | **REQUIRE** | **BIND** when opening encounter-scoped dispense | FSM | Block if encounter NULL |
-| **M9** | Open Rx list (pid-scoped) | NONE | No | Core Rx by `pid` | **WARN** allergy on dispense path |
+| **M9** | Open Rx list (pid-scoped) | NONE | No | Core Rx by `pid`, or native `rx-history.php` (view + print only) behind `enable_native_rx_history` (default OFF) | **WARN** allergy on dispense path |
 | **M9** | Dispense / pharmacy complete | **REQUIRE** | **BIND** before dispense UI | Core inventory / service note | Block E-Sign / allergy gates |
 | **M5** | Take payment / checkout | **REQUIRE** | **No bind** | `CashCheckoutService` reads `new_visit.encounter` from `visit_id` (§M5.2) | Block completion / E-Sign / 70% |
 | **M5** | Mark left unpaid / close no charge | **REQUIRE** | No | FSM from `visit_id` | ACL + reason |
@@ -6492,6 +6494,8 @@ The "Apply cash clinic profile" button in M6-F07 sets the following OpenEMR `glo
 |---------|------|---------|
 | Version | Date | Scope | Summary |
 |---------|------|-------|---------|
+| 1.20.53 | 2026-07-15 | **Cashier billing amendments (D-BILL-7/8)** — §M5 Financial rules, §3.1 G3, §3.2 NG1, §3.3 principle 3. **D-BILL-7:** partial payment permitted as a flag-gated option (`enable_partial_payment`, default OFF) — amends D-BILL-2 (default full-pay intact); **CBILL-2 built + validated**. **D-BILL-8:** insurance scheme-split permitted as a flag-gated **manual** option (`enable_insurance_scheme`, default OFF) — mark lines scheme-covered vs patient-pay, collect patient part at M5, track scheme part as a manual claim register; **automated** claims/pre-auth/APIs (NG1) and X12/EDI/eligibility (NG3) remain out of scope; **CBILL-3 not yet built**. Cash-only default (G3) unchanged; opt-in per facility. Grounded in launch-region NHIS/HMO research ([Cashier Billing Completion Plan](../new/NEW_CLINIC_CASHIER_BILLING_COMPLETION_PLAN.md) §6) |
+| 1.20.52 | 2026-07-14 | **Native Prescription History** — §5.6 M9 matrix row notes native `rx-history.php` (view + print only, paginated) behind `enable_native_rx_history` (default OFF); bind classification unchanged (NONE) |
 | 1.20.51 | 2026-07-08 | **AUDIT-13 doc-sync** — §12.4.1 operational flags from `install.sql`; §12.4.2 `enable_react_*` cutover matrix; §12.4.3 planned flags; `enable_rx_print` install vs profile note; no normative behavior change |
 | 1.20.50 | 2026-06-25 | **Q46 desk registration form** — supersedes Q10 Quick Add; [FRONT_DESK_REGISTRATION](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md); M1b/M1c rewrite; `registration_mode=desk_full_form`; region+district weights; §24.3 updated; companions v1.9.50 / v0.6.51 / FRONT_DESK_REGISTRATION v1.0.0 |
 | 1.20.49 | 2026-06-24 | **M10 audit closure (V1.1-REG)** — D-COHORT-5 reception-only `fin0` hide + D-CTX-10; §4.4 `new_registry*` ACL; M10-F03/F10/F11 phasing; audit events + §12.1 DDL; `cohort.saved_filter`; SEC06 rate limits; **§19.8** menu cutover; **§20.1** V1.1-REG row; §24.4 row 13; REG-8; `@new-clinic-v11-registry-pr1`; companion [PATIENT_REGISTRY](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) v0.2.1 / PAGE_DESIGNS §7.32 v0.6.49 |

@@ -49,8 +49,8 @@ This plan closes the cashier billing story in three dependency-ordered slices.
 | ID | Slice | Size | Depends on | Flag | PRD amendment? |
 |----|-------|------|-----------|------|----------------|
 | **CBILL-1** | Pharmacy charges at the cashier | Small | — | `pharmacy_auto_bill_on_dispense` (OFF) | No |
-| **CBILL-2** | Partial payment / balance | Medium | CBILL-1 | `enable_partial_payment` (OFF) | Softens NG2 — note in PRD |
-| **CBILL-3** | Insurance scheme split | Large | CBILL-2 | `enable_insurance_scheme` (OFF) | **Yes — required before build** |
+| **CBILL-2** | Partial payment / balance | Medium | CBILL-1 | `enable_partial_payment` (OFF) | **Done — D-BILL-7** (amends D-BILL-2) |
+| **CBILL-3** | Insurance scheme split | Large | CBILL-2 | `enable_insurance_scheme` (OFF) | **Done — D-BILL-8** (unblocked) |
 
 Order rationale: CBILL-1 makes the bill *complete*; CBILL-2 introduces "amount due vs paid
 vs balance"; CBILL-3 reuses that same balance machinery to split "scheme owes" from "patient
@@ -192,14 +192,20 @@ card; interaction with `closed_unpaid`; reporting of outstanding (ties to M14
 
 ## 6. CBILL-3 — Insurance scheme split (scope outline, **PRD amendment required**)
 
-### 6.1 Why a PRD amendment first
+### 6.1 PRD amendment — DONE (D-BILL-8)
 
-Insurance is a **formal non-goal**: PRD §3.2 NG3 (insurance backlog), Goal G3 "cash-only
-checkout, zero insurance claim screens," and the "cash truth" principle ("if it's not paid,
-it's *pending payment*, not *insurance pending*"). Per the docs rule, a spec touching a
-non-goal needs a PRD amendment, not just a new spec. **CBILL-3 does not start until the PRD
-is amended** to permit an optional, flag-gated scheme-split at the cashier for the West
-Africa market.
+Insurance is a **formal non-goal**: PRD §3.2 NG1 (NHIS claims / pre-auth / insurer APIs) and
+NG3 (X12/EDI/eligibility), Goal G3 "cash-only checkout," and principle 3 "cash truth." Per
+the docs rule, a spec touching a non-goal needs a PRD amendment first.
+
+**The amendment landed 2026-07-15 (PRD v1.20.53, D-BILL-8):** it permits a flag-gated
+**manual** insurance scheme-split at M5 (`enable_insurance_scheme`, default OFF) — mark lines
+scheme-covered vs patient-pay, collect the patient part, track the scheme part as a manual
+claim register. Cash-only stays the default (G3 intact); opt-in per facility. **Automated**
+claims / pre-auth / insurer APIs (NG1) and X12/EDI/ERA/eligibility (NG3) remain out of scope.
+So **CBILL-3 is now unblocked to build.** (The same amendment added D-BILL-7 retroactively
+authorising CBILL-2's partial payment, which had contradicted the closed D-BILL-2 "no partial
+payments" rule.)
 
 ### 6.2 Grounding (Ghana market research)
 
@@ -253,4 +259,5 @@ annual-limit tracking (likely out of V1).
 | v0.1.0 | 2026-07-15 | Engineering | Initial plan: 3-slice cashier billing roadmap; CBILL-1 (pharmacy charges) full spec; CBILL-2/CBILL-3 scoped; CBILL-3 gated on PRD amendment; Ghana insurance research captured. |
 | v0.1.1 | 2026-07-15 | Engineering | CBILL-1 built: flag `pharmacy_auto_bill_on_dispense` (install.sql + admin), `CashierService` drug-charge read/fold/mark-billed across queue/select/pay, `DrugChargesTable` + Medicines section, tests. Verified: PHP verify PASS, 711 vitest pass, `npm run check` green, live SQL schema smoke PASS. Pending: live e2e payment run with flag ON. |
 | v0.1.2 | 2026-07-15 | Engineering | CBILL-1 live-smoke validated on the dev DB (seeded medicine on a real `ready_for_payment` visit, drove the real `CashierService`): `selectVisit` surfaces the medicine + folds it into `charges_total`; `getCashierQueue` card total includes it; `markDrugSalesBilled` flips `billed=1` + stamps `bill_date` — all PASS on live data, seed cleaned up, flag restored OFF, no collateral changes. Flag-OFF path covered by unit test (in-process config cache makes it untestable in one CLI run). Full `recordPayment` transition/AR-post is unchanged pre-existing code; its two new pieces (drug total fold, mark-billed) are the live-validated ones. Committed `643d9cb2`. |
+| v0.1.4 | 2026-07-15 | Engineering | Post-build audit of CBILL-1/2 (commit 36f48317). **HIGH fix:** M14 outstanding "owed" list counted only `billing`, so a partial-paid visit with dispensed medicines under-reported the balance — now includes cashier-collected `drug_sales` (billed=1); live-verified owed 40 not 10. Also: `recordPayment` repair path marks medicines billed only if the existing payment covers the total; removed the unreachable completion-override path from `recordPartialPayment` (+ dead param/handler arg); added a PHPUnit guards test. `last_level_closed=4`-on-partial assessed and intentionally left (shared plumbing, benign for the owed list). PHP verify + PHPUnit 6/6 green. |
 | v0.1.3 | 2026-07-15 | Engineering | CBILL-2 built + live-smoke validated: `enable_partial_payment` (default OFF); `cashier.pay_partial` → `recordPartialPayment` (manager-gated via `new_visit_mark_outstanding` + reason); `PartialPayModal` + footer button + receipt Balance-owed line; reuses M14 outstanding for the balance (no new FSM state/table). Verified: PHP verify PASS, 724 vitest pass, `npm run check` green, and a 12/12 live smoke (guards, 30/50 partial → balance 20 + completed + AR + on owed list, idempotent replay, gate enforcement) with full visit restore. Pending: PRD NG2 softening note for partial payment. |
