@@ -306,6 +306,14 @@ export function PharmOpsInventoryBrowser({
     });
   }, []);
 
+  // The dashboard tiles/triage panel count lots WITHOUT the search filter applied, so a click-
+  // through must also clear any active search — otherwise the resulting filtered list can show
+  // fewer rows than the number the pharmacist just clicked, which reads as "the count is wrong."
+  const handleExpiryFilter = useCallback((value: string) => {
+    setExpiry(value);
+    setSearch('');
+  }, []);
+
   const groups = useMemo(() => groupLots(rows), [rows]);
 
   const fetchOptions = useMemo(() => ({ ajaxUrl, csrfToken }), [ajaxUrl, csrfToken]);
@@ -565,7 +573,7 @@ export function PharmOpsInventoryBrowser({
           summary={summary}
           currencySymbol={currencySymbol}
           expiry={expiry}
-          onExpiryFilter={setExpiry}
+          onExpiryFilter={handleExpiryFilter}
         />
       ) : null}
 
@@ -574,7 +582,7 @@ export function PharmOpsInventoryBrowser({
           summary={summary}
           currencySymbol={currencySymbol}
           expiry={expiry}
-          onExpiryFilter={setExpiry}
+          onExpiryFilter={handleExpiryFilter}
         />
       ) : null}
 
@@ -711,7 +719,10 @@ export function PharmOpsInventoryBrowser({
                         ? formatMoney(row.value, { currency_symbol: currencySymbol })
                         : <span className="text-(--oe-nc-text-muted)">—</span>}
                     </td>
-                    <td style={RIGHT} aria-hidden />
+                    {/* Days left is a drug-level stat shown on the group row only; a real "—" here
+                        (matching the drug row's own N/A cells) keeps the column readable when a
+                        screen reader walks the table cell-by-cell, unlike aria-hidden. */}
+                    <td style={RIGHT} className="text-(--oe-nc-text-muted)">—</td>
                     <td style={LEFT} className="tabular-nums">{ddmmyyyy(row.expiration)}</td>
                     <td style={LEFT}>
                       {row.expiry_status === 'ok' ? (

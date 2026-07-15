@@ -330,6 +330,7 @@ export function PharmOpsReceiveDrawer({
                   id="nc-pharmops-receive-lot"
                   type="text"
                   className="h-8"
+                  maxLength={20}
                   value={lotNumber}
                   onChange={(e) => setLotNumber(e.target.value)}
                 />

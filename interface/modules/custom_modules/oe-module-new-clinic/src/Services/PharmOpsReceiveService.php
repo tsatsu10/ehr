@@ -179,6 +179,13 @@ class PharmOpsReceiveService
         if ($lotNumber === '') {
             throw new \InvalidArgumentException('Lot number is required');
         }
+        // drug_inventory.lot_number is VARCHAR(20) and this install doesn't run in strict SQL
+        // mode, so an over-length value would otherwise be silently truncated by MySQL — two
+        // genuinely different long lot numbers could then collide on their shared 20-char prefix,
+        // with no error shown. Reject it instead.
+        if (mb_strlen($lotNumber) > 20) {
+            throw new \InvalidArgumentException('Lot number must be 20 characters or fewer');
+        }
         if ($expiration === '' || str_starts_with($expiration, '0000')) {
             throw new \InvalidArgumentException('Expiration date is required for purchase lots');
         }

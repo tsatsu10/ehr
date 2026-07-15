@@ -175,6 +175,34 @@ describe('PharmOpsInventoryBrowser', () => {
     expect(lastCall[1].params.expiry).toBe('expired');
   });
 
+  it('clears an active search when a dashboard tile is clicked, so the count matches what shows', async () => {
+    // The dashboard counts are NOT scoped by search — clicking a tile while a search term is
+    // active must clear it, or the resulting list could show fewer rows than the tile said.
+    mockFetch.mockResolvedValue({
+      offset: 0,
+      has_more: false,
+      summary: { ...summary, expired: 3, value_expired: 100, total_value: 5000 },
+      currency_symbol: 'GH₵',
+      generated_at: '',
+      items: [lot(1)],
+    });
+
+    render(<PharmOpsInventoryBrowser ajaxUrl="/mock/ajax" csrfToken="t" />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.change(screen.getByLabelText('Search'), { target: { value: 'amoxicillin' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Expired lots/i }));
+    });
+
+    expect(screen.getByLabelText('Search')).toHaveValue('');
+    const lastCall = mockFetch.mock.calls[mockFetch.mock.calls.length - 1];
+    expect(lastCall[1].params.expiry).toBe('expired');
+    expect(lastCall[1].params.search).toBe('');
+  });
+
   it('pages with Load more', async () => {
     mockFetch
       .mockResolvedValueOnce({ offset: 0, has_more: true, summary, generated_at: '', items: [lot(1)] })

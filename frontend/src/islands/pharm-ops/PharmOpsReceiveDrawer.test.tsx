@@ -115,3 +115,17 @@ describe('PharmOpsReceiveDrawer supplier picker (INV-7)', () => {
     });
   });
 });
+
+describe('PharmOpsReceiveDrawer lot number length guard', () => {
+  it('caps the lot number input at 20 chars (matches the DB column, which silently truncates otherwise)', async () => {
+    mockedFetch.mockImplementation((action: string) => {
+      if (action === 'pharm_ops.receive_get') return Promise.resolve(receiveForm()) as never;
+      return Promise.resolve({}) as never;
+    });
+
+    render(<PharmOpsReceiveDrawer {...baseProps} />);
+    await waitFor(() => expect(document.getElementById('nc-pharmops-receive-lot')).toBeInTheDocument());
+
+    expect(document.getElementById('nc-pharmops-receive-lot')).toHaveAttribute('maxLength', '20');
+  });
+});
