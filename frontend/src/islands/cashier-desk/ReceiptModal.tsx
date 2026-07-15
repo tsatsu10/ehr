@@ -71,13 +71,19 @@ export function ReceiptModal({ open, preview, receipt, historyUrl, onClose }: Re
               ) : null}
               Paid: {formatMoney(receipt.amount_paid)}
               <br />
+              {receipt.balance_due !== undefined && receipt.balance_due > 0 ? (
+                <>
+                  <strong>Balance owed: {formatMoney(receipt.balance_due)}</strong>
+                  <br />
+                </>
+              ) : null}
               {receipt.payment_method === 'momo' && receipt.momo_reference ? (
                 <>
                   MoMo ref: {receipt.momo_reference}
                   <br />
                 </>
               ) : null}
-              {receipt.payment_method !== 'momo' ? (
+              {receipt.payment_method !== 'momo' && !receipt.partial ? (
                 <>
                   Change: {formatMoney(receipt.change_due)}
                   <br />

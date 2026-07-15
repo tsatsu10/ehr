@@ -30,6 +30,7 @@ import { CashierActivePane, type CashierActiveMode } from './CashierActivePane';
 import { CashierDeskLayout } from './cashierDeskUi';
 import { CashierMobileQueueBar, CashierMobileQueueSheet } from './CashierMobileQueueSheet';
 import { PayConfirmModal } from './PayConfirmModal';
+import { PartialPayModal } from './PartialPayModal';
 import { ReceiptModal } from './ReceiptModal';
 import { CloseZeroModal } from './CloseZeroModal';
 import { DiscountConfirmModal } from './DiscountConfirmModal';
@@ -95,6 +96,8 @@ export function CashierDesk({
   canSkipCompletion = false,
   canApplyDiscount = false,
   canEsignOverride = false,
+  enablePartialPayment = false,
+  canPartialPay = false,
   sharedDeviceWarning = false,
   currencyFormat,
 }: CashierDeskProps) {
@@ -154,6 +157,9 @@ export function CashierDesk({
   const [markUnpaidOpen, setMarkUnpaidOpen] = useState(false);
   const [markUnpaidError, setMarkUnpaidError] = useState<string | null>(null);
   const [markUnpaidSubmitting, setMarkUnpaidSubmitting] = useState(false);
+  const [partialOpen, setPartialOpen] = useState(false);
+  const [partialError, setPartialError] = useState<string | null>(null);
+  const [partialSubmitting, setPartialSubmitting] = useState(false);
   const [mobileQueueOpen, setMobileQueueOpen] = useState(false);
   const narrowDesk = useNarrowCashierDesk();
 
@@ -209,6 +215,7 @@ export function CashierDesk({
       || payConfirmOpen
       || closeZeroOpen
       || markUnpaidOpen
+      || partialOpen
       || mobileQueueOpen
       || receipt !== null;
   }, [
@@ -219,6 +226,7 @@ export function CashierDesk({
     payConfirmOpen,
     closeZeroOpen,
     markUnpaidOpen,
+    partialOpen,
     mobileQueueOpen,
     receipt,
   ]);
@@ -571,6 +579,48 @@ export function CashierDesk({
     void fetchQueueRef.current();
   }, [ajaxUrl, csrfToken, facilityId, markUnpaidSubmitting, resetActivePane, selectData]);
 
+  const handleConfirmPartial = useCallback(async (
+    amountReceived: number,
+    reason: string,
+    paymentMethod: CashierPaymentMethod,
+    momoReference: string,
+  ) => {
+    if (!selectData || partialSubmitting) return;
+
+    setPartialSubmitting(true);
+    setPartialError(null);
+
+    const result = await postCashierAction<CashierPayResult>({
+      ajaxUrl,
+      csrfToken,
+      facilityId,
+      action: 'cashier.pay_partial',
+      body: {
+        visit_id: selectData.visit.id,
+        row_version: selectData.visit.row_version ?? 0,
+        amount_received: amountReceived,
+        reason,
+        payment_method: paymentMethod,
+        ...(paymentMethod === 'momo' ? { momo_reference: momoReference } : {}),
+        client_request_id: newClientRequestId(),
+      },
+    });
+
+    setPartialSubmitting(false);
+
+    if (!result.ok) {
+      setPartialError(result.message || 'Partial payment failed');
+      return;
+    }
+
+    setPartialOpen(false);
+    setReceiptPreview(selectData.preview);
+    setReceipt(result.data.receipt);
+    setReceiptHistoryUrl(result.data.payment_history_url ?? null);
+    resetActivePane();
+    void fetchQueueRef.current();
+  }, [ajaxUrl, csrfToken, facilityId, partialSubmitting, resetActivePane, selectData]);
+
   const mergedSelectData = selectData
     ? mergeSelectData(selectData, canSkipCompletion, canApplyDiscount)
     : null;
@@ -629,6 +679,8 @@ export function CashierDesk({
               signMeta={signMeta}
               visitBoardUrl={visitBoardUrl}
               canMarkUnpaid={canMarkUnpaid}
+              canPartialPay={canPartialPay}
+              enablePartialPayment={enablePartialPayment}
               esignOverrideAllowed={esignOverrideAllowed}
               blocked={sharedSession.blocked}
               posting={posting}
@@ -639,6 +691,7 @@ export function CashierDesk({
               onEsignOverride={handleEsignOverrideClick}
               onMarkUnpaid={() => setMarkUnpaidOpen(true)}
               onCloseZero={() => setCloseZeroOpen(true)}
+              onPartialPay={() => setPartialOpen(true)}
             />
           )}
           queue={(
@@ -789,6 +842,21 @@ export function CashierDesk({
           setMarkUnpaidError(null);
         }}
         onConfirm={(reason) => void handleMarkUnpaid(reason)}
+      />
+
+      <PartialPayModal
+        open={partialOpen}
+        preview={mergedSelectData?.preview ?? null}
+        visit={mergedSelectData?.visit ?? null}
+        total={mergedSelectData?.charges_total ?? 0}
+        momoEnabled={!!mergedSelectData?.enable_momo_payment}
+        submitting={partialSubmitting}
+        error={partialError}
+        onClose={() => {
+          setPartialOpen(false);
+          setPartialError(null);
+        }}
+        onConfirm={(amount, reason, method, momoRef) => void handleConfirmPartial(amount, reason, method, momoRef)}
       />
     </div>
   );

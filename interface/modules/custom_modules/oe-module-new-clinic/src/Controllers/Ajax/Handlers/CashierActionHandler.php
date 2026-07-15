@@ -24,6 +24,7 @@ final class CashierActionHandler implements AjaxActionHandlerInterface
         'cashier.resolve_patient',
         'cashier.charges.post',
         'cashier.pay',
+        'cashier.pay_partial',
         'cashier.mark_unpaid',
         'cashier.close_zero',
     ];
@@ -111,6 +112,28 @@ final class CashierActionHandler implements AjaxActionHandlerInterface
                     isset($body['momo_reference']) ? (string) $body['momo_reference'] : null,
                 );
                 $this->host->respond(true, 'Payment recorded', $result);
+                break;
+            case 'cashier.pay_partial':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $result = $this->host->svc(CashierService::class)->recordPartialPayment(
+                    (int) ($body['visit_id'] ?? 0),
+                    $userId,
+                    (int) ($body['row_version'] ?? 0),
+                    (float) ($body['amount_received'] ?? 0),
+                    (string) ($body['reason'] ?? ''),
+                    $this->host->esignOverrideReason($body),
+                    isset($body['completion_override_reason'])
+                        ? (string) $body['completion_override_reason']
+                        : null,
+                    isset($body['client_request_id']) ? (string) $body['client_request_id'] : null,
+                    isset($body['payment_method']) ? (string) $body['payment_method'] : 'cash',
+                    isset($body['momo_reference']) ? (string) $body['momo_reference'] : null,
+                );
+                $this->host->respond(true, 'Partial payment recorded', $result);
                 break;
             case 'cashier.mark_unpaid':
                 if ($method !== 'POST') {

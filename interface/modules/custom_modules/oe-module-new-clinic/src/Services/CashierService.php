@@ -45,7 +45,7 @@ class CashierService
         $drugChargeExpr = $this->drugChargeSubquery($facilityId);
         $sql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid, pd.sex, pd.DOB,
                        vt.label AS visit_type_label,
-                       ((SELECT COALESCE(SUM(b.fee * GREATEST(b.units, 1)), 0)
+                       ((SELECT COALESCE(SUM(b.fee), 0)
                         FROM billing b
                         WHERE b.pid = v.pid AND b.encounter = v.encounter AND b.activity = 1)"
                         . $drugChargeExpr . ") AS charges_total
@@ -161,7 +161,7 @@ class CashierService
 
         $readySql = "SELECT v.*, pd.fname, pd.lname, pd.pubpid, pd.sex, pd.DOB,
                             vt.label AS visit_type_label,
-                            ((SELECT COALESCE(SUM(b.fee * GREATEST(b.units, 1)), 0)
+                            ((SELECT COALESCE(SUM(b.fee), 0)
                              FROM billing b
                              WHERE b.pid = v.pid AND b.encounter = v.encounter AND b.activity = 1)"
                              . $this->drugChargeSubquery($facilityId) . ") AS charges_total
@@ -393,6 +393,181 @@ class CashierService
             $amountReceived,
             $receiptMeta
         );
+
+        return $this->finalizePaymentResponse($response, $clientRequestId, $visitId, $actorUserId);
+    }
+
+    /**
+     * CBILL-2 — take a partial payment: record less than the full total, complete the visit,
+     * and leave the remainder as an outstanding balance (surfaces in the M14 "owed to clinic"
+     * list via its completed-with-balance branch). Manager-gated + reason required.
+     *
+     * @return array<string, mixed>
+     */
+    public function recordPartialPayment(
+        int $visitId,
+        int $actorUserId,
+        int $expectedVersion,
+        float $amountReceived,
+        string $reason,
+        ?string $esignOverrideReason = null,
+        ?string $completionOverrideReason = null,
+        ?string $clientRequestId = null,
+        ?string $paymentMethod = 'cash',
+        ?string $momoReference = null,
+    ): array {
+        if (!AclMain::aclCheckCore('new_clinic', 'new_visit_mark_outstanding')) {
+            throw new \RuntimeException('Forbidden', 403);
+        }
+
+        $reason = trim($reason);
+        if ($reason === '') {
+            throw new \InvalidArgumentException('Reason is required for a partial payment');
+        }
+
+        $clientRequestId = trim((string) ($clientRequestId ?? ''));
+        if ($clientRequestId !== '') {
+            $cached = $this->loadIdempotentPaymentResponse($clientRequestId);
+            if ($cached !== null) {
+                return $cached;
+            }
+        }
+
+        $visit = $this->queueService->getVisitForActor($visitId);
+        if ($visit['state'] !== 'ready_for_payment') {
+            throw new \InvalidArgumentException('Visit is not ready for payment');
+        }
+
+        $pid = (int) $visit['pid'];
+        $encounter = (int) $visit['encounter'];
+        $facilityId = (int) ($visit['facility_id'] ?? 0);
+
+        if ($this->configService->getInt('enable_partial_payment', 0, $facilityId) !== 1) {
+            throw new \InvalidArgumentException('Partial payment is not enabled for this clinic');
+        }
+
+        $this->signService->assertProfileSigned($visitId, $esignOverrideReason);
+
+        $charges = $this->getEncounterCharges($pid, $encounter);
+        $autoBillDrugs = $this->pharmacyAutoBillEnabled($facilityId);
+        $drugCharges = $autoBillDrugs ? $this->getEncounterDrugCharges($pid, $encounter) : [];
+        $totalDue = round($this->sumCharges($charges) + $this->sumDrugCharges($drugCharges), 2);
+
+        if ($totalDue <= 0) {
+            throw new \InvalidArgumentException('No charges on this visit — add fees before taking payment');
+        }
+
+        if ($amountReceived <= 0) {
+            throw new \InvalidArgumentException('Payment amount must be greater than zero');
+        }
+        if ($amountReceived + 0.001 >= $totalDue) {
+            throw new \InvalidArgumentException('Amount covers the full total — use Take payment instead');
+        }
+
+        $completionGate = $this->assessCompletionGate($pid, true);
+        if ($completionGate['blocked'] && !$completionGate['can_skip']) {
+            $missing = implode(', ', $completionGate['missing_labels']);
+            throw new \InvalidArgumentException(
+                'Profile is ' . $completionGate['score'] . '% complete ('
+                . $completionGate['threshold'] . '% required). Missing: ' . $missing
+            );
+        }
+        if ($completionGate['blocked'] && $completionGate['can_skip']) {
+            $overrideReason = trim((string) ($completionOverrideReason ?? ''));
+            if ($overrideReason === '') {
+                throw new \InvalidArgumentException(
+                    'Profile incomplete — manager override reason is required before payment'
+                );
+            }
+            $this->revisitGate->logCompletionOverride(
+                $pid,
+                $actorUserId,
+                'billing',
+                $completionGate,
+                $overrideReason,
+                $visitId
+            );
+        }
+
+        $method = $this->normalizePaymentMethod((string) ($paymentMethod ?? 'cash'), $facilityId);
+        $paymentReference = $this->resolvePaymentReference($method, null, $momoReference);
+        $balanceDue = round($totalDue - $amountReceived, 2);
+
+        require_once dirname(__DIR__, 6) . '/library/sql.inc.php';
+
+        sqlBeginTrans();
+        $committed = false;
+        try {
+            $postedPaymentId = $this->postPatientPayment(
+                $pid,
+                $encounter,
+                $amountReceived,
+                $actorUserId,
+                $method,
+                $paymentReference
+            );
+            $updated = $this->queueService->transition(
+                $visitId,
+                'completed',
+                $actorUserId,
+                $expectedVersion,
+                'partial_payment: ' . mb_substr($reason, 0, 180)
+            );
+            if ($autoBillDrugs) {
+                $this->markDrugSalesBilled($pid, $encounter);
+            }
+            sqlCommitTrans(true);
+            $committed = true;
+        } catch (\Throwable $e) {
+            if (!$committed) {
+                sqlCommitTrans(false);
+            }
+            throw $e;
+        }
+
+        EventAuditLogger::getInstance()->newEvent(
+            'new_clinic',
+            'cashier',
+            $actorUserId,
+            1,
+            'visit_id=' . $visitId . ' partial_payment paid=' . $amountReceived
+                . ' balance=' . $balanceDue . ' method=' . $method
+        );
+
+        $receiptMeta = $this->issueReceipt(
+            $visit,
+            $amountReceived,
+            $amountReceived,
+            $method === 'momo' ? $paymentReference : ('Partial · owed ' . $balanceDue),
+            $actorUserId,
+            $postedPaymentId ?? 0
+        );
+        $receiptMeta['payment_method'] = $method;
+        $receiptMeta['payment_method_label'] = $method === 'momo' ? 'MoMo' : 'Cash';
+        $receiptMeta['balance_due'] = $balanceDue;
+        $receiptMeta['partial'] = true;
+        if ($method === 'momo') {
+            $receiptMeta['momo_reference'] = $paymentReference;
+        }
+
+        $receipt = array_merge([
+            'queue_number' => (int) ($visit['queue_number'] ?? 0),
+            'show_queue_number' => $this->configService->getInt('print_queue_number_on_receipt', 1, $facilityId) === 1,
+            'amount_paid' => $amountReceived,
+            'change_due' => 0.0,
+            'paid_at' => date('c'),
+            'receipt_number' => '',
+        ], $receiptMeta);
+
+        $response = [
+            'visit' => $this->rowEnricher->enrichVisitRow($updated),
+            'amount_paid' => $amountReceived,
+            'change_due' => 0.0,
+            'balance_due' => $balanceDue,
+            'total_due' => $totalDue,
+            'receipt' => $receipt,
+            'payment_history_url' => $this->paymentHistoryUrl($pid, $visitId, $facilityId),
+        ];
 
         return $this->finalizePaymentResponse($response, $clientRequestId, $visitId, $actorUserId);
     }

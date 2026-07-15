@@ -143,6 +143,9 @@ export interface CashierReceipt {
   payment_method?: CashierPaymentMethod;
   payment_method_label?: string;
   momo_reference?: string;
+  /** CBILL-2 — set on a partial payment; remainder owed after this payment */
+  balance_due?: number;
+  partial?: boolean;
 }
 
 /** Response from cashier.pay */
@@ -214,6 +217,9 @@ export interface CashierDeskProps {
   canSkipCompletion?: boolean;
   canApplyDiscount?: boolean;
   canEsignOverride?: boolean;
+  /** CBILL-2 — partial payment feature flag + permission */
+  enablePartialPayment?: boolean;
+  canPartialPay?: boolean;
   sharedDeviceWarning?: boolean;
   currencyFormat?: {
     currency_code?: string;

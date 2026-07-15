@@ -56,6 +56,7 @@ class AjaxActionPolicy
         'cashier.resolve_patient' => 'new_cashier',
         'cashier.charges.post' => 'new_cashier',
         'cashier.pay' => 'new_cashier',
+        'cashier.pay_partial' => 'new_visit_mark_outstanding',
         'cashier.mark_unpaid' => 'new_visit_mark_outstanding',
         'cashier.close_zero' => 'new_close_without_charge',
         'lab.select' => 'new_lab',

@@ -197,6 +197,48 @@ describe('CashierDesk', () => {
     expect(screen.getByText(/Confirm patient identity before posting payment/i)).toBeInTheDocument();
   });
 
+  it('offers partial payment when enabled and permitted (CBILL-2)', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [waitingVisit],
+        counts: { waiting: 1, paid_today: 0, closed_unpaid: 0 },
+      })
+      .mockResolvedValueOnce(selectData);
+
+    render(<CashierDesk {...props} enablePartialPayment canPartialPay />);
+
+    await waitFor(() => screen.getByText(/Ama Boateng/));
+    fireEvent.click(screen.getByText(/Ama Boateng/));
+
+    await waitFor(() => screen.getByRole('button', { name: /^Partial payment$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Partial payment$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Amount received/i)).toBeInTheDocument();
+    });
+    expect(screen.getByLabelText(/Reason \(required\)/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Take partial payment/i })).toBeInTheDocument();
+  });
+
+  it('hides partial payment when the flag is off', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [waitingVisit],
+        counts: { waiting: 1, paid_today: 0, closed_unpaid: 0 },
+      })
+      .mockResolvedValueOnce(selectData);
+
+    render(<CashierDesk {...props} />);
+
+    await waitFor(() => screen.getByText(/Ama Boateng/));
+    fireEvent.click(screen.getByText(/Ama Boateng/));
+
+    await waitFor(() => screen.getByRole('button', { name: /Take payment/i }));
+    expect(screen.queryByRole('button', { name: /Partial payment/i })).not.toBeInTheDocument();
+  });
+
   it('opens esign override modal when Pay with E-Sign override is clicked', async () => {
     mockFetch
       .mockResolvedValueOnce({

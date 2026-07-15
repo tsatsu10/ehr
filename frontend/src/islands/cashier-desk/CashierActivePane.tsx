@@ -35,12 +35,15 @@ interface CashierActivePaneProps {
   signMeta: CashierSignMeta | null;
   visitBoardUrl?: string;
   canMarkUnpaid?: boolean;
+  canPartialPay?: boolean;
+  enablePartialPayment?: boolean;
   esignOverrideAllowed?: boolean;
   blocked: boolean;
   posting: boolean;
   paneError: string | null;
   onStagedChange: (lines: CashierStagedLine[]) => void;
   onPostCharges: () => void;
+  onPartialPay: () => void;
   onTakePayment: (
     amountReceived: number,
     receiptNote: string,
@@ -118,6 +121,8 @@ export function CashierActivePane({
   signMeta,
   visitBoardUrl,
   canMarkUnpaid = false,
+  canPartialPay = false,
+  enablePartialPayment = false,
   esignOverrideAllowed = false,
   blocked,
   posting,
@@ -128,6 +133,7 @@ export function CashierActivePane({
   onEsignOverride,
   onMarkUnpaid,
   onCloseZero,
+  onPartialPay,
 }: CashierActivePaneProps) {
   const [cashReceived, setCashReceived] = useState('0.00');
   const [receiptNote, setReceiptNote] = useState('');
@@ -185,6 +191,10 @@ export function CashierActivePane({
   const payDisabled = payBlockReason !== null
     || (paymentMethod === 'momo' && momoReference.trim() === '');
   const showEsignPay = unsigned && esignOverrideAllowed && !zeroCharge;
+  // CBILL-2 — partial pay is offered only when a full payment would also be allowed
+  // (signed, completion satisfied) so the modal only needs amount + reason.
+  const showPartial = enablePartialPayment && canPartialPay && !zeroCharge
+    && payBlockReason === null && !data.completion_blocked;
   const momoEnabled = !!data.enable_momo_payment;
   const isMomo = momoEnabled && paymentMethod === 'momo';
   const tenderedAmount = isMomo ? total : parseCashInput(cashReceived);
@@ -384,6 +394,17 @@ export function CashierActivePane({
             )}
           >
             Take payment
+          </Button>
+        )}
+        {showPartial && (
+          <Button
+            type="button"
+            variant="outline"
+            id="nc-cashier-partial-btn"
+            disabled={blocked}
+            onClick={onPartialPay}
+          >
+            Partial payment
           </Button>
         )}
         {canMarkUnpaid && (

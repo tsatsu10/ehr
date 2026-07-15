@@ -71,6 +71,7 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'pharmacy_declined_terminal_state',
   'enable_pharm_ops',
   'pharmacy_auto_bill_on_dispense',
+  'enable_partial_payment',
   'pharmacy_service_formdir',
   'enable_pharm_rx_favorites',
   'enable_native_rx_edit',
@@ -284,6 +285,13 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         type: 'bool',
         label: 'Show dispensed medicines on the cashier bill (CBILL-1)',
         hint: 'When on, medicines dispensed on a visit are added to the cashier total, payment, and are marked paid at checkout. When off, medicine sales are collected separately and never appear at the cashier.',
+        indent: 1,
+      },
+      {
+        key: 'enable_partial_payment',
+        type: 'bool',
+        label: 'Allow partial payment at the cashier (CBILL-2)',
+        hint: 'When on, a manager (with the "mark left unpaid" permission) can accept less than the full total and complete the visit; the remainder becomes an outstanding balance. Turn on the "owed to clinic" outstanding list too, to see and follow up those balances.',
         indent: 1,
       },
       {
