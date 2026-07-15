@@ -126,6 +126,7 @@ export function PharmOpsDestroyDrawer({
   return (
     <SlideOver
       open={open}
+      dismissOnOutsideClick={false}
       id="nc-pharmops-destroy-drawer"
       title={`Write off — ${title}`}
       onClose={onClose}

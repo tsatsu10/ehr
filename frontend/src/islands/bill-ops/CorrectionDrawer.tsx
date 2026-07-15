@@ -15,6 +15,7 @@ export function CorrectionDrawer({ open, visitId, fetchOptions, onClose }: Props
     <SlideOver
       open={open}
       onClose={onClose}
+      dismissOnOutsideClick={false}
       title={`Charge correction — Visit #${visitId}`}
       titleId="nc-billops-drawer-title"
       id="nc-billops-drawer"

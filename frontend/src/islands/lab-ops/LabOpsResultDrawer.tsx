@@ -497,6 +497,7 @@ export function LabOpsResultDrawer({
     <SlideOver
       open={open}
       onClose={onClose}
+      dismissOnOutsideClick={false}
       title={drawerTitle}
       id="nc-labops-drawer"
       titleId="nc-labops-drawer-title"

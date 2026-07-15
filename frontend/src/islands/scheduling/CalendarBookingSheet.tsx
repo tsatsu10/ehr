@@ -119,6 +119,7 @@ export function CalendarBookingSheet({
     <SlideOver
       open={open}
       onClose={onClose}
+      dismissOnOutsideClick={false}
       title={labels.bookSheetTitle}
       ariaLabel={labels.bookSheetAria}
       id="nc-scheduling-book-sheet"

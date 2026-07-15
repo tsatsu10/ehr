@@ -129,6 +129,7 @@ export function PharmOpsDispenseDrawer({
       <SlideOver
         open={open}
         onClose={onClose}
+        dismissOnOutsideClick={false}
         id="nc-pharmops-dispense-drawer"
         title={`Dispense — ${drugName}`}
         width="md"

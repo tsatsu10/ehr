@@ -194,6 +194,7 @@ export function PharmOpsReceiveDrawer({
       <SlideOver
         open={open}
         onClose={onClose}
+        dismissOnOutsideClick={false}
         id="nc-pharmops-receive-drawer"
         title="Receive stock"
         width="md"

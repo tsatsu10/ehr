@@ -113,6 +113,7 @@ export function RecallFormSheet({
     <SlideOver
       open={open}
       onClose={onClose}
+      dismissOnOutsideClick={false}
       title={draft?.recallId ? labels.recallSheetEdit : labels.recallSheetNew}
       ariaLabel={labels.recallSheetAria}
       id="nc-scheduling-recall-sheet"
