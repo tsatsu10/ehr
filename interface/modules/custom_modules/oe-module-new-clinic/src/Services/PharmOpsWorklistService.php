@@ -59,9 +59,16 @@ class PharmOpsWorklistService
         $facilityIds = $this->resolveWorklistFacilityIds($requestedFacility, $deskFacilityId);
 
         $pendingRawRows = $this->fetchPrescriptionRows($facilityIds, $visitDate);
+        // Batched (not one query per row) — stock status used to be looked up per prescription
+        // row via a single-drug query, and mapWorklistRow() runs over every row twice (once
+        // here just for the tab-bar count, again below to build the visible rows).
+        $stockMap = self::batchStockSummaryForDrugs(array_map(
+            static fn (array $raw): int => (int) ($raw['drug_id'] ?? 0),
+            $pendingRawRows
+        ));
         $pendingCount = 0;
         foreach ($pendingRawRows as $raw) {
-            if ($this->mapWorklistRow($raw) !== null) {
+            if ($this->mapWorklistRow($raw, $stockMap) !== null) {
                 $pendingCount++;
             }
         }
@@ -84,7 +91,7 @@ class PharmOpsWorklistService
             }
         } else {
             foreach ($pendingRawRows as $raw) {
-                $mapped = $this->mapWorklistRow($raw);
+                $mapped = $this->mapWorklistRow($raw, $stockMap);
                 if ($mapped === null) {
                     continue;
                 }
@@ -277,9 +284,11 @@ class PharmOpsWorklistService
 
   /**
    * @param array<string, mixed> $raw
+   * @param array<int, array{stock_status: string, on_hand: int, qoh_display: string|null}> $stockMap
+   *   drug_id => pre-batched stock summary (see batchStockSummaryForDrugs()).
    * @return array<string, mixed>|null
    */
-  private function mapWorklistRow(array $raw): ?array
+  private function mapWorklistRow(array $raw, array $stockMap = []): ?array
   {
       $prescriptionId = (int) ($raw['prescription_id'] ?? 0);
       $pid = (int) ($raw['pid'] ?? 0);
@@ -333,7 +342,7 @@ class PharmOpsWorklistService
           'qty_dispensed' => $qtyDispensed,
           'dispense_status' => $dispenseStatus,
           'status_label' => $this->buildStatusLabel($dispenseStatus, $qtyOrdered, $qtyDispensed),
-          'stock_status' => $this->resolveStockStatus((int) ($raw['drug_id'] ?? 0)),
+          'stock_status' => ($stockMap[(int) ($raw['drug_id'] ?? 0)] ?? self::stockSummaryForDrug((int) ($raw['drug_id'] ?? 0)))['stock_status'],
           'ordered_at' => $orderedAt,
           'ordered_display' => $orderedDisplay,
           'can_open_pharmacy_desk' => $canOpenPharmacyDesk,
@@ -401,35 +410,55 @@ class PharmOpsWorklistService
           return ['stock_status' => 'unknown', 'on_hand' => 0, 'qoh_display' => null];
       }
 
-      $row = QueryUtils::querySingleRow(
-          'SELECT COALESCE(SUM(di.on_hand), 0) AS on_hand, d.reorder_point
+      $map = self::batchStockSummaryForDrugs([$drugId]);
+
+      return $map[$drugId] ?? ['stock_status' => 'unknown', 'on_hand' => 0, 'qoh_display' => null];
+  }
+
+  /**
+   * Batched form of stockSummaryForDrug() — the worklist used to call the single-drug version
+   * once per prescription row (a query per row, run twice per hub load/poll since the same
+   * rows get mapped once for the tab-bar count and again to build the visible list).
+   *
+   * @param array<int, int> $drugIds
+   * @return array<int, array{stock_status: string, on_hand: int, qoh_display: string|null}>
+   */
+  public static function batchStockSummaryForDrugs(array $drugIds): array
+  {
+      $drugIds = array_values(array_unique(array_filter(
+          array_map('intval', $drugIds),
+          static fn (int $id): bool => $id > 0
+      )));
+      if ($drugIds === []) {
+          return [];
+      }
+
+      $placeholders = implode(',', array_fill(0, count($drugIds), '?'));
+      $rows = QueryUtils::fetchRecords(
+          "SELECT d.drug_id, COALESCE(SUM(di.on_hand), 0) AS on_hand, d.reorder_point
            FROM drugs d
            LEFT JOIN drug_inventory di
               ON di.drug_id = d.drug_id AND di.destroy_date IS NULL
-           WHERE d.drug_id = ?
-           GROUP BY d.reorder_point',
-          [$drugId]
-      );
-      if (!is_array($row)) {
-          return ['stock_status' => 'unknown', 'on_hand' => 0, 'qoh_display' => null];
+           WHERE d.drug_id IN ($placeholders)
+           GROUP BY d.drug_id, d.reorder_point",
+          $drugIds
+      ) ?: [];
+
+      $map = [];
+      foreach ($rows as $row) {
+          $drugId = (int) ($row['drug_id'] ?? 0);
+          $onHand = (float) ($row['on_hand'] ?? 0);
+          $reorderPoint = (float) ($row['reorder_point'] ?? 0);
+          $onHandInt = (int) round($onHand);
+          $map[$drugId] = [
+              'stock_status' => self::classifyReorderStatus($onHand, $reorderPoint),
+              'on_hand' => $onHandInt,
+              'qoh_display' => 'QOH ' . $onHandInt
+                  . ($reorderPoint > 0 ? ' · reorder ' . (int) round($reorderPoint) : ''),
+          ];
       }
 
-      $onHand = (float) ($row['on_hand'] ?? 0);
-      $reorderPoint = (float) ($row['reorder_point'] ?? 0);
-      $stockStatus = self::classifyReorderStatus($onHand, $reorderPoint);
-      $onHandInt = (int) round($onHand);
-
-      return [
-          'stock_status' => $stockStatus,
-          'on_hand' => $onHandInt,
-          'qoh_display' => 'QOH ' . $onHandInt
-              . ($reorderPoint > 0 ? ' · reorder ' . (int) round($reorderPoint) : ''),
-      ];
-  }
-
-  private function resolveStockStatus(int $drugId): string
-  {
-      return self::stockSummaryForDrug($drugId)['stock_status'];
+      return $map;
   }
 
   /**

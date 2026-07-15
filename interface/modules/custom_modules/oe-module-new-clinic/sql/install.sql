@@ -335,6 +335,14 @@ CREATE INDEX `new_idx_log_date` ON `log` (`date`);
 CREATE INDEX `new_idx_billing_pid_encounter_activity` ON `billing` (`pid`, `encounter`, `activity`);
 #EndIf
 
+# Core `drug_sales` ships with NO index at all on `prescription_id` (only PK(sale_id) and a
+# uuid unique key). The Pharm Ops worklist's dispensed-quantity rollup and the Bill Ops
+# outstanding-charges rollup both GROUP BY prescription_id/pid+encounter over the whole,
+# never-pruned sales ledger on every hub load and every poll tick.
+#IfNotIndex drug_sales new_idx_drug_sales_prescription_id
+CREATE INDEX `new_idx_drug_sales_prescription_id` ON `drug_sales` (`prescription_id`);
+#EndIf
+
 #IfNotRow2D new_completion_field_weight field_key fname level 1
 INSERT INTO `new_completion_field_weight` (`field_key`, `level`, `weight`, `is_active`) VALUES
 ('fname', 1, 15, 1),
