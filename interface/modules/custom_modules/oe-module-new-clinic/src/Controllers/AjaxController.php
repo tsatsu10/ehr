@@ -403,6 +403,7 @@ class AjaxController
             'bill_ops_payment_acl' => $this->requireBillOpsPaymentAcl(),
             'bill_ops_close_acl' => $this->requireBillOpsCloseAcl(),
             'bill_ops_outstanding_acl' => $this->requireBillOpsOutstandingAcl(),
+            'bill_ops_insurance_acl' => $this->requireBillOpsInsuranceAcl(),
             'report_hub_read_acl' => $this->requireReportHubReadAcl(),
             'report_hub_export_acl' => $this->requireReportHubExportAcl(),
             'queue_bridge_read_acl' => $this->requireQueueBridgeReadAcl(),
@@ -625,6 +626,13 @@ class AjaxController
             (new BillOpsAccessService())->assertOutstandingAccess();
         } catch (\RuntimeException $e) {
             $this->respond(false, $e->getMessage(), ['code' => 'forbidden'], 403);
+        }
+    }
+
+    private function requireBillOpsInsuranceAcl(): void
+    {
+        if (!(new BillOpsAccessService())->canViewInsuranceVault()) {
+            $this->respond(false, 'Insurance access denied', ['code' => 'forbidden'], 403);
         }
     }
 

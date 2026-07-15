@@ -18,6 +18,7 @@ use OpenEMR\Modules\NewClinic\Services\BillOpsDaysheetService;
 use OpenEMR\Modules\NewClinic\Services\BillOpsOutstandingService;
 use OpenEMR\Modules\NewClinic\Services\BillOpsPaymentsSearchService;
 use OpenEMR\Modules\NewClinic\Services\PaymentHistoryService;
+use OpenEMR\Modules\NewClinic\Services\SchemeClaimService;
 
 final class BillOpsActionHandler implements AjaxActionHandlerInterface
 {
@@ -32,6 +33,8 @@ final class BillOpsActionHandler implements AjaxActionHandlerInterface
         'bill_ops.daysheet_export',
         'bill_ops.momo_save',
         'bill_ops.outstanding_list',
+        'bill_ops.scheme_claims',
+        'bill_ops.scheme_claim_status',
     ];
 
     public function __construct(
@@ -150,6 +153,38 @@ final class BillOpsActionHandler implements AjaxActionHandlerInterface
                     (int) ($params['limit'] ?? BillOpsOutstandingService::PAGE_SIZE)
                 );
                 $this->host->respond(true, 'ok', $list);
+                break;
+            case 'bill_ops.scheme_claims':
+                $params = $this->host->readRequestParams($method);
+                $facilityId = $this->host->resolveRequestFacilityId();
+                $svc = $this->host->svc(SchemeClaimService::class);
+                $enabled = $svc->isEnabled($facilityId);
+                $status = isset($params['status']) ? (string) $params['status'] : 'to_submit';
+                $this->host->respond(true, 'ok', [
+                    'enabled' => $enabled,
+                    'status' => $status,
+                    'rows' => $enabled
+                        ? $svc->listClaims(
+                            $facilityId,
+                            $status,
+                            (int) ($params['limit'] ?? 50),
+                            (int) ($params['offset'] ?? 0)
+                        )
+                        : [],
+                ]);
+                break;
+            case 'bill_ops.scheme_claim_status':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $result = $this->host->svc(SchemeClaimService::class)->setClaimStatus(
+                    (int) ($body['claim_id'] ?? 0),
+                    (string) ($body['status'] ?? ''),
+                    $userId
+                );
+                $this->host->respond(true, 'Claim updated', $result);
                 break;
             default:
                 $this->host->respond(false, 'Unknown action', ['code' => 'not_found'], 404);

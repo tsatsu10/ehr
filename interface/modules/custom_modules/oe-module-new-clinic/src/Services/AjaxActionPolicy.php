@@ -458,6 +458,12 @@ class AjaxActionPolicy
         'bill_ops.outstanding_list',
     ];
 
+    /** @var array<int, string> CBILL-3 — scheme claim register (insurance-vault gated) */
+    private const BILL_OPS_INSURANCE_ACTIONS = [
+        'bill_ops.scheme_claims',
+        'bill_ops.scheme_claim_status',
+    ];
+
     /** @var array<int, string> */
     private const BILL_OPS_CORRECT_ACLS = [
         'new_bill_ops_correct',
@@ -916,6 +922,10 @@ class AjaxActionPolicy
 
         if (in_array($action, self::BILL_OPS_OUTSTANDING_ACTIONS, true)) {
             return ['type' => 'bill_ops_outstanding_acl'];
+        }
+
+        if (in_array($action, self::BILL_OPS_INSURANCE_ACTIONS, true)) {
+            return ['type' => 'bill_ops_insurance_acl'];
         }
 
         if (in_array($action, self::SCHEDULING_READ_ACTIONS, true)) {

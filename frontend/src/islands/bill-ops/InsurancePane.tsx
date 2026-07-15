@@ -1,4 +1,5 @@
 import type { BillOpsHubProps } from './billOpsTypes';
+import { SchemeClaimsList } from './SchemeClaimsList';
 
 const VAULT_LINKS = [
   { label: 'Billing Manager', path: '/interface/billing/billing_report.php' },
@@ -8,9 +9,10 @@ const VAULT_LINKS = [
   { label: 'Eligibility 271', path: '/interface/billing/edi_271.php' },
 ];
 
-export function InsurancePane({ webroot }: { webroot: string }) {
+export function InsurancePane({ webroot, ajaxUrl, csrfToken }: { webroot: string; ajaxUrl: string; csrfToken: string }) {
   return (
     <div className="nc-billops-pane">
+      <SchemeClaimsList ajaxUrl={ajaxUrl} csrfToken={csrfToken} />
       <p className="text-[var(--oe-nc-text-muted)] text-sm mb-3">
         Legacy US billing tools — not used for daily cash workflow.
       </p>
@@ -34,5 +36,5 @@ export function InsurancePane({ webroot }: { webroot: string }) {
 }
 
 export function InsurancePaneWrapper(props: BillOpsHubProps) {
-  return <InsurancePane webroot={props.webroot} />;
+  return <InsurancePane webroot={props.webroot} ajaxUrl={props.ajaxUrl} csrfToken={props.csrfToken} />;
 }
