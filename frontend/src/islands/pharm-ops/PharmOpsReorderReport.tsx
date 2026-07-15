@@ -8,8 +8,6 @@ import type { PharmReorderReport, PharmReorderRow } from './pharmOpsTypes';
 interface PharmOpsReorderReportProps {
   ajaxUrl: string;
   csrfToken: string;
-  /** Stock inventory_list.php link, kept as a fallback for the full report. */
-  fallbackUrl?: string;
 }
 
 const WINDOWS = [30, 60, 90] as const;
@@ -25,7 +23,7 @@ function statusVariant(status: PharmReorderRow['stock_status']): 'danger' | 'war
   return 'neutral';
 }
 
-export function PharmOpsReorderReport({ ajaxUrl, csrfToken, fallbackUrl }: PharmOpsReorderReportProps) {
+export function PharmOpsReorderReport({ ajaxUrl, csrfToken }: PharmOpsReorderReportProps) {
   const [windowDays, setWindowDays] = useState<number>(90);
   const [data, setData] = useState<PharmReorderReport | null>(null);
   const [loading, setLoading] = useState(true);
@@ -122,15 +120,6 @@ export function PharmOpsReorderReport({ ajaxUrl, csrfToken, fallbackUrl }: Pharm
         </div>
       )}
 
-      {fallbackUrl ? (
-        <p className="mt-3 mb-0 text-sm text-(--oe-nc-text-muted)">
-          Need the full stock report?{' '}
-          <a href={fallbackUrl} target="_blank" rel="noopener noreferrer" className="underline">
-            Open the stock version
-          </a>
-          .
-        </p>
-      ) : null}
     </div>
   );
 }

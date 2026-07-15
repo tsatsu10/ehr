@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Badge } from '@components/ui/badge';
 import { Input } from '@components/ui/input';
-import type { PharmDestroyedReport } from './pharmOpsTypes';
+import type { PharmPrescriptionRow, PharmPrescriptionsReport } from './pharmOpsTypes';
 
-interface PharmOpsDestroyedReportProps {
+interface PharmOpsPrescriptionsReportProps {
   ajaxUrl: string;
   csrfToken: string;
 }
@@ -24,17 +25,22 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-/** Regional DD/MM/YYYY display for a YYYY-MM-DD value. */
 function ddmmyyyy(iso: string): string {
   if (!iso) return '—';
   const [y, m, d] = iso.split('-');
   return d && m && y ? `${d}/${m}/${y}` : iso;
 }
 
-export function PharmOpsDestroyedReport({ ajaxUrl, csrfToken }: PharmOpsDestroyedReportProps) {
-  const [from, setFrom] = useState<string>(() => isoDaysAgo(365));
+function statusVariant(status: PharmPrescriptionRow['status']): 'success' | 'warning' | 'danger' {
+  if (status === 'dispensed') return 'success';
+  if (status === 'partial') return 'warning';
+  return 'danger';
+}
+
+export function PharmOpsPrescriptionsReport({ ajaxUrl, csrfToken }: PharmOpsPrescriptionsReportProps) {
+  const [from, setFrom] = useState<string>(() => isoDaysAgo(90));
   const [to, setTo] = useState<string>(() => todayIso());
-  const [data, setData] = useState<PharmDestroyedReport | null>(null);
+  const [data, setData] = useState<PharmPrescriptionsReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,13 +50,13 @@ export function PharmOpsDestroyedReport({ ajaxUrl, csrfToken }: PharmOpsDestroye
     setLoading(true);
     setError(null);
     try {
-      const res = await oeFetch<PharmDestroyedReport>('pharm_ops.inventory.destroyed', {
+      const res = await oeFetch<PharmPrescriptionsReport>('pharm_ops.inventory.prescriptions', {
         ...fetchOptions,
         params: { from, to },
       });
       setData(res);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load destroyed drugs report');
+      setError(err instanceof Error ? err.message : 'Failed to load prescriptions report');
       setData(null);
     } finally {
       setLoading(false);
@@ -64,41 +70,29 @@ export function PharmOpsDestroyedReport({ ajaxUrl, csrfToken }: PharmOpsDestroye
   const items = data?.items ?? [];
 
   return (
-    <div className="nc-pharmops-destroyed">
+    <div className="nc-pharmops-prescriptions">
       <div className="mb-3 flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
-          <label className="text-sm text-(--oe-nc-text-muted)" htmlFor="nc-destroyed-from">From</label>
-          <Input
-            id="nc-destroyed-from"
-            type="date"
-            className="h-8 w-auto"
-            value={from}
-            onChange={(event) => setFrom(event.target.value)}
-          />
+          <label className="text-sm text-(--oe-nc-text-muted)" htmlFor="nc-rx-from">From</label>
+          <Input id="nc-rx-from" type="date" className="h-8 w-auto" value={from} onChange={(e) => setFrom(e.target.value)} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm text-(--oe-nc-text-muted)" htmlFor="nc-destroyed-to">To</label>
-          <Input
-            id="nc-destroyed-to"
-            type="date"
-            className="h-8 w-auto"
-            value={to}
-            onChange={(event) => setTo(event.target.value)}
-          />
+          <label className="text-sm text-(--oe-nc-text-muted)" htmlFor="nc-rx-to">To</label>
+          <Input id="nc-rx-to" type="date" className="h-8 w-auto" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
       </div>
 
       {loading ? (
-        <div className="nc-pharmops-empty nc-pharmops-empty--loading">Loading destroyed drugs…</div>
+        <div className="nc-pharmops-empty nc-pharmops-empty--loading">Loading prescriptions…</div>
       ) : error ? (
         <div className={deskCalloutClass('warn')} role="alert">
           {error}
         </div>
       ) : items.length === 0 ? (
         <div className="nc-pharmops-empty-card">
-          <div className="nc-pharmops-empty-card-title">No destroyed lots</div>
+          <div className="nc-pharmops-empty-card-title">No prescriptions</div>
           <div className="nc-pharmops-empty-card-body">
-            Nothing was written off in the selected date range.
+            No prescriptions were written in the selected date range.
           </div>
         </div>
       ) : (
@@ -106,32 +100,34 @@ export function PharmOpsDestroyedReport({ ajaxUrl, csrfToken }: PharmOpsDestroye
           <table className="nc-pharmops-report-table w-full">
             <thead>
               <tr>
-                <th style={LEFT}>Product</th>
-                <th style={LEFT}>Lot</th>
-                <th style={RIGHT}>Qty</th>
-                <th style={LEFT}>Destroyed on</th>
-                <th style={LEFT}>Method</th>
-                <th style={LEFT}>Witness</th>
-                <th style={LEFT}>Notes</th>
+                <th style={LEFT}>Date</th>
+                <th style={LEFT}>Patient</th>
+                <th style={LEFT}>Drug</th>
+                <th style={RIGHT}>Prescribed</th>
+                <th style={RIGHT}>Dispensed</th>
+                <th style={LEFT}>Status</th>
               </tr>
             </thead>
             <tbody>
               {items.map((row) => (
-                <tr key={row.inventory_id}>
+                <tr key={row.prescription_id}>
+                  <td style={LEFT} className="tabular-nums">{ddmmyyyy(row.date)}</td>
+                  <td style={LEFT}>
+                    {row.patient_name || '—'}
+                    {row.pubpid ? <span className="text-(--oe-nc-text-muted)"> · {row.pubpid}</span> : null}
+                  </td>
                   <td style={LEFT}>{row.drug_name}</td>
-                  <td style={LEFT}>{row.lot_number || '—'}</td>
-                  <td style={RIGHT} className="tabular-nums">{row.quantity}</td>
-                  <td style={LEFT} className="tabular-nums">{ddmmyyyy(row.destroy_date)}</td>
-                  <td style={LEFT}>{row.method || '—'}</td>
-                  <td style={LEFT}>{row.witness || '—'}</td>
-                  <td style={LEFT}>{row.notes || '—'}</td>
+                  <td style={RIGHT} className="tabular-nums">{row.prescribed_qty}</td>
+                  <td style={RIGHT} className="tabular-nums">{row.dispensed_qty}</td>
+                  <td style={LEFT}>
+                    <Badge variant={statusVariant(row.status)}>{row.status_label}</Badge>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-
     </div>
   );
 }

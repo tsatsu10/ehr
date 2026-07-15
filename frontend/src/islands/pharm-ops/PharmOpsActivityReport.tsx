@@ -7,8 +7,6 @@ import type { PharmActivityReport } from './pharmOpsTypes';
 interface PharmOpsActivityReportProps {
   ajaxUrl: string;
   csrfToken: string;
-  /** Stock inventory_activity.php link — kept as the full-accounting fallback. */
-  fallbackUrl?: string;
 }
 
 // Inline alignment: the BS4-colliding alignment utilities are pinned by the
@@ -26,7 +24,7 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function PharmOpsActivityReport({ ajaxUrl, csrfToken, fallbackUrl }: PharmOpsActivityReportProps) {
+export function PharmOpsActivityReport({ ajaxUrl, csrfToken }: PharmOpsActivityReportProps) {
   const [from, setFrom] = useState<string>(() => isoDaysAgo(30));
   const [to, setTo] = useState<string>(() => todayIso());
   const [data, setData] = useState<PharmActivityReport | null>(null);
@@ -128,15 +126,7 @@ export function PharmOpsActivityReport({ ajaxUrl, csrfToken, fallbackUrl }: Phar
       )}
 
       <p className="mt-3 mb-0 text-sm text-(--oe-nc-text-muted)">
-        Movement totals only (out = negative). {fallbackUrl ? (
-          <>
-            For start/end balances,{' '}
-            <a href={fallbackUrl} target="_blank" rel="noopener noreferrer" className="underline">
-              open the stock report
-            </a>
-            .
-          </>
-        ) : null}
+        Movement totals only (out = negative).
       </p>
     </div>
   );

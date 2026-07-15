@@ -7,6 +7,7 @@ import { PharmOpsReorderReport } from './PharmOpsReorderReport';
 import { PharmOpsDestroyedReport } from './PharmOpsDestroyedReport';
 import { PharmOpsActivityReport } from './PharmOpsActivityReport';
 import { PharmOpsTransactionsReport } from './PharmOpsTransactionsReport';
+import { PharmOpsPrescriptionsReport } from './PharmOpsPrescriptionsReport';
 import type { PharmOpsReportCatalog, PharmOpsReportItem } from './pharmOpsTypes';
 
 interface PharmOpsReportsPaneProps {
@@ -107,7 +108,6 @@ export function PharmOpsReportsPane({ ajaxUrl, csrfToken }: PharmOpsReportsPaneP
             <PharmOpsReorderReport
               ajaxUrl={ajaxUrl}
               csrfToken={csrfToken}
-              fallbackUrl={selectedReport.embed_url}
             />
           );
         }
@@ -116,7 +116,6 @@ export function PharmOpsReportsPane({ ajaxUrl, csrfToken }: PharmOpsReportsPaneP
             <PharmOpsDestroyedReport
               ajaxUrl={ajaxUrl}
               csrfToken={csrfToken}
-              fallbackUrl={selectedReport.embed_url}
             />
           );
         }
@@ -125,7 +124,6 @@ export function PharmOpsReportsPane({ ajaxUrl, csrfToken }: PharmOpsReportsPaneP
             <PharmOpsActivityReport
               ajaxUrl={ajaxUrl}
               csrfToken={csrfToken}
-              fallbackUrl={selectedReport.embed_url}
             />
           );
         }
@@ -134,7 +132,14 @@ export function PharmOpsReportsPane({ ajaxUrl, csrfToken }: PharmOpsReportsPaneP
             <PharmOpsTransactionsReport
               ajaxUrl={ajaxUrl}
               csrfToken={csrfToken}
-              fallbackUrl={selectedReport.embed_url}
+            />
+          );
+        }
+        if (selectedReport.native && selectedReport.id === 'prescriptions') {
+          return (
+            <PharmOpsPrescriptionsReport
+              ajaxUrl={ajaxUrl}
+              csrfToken={csrfToken}
             />
           );
         }

@@ -27,6 +27,8 @@ class PharmOpsReportsService
     public const REORDER_TARGET_DAYS = 30;
     /** Default lookback for the destroyed-drugs report. */
     public const DESTROYED_LOOKBACK_DAYS = 365;
+    /** Default lookback for the prescriptions (prescribed-vs-dispensed) report. */
+    public const PRESCRIPTIONS_LOOKBACK_DAYS = 90;
     /** Page size for the inventory-transactions ledger. */
     public const TRANSACTION_PAGE_SIZE = 50;
     /** Upper bound on the ledger paging offset (sane cap; deep paging returns empty). */
@@ -430,6 +432,154 @@ class PharmOpsReportsService
         return $map;
     }
 
+    /**
+     * Native prescribed-vs-dispensed report: prescriptions in a date range with
+     * the total quantity dispensed against each (drug_sales joined on
+     * prescription_id) and a fulfilment status. Replaces prescriptions_report.php.
+     *
+     * @return array{from: string, to: string, generated_at: string, items: list<array<string, mixed>>}
+     */
+    public function prescriptionsReport(?string $from = null, ?string $to = null): array
+    {
+        $this->access->assertHubAccess();
+
+        $today = new \DateTimeImmutable('today');
+        $toDate = $this->normalizeDate($to) ?? $today->format('Y-m-d');
+        $fromDate = $this->normalizeDate($from)
+            ?? $today->modify('-' . self::PRESCRIPTIONS_LOOKBACK_DAYS . ' days')->format('Y-m-d');
+        if ($fromDate > $toDate) {
+            [$fromDate, $toDate] = [$toDate, $fromDate];
+        }
+
+        $rows = QueryUtils::fetchRecords(
+            "SELECT r.id, r.date_added, r.quantity AS prescribed_qty, r.drug,
+                    d.name AS drug_name,
+                    COALESCE(SUM(s.quantity), 0) AS dispensed_qty,
+                    p.fname, p.lname, p.pubpid
+             FROM prescriptions r
+             LEFT JOIN drugs d ON d.drug_id = r.drug_id
+             LEFT JOIN drug_sales s ON s.prescription_id = r.id
+             LEFT JOIN patient_data p ON p.pid = r.patient_id
+             WHERE r.date_added >= ? AND r.date_added <= ?
+             GROUP BY r.id, r.date_added, r.quantity, r.drug, d.name, p.fname, p.lname, p.pubpid
+             ORDER BY r.date_added DESC, r.id DESC
+             LIMIT " . self::REPORT_ROW_CAP,
+            [$fromDate . ' 00:00:00', $toDate . ' 23:59:59']
+        ) ?: [];
+
+        $items = array_map(static function (array $row): array {
+            $prescribed = (float) ($row['prescribed_qty'] ?? 0);
+            $dispensed = (float) ($row['dispensed_qty'] ?? 0);
+            $status = $dispensed <= 0
+                ? 'not_dispensed'
+                : (($prescribed > 0 && $dispensed >= $prescribed) ? 'dispensed' : 'partial');
+            $drugName = trim((string) ($row['drug_name'] ?? ''));
+            if ($drugName === '') {
+                $drugName = trim((string) ($row['drug'] ?? ''));
+            }
+            $patient = trim(((string) ($row['lname'] ?? '')) . ', ' . ((string) ($row['fname'] ?? '')));
+
+            return [
+                'prescription_id' => (int) ($row['id'] ?? 0),
+                'date' => substr((string) ($row['date_added'] ?? ''), 0, 10),
+                'patient_name' => trim($patient, ', '),
+                'pubpid' => (string) ($row['pubpid'] ?? ''),
+                'drug_name' => $drugName !== '' ? $drugName : 'Medication',
+                'prescribed_qty' => (int) round($prescribed),
+                'dispensed_qty' => (int) round($dispensed),
+                'status' => $status,
+                'status_label' => match ($status) {
+                    'dispensed' => 'Dispensed',
+                    'partial' => 'Partial',
+                    default => 'Not dispensed',
+                },
+            ];
+        }, $rows);
+
+        return [
+            'from' => $fromDate,
+            'to' => $toDate,
+            'generated_at' => date('c'),
+            'items' => $items,
+        ];
+    }
+
+    /**
+     * Native inventory-management stock browser: live lots (non-destroyed) with
+     * on-hand and expiry status. Replaces drug_inventory.php. Filterable by drug
+     * name, empty lots, and expiry bucket. Bounded (R1).
+     *
+     * @return array{generated_at: string, items: list<array<string, mixed>>}
+     */
+    public function stockBrowser(string $search = '', bool $showEmpty = false, string $expiry = 'all'): array
+    {
+        $this->access->assertHubAccess();
+
+        $where = 'di.destroy_date IS NULL AND d.active = 1';
+        $binds = [];
+        if (!$showEmpty) {
+            $where .= ' AND di.on_hand <> 0';
+        }
+        $search = trim($search);
+        if ($search !== '') {
+            $where .= ' AND d.name LIKE ?';
+            $binds[] = '%' . $search . '%';
+        }
+        if ($expiry === 'expired') {
+            $where .= ' AND di.expiration IS NOT NULL AND di.expiration < CURDATE()';
+        } elseif ($expiry === 'expiring') {
+            $where .= ' AND di.expiration IS NOT NULL AND di.expiration >= CURDATE()'
+                . ' AND di.expiration <= DATE_ADD(CURDATE(), INTERVAL 90 DAY)';
+        }
+
+        $rows = QueryUtils::fetchRecords(
+            "SELECT di.inventory_id, di.drug_id, di.lot_number, di.on_hand, di.expiration,
+                    d.name AS drug_name, d.reorder_point
+             FROM drug_inventory di
+             INNER JOIN drugs d ON d.drug_id = di.drug_id
+             WHERE {$where}
+             ORDER BY d.name ASC, di.expiration ASC, di.lot_number ASC
+             LIMIT " . self::REPORT_ROW_CAP,
+            $binds
+        ) ?: [];
+
+        $today = new \DateTimeImmutable('today');
+        $soon = $today->modify('+90 days');
+
+        $items = array_map(static function (array $row) use ($today, $soon): array {
+            $exp = trim((string) ($row['expiration'] ?? ''));
+            $hasExp = $exp !== '' && $exp !== '0000-00-00';
+            $expStatus = 'ok';
+            if ($hasExp) {
+                try {
+                    $expDate = new \DateTimeImmutable($exp);
+                    if ($expDate < $today) {
+                        $expStatus = 'expired';
+                    } elseif ($expDate <= $soon) {
+                        $expStatus = 'expiring';
+                    }
+                } catch (\Exception) {
+                    $hasExp = false;
+                }
+            }
+
+            return [
+                'inventory_id' => (int) ($row['inventory_id'] ?? 0),
+                'drug_id' => (int) ($row['drug_id'] ?? 0),
+                'drug_name' => trim((string) ($row['drug_name'] ?? 'Medication')),
+                'lot_number' => trim((string) ($row['lot_number'] ?? '')),
+                'on_hand' => (int) round((float) ($row['on_hand'] ?? 0)),
+                'expiration' => $hasExp ? substr($exp, 0, 10) : '',
+                'expiry_status' => $expStatus,
+            ];
+        }, $rows);
+
+        return [
+            'generated_at' => date('c'),
+            'items' => $items,
+        ];
+    }
+
     private function normalizeDate(?string $value): ?string
     {
         $value = trim((string) $value);
@@ -458,7 +608,7 @@ class PharmOpsReportsService
                     'id' => self::REPORT_REORDER,
                     'label' => 'Reorder / low stock',
                     'description' => 'Items at or below reorder point — what to buy this week.',
-                    'embed_url' => $webroot . '/interface/reports/inventory_list.php',
+                    'embed_url' => '',
                     // Rendered by a native pane (velocity + days-of-supply + suggested qty)
                     // instead of the stock embed. The embed_url stays as the fallback link.
                     'native' => true,
@@ -467,28 +617,29 @@ class PharmOpsReportsService
                     'id' => self::REPORT_ACTIVITY,
                     'label' => 'Inventory activity',
                     'description' => 'Summary of stock movements for the selected period.',
-                    'embed_url' => $webroot . '/interface/reports/inventory_activity.php',
+                    'embed_url' => '',
                     'native' => true,
                 ],
                 [
                     'id' => self::REPORT_TRANSACTIONS,
                     'label' => 'Inventory transactions',
                     'description' => 'Detailed purchase, sale, and adjustment ledger.',
-                    'embed_url' => $webroot . '/interface/reports/inventory_transactions.php',
+                    'embed_url' => '',
                     'native' => true,
                 ],
                 [
                     'id' => self::REPORT_DESTROYED,
                     'label' => 'Destroyed drugs',
                     'description' => 'Lots written off or destroyed.',
-                    'embed_url' => $webroot . '/interface/reports/destroyed_drugs_report.php',
+                    'embed_url' => '',
                     'native' => true,
                 ],
                 [
                     'id' => self::REPORT_PRESCRIPTIONS,
                     'label' => 'Prescriptions vs dispensed',
                     'description' => 'Compare prescribed and dispensed quantities.',
-                    'embed_url' => $webroot . '/interface/reports/prescriptions_report.php',
+                    'embed_url' => '',
+                    'native' => true,
                 ],
                 [
                     'id' => self::REPORT_CONTROLLED,

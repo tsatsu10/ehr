@@ -6,6 +6,7 @@ import { localDateString } from '@islands/daily-reports/reportsFormatters';
 import { PharmOpsWorklist } from './PharmOpsWorklist';
 import { PharmOpsSetupPanel } from './PharmOpsSetupPanel';
 import { PharmOpsReportsPane } from './PharmOpsReportsPane';
+import { PharmOpsInventoryBrowser } from './PharmOpsInventoryBrowser';
 import type {
   DestroyLotContext,
   PharmOpsHubProps,
@@ -47,7 +48,14 @@ const PharmOpsDestroyDrawer = lazy(() =>
 const EMPTY_COUNTS: WorklistCounts = { pending_dispense: 0, low_stock: 0, write_off: 0 };
 
 function initialTab(value: string): PharmOpsTab {
-  if (value === 'low_stock' || value === 'reports' || value === 'write_off') return value;
+  if (
+    value === 'low_stock'
+    || value === 'reports'
+    || value === 'write_off'
+    || value === 'inventory'
+  ) {
+    return value;
+  }
   return 'pending_dispense';
 }
 
@@ -170,7 +178,7 @@ export function PharmOpsHub({
   }, [loadSetupStatus]);
 
   useInterval(() => {
-    if (tab !== 'reports') {
+    if (tab !== 'reports' && tab !== 'inventory') {
       void loadWorklist();
     }
   }, PHARM_OPS_POLL_MS);
@@ -180,7 +188,7 @@ export function PharmOpsHub({
     await printRxWithNotice(ajaxUrl, csrfToken, prescriptionId, setPrintError);
   }, [ajaxUrl, csrfToken]);
 
-  const isWorklistTab = tab !== 'reports';
+  const isWorklistTab = tab !== 'reports' && tab !== 'inventory';
 
   usePharmOpsPageHeading({
     tab,
@@ -237,6 +245,8 @@ export function PharmOpsHub({
       ) : null}
       {tab === 'reports' && canViewReports ? (
         <PharmOpsReportsPane ajaxUrl={ajaxUrl} csrfToken={csrfToken} />
+      ) : tab === 'inventory' ? (
+        <PharmOpsInventoryBrowser ajaxUrl={ajaxUrl} csrfToken={csrfToken} />
       ) : (
         <PharmOpsWorklist
           tab={tab}

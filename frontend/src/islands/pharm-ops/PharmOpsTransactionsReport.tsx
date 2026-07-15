@@ -10,8 +10,6 @@ import type { PharmTransactionLedger, PharmTransactionRow } from './pharmOpsType
 interface PharmOpsTransactionsReportProps {
   ajaxUrl: string;
   csrfToken: string;
-  /** Stock inventory_transactions.php link — kept as a fallback. */
-  fallbackUrl?: string;
 }
 
 // Inline alignment: the BS4-colliding alignment utilities are pinned by the
@@ -44,7 +42,7 @@ function ddmmyyyy(iso: string): string {
   return d && m && y ? `${d}/${m}/${y}` : iso;
 }
 
-export function PharmOpsTransactionsReport({ ajaxUrl, csrfToken, fallbackUrl }: PharmOpsTransactionsReportProps) {
+export function PharmOpsTransactionsReport({ ajaxUrl, csrfToken }: PharmOpsTransactionsReportProps) {
   const [from, setFrom] = useState<string>(() => isoDaysAgo(30));
   const [to, setTo] = useState<string>(() => todayIso());
   const [type, setType] = useState<string>('');
@@ -185,16 +183,6 @@ export function PharmOpsTransactionsReport({ ajaxUrl, csrfToken, fallbackUrl }: 
           ) : null}
         </>
       )}
-
-      {fallbackUrl ? (
-        <p className="mt-3 mb-0 text-sm text-(--oe-nc-text-muted)">
-          Need the full accounting view?{' '}
-          <a href={fallbackUrl} target="_blank" rel="noopener noreferrer" className="underline">
-            open the stock report
-          </a>
-          .
-        </p>
-      ) : null}
     </div>
   );
 }

@@ -1,4 +1,19 @@
-export type PharmOpsTab = 'pending_dispense' | 'low_stock' | 'write_off' | 'reports';
+export type PharmOpsTab = 'pending_dispense' | 'low_stock' | 'write_off' | 'inventory' | 'reports';
+
+export interface PharmStockRow {
+  inventory_id: number;
+  drug_id: number;
+  drug_name: string;
+  lot_number: string;
+  on_hand: number;
+  expiration: string;
+  expiry_status: 'expired' | 'expiring' | 'ok';
+}
+
+export interface PharmStockBrowser {
+  generated_at: string;
+  items: PharmStockRow[];
+}
 
 export interface PharmOpsReportItem {
   id: string;
@@ -95,6 +110,25 @@ export interface PharmTransactionLedger {
   items: PharmTransactionRow[];
 }
 
+export interface PharmPrescriptionRow {
+  prescription_id: number;
+  date: string;
+  patient_name: string;
+  pubpid: string;
+  drug_name: string;
+  prescribed_qty: number;
+  dispensed_qty: number;
+  status: 'dispensed' | 'partial' | 'not_dispensed';
+  status_label: string;
+}
+
+export interface PharmPrescriptionsReport {
+  from: string;
+  to: string;
+  generated_at: string;
+  items: PharmPrescriptionRow[];
+}
+
 export interface PharmOpsHubProps {
   ajaxUrl: string;
   csrfToken: string;
@@ -148,7 +182,6 @@ export interface LowStockRow {
   stock_status: 'low' | 'out_of_stock' | 'in_stock';
   status_label: string;
   qoh_display?: string;
-  receive_stock_url?: string | null;
 }
 
 export interface WriteOffRow {

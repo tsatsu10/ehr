@@ -467,7 +467,6 @@ class PharmOpsWorklistService
       $onHand = (float) ($raw['on_hand'] ?? 0);
       $reorderPoint = (float) ($raw['reorder_point'] ?? 0);
       $stockStatus = self::classifyReorderStatus($onHand, $reorderPoint);
-      $webroot = $GLOBALS['webroot'] ?? '';
 
       $statusLabel = $stockStatus === 'out_of_stock' ? 'Out of stock' : 'Low stock';
 
@@ -481,7 +480,6 @@ class PharmOpsWorklistService
           'status_label' => $statusLabel,
           'qoh_display' => 'QOH ' . (int) round($onHand)
               . ($reorderPoint > 0 ? ' · reorder ' . (int) round($reorderPoint) : ''),
-          'receive_stock_url' => $webroot . '/interface/drugs/add_edit_lot.php?drug_id=' . urlencode((string) $drugId),
       ];
   }
 }

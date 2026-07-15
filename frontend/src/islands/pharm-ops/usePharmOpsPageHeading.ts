@@ -67,20 +67,25 @@ export function usePharmOpsPageHeading({
       writeOffBtn.classList.toggle('nc-hidden', !canDestroy);
     }
 
+    const inventoryBtn = document.getElementById('nc-pharmops-tab-inventory');
+    if (inventoryBtn) inventoryBtn.classList.toggle('active', tab === 'inventory');
+
     const reportsBtn = document.getElementById('nc-pharmops-tab-reports');
     if (reportsBtn) {
       reportsBtn.classList.toggle('active', tab === 'reports');
       reportsBtn.classList.toggle('nc-hidden', !canViewReports);
     }
 
+    // The clinic-wide read tabs (reports, inventory) and write-off have no date/urgent controls.
+    const nonWorklistTab = tab === 'reports' || tab === 'write_off' || tab === 'inventory';
     const dateEl = document.getElementById('nc-pharmops-date');
     if (dateEl) {
-      dateEl.classList.toggle('nc-hidden', tab === 'reports' || tab === 'write_off');
+      dateEl.classList.toggle('nc-hidden', nonWorklistTab);
     }
 
     const urgentWrap = document.getElementById('nc-pharmops-urgent-wrap');
     if (urgentWrap) {
-      urgentWrap.classList.toggle('nc-hidden', tab === 'reports' || tab === 'write_off');
+      urgentWrap.classList.toggle('nc-hidden', nonWorklistTab);
     }
 
     const pendingCount = document.getElementById('nc-pharmops-count-pending');
@@ -118,6 +123,11 @@ export function usePharmOpsPageHeading({
 
   useEffect(() => {
     const cleanup = bindClick('nc-pharmops-tab-writeoff', () => onTabChange('write_off'));
+    return () => cleanup?.();
+  }, [onTabChange]);
+
+  useEffect(() => {
+    const cleanup = bindClick('nc-pharmops-tab-inventory', () => onTabChange('inventory'));
     return () => cleanup?.();
   }, [onTabChange]);
 

@@ -140,12 +140,6 @@ export function PharmOpsWorklist({
                   >
                     Receive stock
                   </Button>
-                ) : row.receive_stock_url ? (
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={row.receive_stock_url} target="_top">
-                      Receive stock
-                    </a>
-                  </Button>
                 ) : null}
               </div>
             </article>

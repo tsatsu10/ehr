@@ -44,6 +44,8 @@ final class PharmOpsActionHandler implements AjaxActionHandlerInterface
         'pharm_ops.inventory.destroyed',
         'pharm_ops.inventory.activity',
         'pharm_ops.inventory.transactions',
+        'pharm_ops.inventory.prescriptions',
+        'pharm_ops.inventory.stock_list',
         'pharm_ops.controlled_catalog',
         'pharm_ops.controlled_catalog_save',
         'pharm_ops.catalog_list',
@@ -186,6 +188,27 @@ final class PharmOpsActionHandler implements AjaxActionHandlerInterface
                         isset($_REQUEST['to']) ? (string) $_REQUEST['to'] : null,
                         isset($_REQUEST['type']) ? (string) $_REQUEST['type'] : '',
                         (int) ($_REQUEST['offset'] ?? 0)
+                    )
+                );
+                break;
+            case 'pharm_ops.inventory.prescriptions':
+                $this->host->respond(
+                    true,
+                    'ok',
+                    $this->host->svc(PharmOpsReportsService::class)->prescriptionsReport(
+                        isset($_REQUEST['from']) ? (string) $_REQUEST['from'] : null,
+                        isset($_REQUEST['to']) ? (string) $_REQUEST['to'] : null
+                    )
+                );
+                break;
+            case 'pharm_ops.inventory.stock_list':
+                $this->host->respond(
+                    true,
+                    'ok',
+                    $this->host->svc(PharmOpsReportsService::class)->stockBrowser(
+                        isset($_REQUEST['search']) ? (string) $_REQUEST['search'] : '',
+                        !empty($_REQUEST['show_empty']),
+                        isset($_REQUEST['expiry']) ? (string) $_REQUEST['expiry'] : 'all'
                     )
                 );
                 break;

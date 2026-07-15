@@ -53,7 +53,7 @@ $moduleUrl = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/
 $access = new PharmOpsAccessService();
 $reactPharmOps = $config->get('enable_react_pharm_ops', '1') === '1';
 $tabParam = (string) ($_GET['tab'] ?? 'pending_dispense');
-$initialTab = in_array($tabParam, ['low_stock', 'reports', 'write_off'], true) ? $tabParam : 'pending_dispense';
+$initialTab = in_array($tabParam, ['low_stock', 'reports', 'write_off', 'inventory'], true) ? $tabParam : 'pending_dispense';
 
 (new PageController())->renderForAnyAcl(
     'pharm-ops/index.html.twig',

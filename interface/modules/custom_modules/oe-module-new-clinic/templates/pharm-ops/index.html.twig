@@ -19,6 +19,11 @@
             {{ 'Write-off'|xlt }} <span class="nc-badge nc-badge-neutral" id="nc-pharmops-count-writeoff">0</span>
         </button>
         <button type="button"
+                class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary{% if initial_tab == 'inventory' %} active{% endif %}"
+                id="nc-pharmops-tab-inventory">
+            {{ 'Inventory'|xlt }}
+        </button>
+        <button type="button"
                 class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary{% if initial_tab == 'reports' %} active{% endif %}"
                 id="nc-pharmops-tab-reports">
             {{ 'Reports'|xlt }}
@@ -51,21 +56,9 @@
         <span class="nc-sr-only">{{ 'Setup'|xlt }}</span>
     </button>
     {% endif %}
-    {% if can_show_advanced %}
-    <div class="nc-dropdown nc-inline-block nc-mb-1 nc-mr-1">
-        <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-dropdown-toggle" data-nc-dropdown-toggle aria-haspopup="true" aria-expanded="false">
-            {{ 'Advanced'|xlt }}
-        </button>
-        <div class="nc-dropdown-menu nc-dropdown-menu-right">
-            <a class="nc-dropdown-item" href="{{ webroot }}/interface/drugs/drug_inventory.php" target="_top">{{ 'Inventory management (core)'|xlt }}</a>
-            <a class="nc-dropdown-item" href="{{ webroot }}/interface/drugs/add_edit_drug.php" target="_top">{{ 'Add drug (core)'|xlt }}</a>
-            <a class="nc-dropdown-item" href="{{ webroot }}/interface/reports/inventory_list.php" target="_top">{{ 'Reorder report (core)'|xlt }}</a>
-            <a class="nc-dropdown-item" href="{{ webroot }}/interface/reports/inventory_activity.php" target="_top">{{ 'Inventory activity (core)'|xlt }}</a>
-            <a class="nc-dropdown-item" href="{{ webroot }}/interface/reports/inventory_transactions.php" target="_top">{{ 'Inventory transactions (core)'|xlt }}</a>
-            <a class="nc-dropdown-item" href="{{ webroot }}/interface/reports/destroyed_drugs_report.php" target="_top">{{ 'Destroyed drugs (core)'|xlt }}</a>
-        </div>
-    </div>
-    {% endif %}
+    {# Advanced (core) dropdown removed — every item is now a native surface:
+       Inventory management → Inventory tab, the four inventory reports +
+       prescriptions → Reports tab, Add drug → Setup → catalog. No core links. #}
     <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1" id="nc-pharmops-refresh" aria-label="{{ 'Refresh'|xlt }}">
         <i class="fa fa-refresh" aria-hidden="true"></i>
     </button>

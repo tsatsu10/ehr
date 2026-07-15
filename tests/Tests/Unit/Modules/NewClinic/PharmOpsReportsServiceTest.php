@@ -22,7 +22,7 @@ class PharmOpsReportsServiceTest extends TestCase
         $this->assertSame('pharm_ops_read_acl', $policy->describe('pharm_ops.reports_embed')['type']);
     }
 
-    public function testEmbedCatalogIncludesCoreInventoryReports(): void
+    public function testEmbedCatalogHasNoCoreLinksAndKeepsModuleControlledRegister(): void
     {
         $GLOBALS['webroot'] = '/openemr';
         $reflection = new \ReflectionMethod(PharmOpsReportsService::class, 'buildCatalog');
@@ -32,9 +32,16 @@ class PharmOpsReportsServiceTest extends TestCase
         $catalog = $reflection->invoke(new PharmOpsReportsService());
 
         $this->assertSame(PharmOpsReportsService::REPORT_REORDER, $catalog['default_report_id']);
+
+        // Zero-core: no catalog entry links to a stock interface/reports or
+        // interface/drugs page — the report views are native panes now.
+        foreach ($catalog['reports'] as $report) {
+            $this->assertStringNotContainsString('/interface/reports/', (string) $report['embed_url']);
+            $this->assertStringNotContainsString('/interface/drugs/', (string) $report['embed_url']);
+        }
+
+        // The controlled-substances register stays as the module's OWN page.
         $urls = array_column($catalog['reports'], 'embed_url');
-        $this->assertContains('/openemr/interface/reports/inventory_list.php', $urls);
-        $this->assertContains('/openemr/interface/reports/inventory_transactions.php', $urls);
         $this->assertContains(
             '/openemr/interface/modules/custom_modules/oe-module-new-clinic/public/controlled-register.php',
             $urls
@@ -54,7 +61,7 @@ class PharmOpsReportsServiceTest extends TestCase
         $this->assertContains(PharmOpsReportsService::REPORT_CONTROLLED, $ids);
     }
 
-    public function testEmbedCatalogMarksTheFourReportViewsNative(): void
+    public function testEmbedCatalogMarksTheReportViewsNative(): void
     {
         $GLOBALS['webroot'] = '/openemr';
         $reflection = new \ReflectionMethod(PharmOpsReportsService::class, 'buildCatalog');
@@ -69,8 +76,10 @@ class PharmOpsReportsServiceTest extends TestCase
             }
         }
 
+        // All five stock reports are native panes now; controlled register stays
+        // the module's own page (not native, not core).
         sort($native);
-        $this->assertSame(['activity', 'destroyed', 'reorder', 'transactions'], $native);
+        $this->assertSame(['activity', 'destroyed', 'prescriptions', 'reorder', 'transactions'], $native);
     }
 
     /**
