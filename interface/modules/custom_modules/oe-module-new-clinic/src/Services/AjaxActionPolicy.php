@@ -461,6 +461,7 @@ class AjaxActionPolicy
     /** @var array<int, string> CBILL-3 — scheme claim register (insurance-vault gated) */
     private const BILL_OPS_INSURANCE_ACTIONS = [
         'bill_ops.scheme_claims',
+        'bill_ops.scheme_claims_export',
         'bill_ops.scheme_claim_status',
     ];
 

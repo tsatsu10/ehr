@@ -103,6 +103,17 @@ export function SchemeClaimsList({ ajaxUrl, csrfToken }: { ajaxUrl: string; csrf
         <Button type="button" variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
           Refresh
         </Button>
+        {data && data.rows.length > 0 && (
+          <Button asChild variant="outline" size="sm">
+            <a
+              href={`${ajaxUrl}${ajaxUrl.includes('?') ? '&' : '?'}action=bill_ops.scheme_claims_export&status=${status}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Export CSV
+            </a>
+          </Button>
+        )}
       </div>
 
       {error && <div className={deskCalloutClass('warn', 'py-2')}>{error}</div>}

@@ -34,6 +34,7 @@ final class BillOpsActionHandler implements AjaxActionHandlerInterface
         'bill_ops.momo_save',
         'bill_ops.outstanding_list',
         'bill_ops.scheme_claims',
+        'bill_ops.scheme_claims_export',
         'bill_ops.scheme_claim_status',
     ];
 
@@ -172,6 +173,19 @@ final class BillOpsActionHandler implements AjaxActionHandlerInterface
                         )
                         : [],
                 ]);
+                break;
+            case 'bill_ops.scheme_claims_export':
+                $params = $this->host->readRequestParams($method);
+                $facilityId = $this->host->resolveRequestFacilityId();
+                $svc = $this->host->svc(SchemeClaimService::class);
+                if (!$svc->isEnabled($facilityId)) {
+                    $this->host->respond(false, 'Insurance scheme-split is not enabled', ['code' => 'forbidden'], 403);
+                }
+                $status = isset($params['status']) ? (string) $params['status'] : 'to_submit';
+                $this->host->respondCsv(
+                    'scheme-claims-' . preg_replace('/[^a-z_]/', '', $status) . '.csv',
+                    $svc->exportCsv($facilityId, $status)
+                );
                 break;
             case 'bill_ops.scheme_claim_status':
                 if ($method !== 'POST') {

@@ -171,6 +171,33 @@ class SchemeClaimService
     }
 
     /**
+     * CBILL-3c — CSV of the claims in a status (for manual submission to the scheme).
+     */
+    public function exportCsv(int $facilityId, ?string $status = 'to_submit'): string
+    {
+        $rows = $this->listClaims($facilityId, $status, 5000, 0);
+        $out = fopen('php://temp', 'r+');
+        fputcsv($out, ['Patient', 'MRN', 'Scheme', 'Membership', 'Scheme owes', 'Patient paid', 'Status', 'Created']);
+        foreach ($rows as $row) {
+            fputcsv($out, [
+                (string) ($row['display_name'] ?? ''),
+                (string) ($row['pubpid'] ?? ''),
+                (string) ($row['scheme_name'] ?? ''),
+                (string) ($row['membership_number'] ?? ''),
+                number_format((float) ($row['scheme_owed'] ?? 0), 2, '.', ''),
+                number_format((float) ($row['patient_pay'] ?? 0), 2, '.', ''),
+                (string) ($row['status'] ?? ''),
+                (string) ($row['created_at'] ?? ''),
+            ]);
+        }
+        rewind($out);
+        $csv = (string) stream_get_contents($out);
+        fclose($out);
+
+        return $csv;
+    }
+
+    /**
      * Manager transition: to_submit → submitted → settled (or void). Audited.
      *
      * @return array<string, mixed>
