@@ -194,6 +194,9 @@ class CashierChargeService
         int $units,
         float $unitPrice
     ): void {
+        // billing.fee stores the LINE TOTAL (unit price x units); units is kept
+        // separately for reference only. So charge totals must read SUM(fee) —
+        // NOT SUM(fee * units), which would count the quantity twice.
         $lineFee = round($unitPrice * $units, 2);
         $codeText = $description !== '' ? $description : $billingCode;
 

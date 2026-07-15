@@ -75,4 +75,48 @@ class BillOpsDaysheetServiceTest extends TestCase
 
         $method->invoke($service, '2026-02-31');
     }
+
+    public function testSaveMomoTallyEnforcesCloseAccess(): void
+    {
+        $access = $this->createMock(BillOpsAccessService::class);
+        $access->method('assertCloseAccess')
+            ->willThrowException(new \RuntimeException('Forbidden', 403));
+        $service = $this->makeService($access);
+
+        try {
+            $service->saveMomoTally(1, '2026-07-08', 1200.0, '', 5);
+            $this->fail('Expected RuntimeException');
+        } catch (\RuntimeException $e) {
+            $this->assertSame(403, $e->getCode());
+        }
+    }
+
+    public function testSaveMomoTallyRejectsNegativeAmount(): void
+    {
+        $service = $this->makeService();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Amount cannot be negative');
+
+        $service->saveMomoTally(1, '2026-07-08', -1.0, '', 5);
+    }
+
+    public function testSaveMomoTallyLockedOnceDayIsReconciled(): void
+    {
+        $recon = $this->createMock(ReconciliationService::class);
+        $recon->method('getLatestRunForDate')->willReturn(['id' => 9, 'status' => 'ok']);
+        $service = new BillOpsDaysheetService(
+            $this->createMock(ClinicConfigService::class),
+            $this->createMock(VisitScopeService::class),
+            $recon,
+            $this->createMock(BillOpsAccessService::class),
+        );
+
+        try {
+            $service->saveMomoTally(1, '2026-07-08', 1200.0, '', 5);
+            $this->fail('Expected a 409 lock');
+        } catch (\RuntimeException $e) {
+            $this->assertSame(409, $e->getCode());
+        }
+    }
 }

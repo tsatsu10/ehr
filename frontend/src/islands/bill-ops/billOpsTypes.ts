@@ -100,8 +100,18 @@ export interface DaysheetData {
     delta_amount: number;
     latest_run: { status: string; completed_at: string } | null;
   };
+  momo_tally: MomoTally;
   by_cashier: { cashier: string; total: number }[];
   by_visit_type: { visit_type_label: string; total: number }[];
+}
+
+export interface MomoTally {
+  amount: number;
+  note: string;
+  /** True once the day has been reconciled — the tally can no longer be edited. */
+  locked: boolean;
+  updated_by: string | null;
+  updated_at: string;
 }
 
 export interface OutstandingRow {

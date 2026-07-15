@@ -25,6 +25,7 @@ class BillOpsActionHandlerTest extends TestCase
         $this->assertTrue($handler->supports('bill_ops.charge_correct'));
         $this->assertTrue($handler->supports('bill_ops.payment_reverse'));
         $this->assertTrue($handler->supports('bill_ops.daysheet_export'));
+        $this->assertTrue($handler->supports('bill_ops.momo_save'));
         $this->assertTrue($handler->supports('bill_ops.outstanding_list'));
         $this->assertFalse($handler->supports('cashier.checkout'));
         $this->assertFalse($handler->supports('pharm_ops.worklist'));

@@ -169,6 +169,29 @@ class BillOpsPaymentsSearchService
         sqlBeginTrans();
         $committed = false;
         try {
+            // Claim the reversal atomically before posting anything. Two cashiers
+            // reversing the same receipt at once are not serialized by the PHP
+            // session lock, so without this guard both could post an offsetting
+            // entry (a double refund). Only the first caller flips reversed_at.
+            sqlStatement(
+                "UPDATE new_receipt
+                 SET reversed_at = NOW(), reversal_reason = ?, reversal_actor_user_id = ?
+                 WHERE id = ? AND reversed_at IS NULL",
+                [mb_substr($reason, 0, 255), $actorUserId, $receiptId]
+            );
+
+            // affected-rows is unreliable under OpenEMR query logging, so read the
+            // row back to confirm this actor won the claim.
+            $claim = QueryUtils::querySingleRow(
+                "SELECT reversal_actor_user_id, reversed_at FROM new_receipt WHERE id = ?",
+                [$receiptId]
+            );
+            if (!is_array($claim)
+                || (int) ($claim['reversal_actor_user_id'] ?? 0) !== $actorUserId
+                || empty($claim['reversed_at'])) {
+                throw new \InvalidArgumentException('Payment was already reversed');
+            }
+
             $reference = 'Bill ops reversal: ' . mb_substr($reason, 0, 200);
 
             $sessionId = sqlInsert(
@@ -199,13 +222,6 @@ class BillOpsPaymentsSearchService
             );
 
             frontPayment($pid, $encounter, 'cash', $reference, 0, -$amount, date('Y-m-d H:i:s'));
-
-            sqlStatement(
-                "UPDATE new_receipt
-                 SET reversed_at = NOW(), reversal_reason = ?, reversal_actor_user_id = ?
-                 WHERE id = ?",
-                [mb_substr($reason, 0, 255), $actorUserId, $receiptId]
-            );
 
             sqlCommitTrans(true);
             $committed = true;

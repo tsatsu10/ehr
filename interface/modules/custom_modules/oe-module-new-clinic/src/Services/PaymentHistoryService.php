@@ -131,7 +131,7 @@ class PaymentHistoryService
         $charges = 0.0;
         if ($encounterId !== null && $encounterId > 0) {
             $chargesRow = QueryUtils::querySingleRow(
-                'SELECT COALESCE(SUM(fee * GREATEST(units, 1)), 0) AS total
+                'SELECT COALESCE(SUM(fee), 0) AS total
                  FROM billing WHERE pid = ? AND encounter = ? AND activity = 1',
                 [$pid, $encounterId]
             );
@@ -515,7 +515,7 @@ class PaymentHistoryService
 
         if ($encounterId !== null && $encounterId > 0) {
             $chargesRow = QueryUtils::querySingleRow(
-                'SELECT COALESCE(SUM(fee * GREATEST(units, 1)), 0) AS total
+                'SELECT COALESCE(SUM(fee), 0) AS total
                  FROM billing WHERE pid = ? AND encounter = ? AND activity = 1',
                 [$pid, $encounterId]
             );

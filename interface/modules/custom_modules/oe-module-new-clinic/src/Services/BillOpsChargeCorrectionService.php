@@ -123,9 +123,20 @@ class BillOpsChargeCorrectionService
                 );
             }
 
+            // Only void charges that are currently active on this encounter, so a
+            // stale client view can't toggle a line it never saw. pid+encounter
+            // scoping already blocks cross-patient voids.
+            $activeChargeIds = array_flip(array_map(
+                static fn (array $r): int => (int) ($r['id'] ?? 0),
+                QueryUtils::fetchRecords(
+                    "SELECT id FROM billing WHERE pid = ? AND encounter = ? AND activity = 1",
+                    [$pid, $encounter]
+                ) ?: []
+            ));
+
             foreach ($removeBillingIds as $billingId) {
                 $billingId = (int) $billingId;
-                if ($billingId <= 0) {
+                if ($billingId <= 0 || !isset($activeChargeIds[$billingId])) {
                     continue;
                 }
                 sqlStatement(

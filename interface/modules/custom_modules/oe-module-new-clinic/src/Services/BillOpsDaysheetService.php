@@ -31,6 +31,9 @@ class BillOpsDaysheetService
         $this->access->assertCloseAccess();
         $facilityId = $this->visitScope->resolveDeskFacilityId($facilityId > 0 ? $facilityId : null);
         $runDate = $this->normalizeDate($runDate);
+        // Half-open [runDate, nextDay) range so the created_at index can be used
+        // (DATE(created_at) = ? wraps the column and forces a scan).
+        $nextDay = date('Y-m-d', strtotime($runDate . ' +1 day'));
 
         $currencySymbol = (string) ($this->config->get('currency_symbol', 'GH₵', $facilityId) ?? 'GH₵');
 
@@ -39,8 +42,8 @@ class BillOpsDaysheetService
                     COALESCE(SUM(CASE WHEN r.reversed_at IS NULL THEN r.amount_paid ELSE 0 END), 0) AS cash_collected,
                     COALESCE(SUM(CASE WHEN r.reversed_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS void_count
              FROM new_receipt r
-             WHERE r.facility_id = ? AND DATE(r.created_at) = ?",
-            [$facilityId, $runDate]
+             WHERE r.facility_id = ? AND r.created_at >= ? AND r.created_at < ?",
+            [$facilityId, $runDate, $nextDay]
         ) ?: [];
 
         $noChargeRow = QueryUtils::querySingleRow(
@@ -56,10 +59,10 @@ class BillOpsDaysheetService
                     COALESCE(SUM(CASE WHEN r.reversed_at IS NULL THEN r.amount_paid ELSE 0 END), 0) AS total
              FROM new_receipt r
              LEFT JOIN users u ON u.id = r.actor_user_id
-             WHERE r.facility_id = ? AND DATE(r.created_at) = ?
+             WHERE r.facility_id = ? AND r.created_at >= ? AND r.created_at < ?
              GROUP BY r.actor_user_id, u.fname, u.lname
              ORDER BY total DESC",
-            [$facilityId, $runDate]
+            [$facilityId, $runDate, $nextDay]
         ) ?: [];
 
         $byVisitType = QueryUtils::fetchRecords(
@@ -68,10 +71,10 @@ class BillOpsDaysheetService
              FROM new_receipt r
              INNER JOIN new_visit v ON v.id = r.visit_id
              LEFT JOIN new_visit_type vt ON vt.id = v.visit_type_id
-             WHERE r.facility_id = ? AND DATE(r.created_at) = ?
+             WHERE r.facility_id = ? AND r.created_at >= ? AND r.created_at < ?
              GROUP BY vt.label
              ORDER BY total DESC",
-            [$facilityId, $runDate]
+            [$facilityId, $runDate, $nextDay]
         ) ?: [];
 
         $totals = $this->reconciliation->fetchTotals($facilityId, $runDate);
@@ -97,6 +100,21 @@ class BillOpsDaysheetService
             ];
         }
 
+        // The manual MoMo tally is locked once the day has been reconciled.
+        $momoLocked = $latestForDate !== null;
+        $momoRow = QueryUtils::querySingleRow(
+            "SELECT d.momo_amount, d.note, d.updated_at, u.fname, u.lname
+             FROM new_bill_ops_daysheet d
+             LEFT JOIN users u ON u.id = d.updated_by
+             WHERE d.facility_id = ? AND d.run_date = ?",
+            [$facilityId, $runDate]
+        );
+        $momoUpdatedBy = null;
+        if (is_array($momoRow)) {
+            $momoUpdatedBy = trim(trim((string) ($momoRow['fname'] ?? '')) . ' ' . trim((string) ($momoRow['lname'] ?? '')));
+            $momoUpdatedBy = $momoUpdatedBy !== '' ? $momoUpdatedBy : null;
+        }
+
         return [
             'facility_id' => $facilityId,
             'date' => $runDate,
@@ -112,6 +130,13 @@ class BillOpsDaysheetService
                 'delta_amount' => $delta,
                 'tolerance' => $tolerance,
                 'latest_run' => $latestForDate,
+            ],
+            'momo_tally' => [
+                'amount' => round((float) (is_array($momoRow) ? ($momoRow['momo_amount'] ?? 0) : 0), 2),
+                'note' => (string) (is_array($momoRow) ? ($momoRow['note'] ?? '') : ''),
+                'locked' => $momoLocked,
+                'updated_by' => $momoUpdatedBy,
+                'updated_at' => (string) (is_array($momoRow) ? ($momoRow['updated_at'] ?? '') : ''),
             ],
             'by_cashier' => array_map(static function (array $row): array {
                 $name = trim(trim((string) ($row['fname'] ?? '')) . ' ' . trim((string) ($row['lname'] ?? '')));
@@ -159,5 +184,52 @@ class BillOpsDaysheetService
         );
 
         return $payload;
+    }
+
+    /**
+     * Save the manual MoMo tally for a facility-day. Refused once the day has
+     * been reconciled (locked), so a closed daysheet can't be quietly edited.
+     *
+     * @return array<string, mixed>
+     */
+    public function saveMomoTally(int $facilityId, string $runDate, float $amount, string $note, int $actorUserId): array
+    {
+        $this->access->assertCloseAccess();
+        $facilityId = $this->visitScope->resolveDeskFacilityId($facilityId > 0 ? $facilityId : null);
+        $runDate = $this->normalizeDate($runDate);
+
+        if ($amount < 0) {
+            throw new \InvalidArgumentException('Amount cannot be negative');
+        }
+        $amount = round($amount, 2);
+        $note = mb_substr(trim($note), 0, 255);
+
+        if ($this->reconciliation->getLatestRunForDate($facilityId, $runDate) !== null) {
+            throw new \RuntimeException('This day is closed — the MoMo tally is locked.', 409);
+        }
+
+        QueryUtils::sqlStatementThrowException(
+            "INSERT INTO new_bill_ops_daysheet (facility_id, run_date, momo_amount, note, updated_by, updated_at)
+             VALUES (?, ?, ?, ?, ?, NOW())
+             ON DUPLICATE KEY UPDATE momo_amount = VALUES(momo_amount), note = VALUES(note),
+                                     updated_by = VALUES(updated_by), updated_at = NOW()",
+            [$facilityId, $runDate, $amount, $note !== '' ? $note : null, $actorUserId]
+        );
+
+        \OpenEMR\Common\Logging\EventAuditLogger::getInstance()->newEvent(
+            'new_clinic',
+            'bill_ops.momo_tally_saved',
+            $actorUserId,
+            1,
+            'facility_id=' . $facilityId . ' date=' . $runDate . ' amount=' . $amount
+        );
+
+        return [
+            'facility_id' => $facilityId,
+            'date' => $runDate,
+            'amount' => $amount,
+            'note' => $note,
+            'locked' => false,
+        ];
     }
 }

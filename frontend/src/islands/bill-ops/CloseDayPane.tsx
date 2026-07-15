@@ -3,11 +3,11 @@ import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
-import { oeFetch } from '@core/oeFetch';
+import { oeFetch, OeFetchError } from '@core/oeFetch';
+import { showDeskToast } from '@components/deskToast';
 import type { BillOpsHubProps, DaysheetData } from './billOpsTypes';
 import { daysheetToCsv, downloadCsv } from './billOpsDaysheetExport';
 import { formatBillMoney, localDateString } from './billOpsFormatters';
-import { readMomoTally, writeMomoTally } from './billOpsMomoTally';
 
 interface Props {
   fetchOptions: { ajaxUrl: string; csrfToken: string };
@@ -22,6 +22,9 @@ export function CloseDayPane({ fetchOptions, facilityId, reportsUrl }: Props) {
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [momoTally, setMomoTally] = useState('');
+  const [momoSaved, setMomoSaved] = useState('');
+  const [momoLocked, setMomoLocked] = useState(false);
+  const [momoSaving, setMomoSaving] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -47,16 +50,40 @@ export function CloseDayPane({ fetchOptions, facilityId, reportsUrl }: Props) {
   }, [load]);
 
   useEffect(() => {
-    if (!data?.date) return;
-    setMomoTally(readMomoTally(facilityId, data.date));
-  }, [data?.date, facilityId]);
+    if (!data) return;
+    const asStr = data.momo_tally.amount > 0 ? String(data.momo_tally.amount) : '';
+    setMomoTally(asStr);
+    setMomoSaved(asStr);
+    setMomoLocked(data.momo_tally.locked);
+  }, [data]);
 
-  const handleMomoTallyChange = (value: string) => {
-    setMomoTally(value);
-    if (data?.date) {
-      writeMomoTally(facilityId, data.date, value);
+  const saveMomoTally = useCallback(async () => {
+    if (!data || momoLocked) return;
+    const trimmed = momoTally.trim();
+    if (trimmed === momoSaved.trim()) return; // nothing changed
+    const amount = trimmed === '' ? 0 : Number(trimmed);
+    if (!Number.isFinite(amount) || amount < 0) {
+      showDeskToast('Enter a valid MoMo amount', 'danger');
+      return;
     }
-  };
+    setMomoSaving(true);
+    try {
+      const body: Record<string, unknown> = { date: data.date, amount };
+      if (facilityId > 0) body.facility_id = facilityId;
+      await oeFetch('bill_ops.momo_save', { ...fetchOptions, method: 'POST', json: body });
+      setMomoSaved(trimmed);
+      showDeskToast('MoMo tally saved', 'success');
+    } catch (err) {
+      if (err instanceof OeFetchError && err.status === 409) {
+        setMomoLocked(true);
+        showDeskToast('This day is closed — MoMo tally is locked', 'warning');
+      } else {
+        showDeskToast('Could not save MoMo tally', 'danger');
+      }
+    } finally {
+      setMomoSaving(false);
+    }
+  }, [data, momoLocked, momoTally, momoSaved, facilityId, fetchOptions]);
 
   const reconOk = data?.reconciliation.status === 'ok';
 
@@ -144,7 +171,7 @@ export function CloseDayPane({ fetchOptions, facilityId, reportsUrl }: Props) {
 
           <div className="space-y-1.5 mb-3" style={{ maxWidth: '16rem' }}>
             <Label htmlFor="nc-billops-momo-tally" className="normal-case font-normal text-[var(--oe-nc-text-muted)]">
-              MoMo tally (label only, manual)
+              MoMo tally (manual){momoLocked ? ' — locked' : ''}
             </Label>
             <Input
               id="nc-billops-momo-tally"
@@ -153,9 +180,19 @@ export function CloseDayPane({ fetchOptions, facilityId, reportsUrl }: Props) {
               min={0}
               step="0.01"
               value={momoTally}
-              onChange={(e) => handleMomoTallyChange(e.target.value)}
+              disabled={momoLocked || momoSaving}
+              onChange={(e) => setMomoTally(e.target.value)}
+              onBlur={() => void saveMomoTally()}
               placeholder="0.00"
             />
+            {momoLocked ? (
+              <p className="text-xs text-[var(--oe-nc-text-muted)] m-0">
+                The day has been reconciled, so this figure can no longer be changed.
+                {data.momo_tally.updated_by ? ` Last set by ${data.momo_tally.updated_by}.` : ''}
+              </p>
+            ) : (
+              <p className="text-xs text-[var(--oe-nc-text-muted)] m-0">Saved when you click away.</p>
+            )}
           </div>
 
           <p className="mb-3">

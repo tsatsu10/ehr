@@ -1,7 +1,14 @@
 import type { DaysheetData } from './billOpsTypes';
 
 function csvEscape(value: string | number): string {
-  const text = String(value);
+  let text = String(value);
+  // Neutralize spreadsheet formula injection: a leading =, +, -, @ or control
+  // char makes Excel/Sheets evaluate the cell as a formula. Only string fields
+  // (names, labels, the manual MoMo note) pass through here — numeric columns
+  // are written raw — so prefixing a quote never corrupts a real number.
+  if (/^[=+\-@\t\r]/.test(text)) {
+    text = `'${text}`;
+  }
   if (/[",\n]/.test(text)) {
     return `"${text.replace(/"/g, '""')}"`;
   }

@@ -30,6 +30,7 @@ final class BillOpsActionHandler implements AjaxActionHandlerInterface
         'bill_ops.receipt_reprint',
         'bill_ops.daysheet',
         'bill_ops.daysheet_export',
+        'bill_ops.momo_save',
         'bill_ops.outstanding_list',
     ];
 
@@ -125,6 +126,21 @@ final class BillOpsActionHandler implements AjaxActionHandlerInterface
                     $userId
                 );
                 $this->host->respond(true, 'ok', $exported);
+                break;
+            case 'bill_ops.momo_save':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $savedMomo = $this->host->svc(BillOpsDaysheetService::class)->saveMomoTally(
+                    (int) ($body['facility_id'] ?? 0),
+                    $this->host->validDay($body['date'] ?? ''),
+                    (float) ($body['amount'] ?? 0),
+                    (string) ($body['note'] ?? ''),
+                    $userId
+                );
+                $this->host->respond(true, 'ok', $savedMomo);
                 break;
             case 'bill_ops.outstanding_list':
                 $params = $this->host->readRequestParams($method);
