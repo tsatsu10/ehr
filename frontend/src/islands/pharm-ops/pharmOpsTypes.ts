@@ -92,6 +92,7 @@ export interface PharmTransactionLedger {
   type: string;
   offset: number;
   has_more: boolean;
+  currency_symbol?: string;
   generated_at: string;
   items: PharmTransactionRow[];
 }

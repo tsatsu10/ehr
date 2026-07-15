@@ -86,4 +86,15 @@ describe('PharmOpsTransactionsReport', () => {
 
     expect(await screen.findByText('No transactions')).toBeInTheDocument();
   });
+
+  it('surfaces load errors', async () => {
+    mockFetch.mockRejectedValue(new Error('boom'));
+
+    render(<PharmOpsTransactionsReport ajaxUrl="/mock/ajax" csrfToken="t" />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByText('boom')).toBeInTheDocument();
+  });
 });

@@ -97,8 +97,8 @@ export function PharmOpsActivityReport({ ajaxUrl, csrfToken, fallbackUrl }: Phar
           </div>
         </div>
       ) : (
-        <div className="nc-pharmops-reorder-table-wrap" style={{ overflowX: 'auto' }}>
-          <table className="nc-pharmops-reorder-table w-full">
+        <div className="nc-pharmops-report-table-wrap" style={{ overflowX: 'auto' }}>
+          <table className="nc-pharmops-report-table w-full">
             <thead>
               <tr>
                 <th style={LEFT}>Product</th>

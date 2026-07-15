@@ -52,4 +52,15 @@ describe('PharmOpsActivityReport', () => {
 
     expect(await screen.findByText('No stock movement')).toBeInTheDocument();
   });
+
+  it('surfaces load errors', async () => {
+    mockFetch.mockRejectedValue(new Error('boom'));
+
+    render(<PharmOpsActivityReport ajaxUrl="/mock/ajax" csrfToken="t" />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByText('boom')).toBeInTheDocument();
+  });
 });

@@ -92,12 +92,12 @@
 }
 
 /* Reorder report native table (Page 1) */
-.nc-pharmops-reorder-table {
+.nc-pharmops-report-table {
   border-collapse: collapse;
   font-size: 0.85rem;
 }
 
-.nc-pharmops-reorder-table th {
+.nc-pharmops-report-table th {
   padding: 0.4rem 0.6rem;
   border-bottom: 2px solid var(--oe-nc-border, #dee2e6);
   color: var(--oe-nc-text-muted, #6c757d);
@@ -105,13 +105,13 @@
   white-space: nowrap;
 }
 
-.nc-pharmops-reorder-table td {
+.nc-pharmops-report-table td {
   padding: 0.45rem 0.6rem;
   border-bottom: 1px solid var(--oe-nc-border, #edf0f2);
   color: var(--oe-nc-text, #1c2733);
 }
 
-.nc-pharmops-reorder-table tbody tr:hover {
+.nc-pharmops-report-table tbody tr:hover {
   background: var(--oe-nc-bg, #f4f6f8);
 }
 

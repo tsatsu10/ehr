@@ -2,8 +2,8 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 0.1.0 |
-| **Status** | Draft for build — per-page plan for the 6 "Advanced (core)" links in the Pharmacy Ops hub |
+| **Document version** | 0.1.1 |
+| **Status** | **Built** — all 4 report views native (reorder, destroyed, activity, transactions); add-drug + receive/destroy writes were already native |
 | **Parent spec** | [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](../done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (M13, v0.1.10) — this doc details the inventory/report surfaces that M13 §12/§15 name but leave as stock wraps |
 | **Companion to** | [NEW_CLINIC_V1_PRD.md](../done/NEW_CLINIC_V1_PRD.md), [gap analysis](./NEW_CLINIC_OPENEMR_GAP_ANALYSIS_AND_REDESIGN_PLAN.md) |
 | **Scope** | Native React replacements for the 6 stock pages behind **Pharmacy Ops → Advanced**: reorder report, inventory management, add drug, destroyed drugs, inventory activity, inventory transactions |
@@ -73,6 +73,25 @@ drugs×lots browser.
 **Revised build scope** = turn those 4 report embeds into native panes (Page 3 and
 the receive/destroy writes are done). Each native report view flips its
 `embedCatalog()` entry from `embed_url` (stock) to a native pane behind `enable_pharm_ops`.
+
+## 2c. Build status (2026-07-15) — DONE
+
+All four report views are built, tested (Vitest + PHPUnit crosscheck), and
+verified against live DB data. Each flips its `embedCatalog()` entry to
+`native: true`, keeps the stock page as a labelled fallback, and is a bounded
+`READONLY` read dispatched by report id in `PharmOpsReportsPane`.
+
+| View | Service method | Action | Commit |
+|------|----------------|--------|--------|
+| Reorder | `reorderReport()` | `pharm_ops.inventory.reorder` | `6a7c6e9e` |
+| Destroyed | `destroyedReport()` | `pharm_ops.inventory.destroyed` | `6a7c6e9e` |
+| Activity | `activityReport()` | `pharm_ops.inventory.activity` | `dc851ced` |
+| Transactions | `transactionLedger()` | `pharm_ops.inventory.transactions` | `52a4c172` |
+
+**Deferred by decision:** Inventory Activity ships a **movement summary**, not the
+back-derived start/end balance (the sign-sensitive accounting) — the stock report
+remains the labelled full-accounting fallback. A native **stock browser** (replacing
+the `drug_inventory.php` link) is the remaining optional surface.
 
 ## 3. Build order (lowest-risk, highest daily value first)
 
@@ -246,3 +265,4 @@ Notes. Filter by transaction type; CSV export.
 | Version | Date | Change |
 |---------|------|--------|
 | 0.1.0 | 2026-07-15 | Initial per-page plan for the 6 Pharmacy Advanced pages; extends M13. |
+| 0.1.1 | 2026-07-15 | All 4 report views built (reorder, destroyed, activity, transactions) + verified; §2c build-status table added. Activity ships a movement summary (start/end balance deferred by decision). |

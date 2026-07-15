@@ -33,6 +33,8 @@ class PharmOpsReportsService
 
     public function __construct(
         private readonly PharmOpsAccessService $access = new PharmOpsAccessService(),
+        private readonly MoneyFormatService $money = new MoneyFormatService(),
+        private readonly VisitScopeService $visitScope = new VisitScopeService(),
     ) {
     }
 
@@ -313,12 +315,15 @@ class PharmOpsReportsService
             ];
         }, $rows);
 
+        $currency = $this->money->getFormatPayload($this->visitScope->resolveDefaultFacilityId());
+
         return [
             'from' => $fromDate,
             'to' => $toDate,
             'type' => $type,
             'offset' => $offset,
             'has_more' => $hasMore,
+            'currency_symbol' => (string) (is_array($currency) ? ($currency['currency_symbol'] ?? '') : ''),
             'generated_at' => date('c'),
             'items' => $items,
         ];

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
+import { formatMoney } from '@core/formatMoney';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
@@ -48,6 +49,7 @@ export function PharmOpsTransactionsReport({ ajaxUrl, csrfToken, fallbackUrl }: 
   const [to, setTo] = useState<string>(() => todayIso());
   const [type, setType] = useState<string>('');
   const [rows, setRows] = useState<PharmTransactionRow[]>([]);
+  const [currencySymbol, setCurrencySymbol] = useState<string>('');
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -71,6 +73,7 @@ export function PharmOpsTransactionsReport({ ajaxUrl, csrfToken, fallbackUrl }: 
     try {
       const res = await fetchPage(0);
       setRows(res.items ?? []);
+      setCurrencySymbol(res.currency_symbol ?? '');
       setHasMore(!!res.has_more);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load transactions');
@@ -134,8 +137,8 @@ export function PharmOpsTransactionsReport({ ajaxUrl, csrfToken, fallbackUrl }: 
         </div>
       ) : (
         <>
-          <div className="nc-pharmops-reorder-table-wrap" style={{ overflowX: 'auto' }}>
-            <table className="nc-pharmops-reorder-table w-full">
+          <div className="nc-pharmops-report-table-wrap" style={{ overflowX: 'auto' }}>
+            <table className="nc-pharmops-report-table w-full">
               <thead>
                 <tr>
                   <th style={LEFT}>Date</th>
@@ -157,7 +160,9 @@ export function PharmOpsTransactionsReport({ ajaxUrl, csrfToken, fallbackUrl }: 
                     <td style={LEFT}>{row.lot_number || '—'}</td>
                     <td style={LEFT}>{row.who || '—'}</td>
                     <td style={RIGHT} className="tabular-nums">{row.quantity}</td>
-                    <td style={RIGHT} className="tabular-nums">{row.amount.toFixed(2)}</td>
+                    <td style={RIGHT} className="tabular-nums">
+                      {formatMoney(row.amount, { currency_symbol: currencySymbol })}
+                    </td>
                     <td style={LEFT}>{row.notes || '—'}</td>
                   </tr>
                 ))}
@@ -183,11 +188,11 @@ export function PharmOpsTransactionsReport({ ajaxUrl, csrfToken, fallbackUrl }: 
 
       {fallbackUrl ? (
         <p className="mt-3 mb-0 text-sm text-(--oe-nc-text-muted)">
-          Amounts are unformatted;{' '}
+          Need the full accounting view?{' '}
           <a href={fallbackUrl} target="_blank" rel="noopener noreferrer" className="underline">
             open the stock report
-          </a>{' '}
-          for the full accounting view.
+          </a>
+          .
         </p>
       ) : null}
     </div>
