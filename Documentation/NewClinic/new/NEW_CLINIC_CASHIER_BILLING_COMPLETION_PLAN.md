@@ -1,7 +1,7 @@
 # New Clinic — Cashier Billing Completion Plan (CBILL-*)
 
-**Version:** v0.1.1
-**Status:** CBILL-1 **built** (Eng, behind `pharmacy_auto_bill_on_dispense` default OFF; live end-to-end payment smoke with the flag ON still pending); CBILL-2 and CBILL-3 scoped (CBILL-3 gated on a PRD amendment)
+**Version:** v0.1.2
+**Status:** CBILL-1 **built + live-smoke validated** (Eng, behind `pharmacy_auto_bill_on_dispense` default OFF); CBILL-2 and CBILL-3 scoped (CBILL-3 gated on a PRD amendment)
 **Owner:** Engineering
 **Related:** M5 Cashier · M13 Pharmacy Ops · M14 Billing Back Office (V1.2-BILL) ·
 [PRD](../done/NEW_CLINIC_V1_PRD.md) · [Pharmacy Ops Redesign](../done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md)
@@ -233,3 +233,4 @@ annual-limit tracking (likely out of V1).
 |---------|------|--------|--------|
 | v0.1.0 | 2026-07-15 | Engineering | Initial plan: 3-slice cashier billing roadmap; CBILL-1 (pharmacy charges) full spec; CBILL-2/CBILL-3 scoped; CBILL-3 gated on PRD amendment; Ghana insurance research captured. |
 | v0.1.1 | 2026-07-15 | Engineering | CBILL-1 built: flag `pharmacy_auto_bill_on_dispense` (install.sql + admin), `CashierService` drug-charge read/fold/mark-billed across queue/select/pay, `DrugChargesTable` + Medicines section, tests. Verified: PHP verify PASS, 711 vitest pass, `npm run check` green, live SQL schema smoke PASS. Pending: live e2e payment run with flag ON. |
+| v0.1.2 | 2026-07-15 | Engineering | CBILL-1 live-smoke validated on the dev DB (seeded medicine on a real `ready_for_payment` visit, drove the real `CashierService`): `selectVisit` surfaces the medicine + folds it into `charges_total`; `getCashierQueue` card total includes it; `markDrugSalesBilled` flips `billed=1` + stamps `bill_date` — all PASS on live data, seed cleaned up, flag restored OFF, no collateral changes. Flag-OFF path covered by unit test (in-process config cache makes it untestable in one CLI run). Full `recordPayment` transition/AR-post is unchanged pre-existing code; its two new pieces (drug total fold, mark-billed) are the live-validated ones. Committed `643d9cb2`. |
