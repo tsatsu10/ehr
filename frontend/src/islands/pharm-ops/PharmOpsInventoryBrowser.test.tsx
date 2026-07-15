@@ -203,13 +203,15 @@ describe('PharmOpsInventoryBrowser', () => {
     expect(lastCall[1].params.search).toBe('');
   });
 
-  it('pages with Load more', async () => {
+  it('pages through inventory with Prev/Next, replacing the page rather than appending', async () => {
     mockFetch
-      .mockResolvedValueOnce({ offset: 0, has_more: true, summary, generated_at: '', items: [lot(1)] })
+      .mockResolvedValueOnce({ offset: 0, has_more: true, total: 51, summary, currency_symbol: 'GH₵', generated_at: '', items: [lot(1)] })
       .mockResolvedValueOnce({
-        offset: 1,
+        offset: 50,
         has_more: false,
+        total: null,
         summary: null,
+        currency_symbol: 'GH₵',
         generated_at: '',
         items: [lot(2, { lot_number: 'LOT-NEXT' })],
       });
@@ -219,12 +221,39 @@ describe('PharmOpsInventoryBrowser', () => {
       await Promise.resolve();
     });
 
+    await expandDrug();
+    expect(screen.getByText('LOT-1')).toBeInTheDocument();
+
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Load more/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Next' }));
     });
 
-    await expandDrug();
+    const lastCall = mockFetch.mock.calls[mockFetch.mock.calls.length - 1];
+    expect(lastCall[1].params.offset).toBe(50);
+
+    // Real pagination replaces the visible rows — page 1's lot is gone once page 2 loads.
     expect(await screen.findByText('LOT-NEXT')).toBeInTheDocument();
+    expect(screen.queryByText('LOT-1')).toBeNull();
+  });
+
+  it('resets to page 1 when a filter changes while on a later page', async () => {
+    mockFetch.mockResolvedValue({ offset: 0, has_more: false, total: 51, summary, currency_symbol: 'GH₵', generated_at: '', items: [lot(1)] });
+
+    render(<PharmOpsInventoryBrowser ajaxUrl="/mock/ajax" csrfToken="t" />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Search'), { target: { value: 'amoxicillin' } });
+    });
+
+    const lastCall = mockFetch.mock.calls[mockFetch.mock.calls.length - 1];
+    expect(lastCall[1].params.offset).toBe(0);
+    expect(lastCall[1].params.search).toBe('amoxicillin');
   });
 
   it('adjusts a lot via the Adjust action when the user can receive', async () => {

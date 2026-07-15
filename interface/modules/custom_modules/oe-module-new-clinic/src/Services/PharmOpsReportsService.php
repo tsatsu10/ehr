@@ -673,9 +673,21 @@ class PharmOpsReportsService
 
         $currency = $this->money->getFormatPayload($this->visitScope->resolveDefaultFacilityId());
 
+        // Total row count for page-number pagination — only computed on the first page (same
+        // cost-saving pattern as the summary below); the frontend caches it across page changes.
+        $total = null;
+        if ($offset === 0) {
+            $totalRow = QueryUtils::querySingleRow(
+                "SELECT COUNT(*) AS total FROM drug_inventory di INNER JOIN drugs d ON d.drug_id = di.drug_id WHERE {$where}",
+                $binds
+            );
+            $total = (int) ($totalRow['total'] ?? 0);
+        }
+
         return [
             'offset' => $offset,
             'has_more' => $hasMore,
+            'total' => $total,
             // Only compute the stockroom-health summary on the first page.
             'summary' => $offset === 0 ? $this->stockSummary() : null,
             'currency_symbol' => (string) (is_array($currency) ? ($currency['currency_symbol'] ?? '') : ''),

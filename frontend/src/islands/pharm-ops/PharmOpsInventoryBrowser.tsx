@@ -17,6 +17,7 @@ import { formatMoney } from '@core/formatMoney';
 import { ConfirmModal } from '@components/ConfirmModal';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { showDeskToast } from '@components/deskToast';
+import { PaginationBar } from '@components/PaginationBar';
 import { StatCard } from '@components/StatCard';
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
@@ -26,6 +27,8 @@ import { NativeSelect } from '@components/ui/native-select';
 import type { PharmStockBrowser, PharmStockRow, PharmStockSummary } from './pharmOpsTypes';
 
 const STAT_ICON_SIZE = 18;
+// Must match PharmOpsReportsService::INVENTORY_PAGE_SIZE.
+const PAGE_SIZE = 50;
 
 // A count that swings on-hand by this many units, or by at least half the
 // current on-hand, is treated as "large" and asks for a second confirmation —
@@ -326,9 +329,9 @@ export function PharmOpsInventoryBrowser({
   const [rows, setRows] = useState<PharmStockRow[]>([]);
   const [summary, setSummary] = useState<PharmStockSummary | null>(null);
   const [currencySymbol, setCurrencySymbol] = useState('');
-  const [hasMore, setHasMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Inline single-lot adjust.
@@ -371,6 +374,7 @@ export function PharmOpsInventoryBrowser({
   const handleExpiryFilter = useCallback((value: string) => {
     setExpiry(value);
     setSearch('');
+    setPage(1);
   }, []);
 
   const groups = useMemo(() => groupLots(rows), [rows]);
@@ -391,20 +395,20 @@ export function PharmOpsInventoryBrowser({
     setError(null);
     setAdjustId(null);
     try {
-      const res = await fetchPage(0);
+      const res = await fetchPage((page - 1) * PAGE_SIZE);
       setRows(res.items ?? []);
-      setSummary(res.summary ?? null);
+      // summary/total are only sent on the first page — keep whatever we already have
+      // rather than blanking the KPI grid every time the user pages forward.
+      if (res.summary != null) setSummary(res.summary);
+      if (res.total != null) setTotal(res.total);
       setCurrencySymbol(res.currency_symbol ?? '');
-      setHasMore(!!res.has_more);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load inventory');
       setRows([]);
-      setSummary(null);
-      setHasMore(false);
     } finally {
       setLoading(false);
     }
-  }, [fetchPage]);
+  }, [fetchPage, page]);
 
   useEffect(() => {
     void load();
@@ -418,19 +422,6 @@ export function PharmOpsInventoryBrowser({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshToken]);
-
-  const loadMore = useCallback(async () => {
-    setLoadingMore(true);
-    try {
-      const res = await fetchPage(rows.length);
-      setRows((prev) => [...prev, ...(res.items ?? [])]);
-      setHasMore(!!res.has_more);
-    } catch {
-      /* keep what we have */
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [fetchPage, rows.length]);
 
   const openAdjust = useCallback((row: PharmStockRow) => {
     setAdjustId(row.inventory_id);
@@ -581,19 +572,37 @@ export function PharmOpsInventoryBrowser({
             className="h-8 w-auto"
             placeholder="Drug name"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
           />
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-sm text-(--oe-nc-text-muted)" htmlFor="nc-inv-expiry">Expiry</label>
-          <NativeSelect id="nc-inv-expiry" className="h-8 w-auto" value={expiry} onChange={(e) => setExpiry(e.target.value)}>
+          <NativeSelect
+            id="nc-inv-expiry"
+            className="h-8 w-auto"
+            value={expiry}
+            onChange={(e) => {
+              setExpiry(e.target.value);
+              setPage(1);
+            }}
+          >
             {EXPIRY_FILTERS.map((f) => (
               <option key={f.value} value={f.value}>{f.label}</option>
             ))}
           </NativeSelect>
         </div>
         <label className="flex items-center gap-2 text-sm text-(--oe-nc-text-muted)">
-          <input type="checkbox" checked={showEmpty} onChange={(e) => setShowEmpty(e.target.checked)} />
+          <input
+            type="checkbox"
+            checked={showEmpty}
+            onChange={(e) => {
+              setShowEmpty(e.target.checked);
+              setPage(1);
+            }}
+          />
           Show empty lots
         </label>
       </div>
@@ -854,20 +863,13 @@ export function PharmOpsInventoryBrowser({
               </tbody>
             </table>
           </div>
-          {hasMore ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-3"
-              disabled={loadingMore}
-              onClick={() => {
-                void loadMore();
-              }}
-            >
-              {loadingMore ? 'Loading…' : 'Load more'}
-            </Button>
-          ) : null}
+          <PaginationBar
+            id="nc-pharmops-inv-pagination"
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={total}
+            onPageChange={setPage}
+          />
         </>
       )}
 

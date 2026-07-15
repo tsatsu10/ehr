@@ -38,6 +38,8 @@ export interface PharmStockSummary {
 export interface PharmStockBrowser {
   offset: number;
   has_more: boolean;
+  /** Total matching lot count — only sent on the first page (offset 0); cache it across pages. */
+  total?: number | null;
   summary: PharmStockSummary | null;
   currency_symbol?: string;
   generated_at: string;
