@@ -72,4 +72,28 @@ class LabOpsResultServiceTest extends TestCase
 
         $this->makeService()->releaseReport(0, 7);
     }
+
+    public function testAmendRequiresReleaseAccess(): void
+    {
+        $access = $this->createMock(LabOpsAccessService::class);
+        $access->method('assertReleaseAccess')
+            ->willThrowException(new \RuntimeException('Forbidden', 403));
+
+        try {
+            $this->makeService($access)->amendReleasedOrder(1, 'typo', 7);
+            $this->fail('Expected RuntimeException');
+        } catch (\RuntimeException $e) {
+            $this->assertSame(403, $e->getCode());
+        }
+    }
+
+    public function testAmendRequiresAReason(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('An amendment reason is required');
+
+        // Release access is permitted by the default mock; the empty reason is rejected
+        // before any database work.
+        $this->makeService()->amendReleasedOrder(5, '   ', 7);
+    }
 }

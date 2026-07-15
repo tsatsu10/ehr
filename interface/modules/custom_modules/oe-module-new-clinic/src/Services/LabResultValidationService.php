@@ -15,11 +15,20 @@ use OpenEMR\Common\Database\QueryUtils;
 
 class LabResultValidationService
 {
+    /** Lazily constructed so pure unit tests (no DB) and the no-override path stay cheap. */
+    private ?LabQcRuleService $qcRules = null;
+
     /**
      * OPD starter panel QC — keyed by procedure / result code (uppercase).
      *
      * @var array<string, array<string, mixed>>
      */
+    // crit_min/crit_max are panic values (SLIPTA/ISO 15189 critical-value indicator): beyond the
+    // reference range (warn_*) but still a valid result — flagged loudly and audited on release,
+    // never blocked. The top-level warn_*/crit_* are broad adult values used when age/sex is
+    // unknown; `variants` narrow the range for a known paediatric age band or adult sex (D-LAB-AGE,
+    // resolved by applyAgeSexVariant, most-specific first). Starter clinical defaults — reviewable,
+    // and made admin-editable by a later task.
     private const TEST_RULES = [
         'HB' => [
             'type' => 'numeric',
@@ -28,8 +37,16 @@ class LabResultValidationService
             'max' => 25.0,
             'warn_min' => 7.0,
             'warn_max' => 18.0,
+            'crit_min' => 5.0,
+            'crit_max' => 20.0,
             'units' => 'g/dL',
             'reference_range' => '7–18',
+            'variants' => [
+                ['max_age' => 1, 'warn_min' => 9.5, 'warn_max' => 14.0, 'crit_min' => 7.0, 'crit_max' => 22.0, 'reference_range' => '9.5–14 (infant)'],
+                ['max_age' => 12, 'warn_min' => 10.5, 'warn_max' => 15.5, 'reference_range' => '10.5–15.5 (child)'],
+                ['sex' => 'female', 'warn_min' => 12.0, 'warn_max' => 16.0, 'reference_range' => '12–16 (adult female)'],
+                ['sex' => 'male', 'warn_min' => 13.0, 'warn_max' => 17.0, 'reference_range' => '13–17 (adult male)'],
+            ],
         ],
         'HGB' => [
             'type' => 'numeric',
@@ -38,8 +55,16 @@ class LabResultValidationService
             'max' => 25.0,
             'warn_min' => 7.0,
             'warn_max' => 18.0,
+            'crit_min' => 5.0,
+            'crit_max' => 20.0,
             'units' => 'g/dL',
             'reference_range' => '7–18',
+            'variants' => [
+                ['max_age' => 1, 'warn_min' => 9.5, 'warn_max' => 14.0, 'crit_min' => 7.0, 'crit_max' => 22.0, 'reference_range' => '9.5–14 (infant)'],
+                ['max_age' => 12, 'warn_min' => 10.5, 'warn_max' => 15.5, 'reference_range' => '10.5–15.5 (child)'],
+                ['sex' => 'female', 'warn_min' => 12.0, 'warn_max' => 16.0, 'reference_range' => '12–16 (adult female)'],
+                ['sex' => 'male', 'warn_min' => 13.0, 'warn_max' => 17.0, 'reference_range' => '13–17 (adult male)'],
+            ],
         ],
         'GLU_F' => [
             'type' => 'numeric',
@@ -48,6 +73,8 @@ class LabResultValidationService
             'max' => 600.0,
             'warn_min' => 70.0,
             'warn_max' => 110.0,
+            'crit_min' => 40.0,
+            'crit_max' => 500.0,
             'units' => 'mg/dL',
             'reference_range' => '70–110',
         ],
@@ -58,8 +85,14 @@ class LabResultValidationService
             'max' => 50.0,
             'warn_min' => 4.0,
             'warn_max' => 11.0,
+            'crit_min' => 1.5,
+            'crit_max' => 30.0,
             'units' => '10³/µL',
             'reference_range' => '4–11',
+            'variants' => [
+                ['max_age' => 1, 'warn_min' => 6.0, 'warn_max' => 17.5, 'reference_range' => '6–17.5 (infant)'],
+                ['max_age' => 12, 'warn_min' => 5.0, 'warn_max' => 15.0, 'reference_range' => '5–15 (child)'],
+            ],
         ],
         'HCT' => [
             'type' => 'numeric',
@@ -68,8 +101,16 @@ class LabResultValidationService
             'max' => 70.0,
             'warn_min' => 36.0,
             'warn_max' => 48.0,
+            'crit_min' => 20.0,
+            'crit_max' => 60.0,
             'units' => '%',
             'reference_range' => '36–48',
+            'variants' => [
+                ['max_age' => 1, 'warn_min' => 28.0, 'warn_max' => 42.0, 'reference_range' => '28–42 (infant)'],
+                ['max_age' => 12, 'warn_min' => 34.0, 'warn_max' => 46.0, 'reference_range' => '34–46 (child)'],
+                ['sex' => 'female', 'warn_min' => 36.0, 'warn_max' => 46.0, 'reference_range' => '36–46 (adult female)'],
+                ['sex' => 'male', 'warn_min' => 40.0, 'warn_max' => 52.0, 'reference_range' => '40–52 (adult male)'],
+            ],
         ],
         'PLT' => [
             'type' => 'numeric',
@@ -78,6 +119,8 @@ class LabResultValidationService
             'max' => 1000.0,
             'warn_min' => 150.0,
             'warn_max' => 400.0,
+            'crit_min' => 20.0,
+            'crit_max' => 900.0,
             'units' => '10³/µL',
             'reference_range' => '150–400',
         ],
@@ -110,7 +153,7 @@ class LabResultValidationService
      * @param array<int, array<string, mixed>> $lines
      * @return array<string, mixed>
      */
-    public function getFormRulesForLines(array $lines): array
+    public function getFormRulesForLines(array $lines, ?int $ageYears = null, string $sex = ''): array
     {
         $bySeq = [];
         foreach ($lines as $line) {
@@ -119,7 +162,7 @@ class LabResultValidationService
                 continue;
             }
             $code = (string) ($line['procedure_code'] ?? '');
-            $rule = $this->resolveRule($code);
+            $rule = $this->resolveRule($code, $ageYears, $sex);
             $bySeq[(string) $seq] = array_merge($rule, [
                 'procedure_code' => $code,
                 'procedure_name' => (string) ($line['procedure_name'] ?? ''),
@@ -139,17 +182,21 @@ class LabResultValidationService
      * @return array{
      *   errors: array<int, string>,
      *   warnings: array<int, string>,
+     *   criticals: array<int, string>,
      *   field_errors: array<string, string>,
      *   field_warnings: array<string, string>,
+     *   field_criticals: array<string, string>,
      *   normalized_lines: array<int, array<string, mixed>>
      * }
      */
-    public function validateSave(array $orderLines, array $payloadLines, bool $draft): array
+    public function validateSave(array $orderLines, array $payloadLines, bool $draft, ?int $ageYears = null, string $sex = ''): array
     {
         $errors = [];
         $warnings = [];
+        $criticals = [];
         $fieldErrors = [];
         $fieldWarnings = [];
+        $fieldCriticals = [];
         $payloadBySeq = $this->indexPayloadLines($payloadLines);
         $normalized = [];
 
@@ -161,7 +208,7 @@ class LabResultValidationService
 
             $code = (string) ($orderLine['procedure_code'] ?? '');
             $label = (string) ($orderLine['procedure_name'] ?? $code ?: 'Test');
-            $rule = $this->resolveRule($code);
+            $rule = $this->resolveRule($code, $ageYears, $sex);
             $payloadLine = $payloadBySeq[$seq] ?? [];
             $resultPayload = $this->firstResultPayload($payloadLine);
             $value = trim((string) ($resultPayload['result'] ?? ''));
@@ -186,6 +233,10 @@ class LabResultValidationService
                 $warnings[] = $check['warning'];
                 $fieldWarnings[$fieldKey] = $check['warning'];
             }
+            if (($check['critical'] ?? null) !== null) {
+                $criticals[] = $check['critical'];
+                $fieldCriticals[$fieldKey] = $check['critical'];
+            }
 
             $normalizedResult = $resultPayload;
             $normalizedResult['result'] = $check['normalized_value'] ?? $value;
@@ -209,20 +260,23 @@ class LabResultValidationService
         return [
             'errors' => $errors,
             'warnings' => array_values(array_unique($warnings)),
+            'criticals' => array_values(array_unique($criticals)),
             'field_errors' => $fieldErrors,
             'field_warnings' => $fieldWarnings,
+            'field_criticals' => $fieldCriticals,
             'normalized_lines' => $normalized,
         ];
     }
 
     /**
      * @param array<int, array<string, mixed>> $orderLines
-     * @return array{errors: array<int, string>, warnings: array<int, string>}
+     * @return array{errors: array<int, string>, warnings: array<int, string>, criticals: array<int, string>}
      */
-    public function validateForRelease(array $orderLines): array
+    public function validateForRelease(array $orderLines, ?int $ageYears = null, string $sex = ''): array
     {
         $errors = [];
         $warnings = [];
+        $criticals = [];
 
         foreach ($orderLines as $orderLine) {
             $seq = (int) ($orderLine['procedure_order_seq'] ?? 0);
@@ -232,7 +286,7 @@ class LabResultValidationService
 
             $code = (string) ($orderLine['procedure_code'] ?? '');
             $label = (string) ($orderLine['procedure_name'] ?? $code ?: 'Test');
-            $rule = $this->resolveRule($code);
+            $rule = $this->resolveRule($code, $ageYears, $sex);
             $result = $this->firstResultFromLine($orderLine);
             $value = trim((string) ($result['result'] ?? ''));
 
@@ -248,11 +302,15 @@ class LabResultValidationService
             if ($check['warning'] !== null) {
                 $warnings[] = $check['warning'];
             }
+            if (($check['critical'] ?? null) !== null) {
+                $criticals[] = $check['critical'];
+            }
         }
 
         return [
             'errors' => $errors,
             'warnings' => array_values(array_unique($warnings)),
+            'criticals' => array_values(array_unique($criticals)),
         ];
     }
 
@@ -277,16 +335,20 @@ class LabResultValidationService
     /**
      * @return array<string, mixed>
      */
-    public function resolveRule(string $procedureCode): array
+    public function resolveRule(string $procedureCode, ?int $ageYears = null, string $sex = ''): array
     {
         $key = strtoupper(trim($procedureCode));
         if ($key !== '' && isset(self::TEST_RULES[$key])) {
-            return self::TEST_RULES[$key];
+            $resolved = $this->applyAgeSexVariant(self::TEST_RULES[$key], $ageYears, $sex);
+
+            // Admin QC overrides (D-LAB-QC) win over the built-in default so clinics can tune
+            // ranges without a code change.
+            return $this->qcRules()->applyOverride($key, $resolved);
         }
 
         $catalog = $this->lookupCatalogRule($procedureCode);
         if ($catalog !== null) {
-            return $catalog;
+            return $this->qcRules()->applyOverride($key, $catalog);
         }
 
         return [
@@ -294,6 +356,80 @@ class LabResultValidationService
             'label' => $procedureCode !== '' ? $procedureCode : 'Result',
             'min_length' => 1,
         ];
+    }
+
+    private function qcRules(): LabQcRuleService
+    {
+        return $this->qcRules ??= new LabQcRuleService();
+    }
+
+    /**
+     * Built-in numeric defaults exposed for the admin QC editor (D-LAB-QC), keyed by code.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function numericDefaults(): array
+    {
+        $out = [];
+        foreach (self::TEST_RULES as $code => $rule) {
+            if (($rule['type'] ?? '') !== 'numeric') {
+                continue;
+            }
+            $out[$code] = [
+                'label' => $rule['label'] ?? $code,
+                'units' => $rule['units'] ?? '',
+                'warn_min' => $rule['warn_min'] ?? null,
+                'warn_max' => $rule['warn_max'] ?? null,
+                'crit_min' => $rule['crit_min'] ?? null,
+                'crit_max' => $rule['crit_max'] ?? null,
+                'reference_range' => $rule['reference_range'] ?? '',
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Apply the first matching age/sex variant onto a base rule (D-LAB-AGE).
+     *
+     * Variants live under the rule's `variants` key, ordered most-specific first
+     * (paediatric age bands before adult sex bands). A variant matches when its
+     * `max_age` covers the patient age (age must be known) and/or its `sex` equals
+     * the patient sex. The first match's thresholds override the base; if none match
+     * (e.g. age/sex unknown, or adult male) the broad base range is used unchanged.
+     *
+     * @param array<string, mixed> $rule
+     * @return array<string, mixed>
+     */
+    private function applyAgeSexVariant(array $rule, ?int $ageYears, string $sex): array
+    {
+        $variants = $rule['variants'] ?? [];
+        unset($rule['variants']);
+        if (!is_array($variants) || $variants === []) {
+            return $rule;
+        }
+
+        $sex = strtolower(trim($sex));
+        foreach ($variants as $variant) {
+            if (!is_array($variant)) {
+                continue;
+            }
+            $maxAge = array_key_exists('max_age', $variant) ? (int) $variant['max_age'] : null;
+            $wantSex = isset($variant['sex']) ? strtolower((string) $variant['sex']) : null;
+
+            $ageOk = $maxAge === null || ($ageYears !== null && $ageYears <= $maxAge);
+            $sexOk = $wantSex === null || $wantSex === $sex;
+
+            // A variant with no condition is ignored; require at least one match key.
+            if (($maxAge !== null || $wantSex !== null) && $ageOk && $sexOk) {
+                $overrides = $variant;
+                unset($overrides['max_age'], $overrides['sex']);
+
+                return array_merge($rule, $overrides);
+            }
+        }
+
+        return $rule;
     }
 
     public function suggestAbnormal(string $procedureCode, string $value): ?string
@@ -315,7 +451,7 @@ class LabResultValidationService
 
     /**
      * @param array<string, mixed> $rule
-     * @return array{error: ?string, warning: ?string, suggested_abnormal: ?string, normalized_value: ?string}
+     * @return array{error: ?string, warning: ?string, critical: ?string, suggested_abnormal: ?string, normalized_value: ?string}
      */
     private function evaluateValue(string $procedureCode, string $value, array $rule, string $label): array
     {
@@ -327,6 +463,7 @@ class LabResultValidationService
                 return [
                     'error' => $label . ' must be numeric',
                     'warning' => null,
+                    'critical' => null,
                     'suggested_abnormal' => null,
                     'normalized_value' => null,
                 ];
@@ -339,6 +476,7 @@ class LabResultValidationService
                 return [
                     'error' => $label . " must be between {$min} and {$max}",
                     'warning' => null,
+                    'critical' => null,
                     'suggested_abnormal' => null,
                     'normalized_value' => (string) $num,
                 ];
@@ -358,9 +496,21 @@ class LabResultValidationService
                 }
             }
 
+            // Critical / panic value — worse than a reference-range warning, but still a valid
+            // result. Loud + audited, never blocked (SLIPTA critical-value indicator).
+            $critical = null;
+            if (isset($rule['crit_min']) && $num < (float) $rule['crit_min']) {
+                $critical = $label . ' critically LOW (' . $num . ' ' . ($rule['units'] ?? '') . ') — notify the clinician now';
+                $suggested = $suggested ?? 'low';
+            } elseif (isset($rule['crit_max']) && $num > (float) $rule['crit_max']) {
+                $critical = $label . ' critically HIGH (' . $num . ' ' . ($rule['units'] ?? '') . ') — notify the clinician now';
+                $suggested = $suggested ?? 'high';
+            }
+
             return [
                 'error' => null,
-                'warning' => $warning,
+                'warning' => $critical === null ? $warning : null,
+                'critical' => $critical,
                 'suggested_abnormal' => $suggested,
                 'normalized_value' => (string) $num,
             ];
@@ -373,20 +523,26 @@ class LabResultValidationService
                 return [
                     'error' => $label . ' must be one of: ' . implode(', ', $allowed),
                     'warning' => null,
+                    'critical' => null,
                     'suggested_abnormal' => null,
                     'normalized_value' => null,
                 ];
             }
 
             $abnormalValues = array_map('strtolower', $rule['abnormal_values'] ?? []);
+            $criticalValues = array_map('strtolower', $rule['critical_values'] ?? []);
             $suggested = in_array($normalized, $abnormalValues, true)
                 ? (string) ($rule['abnormal_flag'] ?? 'yes')
+                : null;
+            $critical = in_array($normalized, $criticalValues, true)
+                ? $label . ' is ' . $normalized . ' (critical) — notify the clinician now'
                 : null;
 
             return [
                 'error' => null,
-                'warning' => $suggested !== null ? $label . ' is positive — review before release' : null,
-                'suggested_abnormal' => $suggested,
+                'warning' => ($critical === null && $suggested !== null) ? $label . ' is positive — review before release' : null,
+                'critical' => $critical,
+                'suggested_abnormal' => $suggested ?? ($critical !== null ? (string) ($rule['abnormal_flag'] ?? 'yes') : null),
                 'normalized_value' => $normalized,
             ];
         }
@@ -396,6 +552,7 @@ class LabResultValidationService
             return [
                 'error' => $label . ' result is required',
                 'warning' => null,
+                'critical' => null,
                 'suggested_abnormal' => null,
                 'normalized_value' => null,
             ];
@@ -416,6 +573,7 @@ class LabResultValidationService
         return [
             'error' => null,
             'warning' => $warning,
+            'critical' => null,
             'suggested_abnormal' => null,
             'normalized_value' => $trimmed,
         ];

@@ -30,14 +30,56 @@ export interface WorklistRow {
   ordered_display?: string;
   is_urgent?: boolean;
   collected?: boolean;
+  review_status?: string;
+  /** D-LAB-REJECT — specimen was rejected and must be re-collected. */
+  rejected?: boolean;
+  rejection_reason?: string;
+  /** D-LAB-TAT — turnaround-time label (e.g. "TAT 2h 15m", "In lab 30m", "Waiting 3h"). */
+  tat_label?: string;
   can_open_lab_desk?: boolean;
   lab_desk_url?: string;
   requisition_url?: string;
 }
 
+export interface RejectionReasonOption {
+  id: string;
+  label: string;
+}
+
+/** D-LAB-QC — one tunable test in the admin reference-range editor. */
+export interface QcRangeValues {
+  warn_min?: number | null;
+  warn_max?: number | null;
+  crit_min?: number | null;
+  crit_max?: number | null;
+  reference_range?: string;
+}
+
+export interface QcRuleEditorRow {
+  procedure_code: string;
+  label: string;
+  units: string;
+  default: QcRangeValues;
+  override: QcRangeValues | null;
+  has_override: boolean;
+}
+
+/** D-LAB-TAT — day-level SLIPTA indicators shown on the worklist header. */
+export interface WorklistSummary {
+  total_orders: number;
+  released: number;
+  rejections: number;
+  rejection_rate_pct: number;
+  median_tat_minutes?: number | null;
+  median_tat_label?: string | null;
+}
+
 export interface WorklistData {
   rows: WorklistRow[];
   counts: WorklistCounts;
+  summary?: WorklistSummary;
+  rejection_reasons?: RejectionReasonOption[];
+  can_enter?: boolean;
   last_updated?: string;
 }
 
@@ -97,6 +139,10 @@ export interface ValidationRules {
     max?: number;
     warn_min?: number;
     warn_max?: number;
+    // Critical / panic thresholds (SLIPTA critical-value indicator).
+    crit_min?: number;
+    crit_max?: number;
+    critical_values?: string[];
     min_length?: number;
     allowed?: string[];
     abnormal_values?: string[];
@@ -113,6 +159,8 @@ export interface ResultEntryForm {
   lines?: ResultLine[];
   validation?: ValidationRules;
   has_saved_results?: boolean;
+  /** D-LAB-AMEND — reports already released; re-editing is a reason-gated correction. */
+  already_released?: boolean;
   edit_order_url?: string;
 }
 

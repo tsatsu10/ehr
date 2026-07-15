@@ -47,10 +47,11 @@ class LabOpsResultService
         $editOrderUrl = null;
         if ($lines === [] && $encounterId > 0) {
             try {
-                $editOrderUrl = $this->procedureOrderLinks->buildEditOrderUrl(
+                $editOrderUrl = $this->procedureOrderLinks->buildEditOrderUrlPreferNative(
                     $pid,
                     $encounterId,
                     $procedureOrderId,
+                    'labops',
                     $this->procedureOrderLinks->buildLabOpsReturnUrl()
                 );
             } catch (\InvalidArgumentException) {
@@ -65,9 +66,15 @@ class LabOpsResultService
             'has_test_lines' => $lines !== [],
             'edit_order_url' => $editOrderUrl,
             'has_saved_results' => $hasSavedResults,
+            // Editing a released result is a correction (ISO 15189) — the UI gates it behind a reason.
+            'already_released' => $this->orderIsReleased($procedureOrderId),
             'can_enter' => $this->access->canEnterResults(),
             'can_release' => $this->access->canReleaseResults(),
-            'validation' => $this->resultValidation->getFormRulesForLines($lines),
+            'validation' => $this->resultValidation->getFormRulesForLines(
+                $lines,
+                $header['patient_age_years'] ?? null,
+                (string) ($header['patient_sex'] ?? '')
+            ),
             'encounter_results_ready' => $encounterId > 0
                 ? $this->labReadiness->isResultsReady($pid, $encounterId)
                 : false,
@@ -92,7 +99,13 @@ class LabOpsResultService
         }
 
         $orderLines = $this->loadOrderLines($procedureOrderId);
-        $validated = $this->resultValidation->validateSave($orderLines, $payloadLines, $draft);
+        $validated = $this->resultValidation->validateSave(
+            $orderLines,
+            $payloadLines,
+            $draft,
+            $header['patient_age_years'] ?? null,
+            (string) ($header['patient_sex'] ?? '')
+        );
         if (!empty($validated['errors'])) {
             throw new LabResultValidationException(
                 $validated['errors'],
@@ -111,7 +124,8 @@ class LabOpsResultService
             'lab_ops.result_saved',
             $actorUserId,
             1,
-            'procedure_order_id=' . $procedureOrderId . ' draft=' . ($draft ? '1' : '0')
+            'procedure_order_id=' . $procedureOrderId . ' draft=' . ($draft ? '1' : '0'),
+            $pid > 0 ? $pid : null
         );
 
         return [
@@ -126,7 +140,10 @@ class LabOpsResultService
     /**
      * @return array<string, mixed>
      */
-    public function releaseOrder(int $procedureOrderId, int $actorUserId): array
+    /**
+     * @param array<string, mixed>|null $notification critical-value read-back details captured at release
+     */
+    public function releaseOrder(int $procedureOrderId, int $actorUserId, ?array $notification = null): array
     {
         $this->access->assertReleaseAccess();
 
@@ -139,7 +156,11 @@ class LabOpsResultService
         $this->facilityScope->assertPatientAccessible($pid);
 
         $orderLines = $this->loadOrderLines($procedureOrderId);
-        $releaseCheck = $this->resultValidation->validateForRelease($orderLines);
+        $releaseCheck = $this->resultValidation->validateForRelease(
+            $orderLines,
+            $header['patient_age_years'] ?? null,
+            (string) ($header['patient_sex'] ?? '')
+        );
         if (!empty($releaseCheck['errors'])) {
             throw new LabResultValidationException($releaseCheck['errors']);
         }
@@ -153,8 +174,26 @@ class LabOpsResultService
             ['reviewed', $now, 'final', $procedureOrderId, 'reviewed']
         );
 
+        // If this release closes an open amendment, mark the reports corrected (ISO 15189).
+        $corrected = $this->closePendingAmendment($procedureOrderId, $now);
+
         $releasedReportIds = $this->loadReportIdsForOrder($procedureOrderId);
         $abnormal = $this->orderHasAbnormal($procedureOrderId);
+        $criticals = $releaseCheck['criticals'] ?? [];
+
+        // SLIPTA critical-value indicator — a released critical result must record who was notified
+        // and when (read-back). Critical never blocks release (the result is valid and urgent), so
+        // we still log a "pending" notification if the details were not captured, for follow-up.
+        $notificationRecord = null;
+        if (!empty($criticals)) {
+            $notificationRecord = $this->recordCriticalNotification(
+                $procedureOrderId,
+                $pid,
+                $criticals,
+                $notification,
+                $actorUserId
+            );
+        }
 
         EventAuditLogger::getInstance()->newEvent(
             'new_clinic',
@@ -164,6 +203,10 @@ class LabOpsResultService
             'procedure_order_id=' . $procedureOrderId
             . ' reports=' . implode(',', $releasedReportIds)
             . ' abnormal=' . ($abnormal ? '1' : '0')
+            . ' critical=' . (empty($criticals) ? '0' : ('1 [' . implode('; ', $criticals) . ']'))
+            . ' critical_notified=' . ($notificationRecord === null ? 'na' : ($notificationRecord['captured'] ? '1' : 'pending'))
+            . ' corrected=' . ($corrected ? '1' : '0'),
+            $pid > 0 ? $pid : null
         );
 
         $encounterId = (int) ($header['encounter_id'] ?? 0);
@@ -178,13 +221,64 @@ class LabOpsResultService
             'encounter_results_ready' => $encounterReady,
             'abnormal' => $abnormal,
             'qc_warnings' => $releaseCheck['warnings'],
+            'qc_criticals' => $criticals,
+            'critical_notification_captured' => $notificationRecord === null ? null : $notificationRecord['captured'],
+            'corrected' => $corrected,
         ];
+    }
+
+    /**
+     * Persist a critical-value notification for a released order (SLIPTA critical-value indicator).
+     * When the caller supplied read-back details the row is "captured"; otherwise it is logged as
+     * pending so an unnotified critical is still traceable for follow-up.
+     *
+     * @param array<int, string> $criticals
+     * @param array<string, mixed>|null $notification
+     * @return array{captured: bool}
+     */
+    private function recordCriticalNotification(
+        int $procedureOrderId,
+        int $pid,
+        array $criticals,
+        ?array $notification,
+        int $actorUserId
+    ): array {
+        $notifiedName = trim((string) ($notification['notified_name'] ?? ''));
+        $notifiedRole = trim((string) ($notification['notified_role'] ?? ''));
+        $method = trim((string) ($notification['method'] ?? ''));
+        $note = trim((string) ($notification['note'] ?? ''));
+        $readBack = !empty($notification['read_back_confirmed']) ? 1 : 0;
+        $captured = $notifiedName !== '';
+
+        QueryUtils::sqlInsert(
+            'INSERT INTO new_lab_critical_notification
+                (procedure_order_id, pid, criticals_summary, notified_name, notified_role, method,
+                 read_back_confirmed, note, notified_by, notified_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                $procedureOrderId,
+                $pid,
+                mb_substr(implode('; ', $criticals), 0, 1024),
+                $notifiedName !== '' ? mb_substr($notifiedName, 0, 128) : null,
+                $notifiedRole !== '' ? mb_substr($notifiedRole, 0, 64) : null,
+                $method !== '' ? mb_substr($method, 0, 32) : null,
+                $readBack,
+                $note !== '' ? mb_substr($note, 0, 255) : null,
+                $actorUserId > 0 ? $actorUserId : null,
+                date('Y-m-d H:i:s'),
+            ]
+        );
+
+        return ['captured' => $captured];
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function releaseReport(int $procedureReportId, int $actorUserId): array
+    /**
+     * @param array<string, mixed>|null $notification critical-value read-back details captured at release
+     */
+    public function releaseReport(int $procedureReportId, int $actorUserId, ?array $notification = null): array
     {
         $this->access->assertReleaseAccess();
 
@@ -204,10 +298,148 @@ class LabOpsResultService
             throw new \RuntimeException('Lab report not found', 404);
         }
 
-        $released = $this->releaseOrder((int) $report['procedure_order_id'], $actorUserId);
+        $released = $this->releaseOrder((int) $report['procedure_order_id'], $actorUserId, $notification);
         $released['procedure_report_id'] = $procedureReportId;
 
         return $released;
+    }
+
+    /**
+     * Begin an amendment of a released result (ISO 15189 corrected report, D-LAB-AMEND). Snapshots
+     * the current released values with the reason, then reopens the form for editing. The corrected
+     * result is marked on re-release. Amending needs release privilege.
+     *
+     * @return array<string, mixed>
+     */
+    public function amendReleasedOrder(int $procedureOrderId, string $reason, int $actorUserId): array
+    {
+        $this->access->assertReleaseAccess();
+
+        if ($procedureOrderId <= 0) {
+            throw new \InvalidArgumentException('Procedure order id is required');
+        }
+        $reason = trim($reason);
+        if ($reason === '') {
+            throw new \InvalidArgumentException('An amendment reason is required');
+        }
+
+        $header = $this->loadOrderHeader($procedureOrderId);
+        $pid = (int) ($header['patient_id'] ?? 0);
+        $this->facilityScope->assertPatientAccessible($pid);
+
+        if (!$this->orderIsReleased($procedureOrderId)) {
+            throw new \InvalidArgumentException('Only a released result can be amended');
+        }
+
+        // Keep one open amendment per correction cycle so re-opening the form doesn't stack rows.
+        if (!$this->hasPendingAmendment($procedureOrderId)) {
+            QueryUtils::sqlInsert(
+                'INSERT INTO new_lab_result_amendment
+                    (procedure_order_id, pid, reason, previous_values, amended_by, amended_at)
+                 VALUES (?, ?, ?, ?, ?, ?)',
+                [
+                    $procedureOrderId,
+                    $pid,
+                    mb_substr($reason, 0, 255),
+                    json_encode($this->snapshotResults($procedureOrderId)),
+                    $actorUserId > 0 ? $actorUserId : null,
+                    date('Y-m-d H:i:s'),
+                ]
+            );
+        }
+
+        EventAuditLogger::getInstance()->newEvent(
+            'new_clinic',
+            'lab_ops.result_amend_begin',
+            $actorUserId,
+            1,
+            'procedure_order_id=' . $procedureOrderId . ' reason=' . mb_substr($reason, 0, 200),
+            $pid > 0 ? $pid : null
+        );
+
+        return [
+            'procedure_order_id' => $procedureOrderId,
+            'amending' => true,
+            'reason' => $reason,
+        ];
+    }
+
+    private function orderIsReleased(int $procedureOrderId): bool
+    {
+        $row = QueryUtils::querySingleRow(
+            "SELECT COUNT(*) AS cnt FROM procedure_report
+             WHERE procedure_order_id = ? AND review_status = 'reviewed'",
+            [$procedureOrderId]
+        );
+
+        return is_array($row) && (int) ($row['cnt'] ?? 0) > 0;
+    }
+
+    private function hasPendingAmendment(int $procedureOrderId): bool
+    {
+        $row = QueryUtils::querySingleRow(
+            'SELECT COUNT(*) AS cnt FROM new_lab_result_amendment
+             WHERE procedure_order_id = ? AND released_at IS NULL',
+            [$procedureOrderId]
+        );
+
+        return is_array($row) && (int) ($row['cnt'] ?? 0) > 0;
+    }
+
+    /**
+     * Snapshot the current released result values, keyed by test line, for the amendment trail.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function snapshotResults(int $procedureOrderId): array
+    {
+        $rows = QueryUtils::fetchRecords(
+            'SELECT pc.procedure_order_seq, pc.procedure_code, pc.procedure_name,
+                    pres.result, pres.units, pres.abnormal, pres.comments
+             FROM procedure_order_code pc
+             LEFT JOIN procedure_report pr ON pr.procedure_order_id = pc.procedure_order_id
+                 AND pr.procedure_order_seq = pc.procedure_order_seq
+             LEFT JOIN procedure_result pres ON pres.procedure_report_id = pr.procedure_report_id
+             WHERE pc.procedure_order_id = ?
+             ORDER BY pc.procedure_order_seq ASC, pres.procedure_result_id ASC',
+            [$procedureOrderId]
+        ) ?: [];
+
+        return array_map(static function (array $row): array {
+            return [
+                'seq' => (int) ($row['procedure_order_seq'] ?? 0),
+                'code' => (string) ($row['procedure_code'] ?? ''),
+                'name' => (string) ($row['procedure_name'] ?? ''),
+                'result' => (string) ($row['result'] ?? ''),
+                'units' => (string) ($row['units'] ?? ''),
+                'abnormal' => (string) ($row['abnormal'] ?? ''),
+                'comments' => (string) ($row['comments'] ?? ''),
+            ];
+        }, $rows);
+    }
+
+    /**
+     * Close any pending amendment for the order once its corrected result is re-released: stamp the
+     * amendment row and mark the reports as corrected. Returns true when a correction was closed.
+     */
+    private function closePendingAmendment(int $procedureOrderId, string $now): bool
+    {
+        if (!$this->hasPendingAmendment($procedureOrderId)) {
+            return false;
+        }
+
+        QueryUtils::sqlStatementThrowException(
+            'UPDATE new_lab_result_amendment SET released_at = ?
+             WHERE procedure_order_id = ? AND released_at IS NULL',
+            [$now, $procedureOrderId]
+        );
+        QueryUtils::sqlStatementThrowException(
+            "UPDATE procedure_report SET report_status = 'corrected'
+             WHERE procedure_order_id = ?",
+            [$procedureOrderId]
+        );
+
+        return true;
     }
 
     /**
@@ -221,7 +453,7 @@ class LabOpsResultService
 
         $row = QueryUtils::querySingleRow(
             "SELECT po.procedure_order_id, po.patient_id, po.encounter_id, po.date_ordered, po.order_status,
-                    pd.fname, pd.lname, pd.pubpid,
+                    pd.fname, pd.lname, pd.pubpid, pd.DOB, pd.sex,
                     nv.id AS visit_id, nv.queue_number,
                     meta.collected_at, meta.accession_no
              FROM procedure_order po
@@ -248,7 +480,24 @@ class LabOpsResultService
             'order_status' => (string) ($row['order_status'] ?? ''),
             'collected_at' => $row['collected_at'] ?? null,
             'accession_no' => $row['accession_no'] ?? null,
+            // Patient context for age/sex-aware QC ranges (D-LAB-AGE).
+            'patient_age_years' => $this->ageYears((string) ($row['DOB'] ?? '')),
+            'patient_sex' => strtolower((string) ($row['sex'] ?? '')),
         ];
+    }
+
+    /** Whole years from a DOB (Y-m-d); null when unknown. */
+    private function ageYears(string $dob): ?int
+    {
+        $dob = trim($dob);
+        if ($dob === '' || str_starts_with($dob, '0000')) {
+            return null;
+        }
+        try {
+            return (new \DateTimeImmutable($dob))->diff(new \DateTimeImmutable('today'))->y;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**

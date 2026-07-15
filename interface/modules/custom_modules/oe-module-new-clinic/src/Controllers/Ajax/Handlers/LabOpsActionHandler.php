@@ -17,6 +17,8 @@ use OpenEMR\Modules\NewClinic\Services\LabOpsOrderMetaService;
 use OpenEMR\Modules\NewClinic\Services\LabOpsResultService;
 use OpenEMR\Modules\NewClinic\Services\LabOpsSetupService;
 use OpenEMR\Modules\NewClinic\Services\LabOpsWorklistService;
+use OpenEMR\Modules\NewClinic\Services\LabQcRuleService;
+use OpenEMR\Modules\NewClinic\Services\LabResultValidationService;
 
 final class LabOpsActionHandler implements AjaxActionHandlerInterface
 {
@@ -26,7 +28,9 @@ final class LabOpsActionHandler implements AjaxActionHandlerInterface
         'lab_ops.result_get',
         'lab_ops.result_save',
         'lab_ops.result_release',
+        'lab_ops.result_amend',
         'lab_ops.specimen_collect',
+        'lab_ops.specimen_reject',
         'lab_ops.setup_status',
         'lab_ops.setup_model',
         'lab_ops.provider_create',
@@ -35,6 +39,9 @@ final class LabOpsActionHandler implements AjaxActionHandlerInterface
         'lab_ops.fee_map_list',
         'lab_ops.fee_map_save',
         'lab_ops.mark_send_out',
+        'lab_ops.qc_rules_list',
+        'lab_ops.qc_rule_save',
+        'lab_ops.qc_rule_reset',
     ];
 
     public function __construct(
@@ -89,11 +96,32 @@ final class LabOpsActionHandler implements AjaxActionHandlerInterface
                 }
                 $body = $this->host->readJsonBody();
                 $this->host->verifyCsrf($body);
+                $notification = is_array($body['critical_notification'] ?? null)
+                    ? $body['critical_notification']
+                    : null;
                 $released = $this->host->svc(LabOpsResultService::class)->releaseReport(
                     (int) ($body['procedure_report_id'] ?? 0),
-                    $userId
+                    $userId,
+                    $notification
                 );
                 $this->host->respond(true, 'ok', $released);
+                break;
+            case 'lab_ops.result_amend':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                try {
+                    $amended = $this->host->svc(LabOpsResultService::class)->amendReleasedOrder(
+                        (int) ($body['procedure_order_id'] ?? 0),
+                        (string) ($body['reason'] ?? ''),
+                        $userId
+                    );
+                    $this->host->respond(true, 'Amendment started', $amended);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid'], 400);
+                }
                 break;
             case 'lab_ops.specimen_collect':
                 if ($method !== 'POST') {
@@ -107,6 +135,24 @@ final class LabOpsActionHandler implements AjaxActionHandlerInterface
                     $userId
                 );
                 $this->host->respond(true, 'ok', $collected);
+                break;
+            case 'lab_ops.specimen_reject':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                try {
+                    $rejected = $this->host->svc(LabOpsOrderMetaService::class)->rejectSpecimen(
+                        (int) ($body['procedure_order_id'] ?? 0),
+                        (string) ($body['reason'] ?? ''),
+                        isset($body['note']) ? (string) $body['note'] : null,
+                        $userId
+                    );
+                    $this->host->respond(true, 'Specimen rejected', $rejected);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid'], 400);
+                }
                 break;
             case 'lab_ops.setup_status':
                 $status = $this->host->svc(LabOpsSetupService::class)->getSetupStatus();
@@ -193,6 +239,40 @@ final class LabOpsActionHandler implements AjaxActionHandlerInterface
                     $feeResult = $this->host->svc(LabOpsSetupService::class)->saveFeeMappings($rows, $userId);
                 }
                 $this->host->respond(true, 'ok', $feeResult);
+                break;
+            case 'lab_ops.qc_rules_list':
+                $defaults = $this->host->svc(LabResultValidationService::class)->numericDefaults();
+                $qcRows = $this->host->svc(LabQcRuleService::class)->listForEditor($defaults);
+                $this->host->respond(true, 'ok', ['rows' => $qcRows]);
+                break;
+            case 'lab_ops.qc_rule_save':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                try {
+                    $qcSaved = $this->host->svc(LabQcRuleService::class)->saveRule(
+                        (string) ($body['procedure_code'] ?? ''),
+                        is_array($body['fields'] ?? null) ? $body['fields'] : [],
+                        $userId
+                    );
+                    $this->host->respond(true, 'Range saved', $qcSaved);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid'], 400);
+                }
+                break;
+            case 'lab_ops.qc_rule_reset':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $qcReset = $this->host->svc(LabQcRuleService::class)->resetRule(
+                    (string) ($body['procedure_code'] ?? ''),
+                    $userId
+                );
+                $this->host->respond(true, 'Range reset to default', $qcReset);
                 break;
             case 'lab_ops.mark_send_out':
                 if ($method !== 'POST') {

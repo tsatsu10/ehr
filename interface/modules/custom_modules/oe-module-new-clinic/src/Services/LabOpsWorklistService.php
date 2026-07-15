@@ -120,11 +120,103 @@ class LabOpsWorklistService
           'facility_id' => $deskFacilityId,
           'counts' => $counts,
           'rows' => $rows,
+          'summary' => $this->buildDaySummary($rawRows, $orderIds, $visitDate),
           'can_enter' => $this->access->canEnterResults(),
           'can_release' => $this->access->canReleaseResults(),
+          'rejection_reasons' => $this->orderMeta->rejectionReasonOptions(),
           'actor_user_id' => $actorUserId,
           'last_updated' => date('c'),
       ];
+  }
+
+  /**
+   * Day-level SLIPTA indicators for the worklist header: turnaround time and specimen-rejection
+   * rate across every order for the visit date (not just the current tab). TAT is the median
+   * order→release time over released orders; the rejection rate counts rejection events (from the
+   * rejection log) over total orders so a re-collected specimen still shows in the rate.
+   *
+   * @param array<int, array<string, mixed>> $rawRows
+   * @param list<int> $orderIds
+   * @return array<string, mixed>
+   */
+  private function buildDaySummary(array $rawRows, array $orderIds, string $visitDate): array
+  {
+      $totalOrders = 0;
+      $released = 0;
+      $tatMinutes = [];
+
+      foreach ($rawRows as $raw) {
+          $status = strtolower((string) ($raw['order_status'] ?? ''));
+          if (in_array($status, ['canceled', 'cancelled'], true)) {
+              continue;
+          }
+          $totalOrders++;
+
+          $reviewed = strtolower((string) ($raw['review_status'] ?? '')) === 'reviewed'
+              || !empty($raw['has_reviewed']);
+          if ($reviewed) {
+              $released++;
+              $ordered = $this->toTimestamp((string) ($raw['date_ordered'] ?? ''));
+              $reported = $this->toTimestamp((string) ($raw['date_reported'] ?? ''));
+              if ($ordered !== null && $reported !== null && $reported >= $ordered) {
+                  $tatMinutes[] = (int) round(($reported - $ordered) / 60);
+              }
+          }
+      }
+
+      $rejections = $this->countRejectionsForOrders($orderIds, $visitDate);
+      $medianTat = $this->median($tatMinutes);
+
+      return [
+          'total_orders' => $totalOrders,
+          'released' => $released,
+          'rejections' => $rejections,
+          'rejection_rate_pct' => $totalOrders > 0 ? round(($rejections / $totalOrders) * 100, 1) : 0.0,
+          'median_tat_minutes' => $medianTat,
+          'median_tat_label' => $medianTat !== null ? $this->formatDuration($medianTat) : null,
+      ];
+  }
+
+  /**
+   * Count specimen-rejection events for the given orders on the visit date. Uses the rejection log
+   * so a specimen that was rejected then re-collected still counts toward the daily rate.
+   *
+   * @param list<int> $orderIds
+   */
+  private function countRejectionsForOrders(array $orderIds, string $visitDate): int
+  {
+      if ($orderIds === []) {
+          return 0;
+      }
+      $placeholders = implode(',', array_fill(0, count($orderIds), '?'));
+      $bind = array_merge($orderIds, [$visitDate]);
+      $row = QueryUtils::querySingleRow(
+          "SELECT COUNT(*) AS n
+           FROM new_lab_specimen_rejection
+           WHERE procedure_order_id IN ({$placeholders})
+             AND DATE(rejected_at) = ?",
+          $bind
+      );
+
+      return (int) ($row['n'] ?? 0);
+  }
+
+  /**
+   * @param array<int, int> $values
+   */
+  private function median(array $values): ?int
+  {
+      if ($values === []) {
+          return null;
+      }
+      sort($values);
+      $count = count($values);
+      $mid = intdiv($count, 2);
+      if ($count % 2 === 1) {
+          return $values[$mid];
+      }
+
+      return (int) round(($values[$mid - 1] + $values[$mid]) / 2);
   }
 
   /**
@@ -205,7 +297,9 @@ class LabOpsWorklistService
                      MIN(pr.date_collected) AS date_collected,
                      MAX(CASE WHEN pr.review_status = 'reviewed' THEN 1 ELSE 0 END) AS has_reviewed,
                      MAX(pr.review_status) AS review_status,
+                     MAX(CASE WHEN pr.review_status = 'reviewed' THEN pr.date_report END) AS date_reported,
                      meta.fulfillment, meta.collected_at, meta.accession_no, meta.visit_id AS meta_visit_id,
+                     meta.rejected_at, meta.rejection_reason,
                      nv.id AS visit_id, nv.queue_number, nv.state AS visit_state, nv.is_urgent
               FROM procedure_order po
               INNER JOIN patient_data pd ON pd.pid = po.patient_id
@@ -221,6 +315,7 @@ class LabOpsWorklistService
               GROUP BY po.procedure_order_id, po.patient_id, po.encounter_id, po.date_ordered,
                        po.order_status, po.lab_id, pd.fname, pd.lname, pd.pubpid,
                        meta.fulfillment, meta.collected_at, meta.accession_no, meta.visit_id,
+                       meta.rejected_at, meta.rejection_reason,
                        nv.id, nv.queue_number, nv.state, nv.is_urgent
               ORDER BY nv.is_urgent DESC, nv.queue_number ASC, po.date_ordered ASC";
 
@@ -251,6 +346,23 @@ class LabOpsWorklistService
           $reviewStatus = 'reviewed';
       }
 
+      // A rejected specimen has its collected_at cleared, so it reads as "not collected" but with
+      // a rejection flag telling staff to re-collect.
+      $rejectedAt = (string) ($raw['rejected_at'] ?? '');
+      $rejectionReason = (string) ($raw['rejection_reason'] ?? '');
+      $rejected = !$collected
+          && $rejectedAt !== '' && !str_starts_with($rejectedAt, '0000-00-00');
+      $rejectionLabel = $rejected
+          ? (LabOpsOrderMetaService::REJECTION_REASONS[$rejectionReason] ?? 'Rejected')
+          : '';
+
+      $tatLabel = $this->buildTatLabel(
+          (string) ($raw['date_ordered'] ?? ''),
+          $collected ? ($collectedAt !== '' ? $collectedAt : $dateCollected) : '',
+          $reviewStatus,
+          (string) ($raw['date_reported'] ?? '')
+      );
+
         $webroot = $GLOBALS['webroot'] ?? '';
         $moduleUrl = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public';
         $requisitionUrl = $orderId > 0
@@ -276,16 +388,22 @@ class LabOpsWorklistService
           'collected_at' => $collectedAt !== '' ? $collectedAt : ($dateCollected !== '' ? $dateCollected : null),
           'accession_no' => (string) ($raw['accession_no'] ?? '') ?: null,
           'review_status' => $reviewStatus,
+          'rejected' => $rejected,
+          'rejection_reason' => $rejectionLabel,
+          'tat_label' => $tatLabel,
           'visit_state' => (string) ($raw['visit_state'] ?? ''),
           'can_open_lab_desk' => in_array((string) ($raw['visit_state'] ?? ''), ['ready_for_lab', 'in_lab'], true),
           'lab_desk_url' => $visitId > 0 ? $moduleUrl . '/lab.php?visit_id=' . urlencode((string) $visitId) : null,
           'requisition_url' => $requisitionUrl,
-          'status_label' => $this->buildStatusLabel($collected, $reviewStatus, $fulfillment),
+          'status_label' => $this->buildStatusLabel($collected, $reviewStatus, $fulfillment, $rejected, $rejectionLabel),
       ];
   }
 
-  private function buildStatusLabel(bool $collected, string $reviewStatus, string $fulfillment): string
+  private function buildStatusLabel(bool $collected, string $reviewStatus, string $fulfillment, bool $rejected = false, string $rejectionLabel = ''): string
   {
+      if ($rejected) {
+          return 'Specimen rejected (' . $rejectionLabel . ') · recollect';
+      }
       if ($fulfillment === 'send_out' && !$collected) {
           return 'Send-out · not collected';
       }
@@ -300,6 +418,56 @@ class LabOpsWorklistService
       }
 
       return 'Released';
+  }
+
+  /**
+   * Turnaround-time label (SLIPTA TAT indicator). Released orders show total order→release time;
+   * in-progress orders show how long they've been waiting so slow ones stand out.
+   */
+  private function buildTatLabel(string $orderedAt, string $collectedAt, string $reviewStatus, string $dateReported): string
+  {
+      $ordered = $this->toTimestamp($orderedAt);
+      if ($ordered === null) {
+          return '';
+      }
+      if ($reviewStatus === 'reviewed') {
+          $reported = $this->toTimestamp($dateReported);
+          $mins = (int) round((($reported ?? time()) - $ordered) / 60);
+          return 'TAT ' . $this->formatDuration($mins);
+      }
+      $collected = $this->toTimestamp($collectedAt);
+      if ($collected !== null) {
+          return 'In lab ' . $this->formatDuration((int) round((time() - $collected) / 60));
+      }
+      return 'Waiting ' . $this->formatDuration((int) round((time() - $ordered) / 60));
+  }
+
+  private function toTimestamp(string $value): ?int
+  {
+      $value = trim($value);
+      if ($value === '' || str_starts_with($value, '0000-00-00')) {
+          return null;
+      }
+      $ts = strtotime($value);
+      return $ts === false ? null : $ts;
+  }
+
+  private function formatDuration(int $minutes): string
+  {
+      if ($minutes < 0) {
+          $minutes = 0;
+      }
+      if ($minutes < 60) {
+          return $minutes . 'm';
+      }
+      if ($minutes < 1440) {
+          $h = intdiv($minutes, 60);
+          $m = $minutes % 60;
+          return $m > 0 ? "{$h}h {$m}m" : "{$h}h";
+      }
+      $d = intdiv($minutes, 1440);
+      $h = intdiv($minutes % 1440, 60);
+      return $h > 0 ? "{$d}d {$h}h" : "{$d}d";
   }
 
   /**

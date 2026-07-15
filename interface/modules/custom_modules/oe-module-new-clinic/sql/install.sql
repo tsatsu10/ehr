@@ -240,6 +240,7 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_lab_panel_order', '0'),
 (0, 'enable_native_proc_order', '0'),
 (0, 'enable_native_rx_edit', '0'),
+(0, 'enable_native_rx_history', '0'),
 (0, 'enable_debootstrap_shell', '0'),
 (0, 'enable_pharm_ops', '0'),
 (0, 'enable_triage', '1'),
@@ -315,6 +316,14 @@ CREATE INDEX `idx_visit_to_state` ON `new_visit_state_log` (`visit_id`, `to_stat
 
 #IfNotIndex new_visit_state_log idx_visit_from_state
 CREATE INDEX `idx_visit_from_state` ON `new_visit_state_log` (`visit_id`, `from_state`);
+#EndIf
+
+# Core `log` (audit) table grows unbounded and ships with indexes on id + patient_id
+# only. The patient-chart activity feed and the daily-report data-quality count both
+# filter `log.date >= ?` (a recent-window range); without a date index every such read
+# full-scans the entire audit log. This range index lets them scan just the window.
+#IfNotIndex log new_idx_log_date
+CREATE INDEX `new_idx_log_date` ON `log` (`date`);
 #EndIf
 
 #IfNotRow2D new_completion_field_weight field_key fname level 1
@@ -885,6 +894,104 @@ CREATE TABLE IF NOT EXISTS `new_lab_order_meta` (
 ) ENGINE=InnoDB COMMENT='Lab Operations metadata per procedure order (M12)';
 #EndIf
 
+#IfNotTable new_lab_order_line_specimen
+CREATE TABLE IF NOT EXISTS `new_lab_order_line_specimen` (
+    `procedure_order_id` BIGINT NOT NULL,
+    `procedure_order_seq` INT NOT NULL,
+    `specimen_type` VARCHAR(31) NOT NULL DEFAULT '',
+    `specimen_volume` VARCHAR(30) NOT NULL DEFAULT '',
+    PRIMARY KEY (`procedure_order_id`, `procedure_order_seq`)
+) ENGINE=InnoDB COMMENT='Per-test-line specimen for native lab orders (M13 proc-order)';
+#EndIf
+
+-- D-LAB-REJECT — specimen rejection log (SLIPTA sample-rejection-rate indicator). One row per
+-- rejection event so rejection rates are countable over time. Latest unresolved rejection is
+-- also denormalised onto new_lab_order_meta (rejected_at/rejection_reason) for the worklist.
+#IfNotTable new_lab_specimen_rejection
+CREATE TABLE IF NOT EXISTS `new_lab_specimen_rejection` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `procedure_order_id` BIGINT NOT NULL,
+    `pid` BIGINT NOT NULL,
+    `visit_id` BIGINT NULL,
+    `reason` VARCHAR(64) NOT NULL,
+    `note` VARCHAR(255) NULL,
+    `rejected_by` BIGINT NULL,
+    `rejected_at` DATETIME NOT NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_order` (`procedure_order_id`),
+    KEY `idx_rejected_at` (`rejected_at`)
+) ENGINE=InnoDB COMMENT='Lab specimen rejection log (M12, SLIPTA rejection-rate indicator)';
+#EndIf
+
+-- SLIPTA/ISO 15189 critical-value indicator: a released critical result must record who was
+-- notified, by whom, when, and whether read-back was confirmed. One row per release that carried
+-- a critical; `notified_at` is when it was captured (pending rows have empty notified_name).
+#IfNotTable new_lab_critical_notification
+CREATE TABLE IF NOT EXISTS `new_lab_critical_notification` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `procedure_order_id` BIGINT NOT NULL,
+    `pid` BIGINT NOT NULL,
+    `criticals_summary` VARCHAR(1024) NULL,
+    `notified_name` VARCHAR(128) NULL,
+    `notified_role` VARCHAR(64) NULL,
+    `method` VARCHAR(32) NULL,
+    `read_back_confirmed` TINYINT(1) NOT NULL DEFAULT 0,
+    `note` VARCHAR(255) NULL,
+    `notified_by` BIGINT NULL,
+    `notified_at` DATETIME NOT NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_order` (`procedure_order_id`),
+    KEY `idx_notified_at` (`notified_at`)
+) ENGINE=InnoDB COMMENT='Lab critical-value notification log (M12, SLIPTA critical-value indicator)';
+#EndIf
+
+-- ISO 15189 corrected-report trail (D-LAB-AMEND): amending a released result snapshots the original
+-- values + reason before edit. `released_at` is set when the corrected result is re-released (a
+-- pending row = an in-progress amendment).
+#IfNotTable new_lab_result_amendment
+CREATE TABLE IF NOT EXISTS `new_lab_result_amendment` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `procedure_order_id` BIGINT NOT NULL,
+    `pid` BIGINT NOT NULL,
+    `reason` VARCHAR(255) NOT NULL,
+    `previous_values` TEXT NULL,
+    `amended_by` BIGINT NULL,
+    `amended_at` DATETIME NOT NULL,
+    `released_at` DATETIME NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_order` (`procedure_order_id`),
+    KEY `idx_amended_at` (`amended_at`)
+) ENGINE=InnoDB COMMENT='Lab result amendment/correction log (M12, ISO 15189 corrected reports)';
+#EndIf
+
+-- Admin-tunable QC reference/critical ranges (D-LAB-QC). Holds ONLY per-clinic overrides; a test
+-- with no row here uses the built-in defaults in LabResultValidationService. One row per test code.
+#IfNotTable new_lab_qc_rule
+CREATE TABLE IF NOT EXISTS `new_lab_qc_rule` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `procedure_code` VARCHAR(64) NOT NULL,
+    `label` VARCHAR(128) NULL,
+    `units` VARCHAR(32) NULL,
+    `warn_min` DOUBLE NULL,
+    `warn_max` DOUBLE NULL,
+    `crit_min` DOUBLE NULL,
+    `crit_max` DOUBLE NULL,
+    `reference_range` VARCHAR(64) NULL,
+    `updated_by` BIGINT NULL,
+    `updated_at` DATETIME NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uniq_code` (`procedure_code`)
+) ENGINE=InnoDB COMMENT='Admin QC range overrides (M12, D-LAB-QC)';
+#EndIf
+
+#IfMissingColumn new_lab_order_meta rejected_at
+ALTER TABLE `new_lab_order_meta` ADD COLUMN `rejected_at` DATETIME NULL AFTER `collected_by`;
+#EndIf
+
+#IfMissingColumn new_lab_order_meta rejection_reason
+ALTER TABLE `new_lab_order_meta` ADD COLUMN `rejection_reason` VARCHAR(64) NULL AFTER `rejected_at`;
+#EndIf
+
 #IfMissingColumn new_receipt posted_payment_id
 ALTER TABLE `new_receipt` ADD COLUMN `posted_payment_id` BIGINT NULL AFTER `actor_user_id`;
 #EndIf
@@ -910,6 +1017,20 @@ CREATE TABLE IF NOT EXISTS `new_reconciliation_run` (
     PRIMARY KEY (`id`),
     KEY `idx_facility_run_date` (`facility_id`, `run_date`)
 ) ENGINE=InnoDB COMMENT='Daily cashier reconciliation runs (M7-F10, §16.2)';
+#EndIf
+
+#IfNotTable new_bill_ops_daysheet
+CREATE TABLE IF NOT EXISTS `new_bill_ops_daysheet` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `facility_id` INT NOT NULL,
+    `run_date` DATE NOT NULL,
+    `momo_amount` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    `note` VARCHAR(255) NULL,
+    `updated_by` INT NULL,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uniq_facility_run_date` (`facility_id`, `run_date`)
+) ENGINE=InnoDB COMMENT='Manual MoMo tally per facility-day (M14-F03 L2)';
 #EndIf
 
 #IfNotRow2D new_clinic_config facility_id 0 config_key print_queue_slip_on_start_visit
@@ -1364,6 +1485,61 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_native_issue_editor', '0');
 #EndIf
 
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_history_editor
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_native_history_editor', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_history_full_form
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_native_history_full_form', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_immunization_editor
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_native_immunization_editor', '0');
+#EndIf
+
+-- D-IMM-1 — Ghana EPI vaccine set seeded into the stock `immunizations` list (option_ids 500+
+-- avoid the US-default 1–35). The native immunization editor picker + the chart read resolve
+-- vaccine names from these. Guarded on option_id 500 so re-install is idempotent.
+#IfNotRow2D list_options list_id immunizations option_id 500
+INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `activity`) VALUES
+('immunizations', '500', 'BCG', 500, 1),
+('immunizations', '501', 'OPV 0 (birth)', 501, 1),
+('immunizations', '502', 'OPV 1', 502, 1),
+('immunizations', '503', 'OPV 2', 503, 1),
+('immunizations', '504', 'OPV 3', 504, 1),
+('immunizations', '505', 'IPV', 505, 1),
+('immunizations', '506', 'Pentavalent 1 (DTP-HepB-Hib)', 506, 1),
+('immunizations', '507', 'Pentavalent 2', 507, 1),
+('immunizations', '508', 'Pentavalent 3', 508, 1),
+('immunizations', '509', 'PCV 1', 509, 1),
+('immunizations', '510', 'PCV 2', 510, 1),
+('immunizations', '511', 'PCV 3', 511, 1),
+('immunizations', '512', 'Rotavirus 1', 512, 1),
+('immunizations', '513', 'Rotavirus 2', 513, 1),
+('immunizations', '514', 'Measles-Rubella 1', 514, 1),
+('immunizations', '515', 'Measles-Rubella 2', 515, 1),
+('immunizations', '516', 'Yellow Fever', 516, 1),
+('immunizations', '517', 'Meningococcal A', 517, 1),
+('immunizations', '518', 'Vitamin A', 518, 1),
+('immunizations', '519', 'Td / TT (tetanus)', 519, 1);
+#EndIf
+
+-- D-IMM-1 (all-ages expansion) — vaccines beyond routine childhood EPI. Separate guard (option_id
+-- 520) so installs that already have the 500–519 block still receive these on upgrade.
+#IfNotRow2D list_options list_id immunizations option_id 520
+INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `activity`) VALUES
+('immunizations', '520', 'COVID-19', 520, 1),
+('immunizations', '521', 'Malaria (RTS,S / R21)', 521, 1),
+('immunizations', '522', 'HPV', 522, 1),
+('immunizations', '523', 'Hepatitis B (adult)', 523, 1),
+('immunizations', '524', 'Influenza (flu)', 524, 1),
+('immunizations', '525', 'Rabies (post-exposure)', 525, 1),
+('immunizations', '526', 'Typhoid conjugate', 526, 1);
+#EndIf
+
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_proc_order
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_native_proc_order', '0');
@@ -1372,6 +1548,11 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_rx_edit
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_native_rx_edit', '0');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_rx_history
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_native_rx_history', '0');
 #EndIf
 
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_debootstrap_shell

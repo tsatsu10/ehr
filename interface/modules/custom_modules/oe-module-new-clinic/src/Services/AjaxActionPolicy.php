@@ -57,6 +57,8 @@ class AjaxActionPolicy
         'cashier.charges.post' => 'new_cashier',
         'cashier.pay' => 'new_cashier',
         'cashier.pay_partial' => 'new_visit_mark_outstanding',
+        'cashier.scheme.list' => 'new_cashier',
+        'cashier.scheme.pay' => 'new_cashier',
         'cashier.mark_unpaid' => 'new_visit_mark_outstanding',
         'cashier.close_zero' => 'new_close_without_charge',
         'lab.select' => 'new_lab',
@@ -72,9 +74,7 @@ class AjaxActionPolicy
         'pharmacy.shortcut_preflight' => 'new_pharmacy',
         'pharmacy.restore_session' => 'new_pharmacy',
         'pharmacy.skip_to_payment' => 'new_visit_skip_queue',
-        'pharmacy.rx_form_data' => 'new_pharmacy',
-        'pharmacy.rx_search_drugs' => 'new_pharmacy',
-        'pharmacy.rx_save' => 'new_pharmacy',
+        'pharmacy.rx_history' => 'new_pharmacy',
         'admin.config' => 'new_admin',
         'admin.config.save' => 'new_admin',
         'admin.visit_type.save' => 'new_admin',
@@ -172,8 +172,12 @@ class AjaxActionPolicy
     ];
 
     /** @var array<int, string> */
+    // Profile (demographics) editing is limited to the front-of-house roles that
+    // own patient registration data: front desk, nurse, and admin. Doctors,
+    // cashiers, lab and pharmacy get a read-only chart profile (they view, the
+    // chart's Edit button is hidden). Gates patients.update.
     private const PROFILE_EDIT_ACL_ANY = [
-        'new_reception', 'new_nurse', 'new_doctor', 'new_cashier', 'new_admin',
+        'new_reception', 'new_nurse', 'new_admin',
     ];
 
     /** @var array<int, string> */
@@ -251,12 +255,14 @@ class AjaxActionPolicy
     private const LAB_OPS_ENTER_ACTIONS = [
         'lab_ops.result_save',
         'lab_ops.specimen_collect',
+        'lab_ops.specimen_reject',
         'lab_ops.mark_send_out',
     ];
 
     /** @var array<int, string> */
     private const LAB_OPS_RELEASE_ACTIONS = [
         'lab_ops.result_release',
+        'lab_ops.result_amend',
     ];
 
     /** @var array<int, string> */
@@ -264,6 +270,9 @@ class AjaxActionPolicy
         'lab_ops.panel_import',
         'lab_ops.fee_map_list',
         'lab_ops.fee_map_save',
+        'lab_ops.qc_rules_list',
+        'lab_ops.qc_rule_save',
+        'lab_ops.qc_rule_reset',
         'lab_ops.setup_model',
         'lab_ops.provider_create',
         'lab_ops.sendout_provider_create',
@@ -277,6 +286,12 @@ class AjaxActionPolicy
         'pharm_ops.otc_sale_get',
         'pharm_ops.setup_status',
         'pharm_ops.reports_embed',
+        'pharm_ops.inventory.reorder',
+        'pharm_ops.inventory.destroyed',
+        'pharm_ops.inventory.activity',
+        'pharm_ops.inventory.transactions',
+        'pharm_ops.inventory.prescriptions',
+        'pharm_ops.inventory.stock_list',
     ];
 
     /** @var array<int, string> */
@@ -305,6 +320,9 @@ class AjaxActionPolicy
     private const PHARM_OPS_RECEIVE_ACTIONS = [
         'pharm_ops.receive_get',
         'pharm_ops.receive_save',
+        // Stock adjustment (row Adjust + stock-take) is a stock-management write,
+        // gated at the same receive level; POST + CSRF, never read-only.
+        'pharm_ops.inventory.adjust',
     ];
 
     /** @var array<int, string> */
@@ -432,6 +450,7 @@ class AjaxActionPolicy
     private const BILL_OPS_CLOSE_ACTIONS = [
         'bill_ops.daysheet',
         'bill_ops.daysheet_export',
+        'bill_ops.momo_save',
     ];
 
     /** @var array<int, string> */
@@ -494,6 +513,28 @@ class AjaxActionPolicy
         'new_admin',
     ];
 
+    /**
+     * The native Add/Edit Rx form (rx-edit island) is shared: the Pharmacy Desk
+     * reaches it from "Add Rx", and the Doctor Desk reaches it from "Full Rx
+     * form" during consult. Both roles legitimately prescribe, so these actions
+     * are any-of rather than pharmacy-only.
+     *
+     * @var array<int, string>
+     */
+    private const RX_FORM_ACTIONS = [
+        'pharmacy.rx_form_data',
+        'pharmacy.rx_search_drugs',
+        'pharmacy.rx_save',
+    ];
+
+    /** @var array<int, string> */
+    private const RX_FORM_ACLS = [
+        'new_pharmacy',
+        'new_pharmacy_lead',
+        'new_doctor',
+        'new_admin',
+    ];
+
     /** @var array<int, string> */
     private const EXPORT_ACTIONS = [
         'chart_depth.export_builder',
@@ -520,6 +561,11 @@ class AjaxActionPolicy
         'patients.chart.clinical',
         'patients.chart.issue_get',
         'patients.chart.issue_save',
+        'patients.chart.history_get',
+        'patients.chart.history_save',
+        'patients.chart.immunization_options',
+        'patients.chart.immunization_get',
+        'patients.chart.immunization_save',
         'patients.chart.activity_feed',
         'patients.chart.messages',
         'patients.chart.search',
@@ -587,6 +633,7 @@ class AjaxActionPolicy
         'cashier.queue' => true,
         'lab.queue' => true,
         'pharmacy.queue' => true,
+        'pharmacy.rx_history' => true,
         'outreach.queue' => true,
         'doctor.roster' => true,
         'queue_bridge.list' => true,
@@ -611,16 +658,42 @@ class AjaxActionPolicy
         'documents.list' => true,
         'documents.categories' => true,
         'documents.unfiled_list' => true,
+        // Patient chart / MRD reads (SCALE-1.2). Verified free of $_SESSION writes; the chart
+        // fires several of these in parallel, so serializing them on the session lock made the
+        // Clinical tab — and the native history editor opened on top of it — load in seconds
+        // instead of ~500 ms. assertPatientChartPid only validates (no write). NOTE: patients.preview
+        // and patients.chart.visits are deliberately EXCLUDED — the guardrail test lists them as
+        // mutating (they have side effects), so they keep the exclusive lock.
+        'patients.registration.get' => true,
+        'patients.chart.clinical' => true,
+        'patients.chart.messages' => true,
+        'patients.chart.activity_feed' => true,
+        'patients.chart.history_get' => true,
+        'patients.chart.immunization_options' => true,
+        'patients.chart.immunization_get' => true,
+        'patients.chart.search' => true,
+        'mrd.clinical_labs_summary' => true,
+        'mrd.clinical_meds_summary' => true,
+        'mrd.clinical_referrals_strip' => true,
+        'mrd.clinical_vitals_series' => true,
+        'mrd.profile_payments_summary' => true,
         // Lab/Pharmacy ops reads.
         'lab_ops.worklist' => true,
         'lab_ops.result_get' => true,
         'lab_ops.setup_status' => true,
         'lab_ops.fee_map_list' => true,
+        'lab_ops.qc_rules_list' => true,
         'pharm_ops.worklist' => true,
         'pharm_ops.dispense_get' => true,
         'pharm_ops.otc_drugs_search' => true,
         'pharm_ops.otc_sale_get' => true,
         'pharm_ops.setup_status' => true,
+        'pharm_ops.inventory.reorder' => true,
+        'pharm_ops.inventory.destroyed' => true,
+        'pharm_ops.inventory.activity' => true,
+        'pharm_ops.inventory.transactions' => true,
+        'pharm_ops.inventory.prescriptions' => true,
+        'pharm_ops.inventory.stock_list' => true,
         'pharm_ops.catalog_list' => true,
         'pharm_ops.controlled_catalog' => true,
         // Export-job status polls (pure read; inline fallback writes DB/files, not $_SESSION).
@@ -631,6 +704,17 @@ class AjaxActionPolicy
         // Report hub + clinical-doc reads.
         'reports.hub_summary' => true,
         'reports.catalog' => true,
+        // Report reads (SCALE-1.2). Verified free of $_SESSION writes. reports.daily was the
+        // worst session-lock holder in the module: 4.5–68 s runs froze every other request from
+        // the same user (hub_summary queued to 5.9 s; other pages died at 60 s inside
+        // SessionUtil waiting for the lock). daily + scheduling stay in BUDGET_EXEMPT (their
+        // legitimate batch reads may exceed the 15 s budget) — membership here is what makes
+        // that pre-existing exemption meaningful at all. Exports are mutations and stay off.
+        'reports.daily' => true,
+        'reports.reconciliation' => true,
+        'reports.ancillary' => true,
+        'reports.documentation_integrity' => true,
+        'reports.scheduling' => true,
         'clinical_doc.visit_summary' => true,
         'clinical_doc.catalog' => true,
         'clinical_doc.sign_status' => true,
@@ -743,6 +827,10 @@ class AjaxActionPolicy
 
         if ($action === 'health') {
             return ['type' => 'desk_acl'];
+        }
+
+        if (in_array($action, self::RX_FORM_ACTIONS, true)) {
+            return ['type' => 'any_acl', 'acls' => self::RX_FORM_ACLS];
         }
 
         if (isset(self::SINGLE_ACL[$action])) {

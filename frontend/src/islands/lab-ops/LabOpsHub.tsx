@@ -1,20 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { showDeskToast } from '@components/deskToast';
 import { oeFetch } from '@core/oeFetch';
 import { useInterval } from '@core/useInterval';
 import { localDateString } from '@islands/daily-reports/reportsFormatters';
 import { AccessionModal } from './AccessionModal';
+import { RejectSpecimenModal } from './RejectSpecimenModal';
 import { LabOpsResultDrawer } from './LabOpsResultDrawer';
 import { LabOpsSetupPanel } from './LabOpsSetupPanel';
+import { LabOpsSummaryBar } from './LabOpsSummaryBar';
 import { LabOpsWorklist } from './LabOpsWorklist';
 import type {
   FulfillmentFilter,
   LabOpsHubProps,
   LabOpsTab,
+  RejectionReasonOption,
   SetupStatus,
   WorklistCounts,
   WorklistData,
   WorklistRow,
+  WorklistSummary,
 } from './labOpsTypes';
 import { LAB_OPS_POLL_MS } from './labOpsTypes';
 import { useLabOpsPageHeading } from './useLabOpsPageHeading';
@@ -47,6 +52,7 @@ export function LabOpsHub({
   const [urgentFirst, setUrgentFirst] = useState(true);
   const [rows, setRows] = useState<WorklistRow[]>([]);
   const [counts, setCounts] = useState<WorklistCounts>(EMPTY_COUNTS);
+  const [summary, setSummary] = useState<WorklistSummary | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -54,6 +60,12 @@ export function LabOpsHub({
   const [collectOrderId, setCollectOrderId] = useState<number | null>(null);
   const [accession, setAccession] = useState('');
   const [collectSubmitting, setCollectSubmitting] = useState(false);
+
+  const [rejectionReasons, setRejectionReasons] = useState<RejectionReasonOption[]>([]);
+  const [rejectOrderId, setRejectOrderId] = useState<number | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectNote, setRejectNote] = useState('');
+  const [rejectSubmitting, setRejectSubmitting] = useState(false);
 
   const [drawerOrderId, setDrawerOrderId] = useState<number | null>(null);
 
@@ -77,6 +89,8 @@ export function LabOpsHub({
       });
       setRows(data.rows ?? []);
       setCounts(data.counts ?? EMPTY_COUNTS);
+      setSummary(data.summary ?? null);
+      setRejectionReasons(data.rejection_reasons ?? []);
       setLastUpdated(data.last_updated ? new Date(data.last_updated) : new Date());
     } catch {
       setLoadError('Refresh failed');
@@ -136,11 +150,35 @@ export function LabOpsHub({
       setAccession('');
       await loadWorklist();
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not mark collected');
+      showDeskToast(err instanceof Error ? err.message : 'Could not mark collected', 'danger');
     } finally {
       setCollectSubmitting(false);
     }
   }, [accession, collectOrderId, fetchOptions, loadWorklist]);
+
+  const confirmReject = useCallback(async () => {
+    if (!rejectOrderId || rejectReason === '') return;
+    setRejectSubmitting(true);
+    try {
+      await oeFetch('lab_ops.specimen_reject', {
+        ...fetchOptions,
+        json: {
+          procedure_order_id: rejectOrderId,
+          reason: rejectReason,
+          note: rejectNote.trim(),
+        },
+      });
+      setRejectOrderId(null);
+      setRejectReason('');
+      setRejectNote('');
+      showDeskToast('Specimen rejected — recollect', 'warning');
+      await loadWorklist();
+    } catch (err) {
+      showDeskToast(err instanceof Error ? err.message : 'Could not reject specimen', 'danger');
+    } finally {
+      setRejectSubmitting(false);
+    }
+  }, [fetchOptions, loadWorklist, rejectNote, rejectOrderId, rejectReason]);
 
   const markSendOut = useCallback(async (orderId: number) => {
     try {
@@ -150,7 +188,7 @@ export function LabOpsHub({
       });
       await loadWorklist();
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not mark send-out');
+      showDeskToast(err instanceof Error ? err.message : 'Could not mark send-out', 'danger');
     }
   }, [fetchOptions, loadWorklist]);
 
@@ -171,6 +209,8 @@ export function LabOpsHub({
         <div className={deskCalloutClass('warn', 'py-2 text-sm mb-2')} role="status">{loadError}</div>
       ) : null}
 
+      {summary ? <LabOpsSummaryBar summary={summary} /> : null}
+
       <LabOpsWorklist
         tab={tab}
         rows={rows}
@@ -181,6 +221,27 @@ export function LabOpsHub({
         }}
         onEnter={setDrawerOrderId}
         onSendOut={(orderId) => void markSendOut(orderId)}
+        onReject={(orderId) => {
+          setRejectOrderId(orderId);
+          setRejectReason('');
+          setRejectNote('');
+        }}
+      />
+
+      <RejectSpecimenModal
+        open={rejectOrderId !== null}
+        reasons={rejectionReasons}
+        reason={rejectReason}
+        note={rejectNote}
+        submitting={rejectSubmitting}
+        onReasonChange={setRejectReason}
+        onNoteChange={setRejectNote}
+        onConfirm={() => void confirmReject()}
+        onClose={() => {
+          setRejectOrderId(null);
+          setRejectReason('');
+          setRejectNote('');
+        }}
       />
 
       <AccessionModal

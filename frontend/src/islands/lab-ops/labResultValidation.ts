@@ -1,5 +1,7 @@
 /**
- * QC validator for lab result entry — port of lab-result-validation.js.
+ * QC validator for lab result entry — pure, React-state based (D-LAB-VALIDATE). Mirrors the server
+ * (LabResultValidationService). No DOM access: callers pass line values and render feedback from
+ * the returned checks.
  */
 
 import type { ValidationRules } from './labOpsTypes';
@@ -13,6 +15,25 @@ export interface ValidationCheck {
   normalizedValue?: string | null;
 }
 
+/** A line's current value, as held in React state. */
+export interface LineValueInput {
+  seq: number;
+  value: string;
+}
+
+export interface LineDefaults {
+  units: string;
+  range: string;
+}
+
+export interface ValidateAllResult {
+  valid: boolean;
+  fieldErrors: Record<string, string>;
+  fieldWarnings: Record<string, string>;
+  messages: string[];
+  firstInvalidSeq: number | null;
+}
+
 function parseNumber(value: unknown): number | null {
   if (value === '' || value === null || value === undefined) return null;
   const num = parseFloat(String(value));
@@ -23,21 +44,17 @@ function normalizeQualitative(value: unknown): string {
   return String(value ?? '').trim().toLowerCase();
 }
 
+export function fieldKeyForSeq(seq: number): string {
+  return `line_${seq}_result`;
+}
+
 export interface LabResultValidator {
-  validateLine: (lineEl: HTMLElement, draft: boolean) => ValidationCheck;
-  validateAll: (
-    drawerBody: HTMLElement,
-    draft: boolean
-  ) => { valid: boolean; fieldErrors: Record<string, string>; fieldWarnings: Record<string, string>; messages: string[] };
-  applyFieldFeedback: (lineEl: HTMLElement, result: ValidationCheck | null) => void;
-  applyDefaults: (lineEl: HTMLElement, seq: number) => void;
-  suggestAbnormal: (lineEl: HTMLElement, seq: number, value: string) => void;
-  applyServerFieldErrors: (
-    drawerBody: HTMLElement,
-    fieldErrors: Record<string, string>,
-    fieldWarnings: Record<string, string>
-  ) => void;
-  focusFirstInvalid: (drawerBody: HTMLElement) => void;
+  /** Evaluate a single line's value. Pure. */
+  evaluate: (seq: number, value: string, draft: boolean) => ValidationCheck;
+  /** Validate every line's value in one pass. Pure. */
+  validateAll: (lines: LineValueInput[], draft: boolean) => ValidateAllResult;
+  /** Default units / reference range for a line (from QC rules). */
+  defaultsForSeq: (seq: number) => LineDefaults;
 }
 
 export function createLabResultValidator(rules: ValidationRules | undefined): LabResultValidator {
@@ -47,7 +64,7 @@ export function createLabResultValidator(rules: ValidationRules | undefined): La
     return bySeq[String(seq)] ?? { type: 'text', label: 'Result', min_length: 1 };
   }
 
-  function evaluateValue(seq: number, value: string, draft: boolean): ValidationCheck {
+  function evaluate(seq: number, value: string, draft: boolean): ValidationCheck {
     const rule = ruleForSeq(seq);
     const label = rule.procedure_name ?? rule.label ?? 'Result';
     const trimmed = String(value ?? '').trim();
@@ -150,125 +167,31 @@ export function createLabResultValidator(rules: ValidationRules | undefined): La
     };
   }
 
-  function applyFieldFeedback(lineEl: HTMLElement, result: ValidationCheck | null): void {
-    const input = lineEl.querySelector<HTMLInputElement>('[data-field="result"]');
-    if (!input) return;
-
-    const group = input.closest('.form-group');
-    if (!group) return;
-
-    const feedback = group.querySelector<HTMLElement>('.nc-labops-feedback');
-    input.classList.remove('is-invalid', 'nc-labops-warning');
-
-    if (!result || result.level === 'ok') {
-      if (feedback) {
-        feedback.textContent = '';
-        feedback.className = 'nc-labops-feedback';
-      }
-      return;
-    }
-
-    if (!feedback) return;
-
-    if (result.level === 'error') {
-      input.classList.add('is-invalid');
-      feedback.textContent = result.message ?? '';
-      feedback.className = 'nc-labops-feedback block text-sm text-[var(--oe-nc-danger,#dc2626)]';
-      return;
-    }
-
-    input.classList.add('nc-labops-warning');
-    feedback.textContent = result.message ?? '';
-    feedback.className = 'nc-labops-feedback nc-labops-feedback--warning block';
-  }
-
-  function applyDefaults(lineEl: HTMLElement, seq: number): void {
-    const rule = ruleForSeq(seq);
-    const unitsInput = lineEl.querySelector<HTMLInputElement>('[data-field="units"]');
-    const rangeInput = lineEl.querySelector<HTMLInputElement>('[data-field="range"]');
-    if (unitsInput && !String(unitsInput.value ?? '').trim() && rule.units) {
-      unitsInput.value = rule.units;
-    }
-    if (rangeInput && !String(rangeInput.value ?? '').trim() && rule.reference_range) {
-      rangeInput.value = rule.reference_range;
-    }
-  }
-
-  function suggestAbnormal(lineEl: HTMLElement, seq: number, value: string): void {
-    const result = evaluateValue(seq, value, true);
-    if (!result.suggestedAbnormal) return;
-    const abnormalSelect = lineEl.querySelector<HTMLSelectElement>('[data-field="abnormal"]');
-    if (abnormalSelect && !String(abnormalSelect.value ?? '').trim()) {
-      abnormalSelect.value = result.suggestedAbnormal;
-    }
-  }
-
-  function validateLine(lineEl: HTMLElement, draft: boolean): ValidationCheck {
-    const seqInput = lineEl.querySelector<HTMLInputElement>('[data-field="procedure_order_seq"]');
-    const resultInput = lineEl.querySelector<HTMLInputElement>('[data-field="result"]');
-    if (!seqInput || !resultInput) return { level: 'ok' };
-    const seq = parseInt(seqInput.value, 10);
-    return evaluateValue(seq, resultInput.value, draft);
-  }
-
-  function validateAll(drawerBody: HTMLElement, draft: boolean) {
+  function validateAll(lines: LineValueInput[], draft: boolean): ValidateAllResult {
     const fieldErrors: Record<string, string> = {};
     const fieldWarnings: Record<string, string> = {};
     const messages: string[] = [];
+    let firstInvalidSeq: number | null = null;
 
-    drawerBody.querySelectorAll<HTMLElement>('.nc-labops-line').forEach((lineEl) => {
-      const seqInput = lineEl.querySelector<HTMLInputElement>('[data-field="procedure_order_seq"]');
-      if (!seqInput) return;
-      const seq = parseInt(seqInput.value, 10);
-      const fieldKey = `line_${seq}_result`;
-      const check = validateLine(lineEl, draft);
-      applyFieldFeedback(lineEl, check);
-
+    for (const line of lines) {
+      const check = evaluate(line.seq, line.value, draft);
+      const fieldKey = fieldKeyForSeq(line.seq);
       if (check.level === 'error' && check.message) {
         fieldErrors[fieldKey] = check.message;
         messages.push(check.message);
+        if (firstInvalidSeq === null) firstInvalidSeq = line.seq;
       } else if (check.level === 'warning' && check.message) {
         fieldWarnings[fieldKey] = check.message;
       }
-    });
-
-    return { valid: messages.length === 0, fieldErrors, fieldWarnings, messages };
-  }
-
-  function applyServerFieldErrors(
-    drawerBody: HTMLElement,
-    fieldErrors: Record<string, string>,
-    fieldWarnings: Record<string, string>
-  ): void {
-    drawerBody.querySelectorAll<HTMLElement>('.nc-labops-line').forEach((lineEl) => {
-      const seqInput = lineEl.querySelector<HTMLInputElement>('[data-field="procedure_order_seq"]');
-      if (!seqInput) return;
-      const fieldKey = `line_${parseInt(seqInput.value, 10)}_result`;
-      const message = fieldErrors[fieldKey] ?? fieldWarnings[fieldKey] ?? null;
-      if (message) {
-        applyFieldFeedback(lineEl, {
-          level: fieldErrors[fieldKey] ? 'error' : 'warning',
-          message,
-        });
-      }
-    });
-  }
-
-  function focusFirstInvalid(drawerBody: HTMLElement): void {
-    const first = drawerBody.querySelector<HTMLElement>('.is-invalid');
-    if (first) {
-      first.focus();
-      first.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
+
+    return { valid: messages.length === 0, fieldErrors, fieldWarnings, messages, firstInvalidSeq };
   }
 
-  return {
-    validateLine,
-    validateAll,
-    applyFieldFeedback,
-    applyDefaults,
-    suggestAbnormal,
-    applyServerFieldErrors,
-    focusFirstInvalid,
-  };
+  function defaultsForSeq(seq: number): LineDefaults {
+    const rule = ruleForSeq(seq);
+    return { units: rule.units ?? '', range: rule.reference_range ?? '' };
+  }
+
+  return { evaluate, validateAll, defaultsForSeq };
 }

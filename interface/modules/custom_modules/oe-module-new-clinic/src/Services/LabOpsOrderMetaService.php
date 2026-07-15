@@ -16,10 +16,90 @@ use OpenEMR\Common\Logging\EventAuditLogger;
 
 class LabOpsOrderMetaService
 {
+    /** Standard specimen-rejection reasons (SLIPTA sample-rejection indicator). */
+    public const REJECTION_REASONS = [
+        'haemolysed' => 'Haemolysed',
+        'clotted' => 'Clotted',
+        'insufficient' => 'Insufficient sample (QNS)',
+        'wrong_container' => 'Wrong container / tube',
+        'mislabelled' => 'Mislabelled / unlabelled',
+        'leaked' => 'Leaked / spilt in transit',
+        'wrong_patient' => 'Wrong patient',
+        'contaminated' => 'Contaminated / expired tube',
+    ];
+
     public function __construct(
         private readonly LabOpsAccessService $access = new LabOpsAccessService(),
         private readonly FacilityScopeService $facilityScope = new FacilityScopeService(),
     ) {
+    }
+
+    /** @return array<int, array{id: string, label: string}> */
+    public function rejectionReasonOptions(): array
+    {
+        $out = [];
+        foreach (self::REJECTION_REASONS as $id => $label) {
+            $out[] = ['id' => $id, 'label' => $label];
+        }
+        return $out;
+    }
+
+    /**
+     * Reject a collected specimen (SLIPTA sample-rejection indicator). Logs the event, clears the
+     * collected state so the specimen must be re-collected, and flags the order on the worklist.
+     * Never touches results — a rejection is about the sample, before analysis.
+     *
+     * @return array<string, mixed>
+     */
+    public function rejectSpecimen(int $procedureOrderId, string $reason, ?string $note, int $actorUserId): array
+    {
+        $this->access->assertEnterAccess();
+        if ($procedureOrderId <= 0) {
+            throw new \InvalidArgumentException('Procedure order id is required');
+        }
+        $reason = trim($reason);
+        if (!isset(self::REJECTION_REASONS[$reason])) {
+            throw new \InvalidArgumentException('Choose a rejection reason');
+        }
+
+        $order = $this->loadOrderWithLab($procedureOrderId);
+        $pid = (int) ($order['patient_id'] ?? 0);
+        $this->facilityScope->assertPatientAccessible($pid);
+        $visitId = $this->resolveVisitId($pid, (int) ($order['encounter_id'] ?? 0));
+        $note = $note !== null ? mb_substr(trim($note), 0, 255) : null;
+        $now = date('Y-m-d H:i:s');
+
+        // One row per rejection event (rejection-rate reporting), plus the denormalised latest
+        // rejection on the meta row for the worklist. Clearing collected_at/accession forces a
+        // fresh collection.
+        QueryUtils::sqlInsert(
+            'INSERT INTO new_lab_specimen_rejection
+                (procedure_order_id, pid, visit_id, reason, note, rejected_by, rejected_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [$procedureOrderId, $pid, $visitId, $reason, $note, $actorUserId, $now]
+        );
+        QueryUtils::sqlStatementThrowException(
+            'UPDATE new_lab_order_meta
+             SET collected_at = NULL, accession_no = NULL, rejected_at = ?, rejection_reason = ?
+             WHERE procedure_order_id = ?',
+            [$now, $reason, $procedureOrderId]
+        );
+
+        EventAuditLogger::getInstance()->newEvent(
+            'new_clinic',
+            'lab_ops.specimen_rejected',
+            $actorUserId,
+            1,
+            'procedure_order_id=' . $procedureOrderId . ' reason=' . $reason . ' note=' . ($note ?? ''),
+            $pid > 0 ? $pid : null
+        );
+
+        return [
+            'procedure_order_id' => $procedureOrderId,
+            'rejected_at' => $now,
+            'rejection_reason' => $reason,
+            'rejection_label' => self::REJECTION_REASONS[$reason],
+        ];
     }
 
     /**
@@ -49,7 +129,8 @@ class LabOpsOrderMetaService
             1,
             'procedure_order_id=' . $procedureOrderId
             . ' visit_id=' . ($visitId ?? '')
-            . ' accession=' . ($accessionNo ?? '')
+            . ' accession=' . ($accessionNo ?? ''),
+            $pid > 0 ? $pid : null
         );
 
         return [
@@ -117,7 +198,8 @@ class LabOpsOrderMetaService
             'lab_ops.marked_send_out',
             $actorUserId,
             1,
-            'procedure_order_id=' . $procedureOrderId
+            'procedure_order_id=' . $procedureOrderId,
+            $pid > 0 ? $pid : null
         );
 
         return [
@@ -350,7 +432,9 @@ class LabOpsOrderMetaService
                      visit_id = COALESCE(?, visit_id),
                      pid = ?,
                      fulfillment = ?,
-                     requisition_printed_at = COALESCE(?, requisition_printed_at)
+                     requisition_printed_at = COALESCE(?, requisition_printed_at),
+                     rejected_at = CASE WHEN ? IS NOT NULL THEN NULL ELSE rejected_at END,
+                     rejection_reason = CASE WHEN ? IS NOT NULL THEN NULL ELSE rejection_reason END
                  WHERE procedure_order_id = ?',
                 [
                     $collectedAt,
@@ -361,6 +445,9 @@ class LabOpsOrderMetaService
                     $pid,
                     $nextFulfillment,
                     $requisitionPrintedAt,
+                    // Re-collection clears any prior rejection flag (specimen replaced).
+                    $collectedAt,
+                    $collectedAt,
                     $procedureOrderId,
                 ]
             );
