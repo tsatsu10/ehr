@@ -40,32 +40,53 @@ class BillOpsOutstandingService
         $baseSql = "FROM (
             SELECT v.id AS visit_id, v.pid, v.queue_number, v.visit_date, v.state,
                    pd.fname, pd.lname, pd.pubpid, pd.phone_cell, pd.phone_home,
-                   COALESCE(charges.total, 0) AS charges_total,
+                   (COALESCE(charges.total, 0) + COALESCE(drugcharges.total, 0)) AS charges_total,
                    COALESCE(paid.total, 0) AS paid_total,
-                   GREATEST(COALESCE(charges.total, 0) - COALESCE(paid.total, 0), 0) AS owed,
+                   GREATEST((COALESCE(charges.total, 0) + COALESCE(drugcharges.total, 0)) - COALESCE(paid.total, 0), 0) AS owed,
                    DATEDIFF(CURDATE(), v.visit_date) AS age_days
             FROM new_visit v
             INNER JOIN patient_data pd ON pd.pid = v.pid
             LEFT JOIN (
-                SELECT b.pid, b.encounter, SUM(b.fee * GREATEST(b.units, 1)) AS total
+                SELECT b.pid, b.encounter, SUM(b.fee) AS total
                 FROM billing b
                 WHERE b.activity = 1
+                AND EXISTS (
+                    SELECT 1 FROM new_visit vb
+                    WHERE vb.pid = b.pid AND vb.encounter = b.encounter AND vb.facility_id = ?
+                )
                 GROUP BY b.pid, b.encounter
             ) charges ON charges.pid = v.pid AND charges.encounter = v.encounter
             LEFT JOIN (
-                SELECT visit_id, SUM(CASE WHEN reversed_at IS NULL THEN amount_paid ELSE 0 END) AS total
-                FROM new_receipt
-                GROUP BY visit_id
+                -- CBILL-1/2 — medicines collected at the cashier live in drug_sales (billed = 1),
+                -- not billing. Without this a partial-paid visit's owed understates by the
+                -- medicine amount. billed = 0 (separate pharmacy-counter sales) stays excluded.
+                SELECT ds.pid, ds.encounter, SUM(ds.fee) AS total
+                FROM drug_sales ds
+                WHERE ds.billed = 1
+                AND EXISTS (
+                    SELECT 1 FROM new_visit vd
+                    WHERE vd.pid = ds.pid AND vd.encounter = ds.encounter AND vd.facility_id = ?
+                )
+                GROUP BY ds.pid, ds.encounter
+            ) drugcharges ON drugcharges.pid = v.pid AND drugcharges.encounter = v.encounter
+            LEFT JOIN (
+                SELECT r.visit_id, SUM(CASE WHEN r.reversed_at IS NULL THEN r.amount_paid ELSE 0 END) AS total
+                FROM new_receipt r
+                WHERE r.facility_id = ?
+                GROUP BY r.visit_id
             ) paid ON paid.visit_id = v.id
             WHERE v.facility_id = ?
             AND (
                 v.state = 'closed_unpaid'
-                OR (v.state = 'completed' AND COALESCE(charges.total, 0) > COALESCE(paid.total, 0) + 0.001)
+                OR (v.state = 'completed'
+                    AND (COALESCE(charges.total, 0) + COALESCE(drugcharges.total, 0)) > COALESCE(paid.total, 0) + 0.001)
             )
         ) outstanding
         WHERE owed > 0";
 
-        $bind = [$facilityId];
+        // One bind per '?' in order: charges-subquery facility, drug-charges-subquery
+        // facility, paid-subquery facility, then the outer visit facility filter.
+        $bind = [$facilityId, $facilityId, $facilityId, $facilityId];
         $bucketSql = '';
         if ($bucket === '0_7') {
             $bucketSql = ' AND age_days <= 7';

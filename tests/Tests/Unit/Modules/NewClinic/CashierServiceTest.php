@@ -47,6 +47,25 @@ class CashierServiceTest extends TestCase
         $this->assertStringContainsString("'billing'", $body);
     }
 
+    public function testRecordPartialPaymentGuards(): void
+    {
+        $method = new \ReflectionMethod(CashierService::class, 'recordPartialPayment');
+        $source = file_get_contents($method->getFileName());
+        $start = $method->getStartLine();
+        $end = $method->getEndLine();
+        $body = implode('', array_slice(explode("\n", $source), $start - 1, $end - $start + 1));
+
+        // Manager gate + reason + feature flag + partial-amount bounds.
+        $this->assertStringContainsString("'new_visit_mark_outstanding'", $body);
+        $this->assertStringContainsString('Reason is required for a partial payment', $body);
+        $this->assertStringContainsString("'enable_partial_payment'", $body);
+        $this->assertStringContainsString('Amount covers the full total', $body);
+        $this->assertStringContainsString('Payment amount must be greater than zero', $body);
+        // Completes the visit and reports the remaining balance.
+        $this->assertStringContainsString("'completed'", $body);
+        $this->assertStringContainsString("'balance_due'", $body);
+    }
+
     public function testResolvePatientCheckoutRequiresPid(): void
     {
         $method = new \ReflectionMethod(CashierService::class, 'resolvePatientCheckout');

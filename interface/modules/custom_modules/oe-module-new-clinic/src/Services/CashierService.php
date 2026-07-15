@@ -324,7 +324,11 @@ class CashierService
                 'cash_payment_repair'
             );
 
-            if ($autoBillDrugs) {
+            // Only mark medicines paid if the already-recorded payment actually covers the
+            // full total (incl. drugs). A core front-payment that covered services only must
+            // not silently flag the medicines as collected.
+            if ($autoBillDrugs
+                && $this->encounterPatientPaymentTotal($pid, $encounter) + 0.001 >= $totalDue) {
                 $this->markDrugSalesBilled($pid, $encounter);
             }
 
@@ -411,7 +415,6 @@ class CashierService
         float $amountReceived,
         string $reason,
         ?string $esignOverrideReason = null,
-        ?string $completionOverrideReason = null,
         ?string $clientRequestId = null,
         ?string $paymentMethod = 'cash',
         ?string $momoReference = null,
@@ -464,28 +467,15 @@ class CashierService
             throw new \InvalidArgumentException('Amount covers the full total — use Take payment instead');
         }
 
+        // Partial payment requires a complete-enough profile — the desk only offers the
+        // button when completion is satisfied, and V1 has no manager completion-override
+        // path for partial (unlike full pay). This is the defensive server-side guard.
         $completionGate = $this->assessCompletionGate($pid, true);
-        if ($completionGate['blocked'] && !$completionGate['can_skip']) {
+        if ($completionGate['blocked']) {
             $missing = implode(', ', $completionGate['missing_labels']);
             throw new \InvalidArgumentException(
                 'Profile is ' . $completionGate['score'] . '% complete ('
                 . $completionGate['threshold'] . '% required). Missing: ' . $missing
-            );
-        }
-        if ($completionGate['blocked'] && $completionGate['can_skip']) {
-            $overrideReason = trim((string) ($completionOverrideReason ?? ''));
-            if ($overrideReason === '') {
-                throw new \InvalidArgumentException(
-                    'Profile incomplete — manager override reason is required before payment'
-                );
-            }
-            $this->revisitGate->logCompletionOverride(
-                $pid,
-                $actorUserId,
-                'billing',
-                $completionGate,
-                $overrideReason,
-                $visitId
             );
         }
 
@@ -710,6 +700,11 @@ class CashierService
 
     private function encounterHasPatientPayment(int $pid, int $encounter): bool
     {
+        return self::hasRecordedPaymentTotal($this->encounterPatientPaymentTotal($pid, $encounter));
+    }
+
+    private function encounterPatientPaymentTotal(int $pid, int $encounter): float
+    {
         $row = QueryUtils::querySingleRow(
             "SELECT COALESCE(SUM(pay_amount), 0) AS paid
              FROM ar_activity
@@ -717,7 +712,7 @@ class CashierService
             [$pid, $encounter]
         );
 
-        return self::hasRecordedPaymentTotal((float) ($row['paid'] ?? 0));
+        return round((float) ($row['paid'] ?? 0), 2);
     }
 
     /**
