@@ -263,6 +263,7 @@ export function PharmOpsOtcSaleDrawer({
         id="nc-pharmops-otc-drawer"
         title="Sell OTC"
         width="md"
+        dismissOnOutsideClick={false}
         footer={success ? (
           <Button type="button" size="sm" onClick={onClose}>
             Close

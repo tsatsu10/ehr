@@ -26,6 +26,11 @@ interface SlideOverProps {
   width?: SlideOverWidth;
   placement?: SlideOverPlacement;
   initialFocusSelector?: string;
+  /**
+   * When false, a click on the backdrop / outside the panel does NOT close it — use for
+   * data-entry forms so a stray click can't discard in-progress work. Escape and the X still close.
+   */
+  dismissOnOutsideClick?: boolean;
   children: ReactNode;
 }
 
@@ -40,6 +45,7 @@ export function SlideOver({
   width = 'md',
   placement = 'end',
   initialFocusSelector,
+  dismissOnOutsideClick = true,
   children,
 }: SlideOverProps) {
   const resolvedTitleId = titleId ?? (id ? `${id}-title` : undefined);
@@ -68,6 +74,7 @@ export function SlideOver({
           event.preventDefault();
           document.querySelector<HTMLElement>(initialFocusSelector)?.focus();
         }}
+        onInteractOutside={dismissOnOutsideClick ? undefined : (event) => event.preventDefault()}
       >
         <SheetHeader>
           {typeof title === 'string' ? (
