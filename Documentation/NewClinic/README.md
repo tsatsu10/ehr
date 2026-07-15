@@ -6,7 +6,7 @@ Private outpatient clinic layer for OpenEMR. **Primary market:** West Africa. **
 
 Read in this order for a full picture:
 
-1. **[NEW_CLINIC_V1_PRD.md](./done/NEW_CLINIC_V1_PRD.md)** — What we build (requirements, modules M0–M18, ACL, data model) — **v1.20.51**
+1. **[NEW_CLINIC_V1_PRD.md](./done/NEW_CLINIC_V1_PRD.md)** — What we build (requirements, modules M0–M18, ACL, data model) — **v1.20.53**
 2. **[NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md)** — How staff work day-to-day (v1.9.50)
 3. **[NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md)** — What each screen looks like (wireframes, AJAX) (v0.6.51)
 
@@ -63,6 +63,8 @@ Read in this order for a full picture:
 | [FRONTEND_MODULE_GUIDE.md](../FRONTEND_MODULE_GUIDE.md) | How to build and wire React islands (Vite, `oeFetch`, tokens) |
 | [MOBILE_IOS_CURSOR_CHECKLIST.md](./new/MOBILE_IOS_CURSOR_CHECKLIST.md) | Post-session verify checklist when coding from **Cursor iOS** (CI + desktop gates) |
 | [NEW_CLINIC_V1_SCALABILITY_HARDENING_PLAN.md](./new/NEW_CLINIC_V1_SCALABILITY_HARDENING_PLAN.md) | SCALE-* performance hardening tasks + R1–R8 rules — Phases 0–5 executed; **Phase 6 (§8A) added from a post-launch online-research review — SCALE-6.1–6.4 not yet built** + an offline-first product decision routed to a PRD amendment (v1.1.0) |
+| [NEW_CLINIC_CASHIER_BILLING_COMPLETION_PLAN.md](./new/NEW_CLINIC_CASHIER_BILLING_COMPLETION_PLAN.md) | CBILL-* — cashier billing completion, all 3 slices **built + validated**: **CBILL-1** pharmacy charges at the cashier, **CBILL-2** partial payment, **CBILL-3** insurance scheme-split (authorised by PRD amendment D-BILL-7/8) (v0.1.4) |
+| [NEW_CLINIC_V1_INSURANCE_SCHEME_SPLIT_REDESIGN.md](./new/NEW_CLINIC_V1_INSURANCE_SCHEME_SPLIT_REDESIGN.md) | **CBILL-3** design + build record — per-line scheme-covered vs patient-pay split at the cashier + a manual "scheme claims to submit" register; lean `new_scheme_claim` tables reusing core `insurance_companies`; behind `enable_insurance_scheme` (default OFF); manual only — no claims/EDI/eligibility (v0.1.0) |
 | [NEW_CLINIC_SCALE_OUT_RUNBOOK.md](./NEW_CLINIC_SCALE_OUT_RUNBOOK.md) | 1→N-server ops runbook: Stage 0/1/2 progression, incident response, backup/restore (v1.0.1, SCALE-5.2 consolidated) |
 | [NEW_CLINIC_SSE_DESIGN.md](./NEW_CLINIC_SSE_DESIGN.md) | Design-only doc for Server-Sent Events queue invalidation — worker-count math, go/no-go criteria; not implemented (v0.1.1, SCALE-5.1) |
 | [NEW_CLINIC_OUTAGE_RUNBOOK.md](./NEW_CLINIC_OUTAGE_RUNBOOK.md) | Clinic-facing per-deployment outage card: what keeps working vs stops by outage type × on-prem/VPS flavor, UPS/power, server-dead paper fallback + same-day back-entry, recovery checklist (v1.0.0; market plan W1 pilot-pack deliverable) |
