@@ -58,6 +58,7 @@ export function SchemeSplitModal({
   onConfirm,
 }: SchemeSplitModalProps) {
   const [schemes, setSchemes] = useState<CashierScheme[]>([]);
+  const [schemesError, setSchemesError] = useState(false);
   const [schemeId, setSchemeId] = useState(0);
   const [membership, setMembership] = useState('');
   const [covered, setCovered] = useState<Set<string>>(new Set());
@@ -81,9 +82,10 @@ export function SchemeSplitModal({
     setMethod('cash');
     setMomoReference('');
     setAmount('');
+    setSchemesError(false);
     void oeFetch<{ schemes: CashierScheme[] }>('cashier.scheme.list', { ajaxUrl, csrfToken })
       .then((d) => setSchemes(d.schemes ?? []))
-      .catch(() => setSchemes([]));
+      .catch(() => { setSchemes([]); setSchemesError(true); });
   }, [open, ajaxUrl, csrfToken]);
 
   useEffect(() => {
@@ -139,6 +141,11 @@ export function SchemeSplitModal({
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
+          {schemesError && (
+            <div className={deskCalloutClass('error', 'text-sm mb-0')} role="alert">
+              Could not load the scheme list. Refresh and try again.
+            </div>
+          )}
         </div>
         <div className="grid gap-2">
           <Label htmlFor="nc-cashier-membership" className="normal-case font-normal">Membership number</Label>

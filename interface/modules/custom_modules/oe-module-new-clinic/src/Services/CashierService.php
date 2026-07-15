@@ -127,7 +127,6 @@ class CashierService
             'completion_blocked' => $completionGate['blocked'],
             'can_skip_completion' => $completionGate['can_skip'],
             'can_close_without_charge' => $this->canCloseWithoutCharge(),
-            'fee_sheet_url' => $this->feeSheetUrl((int) $visit['pid'], (int) $visit['encounter']),
             'advanced_billing_url' => $advancedBilling['url'],
             'advanced_billing_label' => $advancedBilling['label'],
             'advanced_billing_external' => $advancedBilling['external'],
@@ -580,6 +579,11 @@ class CashierService
         ?string $paymentMethod = 'cash',
         ?string $momoReference = null,
     ): array {
+        // Defensive gate (also enforced by the cashier.scheme.pay action policy).
+        if (!AclMain::aclCheckCore('new_clinic', 'new_cashier')) {
+            throw new \RuntimeException('Forbidden', 403);
+        }
+
         $clientRequestId = trim((string) ($clientRequestId ?? ''));
         if ($clientRequestId !== '') {
             $cached = $this->loadIdempotentPaymentResponse($clientRequestId);
@@ -620,7 +624,41 @@ class CashierService
             throw new \InvalidArgumentException('No charges on this visit — add fees before taking payment');
         }
 
-        $split = $schemeService->splitTotals($coverageLines);
+        // CBILL-3 audit fix — never trust client-supplied line amounts. Rebuild the coverage
+        // lines from the real encounter charges and take ONLY the per-line covered flag from
+        // the client (keyed by source + id). This makes the split tamper-proof and the claim's
+        // per-line amounts authoritative.
+        $coveredKeys = [];
+        foreach ($coverageLines as $line) {
+            if (!empty($line['covered'])) {
+                $source = ($line['source'] ?? 'billing') === 'drug' ? 'drug' : 'billing';
+                $coveredKeys[$source . ':' . (int) ($line['source_id'] ?? 0)] = true;
+            }
+        }
+        $authoritativeLines = [];
+        foreach ($charges as $charge) {
+            $key = 'billing:' . (int) ($charge['id'] ?? 0);
+            $authoritativeLines[] = [
+                'source' => 'billing',
+                'source_id' => (int) ($charge['id'] ?? 0),
+                'description' => (string) ($charge['description'] ?? ''),
+                'amount' => round((float) ($charge['amount'] ?? 0), 2),
+                'covered' => isset($coveredKeys[$key]),
+            ];
+        }
+        foreach ($drugCharges as $drug) {
+            $key = 'drug:' . (int) ($drug['sale_id'] ?? 0);
+            $authoritativeLines[] = [
+                'source' => 'drug',
+                'source_id' => (int) ($drug['sale_id'] ?? 0),
+                'description' => (string) ($drug['description'] ?? ''),
+                'amount' => round((float) ($drug['amount'] ?? 0), 2),
+                'covered' => isset($coveredKeys[$key]),
+            ];
+        }
+
+        $split = $schemeService->splitTotals($authoritativeLines);
+        // Sum is guaranteed to equal totalDue by construction; this is a defensive sanity check.
         if (abs(($split['patient_pay'] + $split['scheme_owed']) - $totalDue) > 0.01) {
             throw new \InvalidArgumentException('Coverage lines do not add up to the visit total');
         }
@@ -655,7 +693,7 @@ class CashierService
         $committed = false;
         $postedPaymentId = 0;
         try {
-            $claimId = $schemeService->createClaim($visit, $schemeId, $membershipNumber, $coverageLines, $actorUserId);
+            $claimId = $schemeService->createClaim($visit, $schemeId, $membershipNumber, $authoritativeLines, $actorUserId);
             if ($patientPay > 0) {
                 $postedPaymentId = $this->postPatientPayment(
                     $pid,
@@ -1155,14 +1193,6 @@ class CashierService
         }
 
         return 'New Clinic cashier';
-    }
-
-    private function feeSheetUrl(int $pid, int $encounter): string
-    {
-        $webroot = $GLOBALS['webroot'] ?? '';
-
-        return $webroot . '/interface/patient_file/encounter/encounter_top.php?set_encounter='
-            . urlencode((string) $encounter);
     }
 
     private function frontPaymentUrl(int $pid): string
