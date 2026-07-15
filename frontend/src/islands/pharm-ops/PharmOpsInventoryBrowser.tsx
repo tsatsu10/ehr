@@ -66,6 +66,63 @@ function groupLots(rows: PharmStockRow[]): DrugGroup[] {
   return order.map((id) => byId.get(id) as DrugGroup);
 }
 
+// INV-6: near-expiry triage — three forward-looking horizons, most urgent first, each clickable
+// to filter the lot list to that window. Complements the KPI strip's single 90-day "at risk" tile.
+function ExpiryBreakdown({
+  summary,
+  currencySymbol,
+  expiry,
+  onExpiryFilter,
+}: {
+  summary: PharmStockSummary;
+  currencySymbol: string;
+  expiry: string;
+  onExpiryFilter: (value: string) => void;
+}) {
+  const money = (n?: number) => formatMoney(n ?? 0, { currency_symbol: currencySymbol });
+  const tiers: Array<{ filter: string; label: string; count: number; value: number; tone: 'danger' | 'warning' | 'neutral' }> = [
+    { filter: '30', label: '≤ 30 days', count: summary.expiring_30 ?? 0, value: summary.value_expiring_30 ?? 0, tone: 'danger' },
+    { filter: '60', label: '≤ 60 days', count: summary.expiring_60 ?? 0, value: summary.value_expiring_60 ?? 0, tone: 'warning' },
+    { filter: 'expiring', label: '≤ 90 days', count: summary.expiring ?? 0, value: summary.value_expiring ?? 0, tone: 'neutral' },
+  ];
+
+  return (
+    <div className="nc-pharmops-inv-expiry-breakdown mb-3">
+      <div className="nc-pharmops-inv-expiry-breakdown-head">
+        <strong>Near-expiry triage</strong>
+        <span className="text-(--oe-nc-text-muted) text-sm">
+          {' '}— dispense the earliest-expiring lot first (FEFO); expand a drug below to see its lots in that order.
+        </span>
+      </div>
+      <div className="nc-pharmops-inv-expiry-tiers" role="group" aria-label="Expiry horizons">
+        {tiers.map((t) => {
+          const active = expiry === t.filter;
+          const color = t.tone === 'danger'
+            ? 'var(--oe-nc-danger)'
+            : t.tone === 'warning'
+              ? 'var(--oe-nc-warning, #b45309)'
+              : undefined;
+          return (
+            <button
+              key={t.filter}
+              type="button"
+              className={`nc-pharmops-inv-expiry-tier${active ? ' is-active' : ''}`}
+              aria-pressed={active}
+              onClick={() => onExpiryFilter(active ? 'all' : t.filter)}
+            >
+              <span className="nc-pharmops-inv-expiry-tier-count tabular-nums" style={color ? { color } : undefined}>
+                {t.count}
+              </span>
+              <span className="nc-pharmops-inv-expiry-tier-label">{t.label}</span>
+              <span className="nc-pharmops-inv-expiry-tier-value tabular-nums">{money(t.value)}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /** Days of stock left at the current consumption rate, and a health tone for it (INV-4). */
 function supplyInfo(group: DrugGroup): { days: number | null; tone?: 'danger' | 'warning' | 'muted' } {
   if (group.avgPerDay <= 0) {
@@ -96,6 +153,8 @@ const LEFT = { textAlign: 'left' as const };
 
 const EXPIRY_FILTERS = [
   { value: 'all', label: 'All lots' },
+  { value: '30', label: 'Expiring ≤ 30 days' },
+  { value: '60', label: 'Expiring ≤ 60 days' },
   { value: 'expiring', label: 'Expiring ≤ 90 days' },
   { value: 'expired', label: 'Expired' },
 ];
@@ -500,6 +559,15 @@ export function PharmOpsInventoryBrowser({
 
       {summary ? (
         <StockSummaryStrip
+          summary={summary}
+          currencySymbol={currencySymbol}
+          expiry={expiry}
+          onExpiryFilter={setExpiry}
+        />
+      ) : null}
+
+      {summary ? (
+        <ExpiryBreakdown
           summary={summary}
           currencySymbol={currencySymbol}
           expiry={expiry}

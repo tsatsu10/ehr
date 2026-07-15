@@ -26,6 +26,11 @@ export interface PharmStockSummary {
   value_expiring?: number;
   value_expired?: number;
   wastage_rate_pct?: number;
+  /** INV-6 expiry tiers: finer horizons than the 90-day `expiring` bucket above. */
+  expiring_30?: number;
+  expiring_60?: number;
+  value_expiring_30?: number;
+  value_expiring_60?: number;
 }
 
 export interface PharmStockBrowser {

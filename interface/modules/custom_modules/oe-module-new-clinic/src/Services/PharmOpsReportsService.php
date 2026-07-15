@@ -569,11 +569,19 @@ class PharmOpsReportsService
             $where .= ' AND d.name LIKE ?';
             $binds[] = '%' . $search . '%';
         }
+        // Expiry tiers (INV-6): '30'/'60'/'90' narrow to that many days out; 'expiring' is the
+        // original 90-day bucket kept for the dashboard tiles (INV-2), an alias for '90'.
+        $expiryDays = match ($expiry) {
+            'expiring', '90' => 90,
+            '60' => 60,
+            '30' => 30,
+            default => null,
+        };
         if ($expiry === 'expired') {
             $where .= ' AND di.expiration IS NOT NULL AND di.expiration < CURDATE()';
-        } elseif ($expiry === 'expiring') {
+        } elseif ($expiryDays !== null) {
             $where .= ' AND di.expiration IS NOT NULL AND di.expiration >= CURDATE()'
-                . ' AND di.expiration <= DATE_ADD(CURDATE(), INTERVAL 90 DAY)';
+                . " AND di.expiration <= DATE_ADD(CURDATE(), INTERVAL {$expiryDays} DAY)";
         }
 
         $offset = min(max(0, $offset), self::TRANSACTION_MAX_OFFSET);
@@ -671,7 +679,17 @@ class PharmOpsReportsService
                          AND di.expiration <= DATE_ADD(CURDATE(), INTERVAL 90 DAY)
                          THEN di.on_hand * cost.unit_cost ELSE 0 END), 0) AS value_expiring,
                 COALESCE(SUM(CASE WHEN di.expiration IS NOT NULL AND di.expiration < CURDATE()
-                         THEN di.on_hand * cost.unit_cost ELSE 0 END), 0) AS value_expired
+                         THEN di.on_hand * cost.unit_cost ELSE 0 END), 0) AS value_expired,
+                SUM(CASE WHEN di.expiration IS NOT NULL AND di.expiration >= CURDATE()
+                         AND di.expiration <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS expiring_30,
+                SUM(CASE WHEN di.expiration IS NOT NULL AND di.expiration >= CURDATE()
+                         AND di.expiration <= DATE_ADD(CURDATE(), INTERVAL 60 DAY) THEN 1 ELSE 0 END) AS expiring_60,
+                COALESCE(SUM(CASE WHEN di.expiration IS NOT NULL AND di.expiration >= CURDATE()
+                         AND di.expiration <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+                         THEN di.on_hand * cost.unit_cost ELSE 0 END), 0) AS value_expiring_30,
+                COALESCE(SUM(CASE WHEN di.expiration IS NOT NULL AND di.expiration >= CURDATE()
+                         AND di.expiration <= DATE_ADD(CURDATE(), INTERVAL 60 DAY)
+                         THEN di.on_hand * cost.unit_cost ELSE 0 END), 0) AS value_expiring_60
              FROM drug_inventory di
              INNER JOIN drugs d ON d.drug_id = di.drug_id
              " . self::costJoin() . "
@@ -706,6 +724,12 @@ class PharmOpsReportsService
             'value_expired' => round($valueExpired, 2),
             // Wastage rate: expired value as a share of total value (0 when nothing on hand).
             'wastage_rate_pct' => $totalValue > 0 ? round(($valueExpired / $totalValue) * 100, 1) : 0.0,
+            // Expiry tiers (INV-6): finer horizons than the 90-day "expiring" bucket above, for
+            // triage — what needs attention this month vs next.
+            'expiring_30' => (int) (is_array($row) ? ($row['expiring_30'] ?? 0) : 0),
+            'expiring_60' => (int) (is_array($row) ? ($row['expiring_60'] ?? 0) : 0),
+            'value_expiring_30' => round((float) (is_array($row) ? ($row['value_expiring_30'] ?? 0) : 0), 2),
+            'value_expiring_60' => round((float) (is_array($row) ? ($row['value_expiring_60'] ?? 0) : 0), 2),
         ];
     }
 

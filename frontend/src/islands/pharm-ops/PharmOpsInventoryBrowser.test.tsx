@@ -50,6 +50,39 @@ describe('PharmOpsInventoryBrowser', () => {
     expect(screen.getByText('12')).toBeInTheDocument();
   });
 
+  it('shows the near-expiry triage tiers and filters to that horizon on click (INV-6)', async () => {
+    mockFetch.mockResolvedValue({
+      offset: 0,
+      has_more: false,
+      summary: {
+        ...summary,
+        expiring_30: 2,
+        expiring_60: 5,
+        value_expiring_30: 40,
+        value_expiring_60: 90,
+      },
+      currency_symbol: 'GH₵',
+      generated_at: '',
+      items: [lot(1)],
+    });
+
+    render(<PharmOpsInventoryBrowser ajaxUrl="/mock/ajax" csrfToken="t" />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByText('Near-expiry triage')).toBeInTheDocument();
+    expect(screen.getByText('≤ 30 days')).toBeInTheDocument();
+    expect(screen.getByText('≤ 60 days')).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('≤ 30 days').closest('button') as HTMLElement);
+    });
+
+    const lastCall = mockFetch.mock.calls[mockFetch.mock.calls.length - 1];
+    expect(lastCall[1].params.expiry).toBe('30');
+  });
+
   it('groups lots under a per-drug row and expands on click (INV-3)', async () => {
     mockFetch.mockResolvedValue({
       offset: 0,
