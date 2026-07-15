@@ -273,14 +273,17 @@ button.nc-pharmops-inv-summary-stat:hover {
 
 /* INV-5: printing the purchase-order list — hide chrome outside the reorder report, keep the
    order-qty inputs readable as plain values (an editable input box doesn't print its typed value
-   reliably in every browser), and stop the table splitting a row across a page break. */
+   reliably in every browser), and stop the table splitting a row across a page break.
+   Gated on `body:has(.nc-pharmops-reorder)` — without it, `body * { visibility: hidden }` would
+   fire on ANY print from this hub (Inventory, Worklist, Setup, other reports), blanking the page,
+   since only the reorder view has something to un-hide. */
 @media print {
-  body * {
+  body:has(.nc-pharmops-reorder) * {
     visibility: hidden;
   }
 
-  .nc-pharmops-reorder,
-  .nc-pharmops-reorder * {
+  body:has(.nc-pharmops-reorder) .nc-pharmops-reorder,
+  body:has(.nc-pharmops-reorder) .nc-pharmops-reorder * {
     visibility: visible;
   }
 

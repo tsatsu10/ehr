@@ -718,7 +718,7 @@ class PharmOpsReportsService
              FROM drug_inventory di
              INNER JOIN drugs d ON d.drug_id = di.drug_id
              " . self::costJoin() . "
-             WHERE di.destroy_date IS NULL AND d.active = 1"
+             WHERE di.destroy_date IS NULL AND d.active = 1 AND di.on_hand <> 0"
         );
 
         // Out-of-stock + at-reorder are per-drug (aggregate on-hand vs reorder point).
