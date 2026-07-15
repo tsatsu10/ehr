@@ -66,23 +66,23 @@ async function selectDrugAndLoadForm() {
 beforeEach(() => mockedFetch.mockReset());
 
 describe('PharmOpsOtcSaleDrawer', () => {
-  it('scales the fee with quantity (unit price x qty) until manually overridden', async () => {
-    mockRoutes(saleForm());
+  it('links quantity and fee two-way via the unit price', async () => {
+    mockRoutes(saleForm()); // unit price 5
     render(<PharmOpsOtcSaleDrawer {...baseProps} />);
     await selectDrugAndLoadForm();
 
     // Prefill = unit price x default qty (5 x 1).
     expect(feeInput().value).toBe('5');
 
-    // Qty 20 -> fee 100.
+    // Quantity drives the fee: 20 -> 100.
     fireEvent.change(qtyInput(), { target: { value: '20' } });
     await waitFor(() => expect(feeInput().value).toBe('100'));
 
-    // Manual override wins and is no longer auto-recomputed.
-    fireEvent.change(feeInput(), { target: { value: '90' } });
-    fireEvent.change(qtyInput(), { target: { value: '10' } });
-    await waitFor(() => expect(qtyInput().value).toBe('10'));
-    expect(feeInput().value).toBe('90');
+    // Amount (budget) drives the quantity: ₵48 buys floor(48/5)=9 units, fee snaps to 45 (never above 48).
+    fireEvent.change(feeInput(), { target: { value: '48' } });
+    fireEvent.blur(feeInput());
+    await waitFor(() => expect(qtyInput().value).toBe('9'));
+    expect(feeInput().value).toBe('45');
   });
 
   it('keeps the picked patient visible (walk-in) instead of clearing back to the search box', async () => {

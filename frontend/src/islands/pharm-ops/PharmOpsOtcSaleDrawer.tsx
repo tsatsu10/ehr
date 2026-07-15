@@ -52,8 +52,6 @@ export function PharmOpsOtcSaleDrawer({
   const [form, setForm] = useState<OtcSaleForm | null>(null);
   const [quantity, setQuantity] = useState('1');
   const [fee, setFee] = useState('');
-  // Fee defaults to unit price x quantity; once the pharmacist edits it, stop auto-recomputing.
-  const [feeEdited, setFeeEdited] = useState(false);
   const [allergyAck, setAllergyAck] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -84,7 +82,6 @@ export function PharmOpsOtcSaleDrawer({
     setForm(null);
     setQuantity('1');
     setFee('');
-    setFeeEdited(false);
     setAllergyAck(false);
     setLoadError(null);
     setSubmitError(null);
@@ -123,7 +120,6 @@ export function PharmOpsOtcSaleDrawer({
       // Fee defaults to unit price x quantity (falls back to the flat amount if no unit price).
       const unit = data.fee?.unit_amount ?? data.fee?.amount ?? 0;
       setFee(moneyString(unit * defaultQty));
-      setFeeEdited(false);
       setAllergyAck(false);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Could not load sale form');
@@ -138,15 +134,28 @@ export function PharmOpsOtcSaleDrawer({
     void loadSaleForm(pid, selectedDrug.drug_id, encounterId);
   }, [encounterId, loadSaleForm, open, pid, selectedDrug]);
 
-  // Keep the fee in step with quantity (unit price x qty) until the pharmacist overrides it.
-  useEffect(() => {
-    if (!form || feeEdited) return;
-    const unit = form.fee?.unit_amount ?? form.fee?.amount ?? 0;
-    const qty = Number(quantity);
-    if (unit > 0 && Number.isFinite(qty) && qty > 0) {
-      setFee(moneyString(unit * qty));
+  const unitPrice = form?.fee?.unit_amount ?? form?.fee?.amount ?? 0;
+
+  // Quantity and fee are linked by the unit price so the charge always equals qty x unit — a
+  // pharmacist can never over- or under-charge for the units dispensed.
+  // Typing a quantity sets the fee; typing an amount (the money the patient has) sets how many
+  // whole units that buys, then snaps the fee to the exact cost (never above the amount entered).
+  const handleQuantityChange = useCallback((value: string) => {
+    setQuantity(value);
+    const qty = Number(value);
+    if (unitPrice > 0 && Number.isFinite(qty) && qty > 0) {
+      setFee(moneyString(unitPrice * qty));
     }
-  }, [quantity, form, feeEdited]);
+  }, [unitPrice]);
+
+  const handleFeeBlur = useCallback(() => {
+    const amount = Number(fee);
+    if (unitPrice > 0 && Number.isFinite(amount) && amount > 0) {
+      const qty = Math.max(1, Math.floor(amount / unitPrice));
+      setQuantity(String(qty));
+      setFee(moneyString(unitPrice * qty));
+    }
+  }, [fee, unitPrice]);
 
   const handleSelectPatient = useCallback((nextPid: number, row?: { display_name?: string }) => {
     setPid(nextPid);
@@ -392,7 +401,7 @@ export function PharmOpsOtcSaleDrawer({
                       min={1}
                       className="h-8"
                       value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
+                      onChange={(e) => handleQuantityChange(e.target.value)}
                     />
                     {overStock ? (
                       <div className="text-[var(--oe-nc-danger,#dc2626)] text-sm mt-1" role="alert">
@@ -401,7 +410,9 @@ export function PharmOpsOtcSaleDrawer({
                     ) : null}
                   </div>
                   <div className="nc-form-group col-span-12 md:col-span-6">
-                    <label htmlFor="nc-pharmops-otc-fee">Fee ({currency})</label>
+                    <label htmlFor="nc-pharmops-otc-fee">
+                      {unitPrice > 0 ? 'Amount to pay' : 'Fee'} ({currency})
+                    </label>
                     <Input
                       id="nc-pharmops-otc-fee"
                       type="number"
@@ -409,8 +420,14 @@ export function PharmOpsOtcSaleDrawer({
                       step="0.01"
                       className="h-8"
                       value={fee}
-                      onChange={(e) => { setFee(e.target.value); setFeeEdited(true); }}
+                      onChange={(e) => setFee(e.target.value)}
+                      onBlur={handleFeeBlur}
                     />
+                    {unitPrice > 0 ? (
+                      <div className="text-[var(--oe-nc-text-muted)] text-sm mt-1">
+                        {currency}{moneyString(unitPrice)} each — the amount sets how many units.
+                      </div>
+                    ) : null}
                   </div>
                 </div>
                 {form.safety?.allergy_warning ? (
