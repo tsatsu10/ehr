@@ -134,11 +134,8 @@ class CashierService
             'front_payment_url' => $this->frontPaymentUrl((int) $visit['pid']),
             'encounter_signed' => $this->signService->isProfileSigned($visitId),
             'unsigned_message' => $this->signService->getProfileUnsignedReason($visitId),
-            'encounter_url' => EncounterSignService::buildEncounterUrl(
-                $GLOBALS['webroot'] ?? '',
-                (int) $visit['pid'],
-                (int) $visit['encounter']
-            ),
+            // Native consult page when the native engine is on (stock fallback inside).
+            'encounter_url' => $this->signService->buildOpenUrlForVisit($visit),
             'can_apply_discount' => AclMain::aclCheckCore('new_clinic', 'new_discount'),
             'can_esign_override' => AclMain::aclCheckCore('new_clinic', 'new_esign_skip_complete'),
             'enable_momo_payment' => $this->configService->getInt('enable_momo_payment', 0, $facilityId) === 1,
@@ -555,6 +552,179 @@ class CashierService
             'change_due' => 0.0,
             'balance_due' => $balanceDue,
             'total_due' => $totalDue,
+            'receipt' => $receipt,
+            'payment_history_url' => $this->paymentHistoryUrl($pid, $visitId, $facilityId),
+        ];
+
+        return $this->finalizePaymentResponse($response, $clientRequestId, $visitId, $actorUserId);
+    }
+
+    /**
+     * CBILL-3 — record a scheme-split checkout: the patient pays their (uncovered) portion now,
+     * the scheme-covered portion becomes a manual claim (new_scheme_claim). The visit completes.
+     * The scheme portion is NOT patient AR — the M14 outstanding list subtracts it.
+     *
+     * @param array<int, array<string, mixed>> $coverageLines each: source, source_id, description, amount, covered
+     * @return array<string, mixed>
+     */
+    public function recordSchemePayment(
+        int $visitId,
+        int $actorUserId,
+        int $expectedVersion,
+        int $schemeId,
+        string $membershipNumber,
+        array $coverageLines,
+        float $amountReceived,
+        ?string $esignOverrideReason = null,
+        ?string $clientRequestId = null,
+        ?string $paymentMethod = 'cash',
+        ?string $momoReference = null,
+    ): array {
+        $clientRequestId = trim((string) ($clientRequestId ?? ''));
+        if ($clientRequestId !== '') {
+            $cached = $this->loadIdempotentPaymentResponse($clientRequestId);
+            if ($cached !== null) {
+                return $cached;
+            }
+        }
+
+        $visit = $this->queueService->getVisitForActor($visitId);
+        if ($visit['state'] !== 'ready_for_payment') {
+            throw new \InvalidArgumentException('Visit is not ready for payment');
+        }
+
+        $pid = (int) $visit['pid'];
+        $encounter = (int) $visit['encounter'];
+        $facilityId = (int) ($visit['facility_id'] ?? 0);
+
+        $schemeService = new SchemeClaimService();
+        if (!$schemeService->isEnabled($facilityId)) {
+            throw new \InvalidArgumentException('Insurance scheme-split is not enabled for this clinic');
+        }
+        if ($schemeId <= 0) {
+            throw new \InvalidArgumentException('A scheme is required');
+        }
+        $membershipNumber = trim($membershipNumber);
+        if ($membershipNumber === '') {
+            throw new \InvalidArgumentException('Membership number is required');
+        }
+
+        $this->signService->assertProfileSigned($visitId, $esignOverrideReason);
+
+        $charges = $this->getEncounterCharges($pid, $encounter);
+        $autoBillDrugs = $this->pharmacyAutoBillEnabled($facilityId);
+        $drugCharges = $autoBillDrugs ? $this->getEncounterDrugCharges($pid, $encounter) : [];
+        $totalDue = round($this->sumCharges($charges) + $this->sumDrugCharges($drugCharges), 2);
+
+        if ($totalDue <= 0) {
+            throw new \InvalidArgumentException('No charges on this visit — add fees before taking payment');
+        }
+
+        $split = $schemeService->splitTotals($coverageLines);
+        if (abs(($split['patient_pay'] + $split['scheme_owed']) - $totalDue) > 0.01) {
+            throw new \InvalidArgumentException('Coverage lines do not add up to the visit total');
+        }
+        $patientPay = $split['patient_pay'];
+        $schemeOwed = $split['scheme_owed'];
+
+        // Same profile-completion rule as partial pay: complete profile required (no override).
+        $completionGate = $this->assessCompletionGate($pid, true);
+        if ($completionGate['blocked']) {
+            $missing = implode(', ', $completionGate['missing_labels']);
+            throw new \InvalidArgumentException(
+                'Profile is ' . $completionGate['score'] . '% complete ('
+                . $completionGate['threshold'] . '% required). Missing: ' . $missing
+            );
+        }
+
+        $method = $this->normalizePaymentMethod((string) ($paymentMethod ?? 'cash'), $facilityId);
+        $paymentReference = $this->resolvePaymentReference($method, null, $momoReference);
+
+        if ($patientPay > 0) {
+            if ($amountReceived <= 0) {
+                throw new \InvalidArgumentException('Payment amount must be greater than zero');
+            }
+            if ($amountReceived + 0.001 < $patientPay) {
+                throw new \InvalidArgumentException('Amount received is less than the patient portion');
+            }
+        }
+
+        require_once dirname(__DIR__, 6) . '/library/sql.inc.php';
+
+        sqlBeginTrans();
+        $committed = false;
+        $postedPaymentId = 0;
+        try {
+            $claimId = $schemeService->createClaim($visit, $schemeId, $membershipNumber, $coverageLines, $actorUserId);
+            if ($patientPay > 0) {
+                $postedPaymentId = $this->postPatientPayment(
+                    $pid,
+                    $encounter,
+                    $patientPay,
+                    $actorUserId,
+                    $method,
+                    $paymentReference
+                );
+            }
+            $updated = $this->queueService->transition(
+                $visitId,
+                'completed',
+                $actorUserId,
+                $expectedVersion,
+                'scheme_split_payment'
+            );
+            if ($autoBillDrugs) {
+                $this->markDrugSalesBilled($pid, $encounter);
+            }
+            sqlCommitTrans(true);
+            $committed = true;
+        } catch (\Throwable $e) {
+            if (!$committed) {
+                sqlCommitTrans(false);
+            }
+            throw $e;
+        }
+
+        EventAuditLogger::getInstance()->newEvent(
+            'new_clinic',
+            'cashier',
+            $actorUserId,
+            1,
+            'visit_id=' . $visitId . ' scheme_split scheme_id=' . $schemeId
+                . ' patient=' . $patientPay . ' scheme_owed=' . $schemeOwed
+        );
+
+        $changeDue = round(max(0.0, $amountReceived - $patientPay), 2);
+        $receiptMeta = $this->issueReceipt(
+            $visit,
+            $patientPay,
+            max($amountReceived, $patientPay),
+            'Scheme: ' . mb_substr($schemeService->schemeLabel($schemeId), 0, 120) . ' owes ' . $schemeOwed,
+            $actorUserId,
+            $postedPaymentId
+        );
+        $receiptMeta['payment_method'] = $method;
+        $receiptMeta['payment_method_label'] = $method === 'momo' ? 'MoMo' : 'Cash';
+        $receiptMeta['scheme_owed'] = $schemeOwed;
+        $receiptMeta['scheme_split'] = true;
+
+        $receipt = array_merge([
+            'queue_number' => (int) ($visit['queue_number'] ?? 0),
+            'show_queue_number' => $this->configService->getInt('print_queue_number_on_receipt', 1, $facilityId) === 1,
+            'amount_paid' => $patientPay,
+            'change_due' => $changeDue,
+            'paid_at' => date('c'),
+            'receipt_number' => '',
+        ], $receiptMeta);
+
+        $response = [
+            'visit' => $this->rowEnricher->enrichVisitRow($updated),
+            'amount_paid' => $patientPay,
+            'change_due' => $changeDue,
+            'patient_pay' => $patientPay,
+            'scheme_owed' => $schemeOwed,
+            'total_due' => $totalDue,
+            'claim_id' => $claimId,
             'receipt' => $receipt,
             'payment_history_url' => $this->paymentHistoryUrl($pid, $visitId, $facilityId),
         ];

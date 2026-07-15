@@ -819,6 +819,53 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_partial_payment', '0');
 #EndIf
 
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_insurance_scheme
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_insurance_scheme', '0');
+#EndIf
+
+-- CBILL-3 — one insurance scheme claim per visit that used the scheme-split at the cashier.
+-- The scheme portion is a MANUAL claim register (no EDI/eligibility); the patient portion is
+-- collected as a normal cash payment. `scheme_name` is a snapshot (the payer may be renamed).
+#IfNotTable new_scheme_claim
+CREATE TABLE IF NOT EXISTS `new_scheme_claim` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `facility_id` INT NOT NULL DEFAULT 0,
+    `visit_id` BIGINT NOT NULL,
+    `pid` BIGINT NOT NULL,
+    `encounter` BIGINT NOT NULL,
+    `insurance_company_id` INT NOT NULL DEFAULT 0,
+    `scheme_name` VARCHAR(255) NOT NULL DEFAULT '',
+    `membership_number` VARCHAR(64) NOT NULL DEFAULT '',
+    `scheme_owed` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    `patient_pay` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    `status` ENUM('to_submit','submitted','settled','void') NOT NULL DEFAULT 'to_submit',
+    `actor_user_id` BIGINT NOT NULL DEFAULT 0,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `submitted_at` DATETIME NULL,
+    `settled_at` DATETIME NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uniq_visit` (`visit_id`),
+    KEY `idx_status` (`facility_id`, `status`),
+    KEY `idx_created` (`created_at`)
+) ENGINE=InnoDB COMMENT='CBILL-3 insurance scheme claims (manual register)';
+#EndIf
+
+-- Per-line coverage snapshot: which charges the scheme covered vs the patient paid.
+#IfNotTable new_scheme_claim_line
+CREATE TABLE IF NOT EXISTS `new_scheme_claim_line` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `claim_id` BIGINT NOT NULL,
+    `source` ENUM('billing','drug') NOT NULL,
+    `source_id` BIGINT NOT NULL DEFAULT 0,
+    `description` VARCHAR(255) NOT NULL DEFAULT '',
+    `amount` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    `covered` TINYINT(1) NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    KEY `idx_claim` (`claim_id`)
+) ENGINE=InnoDB COMMENT='CBILL-3 per-line coverage for a scheme claim';
+#EndIf
+
 #IfNotTable new_lab_order_meta
 CREATE TABLE IF NOT EXISTS `new_lab_order_meta` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,

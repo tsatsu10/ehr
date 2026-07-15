@@ -72,6 +72,7 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'enable_pharm_ops',
   'pharmacy_auto_bill_on_dispense',
   'enable_partial_payment',
+  'enable_insurance_scheme',
   'pharmacy_service_formdir',
   'enable_pharm_rx_favorites',
   'enable_native_rx_edit',
@@ -292,6 +293,13 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         type: 'bool',
         label: 'Allow partial payment at the cashier (CBILL-2)',
         hint: 'When on, a manager (with the "mark left unpaid" permission) can accept less than the full total and complete the visit; the remainder becomes an outstanding balance. Turn on the "owed to clinic" outstanding list too, to see and follow up those balances.',
+        indent: 1,
+      },
+      {
+        key: 'enable_insurance_scheme',
+        type: 'bool',
+        label: 'Insurance scheme-split at the cashier (CBILL-3)',
+        hint: 'When on, the cashier can mark a visit as covered by a scheme and tick each charge scheme-covered vs patient-pay. The patient part is collected now; the scheme part goes to a manual "scheme claims to submit" list. Manual only — no automated claims/eligibility. Default OFF = cash-only, no insurance UI.',
         indent: 1,
       },
       {

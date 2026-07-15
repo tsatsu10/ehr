@@ -37,12 +37,14 @@ class BillOpsOutstandingService
 
         $currencySymbol = (string) ($this->config->get('currency_symbol', 'GH₵', $facilityId) ?? 'GH₵');
 
+        // Patient-owed = billing + collected medicines − scheme-covered portion − receipts.
+        $patientCharges = "(COALESCE(charges.total, 0) + COALESCE(drugcharges.total, 0) - COALESCE(scheme.total, 0))";
         $baseSql = "FROM (
             SELECT v.id AS visit_id, v.pid, v.queue_number, v.visit_date, v.state,
                    pd.fname, pd.lname, pd.pubpid, pd.phone_cell, pd.phone_home,
-                   (COALESCE(charges.total, 0) + COALESCE(drugcharges.total, 0)) AS charges_total,
+                   {$patientCharges} AS charges_total,
                    COALESCE(paid.total, 0) AS paid_total,
-                   GREATEST((COALESCE(charges.total, 0) + COALESCE(drugcharges.total, 0)) - COALESCE(paid.total, 0), 0) AS owed,
+                   GREATEST({$patientCharges} - COALESCE(paid.total, 0), 0) AS owed,
                    DATEDIFF(CURDATE(), v.visit_date) AS age_days
             FROM new_visit v
             INNER JOIN patient_data pd ON pd.pid = v.pid
@@ -70,6 +72,13 @@ class BillOpsOutstandingService
                 GROUP BY ds.pid, ds.encounter
             ) drugcharges ON drugcharges.pid = v.pid AND drugcharges.encounter = v.encounter
             LEFT JOIN (
+                -- CBILL-3 — the scheme-covered portion is owed by the scheme, not the patient.
+                SELECT sc.visit_id, SUM(sc.scheme_owed) AS total
+                FROM new_scheme_claim sc
+                WHERE sc.facility_id = ? AND sc.status <> 'void'
+                GROUP BY sc.visit_id
+            ) scheme ON scheme.visit_id = v.id
+            LEFT JOIN (
                 SELECT r.visit_id, SUM(CASE WHEN r.reversed_at IS NULL THEN r.amount_paid ELSE 0 END) AS total
                 FROM new_receipt r
                 WHERE r.facility_id = ?
@@ -78,15 +87,14 @@ class BillOpsOutstandingService
             WHERE v.facility_id = ?
             AND (
                 v.state = 'closed_unpaid'
-                OR (v.state = 'completed'
-                    AND (COALESCE(charges.total, 0) + COALESCE(drugcharges.total, 0)) > COALESCE(paid.total, 0) + 0.001)
+                OR (v.state = 'completed' AND {$patientCharges} > COALESCE(paid.total, 0) + 0.001)
             )
         ) outstanding
         WHERE owed > 0";
 
-        // One bind per '?' in order: charges-subquery facility, drug-charges-subquery
-        // facility, paid-subquery facility, then the outer visit facility filter.
-        $bind = [$facilityId, $facilityId, $facilityId, $facilityId];
+        // One bind per '?' in order: charges facility, drug-charges facility, scheme facility,
+        // paid facility, then the outer visit facility filter.
+        $bind = [$facilityId, $facilityId, $facilityId, $facilityId, $facilityId];
         $bucketSql = '';
         if ($bucket === '0_7') {
             $bucketSql = ' AND age_days <= 7';

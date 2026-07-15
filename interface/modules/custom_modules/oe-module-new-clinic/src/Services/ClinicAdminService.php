@@ -33,6 +33,7 @@ class ClinicAdminService
         'lab_auto_bill_on_order' => ['type' => 'bool', 'default' => '1'],
         'pharmacy_auto_bill_on_dispense' => ['type' => 'bool', 'default' => '0'],
         'enable_partial_payment' => ['type' => 'bool', 'default' => '0'],
+        'enable_insurance_scheme' => ['type' => 'bool', 'default' => '0'],
         'report_hub_moh_pack' => ['type' => 'string', 'default' => 'ghana_v1'],
         'enable_lab_role' => ['type' => 'bool', 'default' => '0'],
         'enable_pharmacy_role' => ['type' => 'bool', 'default' => '0'],
