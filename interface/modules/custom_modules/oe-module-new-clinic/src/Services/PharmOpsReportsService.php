@@ -27,6 +27,8 @@ class PharmOpsReportsService
     public const REORDER_TARGET_DAYS = 30;
     /** Default lookback for the destroyed-drugs report. */
     public const DESTROYED_LOOKBACK_DAYS = 365;
+    /** Page size for the inventory-transactions ledger. */
+    public const TRANSACTION_PAGE_SIZE = 50;
     private const REPORT_ROW_CAP = 500;
 
     public function __construct(
@@ -249,6 +251,138 @@ class PharmOpsReportsService
     }
 
     /**
+     * Native inventory-transactions ledger: line-by-line stock movements over a
+     * date range, optionally filtered by transaction type. Paginated (R1). Type,
+     * "who", and the -quantity display sign follow the stock report exactly.
+     *
+     * @return array{from: string, to: string, type: string, offset: int, has_more: bool, generated_at: string, items: list<array<string, mixed>>}
+     */
+    public function transactionLedger(?string $from, ?string $to, string $type = '', int $offset = 0): array
+    {
+        $this->access->assertHubAccess();
+
+        $today = new \DateTimeImmutable('today');
+        $toDate = $this->normalizeDate($to) ?? $today->format('Y-m-d');
+        $fromDate = $this->normalizeDate($from)
+            ?? $today->modify('-' . self::DESTROYED_LOOKBACK_DAYS . ' days')->format('Y-m-d');
+        if ($fromDate > $toDate) {
+            [$fromDate, $toDate] = [$toDate, $fromDate];
+        }
+        $offset = max(0, $offset);
+        $limit = self::TRANSACTION_PAGE_SIZE;
+
+        $rows = QueryUtils::fetchRecords(
+            "SELECT ds.sale_id, ds.sale_date, ds.quantity, ds.fee, ds.pid,
+                    ds.distributor_id, ds.xfer_inventory_id, ds.billed, ds.notes,
+                    d.name AS drug_name, di.lot_number,
+                    lo.title AS warehouse,
+                    pd.fname AS pfname, pd.lname AS plname,
+                    du.organization AS dorg, du.fname AS dfname, du.lname AS dlname
+             FROM drug_sales ds
+             INNER JOIN drugs d ON d.drug_id = ds.drug_id
+             LEFT JOIN drug_inventory di ON di.inventory_id = ds.inventory_id
+             LEFT JOIN list_options lo ON lo.list_id = 'warehouse' AND lo.option_id = di.warehouse_id
+             LEFT JOIN patient_data pd ON pd.pid = ds.pid
+             LEFT JOIN users du ON du.id = ds.distributor_id
+             WHERE ds.sale_date >= ? AND ds.sale_date <= ?" . $this->transactionTypeClause($type) . "
+             ORDER BY ds.sale_date DESC, ds.sale_id DESC
+             LIMIT " . ($limit + 1) . " OFFSET " . $offset,
+            [$fromDate, $toDate]
+        ) ?: [];
+
+        $hasMore = count($rows) > $limit;
+        $rows = array_slice($rows, 0, $limit);
+
+        $items = array_map(function (array $row): array {
+            $rowType = $this->deriveTxType($row);
+
+            return [
+                'sale_id' => (int) ($row['sale_id'] ?? 0),
+                'date' => (string) ($row['sale_date'] ?? ''),
+                'type' => $rowType,
+                'type_label' => ucfirst($rowType),
+                'drug_name' => trim((string) ($row['drug_name'] ?? 'Medication')),
+                'lot_number' => trim((string) ($row['lot_number'] ?? '')),
+                'warehouse' => trim((string) ($row['warehouse'] ?? '')),
+                'who' => $this->deriveTxWho($row, $rowType),
+                // Stock report display sign: out = negative.
+                'quantity' => -(int) round((float) ($row['quantity'] ?? 0)),
+                'amount' => round((float) ($row['fee'] ?? 0), 2),
+                'billed' => !empty($row['billed']),
+                'notes' => trim((string) ($row['notes'] ?? '')),
+            ];
+        }, $rows);
+
+        return [
+            'from' => $fromDate,
+            'to' => $toDate,
+            'type' => $type,
+            'offset' => $offset,
+            'has_more' => $hasMore,
+            'generated_at' => date('c'),
+            'items' => $items,
+        ];
+    }
+
+    /**
+     * Derived transaction type, matching the stock report's if/elseif priority.
+     *
+     * @param array<string, mixed> $row
+     */
+    private function deriveTxType(array $row): string
+    {
+        if ((int) ($row['pid'] ?? 0) !== 0) {
+            return 'sale';
+        }
+        if ((int) ($row['distributor_id'] ?? 0) !== 0) {
+            return 'distribution';
+        }
+        if ((int) ($row['xfer_inventory_id'] ?? 0) !== 0) {
+            return 'transfer';
+        }
+        if ((float) ($row['fee'] ?? 0) != 0.0) {
+            return 'purchase';
+        }
+
+        return 'adjustment';
+    }
+
+    /**
+     * "Who" for a transaction: patient for a sale, distributor for a distribution.
+     *
+     * @param array<string, mixed> $row
+     */
+    private function deriveTxWho(array $row, string $type): string
+    {
+        if ($type === 'sale') {
+            return trim(((string) ($row['plname'] ?? '')) . ' ' . ((string) ($row['pfname'] ?? '')));
+        }
+        if ($type === 'distribution') {
+            $org = trim((string) ($row['dorg'] ?? ''));
+            if ($org !== '') {
+                return $org;
+            }
+
+            return trim(((string) ($row['dlname'] ?? '')) . ' ' . ((string) ($row['dfname'] ?? '')));
+        }
+
+        return '';
+    }
+
+    /** SQL fragment filtering by derived transaction type (static, injection-safe). */
+    private function transactionTypeClause(string $type): string
+    {
+        return match ($type) {
+            'sale' => ' AND ds.pid <> 0',
+            'distribution' => ' AND ds.pid = 0 AND COALESCE(ds.distributor_id, 0) <> 0',
+            'transfer' => ' AND ds.pid = 0 AND COALESCE(ds.distributor_id, 0) = 0 AND COALESCE(ds.xfer_inventory_id, 0) <> 0',
+            'purchase' => ' AND ds.pid = 0 AND COALESCE(ds.distributor_id, 0) = 0 AND COALESCE(ds.xfer_inventory_id, 0) = 0 AND ds.fee <> 0',
+            'adjustment' => ' AND ds.pid = 0 AND COALESCE(ds.distributor_id, 0) = 0 AND COALESCE(ds.xfer_inventory_id, 0) = 0 AND ds.fee = 0',
+            default => '',
+        };
+    }
+
+    /**
      * Current live on-hand per drug (non-destroyed lots), keyed by drug_id.
      *
      * @return array<int, int>
@@ -313,6 +447,7 @@ class PharmOpsReportsService
                     'label' => 'Inventory transactions',
                     'description' => 'Detailed purchase, sale, and adjustment ledger.',
                     'embed_url' => $webroot . '/interface/reports/inventory_transactions.php',
+                    'native' => true,
                 ],
                 [
                     'id' => self::REPORT_DESTROYED,

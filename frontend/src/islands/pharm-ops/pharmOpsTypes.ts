@@ -71,6 +71,31 @@ export interface PharmActivityReport {
   items: PharmActivityRow[];
 }
 
+export interface PharmTransactionRow {
+  sale_id: number;
+  date: string;
+  type: string;
+  type_label: string;
+  drug_name: string;
+  lot_number: string;
+  warehouse: string;
+  who: string;
+  quantity: number;
+  amount: number;
+  billed: boolean;
+  notes: string;
+}
+
+export interface PharmTransactionLedger {
+  from: string;
+  to: string;
+  type: string;
+  offset: number;
+  has_more: boolean;
+  generated_at: string;
+  items: PharmTransactionRow[];
+}
+
 export interface PharmOpsHubProps {
   ajaxUrl: string;
   csrfToken: string;
