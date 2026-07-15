@@ -63,7 +63,10 @@ async function selectDrugAndLoadForm() {
   await waitFor(() => expect(qtyInput()).toBeInTheDocument());
 }
 
-beforeEach(() => mockedFetch.mockReset());
+beforeEach(() => {
+  mockedFetch.mockReset();
+  sessionStorage.clear();
+});
 
 describe('PharmOpsOtcSaleDrawer', () => {
   it('links quantity and fee two-way via the unit price', async () => {
@@ -83,6 +86,30 @@ describe('PharmOpsOtcSaleDrawer', () => {
     fireEvent.blur(feeInput());
     await waitFor(() => expect(qtyInput().value).toBe('9'));
     expect(feeInput().value).toBe('45');
+  });
+
+  it('remembers an in-progress sale after closing and reopening (draft persistence)', async () => {
+    mockRoutes(saleForm()); // unit price 5, Paracetamol 500 mg
+    const props = { ...baseProps, initialContext: null };
+    const { rerender } = render(<PharmOpsOtcSaleDrawer {...props} />);
+
+    // Pick a patient, then a product, then change the quantity.
+    fireEvent.change(document.getElementById('nc-pharmops-otc-patient') as HTMLElement, { target: { value: 'Ama' } });
+    fireEvent.click(await screen.findByRole('button', { name: /Ama Owusu/i }));
+    fireEvent.change(document.getElementById('nc-pharmops-otc-drug') as HTMLElement, { target: { value: 'para' } });
+    fireEvent.click(await screen.findByRole('button', { name: /Paracetamol 500 mg/i }));
+    await waitFor(() => expect(qtyInput()).toBeInTheDocument());
+    fireEvent.change(qtyInput(), { target: { value: '5' } });
+    await waitFor(() => expect(feeInput().value).toBe('25'));
+
+    // Close then reopen — the in-progress sale should come back.
+    rerender(<PharmOpsOtcSaleDrawer {...props} open={false} />);
+    rerender(<PharmOpsOtcSaleDrawer {...props} open />);
+
+    expect(await screen.findByRole('button', { name: 'Change patient' })).toBeInTheDocument();
+    await waitFor(() => expect(qtyInput()).toBeInTheDocument());
+    await waitFor(() => expect(qtyInput().value).toBe('5'));
+    expect(feeInput().value).toBe('25');
   });
 
   it('keeps the picked patient visible (walk-in) instead of clearing back to the search box', async () => {

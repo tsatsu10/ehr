@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { oeFetch } from '@core/oeFetch';
 import { PatientSearchDropdown } from '@components/PatientSearchDropdown';
 import { ConfirmModal } from '@components/ConfirmModal';
@@ -22,6 +22,47 @@ function moneyString(value: number): string {
     return '';
   }
   return String(Math.round(value * 100) / 100);
+}
+
+// In-progress walk-in OTC sale, kept in sessionStorage so closing/reopening the form (or a page
+// reload) doesn't lose the work. Cleared on a completed sale or when the patient is changed.
+const OTC_DRAFT_KEY = 'nc-otc-sale-draft';
+
+interface OtcDraft {
+  pid: number;
+  patientLabel: string;
+  encounterId: number | null;
+  selectedDrug: OtcDrugSearchRow | null;
+  quantity: string;
+  fee: string;
+  allergyAck: boolean;
+}
+
+function readOtcDraft(): OtcDraft | null {
+  try {
+    const raw = sessionStorage.getItem(OTC_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as OtcDraft;
+    return parsed && typeof parsed.pid === 'number' && parsed.pid > 0 ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeOtcDraft(draft: OtcDraft): void {
+  try {
+    sessionStorage.setItem(OTC_DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    /* storage unavailable — draft is best-effort */
+  }
+}
+
+function clearOtcDraft(): void {
+  try {
+    sessionStorage.removeItem(OTC_DRAFT_KEY);
+  } catch {
+    /* ignore */
+  }
 }
 
 interface PharmOpsOtcSaleDrawerProps {
@@ -59,6 +100,8 @@ export function PharmOpsOtcSaleDrawer({
   const [loadingForm, setLoadingForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<OtcSaleConfirmResult | null>(null);
+  // Quantity/fee/allergy carried from a restored draft, applied after the sale form reloads.
+  const restorePendingRef = useRef<{ quantity: string; fee: string; allergyAck: boolean } | null>(null);
 
   const fetchOptions = useMemo(() => ({ ajaxUrl, csrfToken }), [ajaxUrl, csrfToken]);
   const {
@@ -98,8 +141,31 @@ export function PharmOpsOtcSaleDrawer({
       setPid(initialContext.pid);
       setPatientLabel(initialContext.patientLabel ?? '');
       setEncounterId(initialContext.encounterId ?? null);
+      return;
+    }
+
+    // Walk-in: restore an in-progress sale from a previous open, if any.
+    const draft = readOtcDraft();
+    if (draft) {
+      setPid(draft.pid);
+      setPatientLabel(draft.patientLabel);
+      setEncounterId(draft.encounterId);
+      if (draft.selectedDrug) {
+        // Carry quantity/fee/allergy through the sale-form reload the drug selection triggers.
+        restorePendingRef.current = { quantity: draft.quantity, fee: draft.fee, allergyAck: draft.allergyAck };
+        setSelectedDrug(draft.selectedDrug);
+        setDrugQuery(draft.selectedDrug.drug_name ?? '');
+      }
     }
   }, [initialContext, open, resetState]);
+
+  // Persist the walk-in draft as the pharmacist works, so a close/reopen (or reload) keeps it.
+  useEffect(() => {
+    if (!open || success || (initialContext?.pid ?? 0) > 0 || pid == null) {
+      return;
+    }
+    writeOtcDraft({ pid, patientLabel, encounterId, selectedDrug, quantity, fee, allergyAck });
+  }, [open, success, initialContext?.pid, pid, patientLabel, encounterId, selectedDrug, quantity, fee, allergyAck]);
 
   const loadSaleForm = useCallback(async (patientId: number, drugId: number, encId?: number | null) => {
     setLoadingForm(true);
@@ -115,12 +181,21 @@ export function PharmOpsOtcSaleDrawer({
       });
       setForm(data);
       setEncounterId(data.encounter_id > 0 ? data.encounter_id : null);
-      const defaultQty = data.drug?.default_quantity ?? 1;
-      setQuantity(String(defaultQty));
-      // Fee defaults to unit price x quantity (falls back to the flat amount if no unit price).
-      const unit = data.fee?.unit_amount ?? data.fee?.amount ?? 0;
-      setFee(moneyString(unit * defaultQty));
-      setAllergyAck(false);
+      const pending = restorePendingRef.current;
+      if (pending) {
+        // Restoring a saved draft — keep the pharmacist's quantity/fee/allergy, not the defaults.
+        restorePendingRef.current = null;
+        setQuantity(pending.quantity);
+        setFee(pending.fee);
+        setAllergyAck(pending.allergyAck);
+      } else {
+        const defaultQty = data.drug?.default_quantity ?? 1;
+        setQuantity(String(defaultQty));
+        // Fee defaults to unit price x quantity (falls back to the flat amount if no unit price).
+        const unit = data.fee?.unit_amount ?? data.fee?.amount ?? 0;
+        setFee(moneyString(unit * defaultQty));
+        setAllergyAck(false);
+      }
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Could not load sale form');
       setForm(null);
@@ -176,6 +251,9 @@ export function PharmOpsOtcSaleDrawer({
 
   // Walk-in flow: clear the picked patient to search again (the search box replaces the banner).
   const changePatient = useCallback(() => {
+    // Switching patient abandons the current draft.
+    clearOtcDraft();
+    restorePendingRef.current = null;
     setPid(null);
     setPatientLabel('');
     setEncounterId(null);
@@ -210,6 +288,7 @@ export function PharmOpsOtcSaleDrawer({
           allergy_acknowledged: allergyAck || !form.safety?.allergy_warning,
         },
       });
+      clearOtcDraft();
       setSuccess(result);
       setConfirmOpen(false);
       onSold?.();
