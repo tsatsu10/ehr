@@ -93,8 +93,11 @@
 | **V1.2-PHARM** | OPS policy | **50** | Eng | Partial | destroy reports; expiry alerts |
 | **V1.2-PHARM-RX** | `enable_pharm_rx_favorites` | **75** | Eng | Partial | `FormularyRxModal`; `v12-pharm-rx-smoke` green |
 | **V1.2** | hard assign, notify, LIS | **75** | Eng | Partial | §6.5.3–4 shipped; `v12-doctor-ready-notify-smoke` + `v12-hard-assign-smoke` green |
+| **CBILL-1** | `pharmacy_auto_bill_on_dispense` | **80** | Eng | Partial | Pharmacy charges at cashier (surface `drug_sales` fees) built behind flag default OFF; PHP verify + 711 vitest + SQL schema smoke green; live e2e payment smoke (flag ON) pending. [plan](./new/NEW_CLINIC_CASHIER_BILLING_COMPLETION_PLAN.md) §4 |
+| **CBILL-2** | `enable_partial_payment` | **90** | Eng | Partial | Partial payment built behind flag default OFF (manager-gated `cashier.pay_partial`, remainder → M14 owed list); PHP verify + 724 vitest + 12/12 live smoke + audit fixes green; **PRD authorised (D-BILL-7, v1.20.53)**. [plan](./new/NEW_CLINIC_CASHIER_BILLING_COMPLETION_PLAN.md) §5 |
+| **CBILL-3** | `enable_insurance_scheme` | **90** | Eng | Done | Insurance scheme-split (manual), all 3 slices: **3a** data+service (58faa48a), **3b** cashier screen (72c94a6d), **3c** claims register in M14 Insurance pane (47ce4eca); audit fixes (cdbc1013: server recomputes split from real charges — tamper-proof). Scheme picker + per-line coverage + collect patient part + owed list excludes scheme portion + manual claim register (submit/settle/void). Behind flag default OFF; PHP verify + PHPUnit + vitest + live smokes (11/11, 5/5 tamper) green. PRD D-BILL-8. [spec](./new/NEW_CLINIC_V1_INSURANCE_SCHEME_SPLIT_REDESIGN.md) |
 
-**§20.1 mean:** **81**
+**§20.1 mean:** **81** (excludes the three CBILL-* slices — tracked separately below)
 
 ---
 
