@@ -14,7 +14,7 @@ export interface BillOpsHubProps {
   canClose: boolean;
   canOutstanding: boolean;
   canInsurance: boolean;
-  canShowAdvanced: boolean;
+  canEdiHistory: boolean;
   reopenOnCorrection: boolean;
   webroot: string;
   initialVisitId?: number;
@@ -69,6 +69,8 @@ export interface PaymentRow {
   reversed_at: string | null;
   reversal_reason: string | null;
   visit_id: number;
+  /** CP-2 — receipt without a visit (deposit/prepayment). */
+  is_deposit?: boolean;
   queue_number: number;
   pid: number;
   posted_payment_id?: number;

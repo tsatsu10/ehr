@@ -20,7 +20,7 @@ const baseProps = {
   canClose: true,
   canOutstanding: false,
   canInsurance: false,
-  canShowAdvanced: false,
+  canEdiHistory: false,
   reopenOnCorrection: false,
   webroot: '/openemr',
 };

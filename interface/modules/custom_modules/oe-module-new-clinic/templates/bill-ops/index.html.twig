@@ -31,18 +31,6 @@
     </div>
     <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1 nc-mr-1" href="{{ cashier_url|attr }}">{{ 'Cashier'|xlt }}</a>
     <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1 nc-mr-1" href="{{ reports_url|attr }}">{{ 'Reports'|xlt }}</a>
-    {% if can_show_advanced %}
-    <div class="nc-dropdown nc-inline-block nc-mb-1 nc-mr-1">
-        <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-dropdown-toggle" data-nc-dropdown-toggle aria-haspopup="true" aria-expanded="false">
-            {{ 'Advanced'|xlt }}
-        </button>
-        <div class="nc-dropdown-menu nc-dropdown-menu-right">
-            <a class="nc-dropdown-item" href="{{ webroot }}/interface/billing/billing_report.php" target="_top">{{ 'Billing Manager (core)'|xlt }}</a>
-            <a class="nc-dropdown-item" href="{{ webroot }}/interface/billing/search_payments.php" target="_top">{{ 'Search payments (core)'|xlt }}</a>
-            <a class="nc-dropdown-item" href="{{ webroot }}/interface/reports/pat_ledger.php" target="_top">{{ 'Patient ledger (core)'|xlt }}</a>
-        </div>
-    </div>
-    {% endif %}
     <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1" id="nc-billops-refresh" aria-label="{{ 'Refresh'|xlt }}">
         <i class="fa fa-refresh" aria-hidden="true"></i>
     </button>
@@ -68,7 +56,7 @@
         canClose: can_close ? true : false,
         canOutstanding: can_outstanding ? true : false,
         canInsurance: can_insurance ? true : false,
-        canShowAdvanced: can_show_advanced ? true : false,
+        canEdiHistory: can_edi_history ? true : false,
         reopenOnCorrection: reopen_on_correction ? true : false,
         webroot: webroot,
         currencyFormat: currency_format|default({})

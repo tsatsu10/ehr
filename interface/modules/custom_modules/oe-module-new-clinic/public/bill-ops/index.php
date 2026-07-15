@@ -11,7 +11,6 @@
 
 require_once dirname(__DIR__) . '/bootstrap.php';
 
-use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Modules\NewClinic\Controllers\PageController;
 use OpenEMR\Modules\NewClinic\Services\BillOpsAccessService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
@@ -91,8 +90,11 @@ if (!in_array($initialTab, $allowedTabs, true)) {
         'can_close' => $access->canCloseDay(),
         'can_outstanding' => $access->isOutstandingEnabled($facilityId) && $access->canViewOutstanding(),
         'can_insurance' => $access->isInsuranceVaultEnabled($facilityId) && $access->canViewInsuranceVault(),
-        'can_show_advanced' => AclMain::aclCheckCore('new_clinic', 'new_admin')
-            || AclMain::aclCheckCore('admin', 'super'),
+        // Spec'd 6th vault card (M14-F05) — gated on the same core menu global that
+        // controls whether stock OpenEMR shows "EDI History" at all.
+        'can_edi_history' => $access->isInsuranceVaultEnabled($facilityId)
+            && $access->canViewInsuranceVault()
+            && !empty($GLOBALS['enable_edihistory_in_left_menu']),
         'enable_react_bill_ops' => $reactBillOps,
         'reopen_on_correction' => $config->getInt('bill_ops_reopen_on_correction', 0, $facilityId) === 1,
     ]
