@@ -37,6 +37,20 @@ class PharmOpsReportsService
     private const TRANSACTION_MAX_OFFSET = 100000;
     private const REPORT_ROW_CAP = 500;
 
+    // Per-drug unit cost = the most recent purchase (trans_type 2, negative qty/fee) unit price.
+    // Joined as `cost.unit_cost`; NULL when the drug has never been received through the module.
+    private const COST_JOIN =
+        "LEFT JOIN (
+            SELECT ds.drug_id, ABS(ds.fee / ds.quantity) AS unit_cost
+            FROM drug_sales ds
+            INNER JOIN (
+                SELECT drug_id, MAX(sale_id) AS max_id
+                FROM drug_sales
+                WHERE trans_type = 2 AND quantity <> 0 AND drug_id > 0
+                GROUP BY drug_id
+            ) latest ON latest.drug_id = ds.drug_id AND latest.max_id = ds.sale_id
+         ) cost ON cost.drug_id = di.drug_id";
+
     public function __construct(
         private readonly PharmOpsAccessService $access = new PharmOpsAccessService(),
         private readonly MoneyFormatService $money = new MoneyFormatService(),
@@ -540,9 +554,10 @@ class PharmOpsReportsService
 
         $rows = QueryUtils::fetchRecords(
             "SELECT di.inventory_id, di.drug_id, di.lot_number, di.on_hand, di.expiration,
-                    d.name AS drug_name, d.reorder_point
+                    d.name AS drug_name, d.reorder_point, cost.unit_cost
              FROM drug_inventory di
              INNER JOIN drugs d ON d.drug_id = di.drug_id
+             " . self::COST_JOIN . "
              WHERE {$where}
              ORDER BY d.name ASC, di.expiration ASC, di.lot_number ASC
              LIMIT " . ($limit + 1) . " OFFSET " . $offset,
@@ -572,22 +587,33 @@ class PharmOpsReportsService
                 }
             }
 
+            $onHand = (int) round((float) ($row['on_hand'] ?? 0));
+            $unitCost = isset($row['unit_cost']) && $row['unit_cost'] !== null
+                ? round((float) $row['unit_cost'], 2)
+                : null;
+
             return [
                 'inventory_id' => (int) ($row['inventory_id'] ?? 0),
                 'drug_id' => (int) ($row['drug_id'] ?? 0),
                 'drug_name' => trim((string) ($row['drug_name'] ?? 'Medication')),
                 'lot_number' => trim((string) ($row['lot_number'] ?? '')),
-                'on_hand' => (int) round((float) ($row['on_hand'] ?? 0)),
+                'on_hand' => $onHand,
                 'expiration' => $hasExp ? substr($exp, 0, 10) : '',
                 'expiry_status' => $expStatus,
+                // Stock valuation (INV-1): unit cost from the latest purchase; null = cost unknown.
+                'unit_cost' => $unitCost,
+                'value' => $unitCost !== null ? round($onHand * $unitCost, 2) : null,
             ];
         }, $rows);
+
+        $currency = $this->money->getFormatPayload($this->visitScope->resolveDefaultFacilityId());
 
         return [
             'offset' => $offset,
             'has_more' => $hasMore,
             // Only compute the stockroom-health summary on the first page.
             'summary' => $offset === 0 ? $this->stockSummary() : null,
+            'currency_symbol' => (string) (is_array($currency) ? ($currency['currency_symbol'] ?? '') : ''),
             'generated_at' => date('c'),
             'items' => $items,
         ];
@@ -607,9 +633,16 @@ class PharmOpsReportsService
                 COUNT(DISTINCT CASE WHEN di.on_hand <> 0 THEN di.drug_id END) AS sku_count,
                 SUM(CASE WHEN di.expiration IS NOT NULL AND di.expiration >= CURDATE()
                          AND di.expiration <= DATE_ADD(CURDATE(), INTERVAL 90 DAY) THEN 1 ELSE 0 END) AS expiring,
-                SUM(CASE WHEN di.expiration IS NOT NULL AND di.expiration < CURDATE() THEN 1 ELSE 0 END) AS expired
+                SUM(CASE WHEN di.expiration IS NOT NULL AND di.expiration < CURDATE() THEN 1 ELSE 0 END) AS expired,
+                COALESCE(SUM(di.on_hand * cost.unit_cost), 0) AS total_value,
+                COALESCE(SUM(CASE WHEN di.expiration IS NOT NULL AND di.expiration >= CURDATE()
+                         AND di.expiration <= DATE_ADD(CURDATE(), INTERVAL 90 DAY)
+                         THEN di.on_hand * cost.unit_cost ELSE 0 END), 0) AS value_expiring,
+                COALESCE(SUM(CASE WHEN di.expiration IS NOT NULL AND di.expiration < CURDATE()
+                         THEN di.on_hand * cost.unit_cost ELSE 0 END), 0) AS value_expired
              FROM drug_inventory di
              INNER JOIN drugs d ON d.drug_id = di.drug_id
+             " . self::COST_JOIN . "
              WHERE di.destroy_date IS NULL AND d.active = 1"
         );
 
@@ -626,12 +659,21 @@ class PharmOpsReportsService
              WHERE d.active = 1 AND d.dispensable = 1"
         );
 
+        $totalValue = (float) (is_array($row) ? ($row['total_value'] ?? 0) : 0);
+        $valueExpired = (float) (is_array($row) ? ($row['value_expired'] ?? 0) : 0);
+
         return [
             'sku_count' => (int) (is_array($row) ? ($row['sku_count'] ?? 0) : 0),
             'expiring' => (int) (is_array($row) ? ($row['expiring'] ?? 0) : 0),
             'expired' => (int) (is_array($row) ? ($row['expired'] ?? 0) : 0),
             'out_of_stock' => (int) (is_array($reorderRow) ? ($reorderRow['out_of_stock'] ?? 0) : 0),
             'at_reorder' => (int) (is_array($reorderRow) ? ($reorderRow['at_reorder'] ?? 0) : 0),
+            // Stock valuation (INV-1): value at cost of all on-hand stock, and the slice at risk.
+            'total_value' => round($totalValue, 2),
+            'value_expiring' => round((float) (is_array($row) ? ($row['value_expiring'] ?? 0) : 0), 2),
+            'value_expired' => round($valueExpired, 2),
+            // Wastage rate: expired value as a share of total value (0 when nothing on hand).
+            'wastage_rate_pct' => $totalValue > 0 ? round(($valueExpired / $totalValue) * 100, 1) : 0.0,
         ];
     }
 

@@ -41,6 +41,28 @@ describe('PharmOpsInventoryBrowser', () => {
     expect(screen.getByText('12')).toBeInTheDocument();
   });
 
+  it('shows lot value and stock-value totals (INV-1)', async () => {
+    mockFetch.mockResolvedValue({
+      offset: 0,
+      has_more: false,
+      summary: { ...summary, total_value: 5000, value_expiring: 200, value_expired: 100, wastage_rate_pct: 2 },
+      currency_symbol: 'GH₵',
+      generated_at: '',
+      items: [lot(1, { unit_cost: 3, value: 600 })],
+    });
+
+    render(<PharmOpsInventoryBrowser ajaxUrl="/mock/ajax" csrfToken="t" />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByText('Stock value')).toBeInTheDocument();
+    expect(screen.getByText('Wastage rate')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Value' })).toBeInTheDocument();
+    // Both the total and the lot value render as formatted money.
+    expect(screen.getAllByText((t) => t.includes('GH₵')).length).toBeGreaterThan(0);
+  });
+
   it('pages with Load more', async () => {
     mockFetch
       .mockResolvedValueOnce({ offset: 0, has_more: true, summary, generated_at: '', items: [lot(1)] })

@@ -8,6 +8,9 @@ export interface PharmStockRow {
   on_hand: number;
   expiration: string;
   expiry_status: 'expired' | 'expiring' | 'ok';
+  /** INV-1 valuation: unit cost from the latest purchase (null = cost unknown), and lot value. */
+  unit_cost?: number | null;
+  value?: number | null;
 }
 
 export interface PharmStockSummary {
@@ -16,12 +19,18 @@ export interface PharmStockSummary {
   expired: number;
   out_of_stock: number;
   at_reorder: number;
+  /** INV-1 valuation totals (at cost). */
+  total_value?: number;
+  value_expiring?: number;
+  value_expired?: number;
+  wastage_rate_pct?: number;
 }
 
 export interface PharmStockBrowser {
   offset: number;
   has_more: boolean;
   summary: PharmStockSummary | null;
+  currency_symbol?: string;
   generated_at: string;
   items: PharmStockRow[];
 }

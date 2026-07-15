@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { oeFetch, OeFetchError } from '@core/oeFetch';
+import { formatMoney } from '@core/formatMoney';
 import { ConfirmModal } from '@components/ConfirmModal';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { showDeskToast } from '@components/deskToast';
@@ -67,19 +68,34 @@ function expiryText(status: PharmStockRow['expiry_status']): string {
   return 'OK';
 }
 
-function StockSummaryStrip({ summary }: { summary: PharmStockSummary }) {
-  const stats: Array<{ label: string; value: number }> = [
-    { label: 'In-stock SKUs', value: summary.sku_count },
-    { label: 'Expiring ≤ 90d', value: summary.expiring },
-    { label: 'Expired lots', value: summary.expired },
-    { label: 'Out of stock', value: summary.out_of_stock },
-    { label: 'At reorder', value: summary.at_reorder },
+function StockSummaryStrip({ summary, currencySymbol }: { summary: PharmStockSummary; currencySymbol: string }) {
+  const money = (n?: number) => formatMoney(n ?? 0, { currency_symbol: currencySymbol });
+  const valueAtRisk = (summary.value_expiring ?? 0) + (summary.value_expired ?? 0);
+
+  const stats: Array<{ label: string; value: string; tone?: 'danger' | 'warning' }> = [
+    { label: 'Stock value', value: money(summary.total_value) },
+    { label: 'Value at risk', value: money(valueAtRisk), tone: valueAtRisk > 0 ? 'warning' : undefined },
+    { label: 'Wastage rate', value: `${summary.wastage_rate_pct ?? 0}%`, tone: (summary.wastage_rate_pct ?? 0) >= 5 ? 'danger' : undefined },
+    { label: 'In-stock SKUs', value: String(summary.sku_count) },
+    { label: 'Out of stock', value: String(summary.out_of_stock), tone: summary.out_of_stock > 0 ? 'danger' : undefined },
+    { label: 'At reorder', value: String(summary.at_reorder), tone: summary.at_reorder > 0 ? 'warning' : undefined },
+    { label: 'Expiring ≤ 90d', value: String(summary.expiring) },
+    { label: 'Expired lots', value: String(summary.expired), tone: summary.expired > 0 ? 'danger' : undefined },
   ];
   return (
     <div className="nc-pharmops-inv-summary mb-3" role="group" aria-label="Stockroom health">
       {stats.map((s) => (
         <div key={s.label} className="nc-pharmops-inv-summary-stat">
-          <span className="nc-pharmops-inv-summary-value tabular-nums">{s.value}</span>
+          <span
+            className="nc-pharmops-inv-summary-value tabular-nums"
+            style={s.tone === 'danger'
+              ? { color: 'var(--oe-nc-danger)' }
+              : s.tone === 'warning'
+                ? { color: 'var(--oe-nc-warning, #b45309)' }
+                : undefined}
+          >
+            {s.value}
+          </span>
           <span className="nc-pharmops-inv-summary-label">{s.label}</span>
         </div>
       ))}
@@ -101,6 +117,7 @@ export function PharmOpsInventoryBrowser({
   const [expiry, setExpiry] = useState('all');
   const [rows, setRows] = useState<PharmStockRow[]>([]);
   const [summary, setSummary] = useState<PharmStockSummary | null>(null);
+  const [currencySymbol, setCurrencySymbol] = useState('');
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -145,6 +162,7 @@ export function PharmOpsInventoryBrowser({
       const res = await fetchPage(0);
       setRows(res.items ?? []);
       setSummary(res.summary ?? null);
+      setCurrencySymbol(res.currency_symbol ?? '');
       setHasMore(!!res.has_more);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load inventory');
@@ -377,7 +395,7 @@ export function PharmOpsInventoryBrowser({
         </div>
       ) : null}
 
-      {summary ? <StockSummaryStrip summary={summary} /> : null}
+      {summary ? <StockSummaryStrip summary={summary} currencySymbol={currencySymbol} /> : null}
 
       {loading ? (
         <div className="nc-pharmops-empty nc-pharmops-empty--loading">Loading inventory…</div>
@@ -399,6 +417,7 @@ export function PharmOpsInventoryBrowser({
                   <th style={LEFT}>Drug</th>
                   <th style={LEFT}>Lot</th>
                   <th style={RIGHT}>On hand</th>
+                  <th style={RIGHT}>Value</th>
                   <th style={LEFT}>Expiry</th>
                   <th style={LEFT}>Status</th>
                   {showActions ? <th style={RIGHT}>Actions</th> : null}
@@ -445,6 +464,11 @@ export function PharmOpsInventoryBrowser({
                       ) : (
                         row.on_hand
                       )}
+                    </td>
+                    <td style={RIGHT} className="tabular-nums">
+                      {row.value != null
+                        ? formatMoney(row.value, { currency_symbol: currencySymbol })
+                        : <span className="text-(--oe-nc-text-muted)">—</span>}
                     </td>
                     <td style={LEFT} className="tabular-nums">{ddmmyyyy(row.expiration)}</td>
                     <td style={LEFT}>
