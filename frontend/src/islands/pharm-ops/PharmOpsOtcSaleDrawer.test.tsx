@@ -25,6 +25,9 @@ function saleForm(overrides: Partial<OtcSaleForm> = {}): OtcSaleForm {
 
 function mockRoutes(form: OtcSaleForm) {
   mockedFetch.mockImplementation((action: string) => {
+    if (action === 'patients.search') {
+      return Promise.resolve({ patients: [{ pid: 385, display_name: 'Ama Owusu', pubpid: 'P385' }] }) as never;
+    }
     if (action === 'pharm_ops.otc_drugs_search') {
       return Promise.resolve({ rows: [{ drug_id: 2, drug_name: 'Paracetamol 500 mg', on_hand: 500 }] }) as never;
     }
@@ -80,6 +83,26 @@ describe('PharmOpsOtcSaleDrawer', () => {
     fireEvent.change(qtyInput(), { target: { value: '10' } });
     await waitFor(() => expect(qtyInput().value).toBe('10'));
     expect(feeInput().value).toBe('90');
+  });
+
+  it('keeps the picked patient visible (walk-in) instead of clearing back to the search box', async () => {
+    mockRoutes(saleForm());
+    render(<PharmOpsOtcSaleDrawer {...baseProps} initialContext={null} />);
+
+    const patientInput = document.getElementById('nc-pharmops-otc-patient') as HTMLInputElement;
+    fireEvent.change(patientInput, { target: { value: 'Ama' } });
+    const option = await screen.findByRole('button', { name: /Ama Owusu/i });
+    fireEvent.click(option);
+
+    // The picked patient is confirmed, not vanished — and the search box is gone.
+    expect(await screen.findByRole('button', { name: 'Change patient' })).toBeInTheDocument();
+    expect(document.getElementById('nc-pharmops-otc-patient')).toBeNull();
+    // The product field is now enabled for the selected patient.
+    expect(document.getElementById('nc-pharmops-otc-drug')).not.toBeDisabled();
+
+    // "Change patient" returns to the search box.
+    fireEvent.click(screen.getByRole('button', { name: 'Change patient' }));
+    await waitFor(() => expect(document.getElementById('nc-pharmops-otc-patient')).toBeInTheDocument());
   });
 
   it('blocks the sale on a zero fee or overselling stock', async () => {

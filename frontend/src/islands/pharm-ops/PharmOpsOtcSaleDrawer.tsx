@@ -158,6 +158,18 @@ export function PharmOpsOtcSaleDrawer({
     setSuccess(null);
   }, []);
 
+  // Walk-in flow: clear the picked patient to search again (the search box replaces the banner).
+  const changePatient = useCallback(() => {
+    setPid(null);
+    setPatientLabel('');
+    setEncounterId(null);
+    setSelectedDrug(null);
+    setDrugQuery('');
+    setForm(null);
+    setLoadError(null);
+    setSuccess(null);
+  }, []);
+
   const handleSelectDrug = useCallback((row: OtcDrugSearchRow) => {
     setSelectedDrug(row);
     setDrugQuery(row.drug_name);
@@ -257,7 +269,7 @@ export function PharmOpsOtcSaleDrawer({
           </div>
         ) : (
           <>
-            {!initialContext?.pid ? (
+            {pid == null ? (
               <PatientSearchDropdown
                 ajaxUrl={ajaxUrl}
                 csrfToken={csrfToken}
@@ -267,7 +279,26 @@ export function PharmOpsOtcSaleDrawer({
                 onSelectPatient={handleSelectPatient}
               />
             ) : patientIdentity ? (
-              <PatientContextBanner layout="compact" identity={patientIdentity} />
+              <div className="mb-3">
+                <PatientContextBanner
+                  layout="compact"
+                  identity={patientIdentity}
+                  safety={form ? {
+                    allergies_severe: form.safety?.allergy_warning
+                      ? (form.safety.allergies ?? [])
+                      : (form.safety?.allergies ?? []).slice(0, 3),
+                  } : undefined}
+                />
+                {!initialContext?.pid ? (
+                  <button
+                    type="button"
+                    className="text-sm text-[var(--oe-nc-primary,#2563eb)] underline mt-1"
+                    onClick={changePatient}
+                  >
+                    Change patient
+                  </button>
+                ) : null}
+              </div>
             ) : null}
 
             <div className="mb-3 position-relative">
@@ -334,17 +365,6 @@ export function PharmOpsOtcSaleDrawer({
               <>
                 {form.encounter_warning ? (
                   <div className={deskCalloutClass('warn', 'py-2 px-3 text-sm')}>{form.encounter_warning}</div>
-                ) : null}
-                {patientIdentity ? (
-                  <PatientContextBanner
-                    layout="compact"
-                    identity={patientIdentity}
-                    safety={{
-                      allergies_severe: form.safety?.allergy_warning
-                        ? (form.safety.allergies ?? [])
-                        : (form.safety?.allergies ?? []).slice(0, 3),
-                    }}
-                  />
                 ) : null}
                 <div className="nc-pharmops-dispense-meta text-sm text-[var(--oe-nc-text-muted)] mb-2">
                   {form.visit?.queue_number ? `Q#${form.visit.queue_number}` : null}
