@@ -54,9 +54,7 @@
     data-props="{{ {
         ajaxUrl: ajax_url,
         csrfToken: csrf_token,
-        moduleUrl: module_url,
         doctorDeskUrl: doctor_desk_url,
-        visitBoardUrl: visit_board_url,
         facilityId: desk_facility_id|default(0)|number_format(0, '', ''),
         initialTab: initial_tab,
         initialVisitId: initial_visit_id,
@@ -65,9 +63,7 @@
         canScreening: can_screening ? true : false,
         canNursing: can_nursing ? true : false,
         canOrders: can_orders ? true : false,
-        canSpecialty: can_specialty ? true : false,
-        canShowAdvanced: can_show_advanced ? true : false,
-        webroot: webroot
+        canSpecialty: can_specialty ? true : false
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}

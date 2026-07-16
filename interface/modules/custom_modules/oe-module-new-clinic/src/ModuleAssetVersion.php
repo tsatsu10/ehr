@@ -13,5 +13,5 @@ namespace OpenEMR\Modules\NewClinic;
 
 class ModuleAssetVersion
 {
-    public const VERSION = '20260716schedaudit';
+    public const VERSION = '20260716cbill4cd';
 }

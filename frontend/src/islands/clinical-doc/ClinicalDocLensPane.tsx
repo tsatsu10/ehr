@@ -27,6 +27,7 @@ interface ClinicalDocLensPaneProps {
   visitId: number | null;
   ajaxUrl: string;
   csrfToken: string;
+  doctorDeskUrl: string;
   onOpenError: (message: string) => void;
   onOpenLabPanel?: () => void;
 }
@@ -41,6 +42,16 @@ async function openForm(
   await openClinicalDocForm(ajaxUrl, csrfToken, visitId, card, { lens, returnTo: 'hub' });
 }
 
+/** Backend sends 'YYYY-MM-DD HH:mm' (ClinicalDocVisitSummaryService::formatFormDate) -> regional 'DD/MM/YYYY HH:mm'. */
+function formatSavedAt(value: string): string {
+  const [datePart, timePart] = value.split(' ');
+  const [y, m, d] = (datePart ?? '').split('-');
+  if (!d || !m || !y || !/^\d{4}$/.test(y) || !/^\d{2}$/.test(m) || !/^\d{2}$/.test(d)) {
+    return value;
+  }
+  return timePart ? `${d}/${m}/${y} ${timePart}` : `${d}/${m}/${y}`;
+}
+
 function statusLine(card: ClinicalDocCard): string {
   const previewLine = consultCardPreviewLine(card.note_preview);
   if (previewLine) {
@@ -52,7 +63,7 @@ function statusLine(card: ClinicalDocCard): string {
   }
   const parts: string[] = [];
   if (card.last_saved_at) {
-    parts.push(`Last saved ${card.last_saved_at}`);
+    parts.push(`Last saved ${formatSavedAt(card.last_saved_at)}`);
   }
   if (card.last_saved_by) {
     parts.push(`by ${card.last_saved_by}`);
@@ -76,6 +87,7 @@ export function ClinicalDocLensPane({
   visitId,
   ajaxUrl,
   csrfToken,
+  doctorDeskUrl,
   onOpenError,
   onOpenLabPanel,
 }: ClinicalDocLensPaneProps) {
@@ -84,7 +96,7 @@ export function ClinicalDocLensPane({
       <div className="nc-clinicaldoc-empty">
         <p className="mb-2 text-[var(--oe-nc-text-muted)]">Open documentation from Doctor Desk with an active visit, or add <code>?visit_id=</code> to the URL.</p>
         <Button variant="outline" size="sm" asChild>
-          <a href="../doctor.php">Go to Doctor Desk</a>
+          <a href={doctorDeskUrl}>Go to Doctor Desk</a>
         </Button>
       </div>
     );
@@ -136,7 +148,7 @@ export function ClinicalDocLensPane({
         </ul>
       ) : null}
       {card.bundle_health && !card.bundle_health.esign_ok ? (
-        <p className="text-sm text-[var(--color-oe-warning,#ea580c)] mb-2">{card.bundle_health.status_label}</p>
+        <p className="text-sm text-[var(--oe-nc-warning,#b54708)] mb-2">{card.bundle_health.status_label}</p>
       ) : null}
       <div className="flex flex-wrap gap-2">
         {card.signed || preview?.signed ? (

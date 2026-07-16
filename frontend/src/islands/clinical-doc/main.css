@@ -14,7 +14,7 @@
 }
 
 .nc-clinicaldoc-card {
-  border: 1px solid var(--nc-border-subtle, #dee2e6);
+  border: 1px solid var(--oe-nc-border, #d3dce3);
   border-radius: 0.5rem;
   padding: 1rem;
   background: var(--nc-surface, #fff);
@@ -30,16 +30,16 @@
 
 .nc-clinicaldoc-empty {
   padding: 1.5rem;
-  border: 1px dashed var(--nc-border-subtle, #dee2e6);
+  border: 1px dashed var(--oe-nc-border, #d3dce3);
   border-radius: 0.5rem;
-  background: var(--nc-surface-muted, #f8f9fa);
+  background: var(--oe-nc-bg-tint, #eef1f4);
 }
 
 .nc-clinicaldoc-sign-overview {
   padding: 1rem;
-  border: 1px solid var(--nc-border-subtle, #dee2e6);
+  border: 1px solid var(--oe-nc-border, #d3dce3);
   border-radius: 0.5rem;
-  background: var(--nc-surface-muted, #f8f9fa);
+  background: var(--oe-nc-bg-tint, #eef1f4);
 }
 
 .nc-clinicaldoc-sign-overview-stats .badge {
@@ -48,7 +48,7 @@
 
 .nc-clinicaldoc-lab-panel {
   padding: 0.75rem 1rem;
-  border: 1px dashed var(--nc-border-subtle, #dee2e6);
+  border: 1px dashed var(--oe-nc-border, #d3dce3);
   border-radius: 0.5rem;
-  background: var(--nc-surface-muted, #f8f9fa);
+  background: var(--oe-nc-bg-tint, #eef1f4);
 }

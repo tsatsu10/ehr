@@ -54,9 +54,7 @@ if (!in_array($tabParam, $allowedTabs, true)) {
     [
         'island_entry' => 'clinical-doc',
         'shell_nav_id' => 'clinicdochub',
-        'module_url' => $moduleUrl,
         'doctor_desk_url' => $moduleUrl . '/doctor.php',
-        'visit_board_url' => $moduleUrl . '/visit-board.php',
         'initial_tab' => $tabParam,
         'initial_visit_id' => $visitId > 0 ? $visitId : null,
         'can_visit' => $access->canViewVisit(),
@@ -68,6 +66,5 @@ if (!in_array($tabParam, $allowedTabs, true)) {
         'can_show_advanced' => AclMain::aclCheckCore('new_clinic', 'new_admin')
             || AclMain::aclCheckCore('admin', 'super'),
         'enable_react_clinical_doc_hub' => $reactHub,
-        'webroot' => $webroot,
     ]
 );

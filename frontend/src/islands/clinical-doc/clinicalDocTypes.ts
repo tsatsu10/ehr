@@ -87,9 +87,7 @@ export interface ClinicalDocVisitSummary {
 export interface ClinicalDocProps {
   ajaxUrl: string;
   csrfToken: string;
-  moduleUrl: string;
   doctorDeskUrl: string;
-  visitBoardUrl: string;
   facilityId?: number;
   initialTab: ClinicalDocLens;
   initialVisitId?: number | null;
@@ -99,6 +97,4 @@ export interface ClinicalDocProps {
   canNursing: boolean;
   canOrders: boolean;
   canSpecialty: boolean;
-  canShowAdvanced: boolean;
-  webroot: string;
 }

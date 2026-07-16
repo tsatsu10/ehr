@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { PatientContextBanner } from '@components/PatientContextBanner';
 import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
+import { OeFetchError } from '@core/oeFetch';
 import type { DoctorVisit, LabPanelPlaceResult } from '@core/types';
 import { LabPanelModal } from '../doctor-desk/LabPanelModal';
 import { ClinicalDocLensPane, fetchVisitSummary } from './ClinicalDocLensPane';
@@ -47,6 +49,7 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
   const [pubpid, setPubpid] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [noEncounter, setNoEncounter] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
   const [labPanelOpen, setLabPanelOpen] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
@@ -70,6 +73,7 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
     }
     setLoading(true);
     setError(null);
+    setNoEncounter(false);
     try {
       const data = await fetchVisitSummary(props.ajaxUrl, props.csrfToken, visitId, tab);
       setCards(data.cards ?? []);
@@ -95,7 +99,11 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
       setSignOverview(null);
       setAddableForms([]);
       setDoctorVisit(null);
-      setError(err instanceof Error ? err.message : 'Could not load visit documentation');
+      if (err instanceof OeFetchError && err.code === 'no_encounter_on_visit') {
+        setNoEncounter(true);
+      } else {
+        setError(err instanceof Error ? err.message : 'Could not load visit documentation');
+      }
     } finally {
       setLoading(false);
     }
@@ -155,20 +163,32 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
         />
       ) : null}
       {openError ? <div className={deskCalloutClass('error')}>{openError}</div> : null}
-      <ClinicalDocLensPane
-        lens={tab}
-        cards={cards}
-        signOverview={signOverview}
-        addableForms={addableForms}
-        labPanelOrderEnabled={labPanelOrderEnabled}
-        loading={loading}
-        error={error}
-        visitId={visitId}
-        ajaxUrl={props.ajaxUrl}
-        csrfToken={props.csrfToken}
-        onOpenError={setOpenError}
-        onOpenLabPanel={() => setLabPanelOpen(true)}
-      />
+      {noEncounter ? (
+        <div className="nc-clinicaldoc-empty">
+          <p className="mb-2 text-[var(--oe-nc-text-muted)]">
+            This visit hasn&apos;t started yet — documentation opens once the encounter is created at Start visit.
+          </p>
+          <Button variant="outline" size="sm" asChild>
+            <a href={props.doctorDeskUrl}>Go to Doctor Desk</a>
+          </Button>
+        </div>
+      ) : (
+        <ClinicalDocLensPane
+          lens={tab}
+          cards={cards}
+          signOverview={signOverview}
+          addableForms={addableForms}
+          labPanelOrderEnabled={labPanelOrderEnabled}
+          loading={loading}
+          error={error}
+          visitId={visitId}
+          ajaxUrl={props.ajaxUrl}
+          csrfToken={props.csrfToken}
+          doctorDeskUrl={props.doctorDeskUrl}
+          onOpenError={setOpenError}
+          onOpenLabPanel={() => setLabPanelOpen(true)}
+        />
+      )}
       <LabPanelModal
         open={labPanelOpen}
         visit={doctorVisit}
