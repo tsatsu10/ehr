@@ -110,6 +110,22 @@ class ClinicalDocCatalogService
     /** @var array<string, list<string>>|null */
     private ?array $allowedFormdirsCache = null;
 
+    /**
+     * cardsForLens() rebuilds every card from scratch (a registry/LBF lookup per formdir,
+     * uncached) — cheap per call today since `registry` is a small, slowly-growing form
+     * catalog, not transactional data, but getCatalog(null, ...) (the full, unscoped catalog
+     * used by e.g. buildAddableForms()) iterates every lens and rebuilds cards for lenses
+     * that a lens-scoped getCatalog() call already built moments earlier in the same request.
+     * Memoized per (lens, facility) for the life of this instance; cleared alongside
+     * allowedFormdirsCache since both are derived from the same underlying catalog data.
+     *
+     * @var array<string, list<array<string, mixed>>>
+     */
+    private array $cardsForLensCache = [];
+
+    /** @var array<string, string> raw formdir => resolved canonical directory, see resolveRegistryDirectory(). */
+    private array $resolveRegistryDirectoryCache = [];
+
     private ?ClinicalDocAccessService $access = null;
     private ?ClinicConfigService $config = null;
     private ?VisitScopeService $visitScope = null;
@@ -373,8 +389,17 @@ class ClinicalDocCatalogService
             return '';
         }
 
+        // Pure function (same input -> same output for the life of a request) but called
+        // heavily and uncached from two places: once per card while building a lens, and
+        // again — plus once per bundle-spec candidate — inside
+        // AdminFormBundleService::getFormHealth() for every card's bundle-health check. That
+        // second path alone can fire 1-3 queries per (card, spec) pair with zero caching.
+        if (isset($this->resolveRegistryDirectoryCache[$formdir])) {
+            return $this->resolveRegistryDirectoryCache[$formdir];
+        }
+
         if ($this->getEnginePolicy()->isNativeFormdir($formdir)) {
-            return EncounterNoteService::NATIVE_FORMDIR;
+            return $this->resolveRegistryDirectoryCache[$formdir] = EncounterNoteService::NATIVE_FORMDIR;
         }
 
         $row = QueryUtils::querySingleRow(
@@ -383,7 +408,7 @@ class ClinicalDocCatalogService
         );
 
         if (is_array($row)) {
-            return (string) ($row['directory'] ?? $formdir);
+            return $this->resolveRegistryDirectoryCache[$formdir] = (string) ($row['directory'] ?? $formdir);
         }
 
         foreach ($this->lbfFormIdCandidates($formdir) as $candidate) {
@@ -393,16 +418,18 @@ class ClinicalDocCatalogService
                 [$candidate]
             );
             if (is_array($lbfRow)) {
-                return (string) ($lbfRow['grp_form_id'] ?? $candidate);
+                return $this->resolveRegistryDirectoryCache[$formdir] = (string) ($lbfRow['grp_form_id'] ?? $candidate);
             }
         }
 
-        return $formdir;
+        return $this->resolveRegistryDirectoryCache[$formdir] = $formdir;
     }
 
     public function clearAllowedFormdirsCache(): void
     {
         $this->allowedFormdirsCache = null;
+        $this->cardsForLensCache = [];
+        $this->resolveRegistryDirectoryCache = [];
     }
 
     public function isFormInstalledAndActive(string $formdir): bool
@@ -432,8 +459,13 @@ class ClinicalDocCatalogService
      */
     private function cardsForLens(string $lens, int $facilityId): array
     {
+        $cacheKey = $lens . '|' . $facilityId;
+        if (isset($this->cardsForLensCache[$cacheKey])) {
+            return $this->cardsForLensCache[$cacheKey];
+        }
+
         if ($lens === 'visit') {
-            return $this->visitLensCards($facilityId);
+            return $this->cardsForLensCache[$cacheKey] = $this->visitLensCards($facilityId);
         }
 
         $defs = $this->lensDefinitions($lens, $facilityId);
@@ -445,7 +477,7 @@ class ClinicalDocCatalogService
             }
         }
 
-        return $cards;
+        return $this->cardsForLensCache[$cacheKey] = $cards;
     }
 
     /**

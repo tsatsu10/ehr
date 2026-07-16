@@ -32,7 +32,7 @@ class ClinicalDocDocumentationStatusService
         $visitId = (int) ($visit['id'] ?? 0);
         $pid = (int) ($visit['pid'] ?? 0);
         $encounterId = (int) ($visit['encounter'] ?? 0);
-        if ($facilityId === null || $facilityId < 0) {
+        if ($facilityId === null || $facilityId <= 0) {
             $facilityId = (int) ($visit['facility_id'] ?? 0);
         }
 

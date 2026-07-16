@@ -17,8 +17,6 @@ use OpenEMR\Modules\NewClinic\Exceptions\EncounterSessionMismatchException;
 
 class ClinicalDocFormOpenService
 {
-    private static bool $schemaEnsured = false;
-
     public function __construct(
         private readonly ClinicalDocAccessService $access = new ClinicalDocAccessService(),
         private readonly ClinicalDocCatalogService $catalog = new ClinicalDocCatalogService(),
@@ -281,8 +279,6 @@ class ClinicalDocFormOpenService
         int $actorUserId,
         string $action,
     ): void {
-        $this->ensureTableExists();
-
         QueryUtils::sqlInsert(
             'INSERT INTO clinical_doc_form_open
                 (facility_id, visit_id, encounter, formdir, form_id, actor_user_id, opened_at, action)
@@ -313,31 +309,5 @@ class ClinicalDocFormOpenService
             ]),
             0
         );
-    }
-
-    private function ensureTableExists(): void
-    {
-        if (self::$schemaEnsured) {
-            return;
-        }
-
-        sqlStatement(
-            'CREATE TABLE IF NOT EXISTS `clinical_doc_form_open` (
-                `id` BIGINT NOT NULL AUTO_INCREMENT,
-                `facility_id` INT NOT NULL,
-                `visit_id` BIGINT NOT NULL,
-                `encounter` BIGINT NOT NULL,
-                `formdir` VARCHAR(64) NOT NULL,
-                `form_id` BIGINT NULL,
-                `actor_user_id` BIGINT NOT NULL,
-                `opened_at` DATETIME NOT NULL,
-                `action` VARCHAR(16) NOT NULL,
-                PRIMARY KEY (`id`),
-                KEY `idx_visit_opened` (`visit_id`, `opened_at`),
-                KEY `idx_facility_opened` (`facility_id`, `opened_at`)
-            ) ENGINE=InnoDB COMMENT=\'M17 form open audit (V1.1-DOC)\''
-        );
-
-        self::$schemaEnsured = true;
     }
 }
