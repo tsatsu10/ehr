@@ -27,6 +27,14 @@ class NullRecallMessagingAdapter implements RecallMessagingPort
         ];
     }
 
+    public function batchGetRecallDeliveryStatus(array $pids): array
+    {
+        return array_fill_keys(
+            array_values(array_unique(array_filter($pids, static fn (int $p): bool => $p > 0))),
+            ['available' => false, 'last_channel' => null, 'last_status' => null],
+        );
+    }
+
     public function queueRecallReminder(int $recallId, int $pid, int $actorUserId): bool
     {
         return false;

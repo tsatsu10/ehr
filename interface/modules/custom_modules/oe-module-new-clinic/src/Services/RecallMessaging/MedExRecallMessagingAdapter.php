@@ -47,6 +47,58 @@ class MedExRecallMessagingAdapter implements RecallMessagingPort
         ];
     }
 
+    public function batchGetRecallDeliveryStatus(array $pids): array
+    {
+        $pids = array_values(array_unique(array_filter(
+            array_map('intval', $pids),
+            static fn (int $p): bool => $p > 0,
+        )));
+        if ($pids === []) {
+            return [];
+        }
+
+        if (!$this->isConfigured()) {
+            return array_fill_keys(
+                $pids,
+                ['available' => false, 'last_channel' => null, 'last_status' => null],
+            );
+        }
+
+        $eidToPid = [];
+        foreach ($pids as $pid) {
+            $eidToPid['recall_' . $pid] = $pid;
+        }
+        $placeholders = implode(',', array_fill(0, count($eidToPid), '?'));
+        $rows = QueryUtils::fetchRecords(
+            "SELECT msg_pc_eid, msg_type, msg_reply
+             FROM medex_outgoing
+             WHERE msg_pc_eid IN ($placeholders)
+             ORDER BY msg_date DESC",
+            array_keys($eidToPid),
+        ) ?: [];
+
+        // Rows are ordered newest-first, so the first row seen per pid is the latest.
+        $latestByPid = [];
+        foreach ($rows as $row) {
+            $pid = $eidToPid[(string) ($row['msg_pc_eid'] ?? '')] ?? 0;
+            if ($pid <= 0 || isset($latestByPid[$pid])) {
+                continue;
+            }
+            $latestByPid[$pid] = [
+                'available' => true,
+                'last_channel' => isset($row['msg_type']) ? (string) $row['msg_type'] : null,
+                'last_status' => isset($row['msg_reply']) ? (string) $row['msg_reply'] : null,
+            ];
+        }
+
+        $result = [];
+        foreach ($pids as $pid) {
+            $result[$pid] = $latestByPid[$pid] ?? ['available' => true, 'last_channel' => null, 'last_status' => null];
+        }
+
+        return $result;
+    }
+
     public function queueRecallReminder(int $recallId, int $pid, int $actorUserId): bool
     {
         if (!$this->isConfigured() || $recallId <= 0 || $pid <= 0) {

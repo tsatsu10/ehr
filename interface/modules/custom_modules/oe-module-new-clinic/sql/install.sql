@@ -850,6 +850,11 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_insurance_scheme', '0');
 #EndIf
 
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_payer_billing
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_payer_billing', '0');
+#EndIf
+
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_otc_manual_discount
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_otc_manual_discount', '0');
@@ -895,6 +900,43 @@ CREATE TABLE IF NOT EXISTS `new_scheme_claim_line` (
     PRIMARY KEY (`id`),
     KEY `idx_claim` (`claim_id`)
 ) ENGINE=InnoDB COMMENT='CBILL-3 per-line coverage for a scheme claim';
+#EndIf
+
+-- CBILL-4a: per-payer price overrides (e.g. NHIS G-DRG tariff). One row per billable item
+-- per payer; falls back to the clinic's normal price when no row exists.
+#IfNotTable new_payer_price
+CREATE TABLE IF NOT EXISTS `new_payer_price` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `facility_id` INT NOT NULL DEFAULT 0,
+    `insurance_company_id` INT NOT NULL,
+    `item_code` VARCHAR(64) NOT NULL,
+    `item_name` VARCHAR(255) NOT NULL DEFAULT '',
+    `price_amount` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    `actor_user_id` BIGINT NOT NULL DEFAULT 0,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uniq_payer_item` (`facility_id`, `insurance_company_id`, `item_code`)
+) ENGINE=InnoDB COMMENT='CBILL-4a per-payer price overrides (e.g. NHIS G-DRG tariff)';
+#EndIf
+
+-- CBILL-4b: manual eligibility check log. Staff perform the check themselves (e.g. Ghana
+-- NHIA's *842# USSD code) and log the result here -- no live API call is ever made.
+#IfNotTable new_insurance_eligibility_check
+CREATE TABLE IF NOT EXISTS `new_insurance_eligibility_check` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `pid` BIGINT NOT NULL,
+    `visit_id` BIGINT NULL,
+    `insurance_company_id` INT NOT NULL DEFAULT 0,
+    `membership_number` VARCHAR(64) NOT NULL DEFAULT '',
+    `method` ENUM('ussd','phone','portal','card','other') NOT NULL DEFAULT 'other',
+    `result` ENUM('eligible','not_eligible','unknown') NOT NULL DEFAULT 'unknown',
+    `reference_code` VARCHAR(64) NOT NULL DEFAULT '',
+    `note` VARCHAR(255) NOT NULL DEFAULT '',
+    `actor_user_id` BIGINT NOT NULL DEFAULT 0,
+    `checked_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_pid` (`pid`, `checked_at`)
+) ENGINE=InnoDB COMMENT='CBILL-4b manual eligibility check log (no live API)';
 #EndIf
 
 #IfNotTable new_lab_order_meta
@@ -1272,6 +1314,13 @@ ALTER TABLE `medex_recalls` DROP INDEX `r_PRACTID`;
 
 #IfNotIndex medex_recalls idx_medex_recalls_pid
 ALTER TABLE `medex_recalls` ADD INDEX `idx_medex_recalls_pid` (`r_pid`);
+#EndIf
+
+# The Recalls worklist filters on (r_facility, r_provider) and sorts by r_eventDate — none of
+# which the pid-only index above covers, so every worklist load is a full table scan +
+# filesort of medex_recalls once a clinic has real recall history.
+#IfNotIndex medex_recalls new_idx_medex_recalls_facility_date
+ALTER TABLE `medex_recalls` ADD INDEX `new_idx_medex_recalls_facility_date` (`r_facility`, `r_eventDate`);
 #EndIf
 
 #IfNotTable new_clinic_flowboard_lane_prefs

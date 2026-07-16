@@ -21,6 +21,15 @@ interface RecallMessagingPort
     public function getRecallDeliveryStatus(int $recallId, int $pid): array;
 
     /**
+     * Batched form of getRecallDeliveryStatus() — one query for a whole worklist page
+     * instead of one per row (delivery status is keyed by patient, not by recall).
+     *
+     * @param array<int, int> $pids
+     * @return array<int, array{available: bool, last_channel: string|null, last_status: string|null}> pid => status
+     */
+    public function batchGetRecallDeliveryStatus(array $pids): array;
+
+    /**
      * Queue an automated recall reminder (no-op when not configured).
      */
     public function queueRecallReminder(int $recallId, int $pid, int $actorUserId): bool;

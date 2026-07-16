@@ -31,6 +31,13 @@ class SchedulingRecallsService
     /** @var list<string> */
     public const RECALL_TYPES = ['general', 'follow_up', 'preventive', 'chronic', 'dental'];
 
+    /**
+     * Terminal-status recalls (completed/declined/unreachable) older than this are excluded
+     * from the worklist query — they're not actionable and would otherwise accumulate
+     * unbounded forever. Open/contacted/scheduled/snoozed recalls are never date-bounded.
+     */
+    private const TERMINAL_LOOKBACK_DAYS = 90;
+
     public function __construct(
         private readonly SchedulingAccessService $access = new SchedulingAccessService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
@@ -53,7 +60,13 @@ class SchedulingRecallsService
         $facilityId = $this->visitScope->resolveDeskFacilityId($facilityId > 0 ? $facilityId : null);
         $today = $this->clinicDate->today();
         $rows = $this->fetchRecallRows($facilityId, $providerId, $pid, $search);
-        $mapped = array_map(fn (array $row): array => $this->mapRecallRow($row, $today), $rows);
+        // Batched (not one query per row) — delivery status is keyed by patient, so the whole
+        // page's status can be fetched in one query instead of one per recall.
+        $messagingMap = $this->messaging()->batchGetRecallDeliveryStatus(array_map(
+            static fn (array $row): int => (int) ($row['r_pid'] ?? 0),
+            $rows,
+        ));
+        $mapped = array_map(fn (array $row): array => $this->mapRecallRow($row, $today, $messagingMap), $rows);
 
         $counts = [
             'overdue' => 0,
@@ -421,6 +434,15 @@ class SchedulingRecallsService
             array_push($bind, $like, $like, $like, $like);
         }
 
+        // Terminal-status recalls (completed/declined/unreachable) are excluded once they're
+        // older than the lookback window — actionable recalls (meta.status NULL/open/contacted/
+        // scheduled/snoozed) are never date-bounded. Without this, this query pulls the
+        // clinic's entire recall history on every worklist load, forever.
+        $lookbackDate = date('Y-m-d', strtotime('-' . self::TERMINAL_LOOKBACK_DAYS . ' days'));
+        $terminalList = "'" . implode("','", self::TERMINAL_STATUSES) . "'";
+        $where[] = "(meta.status IS NULL OR meta.status NOT IN ({$terminalList}) OR mr.r_eventDate >= ?)";
+        $bind[] = $lookbackDate;
+
         $sql = 'SELECT mr.r_ID, mr.r_pid, mr.r_eventDate, mr.r_facility, mr.r_provider, mr.r_reason,
                        pat.fname, pat.lname, pat.pubpid, pat.phone_home, pat.phone_cell, pat.email,
                        pat.hipaa_allowsms, pat.hipaa_allowemail, pat.hipaa_voice,
@@ -440,7 +462,11 @@ class SchedulingRecallsService
      * @param array<string, mixed> $row
      * @return array<string, mixed>
      */
-    private function mapRecallRow(array $row, string $today): array
+    /**
+     * @param array<int, array{available: bool, last_channel: string|null, last_status: string|null}> $messagingMap
+     *   pid => delivery status (see SchedulingRecallsService::getWorklist()).
+     */
+    private function mapRecallRow(array $row, string $today, array $messagingMap = []): array
     {
         $dueDate = (string) ($row['r_eventDate'] ?? '');
         $status = (string) ($row['recall_status'] ?? 'open');
@@ -469,7 +495,7 @@ class SchedulingRecallsService
             'status_label' => $this->statusLabel($status),
             'recall_type' => $this->normalizeRecallType((string) ($row['recall_type'] ?? 'general')),
             'recall_type_label' => $this->recallTypeLabel((string) ($row['recall_type'] ?? 'general')),
-            'messaging' => $this->messaging()->getRecallDeliveryStatus((int) ($row['r_ID'] ?? 0), $pid),
+            'messaging' => $messagingMap[$pid] ?? $this->messaging()->getRecallDeliveryStatus((int) ($row['r_ID'] ?? 0), $pid),
             'produced_eid' => isset($row['produced_eid']) ? (int) $row['produced_eid'] : null,
             'produced_event_date' => (string) ($row['produced_event_date'] ?? ''),
             'outcome_note' => (string) ($row['outcome_note'] ?? ''),

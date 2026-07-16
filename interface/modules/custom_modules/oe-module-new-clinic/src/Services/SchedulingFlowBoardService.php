@@ -23,12 +23,30 @@ class SchedulingFlowBoardService
 
     private static bool $legacyLoaded = false;
 
+    // Lazy — QueueBridgeSurfaceService eagerly builds QueueBridgeService, which eagerly builds
+    // SchedulingShellService AND SchedulingRecallsService (a Scheduling service reaching back
+    // into two other Scheduling services through a third module). No active cycle today, but
+    // it means every Flow Board load/poll constructs 15-20 objects even when queue bridge is
+    // off, and one future edit anywhere in that graph turns this into the eager-ctor-cycle
+    // crash class (CLAUDE.md §6). Built only on first actual use.
+    private ?QueueBridgeSurfaceService $queueBridge = null;
+
     public function __construct(
         private readonly SchedulingAccessService $access = new SchedulingAccessService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
-        private readonly QueueBridgeSurfaceService $queueBridge = new QueueBridgeSurfaceService(),
+        ?QueueBridgeSurfaceService $queueBridge = null,
         private readonly SchedulingFlowBoardLaneMapService $laneMap = new SchedulingFlowBoardLaneMapService(),
     ) {
+        $this->queueBridge = $queueBridge;
+    }
+
+    private function getQueueBridge(): QueueBridgeSurfaceService
+    {
+        if ($this->queueBridge === null) {
+            $this->queueBridge = new QueueBridgeSurfaceService();
+        }
+
+        return $this->queueBridge;
     }
 
     /**
@@ -76,7 +94,7 @@ class SchedulingFlowBoardService
             'revision' => $revision,
             'poll_interval_ms' => $pollMs,
             'can_advance' => $this->access->canBookAppointment(),
-            'queue_bridge_enabled' => $this->queueBridge->isSurfaceEnabled($facilityId),
+            'queue_bridge_enabled' => $this->getQueueBridge()->isSurfaceEnabled($facilityId),
         ];
     }
 
@@ -415,12 +433,12 @@ class SchedulingFlowBoardService
      */
     private function buildEx01Map(int $facilityId, string $date): array
     {
-        if (!$this->queueBridge->isSurfaceEnabled($facilityId) || $date !== date('Y-m-d')) {
+        if (!$this->getQueueBridge()->isSurfaceEnabled($facilityId) || $date !== date('Y-m-d')) {
             return [];
         }
 
         $map = [];
-        foreach ($this->queueBridge->flowBoardChips($facilityId) as $chip) {
+        foreach ($this->getQueueBridge()->flowBoardChips($facilityId) as $chip) {
             $key = (int) ($chip['pid'] ?? 0) . ':' . (int) ($chip['pc_eid'] ?? 0);
             $map[$key] = (string) ($chip['fix_url'] ?? '');
         }
