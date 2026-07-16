@@ -62,6 +62,6 @@ describe('CalendarLens', () => {
 
     expect(await screen.findByText(/Ama Boateng/)).toBeInTheDocument();
     expect(screen.getByRole('listitem', { name: /09:00/ })).toBeInTheDocument();
-    expect(screen.getByText(/1 appointment on 2026-06-30/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 appointment on 30\/06\/2026/i)).toBeInTheDocument();
   });
 });

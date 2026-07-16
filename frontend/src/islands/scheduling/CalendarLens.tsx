@@ -24,6 +24,7 @@ import type {
 import { ALL_PROVIDERS_ID } from './schedulingTypes';
 import {
   defaultCalendarLayout,
+  formatDateDisplay,
   isCalendarUnchanged,
   type CalendarLayout,
 } from './schedulingCalendarUtils';
@@ -414,7 +415,7 @@ export function CalendarLens({
               {' '}
               {labels.calendarOn}
               {' '}
-              {data.date}
+              {formatDateDisplay(data.date)}
               .
             </>
           ) : (
@@ -422,11 +423,11 @@ export function CalendarLens({
               {' '}
               {labels.calendarFrom}
               {' '}
-              {data.start_date}
+              {formatDateDisplay(data.start_date ?? '')}
               {' '}
               {labels.calendarTo}
               {' '}
-              {data.end_date}
+              {formatDateDisplay(data.end_date ?? '')}
               .
             </>
           )}
@@ -474,7 +475,7 @@ export function CalendarLens({
             >
               <div className="flex justify-between items-start w-full">
                 <strong className="text-sm">
-                  {event.event_date !== data.date ? `${event.event_date} ` : ''}
+                  {event.event_date !== data.date ? `${formatDateDisplay(event.event_date)} ` : ''}
                   {formatSlotRange(event)}
                 </strong>
                 <Badge variant="outline">{event.status_label}</Badge>
@@ -517,7 +518,7 @@ export function CalendarLens({
       )}
 
       {selectedEvent && (
-        <div className="nc-calendar-peek border rounded p-3 mt-3 bg-white">
+        <div className="nc-calendar-peek">
           <div className="flex justify-between items-start mb-2">
             <div>
               <strong>{selectedEvent.patient_name}</strong>

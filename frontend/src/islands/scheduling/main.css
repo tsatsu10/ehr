@@ -26,12 +26,12 @@
 }
 
 .nc-flowboard-card--alert-warn {
-  border-color: #f59e0b !important;
+  border-color: var(--oe-nc-warning, #b54708) !important;
 }
 
 .nc-flowboard-card--alert-over {
-  border-color: #ef4444 !important;
-  box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.15);
+  border-color: var(--oe-nc-danger, #b42318) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--oe-nc-danger, #b42318) 15%, transparent);
 }
 
 .nc-flowboard-board--mobile {
@@ -97,6 +97,8 @@
   height: 0.35rem;
   margin-top: 0.15rem;
   border-radius: 0.125rem;
+  /* Calendar-specific accent blue — no shared --oe-nc-* token covers this narrow
+     drag/resize-affordance use, so it's a deliberate raw color, not an oversight. */
   background: rgba(59, 130, 246, 0.35);
   cursor: ns-resize;
 }
@@ -144,6 +146,7 @@
 }
 
 .nc-calendar-day-event {
+  /* Same deliberate accent blue as .nc-calendar-day-resize-handle above. */
   background: rgba(59, 130, 246, 0.08);
   border: 1px solid rgba(59, 130, 246, 0.25);
   border-radius: 0.25rem;
@@ -156,7 +159,19 @@
 }
 
 .nc-calendar-peek {
-  border-color: var(--oe-nc-border, #e2e8f0) !important;
+  border: 1px solid var(--oe-nc-border, #e2e8f0);
+  border-radius: 0.25rem;
+  padding: 0.75rem;
+  margin-top: 0.75rem;
+  background: var(--oe-nc-surface, #fff);
+}
+
+.nc-flowboard-card {
+  border: 1px solid var(--oe-nc-border, #e2e8f0);
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  background: var(--oe-nc-surface, #fff);
 }
 
 .nc-recalls .nc-segmented-control {

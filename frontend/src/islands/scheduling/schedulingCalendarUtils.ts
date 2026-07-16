@@ -7,6 +7,14 @@ export function formatDateYmd(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+/** ISO ('YYYY-MM-DD') -> regional display ('DD/MM/YYYY'). Returns the input unchanged if it isn't ISO-shaped. */
+export function formatDateDisplay(isoDate: string): string {
+  const [y, m, d] = isoDate.split('-');
+  return d && m && y && /^\d{4}$/.test(y) && /^\d{2}$/.test(m) && /^\d{2}$/.test(d)
+    ? `${d}/${m}/${y}`
+    : isoDate;
+}
+
 export function weekDates(anchor: string): string[] {
   const anchorDate = new Date(`${anchor}T12:00:00`);
   const weekday = anchorDate.getDay();

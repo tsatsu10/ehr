@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
@@ -57,7 +58,7 @@ export function FlowBoardCardView({
 
   return (
     <article
-      className={`nc-flowboard-card border rounded p-2 mb-2 bg-white ${alertClass(card.alert_level)}${draggable ? ' nc-flowboard-card--draggable' : ''}`}
+      className={`nc-flowboard-card ${alertClass(card.alert_level)}${draggable ? ' nc-flowboard-card--draggable' : ''}`}
       aria-label={`${card.patient_name}, ${card.status_label}`}
       draggable={draggable}
       onDragStart={(event) => {
@@ -238,7 +239,7 @@ export function FlowBoardLaneColumn({
               aria-label={labels.moveLaneLeft}
               onClick={() => onMoveLane(lane.status, -1)}
             >
-              ←
+              <ChevronLeft size={16} aria-hidden="true" />
             </Button>
             <Button
               type="button"
@@ -247,7 +248,7 @@ export function FlowBoardLaneColumn({
               aria-label={labels.moveLaneRight}
               onClick={() => onMoveLane(lane.status, 1)}
             >
-              →
+              <ChevronRight size={16} aria-hidden="true" />
             </Button>
           </span>
         )}

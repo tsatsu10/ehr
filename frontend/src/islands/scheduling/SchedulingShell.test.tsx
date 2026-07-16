@@ -84,7 +84,7 @@ describe('SchedulingShell', () => {
     expect(screen.getByLabelText(/Provider/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Date/i)).toHaveValue('2026-06-30');
     expect(screen.getByRole('tab', { name: /Calendar/i })).toHaveAttribute('aria-selected', 'true');
-    expect(await screen.findByText(/0 appointments on 2026-06-30/i)).toBeInTheDocument();
+    expect(await screen.findByText(/0 appointments on 30\/06\/2026/i)).toBeInTheDocument();
   });
 
   it('syncs lens changes to URL query params', async () => {

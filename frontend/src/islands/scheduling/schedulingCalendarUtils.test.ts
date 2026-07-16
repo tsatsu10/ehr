@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addMinutesToTime,
   buildTimeSlots,
+  formatDateDisplay,
   isCalendarUnchanged,
   monthGridDates,
   slotSpan,
@@ -9,6 +10,15 @@ import {
 } from './schedulingCalendarUtils';
 
 describe('schedulingCalendarUtils', () => {
+  it('formats an ISO date as DD/MM/YYYY', () => {
+    expect(formatDateDisplay('2026-07-15')).toBe('15/07/2026');
+  });
+
+  it('returns non-ISO input unchanged', () => {
+    expect(formatDateDisplay('')).toBe('');
+    expect(formatDateDisplay('not-a-date')).toBe('not-a-date');
+  });
+
   it('builds a Monday-first week for an anchor date', () => {
     expect(weekDates('2026-06-30')).toEqual([
       '2026-06-29',

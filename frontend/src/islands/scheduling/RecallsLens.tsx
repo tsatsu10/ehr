@@ -29,6 +29,7 @@ import type {
   SchedulingLabels,
 } from './schedulingTypes';
 import { recallBucketLabel, resolveSchedulingLabels } from './schedulingLabels';
+import { formatDateDisplay } from './schedulingCalendarUtils';
 import { calendarUrlForDate, flowBoardUrlForDate } from './schedulingShellUtils';
 
 const BUCKETS: RecallBucket[] = ['overdue', 'due', 'upcoming', 'completed'];
@@ -48,7 +49,7 @@ interface RecallsLensProps {
 
 function dueLabel(row: RecallRow): string {
   if (row.bucket === 'completed') {
-    return row.due_date;
+    return formatDateDisplay(row.due_date);
   }
   if (row.days_delta < 0) {
     return `${Math.abs(row.days_delta)}d overdue`;
@@ -86,6 +87,7 @@ export function RecallsLens({
   const [outcomeRow, setOutcomeRow] = useState<RecallRow | null>(null);
   const [outcomeStatus, setOutcomeStatus] = useState('contacted');
   const [outcomeNote, setOutcomeNote] = useState('');
+  const [pendingDelete, setPendingDelete] = useState<RecallRow | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -205,9 +207,6 @@ export function RecallsLens({
   };
 
   const handleDelete = async (row: RecallRow) => {
-    if (!window.confirm(`${labels.deleteRecallConfirm} ${row.patient_name}?`)) {
-      return;
-    }
     setBusy(true);
     try {
       const worklist = await deleteRecall(ajaxUrl, csrfToken, filters, bucket, row.recall_id);
@@ -216,6 +215,7 @@ export function RecallsLens({
       setError(err instanceof Error ? err.message : labels.errorDeleteFailed);
     } finally {
       setBusy(false);
+      setPendingDelete(null);
     }
   };
 
@@ -397,9 +397,9 @@ export function RecallsLens({
                     type="button"
                     variant="link"
                     size="sm"
-                    className="h-auto p-0 text-red-600 hover:text-red-700"
+                    className="h-auto p-0 text-(--oe-nc-danger,#dc2626) hover:text-(--oe-nc-danger,#dc2626)"
                     disabled={busy}
-                    onClick={() => { void handleDelete(row); }}
+                    onClick={() => setPendingDelete(row)}
                   >
                     {labels.recallDelete}
                   </Button>
@@ -421,10 +421,7 @@ export function RecallsLens({
         bucket={bucket}
         providers={data?.providers ?? []}
         facilities={facilities}
-        recallTypes={(data?.recall_types ?? []).map((type) => ({
-          id: type.id as unknown as number,
-          label: type.label,
-        }))}
+        recallTypes={data?.recall_types ?? []}
         draft={formDraft}
         labels={labels}
         onClose={() => setFormOpen(false)}
@@ -448,6 +445,24 @@ export function RecallsLens({
       />
 
       <ConfirmModal
+        open={pendingDelete != null}
+        onClose={() => setPendingDelete(null)}
+        title={`${labels.deleteRecallConfirm} ${pendingDelete?.patient_name ?? ''}?`}
+        confirmLabel={labels.recallDelete}
+        confirmVariant="danger"
+        submitting={busy}
+        onConfirm={() => {
+          if (pendingDelete) {
+            void handleDelete(pendingDelete);
+          }
+        }}
+      >
+        <p className="text-sm text-[var(--oe-nc-text-muted)]">
+          MRN {pendingDelete?.pubpid}
+        </p>
+      </ConfirmModal>
+
+      <ConfirmModal
         open={outcomeRow != null}
         onClose={() => setOutcomeRow(null)}
         title={labels.outcomeModalTitle}
@@ -468,11 +483,11 @@ export function RecallsLens({
             value={outcomeStatus}
             onChange={(e) => setOutcomeStatus(e.target.value)}
           >
-            <option value="contacted">Contacted</option>
-            <option value="declined">Declined</option>
-            <option value="unreachable">Unreachable</option>
-            <option value="completed">Completed</option>
-            <option value="snoozed">Snoozed</option>
+            <option value="contacted">{labels.outcomeStatusContacted}</option>
+            <option value="declined">{labels.outcomeStatusDeclined}</option>
+            <option value="unreachable">{labels.outcomeStatusUnreachable}</option>
+            <option value="completed">{labels.outcomeStatusCompleted}</option>
+            <option value="snoozed">{labels.outcomeStatusSnoozed}</option>
           </NativeSelect>
         </div>
         <div className="nc-form-group mb-0">

@@ -12,6 +12,7 @@ import {
 import type { CalendarDayPayload, CalendarEvent, SchedulingOption } from './schedulingTypes';
 import {
   buildTimeSlots,
+  formatDateDisplay,
   monthGridDates,
   slotSpan,
   weekDates,
@@ -188,7 +189,7 @@ export function CalendarWeekGrid({
             <TableHead className="nc-calendar-day-time-col" rowSpan={2}>Time</TableHead>
             {dates.map((date) => (
               <TableHead key={date} scope="colgroup" colSpan={Math.max(providers.length, 1)}>
-                {date.slice(5)}
+                {formatDateDisplay(date).slice(0, 5)}
               </TableHead>
             ))}
           </TableRow>
@@ -434,10 +435,11 @@ function CalendarGridCell({
           variant="link"
           size="sm"
           className="nc-calendar-day-slot h-auto w-full text-[var(--oe-nc-text-muted)]"
+          aria-label={`Book appointment at ${slot} on ${date}`}
           {...gridFocusProps}
           onClick={() => onBookSlot({ date, time: slot, providerId })}
         >
-          +
+          <span aria-hidden="true">+</span>
         </Button>
       ) : canBook ? (
         <Button
@@ -445,10 +447,11 @@ function CalendarGridCell({
           variant="link"
           size="sm"
           className="nc-calendar-day-slot h-auto w-full text-[var(--oe-nc-text-muted)]"
+          aria-label={`Book appointment at ${slot} on ${date}`}
           {...gridFocusProps}
           onClick={() => onBookSlot({ date, time: slot, providerId: 0 })}
         >
-          +
+          <span aria-hidden="true">+</span>
         </Button>
       ) : null}
     </TableCell>

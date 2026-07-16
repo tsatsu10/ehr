@@ -5,7 +5,7 @@ import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { NativeSelect } from '@components/ui/native-select';
-import type { RecallFormDraft, RecallBucket, SchedulingFilters, SchedulingLabels, SchedulingOption } from './schedulingTypes';
+import type { RecallFormDraft, RecallBucket, RecallTypeOption, SchedulingFilters, SchedulingLabels, SchedulingOption } from './schedulingTypes';
 import { saveRecall } from './schedulingApi';
 import { resolveSchedulingLabels } from './schedulingLabels';
 
@@ -17,7 +17,7 @@ interface RecallFormSheetProps {
   bucket: RecallBucket;
   providers: SchedulingOption[];
   facilities: SchedulingOption[];
-  recallTypes?: SchedulingOption[];
+  recallTypes?: RecallTypeOption[];
   draft: RecallFormDraft | null;
   labels?: Partial<SchedulingLabels>;
   onClose: () => void;
@@ -60,7 +60,7 @@ export function RecallFormSheet({
     setReason(draft?.reason ?? '');
     setProviderId(draft?.providerId ?? providers[0]?.id ?? 0);
     setFacilityId(draft?.facilityId ?? filters.facilityId);
-    setRecallType(draft?.recallType ?? recallTypes[0]?.id?.toString() ?? 'general');
+    setRecallType(draft?.recallType ?? recallTypes[0]?.id ?? 'general');
   }, [open, draft, filters.date, filters.facilityId, providers, recallTypes]);
 
   const canSave = pid > 0 && dueDate !== '' && providerId > 0 && facilityId > 0;

@@ -143,6 +143,11 @@ export interface SchedulingLabels {
   outcomeModalConfirm: string;
   outcomeModalStatus: string;
   outcomeModalNote: string;
+  outcomeStatusContacted: string;
+  outcomeStatusDeclined: string;
+  outcomeStatusUnreachable: string;
+  outcomeStatusCompleted: string;
+  outcomeStatusSnoozed: string;
   recallColPatient: string;
   recallColDue: string;
   recallColReason: string;
@@ -318,6 +323,12 @@ export interface RecallRow {
   };
 }
 
+/** Recall type ids are a string enum server-side (SchedulingRecallsService::RECALL_TYPES), unlike SchedulingOption's numeric id. */
+export interface RecallTypeOption {
+  id: string;
+  label: string;
+}
+
 export interface RecallsWorklistPayload {
   bucket: RecallBucket;
   facility_id: number;
@@ -327,7 +338,7 @@ export interface RecallsWorklistPayload {
   rows: RecallRow[];
   can_manage: boolean;
   providers: SchedulingOption[];
-  recall_types?: SchedulingOption[];
+  recall_types?: RecallTypeOption[];
   messaging_enabled?: boolean;
 }
 
