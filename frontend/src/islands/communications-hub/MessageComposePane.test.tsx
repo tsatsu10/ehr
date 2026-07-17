@@ -152,6 +152,87 @@ describe('MessageComposePane', () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByText(/Attaching fax ID: FAX-123/i)).toBeInTheDocument();
+    expect(screen.getByText(/received fax \(job FAX-123\)/i)).toBeInTheDocument();
+  });
+
+  it('has no Status dropdown and disables Send until the form is valid', async () => {
+    render(
+      <MessageComposePane
+        ajaxUrl="/ajax"
+        csrfToken="token"
+        onCancel={vi.fn()}
+        onSent={vi.fn()}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Status is no longer part of compose — done/reopen lives in the reader.
+    expect(screen.queryByLabelText('Status')).not.toBeInTheDocument();
+
+    const send = screen.getByRole('button', { name: 'Send' });
+    expect(send).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Hello team' } });
+    expect(send).toBeDisabled(); // still no recipient
+
+    fireEvent.click(screen.getByLabelText('Dr One'));
+    expect(send).toBeEnabled();
+  });
+
+  it('shows an inline body error after blur while typing stays preserved', async () => {
+    render(
+      <MessageComposePane
+        ajaxUrl="/ajax"
+        csrfToken="token"
+        onCancel={vi.fn()}
+        onSent={vi.fn()}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const bodyField = screen.getByLabelText('Message');
+    fireEvent.change(bodyField, { target: { value: 'a' } });
+    fireEvent.blur(bodyField);
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/at least/i);
+    expect(bodyField).toHaveValue('a');
+  });
+
+  it('filters the recipient list when there are many staff', async () => {
+    mockFetch.mockImplementation((action: string) => {
+      if (action === 'communications.compose_options') {
+        return Promise.resolve({
+          ...composeOptions,
+          users: Array.from({ length: 10 }, (_, i) => ({
+            username: `u${i}`,
+            label: i === 0 ? 'Ama Owusu' : `Staff ${i}`,
+          })),
+        });
+      }
+      return Promise.resolve({});
+    });
+
+    render(
+      <MessageComposePane
+        ajaxUrl="/ajax"
+        csrfToken="token"
+        onCancel={vi.fn()}
+        onSent={vi.fn()}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.change(screen.getByLabelText('Filter recipients'), { target: { value: 'ama' } });
+    expect(screen.getByLabelText('Ama Owusu')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Staff 3')).not.toBeInTheDocument();
   });
 });

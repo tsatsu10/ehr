@@ -29,9 +29,6 @@ const props = {
     scope: 'my' as const,
     sort: { sortby: 'pnotes.date', sortorder: 'desc' as const },
   },
-  reminderAddUrl: '/reminder-add',
-  reminderLogUrl: '/reminder-log',
-  legacyComposeUrl: '/compose',
   webroot: '/openemr',
 };
 
@@ -65,9 +62,13 @@ describe('CommunicationsHub', () => {
       '<span id="nc-comm-count-messages"></span>' +
       '<span id="nc-comm-count-reminders"></span>' +
       '<input id="nc-comm-search" />' +
-      '<select id="nc-comm-activity"><option value="1">Active</option></select>' +
+      '<select id="nc-comm-activity"><option value="1">Open</option></select>' +
+      '<select id="nc-comm-sort"><option value="date_desc">Newest first</option><option value="date_asc">Oldest first</option></select>' +
       '<button id="nc-comm-refresh"></button>' +
-      '<a id="nc-comm-compose-link"></a>';
+      // Lens-scoped toolbar actions (React toggles nc-hidden by lens).
+      '<button id="nc-comm-view-log" class="nc-hidden">View log</button>' +
+      '<button id="nc-comm-new-message">+ New message</button>' +
+      '<button id="nc-comm-new-reminder" class="nc-hidden">+ New reminder</button>';
   });
 
   afterEach(() => {
@@ -87,6 +88,25 @@ describe('CommunicationsHub', () => {
     expect(await screen.findByText('Jane Doe')).toBeInTheDocument();
   });
 
+  it('surfaces a notice when a search only scanned the recent window', async () => {
+    mockFetch.mockImplementation((action: string) => {
+      if (action === 'communications.hub_counts') {
+        return Promise.resolve({ messages_active: 0, reminders_in_window: 0 });
+      }
+      if (action === 'communications.messages_list') {
+        return Promise.resolve({ rows: [], total: 0, search_truncated: true, search_scan_max: 5000 });
+      }
+      return Promise.resolve({ rows: [], total: 0 });
+    });
+
+    render(<CommunicationsHub {...props} />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByText(/most recent messages only/i)).toBeInTheDocument();
+  });
+
   it('shows empty detail prompt initially', async () => {
     render(<CommunicationsHub {...props} />);
 
@@ -97,14 +117,28 @@ describe('CommunicationsHub', () => {
     expect(screen.getByText(/Select an item to read details/i)).toBeInTheDocument();
   });
 
-  it('shows compose button on messages lens', async () => {
+  it('opens compose from the toolbar "+ New message" action on the messages lens', async () => {
     render(<CommunicationsHub {...props} />);
 
     await act(async () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByRole('button', { name: 'Compose' })).toBeInTheDocument();
+    // The action lives in the Twig toolbar (top-right, like every other desk);
+    // the island binds it by id rather than rendering its own footer button.
+    const newMessage = document.getElementById('nc-comm-new-message') as HTMLButtonElement;
+    expect(newMessage).not.toBeNull();
+    expect(newMessage.classList.contains('nc-hidden')).toBe(false);
+
+    // Idle prompt is showing before…
+    expect(screen.getByText(/Select an item to read details/i)).toBeInTheDocument();
+
+    await act(async () => {
+      newMessage.click();
+    });
+
+    // …and compose has taken over the detail pane after.
+    expect(screen.queryByText(/Select an item to read details/i)).not.toBeInTheDocument();
   });
 
   it('supports keyboard list navigation (COM-F13)', async () => {
@@ -166,5 +200,125 @@ describe('CommunicationsHub', () => {
 
     expect(screen.getByRole('option', { name: /John Roe/i })).toHaveAttribute('aria-selected', 'true');
     expect(mockFetch).toHaveBeenCalledWith('communications.message_detail', expect.any(Object));
+  });
+
+  it('swaps the toolbar primary action per lens (+ New reminder / View log on reminders)', async () => {
+    render(<CommunicationsHub {...props} />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const newMessage = document.getElementById('nc-comm-new-message') as HTMLButtonElement;
+    const newReminder = document.getElementById('nc-comm-new-reminder') as HTMLButtonElement;
+    const viewLog = document.getElementById('nc-comm-view-log') as HTMLButtonElement;
+
+    expect(newMessage.classList.contains('nc-hidden')).toBe(false);
+    expect(newReminder.classList.contains('nc-hidden')).toBe(true);
+    expect(viewLog.classList.contains('nc-hidden')).toBe(true);
+
+    await act(async () => {
+      (document.getElementById('nc-comm-lens-reminders') as HTMLButtonElement).click();
+    });
+
+    expect(newMessage.classList.contains('nc-hidden')).toBe(true);
+    expect(newReminder.classList.contains('nc-hidden')).toBe(false);
+    expect(viewLog.classList.contains('nc-hidden')).toBe(false);
+  });
+
+  it('filters reminders client-side by the toolbar search', async () => {
+    mockFetch.mockImplementation((action: string) => {
+      if (action === 'communications.hub_counts') {
+        return Promise.resolve({ messages_active: 0, reminders_in_window: 2 });
+      }
+      if (action === 'communications.reminders_list') {
+        return Promise.resolve({
+          rows: [
+            {
+              id: 1,
+              pid: 10,
+              patient_name: 'Jane Doe',
+              from_name: 'Dr Smith',
+              due_date: '2026-07-18',
+              due_display: '18/07/2026',
+              urgency: 'upcoming',
+              urgency_label: 'Upcoming',
+              preview: 'Check labs',
+            },
+            {
+              id: 2,
+              pid: 11,
+              patient_name: 'John Roe',
+              from_name: 'Dr Jones',
+              due_date: '2026-07-19',
+              due_display: '19/07/2026',
+              urgency: 'upcoming',
+              urgency_label: 'Upcoming',
+              preview: 'Call back',
+            },
+          ],
+          total: 2,
+        });
+      }
+      return Promise.resolve({ rows: [], total: 0 });
+    });
+
+    vi.useFakeTimers();
+    try {
+      render(<CommunicationsHub {...props} initialLens="reminders" />);
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(screen.getByText('Jane Doe')).toBeInTheDocument();
+      expect(screen.getByText('John Roe')).toBeInTheDocument();
+
+      const search = document.getElementById('nc-comm-search') as HTMLInputElement;
+      search.value = 'jane';
+      fireEvent.input(search);
+
+      await act(async () => {
+        vi.advanceTimersByTime(350);
+        await Promise.resolve();
+      });
+
+      expect(screen.getByText('Jane Doe')).toBeInTheDocument();
+      expect(screen.queryByText('John Roe')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps current rows visible during a background refresh (no Loading flash)', async () => {
+    render(<CommunicationsHub {...props} />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByText('Jane Doe')).toBeInTheDocument();
+
+    // Make the next list load hang — the refresh must not blank the list.
+    let resolveList: ((value: unknown) => void) | undefined;
+    mockFetch.mockImplementation((action: string) => {
+      if (action === 'communications.hub_counts') {
+        return Promise.resolve({ messages_active: 2, reminders_in_window: 1 });
+      }
+      if (action === 'communications.messages_list') {
+        return new Promise((resolve) => { resolveList = resolve; });
+      }
+      return Promise.resolve({ rows: [], total: 0 });
+    });
+
+    await act(async () => {
+      (document.getElementById('nc-comm-refresh') as HTMLButtonElement).click();
+    });
+
+    expect(screen.getByText('Jane Doe')).toBeInTheDocument();
+    expect(screen.queryByText('Loading…')).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveList?.({ rows: [], total: 0 });
+      await Promise.resolve();
+    });
   });
 });

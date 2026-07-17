@@ -11,14 +11,13 @@
         </button>
     </div>
     <input type="search"
-           class="nc-input nc-input-sm nc-mr-2 nc-mb-1"
+           class="nc-input nc-input-sm nc-mr-2 nc-mb-1 nc-comm-toolbar-search"
            id="nc-comm-search"
-           placeholder="{{ 'Search…'|xlt }}"
-           style="width:12rem;max-width:40vw;"
+           placeholder="{{ 'Search messages…'|xlt }}"
            aria-label="{{ 'Search'|xlt }}">
-    <select class="nc-select nc-select-sm nc-mr-2 nc-mb-1 nc-hidden" id="nc-comm-activity" aria-label="{{ 'Message activity'|xlt }}" style="width:auto;">
-        <option value="1">{{ 'Active'|xlt }}</option>
-        <option value="0">{{ 'Inactive'|xlt }}</option>
+    <select class="nc-select nc-select-sm nc-mr-2 nc-mb-1 nc-hidden nc-comm-toolbar-select" id="nc-comm-activity" aria-label="{{ 'Message activity'|xlt }}">
+        <option value="1">{{ 'Open'|xlt }}</option>
+        <option value="0">{{ 'Done'|xlt }}</option>
         <option value="all">{{ 'All'|xlt }}</option>
     </select>
     {% if can_view_all_users %}
@@ -27,19 +26,29 @@
         <label class="nc-form-check-label nc-text-sm" for="nc-comm-show-all">{{ 'All users'|xlt }}</label>
     </div>
     {% endif %}
-    <select class="nc-select nc-select-sm nc-mr-2 nc-mb-1 nc-hidden" id="nc-comm-sort-by" aria-label="{{ 'Sort by'|xlt }}" style="width:auto;">
-        <option value="pnotes.date">{{ 'Date'|xlt }}</option>
-        <option value="users.lname">{{ 'From'|xlt }}</option>
-        <option value="patient_data.lname">{{ 'Patient'|xlt }}</option>
-        <option value="pnotes.title">{{ 'Type'|xlt }}</option>
-        <option value="pnotes.message_status">{{ 'Status'|xlt }}</option>
-    </select>
-    <select class="nc-select nc-select-sm nc-mr-2 nc-mb-1 nc-hidden" id="nc-comm-sort-order" aria-label="{{ 'Sort order'|xlt }}" style="width:auto;">
-        <option value="desc">{{ 'Newest first'|xlt }}</option>
-        <option value="asc">{{ 'Oldest first'|xlt }}</option>
+    {# One sort select instead of the old field × order pair — values map to
+       sortby/sortorder in useCommunicationsPageHeading. #}
+    <select class="nc-select nc-select-sm nc-mr-2 nc-mb-1 nc-hidden nc-comm-toolbar-select" id="nc-comm-sort" aria-label="{{ 'Sort'|xlt }}">
+        <option value="date_desc">{{ 'Newest first'|xlt }}</option>
+        <option value="date_asc">{{ 'Oldest first'|xlt }}</option>
+        <option value="patient_az">{{ 'Patient A–Z'|xlt }}</option>
+        <option value="from_az">{{ 'Sender A–Z'|xlt }}</option>
+        <option value="type_az">{{ 'Type A–Z'|xlt }}</option>
     </select>
     <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1" id="nc-comm-refresh" aria-label="{{ 'Refresh'|xlt }}">
         <i class="fa fa-refresh" aria-hidden="true"></i>
+    </button>
+    {# Lens-scoped actions, top-right like every other desk. React toggles
+       nc-hidden by lens: messages → "+ New message"; reminders → "View log"
+       + "+ New reminder". #}
+    <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1 nc-mr-2 nc-hidden" id="nc-comm-view-log">
+        {{ 'View log'|xlt }}
+    </button>
+    <button type="button" class="nc-btn nc-btn-sm nc-btn-primary nc-mb-1 nc-comm-new-message" id="nc-comm-new-message">
+        + {{ 'New message'|xlt }}
+    </button>
+    <button type="button" class="nc-btn nc-btn-sm nc-btn-primary nc-mb-1 nc-hidden" id="nc-comm-new-reminder">
+        + {{ 'New reminder'|xlt }}
     </button>
 </div>
 {% endblock %}
@@ -54,9 +63,6 @@
         canViewAllUsers: can_view_all_users ? true : false,
         initialLens: initial_lens,
         preferences: preferences,
-        reminderAddUrl: reminder_add_url,
-        reminderLogUrl: reminder_log_url,
-        legacyComposeUrl: legacy_compose_url,
         webroot: webroot,
         composeLaunch: compose_launch
     }|json_encode|e('html_attr') }}"

@@ -32,9 +32,6 @@ export interface CommunicationsHubProps {
   canViewAllUsers: boolean;
   initialLens: CommLens;
   preferences: CommHubPreferences;
-  reminderAddUrl: string;
-  reminderLogUrl: string;
-  legacyComposeUrl: string;
   webroot: string;
   composeLaunch?: ComposeLaunch | null;
 }
@@ -157,6 +154,8 @@ export interface MessageListRow {
   status: string;
   is_unread: boolean;
   patient_unassigned?: boolean;
+  /** One-line body snippet for the conversation list. */
+  preview?: string;
 }
 
 export interface ReminderListRow {
@@ -171,8 +170,17 @@ export interface ReminderListRow {
   preview: string;
 }
 
+export interface MessageTurn {
+  author: string;
+  is_self: boolean;
+  time_label: string;
+  text: string;
+}
+
 export interface MessageDetail {
   id: number;
+  /** Chat turns parsed from the thread body (bubbles); thread_html kept for print. */
+  turns?: MessageTurn[];
   patient_name: string;
   type: string;
   from_name: string;
@@ -183,12 +191,12 @@ export interface MessageDetail {
   patient_unassigned?: boolean;
   can_assign_patient?: boolean;
   chart_url?: string;
+  /** True when opening this message just flipped it from New to Read (server-side). */
+  marked_read?: boolean;
   can_reply: boolean;
-  legacy_reply_url?: string;
   can_mark_done: boolean;
   can_delete?: boolean;
   can_change_status?: boolean;
-  message_statuses?: ComposeListOption[];
   is_supervisory_read?: boolean;
   supervisory_banner?: string;
   thread_html: string;
@@ -199,6 +207,9 @@ export interface MessagesListResult {
   total: number;
   begin: number;
   limit: number;
+  /** True when a keyword search only scanned the most-recent window (older matches may exist). */
+  search_truncated?: boolean;
+  search_scan_max?: number;
 }
 
 export interface RemindersListResult {

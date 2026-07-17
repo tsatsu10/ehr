@@ -8,13 +8,15 @@
     min-height: 28rem;
 }
 
+/* Console 26 card chrome (was a square 0.25rem box) — matches WidgetCard. */
 .nc-comm-split {
     display: flex;
     flex: 1 1 auto;
     gap: 0;
-    border: 1px solid var(--oe-nc-border, #dee2e6);
-    border-radius: 0.25rem;
-    background: #fff;
+    border: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.08));
+    border-radius: 1.125rem;
+    background: var(--oe-nc-surface, #fff);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
     min-height: 22rem;
     overflow: hidden;
 }
@@ -22,7 +24,7 @@
 .nc-comm-list-pane {
     flex: 0 0 40%;
     max-width: 40%;
-    border-right: 1px solid var(--oe-nc-border, #dee2e6);
+    border-right: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.08));
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -42,27 +44,135 @@
     max-height: calc(100vh - 18rem);
 }
 
+/* Premium conversation row: avatar · (name + time / preview / from) */
 .nc-comm-row {
-    display: block;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
     width: 100%;
     text-align: left;
     border: 0;
-    border-bottom: 1px solid var(--oe-nc-border, #eee);
-    background: #fff;
-    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.08));
+    background: var(--oe-nc-surface, #fff);
+    padding: 0.7rem 0.85rem;
     cursor: pointer;
     transition: background 0.12s ease;
 }
 
+.nc-comm-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.nc-comm-avatar--lg {
+    width: 2.75rem;
+    height: 2.75rem;
+    font-size: 0.95rem;
+}
+
+.nc-comm-row-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.nc-comm-row-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.nc-comm-row-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--oe-nc-text, #1d1d1f);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nc-comm-row-time {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    color: var(--oe-nc-text-muted, #6e6e73);
+    font-variant-numeric: tabular-nums;
+}
+
+.nc-comm-row-sub {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.nc-comm-row-preview {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.8rem;
+    color: var(--oe-nc-text-muted, #6e6e73);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nc-comm-unread-dot {
+    flex-shrink: 0;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--oe-nc-primary, #0071e3);
+}
+
+.nc-comm-row-tags {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.1rem;
+}
+
+.nc-comm-row-from {
+    font-size: 0.72rem;
+    color: var(--oe-nc-text-muted, #6e6e73);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nc-comm-row-urgency {
+    font-size: 0.6875rem;
+    font-weight: 700;
+}
+
+/* Unread conversation: bold name + preview (never colour-only). */
+.nc-comm-row.is-unread .nc-comm-row-name { font-weight: 700; }
+.nc-comm-row.is-unread .nc-comm-row-preview {
+    color: var(--oe-nc-text, #1d1d1f);
+    font-weight: 500;
+}
+
+/* --oe-nc-surface-muted / --oe-nc-accent / --oe-nc-accent-soft were never defined
+   anywhere, so these silently fell back to the hardcoded Bootstrap greys/blue
+   (#0d6efd) — which is why this page read as off-theme next to Console 26. */
 .nc-comm-row:hover,
 .nc-comm-row:focus {
-    background: var(--oe-nc-surface-muted, #f8f9fa);
+    background: var(--oe-nc-bg-muted, #ececef);
     outline: none;
 }
 
 .nc-comm-row.is-selected {
-    background: var(--oe-nc-accent-soft, #e8f0fe);
-    box-shadow: inset 3px 0 0 var(--oe-nc-accent, #0d6efd);
+    background: var(--oe-nc-primary-tint, #e8f1fc);
+    box-shadow: inset 3px 0 0 var(--oe-nc-primary, #0071e3);
 }
 
 .nc-comm-row-title {
@@ -73,18 +183,59 @@
 
 .nc-comm-row-meta {
     font-size: 0.78rem;
-    color: #6c757d;
+    color: var(--oe-nc-text-muted, #6e6e73);
 }
 
+/* The badge's colour used to come from Tailwind variant classes, which this
+   island never loads — so Bootstrap's `.text-white !important` won and the
+   unread pill rendered as white-on-transparent (an invisible empty box).
+   Paint it here, with enough specificity + !important to outrank .text-white. */
 .nc-comm-row-badge {
-    font-size: 0.7rem;
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.5rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
     vertical-align: middle;
+}
+
+/* Unscoped: the badge moved from .nc-comm-row-title into .nc-comm-row-tags and
+   the old title-scoped selector silently stopped matching (COMHUB-1). */
+.nc-comm-row-badge--warn {
+    background: color-mix(in srgb, var(--oe-nc-warning, #b54708) 14%, white) !important;
+    color: var(--oe-nc-warning, #b54708) !important;
+    border-color: color-mix(in srgb, var(--oe-nc-warning, #b54708) 35%, transparent) !important;
+}
+
+/* List loading / empty / error state */
+.nc-comm-list-state {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 1.25rem 1rem;
+    font-size: 0.8125rem;
+    color: var(--oe-nc-text-muted, #6e6e73);
+}
+
+.nc-comm-list-state--error {
+    color: var(--oe-nc-danger, #e0362c);
+}
+
+.nc-comm-empty-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--oe-nc-text, #1d1d1f);
 }
 
 .nc-comm-pagination {
     padding: 0.4rem 0.75rem;
-    border-top: 1px solid var(--oe-nc-border, #dee2e6);
+    border-top: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.08));
     font-size: 0.8rem;
+    color: var(--oe-nc-text-muted, #6e6e73);
 }
 
 .nc-comm-detail {
@@ -96,7 +247,316 @@
 .nc-comm-detail-header {
     margin-bottom: 1rem;
     padding-bottom: 0.75rem;
-    border-bottom: 1px solid var(--oe-nc-border, #eee);
+    border-bottom: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.08));
+}
+
+/* Reading-pane header: avatar · (title + meta) · action bar.
+   Wraps on narrow panes so the labeled done toggle + icon actions drop to
+   their own line instead of clipping off the right edge (mobile). */
+.nc-comm-reader-head {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+}
+
+.nc-comm-reader-head-main {
+    flex: 1 1 12rem;
+    min-width: 0;
+}
+
+.nc-comm-reader-title {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.15rem;
+    color: var(--oe-nc-text, #1d1d1f);
+}
+
+.nc-comm-reader-tags {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* Quiet category tag (was the prominent "Type: X" prose label). */
+.nc-comm-type-tag {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: var(--oe-nc-bg-muted, #ececef);
+    color: var(--oe-nc-text-muted, #6e6e73);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+/* Subtle "closed" marker shown only when a message is Done. */
+.nc-comm-done-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--oe-nc-success, #2bb350) 14%, white);
+    color: color-mix(in srgb, var(--oe-nc-success, #2bb350) 55%, black);
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.nc-comm-reader-meta {
+    font-size: 0.8125rem;
+    color: var(--oe-nc-text-muted, #6e6e73);
+    margin-bottom: 0.2rem;
+}
+
+.nc-comm-reader-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+/* 44px touch target; icon-only with tooltip + aria-label (a11y). */
+.nc-comm-icon-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.08));
+    border-radius: 0.75rem;
+    background: var(--oe-nc-surface, #fff);
+    color: var(--oe-nc-text-muted, #6e6e73);
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.nc-comm-icon-action:hover {
+    background: var(--oe-nc-bg-muted, #ececef);
+    color: var(--oe-nc-text, #1d1d1f);
+}
+
+.nc-comm-icon-action:focus-visible {
+    outline: none;
+    box-shadow: var(--oe-nc-focus-ring, 0 0 0 3px rgba(0, 113, 227, 0.35));
+}
+
+.nc-comm-icon-action svg {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.nc-comm-icon-action--danger:hover {
+    background: color-mix(in srgb, var(--oe-nc-danger, #e0362c) 12%, white);
+    color: var(--oe-nc-danger, #e0362c);
+    border-color: color-mix(in srgb, var(--oe-nc-danger, #e0362c) 35%, transparent);
+}
+
+/* One clear done/reopen action in the reader header (replaced the status
+   dropdown + a separate footer button). Labeled, not icon-only. */
+.nc-comm-done-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    height: 2.75rem;
+    padding: 0 0.9rem;
+    border: 1px solid var(--oe-nc-primary, #0071e3);
+    border-radius: 0.75rem;
+    background: var(--oe-nc-primary, #0071e3);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: opacity 0.12s ease, background 0.12s ease;
+}
+
+.nc-comm-done-toggle:hover:not(:disabled) { opacity: 0.92; }
+.nc-comm-done-toggle:disabled { opacity: 0.5; cursor: not-allowed; }
+.nc-comm-done-toggle svg { width: 1.05rem; height: 1.05rem; }
+
+.nc-comm-done-toggle:focus-visible {
+    outline: none;
+    box-shadow: var(--oe-nc-focus-ring, 0 0 0 3px rgba(0, 113, 227, 0.35));
+}
+
+/* Reopen is a lower-emphasis (outline) variant — the message is already closed. */
+.nc-comm-done-toggle--reopen {
+    background: var(--oe-nc-surface, #fff);
+    color: var(--oe-nc-text, #1d1d1f);
+    border-color: var(--oe-nc-border, rgba(0, 0, 0, 0.15));
+}
+
+.nc-comm-done-toggle--reopen:hover:not(:disabled) {
+    opacity: 1;
+    background: var(--oe-nc-bg-muted, #ececef);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nc-comm-done-toggle { transition: none; }
+}
+
+/* ─── Chat thread (message bubbles) ─────────────────────────────────────── */
+.nc-comm-chat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.25rem 0 0.5rem;
+}
+
+.nc-comm-day-sep {
+    text-align: center;
+    margin: 0.6rem 0 0.35rem;
+}
+
+.nc-comm-day-sep span {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    background: var(--oe-nc-bg-muted, #ececef);
+    color: var(--oe-nc-text-muted, #6e6e73);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.nc-comm-bubble-row {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.nc-comm-bubble-row.is-self {
+    justify-content: flex-end;
+}
+
+.nc-comm-bubble {
+    display: flex;
+    flex-direction: column;
+    max-width: 78%;
+    padding: 0.5rem 0.75rem;
+    border-radius: 1.05rem;
+    background: var(--oe-nc-surface-2, #f2f2f5);
+    color: var(--oe-nc-text, #1d1d1f);
+    border-bottom-left-radius: 0.35rem;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+/* Your own turns: accent bubble on the right (chat convention). */
+.nc-comm-bubble-row.is-self .nc-comm-bubble {
+    background: var(--oe-nc-primary, #0071e3);
+    color: #fff;
+    border-bottom-left-radius: 1.05rem;
+    border-bottom-right-radius: 0.35rem;
+}
+
+.nc-comm-bubble-author {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--oe-nc-primary, #0071e3);
+    margin-bottom: 0.1rem;
+}
+
+.nc-comm-bubble-text {
+    font-size: 0.9rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.nc-comm-bubble-time {
+    align-self: flex-end;
+    margin-top: 0.15rem;
+    font-size: 0.65rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--oe-nc-text-muted, #6e6e73);
+}
+
+.nc-comm-bubble-row.is-self .nc-comm-bubble-time {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Docked composer — sticks to the bottom of the scrolling thread. */
+.nc-comm-composer-dock {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0.6rem 0.25rem 0.25rem;
+    background: linear-gradient(to top, var(--oe-nc-surface, #fff) 70%, transparent);
+}
+
+.nc-comm-composer-input {
+    flex: 1 1 auto;
+    min-height: 2.75rem;
+    max-height: 8rem;
+    resize: none;
+    border: 1px solid var(--oe-nc-border, #d2d2d7);
+    border-radius: 1.25rem;
+    padding: 0.6rem 0.9rem;
+    background: var(--oe-nc-surface, #fff);
+    color: var(--oe-nc-text, #1d1d1f);
+    font: inherit;
+    line-height: 1.4;
+}
+
+.nc-comm-composer-input::placeholder {
+    color: var(--oe-nc-text-muted, #8e8e93);
+}
+
+.nc-comm-composer-input:focus-visible {
+    outline: none;
+    border-color: var(--oe-nc-primary, #0071e3);
+    box-shadow: var(--oe-nc-focus-ring, 0 0 0 3px rgba(0, 113, 227, 0.35));
+}
+
+.nc-comm-composer-send {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border: 0;
+    border-radius: 50%;
+    background: var(--oe-nc-primary, #0071e3);
+    color: #fff;
+    cursor: pointer;
+    transition: opacity 0.12s ease, transform 0.1s ease;
+}
+
+.nc-comm-composer-send:hover:not(:disabled) { opacity: 0.92; }
+.nc-comm-composer-send:active:not(:disabled) { transform: scale(0.94); }
+.nc-comm-composer-send:disabled { opacity: 0.4; cursor: not-allowed; }
+.nc-comm-composer-send svg { width: 1.2rem; height: 1.2rem; }
+
+.nc-comm-composer-send:focus-visible {
+    outline: none;
+    box-shadow: var(--oe-nc-focus-ring, 0 0 0 3px rgba(0, 113, 227, 0.35));
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nc-comm-composer-send { transition: none; }
+}
+
+/* Message body as a readable card (was cramped raw HTML flush on the pane). */
+.nc-comm-message-card {
+    border: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.08));
+    border-radius: 0.875rem;
+    background: var(--oe-nc-surface-2, #f9f9fb);
+    padding: 1rem 1.15rem;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    color: var(--oe-nc-text, #1d1d1f);
 }
 
 .nc-comm-detail-banner {
@@ -108,31 +568,34 @@
     line-height: 1.5;
 }
 
-.nc-comm-footer {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    padding: 0.75rem 0 0;
-    margin-top: 0.75rem;
-    border-top: 1px solid var(--oe-nc-border, #dee2e6);
-}
+/* (The old .nc-comm-footer bar is gone — its actions moved to the toolbar and
+   the reminder reader header.) */
 
+/* "Back to list" is a mobile-only affordance — hide it exactly where the split
+   becomes side-by-side (768px, same breakpoint as the stacking rule below), so
+   it can never appear next to an already-visible list. */
 .nc-comm-back {
     padding: 0.5rem 0.75rem;
 }
 
+@media (min-width: 768px) {
+    .nc-comm-back {
+        display: none !important;
+    }
+}
+
 .nc-comm-urgency--overdue {
-    color: #b02a37;
+    color: var(--oe-nc-danger, #e0362c);
     font-weight: 600;
 }
 
 .nc-comm-urgency--today {
-    color: #b8860b;
+    color: var(--oe-nc-warning, #b54708);
     font-weight: 600;
 }
 
 .nc-comm-urgency--upcoming {
-    color: #495057;
+    color: var(--oe-nc-text-muted, #6e6e73);
 }
 
 @media (max-width: 767.98px) {
@@ -158,4 +621,320 @@
     .nc-comm-hub.is-detail-open .nc-comm-detail-pane {
         transform: translateX(0);
     }
+}
+
+/* ─── Reminder forms (create / forward / log) ───────────────────────────── */
+/* Field-label to match the rest of the redesign (was a BS4 <legend> grey bar). */
+.nc-comm-field-label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--oe-nc-text, #1d1d1f);
+}
+
+/* Priority etc. — real radios (radiogroup a11y) styled as pills. */
+.nc-radio-pills {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.nc-radio-pill {
+    position: relative;
+    display: inline-flex;
+    margin: 0;
+}
+
+.nc-radio-pill input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.nc-radio-pill span {
+    display: inline-block;
+    padding: 0.4rem 0.95rem;
+    border: 1px solid var(--oe-nc-border, #d2d2d7);
+    border-radius: 999px;
+    background: var(--oe-nc-surface, #fff);
+    color: var(--oe-nc-text-muted, #6e6e73);
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1.2;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.nc-radio-pill input:hover + span {
+    border-color: var(--oe-nc-primary, #0071e3);
+    color: var(--oe-nc-text, #1d1d1f);
+}
+
+.nc-radio-pill input:checked + span {
+    background: var(--oe-nc-primary, #0071e3);
+    border-color: var(--oe-nc-primary, #0071e3);
+    color: #fff;
+}
+
+.nc-radio-pill input:focus-visible + span {
+    outline: none;
+    box-shadow: var(--oe-nc-focus-ring, 0 0 0 3px rgba(0, 113, 227, 0.35));
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nc-radio-pill span { transition: none; }
+}
+
+/* Scrollable checkbox list (recipient pickers) — token border, not BS4. */
+.nc-comm-recipient-box {
+    max-height: 10rem;
+    overflow-y: auto;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid var(--oe-nc-border, #d2d2d7);
+    border-radius: 0.6rem;
+    background: var(--oe-nc-surface, #fff);
+}
+
+.nc-comm-recipient-box--sm {
+    max-height: 6rem;
+}
+
+/* Filter bar wrapper for the reminder log (was BS4 border+rounded). */
+.nc-comm-filter-bar {
+    padding: 0.75rem;
+    margin-bottom: 0.85rem;
+    border: 1px solid var(--oe-nc-border, #d2d2d7);
+    border-radius: 0.75rem;
+    background: var(--oe-nc-bg-muted, #f5f5f7);
+}
+
+/* Checkbox rows use native inputs + BEM: this island ships NO Tailwind
+   utilities, so shadcn's Checkbox (h-4 w-4) collapses to ~2px here. */
+.nc-comm-check-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.3rem;
+}
+
+.nc-comm-check-row:last-child {
+    margin-bottom: 0;
+}
+
+.nc-comm-check {
+    flex-shrink: 0;
+    width: 1.05rem;
+    height: 1.05rem;
+    margin: 0;
+    accent-color: var(--oe-nc-primary, #0071e3);
+    cursor: pointer;
+}
+
+.nc-comm-check-row label,
+.nc-comm-check-label {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 400;
+    text-transform: none;
+    color: var(--oe-nc-text, #1d1d1f);
+    cursor: pointer;
+}
+
+/* Side-by-side form fields (grid grid-cols-12 no-ops without Tailwind). */
+.nc-comm-form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+    margin-bottom: 0.85rem;
+}
+
+.nc-comm-form-row > * {
+    flex: 1 1 12rem;
+    min-width: 0;
+}
+
+/* Apply/Reset sit at the row's baseline next to the date fields. */
+.nc-comm-filter-actions {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.4rem;
+}
+
+/* ─── COMHUB additions ──────────────────────────────────────────────────── */
+
+/* Toolbar control widths (were inline style attributes in the Twig). */
+.nc-comm-toolbar-search {
+    width: 12rem;
+    max-width: 40vw;
+}
+
+.nc-comm-toolbar-select {
+    width: auto;
+}
+
+/* Search-truncation notice sits above the listbox (a div is not a valid
+   listbox child). */
+.nc-comm-list-notice {
+    margin: 0.6rem 0.75rem 0.2rem;
+}
+
+/* Compose / create pane header — reader-title typography + a one-line hint. */
+.nc-comm-compose-head .nc-comm-reader-meta {
+    margin: 0.1rem 0 0;
+}
+
+/* Selected-recipient chips above the checkbox box. */
+.nc-comm-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 0.45rem;
+}
+
+.nc-comm-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.3rem 0.2rem 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--oe-nc-primary, #0071e3) 30%, transparent);
+    border-radius: 999px;
+    background: var(--oe-nc-primary-tint, #e8f1fc);
+    color: var(--oe-nc-text, #1d1d1f);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.nc-comm-chip-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35rem;
+    height: 1.35rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--oe-nc-text-muted, #6e6e73);
+    cursor: pointer;
+}
+
+.nc-comm-chip-remove:hover {
+    background: color-mix(in srgb, var(--oe-nc-primary, #0071e3) 18%, transparent);
+    color: var(--oe-nc-text, #1d1d1f);
+}
+
+.nc-comm-chip-remove:focus-visible {
+    outline: none;
+    box-shadow: var(--oe-nc-focus-ring, 0 0 0 3px rgba(0, 113, 227, 0.35));
+}
+
+.nc-comm-chip-remove svg {
+    width: 0.85rem;
+    height: 0.85rem;
+}
+
+.nc-comm-recipient-filter {
+    margin-bottom: 0.45rem;
+}
+
+.nc-comm-recipient-empty {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--oe-nc-text-muted, #6e6e73);
+}
+
+/* Inline field validation message (inline-while-typing forms rule). */
+.nc-comm-field-error {
+    margin: 0.3rem 0 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--oe-nc-danger, #e0362c);
+}
+
+/* Send/Cancel row for compose + reminder create. */
+.nc-comm-compose-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+/* Due date input + quick-span preset chips. */
+.nc-comm-due-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.nc-comm-due-input {
+    flex: 0 1 11rem;
+}
+
+.nc-comm-preset-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.nc-comm-preset-chip {
+    padding: 0.32rem 0.75rem;
+    border: 1px solid var(--oe-nc-border, #d2d2d7);
+    border-radius: 999px;
+    background: var(--oe-nc-surface, #fff);
+    color: var(--oe-nc-text-muted, #6e6e73);
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.nc-comm-preset-chip:hover {
+    border-color: var(--oe-nc-primary, #0071e3);
+    color: var(--oe-nc-text, #1d1d1f);
+}
+
+.nc-comm-preset-chip.is-active {
+    background: var(--oe-nc-primary, #0071e3);
+    border-color: var(--oe-nc-primary, #0071e3);
+    color: #fff;
+}
+
+.nc-comm-preset-chip:focus-visible {
+    outline: none;
+    box-shadow: var(--oe-nc-focus-ring, 0 0 0 3px rgba(0, 113, 227, 0.35));
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nc-comm-preset-chip { transition: none; }
+}
+
+/* Reminder log header: title block + Close on one line. */
+.nc-comm-log-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+/* Keep long reminder text from blowing the log table open. */
+.nc-comm-log-msg {
+    max-width: 18rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Quiet "Reminder" kind label when the patient banner owns the header. */
+.nc-comm-reader-kind {
+    margin: 0 0 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }

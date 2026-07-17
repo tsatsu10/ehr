@@ -1,17 +1,15 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { PatientContextBanner } from '@components/PatientContextBanner';
 import { PatientSearchDropdown } from '@components/PatientSearchDropdown';
 import { identityFromLabels } from '@components/patientBannerUtils';
 import { Button } from '@components/ui/button';
-import { Checkbox } from '@components/ui/checkbox';
 import { Input } from '@components/ui/input';
-import { Label } from '@components/ui/label';
-import { NativeSelect } from '@components/ui/native-select';
 import { Textarea } from '@components/ui/textarea';
 import { oeFetch } from '@core/oeFetch';
 import type { ReminderCreateOptions } from './communicationsTypes';
 import { dueDateFromPreset, todayIsoDate } from './reminderDateUtils';
+import { t } from '@core/i18n';
 
 interface ReminderCreatePaneProps {
   ajaxUrl: string;
@@ -42,6 +40,8 @@ export function ReminderCreatePane({
   const [priority, setPriority] = useState(3);
   const [message, setMessage] = useState('');
   const [sendSeparately, setSendSeparately] = useState(false);
+  const [messageTouched, setMessageTouched] = useState(false);
+  const [recipientsTouched, setRecipientsTouched] = useState(false);
 
   const fetchOptions = useMemo(() => ({ ajaxUrl, csrfToken }), [ajaxUrl, csrfToken]);
   const maxLength = options?.max_message_length ?? 160;
@@ -76,7 +76,7 @@ export function ReminderCreatePane({
         setPatientName(seed?.patient_name ?? '');
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Could not load reminder form');
+          setError(err instanceof Error ? err.message : t('Could not load reminder form'));
         }
       } finally {
         if (!cancelled) {
@@ -91,6 +91,7 @@ export function ReminderCreatePane({
   }, [fetchOptions, forwardReminderId]);
 
   const toggleRecipient = (id: number) => {
+    setRecipientsTouched(true);
     setSendTo((prev) => (
       prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]
     ));
@@ -100,35 +101,36 @@ export function ReminderCreatePane({
     if (!options?.recipients.length) {
       return;
     }
+    setRecipientsTouched(true);
     setSendTo(options.recipients.map((row) => row.id));
   };
 
-  const handlePresetChange = (key: string) => {
+  const applyPreset = (key: string) => {
     setPresetKey(key);
-    if (!key) {
-      return;
-    }
     const nextDate = dueDateFromPreset(key);
     if (nextDate) {
       setDueDate(nextDate);
     }
   };
 
+  // Inline validation — live errors, shown once the field was touched (or a
+  // submit was attempted); the form never wipes on error.
+  const trimmed = message.trim();
+  const messageError = trimmed.length === 0
+    ? t('Message is required.')
+    : trimmed.length > maxLength
+      ? t('Message must be at most {max} characters.', { max: String(maxLength) })
+      : null;
+  const recipientsError = sendTo.length === 0 ? t('Select at least one recipient.') : null;
+  const dueDateError = !dueDate ? t('Due date is required.') : null;
+  const formValid = !messageError && !recipientsError && !dueDateError;
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setSubmitError(null);
-
-    const trimmed = message.trim();
-    if (trimmed.length === 0 || trimmed.length > maxLength) {
-      setSubmitError(`Message must be 1–${maxLength} characters.`);
-      return;
-    }
-    if (sendTo.length === 0) {
-      setSubmitError('Select at least one recipient.');
-      return;
-    }
-    if (!dueDate) {
-      setSubmitError('Due date is required.');
+    setMessageTouched(true);
+    setRecipientsTouched(true);
+    if (!formValid) {
       return;
     }
 
@@ -148,30 +150,40 @@ export function ReminderCreatePane({
       });
       onCreated();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Could not create reminder');
+      setSubmitError(err instanceof Error ? err.message : t('Could not create reminder'));
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLFormElement>) => {
+    if (event.key === 'Escape' && !event.defaultPrevented && !submitting) {
+      event.preventDefault();
+      onCancel();
+    }
+  };
+
   if (loading) {
-    return <div className="text-[var(--oe-nc-text-muted)]"><em>Loading reminder form…</em></div>;
+    return <div className="text-[var(--oe-nc-text-muted)]"><em>{t('Loading reminder form…')}</em></div>;
   }
 
   if (error) {
-    return <div className="text-[var(--oe-nc-danger,#dc2626)]">{error}</div>;
+    return <div className={deskCalloutClass('error', 'py-2')}>{error}</div>;
   }
 
   const patientIdentity = identityFromLabels(patientName, { pid: pid ?? undefined });
 
   return (
-    <form className="nc-comm-reminder-create" onSubmit={(event) => { void handleSubmit(event); }}>
-      <header className="nc-comm-detail-header mb-3">
-        <h2 className="text-lg font-semibold mb-0">{isForward ? 'Forward reminder' : 'Create reminder'}</h2>
+    <form className="nc-comm-reminder-create" onSubmit={(event) => { void handleSubmit(event); }} onKeyDown={handleKeyDown}>
+      <header className="nc-comm-detail-header nc-comm-compose-head">
+        <h2 className="nc-comm-reader-title">{isForward ? t('Forward reminder') : t('Create reminder')}</h2>
+        <p className="nc-comm-reader-meta">
+          {t('A dated task that appears in the recipients’ reminder list until completed.')}
+        </p>
       </header>
 
       <div className="nc-form-group">
-        <label className="block">Link to patient</label>
+        <label className="nc-comm-field-label">{t('Link to patient')}</label>
         {patientIdentity ? (
           <>
             <PatientContextBanner layout="compact" identity={patientIdentity} />
@@ -185,7 +197,7 @@ export function ReminderCreatePane({
                 setPatientName('');
               }}
             >
-              Clear patient
+              {t('Clear patient')}
             </Button>
           </>
         ) : (
@@ -194,7 +206,7 @@ export function ReminderCreatePane({
             csrfToken={csrfToken}
             inputId="nc-reminder-patient"
             resultsId="nc-reminder-patient-results"
-            placeholder="Search by name, phone, NHIS, National ID, MRN"
+            placeholder={t('Search by name, phone, NHIS, National ID, MRN')}
             onSelectPatient={(selectedPid, row) => {
               setPid(selectedPid);
               setPatientName(row?.display_name ?? '');
@@ -205,44 +217,51 @@ export function ReminderCreatePane({
 
       <div className="nc-form-group">
         <div className="flex justify-between items-center mb-1">
-          <label className="mb-0">Send to</label>
+          <label className="nc-comm-field-label mb-0" id="nc-reminder-to-label">{t('Send to')}</label>
           <Button type="button" variant="link" size="sm" className="h-auto p-0" onClick={selectAllRecipients}>
-            Select all
+            {t('Select all')}
           </Button>
         </div>
-        <div className="border rounded p-2" style={{ maxHeight: '10rem', overflowY: 'auto' }}>
+        <div className="nc-comm-recipient-box" role="group" aria-labelledby="nc-reminder-to-label">
           {(options?.recipients ?? []).map((recipient) => (
-            <div className="flex items-center gap-2 mb-1" key={recipient.id}>
-              <Checkbox
+            <div className="nc-comm-check-row" key={recipient.id}>
+              <input
+                type="checkbox"
+                className="nc-comm-check"
                 id={`nc-reminder-to-${recipient.id}`}
                 checked={sendTo.includes(recipient.id)}
-                onCheckedChange={() => toggleRecipient(recipient.id)}
+                onChange={() => toggleRecipient(recipient.id)}
               />
-              <Label htmlFor={`nc-reminder-to-${recipient.id}`} className="font-normal normal-case cursor-pointer mb-0">
+              <label htmlFor={`nc-reminder-to-${recipient.id}`}>
                 {recipient.label}
-              </Label>
+              </label>
             </div>
           ))}
         </div>
+        {recipientsTouched && recipientsError && (
+          <p className="nc-comm-field-error" role="alert">{recipientsError}</p>
+        )}
       </div>
 
-      <div className="flex items-center gap-2 mb-3">
-        <Checkbox
+      <div className="nc-comm-check-row mb-3">
+        <input
+          type="checkbox"
+          className="nc-comm-check"
           id="nc-reminder-send-separately"
           checked={sendSeparately}
-          onCheckedChange={(checked) => setSendSeparately(checked === true)}
+          onChange={(event) => setSendSeparately(event.target.checked)}
         />
-        <Label htmlFor="nc-reminder-send-separately" className="font-normal normal-case cursor-pointer mb-0">
-          Each recipient must mark their own copy completed
-        </Label>
+        <label htmlFor="nc-reminder-send-separately">
+          {t('Each recipient must mark their own copy completed')}
+        </label>
       </div>
 
-      <div className="grid grid-cols-12 gap-3">
-        <div className="nc-form-group col-span-12 md:col-span-6 space-y-1.5">
-          <Label htmlFor="nc-reminder-due-date" className="normal-case">Due date</Label>
+      <div className="nc-form-group">
+        <label className="nc-comm-field-label" htmlFor="nc-reminder-due-date">{t('Due date')}</label>
+        <div className="nc-comm-due-row">
           <Input
             type="date"
-            className="h-8"
+            className="h-8 nc-comm-due-input"
             id="nc-reminder-due-date"
             value={dueDate}
             onChange={(event) => {
@@ -251,64 +270,68 @@ export function ReminderCreatePane({
             }}
             required
           />
-        </div>
-        <div className="nc-form-group col-span-12 md:col-span-6 space-y-1.5">
-          <Label htmlFor="nc-reminder-preset" className="normal-case">Or select a time span</Label>
-          <NativeSelect
-            className="h-8"
-            id="nc-reminder-preset"
-            value={presetKey}
-            onChange={(event) => handlePresetChange(event.target.value)}
-          >
-            <option value="">— Select —</option>
+          {/* Quick spans as chips (was a "— Select —" dropdown). */}
+          <div className="nc-comm-preset-chips" role="group" aria-label={t('Quick due dates')}>
             {(options?.date_presets ?? []).map((preset) => (
-              <option key={preset.key} value={preset.key}>{preset.label}</option>
+              <button
+                type="button"
+                key={preset.key}
+                className={`nc-comm-preset-chip${presetKey === preset.key ? ' is-active' : ''}`}
+                aria-pressed={presetKey === preset.key}
+                onClick={() => applyPreset(preset.key)}
+              >
+                {preset.label}
+              </button>
             ))}
-          </NativeSelect>
+          </div>
+        </div>
+        {dueDateError && (
+          <p className="nc-comm-field-error" role="alert">{dueDateError}</p>
+        )}
+      </div>
+
+      <div className="nc-form-group">
+        <span className="nc-comm-field-label" id="nc-reminder-priority-label">{t('Priority')}</span>
+        <div className="nc-radio-pills" role="radiogroup" aria-labelledby="nc-reminder-priority-label">
+          {(options?.priorities ?? []).map((item) => (
+            <label className="nc-radio-pill" key={item.id}>
+              <input
+                type="radio"
+                name="nc-reminder-priority"
+                value={item.id}
+                checked={priority === item.id}
+                onChange={() => setPriority(item.id)}
+              />
+              <span>{item.label}</span>
+            </label>
+          ))}
         </div>
       </div>
 
-      <fieldset className="nc-form-group">
-        <legend className="text-sm font-bold">Priority</legend>
-        {(options?.priorities ?? []).map((item) => (
-          <div className="custom-control custom-radio custom-control-inline" key={item.id}>
-            <input
-              type="radio"
-              className="custom-control-input"
-              id={`nc-reminder-priority-${item.id}`}
-              name="nc-reminder-priority"
-              value={item.id}
-              checked={priority === item.id}
-              onChange={() => setPriority(item.id)}
-            />
-            <label className="custom-control-label" htmlFor={`nc-reminder-priority-${item.id}`}>
-              {item.label}
-            </label>
-          </div>
-        ))}
-      </fieldset>
-
-      <div className="space-y-1.5 mb-3">
-        <Label htmlFor="nc-reminder-message" className="normal-case">Message</Label>
+      <div className="nc-form-group">
+        <label className="nc-comm-field-label" htmlFor="nc-reminder-message">{t('Message')}</label>
         <Textarea
           id="nc-reminder-message"
           rows={4}
           maxLength={maxLength}
           value={message}
           onChange={(event) => setMessage(event.target.value)}
-          required
+          onBlur={() => setMessageTouched(true)}
         />
         <p className="text-xs text-[var(--oe-nc-text-muted)] m-0">{message.length}/{maxLength}</p>
+        {messageTouched && messageError && (
+          <p className="nc-comm-field-error" role="alert">{messageError}</p>
+        )}
       </div>
 
-      {submitError && <div className={deskCalloutClass('error', 'py-2 mb-3')}>{submitError}</div>}
+      {submitError && <div className={deskCalloutClass('error', 'py-2 mb-3')} role="alert">{submitError}</div>}
 
-      <div className="flex flex-wrap">
-        <Button type="submit" size="sm" className="mr-2" disabled={submitting}>
-          {submitting ? 'Sending…' : 'Send reminder'}
+      <div className="nc-comm-compose-actions">
+        <Button type="submit" disabled={submitting || !formValid}>
+          {submitting ? t('Sending…') : t('Send reminder')}
         </Button>
-        <Button type="button" variant="outline" size="sm" onClick={onCancel}>
-          Cancel
+        <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
+          {t('Cancel')}
         </Button>
       </div>
     </form>

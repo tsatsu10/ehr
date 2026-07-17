@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@components/ui/button';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { showDeskToast } from '@components/deskToast';
 import { oeFetch } from '@core/oeFetch';
 import { useInterval } from '@core/useInterval';
 import { CommunicationsDetail } from './CommunicationsDetail';
@@ -22,6 +24,7 @@ import type {
 import { COMM_PAGE_SIZE, COMM_POLL_MS } from './communicationsTypes';
 import { readCommHubSelection, writeCommHubSelection } from './commHubSessionStorage';
 import { useCommunicationsPageHeading } from './useCommunicationsPageHeading';
+import { t } from '@core/i18n';
 
 const EMPTY_COUNTS: HubCounts = { messages_active: 0, reminders_in_window: 0 };
 
@@ -52,6 +55,7 @@ export function CommunicationsHub({
   const [rows, setRows] = useState<CommListRow[]>([]);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
+  const [searchTruncated, setSearchTruncated] = useState(false);
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedType, setSelectedType] = useState<'message' | 'reminder' | null>(null);
@@ -116,18 +120,29 @@ export function CommunicationsHub({
         });
         setRows(data.rows ?? []);
         setTotal(data.total ?? 0);
+        setSearchTruncated(Boolean(data.search_truncated));
       } else {
         const data = await oeFetch<RemindersListResult>('communications.reminders_list', {
           ...fetchOptions,
           params: { days: 30 },
         });
-        const reminderRows = data.rows ?? [];
+        let reminderRows = data.rows ?? [];
+        // The toolbar search filters reminders client-side — the fetch stays
+        // one bounded 30-day query regardless of the query text.
+        const q = search.trim().toLowerCase();
+        if (q) {
+          reminderRows = reminderRows.filter((row) => (
+            [row.patient_name, row.from_name, row.preview, row.urgency_label]
+              .some((field) => (field ?? '').toLowerCase().includes(q))
+          ));
+        }
         setRows(reminderRows);
-        setTotal(data.total ?? reminderRows.length);
+        setTotal(reminderRows.length);
+        setSearchTruncated(false);
       }
     } catch (err) {
       setRows([]);
-      setListError(err instanceof Error ? err.message : 'Could not load list');
+      setListError(err instanceof Error ? err.message : t('Could not load list'));
     } finally {
       setListLoading(false);
     }
@@ -144,12 +159,18 @@ export function CommunicationsHub({
         params: { id },
       });
       setMessageDetail(data);
+      // Opening an unread message marked it Read server-side — refresh the list
+      // and counts so its unread dot and the "Messages" tally clear.
+      if (data.marked_read) {
+        void loadList();
+        void refreshCounts();
+      }
     } catch (err) {
-      setDetailError(err instanceof Error ? err.message : 'Could not load message');
+      setDetailError(err instanceof Error ? err.message : t('Could not load message'));
     } finally {
       setDetailLoading(false);
     }
-  }, [fetchOptions]);
+  }, [fetchOptions, loadList, refreshCounts]);
 
   const loadDetail = useCallback((id: number, type: 'message' | 'reminder') => {
     if (type === 'reminder') {
@@ -159,7 +180,7 @@ export function CommunicationsHub({
       const match = rows.find((r) => r.id === id) as ReminderListRow | undefined;
       setReminderDetail(match ?? null);
       if (!match) {
-        setDetailError('Reminder not found or already completed.');
+        setDetailError(t('Reminder not found or already completed.'));
       }
       return;
     }
@@ -262,11 +283,55 @@ export function CommunicationsHub({
     setReminderDetail(null);
     setDetailError(null);
     setBegin(0);
+    // Clear stale rows so the other lens's rows never render under the wrong
+    // shape while the new list loads (the list keeps rows visible during
+    // background refreshes, so it no longer masks this).
+    setRows([]);
+    setTotal(0);
     setMobileDetailOpen(false);
     setComposeMode('idle');
     setComposeReplyId(null);
     setSelectionRestored(false);
     writeCommHubSelection(null);
+  }, []);
+
+  // Declared before useCommunicationsPageHeading — the hook binds these to
+  // the toolbar buttons, and a const referenced above its declaration would
+  // blow up in the temporal dead zone.
+  const openCompose = useCallback(() => {
+    setComposeMode('new');
+    setComposeReplyId(null);
+    setComposeAttachment(null);
+    setComposeSeedPid(null);
+    setSelectedId(null);
+    setSelectedType(null);
+    setMessageDetail(null);
+    setReminderDetail(null);
+    setDetailError(null);
+    setMobileDetailOpen(true);
+  }, []);
+
+  const openReminderCreate = useCallback(() => {
+    setForwardReminderId(null);
+    setComposeMode('reminder_create');
+    setComposeReplyId(null);
+    setSelectedId(null);
+    setSelectedType(null);
+    setMessageDetail(null);
+    setReminderDetail(null);
+    setDetailError(null);
+    setMobileDetailOpen(true);
+  }, []);
+
+  const openReminderLog = useCallback(() => {
+    setComposeMode('reminder_log');
+    setComposeReplyId(null);
+    setSelectedId(null);
+    setSelectedType(null);
+    setMessageDetail(null);
+    setReminderDetail(null);
+    setDetailError(null);
+    setMobileDetailOpen(true);
   }, []);
 
   useCommunicationsPageHeading({
@@ -294,6 +359,9 @@ export function CommunicationsHub({
       setBegin(0);
     },
     onRefresh: handleRefresh,
+    onCompose: openCompose,
+    onCreateReminder: openReminderCreate,
+    onViewLog: openReminderLog,
   });
 
   const handleSelect = useCallback((id: number, type: 'message' | 'reminder') => {
@@ -305,25 +373,9 @@ export function CommunicationsHub({
     loadDetail(id, type);
   }, [loadDetail]);
 
-  const openCompose = useCallback(() => {
-    setComposeMode('new');
-    setComposeReplyId(null);
-    setComposeAttachment(null);
-    setComposeSeedPid(null);
-    setSelectedId(null);
-    setSelectedType(null);
-    setMessageDetail(null);
-    setReminderDetail(null);
-    setDetailError(null);
-    setMobileDetailOpen(true);
-  }, []);
-
-  const openReply = useCallback((noteId: number) => {
-    setComposeMode('reply');
-    setComposeReplyId(noteId);
-    setMobileDetailOpen(true);
-  }, []);
-
+  // Reply is now the docked composer inside the chat thread (sendReply), not a
+  // separate compose pane — no openReply. The 'new' compose pane stays for
+  // starting a fresh conversation.
   const closeCompose = useCallback(() => {
     setComposeMode('idle');
     setComposeReplyId(null);
@@ -332,33 +384,10 @@ export function CommunicationsHub({
     }
   }, [selectedId]);
 
-  const openReminderCreate = useCallback(() => {
-    setForwardReminderId(null);
-    setComposeMode('reminder_create');
-    setComposeReplyId(null);
-    setSelectedId(null);
-    setSelectedType(null);
-    setMessageDetail(null);
-    setReminderDetail(null);
-    setDetailError(null);
-    setMobileDetailOpen(true);
-  }, []);
-
   const openReminderForward = useCallback((reminderId: number) => {
     setForwardReminderId(reminderId);
     setComposeMode('reminder_create');
     setComposeReplyId(null);
-    setMobileDetailOpen(true);
-  }, []);
-
-  const openReminderLog = useCallback(() => {
-    setComposeMode('reminder_log');
-    setComposeReplyId(null);
-    setSelectedId(null);
-    setSelectedType(null);
-    setMessageDetail(null);
-    setReminderDetail(null);
-    setDetailError(null);
     setMobileDetailOpen(true);
   }, []);
 
@@ -419,24 +448,43 @@ export function CommunicationsHub({
       void refreshCounts();
       void loadList();
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not mark message done');
+      showDeskToast(err instanceof Error ? err.message : t('Could not mark message done'), 'danger');
     }
   }, [clearSelection, fetchOptions, loadList, refreshCounts, selectedId]);
 
-  const markReminderDone = useCallback(async () => {
-    if (!selectedId) return;
+  const markReminderDone = useCallback(async (reminderId: number) => {
     try {
       await oeFetch('communications.reminder_done', {
         ...fetchOptions,
-        json: { dr_id: selectedId },
+        json: { dr_id: reminderId },
       });
       clearSelection();
+      showDeskToast(t('Reminder completed'), 'success');
       void refreshCounts();
       void loadList();
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not complete reminder');
+      showDeskToast(err instanceof Error ? err.message : t('Could not complete reminder'), 'danger');
     }
-  }, [clearSelection, fetchOptions, loadList, refreshCounts, selectedId]);
+  }, [clearSelection, fetchOptions, loadList, refreshCounts]);
+
+  const [replySending, setReplySending] = useState(false);
+  const sendReply = useCallback(async (noteId: number, body: string) => {
+    setReplySending(true);
+    try {
+      await oeFetch('communications.message_send', {
+        ...fetchOptions,
+        method: 'POST',
+        json: { body, reply_note_id: noteId, message_status: 'New' },
+      });
+      await loadMessageDetail(noteId); // refresh the thread with the new turn
+      void loadList();
+      void refreshCounts();
+    } catch (err) {
+      showDeskToast(err instanceof Error ? err.message : t('Could not send reply'), 'danger');
+    } finally {
+      setReplySending(false);
+    }
+  }, [fetchOptions, loadMessageDetail, loadList, refreshCounts]);
 
   const handleStatusChange = useCallback(async (noteId: number, status: string) => {
     setStatusChanging(true);
@@ -450,7 +498,7 @@ export function CommunicationsHub({
       void loadList();
       void loadMessageDetail(noteId);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not update message status');
+      showDeskToast(err instanceof Error ? err.message : t('Could not update message status'), 'danger');
     } finally {
       setStatusChanging(false);
     }
@@ -468,7 +516,7 @@ export function CommunicationsHub({
       void loadList();
       void loadMessageDetail(noteId);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not assign patient');
+      showDeskToast(err instanceof Error ? err.message : t('Could not assign patient'), 'danger');
     } finally {
       setAssigningPatient(false);
     }
@@ -485,12 +533,9 @@ export function CommunicationsHub({
       void refreshCounts();
       void loadList();
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not delete message');
+      showDeskToast(err instanceof Error ? err.message : t('Could not delete message'), 'danger');
     }
   }, [clearSelection, fetchOptions, loadList, refreshCounts]);
-
-  const showMarkDone = composeMode === 'idle' && lens === 'messages' && selectedType === 'message' && messageDetail?.can_mark_done;
-  const showReminderComplete = composeMode === 'idle' && lens === 'reminders' && selectedId !== null;
 
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -563,6 +608,14 @@ export function CommunicationsHub({
     <div className={`nc-comm-hub${mobileDetailOpen ? ' is-detail-open' : ''}`} id="nc-communications-hub">
       <div className="nc-comm-split">
         <section className="nc-comm-list-pane" aria-label="List">
+          {/* Status callout lives OUTSIDE the listbox — a div is not a valid
+              listbox child, and aria-live on the whole list announced every
+              re-render. */}
+          {lens === 'messages' && searchTruncated && (
+            <div className={deskCalloutClass('info', 'nc-comm-list-notice')} role="status">
+              {t('Showing matches from your most recent messages only. Narrow the activity or scope filters to search further back.')}
+            </div>
+          )}
           <div
             ref={listRef}
             className="nc-comm-list"
@@ -570,7 +623,6 @@ export function CommunicationsHub({
             role="listbox"
             tabIndex={0}
             aria-label="Items"
-            aria-live="polite"
           >
             <CommunicationsList
               lens={lens}
@@ -590,15 +642,20 @@ export function CommunicationsHub({
         </section>
 
         <section className="nc-comm-detail-pane" id="nc-comm-detail-pane" aria-label="Detail">
+          {/* Mobile-only affordance — hidden at >=768px by .nc-comm-back's own
+              media rule (the split's breakpoint). It previously carried
+              `nc-hidden-md`, which despite the name is defined under
+              max-width:991.98px, so it hid this on MOBILE and showed it on
+              DESKTOP — exactly inverted. */}
           <Button
             type="button"
             variant="link"
             size="sm"
-            className="nc-hidden-md nc-comm-back h-auto p-0"
+            className="nc-comm-back h-auto p-0"
             id="nc-comm-back"
             onClick={() => setMobileDetailOpen(false)}
           >
-            <i className="fa fa-arrow-left" aria-hidden="true" /> Back to list
+            <i className="fa fa-arrow-left" aria-hidden="true" /> {t('Back to list')}
           </Button>
           <div id="nc-comm-detail" className="nc-comm-detail">
             {composeMode === 'new' || composeMode === 'reply' ? (
@@ -634,64 +691,26 @@ export function CommunicationsHub({
                 webroot={webroot}
                 ajaxUrl={ajaxUrl}
                 csrfToken={csrfToken}
-                onReply={openReply}
+                onSendReply={sendReply}
                 onStatusChange={(noteId, status) => { void handleStatusChange(noteId, status); }}
+                onMarkDone={() => { void markMessageDone(); }}
                 onAssignPatient={(noteId, pid) => { void handleAssignPatient(noteId, pid); }}
                 onDelete={(noteId) => { void handleDeleteMessage(noteId); }}
                 onForwardReminder={openReminderForward}
+                onCompleteReminder={(reminderId) => { void markReminderDone(reminderId); }}
                 statusChanging={statusChanging}
                 assigningPatient={assigningPatient}
+                replySending={replySending}
               />
             )}
           </div>
         </section>
       </div>
 
-      <footer className="nc-comm-footer" id="nc-comm-footer">
-        {showMarkDone && (
-          <Button type="button" size="sm" id="nc-comm-mark-done" onClick={() => { void markMessageDone(); }}>
-            Mark done
-          </Button>
-        )}
-        {showReminderComplete && (
-          <Button type="button" size="sm" id="nc-comm-reminder-complete" onClick={() => { void markReminderDone(); }}>
-            Mark completed
-          </Button>
-        )}
-        {lens === 'reminders' && composeMode === 'idle' && (
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              id="nc-comm-create-reminder"
-              onClick={openReminderCreate}
-            >
-              Create reminder
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              id="nc-comm-view-log"
-              onClick={openReminderLog}
-            >
-              View log
-            </Button>
-          </>
-        )}
-        {lens === 'messages' && composeMode === 'idle' && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            id="nc-comm-compose-link"
-            onClick={openCompose}
-          >
-            Compose
-          </Button>
-        )}
-      </footer>
+      {/* The old page footer is gone: "Mark completed" now lives in the
+          reminder reader header (parity with the message done toggle), and
+          "Create reminder" / "View log" moved to the top-right toolbar for
+          the Reminders lens (see communications.html.twig). */}
     </div>
   );
 }

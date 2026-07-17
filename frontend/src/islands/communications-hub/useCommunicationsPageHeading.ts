@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { t } from '@core/i18n';
 import type { CommHubSort, CommLens, HubCounts } from './communicationsTypes';
 
 interface PageHeadingOptions {
@@ -14,6 +15,30 @@ interface PageHeadingOptions {
   sort: CommHubSort;
   onSortChange: (sort: CommHubSort) => void;
   onRefresh: () => void;
+  /** Top-right primary action ("+ New message") — messages lens only. */
+  onCompose: () => void;
+  /** Top-right primary action ("+ New reminder") — reminders lens only. */
+  onCreateReminder: () => void;
+  /** Toolbar secondary ("View log") — reminders lens only. */
+  onViewLog: () => void;
+}
+
+/** The single sort select's values, mapped to the service's sortby/sortorder
+ *  pair (the preference payload shape is unchanged, so stored prefs keep
+ *  working; unknown stored combos fall back to newest-first). */
+const SORT_VALUE_TO_SORT: Record<string, CommHubSort> = {
+  date_desc: { sortby: 'pnotes.date', sortorder: 'desc' },
+  date_asc: { sortby: 'pnotes.date', sortorder: 'asc' },
+  patient_az: { sortby: 'patient_data.lname', sortorder: 'asc' },
+  from_az: { sortby: 'users.lname', sortorder: 'asc' },
+  type_az: { sortby: 'pnotes.title', sortorder: 'asc' },
+};
+
+function sortToSelectValue(sort: CommHubSort): string {
+  const match = Object.entries(SORT_VALUE_TO_SORT).find(
+    ([, candidate]) => candidate.sortby === sort.sortby && candidate.sortorder === sort.sortorder,
+  );
+  return match ? match[0] : 'date_desc';
 }
 
 function bindClick(id: string, handler: () => void): (() => void) | undefined {
@@ -37,6 +62,9 @@ export function useCommunicationsPageHeading({
   sort,
   onSortChange,
   onRefresh,
+  onCompose,
+  onCreateReminder,
+  onViewLog,
 }: PageHeadingOptions): void {
   useEffect(() => {
     const messagesEl = document.getElementById('nc-comm-count-messages');
@@ -51,19 +79,32 @@ export function useCommunicationsPageHeading({
     if (btnMessages) btnMessages.classList.toggle('active', lens === 'messages');
     if (btnReminders) btnReminders.classList.toggle('active', lens === 'reminders');
 
-    const activity = document.getElementById('nc-comm-activity');
-    if (activity) activity.classList.toggle('nc-hidden', lens !== 'messages');
+    const isMessages = lens === 'messages';
+
+    const activityEl = document.getElementById('nc-comm-activity');
+    if (activityEl) activityEl.classList.toggle('nc-hidden', !isMessages);
 
     const scopeWrap = document.getElementById('nc-comm-scope-wrap');
-    if (scopeWrap) scopeWrap.classList.toggle('nc-hidden', lens !== 'messages' || !canViewAllUsers);
+    if (scopeWrap) scopeWrap.classList.toggle('nc-hidden', !isMessages || !canViewAllUsers);
 
-    const compose = document.getElementById('nc-comm-compose-link');
-    if (compose) compose.classList.toggle('nc-hidden', lens !== 'messages');
+    const sortEl = document.getElementById('nc-comm-sort');
+    if (sortEl) sortEl.classList.toggle('nc-hidden', !isMessages);
 
-    const sortBy = document.getElementById('nc-comm-sort-by');
-    const sortOrder = document.getElementById('nc-comm-sort-order');
-    if (sortBy) sortBy.classList.toggle('nc-hidden', lens !== 'messages');
-    if (sortOrder) sortOrder.classList.toggle('nc-hidden', lens !== 'messages');
+    // Lens-scoped toolbar actions: the primary action swaps with the lens,
+    // and "View log" only exists for reminders.
+    const newMessage = document.getElementById('nc-comm-new-message');
+    if (newMessage) newMessage.classList.toggle('nc-hidden', !isMessages);
+
+    const newReminder = document.getElementById('nc-comm-new-reminder');
+    if (newReminder) newReminder.classList.toggle('nc-hidden', isMessages);
+
+    const viewLog = document.getElementById('nc-comm-view-log');
+    if (viewLog) viewLog.classList.toggle('nc-hidden', isMessages);
+
+    const search = document.getElementById('nc-comm-search') as HTMLInputElement | null;
+    if (search) {
+      search.placeholder = isMessages ? t('Search messages…') : t('Filter reminders…');
+    }
   }, [canViewAllUsers, lens]);
 
   useEffect(() => {
@@ -77,27 +118,26 @@ export function useCommunicationsPageHeading({
       showAllEl.checked = showAll;
     }
 
-    const sortByEl = document.getElementById('nc-comm-sort-by') as HTMLSelectElement | null;
-    if (sortByEl && sortByEl.value !== sort.sortby) {
-      sortByEl.value = sort.sortby;
+    const sortEl = document.getElementById('nc-comm-sort') as HTMLSelectElement | null;
+    const sortValue = sortToSelectValue(sort);
+    if (sortEl && sortEl.value !== sortValue) {
+      sortEl.value = sortValue;
     }
-
-    const sortOrderEl = document.getElementById('nc-comm-sort-order') as HTMLSelectElement | null;
-    if (sortOrderEl && sortOrderEl.value !== sort.sortorder) {
-      sortOrderEl.value = sort.sortorder;
-    }
-  }, [activity, showAll, sort.sortby, sort.sortorder]);
+  }, [activity, showAll, sort]);
 
   useEffect(() => {
-    const cleanupMessages = bindClick('nc-comm-lens-messages', () => onLensChange('messages'));
-    const cleanupReminders = bindClick('nc-comm-lens-reminders', () => onLensChange('reminders'));
-    const cleanupRefresh = bindClick('nc-comm-refresh', onRefresh);
+    const cleanups = [
+      bindClick('nc-comm-lens-messages', () => onLensChange('messages')),
+      bindClick('nc-comm-lens-reminders', () => onLensChange('reminders')),
+      bindClick('nc-comm-refresh', onRefresh),
+      bindClick('nc-comm-new-message', onCompose),
+      bindClick('nc-comm-new-reminder', onCreateReminder),
+      bindClick('nc-comm-view-log', onViewLog),
+    ];
     return () => {
-      cleanupMessages?.();
-      cleanupReminders?.();
-      cleanupRefresh?.();
+      cleanups.forEach((cleanup) => cleanup?.());
     };
-  }, [onLensChange, onRefresh]);
+  }, [onLensChange, onRefresh, onCompose, onCreateReminder, onViewLog]);
 
   useEffect(() => {
     const search = document.getElementById('nc-comm-search') as HTMLInputElement | null;
@@ -116,38 +156,30 @@ export function useCommunicationsPageHeading({
   }, [onSearchChange]);
 
   useEffect(() => {
-    const activity = document.getElementById('nc-comm-activity') as HTMLSelectElement | null;
-    if (!activity) return undefined;
-    const handler = () => onActivityChange(activity.value);
-    activity.addEventListener('change', handler);
-    return () => activity.removeEventListener('change', handler);
+    const activityEl = document.getElementById('nc-comm-activity') as HTMLSelectElement | null;
+    if (!activityEl) return undefined;
+    const handler = () => onActivityChange(activityEl.value);
+    activityEl.addEventListener('change', handler);
+    return () => activityEl.removeEventListener('change', handler);
   }, [onActivityChange]);
 
   useEffect(() => {
-    const showAll = document.getElementById('nc-comm-show-all') as HTMLInputElement | null;
-    if (!showAll) return undefined;
-    const handler = () => onShowAllChange(showAll.checked);
-    showAll.addEventListener('change', handler);
-    return () => showAll.removeEventListener('change', handler);
+    const showAllEl = document.getElementById('nc-comm-show-all') as HTMLInputElement | null;
+    if (!showAllEl) return undefined;
+    const handler = () => onShowAllChange(showAllEl.checked);
+    showAllEl.addEventListener('change', handler);
+    return () => showAllEl.removeEventListener('change', handler);
   }, [onShowAllChange]);
 
   useEffect(() => {
-    const sortBy = document.getElementById('nc-comm-sort-by') as HTMLSelectElement | null;
-    const sortOrder = document.getElementById('nc-comm-sort-order') as HTMLSelectElement | null;
-    if (!sortBy || !sortOrder) return undefined;
+    const sortEl = document.getElementById('nc-comm-sort') as HTMLSelectElement | null;
+    if (!sortEl) return undefined;
 
     const handler = () => {
-      onSortChange({
-        sortby: sortBy.value,
-        sortorder: sortOrder.value === 'asc' ? 'asc' : 'desc',
-      });
+      onSortChange(SORT_VALUE_TO_SORT[sortEl.value] ?? SORT_VALUE_TO_SORT.date_desc);
     };
-    sortBy.addEventListener('change', handler);
-    sortOrder.addEventListener('change', handler);
-    return () => {
-      sortBy.removeEventListener('change', handler);
-      sortOrder.removeEventListener('change', handler);
-    };
+    sortEl.addEventListener('change', handler);
+    return () => sortEl.removeEventListener('change', handler);
   }, [onSortChange]);
 }
 

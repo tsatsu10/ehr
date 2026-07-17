@@ -1,16 +1,20 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { PatientContextBanner } from '@components/PatientContextBanner';
 import { PatientSearchDropdown } from '@components/PatientSearchDropdown';
 import { identityFromLabels } from '@components/patientBannerUtils';
 import { Button } from '@components/ui/button';
-import { Checkbox } from '@components/ui/checkbox';
 import { Input } from '@components/ui/input';
-import { Label } from '@components/ui/label';
 import { NativeSelect } from '@components/ui/native-select';
 import { Textarea } from '@components/ui/textarea';
+import { X } from 'lucide-react';
 import { oeFetch } from '@core/oeFetch';
 import type { ComposeAttachment, ComposeOptions, ComposeReplySeed } from './communicationsTypes';
+import { t } from '@core/i18n';
+
+const MIN_BODY_LENGTH = 2;
+/** Show the recipient filter box once the staff list is long enough to scroll. */
+const RECIPIENT_FILTER_THRESHOLD = 8;
 
 interface MessageComposePaneProps {
   ajaxUrl: string;
@@ -44,6 +48,9 @@ export function MessageComposePane({
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
   const [body, setBody] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [recipientFilter, setRecipientFilter] = useState('');
+  const [bodyTouched, setBodyTouched] = useState(false);
+  const [recipientsTouched, setRecipientsTouched] = useState(false);
 
   const fetchOptions = useMemo(() => ({ ajaxUrl, csrfToken }), [ajaxUrl, csrfToken]);
   const isReply = (replyNoteId ?? 0) > 0;
@@ -91,7 +98,7 @@ export function MessageComposePane({
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Could not load compose form');
+          setError(err instanceof Error ? err.message : t('Could not load compose form'));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -104,6 +111,7 @@ export function MessageComposePane({
   }, [fetchOptions, replyNoteId, initialPid]);
 
   const toggleAssignee = (username: string) => {
+    setRecipientsTouched(true);
     setAssignedTo((prev) => (
       prev.includes(username)
         ? prev.filter((u) => u !== username)
@@ -111,26 +119,40 @@ export function MessageComposePane({
     ));
   };
 
+  // Inline validation — errors compute live while typing; hints only show once
+  // the field was touched (or a submit was attempted), values are never wiped.
+  const bodyError = body.trim().length < MIN_BODY_LENGTH
+    ? t('Message must be at least {min} characters.', { min: String(MIN_BODY_LENGTH) })
+    : null;
+  const recipientsError = !isReply && assignedTo.length === 0
+    ? t('Select at least one recipient.')
+    : null;
+  const formValid = !bodyError && !recipientsError;
+
+  const users = options?.users ?? [];
+  const filterText = recipientFilter.trim().toLowerCase();
+  const visibleUsers = filterText
+    ? users.filter((user) => user.label.toLowerCase().includes(filterText))
+    : users;
+  const selectedUsers = users.filter((user) => assignedTo.includes(user.username));
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setSubmitError(null);
-
-    const trimmedBody = body.trim();
-    if (trimmedBody.length < 2) {
-      setSubmitError('Message body must be at least 2 characters.');
-      return;
-    }
-
-    if (!isReply && messageStatus !== 'Done' && assignedTo.length === 0) {
-      setSubmitError('Select at least one recipient.');
+    setBodyTouched(true);
+    setRecipientsTouched(true);
+    if (!formValid) {
       return;
     }
 
     setSubmitting(true);
     try {
       const payload: Record<string, unknown> = {
-        body: trimmedBody,
+        body: body.trim(),
         note_type: noteType || 'Unassigned',
+        // The compose form no longer exposes a Status dropdown — a new
+        // conversation is always the default status; done/reopen lives in
+        // the reader.
         message_status: messageStatus || 'New',
         pid: pid ?? 0,
         assigned_to: assignedTo,
@@ -153,14 +175,21 @@ export function MessageComposePane({
       });
       onSent(result.id);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Could not send message');
+      setSubmitError(err instanceof Error ? err.message : t('Could not send message'));
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLFormElement>) => {
+    if (event.key === 'Escape' && !event.defaultPrevented && !submitting) {
+      event.preventDefault();
+      onCancel();
+    }
+  };
+
   if (loading) {
-    return <div className="text-[var(--oe-nc-text-muted)]"><em>Loading compose form…</em></div>;
+    return <div className="text-[var(--oe-nc-text-muted)]"><em>{t('Loading compose form…')}</em></div>;
   }
 
   if (error) {
@@ -170,51 +199,110 @@ export function MessageComposePane({
   const patientIdentity = identityFromLabels(patientName, { pid: pid ?? undefined });
 
   return (
-    <form className="nc-comm-compose" onSubmit={(e) => { void handleSubmit(e); }}>
-      <header className="nc-comm-detail-header mb-3">
-        <h2 className="text-lg font-semibold mb-0">{isReply ? 'Reply to message' : 'Compose message'}</h2>
+    <form className="nc-comm-compose" onSubmit={(e) => { void handleSubmit(e); }} onKeyDown={handleKeyDown}>
+      <header className="nc-comm-detail-header nc-comm-compose-head">
+        <h2 className="nc-comm-reader-title">{isReply ? t('Reply to message') : t('New message')}</h2>
+        <p className="nc-comm-reader-meta">
+          {isReply
+            ? t('Your reply is added to the conversation.')
+            : t('Starts a conversation with the staff you select.')}
+        </p>
       </header>
 
       {attachment && !isReply && (
         <div className={deskCalloutClass('info', 'py-2 text-sm mb-3')}>
-          Attaching fax ID: {attachment.job_id || attachment.attachment_id}
+          {t('The received fax (job {id}) will be attached to this message.', {
+            id: String(attachment.job_id || attachment.attachment_id),
+          })}
         </div>
       )}
 
-      <div className="space-y-1.5 mb-3">
-        <Label htmlFor="nc-comm-compose-type" className="normal-case">Type</Label>
-        <NativeSelect
-          id="nc-comm-compose-type"
-          className="h-8"
-          value={noteType}
-          onChange={(e) => setNoteType(e.target.value)}
-        >
-          <option value="">Unassigned</option>
-          {(options?.note_types ?? []).map((opt) => (
-            <option key={opt.id} value={opt.id}>{opt.label}</option>
-          ))}
-        </NativeSelect>
-      </div>
-
-      <div className="space-y-1.5 mb-3">
-        <Label htmlFor="nc-comm-compose-status" className="normal-case">Status</Label>
-        <NativeSelect
-          id="nc-comm-compose-status"
-          className="h-8"
-          value={messageStatus}
-          onChange={(e) => setMessageStatus(e.target.value)}
-        >
-          {(options?.message_statuses ?? []).map((opt) => (
-            <option key={opt.id} value={opt.id}>{opt.label}</option>
-          ))}
-          {!options?.message_statuses?.length && (
-            <option value="New">New</option>
+      {!isReply && (
+        <div className="nc-form-group">
+          <label className="nc-comm-field-label" id="nc-comm-compose-to-label">{t('To')}</label>
+          {selectedUsers.length > 0 && (
+            <div className="nc-comm-chip-row" aria-live="polite">
+              {selectedUsers.map((user) => (
+                <span className="nc-comm-chip" key={`sel-${user.username}`}>
+                  {user.label}
+                  <button
+                    type="button"
+                    className="nc-comm-chip-remove"
+                    aria-label={t('Remove {name}', { name: user.label })}
+                    onClick={() => toggleAssignee(user.username)}
+                  >
+                    <X aria-hidden="true" />
+                  </button>
+                </span>
+              ))}
+            </div>
           )}
-        </NativeSelect>
+          {users.length > RECIPIENT_FILTER_THRESHOLD && (
+            <Input
+              type="search"
+              className="nc-comm-recipient-filter"
+              placeholder={t('Filter staff…')}
+              aria-label={t('Filter recipients')}
+              value={recipientFilter}
+              onChange={(e) => setRecipientFilter(e.target.value)}
+            />
+          )}
+          <div className="nc-comm-recipient-box" role="group" aria-labelledby="nc-comm-compose-to-label">
+            {visibleUsers.map((user) => (
+              <div className="nc-comm-check-row" key={user.username}>
+                <input
+                  type="checkbox"
+                  className="nc-comm-check"
+                  id={`nc-comm-to-${user.username}`}
+                  checked={assignedTo.includes(user.username)}
+                  onChange={() => toggleAssignee(user.username)}
+                />
+                <label htmlFor={`nc-comm-to-${user.username}`}>
+                  {user.label}
+                </label>
+              </div>
+            ))}
+            {!visibleUsers.length && (
+              <p className="nc-comm-recipient-empty">{t('No staff match this filter.')}</p>
+            )}
+          </div>
+          {recipientsTouched && recipientsError && (
+            <p className="nc-comm-field-error" role="alert">{recipientsError}</p>
+          )}
+        </div>
+      )}
+
+      <div className="nc-comm-form-row">
+        <div className="nc-form-group">
+          <label className="nc-comm-field-label" htmlFor="nc-comm-compose-type">{t('Type')}</label>
+          <NativeSelect
+            id="nc-comm-compose-type"
+            className="h-8"
+            value={noteType}
+            onChange={(e) => setNoteType(e.target.value)}
+          >
+            <option value="">{t('Unassigned')}</option>
+            {(options?.note_types ?? []).map((opt) => (
+              <option key={opt.id} value={opt.id}>{opt.label}</option>
+            ))}
+          </NativeSelect>
+        </div>
+        {options?.show_due_date && (
+          <div className="nc-form-group">
+            <label className="nc-comm-field-label" htmlFor="nc-comm-compose-due">{t('Due date')}</label>
+            <Input
+              id="nc-comm-compose-due"
+              type="datetime-local"
+              className="h-8"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
+          </div>
+        )}
       </div>
 
-      <div className="space-y-1.5 mb-3">
-        <Label htmlFor="nc-comm-compose-patient" className="normal-case">Patient (optional)</Label>
+      <div className="nc-form-group">
+        <label className="nc-comm-field-label" htmlFor="nc-comm-compose-patient">{t('Patient (optional)')}</label>
         {isReply && patientIdentity ? (
           <PatientContextBanner layout="compact" identity={patientIdentity} />
         ) : isReply ? (
@@ -223,7 +311,7 @@ export function MessageComposePane({
             type="text"
             className="h-8"
             readOnly
-            value={patientName || (pid ? `PID ${pid}` : 'No patient linked')}
+            value={patientName || (pid ? t('PID {pid}', { pid: String(pid) }) : t('No patient linked'))}
           />
         ) : patientIdentity ? (
           <>
@@ -238,7 +326,7 @@ export function MessageComposePane({
                 setPatientName('');
               }}
             >
-              Clear patient
+              {t('Clear patient')}
             </Button>
           </>
         ) : (
@@ -247,7 +335,7 @@ export function MessageComposePane({
             csrfToken={csrfToken}
             inputId="nc-comm-compose-patient"
             resultsId="nc-comm-compose-patient-results"
-            placeholder="Search by name, phone, NHIS, National ID, MRN"
+            placeholder={t('Search by name, phone, NHIS, National ID, MRN')}
             onSelectPatient={(selectedPid, row) => {
               setPid(selectedPid);
               setPatientName(row?.display_name ?? '');
@@ -256,61 +344,30 @@ export function MessageComposePane({
         )}
       </div>
 
-      {!isReply && (
-        <div className="nc-form-group">
-          <label>To</label>
-          <div className="nc-comm-compose-recipients border rounded p-2" style={{ maxHeight: '10rem', overflowY: 'auto' }}>
-            {(options?.users ?? []).map((user) => (
-              <div key={user.username} className="flex items-center gap-2 mb-1">
-                <Checkbox
-                  id={`nc-comm-to-${user.username}`}
-                  checked={assignedTo.includes(user.username)}
-                  onCheckedChange={() => toggleAssignee(user.username)}
-                />
-                <Label htmlFor={`nc-comm-to-${user.username}`} className="font-normal normal-case cursor-pointer mb-0">
-                  {user.label}
-                </Label>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {options?.show_due_date && (
-        <div className="space-y-1.5 mb-3">
-          <Label htmlFor="nc-comm-compose-due" className="normal-case">Due date</Label>
-          <Input
-            id="nc-comm-compose-due"
-            type="datetime-local"
-            className="h-8"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-          />
-        </div>
-      )}
-
-      <div className="space-y-1.5 mb-3">
-        <Label htmlFor="nc-comm-compose-body" className="normal-case">Message</Label>
+      <div className="nc-form-group">
+        <label className="nc-comm-field-label" htmlFor="nc-comm-compose-body">{t('Message')}</label>
         <Textarea
           id="nc-comm-compose-body"
           rows={5}
-          required
-          minLength={2}
           value={body}
           onChange={(e) => setBody(e.target.value)}
+          onBlur={() => setBodyTouched(true)}
         />
+        {bodyTouched && bodyError && (
+          <p className="nc-comm-field-error" role="alert">{bodyError}</p>
+        )}
       </div>
 
       {submitError && (
-        <div className={deskCalloutClass('error', 'py-2 mb-3')}>{submitError}</div>
+        <div className={deskCalloutClass('error', 'py-2 mb-3')} role="alert">{submitError}</div>
       )}
 
-      <div className="flex flex-wrap">
-        <Button type="submit" size="sm" className="mr-2" disabled={submitting}>
-          {submitting ? 'Sending…' : 'Send'}
+      <div className="nc-comm-compose-actions">
+        <Button type="submit" disabled={submitting || !formValid}>
+          {submitting ? t('Sending…') : t('Send')}
         </Button>
-        <Button type="button" variant="outline" size="sm" onClick={onCancel} disabled={submitting}>
-          Cancel
+        <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
+          {t('Cancel')}
         </Button>
       </div>
     </form>

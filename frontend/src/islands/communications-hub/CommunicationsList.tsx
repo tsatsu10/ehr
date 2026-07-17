@@ -2,6 +2,9 @@ import type { CommLens, CommListRow, MessageListRow, ReminderListRow } from './c
 import { COMM_PAGE_SIZE } from './communicationsTypes';
 import { Badge } from '@components/ui/badge';
 import { PaginationBar } from '@components/PaginationBar';
+import { initialsFromName } from '@components/patientBannerUtils';
+import { avatarColor } from './commAvatar';
+import { t } from '@core/i18n';
 
 interface CommunicationsListProps {
   lens: CommLens;
@@ -24,14 +27,28 @@ export function CommunicationsList({
   error,
   onSelect,
 }: CommunicationsListProps) {
-  if (loading) {
-    return <div className="p-3 text-[var(--oe-nc-text-muted)]"><em>Loading…</em></div>;
+  // Only show the loading state when there is nothing to display — background
+  // refreshes (the reminders poll, search retypes, manual refresh) keep the
+  // current rows on screen instead of flashing "Loading…" and losing scroll.
+  if (loading && !rows.length) {
+    return <div className="nc-comm-list-state">{t('Loading…')}</div>;
   }
-  if (error) {
-    return <div className="p-3 text-[var(--oe-nc-danger,#dc2626)]">{error}</div>;
+  if (error && !loading) {
+    return <div className="nc-comm-list-state nc-comm-list-state--error">{error}</div>;
   }
   if (!rows.length) {
-    return <div className="p-3 text-[var(--oe-nc-text-muted)]"><em>No items in this view.</em></div>;
+    return (
+      <div className="nc-comm-list-state">
+        <strong className="nc-comm-empty-title">
+          {lens === 'messages' ? t('No messages') : t('No reminders')}
+        </strong>
+        <span>
+          {lens === 'messages'
+            ? t('Messages sent to you appear here.')
+            : t('Reminders due in the next 30 days appear here.')}
+        </span>
+      </div>
+    );
   }
 
   return (
@@ -39,28 +56,43 @@ export function CommunicationsList({
       {rows.map((row) => {
         const selected = selectedId === row.id;
         if (isMessageRow(row, lens)) {
+          const title = row.patient_name || row.type || t('Message');
           return (
             <button
               key={`msg-${row.id}`}
               type="button"
-              className={`nc-comm-row${selected ? ' is-selected' : ''}`}
+              className={`nc-comm-row${selected ? ' is-selected' : ''}${row.is_unread ? ' is-unread' : ''}`}
               role="option"
               aria-selected={selected}
               onClick={() => onSelect(row.id, 'message')}
             >
-              <div className="nc-comm-row-title">
-                {row.patient_name || row.type || 'Message'}
-                {row.patient_unassigned && (
-                  <Badge variant="warning" className="nc-comm-row-badge">No patient</Badge>
-                )}
-                {row.is_unread && (
-                  <Badge className="nc-comm-row-badge"> New</Badge>
-                )}
-              </div>
-              <div className="nc-comm-row-meta">
-                {row.from_name} · {row.date_display || row.date}
-              </div>
-              <div className="nc-comm-row-meta">{row.status}</div>
+              <span
+                className="nc-comm-avatar"
+                style={{ background: avatarColor(row.from_name || title) }}
+                aria-hidden="true"
+              >
+                {initialsFromName(title)}
+              </span>
+              <span className="nc-comm-row-body">
+                <span className="nc-comm-row-top">
+                  <span className="nc-comm-row-name">{title}</span>
+                  <span className="nc-comm-row-time">{row.date_display || row.date}</span>
+                </span>
+                <span className="nc-comm-row-sub">
+                  <span className="nc-comm-row-preview">
+                    {row.preview || row.type || t('Message')}
+                  </span>
+                  {row.is_unread && <span className="nc-comm-unread-dot" aria-label={t('Unread')} />}
+                </span>
+                <span className="nc-comm-row-tags">
+                  <span className="nc-comm-row-from">{row.from_name}</span>
+                  {row.patient_unassigned && (
+                    <Badge variant="warning" className="nc-comm-row-badge nc-comm-row-badge--warn">
+                      {t('No patient')}
+                    </Badge>
+                  )}
+                </span>
+              </span>
             </button>
           );
         }
@@ -75,16 +107,28 @@ export function CommunicationsList({
             aria-selected={selected}
             onClick={() => onSelect(reminder.id, 'reminder')}
           >
-            <div className="nc-comm-row-title">
-              {reminder.patient_name || 'Reminder'}
-              <span className={`nc-comm-urgency--${reminder.urgency} nc-comm-row-badge`}>
-                {' '}{reminder.urgency_label}
+            <span
+              className="nc-comm-avatar"
+              style={{ background: avatarColor(reminder.patient_name) }}
+              aria-hidden="true"
+            >
+              {initialsFromName(reminder.patient_name || t('Reminder'))}
+            </span>
+            <span className="nc-comm-row-body">
+              <span className="nc-comm-row-top">
+                <span className="nc-comm-row-name">{reminder.patient_name || t('Reminder')}</span>
+                <span className="nc-comm-row-time">{reminder.due_display || reminder.due_date}</span>
               </span>
-            </div>
-            <div className="nc-comm-row-meta">
-              {reminder.due_display || reminder.due_date} · {reminder.from_name}
-            </div>
-            <div className="nc-comm-row-meta">{reminder.preview}</div>
+              <span className="nc-comm-row-sub">
+                <span className="nc-comm-row-preview">{reminder.preview}</span>
+              </span>
+              <span className="nc-comm-row-tags">
+                <span className={`nc-comm-urgency--${reminder.urgency} nc-comm-row-urgency`}>
+                  {reminder.urgency_label}
+                </span>
+                <span className="nc-comm-row-from">{reminder.from_name}</span>
+              </span>
+            </span>
           </button>
         );
       })}
@@ -105,16 +149,16 @@ export function CommunicationsPagination({
 }) {
   if (lens !== 'messages') {
     return total > 0 ? (
-      <div className="nc-comm-pagination px-2 py-1 text-[var(--oe-nc-text-muted)] text-sm">
-        {total} item(s)
+      <div className="nc-comm-pagination">
+        {t('{count} item(s)', { count: String(total) })}
       </div>
     ) : null;
   }
 
   if (total <= COMM_PAGE_SIZE) {
     return total > 0 ? (
-      <div className="nc-comm-pagination px-2 py-1 text-[var(--oe-nc-text-muted)] text-sm">
-        {total} item(s)
+      <div className="nc-comm-pagination">
+        {t('{count} item(s)', { count: String(total) })}
       </div>
     ) : null;
   }

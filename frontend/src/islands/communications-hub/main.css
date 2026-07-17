@@ -1,1 +1,11 @@
-/* Communications Hub island — layout in module communications-hub.css */
+/*
+ * Communications Hub island.
+ *
+ * tokens.css brings the --oe-nc-* variables + Tailwind theme/utilities the
+ * shared components (Button, Badge, ConfirmModal, PatientContextBanner,
+ * callouts…) are styled with. This island shipped WITHOUT it for a long time,
+ * which silently unstyled every Tailwind-classed control on the page
+ * (COMHUB-0). Island-specific visual identity stays in the module's
+ * communications-hub.css as non-layered BEM (it outranks layered utilities).
+ */
+@import '../../core/tokens.css';

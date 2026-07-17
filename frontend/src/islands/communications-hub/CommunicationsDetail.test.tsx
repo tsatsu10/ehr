@@ -29,15 +29,11 @@ const baseMessage: MessageDetail = {
   can_reply: true,
   can_mark_done: true,
   can_change_status: true,
-  message_statuses: [
-    { id: 'New', label: 'New' },
-    { id: 'Done', label: 'Done' },
-  ],
   thread_html: '<p>Hello</p>',
 };
 
 describe('CommunicationsDetail', () => {
-  it('renders status dropdown when user can change status', () => {
+  it('shows a Mark done action on an active message (no status dropdown)', () => {
     render(
       <CommunicationsDetail
         loading={false}
@@ -45,41 +41,61 @@ describe('CommunicationsDetail', () => {
         message={baseMessage}
         reminder={null}
         webroot="/openemr"
-        onStatusChange={vi.fn()}
+        onMarkDone={vi.fn()}
       />,
     );
 
-    expect(screen.getByLabelText('Message status')).toBeInTheDocument();
-    expect(screen.getByLabelText('Message status')).toHaveValue('New');
+    expect(screen.queryByLabelText('Message status')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mark done' })).toBeInTheDocument();
   });
 
-  it('calls onStatusChange when status is updated', () => {
+  it('calls onMarkDone when Mark done is clicked', () => {
+    const onMarkDone = vi.fn();
+
+    render(
+      <CommunicationsDetail
+        loading={false}
+        error={null}
+        message={baseMessage}
+        reminder={null}
+        webroot="/openemr"
+        onMarkDone={onMarkDone}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mark done' }));
+    expect(onMarkDone).toHaveBeenCalledWith(12);
+  });
+
+  it('shows Reopen (not Mark done) on a done message and reopens it', () => {
     const onStatusChange = vi.fn();
 
     render(
       <CommunicationsDetail
         loading={false}
         error={null}
-        message={baseMessage}
+        message={{ ...baseMessage, status: 'Done' }}
         reminder={null}
         webroot="/openemr"
+        onMarkDone={vi.fn()}
         onStatusChange={onStatusChange}
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('Message status'), { target: { value: 'Done' } });
-    expect(onStatusChange).toHaveBeenCalledWith(12, 'Done');
+    expect(screen.queryByRole('button', { name: 'Mark done' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen' }));
+    expect(onStatusChange).toHaveBeenCalledWith(12, 'Read');
   });
 
-  it('shows read-only status for supervisory read', () => {
+  it('shows no done/reopen action for supervisory read', () => {
     render(
       <CommunicationsDetail
         loading={false}
         error={null}
         message={{
           ...baseMessage,
+          can_mark_done: false,
           can_change_status: false,
-          message_statuses: [],
           is_supervisory_read: true,
           supervisory_banner: 'Admin read only',
         }}
@@ -89,7 +105,8 @@ describe('CommunicationsDetail', () => {
     );
 
     expect(screen.queryByLabelText('Message status')).not.toBeInTheDocument();
-    expect(screen.getByText('New')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mark done' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reopen' })).not.toBeInTheDocument();
   });
 
   it('shows assign patient flow for orphan messages', () => {
@@ -145,5 +162,33 @@ describe('CommunicationsDetail', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Forward' }));
     expect(onForwardReminder).toHaveBeenCalledWith(9);
+  });
+
+  it('shows Mark completed in the reminder reader header', () => {
+    const onCompleteReminder = vi.fn();
+
+    render(
+      <CommunicationsDetail
+        loading={false}
+        error={null}
+        message={null}
+        reminder={{
+          id: 9,
+          pid: 42,
+          patient_name: 'Jane Doe',
+          from_name: 'Dr Smith',
+          due_date: '2026-06-28',
+          due_display: 'Jun 28',
+          urgency: 'today',
+          urgency_label: 'Due today',
+          preview: 'Follow up on labs',
+        }}
+        webroot="/openemr"
+        onCompleteReminder={onCompleteReminder}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mark completed' }));
+    expect(onCompleteReminder).toHaveBeenCalledWith(9);
   });
 });
