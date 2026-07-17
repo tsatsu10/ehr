@@ -254,19 +254,19 @@
 }
 
 .nc-import-stat-tile--warn {
-  border-color: #fcd34d;
-  background: #fffbeb;
+  border-color: color-mix(in srgb, var(--oe-nc-warning, #c77700) 40%, var(--oe-nc-border, #cbd5e1));
+  background: color-mix(in srgb, var(--oe-nc-warning, #c77700) 8%, white);
 }
 
 .nc-import-stat-tile--warn .nc-import-stat-tile__value {
-  color: #b45309;
+  color: var(--oe-nc-warning, #c77700);
 }
 
 .nc-import-stat-tile--danger {
-  border-color: #fca5a5;
-  background: #fef2f2;
+  border-color: color-mix(in srgb, var(--oe-nc-danger, #e0362c) 40%, var(--oe-nc-border, #cbd5e1));
+  background: color-mix(in srgb, var(--oe-nc-danger, #e0362c) 8%, white);
 }
 
 .nc-import-stat-tile--danger .nc-import-stat-tile__value {
-  color: #b91c1c;
+  color: var(--oe-nc-danger, #e0362c);
 }
