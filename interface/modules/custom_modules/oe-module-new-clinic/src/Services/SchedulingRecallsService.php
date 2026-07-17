@@ -447,7 +447,8 @@ class SchedulingRecallsService
                        pat.fname, pat.lname, pat.pubpid, pat.phone_home, pat.phone_cell, pat.email,
                        pat.hipaa_allowsms, pat.hipaa_allowemail, pat.hipaa_voice,
                        meta.status AS recall_status, meta.produced_eid, meta.outcome_note, meta.recall_type,
-                       appt.pc_eventDate AS produced_event_date
+                       appt.pc_eventDate AS produced_event_date,
+                       (SELECT MAX(fe.date) FROM form_encounter AS fe WHERE fe.pid = mr.r_pid) AS last_seen_at
                 FROM medex_recalls AS mr
                 INNER JOIN patient_data AS pat ON pat.pid = mr.r_pid
                 LEFT JOIN new_clinic_recall_meta AS meta ON meta.recall_id = mr.r_ID
@@ -479,6 +480,10 @@ class SchedulingRecallsService
         $fname = trim((string) ($row['fname'] ?? ''));
         $lname = trim((string) ($row['lname'] ?? ''));
         $pid = (int) ($row['r_pid'] ?? 0);
+        $lastSeenDate = substr((string) ($row['last_seen_at'] ?? ''), 0, 10);
+        if ($lastSeenDate === '' || $lastSeenDate === '0000-00-00') {
+            $lastSeenDate = '';
+        }
 
         return [
             'recall_id' => (int) ($row['r_ID'] ?? 0),
@@ -500,7 +505,45 @@ class SchedulingRecallsService
             'produced_event_date' => (string) ($row['produced_event_date'] ?? ''),
             'outcome_note' => (string) ($row['outcome_note'] ?? ''),
             'contact' => $this->contactSummary($row),
+            'last_seen_date' => $lastSeenDate,
+            'last_seen_label' => $this->relativeSince($lastSeenDate, $today),
         ];
+    }
+
+    /**
+     * Human "N days/weeks/months/years ago" for a past date, '' when unknown.
+     * Coarse on purpose — a recall row just needs the sense of how stale the
+     * patient's last visit is.
+     */
+    private function relativeSince(string $date, string $today): string
+    {
+        if ($date === '') {
+            return '';
+        }
+        $then = strtotime($date);
+        $now = strtotime($today);
+        if ($then === false || $now === false || $then > $now) {
+            return '';
+        }
+        $days = (int) floor(($now - $then) / 86400);
+        if ($days <= 0) {
+            return 'today';
+        }
+        if ($days === 1) {
+            return 'yesterday';
+        }
+        if ($days < 14) {
+            return $days . ' days ago';
+        }
+        if ($days < 60) {
+            return (int) round($days / 7) . ' weeks ago';
+        }
+        if ($days < 365) {
+            return (int) round($days / 30) . ' months ago';
+        }
+        $years = (int) floor($days / 365);
+
+        return $years === 1 ? '1 year ago' : ($years . ' years ago');
     }
 
     private function resolveBucket(string $dueDate, string $status, string $today): string

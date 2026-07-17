@@ -81,12 +81,22 @@ class ConsultShortcutService
         $redirectUrl = match ($shortcut) {
             'encounter' => $this->resolveEncounterShortcutUrl($visit),
             'encounter_hub' => $modulePublic . 'clinical-doc/index.php?visit_id=' . urlencode((string) $visitId) . '&tab=visit',
-            'lab' => $this->procedureOrderLinks->buildNewOrderUrl(
-                $pid,
-                $encounter,
-                $modulePublic . 'doctor.php'
-            ),
-            'rx' => ($GLOBALS['webroot'] ?? '') . '/controller.php?prescription&edit&id=&pid=' . urlencode((string) $pid),
+            // Full lab form: native proc-order island when the facility has it
+            // enabled, else the stock procedure_order form via the bridge.
+            // Policies reuse the injected config so they honour the same
+            // facility scope (and stay unit-testable via the config mock).
+            'lab' => (new ProcedureOrderEnginePolicy($this->config))->isNativeProcOrderEnabled($facilityId)
+                ? $modulePublic . 'proc-order.php?visit_id=' . urlencode((string) $visitId) . '&return_to=doctor'
+                : $this->procedureOrderLinks->buildNewOrderUrl(
+                    $pid,
+                    $encounter,
+                    $modulePublic . 'doctor.php'
+                ),
+            // Full Rx form: native rx-edit island when enabled, else the stock
+            // prescription editor.
+            'rx' => (new PrescriptionEditPolicy($this->config))->isNativeRxEditEnabled($facilityId)
+                ? $modulePublic . 'rx-edit.php?visit_id=' . urlencode((string) $visitId) . '&return_to=doctor'
+                : ($GLOBALS['webroot'] ?? '') . '/controller.php?prescription&edit&id=&pid=' . urlencode((string) $pid),
             'chart' => PatientCompletionService::chartUrl($pid, 'profile'),
         };
 

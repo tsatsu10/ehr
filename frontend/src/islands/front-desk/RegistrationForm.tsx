@@ -3,6 +3,7 @@ import { oeFetch } from '@core/oeFetch';
 import type { RegistrationDupResult, RegistrationFormData, RegistrationSaveResult } from '@core/types';
 import { ConfirmModal } from '@components/ConfirmModal';
 import { showDeskToast } from '@components/deskToast';
+import { AdditionalPayerSection } from './AdditionalPayerSection';
 import { RegistrationDupPanel } from './RegistrationDupPanel';
 import { RegistrationFormSections, type RegistrationFormValues } from './RegistrationFormSections';
 import {
@@ -53,6 +54,7 @@ interface RegistrationFormProps {
     /** Parent-owned discard modal (front desk). Falls back to inline ConfirmModal when omitted. */
     onDiscardConfirm?: (onProceed: () => void) => void;
     mergeToolBaseUrl?: string;
+    enablePayerBilling?: boolean;
 }
 
 export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationFormProps>(function RegistrationForm(
@@ -71,6 +73,7 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
         onCancel,
         onDiscardConfirm,
         mergeToolBaseUrl,
+        enablePayerBilling = false,
     },
     ref
 ) {
@@ -514,6 +517,15 @@ export const RegistrationForm = forwardRef<RegistrationFormHandle, RegistrationF
                 onRegionChange={handleRegionChange}
                 onFieldBlur={handleFieldBlur}
             />
+
+            {currentPid && (
+                <AdditionalPayerSection
+                    ajaxUrl={ajaxUrl}
+                    csrfToken={csrfToken}
+                    pid={currentPid}
+                    enabled={enablePayerBilling}
+                />
+            )}
 
             <ConfirmModal
                 open={discardOpen}

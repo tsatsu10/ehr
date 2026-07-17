@@ -21,6 +21,7 @@ import {
 import { oeFetch } from '@core/oeFetch';
 import { ChartBanner } from './ChartBanner';
 import { ChartInChartSearch } from './ChartInChartSearch';
+import { ChatTab } from './ChatTab';
 import { ClinicalTab } from './ClinicalTab';
 import { DocumentsTab } from './DocumentsTab';
 import { FollowUpFlagModal } from './FollowUpFlagModal';
@@ -61,6 +62,7 @@ const TAB_LABELS: Record<ChartTabId, string> = {
   clinical: 'Clinical',
   documents: 'Documents',
   messages: 'Messages',
+  chat: 'Chat',
 };
 
 export function PatientChart({
@@ -76,6 +78,7 @@ export function PatientChart({
   registrationMode,
   enableInChartPatientSearch = false,
   enableDocuments = false,
+  enablePatientChat = false,
   enableLabels = false,
   labelPrintUrl = '',
   lettersHubUrl = '',
@@ -84,7 +87,9 @@ export function PatientChart({
   canEditProfile = false,
 }: PatientChartProps) {
   const resolvedInitialTab =
-    isValidChartTab(initialTab) && (initialTab !== 'documents' || enableDocuments)
+    isValidChartTab(initialTab)
+    && (initialTab !== 'documents' || enableDocuments)
+    && (initialTab !== 'chat' || enablePatientChat)
       ? initialTab
       : 'overview';
   const [activeTab, setActiveTab] = useState<ChartTabId>(resolvedInitialTab);
@@ -315,6 +320,8 @@ export function PatientChart({
     }
   }, [fetchOptions, loadClinicalStrips, pid]);
 
+  const [messagesActivity, setMessagesActivity] = useState('all');
+
   const loadMessages = useCallback(
     async (reset: boolean) => {
       if (reset) {
@@ -329,7 +336,7 @@ export function PatientChart({
         const offset = reset ? 0 : messagesOffset;
         const data = await oeFetch<ChartMessagesData>('patients.chart.messages', {
           ...fetchOptions,
-          params: { pid, offset },
+          params: { pid, offset, activity: messagesActivity },
         });
 
         if (reset) {
@@ -353,8 +360,16 @@ export function PatientChart({
         setMessagesLoadingMore(false);
       }
     },
-    [fetchOptions, messagesOffset, pid]
+    [fetchOptions, messagesOffset, pid, messagesActivity]
   );
+
+  // CP-5 — refetch from page one when the notes activity filter changes.
+  useEffect(() => {
+    if (messagesLoaded) {
+      void loadMessages(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messagesActivity]);
 
   const loadMoreActivity = useCallback(async () => {
     setActivityLoadingMore(true);
@@ -524,7 +539,8 @@ export function PatientChart({
   }, [activeTab, preview?.active_visit?.visit_id, reloadContext]);
 
   const tabSegments = CHART_TAB_IDS.filter(
-    (tab) => tab !== 'documents' || enableDocuments
+    (tab) =>
+      (tab !== 'documents' || enableDocuments) && (tab !== 'chat' || enablePatientChat)
   ).map((tab) => ({
     id: tab,
     label: TAB_LABELS[tab],
@@ -739,8 +755,26 @@ export function PatientChart({
                   onLoadMore={() => {
                     void loadMessages(false);
                   }}
+                  ajaxUrl={ajaxUrl}
+                  csrfToken={csrfToken}
+                  pid={pid}
+                  activity={messagesActivity}
+                  onActivityChange={(next) => {
+                    setMessagesActivity(next);
+                  }}
                 />
               </ChartTabPanel>
+
+              {enablePatientChat && (
+                <ChartTabPanel tabId="chat" active={activeTab === 'chat'}>
+                  <ChatTab
+                    ajaxUrl={ajaxUrl}
+                    csrfToken={csrfToken}
+                    pid={pid}
+                    active={activeTab === 'chat'}
+                  />
+                </ChartTabPanel>
+              )}
             </div>
           </ChartShell>
         </CardContent>

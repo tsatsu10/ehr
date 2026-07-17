@@ -35,6 +35,7 @@ import type {
   SystemHealthPayload,
   DirectoryContactRow,
   DirectoryContactType,
+  FacilityRow,
   FeeCategoryOption,
   FeeImportSummary,
   FeeScheduleRow,
@@ -45,6 +46,7 @@ import type {
 import { ADMIN_TABS } from './adminTypes';
 import { initialAdminTab, localDateString } from './adminUtils';
 import { DirectoryModal } from './modals/DirectoryModal';
+import { FacilityModal } from './modals/FacilityModal';
 import { FeeModal } from './modals/FeeModal';
 import { BulkPriceModal } from './modals/BulkPriceModal';
 import { VisitTypeModal } from './modals/VisitTypeModal';
@@ -86,9 +88,9 @@ export function AdminHub({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [visitTypes, setVisitTypes] = useState<VisitTypeRow[]>([]);
-  const [calendarCategories, setCalendarCategories] = useState<AdminConfigPayload['calendar_categories']>([]);
   const [directoryContacts, setDirectoryContacts] = useState<DirectoryContactRow[]>([]);
   const [directoryTypes, setDirectoryTypes] = useState<DirectoryContactType[]>([]);
+  const [facilities, setFacilities] = useState<FacilityRow[]>([]);
   const [feeSchedule, setFeeSchedule] = useState<FeeScheduleRow[]>([]);
   const [feeCategories, setFeeCategories] = useState<FeeCategoryOption[]>([]);
   const [feeTemplates, setFeeTemplates] = useState<FeeTemplate[]>([]);
@@ -144,6 +146,11 @@ export function AdminHub({
   const [directorySaving, setDirectorySaving] = useState(false);
   const [directoryError, setDirectoryError] = useState<string | null>(null);
 
+  const [facilityModalOpen, setFacilityModalOpen] = useState(false);
+  const [facilityEdit, setFacilityEdit] = useState<FacilityRow | null>(null);
+  const [facilitySaving, setFacilitySaving] = useState(false);
+  const [facilityError, setFacilityError] = useState<string | null>(null);
+
   const [feeCsv, setFeeCsv] = useState('');
   const [feeImporting, setFeeImporting] = useState(false);
   const [bulkPriceOpen, setBulkPriceOpen] = useState(false);
@@ -172,8 +179,9 @@ export function AdminHub({
     }
   }, [adminHubEnabled, activeTab]);
 
+  const clinicName = clinicFacilityLabel || 'your clinic';
   const scopeHint = scope === 'global'
-    ? 'Applies as the default when a clinic has no override. Existing per-clinic rows still win until you save under This clinic.'
+    ? `Applies as the default when a clinic has no override. Existing per-clinic rows still win until you save under ${clinicName}.`
     : `Editing ${scopeLabel || clinicFacilityLabel} (ID ${facilityId}). These values override the global default for this clinic.`;
 
   const statusText = scopeLabel || `Facility ${facilityId}`;
@@ -185,9 +193,9 @@ export function AdminHub({
     setClinicFacilityLabel(data.clinic_facility_label ?? `Facility ${clinicFacilityId}`);
     setSettings(data.settings ?? {});
     setVisitTypes(data.visit_types ?? []);
-    setCalendarCategories(data.calendar_categories ?? []);
     setDirectoryContacts(data.directory_contacts ?? []);
     setDirectoryTypes(data.directory_types ?? []);
+    setFacilities(data.facilities ?? []);
     setFeeSchedule(data.fee_schedule ?? []);
     setFeeCategories(data.categories ?? []);
     setFeeTemplates(data.templates ?? []);
@@ -371,7 +379,6 @@ export function AdminHub({
   const saveVisitType = useCallback(async (payload: {
     id: number;
     label: string;
-    pc_catid: number;
     service_profile: string;
     referral_required: boolean;
     is_default: boolean;
@@ -388,7 +395,6 @@ export function AdminHub({
         },
       });
       setVisitTypes(data.visit_types ?? []);
-      setCalendarCategories(data.calendar_categories ?? calendarCategories);
       setVisitTypeModalOpen(false);
       setSuccessMessage('Visit type saved.');
       setErrorMessage(null);
@@ -397,7 +403,7 @@ export function AdminHub({
     } finally {
       setVisitTypeSaving(false);
     }
-  }, [calendarCategories, facilityId, fetchOptions]);
+  }, [facilityId, fetchOptions]);
 
   const archiveVisitType = useCallback(async (row: VisitTypeRow) => {
     try {
@@ -462,6 +468,58 @@ export function AdminHub({
       setErrorMessage(err instanceof Error ? err.message : 'Delete failed');
     }
   }, [fetchOptions]);
+
+  const openFacilityModal = useCallback((row: FacilityRow | null) => {
+    setFacilityEdit(row);
+    setFacilityError(null);
+    setFacilityModalOpen(true);
+  }, []);
+
+  const saveFacility = useCallback(async (payload: {
+    id: number;
+    name: string;
+    phone: string;
+    email: string;
+    website: string;
+    street: string;
+    city: string;
+    state: string;
+    postal_code: string;
+    country_code: string;
+    color: string;
+    service_location: boolean;
+    billing_location: boolean;
+    inactive: boolean;
+  }) => {
+    setFacilitySaving(true);
+    setFacilityError(null);
+    try {
+      const data = await oeFetch<{
+        facilities: FacilityRow[];
+        scope_label?: string;
+        clinic_facility_label?: string;
+      }>('admin.facility.save', {
+        ...fetchOptions,
+        json: { facility: payload, scope, facility_id: facilityId },
+      });
+      setFacilities(data.facilities ?? []);
+      // Renaming the clinic facility changes the name shown in the scope bar —
+      // refresh those labels in place without reloading the whole settings form.
+      if (data.scope_label !== undefined) {
+        setScopeLabel(data.scope_label);
+      }
+      if (data.clinic_facility_label !== undefined) {
+        setClinicFacilityLabel(data.clinic_facility_label);
+      }
+      setFacilityModalOpen(false);
+      setSuccessMessage('Facility saved.');
+      setErrorMessage(null);
+    } catch (err) {
+      setFacilityError(err instanceof Error ? err.message : 'Save failed');
+    } finally {
+      setFacilitySaving(false);
+    }
+  }, [facilityId, fetchOptions, scope]);
 
   const openFeeModal = useCallback(async (row: FeeScheduleRow | null) => {
     setFeeEdit(row);
@@ -1017,7 +1075,7 @@ export function AdminHub({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="facility">This clinic</SelectItem>
+                <SelectItem value="facility">{clinicFacilityLabel || 'This clinic'}</SelectItem>
                 <SelectItem value="global">All facilities (global default)</SelectItem>
               </SelectContent>
             </Select>
@@ -1101,9 +1159,9 @@ export function AdminHub({
             setupCompleting={setupCompleting}
             healthRefreshing={healthRefreshing}
             visitTypes={visitTypes}
-            calendarCategories={calendarCategories}
             directoryContacts={directoryContacts}
             directoryTypes={directoryTypes}
+            facilities={facilities}
             feeSchedule={feeSchedule}
             feeCsv={feeCsv}
             feeImporting={feeImporting}
@@ -1139,6 +1197,7 @@ export function AdminHub({
             onAddDirectoryContact={() => openDirectoryModal(null)}
             onEditDirectoryContact={(row) => openDirectoryModal(row)}
             onDeleteDirectoryContact={(row) => setPendingConfirm({ type: 'delete_directory_contact', row })}
+            onEditFacility={(row) => openFacilityModal(row)}
           />
         </>
       )}
@@ -1146,7 +1205,6 @@ export function AdminHub({
       <VisitTypeModal
         open={visitTypeModalOpen}
         row={visitTypeEdit}
-        calendarCategories={calendarCategories ?? []}
         feeSchedule={feeSchedule}
         saving={visitTypeSaving}
         error={visitTypeError}
@@ -1222,6 +1280,15 @@ export function AdminHub({
         error={directoryError}
         onClose={() => setDirectoryModalOpen(false)}
         onSave={(payload) => { void saveDirectoryContact(payload); }}
+      />
+
+      <FacilityModal
+        open={facilityModalOpen}
+        row={facilityEdit}
+        saving={facilitySaving}
+        error={facilityError}
+        onClose={() => setFacilityModalOpen(false)}
+        onSave={(payload) => { void saveFacility(payload); }}
       />
     </AdminShell>
   );

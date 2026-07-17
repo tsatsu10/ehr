@@ -130,44 +130,92 @@ class SchemeClaimService
         return is_array($row) ? (string) ($row['name'] ?? '') : '';
     }
 
+    /** @var array<int, string> */
+    private const STATUSES = ['to_submit', 'submitted', 'settled', 'void', 'rejected'];
+
     /**
      * "Scheme claims to submit" list.
      *
      * @return array<int, array<string, mixed>>
      */
-    public function listClaims(int $facilityId, ?string $status = 'to_submit', int $limit = 50, int $offset = 0): array
-    {
+    public function listClaims(
+        int $facilityId,
+        ?string $status = 'to_submit',
+        int $limit = 50,
+        int $offset = 0,
+        int $insuranceCompanyId = 0,
+        ?string $ageBucket = null,
+    ): array {
         $facilityId = $this->visitScope->resolveActorFacilityId($facilityId > 0 ? $facilityId : null);
-        $status = in_array($status, ['to_submit', 'submitted', 'settled', 'void'], true) ? $status : 'to_submit';
+        $status = in_array($status, self::STATUSES, true) ? $status : 'to_submit';
         $limit = min(max($limit, 1), 200);
         $offset = max($offset, 0);
+        $ageBucket = self::normalizeAgeBucket($ageBucket);
+
+        $where = ' WHERE c.facility_id = ? AND c.status = ?';
+        $bind = [$facilityId, $status];
+        if ($insuranceCompanyId > 0) {
+            $where .= ' AND c.insurance_company_id = ?';
+            $bind[] = $insuranceCompanyId;
+        }
+        if ($ageBucket === '0_7') {
+            $where .= ' AND DATEDIFF(CURDATE(), c.created_at) <= 7';
+        } elseif ($ageBucket === '8_30') {
+            $where .= ' AND DATEDIFF(CURDATE(), c.created_at) BETWEEN 8 AND 30';
+        } elseif ($ageBucket === '31_plus') {
+            $where .= ' AND DATEDIFF(CURDATE(), c.created_at) >= 31';
+        }
 
         $rows = QueryUtils::fetchRecords(
-            "SELECT c.id, c.visit_id, c.pid, c.encounter, c.scheme_name, c.membership_number,
-                    c.scheme_owed, c.patient_pay, c.status, c.created_at,
+            "SELECT c.id, c.visit_id, c.pid, c.encounter, c.insurance_company_id, c.scheme_name,
+                    c.membership_number, c.scheme_owed, c.patient_pay, c.status, c.rejection_note,
+                    c.created_at, DATEDIFF(CURDATE(), c.created_at) AS age_days,
                     pd.fname, pd.lname, pd.pubpid
              FROM new_scheme_claim c
              INNER JOIN patient_data pd ON pd.pid = c.pid
-             WHERE c.facility_id = ? AND c.status = ?
+             {$where}
              ORDER BY c.created_at DESC
              LIMIT " . (int) $limit . " OFFSET " . (int) $offset,
-            [$facilityId, $status]
+            $bind
         ) ?: [];
 
         return array_map(static function (array $r): array {
+            $ageDays = (int) ($r['age_days'] ?? 0);
+
             return [
                 'id' => (int) $r['id'],
                 'visit_id' => (int) $r['visit_id'],
                 'display_name' => trim(((string) ($r['fname'] ?? '')) . ' ' . ((string) ($r['lname'] ?? ''))),
                 'pubpid' => (string) ($r['pubpid'] ?? ''),
+                'insurance_company_id' => (int) ($r['insurance_company_id'] ?? 0),
                 'scheme_name' => (string) ($r['scheme_name'] ?? ''),
                 'membership_number' => (string) ($r['membership_number'] ?? ''),
                 'scheme_owed' => round((float) ($r['scheme_owed'] ?? 0), 2),
                 'patient_pay' => round((float) ($r['patient_pay'] ?? 0), 2),
                 'status' => (string) ($r['status'] ?? ''),
+                'rejection_note' => (string) ($r['rejection_note'] ?? ''),
                 'created_at' => (string) ($r['created_at'] ?? ''),
+                'age_days' => $ageDays,
+                'age_bucket' => self::bucketForAge($ageDays),
             ];
         }, $rows);
+    }
+
+    private static function normalizeAgeBucket(?string $bucket): ?string
+    {
+        return in_array($bucket, ['0_7', '8_30', '31_plus'], true) ? $bucket : null;
+    }
+
+    private static function bucketForAge(int $ageDays): string
+    {
+        if ($ageDays <= 7) {
+            return '0_7';
+        }
+        if ($ageDays <= 30) {
+            return '8_30';
+        }
+
+        return '31_plus';
     }
 
     /**
@@ -198,25 +246,35 @@ class SchemeClaimService
     }
 
     /**
-     * Manager transition: to_submit → submitted → settled (or void). Audited.
+     * Manager transition: to_submit → submitted → settled (or void). CBILL-4d also permits
+     * submitted → rejected (with a required free-text reason — NHIS/HMO rejections come back
+     * with little structured detail in practice) → to_submit (correct and resubmit) or void.
+     * Audited.
      *
      * @return array<string, mixed>
      */
-    public function setClaimStatus(int $claimId, string $status, int $actorUserId): array
+    public function setClaimStatus(int $claimId, string $status, int $actorUserId, string $rejectionNote = ''): array
     {
         if (!AclMain::aclCheckCore('new_clinic', 'new_bill_ops_insurance')
             && !AclMain::aclCheckCore('new_clinic', 'new_bill_ops')) {
             throw new \RuntimeException('Forbidden', 403);
         }
-        if (!in_array($status, ['submitted', 'settled', 'void'], true)) {
+        if (!in_array($status, ['to_submit', 'submitted', 'settled', 'void', 'rejected'], true)) {
             throw new \InvalidArgumentException('Invalid claim status');
+        }
+        $rejectionNote = trim($rejectionNote);
+        if ($status === 'rejected' && $rejectionNote === '') {
+            throw new \InvalidArgumentException('A reason is required to mark a claim rejected');
         }
 
         $stampCol = $status === 'submitted' ? 'submitted_at' : ($status === 'settled' ? 'settled_at' : null);
-        $sql = "UPDATE new_scheme_claim SET status = ?"
+        // Resubmitting (rejected -> to_submit) or resolving (-> settled/void) clears the old
+        // note; it only describes the rejection that is being corrected.
+        $noteValue = $status === 'rejected' ? mb_substr($rejectionNote, 0, 2000) : null;
+        $sql = "UPDATE new_scheme_claim SET status = ?, rejection_note = ?"
             . ($stampCol !== null ? ", `{$stampCol}` = NOW()" : '')
             . " WHERE id = ?";
-        QueryUtils::sqlStatementThrowException($sql, [$status, $claimId]);
+        QueryUtils::sqlStatementThrowException($sql, [$status, $noteValue, $claimId]);
 
         EventAuditLogger::getInstance()->newEvent(
             'new_clinic',

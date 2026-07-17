@@ -42,7 +42,8 @@ class ProfilePaymentsSummaryServiceIntegrationTest extends TestCase
         $this->assertArrayHasKey('hidden', $payload);
         $this->assertArrayHasKey('payments_strip_label', $payload);
         $this->assertArrayHasKey('can_view_history', $payload);
-        $this->assertArrayHasKey('ledger_url', $payload);
+        // ledger_url (stock pat_ledger link) removed in the CP-14 dead-field cleanup.
+        $this->assertArrayNotHasKey('ledger_url', $payload);
     }
 
     private function resolveAnyPatientPid(): int

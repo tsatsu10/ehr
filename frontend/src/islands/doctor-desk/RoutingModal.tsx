@@ -19,6 +19,7 @@ import {
 } from '@components/ui/dialog';
 import { Label } from '@components/ui/label';
 import { Textarea } from '@components/ui/textarea';
+import { t } from '@core/i18n';
 import type { DoctorVisit, PatientPreview, RoutingPreview } from '@core/types';
 import { useModalDismiss } from '@components/useModalDismiss';
 import { postDoctorAction } from './postDoctorAction';
@@ -80,7 +81,7 @@ function RoutingModalBody({
     if (blocked || submitting) return;
 
     if (needsLab && needsRx) {
-      setError('Choose lab or pharmacy routing, not both');
+      setError(t('Choose lab or pharmacy routing, not both'));
       return;
     }
 
@@ -106,13 +107,13 @@ function RoutingModalBody({
     if (!result.ok) {
       const data = result.data as { code?: string; encounter_url?: string } | undefined;
       if (result.status === 409 && data?.code === 'encounter_unsigned') {
-        setError(result.message || 'Documentation must be signed first');
+        setError(result.message || t('Documentation must be signed first'));
         if (data.encounter_url) {
           window.open(data.encounter_url, '_blank', 'noopener,noreferrer');
         }
         return;
       }
-      setError(result.message || 'Complete failed');
+      setError(result.message || t('Complete failed'));
       return;
     }
 
@@ -127,8 +128,8 @@ function RoutingModalBody({
         aria-labelledby="nc-doctor-routing-title"
       >
         <DialogHeader>
-          <DialogTitle id="nc-doctor-routing-title">Confirm routing</DialogTitle>
-          <DialogClose aria-label="Close">
+          <DialogTitle id="nc-doctor-routing-title">{t('Confirm routing')}</DialogTitle>
+          <DialogClose aria-label={t('Close')}>
             <span aria-hidden="true">&times;</span>
           </DialogClose>
         </DialogHeader>
@@ -139,7 +140,10 @@ function RoutingModalBody({
             queueNumber={visit.queue_number}
           />
           <p className="text-[var(--oe-nc-text-muted)] text-sm mb-3" id="nc-routing-detected">
-            System detected: {routing.lab_count} lab order(s), {routing.rx_count} Rx today
+            {t('System detected: {labCount} lab order(s), {rxCount} Rx today', {
+              labCount: routing.lab_count,
+              rxCount: routing.rx_count,
+            })}
           </p>
           <div className="flex items-center gap-2 mb-2">
             <Checkbox
@@ -148,7 +152,7 @@ function RoutingModalBody({
               onCheckedChange={(checked) => setNeedsLab(checked === true)}
             />
             <Label htmlFor="nc-routing-lab" className="font-normal cursor-pointer">
-              Send to lab
+              {t('Send to lab')}
             </Label>
           </div>
           <div className="flex items-center gap-2 mb-3">
@@ -158,11 +162,11 @@ function RoutingModalBody({
               onCheckedChange={(checked) => setNeedsRx(checked === true)}
             />
             <Label htmlFor="nc-routing-rx" className="font-normal cursor-pointer">
-              Send to pharmacy
+              {t('Send to pharmacy')}
             </Label>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="nc-routing-notes">Notes (optional)</Label>
+            <Label htmlFor="nc-routing-notes">{t('Notes (optional)')}</Label>
             <Textarea
               id="nc-routing-notes"
               rows={2}
@@ -178,7 +182,7 @@ function RoutingModalBody({
         </DialogBody>
         <DialogFooter>
           <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
+            {t('Cancel')}
           </Button>
           <Button
             type="button"
@@ -186,7 +190,7 @@ function RoutingModalBody({
             disabled={submitting || blocked}
             onClick={() => void handleConfirm()}
           >
-            {submitting ? 'Routing…' : 'Confirm and route'}
+            {submitting ? t('Routing…') : t('Confirm and route')}
           </Button>
         </DialogFooter>
       </DialogContent>

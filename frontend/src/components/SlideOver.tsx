@@ -61,6 +61,22 @@ export function SlideOver({
     return () => window.clearTimeout(t);
   }, [open, initialFocusSelector]);
 
+  // Radix marks <body> `pointer-events: none` while a modal dialog is open and
+  // clears it on close. If the app re-renders during the close (e.g. a save that
+  // also refreshes the page), that cleanup can be skipped and the whole page
+  // stays unclickable ("frozen", other buttons dead). Once this drawer is closed
+  // and no dialog remains open, clear any stuck value so the page stays live.
+  useEffect(() => {
+    if (open) return undefined;
+    const t = window.setTimeout(() => {
+      const stillOpen = document.querySelector('[role="dialog"][data-state="open"]');
+      if (!stillOpen && document.body.style.pointerEvents === 'none') {
+        document.body.style.pointerEvents = '';
+      }
+    }, 350);
+    return () => window.clearTimeout(t);
+  }, [open]);
+
   return (
     <Sheet open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
       <SheetContent

@@ -135,6 +135,62 @@ class ConsultShortcutServiceTest extends TestCase
         $this->assertSame('rx', $result['shortcut']);
     }
 
+    public function testRxShortcutRoutesToNativeFormWhenEnabled(): void
+    {
+        $config = $this->createMock(ClinicConfigService::class);
+        $config->method('getInt')
+            ->willReturnCallback(function (string $key, int $default, int $facilityId): int {
+                return $key === 'enable_native_rx_edit' ? 1 : $default;
+            });
+
+        $completion = $this->createMock(PatientCompletionService::class);
+        $queue = $this->createMock(VisitQueueService::class);
+        $queue->method('getVisitForActor')->with(99)->willReturn($this->visitFixture());
+
+        $service = $this->makeService($config, $completion, $queue);
+        $result = $service->preflight(99, 'rx', 5);
+
+        $this->assertStringContainsString('rx-edit.php', $result['redirect_url']);
+        $this->assertStringContainsString('return_to=doctor', $result['redirect_url']);
+        $this->assertStringNotContainsString('controller.php', $result['redirect_url']);
+    }
+
+    public function testLabShortcutRoutesToNativeFormWhenEnabled(): void
+    {
+        $config = $this->createMock(ClinicConfigService::class);
+        $config->method('getInt')
+            ->willReturnCallback(function (string $key, int $default, int $facilityId): int {
+                return in_array($key, ['enable_lab_ops', 'enable_native_proc_order'], true) ? 1 : $default;
+            });
+
+        $completion = $this->createMock(PatientCompletionService::class);
+        $queue = $this->createMock(VisitQueueService::class);
+        $queue->method('getVisitForActor')->with(99)->willReturn($this->visitFixture());
+
+        $service = $this->makeService($config, $completion, $queue);
+        $result = $service->preflight(99, 'lab', 5);
+
+        $this->assertStringContainsString('proc-order.php', $result['redirect_url']);
+        $this->assertStringContainsString('return_to=doctor', $result['redirect_url']);
+        $this->assertStringNotContainsString('clinical-form-bridge', $result['redirect_url']);
+    }
+
+    public function testLabShortcutUsesStockBridgeWhenNativeDisabled(): void
+    {
+        $config = $this->createMock(ClinicConfigService::class);
+        $config->method('getInt')->willReturn(0);
+
+        $completion = $this->createMock(PatientCompletionService::class);
+        $queue = $this->createMock(VisitQueueService::class);
+        $queue->method('getVisitForActor')->with(99)->willReturn($this->visitFixture());
+
+        $service = $this->makeService($config, $completion, $queue);
+        $result = $service->preflight(99, 'lab', 5);
+
+        $this->assertStringContainsString('clinical-form-bridge.php', $result['redirect_url']);
+        $this->assertStringNotContainsString('proc-order.php', $result['redirect_url']);
+    }
+
     public function testRxAllergyOverrideAuditEventIsRecordedInService(): void
     {
         $body = $this->methodBody(ConsultShortcutService::class, 'assertRxAllergyOverrideAllowed');

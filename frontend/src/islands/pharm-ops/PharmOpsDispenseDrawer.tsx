@@ -40,6 +40,7 @@ export function PharmOpsDispenseDrawer({
   const [form, setForm] = useState<DispenseForm | null>(null);
   const [quantity, setQuantity] = useState('');
   const [fee, setFee] = useState('');
+  const [feeManuallyEdited, setFeeManuallyEdited] = useState(false);
   const [allergyAck, setAllergyAck] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -64,6 +65,7 @@ export function PharmOpsDispenseDrawer({
       const defaultQty = data.drug?.default_quantity ?? data.drug?.qty_remaining ?? 1;
       setQuantity(String(defaultQty));
       setFee(String(data.fee?.amount ?? 0));
+      setFeeManuallyEdited(false);
       setAllergyAck(false);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Could not load dispense form');
@@ -82,6 +84,22 @@ export function PharmOpsDispenseDrawer({
     }
     void loadForm(prescriptionId);
   }, [loadForm, open, prescriptionId]);
+
+  const unitFee = form?.fee?.unit_amount;
+
+  // Keep the fee in step with the dispense qty (e.g. dispensing 8 of 20
+  // because that's all that's in stock) unless the pharmacist has typed
+  // their own fee, in which case their override wins.
+  useEffect(() => {
+    if (feeManuallyEdited || unitFee == null) {
+      return;
+    }
+    const qtyNum = Number(quantity);
+    if (!Number.isFinite(qtyNum) || qtyNum <= 0) {
+      return;
+    }
+    setFee((unitFee * qtyNum).toFixed(2));
+  }, [quantity, unitFee, feeManuallyEdited]);
 
   const handleConfirm = useCallback(async () => {
     if (!prescriptionId || !form) return;
@@ -234,7 +252,26 @@ export function PharmOpsDispenseDrawer({
                 />
               </div>
               <div className="nc-form-group col-span-12 md:col-span-6">
-                <label htmlFor="nc-pharmops-dispense-fee">Fee ({currency})</label>
+                <label htmlFor="nc-pharmops-dispense-fee" className="flex items-center justify-between gap-2">
+                  <span>Fee ({currency})</span>
+                  {feeManuallyEdited && unitFee != null ? (
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs font-normal normal-case"
+                      onClick={() => {
+                        setFeeManuallyEdited(false);
+                        const qtyNum = Number(quantity);
+                        if (Number.isFinite(qtyNum) && qtyNum > 0) {
+                          setFee((unitFee * qtyNum).toFixed(2));
+                        }
+                      }}
+                    >
+                      Use calculated fee
+                    </Button>
+                  ) : null}
+                </label>
                 <Input
                   id="nc-pharmops-dispense-fee"
                   type="number"
@@ -242,7 +279,10 @@ export function PharmOpsDispenseDrawer({
                   step="0.01"
                   className="h-8"
                   value={fee}
-                  onChange={(e) => setFee(e.target.value)}
+                  onChange={(e) => {
+                    setFeeManuallyEdited(true);
+                    setFee(e.target.value);
+                  }}
                 />
               </div>
             </div>

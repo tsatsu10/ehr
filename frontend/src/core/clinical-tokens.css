@@ -1,18 +1,14 @@
 /*
  * OpenEMR 2026 — Clinical Design Tokens
  * ============================================================
- * Professional Clinical Aesthetic for Front Desk Module
- * "Calm Authority" — Trust, professionalism, medical gravitas
+ * Front Desk extension of the core token set.
  *
- * This file extends tokens.css with clinical-specific design system.
- * Import after tokens.css in components that need clinical styling.
+ * "Console 26" retheme (2026-07-16): the color/radius/focus values now
+ * alias the --oe-nc-* Console 26 tokens (system blue accent, hairline
+ * borders, soft rounded curves). The typography/spacing/sizing scales
+ * below are Front Desk-specific density tuning and are unchanged.
  *
- * Design principles applied:
- * - Deeper, more authoritative colors (trust blue vs bright cyan)
- * - Increased typography weight for medical authority
- * - Tighter spacing for high-volume clinic efficiency
- * - Softer shadows for subtle clinical depth
- * - WCAG 2.1 AA compliant (7.2:1+ contrast ratios)
+ * This file extends tokens.css — import it after tokens.css.
  */
 
 :root {
@@ -21,17 +17,17 @@
    * All colors tested for WCAG 2.1 AA compliance on white backgrounds
    */
   
-  /* Primary — Clinical Navy (Clinical Console 2026-07-08) */
-  --oe-clinical-primary:       #1b3a5f;  /* 10.9:1 contrast on white */
-  --oe-clinical-primary-hover: #142c49;  /* Darker on hover */
-  --oe-clinical-primary-light: #46647f;  /* Lighter variant for backgrounds */
-  --oe-clinical-primary-bg:    rgba(27, 58, 95, 0.08); /* 8% opacity for surfaces */
+  /* Primary — Console 26 system blue (retheme 2026-07-16, was Clinical Navy) */
+  --oe-clinical-primary:       var(--oe-nc-primary, #0071e3);
+  --oe-clinical-primary-hover: var(--oe-nc-primary-hover, #0060c0);
+  --oe-clinical-primary-light: #69a9ea;  /* Lighter variant for hover borders/backgrounds */
+  --oe-clinical-primary-bg:    rgba(0, 113, 227, 0.08); /* 8% opacity for surfaces */
 
-  /* Secondary — Steel Slate (subdued accent) */
-  --oe-clinical-secondary:       #46647f;  /* 5.6:1 contrast */
-  --oe-clinical-secondary-hover: #3a5266;
-  --oe-clinical-secondary-light: #7b93a8;
-  --oe-clinical-secondary-bg:    rgba(70, 100, 127, 0.08);
+  /* Secondary — neutral grey ink-2 (subdued accent) */
+  --oe-clinical-secondary:       var(--oe-nc-secondary, #6e6e73);
+  --oe-clinical-secondary-hover: #55555a;
+  --oe-clinical-secondary-light: #9a9aa0;
+  --oe-clinical-secondary-bg:    rgba(110, 110, 115, 0.08);
   
   /* Success — Medical Green (confirmation, health status) */
   --oe-clinical-success:       #047857;  /* 5.1:1 contrast */
@@ -39,34 +35,34 @@
   --oe-clinical-success-light: #10b981;
   --oe-clinical-success-bg:    rgba(4, 120, 87, 0.08);
   
-  /* Danger — Clinical Red (critical, allergies, serious warnings) */
-  --oe-clinical-danger:       #b42318;  /* 6.9:1 contrast */
-  --oe-clinical-danger-hover: #931d13;
-  --oe-clinical-danger-light: #d92d20;
-  --oe-clinical-danger-bg:    rgba(180, 35, 24, 0.08);
+  /* Danger — Console 26 red, text-safe shift of pill red #ff453a */
+  --oe-clinical-danger:       var(--oe-nc-danger, #e0362c);
+  --oe-clinical-danger-hover: #b52b23;
+  --oe-clinical-danger-light: #ff453a;
+  --oe-clinical-danger-bg:    rgba(224, 54, 44, 0.08);
 
-  /* Warning — Clinical Amber (alerts, incomplete, pending) */
-  --oe-clinical-warning:       #b54708;  /* 5.9:1 contrast */
-  --oe-clinical-warning-hover: #93400f;
-  --oe-clinical-warning-light: #f59e0b;
-  --oe-clinical-warning-bg:    rgba(181, 71, 8, 0.08);
+  /* Warning — Console 26 amber, text-safe shift of pill amber #ff9f0a */
+  --oe-clinical-warning:       var(--oe-nc-warning, #c77700);
+  --oe-clinical-warning-hover: #a56300;
+  --oe-clinical-warning-light: #ff9f0a;
+  --oe-clinical-warning-bg:    rgba(199, 119, 0, 0.08);
   
-  /* Surface & Background — Slate Paper */
-  --oe-clinical-surface:       #ffffff;  /* Pure white for cards */
-  --oe-clinical-bg:            #f4f6f8;  /* Slate paper background */
-  --oe-clinical-bg-tint:       #eef1f4;  /* Paper tint */
-  --oe-clinical-bg-muted:      #e2e8ed;  /* Muted background for inactive */
+  /* Surface & Background — Console 26 light grey ground */
+  --oe-clinical-surface:       var(--oe-nc-surface, #ffffff);  /* Pure white for cards */
+  --oe-clinical-bg:            var(--oe-nc-bg, #f5f5f7);       /* Light grey ground */
+  --oe-clinical-bg-tint:       var(--oe-nc-bg-tint, #f5f5f7);  /* Page ground */
+  --oe-clinical-bg-muted:      var(--oe-nc-bg-muted, #ececef); /* Muted background for inactive */
 
-  /* Text — Ink Navy (maximum readability) */
-  --oe-clinical-text:          #1c2733;  /* 14.6:1 contrast — near black */
-  --oe-clinical-text-secondary: #42525f; /* 8.4:1 contrast — secondary text */
-  --oe-clinical-text-muted:    #5b6b7b;  /* 5.6:1 contrast — metadata */
-  --oe-clinical-text-disabled: #93a3b1;  /* disabled states */
+  /* Text — near-black ink (maximum readability) */
+  --oe-clinical-text:          var(--oe-nc-text, #1d1d1f);
+  --oe-clinical-text-secondary: #48484c; /* secondary text */
+  --oe-clinical-text-muted:    var(--oe-nc-text-muted, #6e6e73); /* metadata */
+  --oe-clinical-text-disabled: #a1a1a6;  /* disabled states */
 
   /* Borders — Hairline */
-  --oe-clinical-border:        #d3dce3;  /* Hairline borders */
-  --oe-clinical-border-light:  #e4eaef;  /* Lighter variant */
-  --oe-clinical-border-strong: #9fb0be;  /* Stronger for emphasis */
+  --oe-clinical-border:        var(--oe-nc-border, rgba(0, 0, 0, 0.08));
+  --oe-clinical-border-light:  rgba(0, 0, 0, 0.05);  /* Lighter variant */
+  --oe-clinical-border-strong: var(--oe-nc-border-strong, rgba(0, 0, 0, 0.16));
   
   /* ── Clinical Typography Scale ─────────────────────────────────────────
    * Increased weights for medical authority
@@ -129,22 +125,22 @@
   --oe-clinical-shadow-lg:  0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
   --oe-clinical-shadow-xl:  0 8px 24px rgba(0, 0, 0, 0.10), 0 4px 12px rgba(0, 0, 0, 0.05);
   
-  /* Focus shadows — clinical navy glow */
-  --oe-clinical-shadow-focus: 0 0 0 3px rgba(27, 58, 95, 0.22);
+  /* Focus shadows — Console 26 blue glow */
+  --oe-clinical-shadow-focus: var(--oe-nc-focus-ring, 0 0 0 3px rgba(0, 113, 227, 0.35));
   
   /* Inner shadows for inputs */
   --oe-clinical-shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.05);
   
   /* ── Clinical Border Radius ────────────────────────────────────────────
-   * Subtle rounding for professional appearance
+   * Console 26: soft, continuous curves (retheme 2026-07-16)
    */
-  
+
   --oe-clinical-radius-none: 0;
-  --oe-clinical-radius-sm:   0.125rem; /* 2px — chips, badges */
-  --oe-clinical-radius-md:   0.25rem;  /* 4px — cards, inputs, buttons */
-  --oe-clinical-radius-lg:   0.25rem;  /* 4px — larger cards */
-  --oe-clinical-radius-xl:   0.375rem; /* 6px — modals */
-  --oe-clinical-radius-full: 9999px;   /* Pills, avatars */
+  --oe-clinical-radius-sm:   0.5rem;    /* 8px — chips, badges */
+  --oe-clinical-radius-md:   0.75rem;   /* 12px — cards, inputs, buttons */
+  --oe-clinical-radius-lg:   1.125rem;  /* 18px — larger cards */
+  --oe-clinical-radius-xl:   1.125rem;  /* 18px — modals */
+  --oe-clinical-radius-full: 9999px;    /* Pills, avatars */
   
   /* ── Clinical Motion ───────────────────────────────────────────────────
    * Professional, subtle animations

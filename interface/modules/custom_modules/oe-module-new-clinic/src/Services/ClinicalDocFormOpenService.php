@@ -158,6 +158,113 @@ class ClinicalDocFormOpenService
             ];
         }
 
+        // Native Clinical Instructions editor is the default (no flag) — funnel
+        // every caller (hub card, Add form, Doctor Desk favorites, any deep link)
+        // to the hub with the drawer auto-opened. The in-hub island also
+        // intercepts client-side for a no-reload drawer; this server route covers
+        // the callers that navigate instead.
+        if ($canonicalFormdir === 'clinical_instructions') {
+            $webroot = $GLOBALS['webroot'] ?? '';
+            $modulePublic = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
+            $returnTab = $sourceLens !== '' ? $sourceLens : 'nursing';
+            $redirectUrl = $modulePublic . 'clinical-doc/index.php?'
+                . http_build_query([
+                    'visit_id' => (string) $visitId,
+                    'tab' => $returnTab,
+                    'open_form' => 'clinical_instructions',
+                ]);
+            $this->recordFormOpen($facilityId, $visitId, $encounter, 'clinical_instructions', $formId > 0 ? $formId : null, $actorUserId, 'open');
+
+            return [
+                'redirect_url' => $redirectUrl,
+                'formdir' => 'clinical_instructions',
+                'action' => $action,
+            ];
+        }
+
+        // Primary-care eye exam (flag-gated) — funnel to the hub Specialty lens.
+        if ($canonicalFormdir === 'nc_eye_exam') {
+            $webroot = $GLOBALS['webroot'] ?? '';
+            $modulePublic = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
+            $redirectUrl = $modulePublic . 'clinical-doc/index.php?'
+                . http_build_query([
+                    'visit_id' => (string) $visitId,
+                    'tab' => 'specialty',
+                    'open_form' => 'nc_eye_exam',
+                ]);
+            $this->recordFormOpen($facilityId, $visitId, $encounter, 'nc_eye_exam', $formId > 0 ? $formId : null, $actorUserId, 'open');
+
+            return [
+                'redirect_url' => $redirectUrl,
+                'formdir' => 'nc_eye_exam',
+                'action' => $action,
+            ];
+        }
+
+        // Medical certificate (flag-gated) — funnel to the hub with the drawer
+        // auto-opened; there is no stock fallback page for this formdir.
+        if ($canonicalFormdir === 'nc_certificate') {
+            $webroot = $GLOBALS['webroot'] ?? '';
+            $modulePublic = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
+            $redirectUrl = $modulePublic . 'clinical-doc/index.php?'
+                . http_build_query([
+                    'visit_id' => (string) $visitId,
+                    'tab' => 'visit',
+                    'open_form' => 'nc_certificate',
+                ]);
+            $this->recordFormOpen($facilityId, $visitId, $encounter, 'nc_certificate', $formId > 0 ? $formId : null, $actorUserId, 'open');
+
+            return [
+                'redirect_url' => $redirectUrl,
+                'formdir' => 'nc_certificate',
+                'action' => $action,
+            ];
+        }
+
+        // Native vitals editor is the default (no flag) — funnel every caller to
+        // the hub with the vitals drawer auto-opened, same as instructions.
+        if ($canonicalFormdir === 'vitals') {
+            $webroot = $GLOBALS['webroot'] ?? '';
+            $modulePublic = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
+            $returnTab = $sourceLens !== '' ? $sourceLens : 'nursing';
+            $redirectUrl = $modulePublic . 'clinical-doc/index.php?'
+                . http_build_query([
+                    'visit_id' => (string) $visitId,
+                    'tab' => $returnTab,
+                    'open_form' => 'vitals',
+                ]);
+            $this->recordFormOpen($facilityId, $visitId, $encounter, 'vitals', $formId > 0 ? $formId : null, $actorUserId, 'open');
+
+            return [
+                'redirect_url' => $redirectUrl,
+                'formdir' => 'vitals',
+                'action' => $action,
+            ];
+        }
+
+        // Native screening questionnaires (PHQ-9 / GAD-7) are the default (no
+        // flag). Funnel every caller to the hub Screening lens with the screener
+        // drawer auto-opened — the in-hub island also intercepts client-side, this
+        // route covers deep-links / favorites / any stale-bundle fallback so the
+        // card never lands on the (non-existent) stock form directory.
+        if ($this->catalog->isNativeScreeningFormdir($canonicalFormdir, $facilityId)) {
+            $webroot = $GLOBALS['webroot'] ?? '';
+            $modulePublic = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
+            $redirectUrl = $modulePublic . 'clinical-doc/index.php?'
+                . http_build_query([
+                    'visit_id' => (string) $visitId,
+                    'tab' => 'screening',
+                    'open_form' => $canonicalFormdir,
+                ]);
+            $this->recordFormOpen($facilityId, $visitId, $encounter, $canonicalFormdir, null, $actorUserId, 'open');
+
+            return [
+                'redirect_url' => $redirectUrl,
+                'formdir' => $canonicalFormdir,
+                'action' => $action,
+            ];
+        }
+
         $webroot = $GLOBALS['webroot'] ?? '';
         $modulePublic = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
         $returnTo = strtolower(trim((string) ($body['return_to'] ?? 'hub')));
@@ -233,7 +340,7 @@ class ClinicalDocFormOpenService
     {
         $row = QueryUtils::querySingleRow(
             'SELECT id FROM forms
-             WHERE id = ? AND encounter = ? AND pid = ? AND deleted = 0 AND LOWER(formdir) = ?
+             WHERE form_id = ? AND encounter = ? AND pid = ? AND deleted = 0 AND LOWER(formdir) = ?
              LIMIT 1',
             [$formId, $encounter, $pid, strtolower($formdir)]
         );

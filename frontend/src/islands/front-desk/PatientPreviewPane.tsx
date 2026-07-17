@@ -51,6 +51,7 @@ interface PatientPreviewPaneProps {
   deskWaitingCount?: number;
   arrivedAtMs?: number;
   calendarUrl?: string;
+  enablePayerBilling?: boolean;
 }
 
 function RegistrationContent({
@@ -67,6 +68,7 @@ function RegistrationContent({
   onRegistrationUseExisting,
   onRegistrationCancel,
   onRegistrationDiscardConfirm,
+  enablePayerBilling,
 }: {
   registrationMode: string;
   registrationPid?: number;
@@ -81,6 +83,7 @@ function RegistrationContent({
   onRegistrationUseExisting: (pid: number) => void;
   onRegistrationCancel: () => void;
   onRegistrationDiscardConfirm?: (onProceed: () => void) => void;
+  enablePayerBilling?: boolean;
 }) {
   const formKey = `reg-${registrationPid ?? 'new'}-${registrationPrefill ?? ''}`;
   const useQuickAdd = registrationMode === 'progressive' && !registrationPid;
@@ -118,6 +121,7 @@ function RegistrationContent({
       onCancel={onRegistrationCancel}
       onDiscardConfirm={onRegistrationDiscardConfirm}
       mergeToolBaseUrl={mergeToolBaseUrl}
+      enablePayerBilling={enablePayerBilling}
     />
   );
 }
@@ -154,6 +158,7 @@ function previewBanner(props: PatientPreviewPaneProps, inner?: ReactNode) {
       deskWaitingCount={props.deskWaitingCount}
       arrivedAtMs={props.arrivedAtMs}
       calendarUrl={props.calendarUrl}
+      enablePayerBilling={props.enablePayerBilling}
     />
   );
 }
@@ -176,6 +181,7 @@ export function PatientPreviewPane(props: PatientPreviewPaneProps) {
     onRegistrationUseExisting,
     onRegistrationCancel,
     onRegistrationDiscardConfirm,
+    enablePayerBilling,
   } = props;
 
   const mergeToolBaseUrl = moduleUrl.replace(/\/oe-module-new-clinic.*$/, '') + '/interface/main/manage_dup_patients.php';
@@ -191,6 +197,7 @@ export function PatientPreviewPane(props: PatientPreviewPaneProps) {
       ajaxUrl={ajaxUrl}
       csrfToken={csrfToken}
       mergeToolBaseUrl={mergeToolBaseUrl}
+      enablePayerBilling={enablePayerBilling}
       onRegistrationSaved={onRegistrationSaved}
       onRegistrationUseExisting={onRegistrationUseExisting}
       onRegistrationCancel={onRegistrationCancel}

@@ -6,6 +6,7 @@ import type { CashierPaidTodayRow, CashierQueueCard } from '@core/types';
 import { WaitTimeSpan } from '@components/WaitTimeSpan';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { ChevronRight } from 'lucide-react';
+import { Button } from '@components/ui/button';
 import { CashierQueueCardBadges } from './CashierQueueCardBadges';
 import { CashierPaidTodayList } from './CashierPaidTodayList';
 import { PatientSearchPanel, type PatientSearchHint } from './PatientSearchPanel';
@@ -17,6 +18,8 @@ interface CashierQueueSearchProps {
   blocked: boolean;
   searchHint: PatientSearchHint | null;
   onSelectPatient: (pid: number) => void;
+  /** CP-2 — shown when the deposits/other-payments flag + permission allow it. */
+  onOtherPayment?: () => void;
 }
 
 interface CashierQueueBodyProps {
@@ -33,6 +36,7 @@ export function CashierQueueSearch({
   blocked,
   searchHint,
   onSelectPatient,
+  onOtherPayment,
 }: CashierQueueSearchProps) {
   return (
     <div className="nc-cashier-queue-search">
@@ -43,6 +47,18 @@ export function CashierQueueSearch({
         hint={searchHint}
         onSelectPatient={onSelectPatient}
       />
+      {onOtherPayment && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-2"
+          disabled={blocked}
+          onClick={onOtherPayment}
+        >
+          Record other payment
+        </Button>
+      )}
     </div>
   );
 }
@@ -130,6 +146,7 @@ export function CashierQueue({
   searchHint,
   onSelectVisit,
   onSelectPatient,
+  onOtherPayment,
 }: CashierQueueProps) {
   return (
     <CashierQueuePanel title="Payment queue" count={cards.length}>
@@ -139,6 +156,7 @@ export function CashierQueue({
         blocked={blocked}
         searchHint={searchHint}
         onSelectPatient={onSelectPatient}
+        onOtherPayment={onOtherPayment}
       />
       <CashierQueueBody
         cards={cards}

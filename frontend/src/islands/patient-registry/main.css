@@ -67,7 +67,7 @@
 
 .nc-registry-vars-panel__title {
   margin: 0;
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
   font-size: 1rem;
   font-weight: 600;
   color: var(--oe-nc-text, #1e293b);
@@ -246,7 +246,7 @@
 
 .nc-registry-output-panel__title {
   margin: 0;
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
   font-size: 1rem;
   font-weight: 600;
 }

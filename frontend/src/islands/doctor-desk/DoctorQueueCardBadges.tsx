@@ -3,6 +3,7 @@ import type { DoctorQueueCard } from '@core/types';
 import { RoutingChips } from '@components/RoutingChips';
 import { AncillaryVisitBadges } from '@components/AncillaryVisitBadges';
 import { Badge } from '@components/ui/badge';
+import { t } from '@core/i18n';
 
 interface BadgeItem {
   key: string;
@@ -17,14 +18,14 @@ function collectQueueBadges(card: DoctorQueueCard): BadgeItem[] {
     items.push({
       key: 'urgent',
       priority: 0,
-      node: <Badge variant="warning">URGENT</Badge>,
+      node: <Badge variant="warning">{t('URGENT')}</Badge>,
     });
   }
   if (card.skipped_triage) {
     items.push({
       key: 'skipped-triage',
       priority: 1,
-      node: <Badge variant="neutral">Skipped triage</Badge>,
+      node: <Badge variant="neutral">{t('Skipped triage')}</Badge>,
     });
   }
   if (card.ancillary_badges?.length) {
@@ -38,7 +39,7 @@ function collectQueueBadges(card: DoctorQueueCard): BadgeItem[] {
     items.push({
       key: 'appt',
       priority: 3,
-      node: <Badge variant="info">Appt: {card.assigned_provider_name}</Badge>,
+      node: <Badge variant="info">{t('Appt: {name}', { name: card.assigned_provider_name })}</Badge>,
     });
   }
   if (card.routing_suggested_provider_name) {
@@ -46,8 +47,8 @@ function collectQueueBadges(card: DoctorQueueCard): BadgeItem[] {
       key: 'routing',
       priority: 4,
       node: (
-        <Badge title="Advisory routing suggestion">
-          Routing suggests: {card.routing_suggested_provider_name}
+        <Badge title={t('Advisory routing suggestion')}>
+          {t('Routing suggests: {name}', { name: card.routing_suggested_provider_name })}
         </Badge>
       ),
     });
@@ -60,9 +61,9 @@ function collectQueueBadges(card: DoctorQueueCard): BadgeItem[] {
         <Badge
           variant="neutral"
           className="border-transparent bg-slate-800 text-white"
-          title="Hard-assigned provider"
+          title={t('Hard-assigned provider')}
         >
-          Assigned: {card.hard_assigned_provider_name}
+          {t('Assigned: {name}', { name: card.hard_assigned_provider_name })}
         </Badge>
       ),
     });
@@ -101,7 +102,7 @@ export function DoctorQueueCardBadges({ card }: { card: DoctorQueueCard }) {
       {overflow.length > 0 && (
         <details className="nc-doctor-queue-card__badges-more">
           <summary className="nc-doctor-queue-card__badges-more-trigger">
-            +{overflow.length} more
+            {t('+{count} more', { count: overflow.length })}
           </summary>
           <div className="nc-doctor-queue-card__badges-overflow">
             {overflow.map((item) => (

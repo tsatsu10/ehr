@@ -8,6 +8,7 @@ interface LabOpsWorklistProps {
   onCollect: (orderId: number) => void;
   onEnter: (orderId: number) => void;
   onSendOut: (orderId: number) => void;
+  onReject: (orderId: number) => void;
 }
 
 function emptyMessage(tab: LabOpsTab): string {
@@ -29,6 +30,7 @@ export function LabOpsWorklist({
   onCollect,
   onEnter,
   onSendOut,
+  onReject,
 }: LabOpsWorklistProps) {
   if (!rows.length) {
     return (
@@ -59,8 +61,9 @@ export function LabOpsWorklist({
               ) : null}
             </div>
             <div className="nc-labops-row-meta">{row.test_names}</div>
-            <div className="nc-labops-row-meta">
+            <div className={`nc-labops-row-meta${row.rejected ? ' text-[var(--oe-nc-danger,#dc2626)]' : ''}`}>
               {row.fulfillment_label} · {row.status_label}
+              {row.tat_label ? ` · ${row.tat_label}` : ''}
               {row.ordered_display ? ` · ${row.ordered_display}` : ''}
             </div>
             <div className="nc-labops-row-actions">
@@ -96,6 +99,16 @@ export function LabOpsWorklist({
                   onClick={() => onCollect(row.procedure_order_id)}
                 >
                   Mark collected
+                </Button>
+              ) : null}
+              {canEnter && row.collected && row.review_status !== 'reviewed' && row.fulfillment !== 'send_out' ? (
+                <Button
+                  type="button"
+                  variant="warning"
+                  size="sm"
+                  onClick={() => onReject(row.procedure_order_id)}
+                >
+                  Reject specimen
                 </Button>
               ) : null}
               {canEnter ? (

@@ -11,6 +11,7 @@ import type { FrontDeskPreviewData } from '@core/types';
 import { CompletionRing } from '@components/CompletionRing';
 import { CompletionScorePill } from '@components/CompletionScorePill';
 import { DeskAlert } from '@components/DeskAlert';
+import { EligibilityCheckWidget } from '@components/EligibilityCheckWidget';
 import { PatientContextBanner } from '@components/PatientContextBanner';
 import { bannerPropsFromPreview } from '@components/bannerPreviewProps';
 import { Button } from '@components/ui/button';
@@ -110,6 +111,7 @@ export interface PatientPreviewBannerProps {
   deskWaitingCount?: number;
   arrivedAtMs?: number;
   calendarUrl?: string;
+  enablePayerBilling?: boolean;
 }
 
 // ── PatientPreviewBanner ──────────────────────────────────────────────────────
@@ -140,6 +142,7 @@ export function PatientPreviewBanner({
   deskWaitingCount,
   arrivedAtMs,
   calendarUrl,
+  enablePayerBilling = false,
 }: PatientPreviewBannerProps) {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
@@ -204,6 +207,11 @@ export function PatientPreviewBanner({
         {nhisExpired && (
           <div className="mb-3">
             <Badge variant="warning" title={preview.insurance_label ?? undefined}>Cash (NHIS expired)</Badge>
+          </div>
+        )}
+        {enablePayerBilling && (
+          <div className="mb-3">
+            <EligibilityCheckWidget ajaxUrl={ajaxUrl} csrfToken={csrfToken} pid={pid} enabled={enablePayerBilling} />
           </div>
         )}
         {!activeVisit && recallDue && (

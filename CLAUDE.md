@@ -188,7 +188,11 @@ explicit out-of-scope items.
 - **Wants honesty, not flattery:** "do you think this looks modern, be honest" / "are you sure
   everything was covered" — give real assessments, second-pass audits, and honest limits (e.g.
   scale headroom is 10×–50×, not infinite).
-- **Explain in simple words** for product questions — plain English, no file-name soup.
+- **Always talk in simple, plain English — this is a standing rule, not just for product
+  questions.** Short sentences, everyday words, no file-name soup or jargon dumped into prose.
+  Technical detail (file paths, service names, line numbers) belongs in code blocks or brief
+  asides, not the main explanation. The user has flagged this repeatedly — do not let it slide
+  back once a conversation gets technical.
 - **Naming:** the product is "New Clinic", never "Ghana-this" in docs; neutral regional examples.
   Deliberate exception: the `NEW_CLINIC_PERSONA_*.md` role personas are setting-specific
   composites by design (see the README personas section).

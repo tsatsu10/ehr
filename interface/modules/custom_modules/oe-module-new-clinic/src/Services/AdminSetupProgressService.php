@@ -29,14 +29,21 @@ class AdminSetupProgressService
     /**
      * @return array<string, mixed>
      */
-    public function getProgress(int $facilityId): array
+    /**
+     * @param array<string, mixed>|null $health Pre-computed health status to reuse.
+     *        getHealthStatus() runs a COUNT over the multi-million-row `log` table
+     *        (~0.5-1s); the settings payload already computes it, so pass it in to
+     *        avoid running that scan a second time on the same request.
+     * @return array<string, mixed>
+     */
+    public function getProgress(int $facilityId, ?array $health = null): array
     {
         if ($facilityId < 0) {
             $facilityId = 0;
         }
 
         $manual = $this->manualCompletions($facilityId);
-        $items = $this->buildItems($facilityId, $manual);
+        $items = $this->buildItems($facilityId, $manual, $health);
         $score = 0;
         foreach ($items as $item) {
             if (!empty($item['completed'])) {
@@ -123,7 +130,12 @@ class AdminSetupProgressService
      * @param array<string, string> $manual
      * @return list<array<string, mixed>>
      */
-    private function buildItems(int $facilityId, array $manual): array
+    /**
+     * @param array<string, mixed> $manual
+     * @param array<string, mixed>|null $health Reuse a pre-computed health status when available.
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildItems(int $facilityId, array $manual, ?array $health = null): array
     {
         $cashApplied = (bool) ($this->cashProfile->getProfileStatus($facilityId)['applied'] ?? false);
         $feeCount = count(array_filter(
@@ -138,7 +150,7 @@ class AdminSetupProgressService
             static fn (array $row): bool => (int) ($row['pc_catid'] ?? 0) > 0
         ));
         $reconcileRun = $this->reconciliation->getLatestRun($facilityId);
-        $health = $this->health->getHealthStatus($facilityId);
+        $health ??= $this->health->getHealthStatus($facilityId);
         $backupOk = false;
         foreach ($health['chips'] ?? [] as $chip) {
             if (($chip['key'] ?? '') === 'backup' && ($chip['status'] ?? '') === 'ok') {

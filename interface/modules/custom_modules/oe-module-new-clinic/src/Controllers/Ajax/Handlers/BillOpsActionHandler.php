@@ -18,6 +18,7 @@ use OpenEMR\Modules\NewClinic\Services\BillOpsDaysheetService;
 use OpenEMR\Modules\NewClinic\Services\BillOpsOutstandingService;
 use OpenEMR\Modules\NewClinic\Services\BillOpsPaymentsSearchService;
 use OpenEMR\Modules\NewClinic\Services\PaymentHistoryService;
+use OpenEMR\Modules\NewClinic\Services\PayerPriceService;
 use OpenEMR\Modules\NewClinic\Services\SchemeClaimService;
 
 final class BillOpsActionHandler implements AjaxActionHandlerInterface
@@ -36,6 +37,9 @@ final class BillOpsActionHandler implements AjaxActionHandlerInterface
         'bill_ops.scheme_claims',
         'bill_ops.scheme_claims_export',
         'bill_ops.scheme_claim_status',
+        'bill_ops.payer_prices',
+        'bill_ops.payer_price_upsert',
+        'bill_ops.payer_price_delete',
     ];
 
     public function __construct(
@@ -164,12 +168,15 @@ final class BillOpsActionHandler implements AjaxActionHandlerInterface
                 $this->host->respond(true, 'ok', [
                     'enabled' => $enabled,
                     'status' => $status,
+                    'schemes' => $enabled ? $svc->getSchemes() : [],
                     'rows' => $enabled
                         ? $svc->listClaims(
                             $facilityId,
                             $status,
                             (int) ($params['limit'] ?? 50),
-                            (int) ($params['offset'] ?? 0)
+                            (int) ($params['offset'] ?? 0),
+                            (int) ($params['insurance_company_id'] ?? 0),
+                            isset($params['age_bucket']) ? (string) $params['age_bucket'] : null
                         )
                         : [],
                 ]);
@@ -196,9 +203,51 @@ final class BillOpsActionHandler implements AjaxActionHandlerInterface
                 $result = $this->host->svc(SchemeClaimService::class)->setClaimStatus(
                     (int) ($body['claim_id'] ?? 0),
                     (string) ($body['status'] ?? ''),
-                    $userId
+                    $userId,
+                    (string) ($body['rejection_note'] ?? '')
                 );
                 $this->host->respond(true, 'Claim updated', $result);
+                break;
+            case 'bill_ops.payer_prices':
+                $params = $this->host->readRequestParams($method);
+                $facilityId = $this->host->resolveRequestFacilityId();
+                $svc = $this->host->svc(PayerPriceService::class);
+                $this->host->respond(true, 'ok', [
+                    'enabled' => $svc->isEnabled($facilityId),
+                    'schemes' => $this->host->svc(SchemeClaimService::class)->getSchemes(),
+                    'insurance_company_id' => (int) ($params['insurance_company_id'] ?? 0),
+                    'rows' => (int) ($params['insurance_company_id'] ?? 0) > 0
+                        ? $svc->listOverrides($facilityId, (int) $params['insurance_company_id'])
+                        : [],
+                ]);
+                break;
+            case 'bill_ops.payer_price_upsert':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $saved = $this->host->svc(PayerPriceService::class)->upsertOverride(
+                    $this->host->resolveRequestFacilityId(),
+                    (int) ($body['insurance_company_id'] ?? 0),
+                    (string) ($body['item_code'] ?? ''),
+                    (string) ($body['item_name'] ?? ''),
+                    (float) ($body['price_amount'] ?? 0),
+                    $userId
+                );
+                $this->host->respond(true, 'Price saved', $saved);
+                break;
+            case 'bill_ops.payer_price_delete':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $this->host->svc(PayerPriceService::class)->deleteOverride(
+                    $this->host->resolveRequestFacilityId(),
+                    (int) ($body['id'] ?? 0)
+                );
+                $this->host->respond(true, 'Price removed', []);
                 break;
             default:
                 $this->host->respond(false, 'Unknown action', ['code' => 'not_found'], 404);

@@ -57,6 +57,9 @@ export default tseslint.config(
       'src/islands/proc-order/**/*.{ts,tsx}',
       'src/islands/my-profile/**/*.{ts,tsx}',
       'src/islands/rx-edit/**/*.{ts,tsx}',
+      'src/islands/rx-history/**/*.{ts,tsx}',
+      'src/islands/doctor-desk/**/*.{ts,tsx}',
+      'src/islands/communications-hub/**/*.{ts,tsx}',
     ],
     ignores: ['**/*.test.{ts,tsx}'],
     rules: {

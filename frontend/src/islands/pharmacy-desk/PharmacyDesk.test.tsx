@@ -138,6 +138,40 @@ describe('PharmacyDesk', () => {
     expect(screen.getByText(/Paracetamol 500mg/)).toBeInTheDocument();
   });
 
+  it('labels the Rx list link "Rx history" when it points at the native page', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [waitingVisit],
+        counts: { waiting: 1, in_pharmacy: 0, total: 1 },
+      })
+      .mockResolvedValueOnce({
+        visit: { ...selectData.visit, state: 'ready_for_pharmacy' as const, row_version: 1 },
+        preview: selectData.preview,
+        prescriptions: [],
+      })
+      .mockResolvedValueOnce({
+        ...selectData,
+        rx_list_url: '/interface/modules/custom_modules/oe-module-new-clinic/public/rx-history.php?pid=7',
+      })
+      .mockResolvedValueOnce({
+        ...emptyQueue,
+        visits: [{ ...waitingVisit, state: 'in_pharmacy' as const }],
+        counts: { waiting: 0, in_pharmacy: 1, total: 1 },
+        has_active_work: true,
+      });
+
+    render(<PharmacyDesk {...props} />);
+
+    await waitFor(() => screen.getByText(/Ama Mensah/));
+    fireEvent.click(screen.getByText(/Ama Mensah/));
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'Rx history' })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('link', { name: 'Open Rx list (core)' })).not.toBeInTheDocument();
+  });
+
   it('shows skip to payment when permitted and submits skip action', async () => {
     mockFetch
       .mockResolvedValueOnce({

@@ -44,6 +44,7 @@ const embedContext: ReportHubEmbedContext = {
     canClose: true,
     canOutstanding: true,
     canInsurance: false,
+    canPayerBilling: false,
     reopenOnCorrection: false,
   },
 };

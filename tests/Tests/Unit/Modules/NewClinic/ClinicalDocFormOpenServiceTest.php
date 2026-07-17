@@ -19,6 +19,7 @@ use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\EncounterNoteService;
 use OpenEMR\Modules\NewClinic\Services\EncounterSessionService;
 use OpenEMR\Modules\NewClinic\Services\VisitQueueService;
+use OpenEMR\Common\Database\QueryUtils;
 use PHPUnit\Framework\TestCase;
 
 class ClinicalDocFormOpenServiceTest extends TestCase
@@ -147,6 +148,33 @@ class ClinicalDocFormOpenServiceTest extends TestCase
             'action' => 'edit',
             'form_id' => 123456,
         ], 1);
+    }
+
+    public function testAcceptsEditWhenFormInstanceIsOnEncounter(): void
+    {
+        // The card payload (and every edit URL) carries forms.form_id — the
+        // per-formdir data-table id — NOT forms.id. Rows where the two differ
+        // must still pass the encounter-binding guard.
+        $formsRowId = (int) QueryUtils::sqlInsert(
+            'INSERT INTO forms (date, encounter, form_name, form_id, pid, user, groupname, authorized, deleted, formdir)
+             VALUES (NOW(), ?, ?, ?, ?, ?, ?, 1, 0, ?)',
+            [99999, 'Test SOAP', 987654321, 1, 'phpunit', 'Default', 'soap']
+        );
+
+        try {
+            $service = new ClinicalDocFormOpenService(access: $this->hubEnabledDoctorAccess());
+            $assert = new \ReflectionMethod($service, 'assertFormInstanceOnEncounter');
+
+            $assert->invoke($service, 987654321, 99999, 1, 'soap');
+            $this->addToAssertionCount(1);
+
+            // Same form_id on the wrong encounter must still be rejected.
+            $this->expectException(\InvalidArgumentException::class);
+            $this->expectExceptionMessage('not on this visit');
+            $assert->invoke($service, 987654321, 88888, 1, 'soap');
+        } finally {
+            QueryUtils::sqlStatementThrowException('DELETE FROM forms WHERE id = ?', [$formsRowId]);
+        }
     }
 
     public function testNurseCannotOpenConsultFormWithoutConsultAcl(): void

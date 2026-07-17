@@ -327,6 +327,15 @@ CREATE INDEX `idx_visit_from_state` ON `new_visit_state_log` (`visit_id`, `from_
 CREATE INDEX `new_idx_log_date` ON `log` (`date`);
 #EndIf
 
+# The Admin Hub health chip counts recent FAILED audit rows
+# (`WHERE date >= ? AND success = 0`). success=0 is a tiny fraction of the log
+# (< 0.2%), but the date-only index above still scans every row in the window
+# (~190k in a busy day) to filter success — ~0.7s on the settings page. Leading
+# with the highly-selective `success` column lets it seek the few failures first.
+#IfNotIndex log new_idx_log_success_date
+CREATE INDEX `new_idx_log_success_date` ON `log` (`success`, `date`);
+#EndIf
+
 # Core `billing` ships with only PRIMARY KEY(id) and KEY(pid). The daily-reports
 # unpaid-visits charges total and the cash-by-category breakdown both join/filter on
 # (pid, encounter, activity) per visit — with only a pid index, a long-tenured
@@ -341,6 +350,35 @@ CREATE INDEX `new_idx_billing_pid_encounter_activity` ON `billing` (`pid`, `enco
 # never-pruned sales ledger on every hub load and every poll tick.
 #IfNotIndex drug_sales new_idx_drug_sales_prescription_id
 CREATE INDEX `new_idx_drug_sales_prescription_id` ON `drug_sales` (`prescription_id`);
+#EndIf
+
+# Patient Registry (M10) sorts/columns compute "last visit date" per patient via
+# `SELECT MAX(fe.date) FROM form_encounter fe WHERE fe.pid = ?`. Core form_encounter
+# indexes `pid` alone, so that MAX reads ALL of a patient's encounters; when the
+# "Last visit" sort is used it runs that per matching patient before paging. A
+# (pid, date) index makes each MAX a single index seek to the newest row.
+#IfNotIndex form_encounter new_idx_fe_pid_date
+CREATE INDEX `new_idx_fe_pid_date` ON `form_encounter` (`pid`, `date`);
+#EndIf
+
+# Registry "Diagnosis date" sort and condition filters scan `lists` by
+# (pid, type='medical_problem', activity='1') and MIN(begdate). Core `lists`
+# indexes `pid` and `type` separately, so each lookup reads all of a patient's
+# problem-list rows. This composite makes the dx-date MIN and the condition
+# EXISTS checks index seeks.
+#IfNotIndex lists new_idx_lists_pid_type_activity_begdate
+CREATE INDEX `new_idx_lists_pid_type_activity_begdate` ON `lists` (`pid`, `type`, `activity`, `begdate`);
+#EndIf
+
+# Reporting reads filter the audit `log` by (rare) categories: the Daily Report
+# data-quality tile counts `category='dup_override'` and the Documentation
+# Integrity report pulls `category IN ('new_visit','esign_override')`. Core `log`
+# has no index on `category`, so each of those full-scanned the multi-million-row
+# log (~0.75s and ~3.4s respectively). Leading with the low-cardinality category
+# lets them seek just the handful of matching rows; the trailing `date` keeps the
+# scan ordered/bounded.
+#IfNotIndex log new_idx_log_category_date
+CREATE INDEX `new_idx_log_category_date` ON `log` (`category`, `date`);
 #EndIf
 
 #IfNotRow2D new_completion_field_weight field_key fname level 1
@@ -875,16 +913,37 @@ CREATE TABLE IF NOT EXISTS `new_scheme_claim` (
     `membership_number` VARCHAR(64) NOT NULL DEFAULT '',
     `scheme_owed` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     `patient_pay` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-    `status` ENUM('to_submit','submitted','settled','void') NOT NULL DEFAULT 'to_submit',
+    `status` ENUM('to_submit','submitted','settled','void','rejected') NOT NULL DEFAULT 'to_submit',
     `actor_user_id` BIGINT NOT NULL DEFAULT 0,
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `submitted_at` DATETIME NULL,
     `settled_at` DATETIME NULL,
+    `rejection_note` TEXT NULL,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uniq_visit` (`visit_id`),
+    UNIQUE KEY `uniq_visit_payer` (`visit_id`, `insurance_company_id`),
     KEY `idx_status` (`facility_id`, `status`),
     KEY `idx_created` (`created_at`)
-) ENGINE=InnoDB COMMENT='CBILL-3 insurance scheme claims (manual register)';
+) ENGINE=InnoDB COMMENT='CBILL-3/4c insurance scheme claims (manual register) — one row per visit+payer';
+#EndIf
+
+-- CBILL-4c — existing installs created uniq_visit (visit_id) under CBILL-3, when a visit could
+-- only ever have one payer. Multi-payer needs one claim per (visit, payer) instead.
+#IfNotIndex new_scheme_claim uniq_visit_payer
+ALTER TABLE `new_scheme_claim`
+    DROP INDEX `uniq_visit`,
+    ADD UNIQUE KEY `uniq_visit_payer` (`visit_id`, `insurance_company_id`);
+#EndIf
+
+-- CBILL-4d — a rejected claim (e.g. NHIS queried it) gets a free-text reason; existing installs
+-- need the column added since it wasn't part of the original CBILL-3 CREATE TABLE.
+#IfMissingColumn new_scheme_claim rejection_note
+ALTER TABLE `new_scheme_claim` ADD COLUMN `rejection_note` TEXT NULL AFTER `status`;
+#EndIf
+
+-- CBILL-4d — widen the status ENUM on existing installs to add 'rejected'.
+#IfNotColumnType new_scheme_claim status ENUM('to_submit','submitted','settled','void','rejected')
+ALTER TABLE `new_scheme_claim`
+    MODIFY `status` ENUM('to_submit','submitted','settled','void','rejected') NOT NULL DEFAULT 'to_submit';
 #EndIf
 
 -- Per-line coverage snapshot: which charges the scheme covered vs the patient paid.
@@ -937,6 +996,25 @@ CREATE TABLE IF NOT EXISTS `new_insurance_eligibility_check` (
     PRIMARY KEY (`id`),
     KEY `idx_pid` (`pid`, `checked_at`)
 ) ENGINE=InnoDB COMMENT='CBILL-4b manual eligibility check log (no live API)';
+#EndIf
+
+-- CBILL-4c: a patient can have a second (or third) payer on file besides the primary payer
+-- already captured in the registration meta table (new_patient_meta.insurance_type etc). No
+-- migration of existing data -- the primary payer's fields are untouched; this only ever
+-- holds additional payers.
+#IfNotTable new_patient_payer
+CREATE TABLE IF NOT EXISTS `new_patient_payer` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `pid` BIGINT NOT NULL,
+    `rank` ENUM('secondary','tertiary') NOT NULL DEFAULT 'secondary',
+    `payer_type` ENUM('nhis','private') NOT NULL,
+    `insurance_company_id` INT NULL,
+    `membership_number` VARCHAR(64) NOT NULL DEFAULT '',
+    `expiry_date` DATE NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uniq_pid_rank` (`pid`, `rank`)
+) ENGINE=InnoDB COMMENT='CBILL-4c additional patient payers beyond the primary';
 #EndIf
 
 #IfNotTable new_lab_order_meta
@@ -1394,6 +1472,11 @@ INSERT INTO `registry` (`name`, `state`, `directory`, `sql_run`, `unpackaged`, `
 VALUES ('Consultation note', 1, 'nc_encounter_consult', 0, 1, NOW(), 0, 'Clinical', '', 1, 0, 'encounters|notes');
 #EndIf
 
+#IfNotRow2D registry directory nc_screening
+INSERT INTO `registry` (`name`, `state`, `directory`, `sql_run`, `unpackaged`, `date`, `priority`, `category`, `nickname`, `patient_encounter`, `therapy_group_encounter`, `aco_spec`)
+VALUES ('Screening', 1, 'nc_screening', 0, 1, NOW(), 0, 'Clinical', '', 1, 0, 'encounters|notes');
+#EndIf
+
 #IfNotTable nc_encounter_note
 CREATE TABLE IF NOT EXISTS `nc_encounter_note` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
@@ -1652,6 +1735,121 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_native_rx_history', '0');
 #EndIf
 
+#IfNotTable form_nc_screening
+CREATE TABLE `form_nc_screening` (
+    `id`            BIGINT(21) NOT NULL AUTO_INCREMENT,
+    `date`          DATETIME DEFAULT NULL,
+    `pid`           BIGINT(21) NOT NULL DEFAULT 0,
+    `encounter`     BIGINT(21) NOT NULL DEFAULT 0,
+    `user`          VARCHAR(255) DEFAULT NULL,
+    `groupname`     VARCHAR(255) DEFAULT NULL,
+    `authorized`    TINYINT(4) NOT NULL DEFAULT 0,
+    `activity`      TINYINT(4) NOT NULL DEFAULT 1,
+    `instrument`    VARCHAR(32) NOT NULL,
+    `answers`       TEXT,
+    `total_score`   INT DEFAULT NULL,
+    `severity`      VARCHAR(32) DEFAULT NULL,
+    `flags`         VARCHAR(255) DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    KEY `pid_encounter` (`pid`, `encounter`),
+    KEY `instrument_pid` (`instrument`, `pid`)
+) ENGINE=InnoDB;
+#EndIf
+
+#IfNotTable form_nc_certificate
+CREATE TABLE `form_nc_certificate` (
+    `id`                 BIGINT(21) NOT NULL AUTO_INCREMENT,
+    `date`               DATETIME DEFAULT NULL,
+    `pid`                BIGINT(21) NOT NULL DEFAULT 0,
+    `encounter`          BIGINT(21) NOT NULL DEFAULT 0,
+    `user`               VARCHAR(255) DEFAULT NULL,
+    `groupname`          VARCHAR(255) DEFAULT NULL,
+    `authorized`         TINYINT(4) NOT NULL DEFAULT 0,
+    `activity`           TINYINT(4) NOT NULL DEFAULT 1,
+    `cert_no`            VARCHAR(32) NOT NULL,
+    `cert_type`          VARCHAR(32) NOT NULL,
+    `rest_from`          DATE DEFAULT NULL,
+    `rest_to`            DATE DEFAULT NULL,
+    `remarks`            VARCHAR(500) DEFAULT NULL,
+    `include_diagnosis`  TINYINT(1) NOT NULL DEFAULT 0,
+    `diagnosis_text`     VARCHAR(500) DEFAULT NULL,
+    `issued_by_user_id`  INT NOT NULL DEFAULT 0,
+    `superseded_by`      BIGINT(21) DEFAULT NULL,
+    `print_count`        INT NOT NULL DEFAULT 0,
+    `last_printed_at`    DATETIME DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `cert_no` (`cert_no`),
+    KEY `pid_encounter` (`pid`, `encounter`)
+) ENGINE=InnoDB;
+#EndIf
+
+#IfNotRow2D registry directory nc_certificate
+INSERT INTO `registry` (`name`, `state`, `directory`, `sql_run`, `unpackaged`, `date`, `priority`, `category`, `nickname`, `patient_encounter`, `therapy_group_encounter`, `aco_spec`)
+VALUES ('Medical certificate', 1, 'nc_certificate', 0, 1, NOW(), 0, 'Clinical', '', 1, 0, 'encounters|notes');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_certificate
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_native_certificate', '0');
+#EndIf
+
+#IfNotTable form_nc_eye_exam
+CREATE TABLE `form_nc_eye_exam` (
+    `id`                 BIGINT(21) NOT NULL AUTO_INCREMENT,
+    `date`               DATETIME DEFAULT NULL,
+    `pid`                BIGINT(21) NOT NULL DEFAULT 0,
+    `encounter`          BIGINT(21) NOT NULL DEFAULT 0,
+    `user`               VARCHAR(255) DEFAULT NULL,
+    `groupname`          VARCHAR(255) DEFAULT NULL,
+    `authorized`         TINYINT(4) NOT NULL DEFAULT 0,
+    `activity`           TINYINT(4) NOT NULL DEFAULT 1,
+    `acuity_r_unaided`   VARCHAR(8) DEFAULT NULL,
+    `acuity_l_unaided`   VARCHAR(8) DEFAULT NULL,
+    `acuity_r_pinhole`   VARCHAR(8) DEFAULT NULL,
+    `acuity_l_pinhole`   VARCHAR(8) DEFAULT NULL,
+    `acuity_r_corrected` VARCHAR(8) DEFAULT NULL,
+    `acuity_l_corrected` VARCHAR(8) DEFAULT NULL,
+    `pupils_equal_reactive` TINYINT(1) NOT NULL DEFAULT 1,
+    `rapd_r`             TINYINT(1) NOT NULL DEFAULT 0,
+    `rapd_l`             TINYINT(1) NOT NULL DEFAULT 0,
+    `pupils_note`        VARCHAR(255) DEFAULT NULL,
+    `iop_r`              DECIMAL(5,1) DEFAULT NULL,
+    `iop_l`              DECIMAL(5,1) DEFAULT NULL,
+    `iop_method`         VARCHAR(32) DEFAULT NULL,
+    `antseg_r`           VARCHAR(255) DEFAULT NULL,
+    `antseg_l`           VARCHAR(255) DEFAULT NULL,
+    `antseg_note`        VARCHAR(500) DEFAULT NULL,
+    `fundus_examined_r`  TINYINT(1) NOT NULL DEFAULT 0,
+    `fundus_examined_l`  TINYINT(1) NOT NULL DEFAULT 0,
+    `fundus_r`           VARCHAR(255) DEFAULT NULL,
+    `fundus_l`           VARCHAR(255) DEFAULT NULL,
+    `fundus_note`        VARCHAR(500) DEFAULT NULL,
+    `rx_sph_r`           VARCHAR(8) DEFAULT NULL,
+    `rx_sph_l`           VARCHAR(8) DEFAULT NULL,
+    `rx_cyl_r`           VARCHAR(8) DEFAULT NULL,
+    `rx_cyl_l`           VARCHAR(8) DEFAULT NULL,
+    `rx_axis_r`          SMALLINT DEFAULT NULL,
+    `rx_axis_l`          SMALLINT DEFAULT NULL,
+    `rx_add_r`           VARCHAR(8) DEFAULT NULL,
+    `rx_add_l`           VARCHAR(8) DEFAULT NULL,
+    `rx_pd`              VARCHAR(8) DEFAULT NULL,
+    `impression`         VARCHAR(1000) DEFAULT NULL,
+    `refer`              TINYINT(1) NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    KEY `pid_encounter` (`pid`, `encounter`)
+) ENGINE=InnoDB;
+#EndIf
+
+#IfNotRow2D registry directory nc_eye_exam
+INSERT INTO `registry` (`name`, `state`, `directory`, `sql_run`, `unpackaged`, `date`, `priority`, `category`, `nickname`, `patient_encounter`, `therapy_group_encounter`, `aco_spec`)
+VALUES ('Eye exam', 1, 'nc_eye_exam', 0, 1, NOW(), 0, 'Clinical', '', 1, 0, 'encounters|notes');
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_eye_exam
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_native_eye_exam', '0');
+#EndIf
+
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_debootstrap_shell
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_debootstrap_shell', '0');
@@ -1735,4 +1933,25 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 #IfNotRow2D new_clinic_config facility_id 0 config_key retention_notify_log_days
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'retention_notify_log_days', '730');
+#EndIf
+
+-- Patient Chart "Chat" tab (staff-facing UI first — persisted thread only,
+-- no SMS/WhatsApp delivery yet). direction='out' is staff-authored;
+-- direction='in' is reserved for a future inbound-message provider.
+#IfNotTable new_clinic_patient_chat_message
+CREATE TABLE IF NOT EXISTS `new_clinic_patient_chat_message` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `pid` BIGINT NOT NULL,
+    `direction` ENUM('out', 'in') NOT NULL DEFAULT 'out',
+    `body` TEXT NOT NULL,
+    `author_user_id` BIGINT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_pid_created` (`pid`, `created_at`)
+) ENGINE=InnoDB COMMENT='Patient chart Chat tab thread (staff-facing UI, not yet wired to a delivery provider)';
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_patient_chat
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_patient_chat', '0');
 #EndIf

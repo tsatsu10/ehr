@@ -19,6 +19,14 @@ class CommunicationsHubService
     private const LIST_LIMIT_DEFAULT = 25;
     private const LIST_LIMIT_MAX = 50;
     private const REMINDER_WINDOW_DAYS = 30;
+    /**
+     * Stock getPnotesByUser() has no text-search argument, so a keyword search has
+     * to fetch rows and match in PHP. Cap that scan at the most-recent N messages
+     * (in the current sort) instead of loading a user's ENTIRE note history into
+     * memory; the UI surfaces `search_truncated` so staff know to narrow filters
+     * if a match might be older than the window.
+     */
+    private const SEARCH_SCAN_MAX = 5000;
 
     public function assertNotesAcl(): void
     {
@@ -66,18 +74,33 @@ class CommunicationsHubService
         $limit = min(max((int) ($filters['limit'] ?? self::LIST_LIMIT_DEFAULT), 1), self::LIST_LIMIT_MAX);
         $search = trim((string) ($filters['q'] ?? ''));
 
+        $searchTruncated = false;
         if ($search !== '') {
-            $result = getPnotesByUser($activity, $showAll, $authUser, false, $sortby, $sortorder);
+            // Bounded scan: pull at most SEARCH_SCAN_MAX rows (in the current sort)
+            // rather than a user's whole note history, then filter in PHP.
+            $result = getPnotesByUser(
+                $activity,
+                $showAll,
+                $authUser,
+                false,
+                $sortby,
+                $sortorder,
+                '0',
+                (string) self::SEARCH_SCAN_MAX
+            );
+            $scanned = 0;
             $matched = [];
             while ($row = sqlFetchArray($result)) {
                 if (!is_array($row)) {
                     continue;
                 }
+                $scanned++;
                 $mapped = $this->mapMessageRow($row);
                 if ($this->rowMatchesSearch($mapped, $search)) {
                     $matched[] = $mapped;
                 }
             }
+            $searchTruncated = $scanned >= self::SEARCH_SCAN_MAX;
             $total = count($matched);
             $rows = array_slice($matched, $begin, $limit);
         } else {
@@ -93,6 +116,10 @@ class CommunicationsHubService
             }
         }
 
+        // Stock getPnotesByUser() does not select the note body, so fill the
+        // inbox-row preview snippets in one bounded query over the current page.
+        $rows = $this->attachPreviews($rows);
+
         return [
             'rows' => $rows,
             'total' => $total,
@@ -100,6 +127,8 @@ class CommunicationsHubService
             'limit' => $limit,
             'show_all' => $showAll === 'yes',
             'admin_read_only' => $showAll === 'yes',
+            'search_truncated' => $searchTruncated,
+            'search_scan_max' => self::SEARCH_SCAN_MAX,
         ];
     }
 
@@ -126,15 +155,30 @@ class CommunicationsHubService
             throw new \RuntimeException('Forbidden', 403);
         }
 
+        // Opening an unread message you own marks it Read, like email/chat.
+        // This is a one-row write on an explicit user open (not a poll), and a
+        // supervisory admin peeking at someone else's message never changes it.
+        $currentStatus = trim((string) ($note['message_status'] ?? ''));
+        $markedRead = false;
+        if ($isOwner && $currentStatus === 'New') {
+            updatePnoteMessageStatus($noteId, 'Read');
+            $currentStatus = 'Read';
+            $markedRead = true;
+        }
+
         $pid = (int) ($note['pid'] ?? 0);
         $patientName = $pid > 0 ? $this->formatPatientName($pid) : '';
         $body = (string) ($note['body'] ?? '');
+        // Escape FIRST, then linkify — stock pnoteConvertLinks does not escape,
+        // so linkifying the raw body would render note markup verbatim (XSS).
+        $escapedBody = nl2br(htmlspecialchars($body, ENT_QUOTES, 'UTF-8'));
         $threadHtml = function_exists('pnoteConvertLinks')
-            ? pnoteConvertLinks($body)
-            : nl2br(htmlspecialchars($body, ENT_QUOTES, 'UTF-8'));
+            ? pnoteConvertLinks($escapedBody)
+            : $escapedBody;
 
         return [
             'id' => $noteId,
+            'turns' => $this->parseThreadTurns($body, (string) ($note['user'] ?? ''), $authUser),
             'from_name' => $this->formatUserName((string) ($note['user'] ?? '')),
             'assigned_to' => (string) ($note['assigned_to'] ?? ''),
             'patient_name' => $patientName,
@@ -142,20 +186,15 @@ class CommunicationsHubService
             'patient_unassigned' => $pid <= 0,
             'can_assign_patient' => $isOwner && $pid <= 0,
             'type' => trim((string) ($note['title'] ?? '')) ?: 'Message',
-            'status' => trim((string) ($note['message_status'] ?? '')) ?: null,
+            'status' => $currentStatus ?: null,
+            'marked_read' => $markedRead,
             'date' => (string) ($note['date'] ?? ''),
             'date_display' => $this->formatDateTime($note['date'] ?? null),
             'thread_html' => '<div class="msg-thread">' . $threadHtml . '</div>',
             'can_reply' => $isOwner,
-            'legacy_reply_url' => $isOwner
-                ? ($GLOBALS['webroot'] ?? '')
-                . '/interface/main/messages/messages.php?form_active=1&noteid='
-                . urlencode((string) $noteId)
-                : null,
             'can_delete' => $isOwner && $this->messageDeletableByUser($note, $authUser),
             'can_mark_done' => $isOwner,
             'can_change_status' => $isOwner,
-            'message_statuses' => $isOwner ? $this->fetchListOptions('message_status') : [],
             'is_supervisory_read' => $adminSupervisory,
             'supervisory_banner' => $adminSupervisory
                 ? 'You are viewing another user\'s message as an administrator. Reply and delete are disabled.'
@@ -377,7 +416,9 @@ class CommunicationsHubService
             throw new \InvalidArgumentException('Message body is required');
         }
 
-        $noteType = trim((string) ($payload['note_type'] ?? 'Unassigned')) ?: 'Unassigned';
+        $noteTypeProvided = array_key_exists('note_type', $payload)
+            && trim((string) $payload['note_type']) !== '';
+        $noteType = $noteTypeProvided ? trim((string) $payload['note_type']) : 'Unassigned';
         $messageStatus = trim((string) ($payload['message_status'] ?? 'New')) ?: 'New';
         $pid = max(0, (int) ($payload['pid'] ?? 0));
         $replyNoteId = (int) ($payload['reply_note_id'] ?? 0);
@@ -388,9 +429,14 @@ class CommunicationsHubService
             if (!$this->canReplyToNote($replyNoteId, $authUser)) {
                 throw new \RuntimeException('Forbidden', 403);
             }
+            $note = getPnoteById($replyNoteId);
             if ($assignedTo === []) {
-                $note = getPnoteById($replyNoteId);
                 $assignedTo = [trim((string) ($note['assigned_to'] ?? ''))];
+            }
+            // An inline chat reply carries no type; keep the conversation's own type
+            // rather than resetting it to "Unassigned".
+            if (!$noteTypeProvided) {
+                $noteType = trim((string) ($note['title'] ?? '')) ?: 'Unassigned';
             }
             $assignee = $assignedTo[0] ?? '';
             if ($assignee === '') {
@@ -972,9 +1018,148 @@ class CommunicationsHubService
             'status_title' => $status !== '' ? $status : 'Active',
             'date' => (string) ($row['date'] ?? ''),
             'date_display' => $this->formatDateTime($row['date'] ?? null),
+            // Body snippet is filled by attachPreviews() — the list query omits body.
             'preview' => '',
             'is_unread' => $status === 'New',
         ];
+    }
+
+    /**
+     * Fill each mapped row's 'preview' with a snippet of its note body.
+     * One bounded "id IN (…)" query over the current page — the stock list
+     * query does not return the body column.
+     *
+     * @param list<array<string, mixed>> $rows
+     * @return list<array<string, mixed>>
+     */
+    private function attachPreviews(array $rows): array
+    {
+        $ids = [];
+        foreach ($rows as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+        if ($ids === []) {
+            return $rows;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $result = sqlStatement(
+            "SELECT id, body FROM pnotes WHERE id IN ($placeholders)",
+            $ids
+        );
+        $bodies = [];
+        while ($row = sqlFetchArray($result)) {
+            $bodies[(int) $row['id']] = (string) ($row['body'] ?? '');
+        }
+
+        foreach ($rows as &$row) {
+            $id = (int) ($row['id'] ?? 0);
+            if (isset($bodies[$id])) {
+                $row['preview'] = $this->buildPreview($bodies[$id]);
+            }
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    /**
+     * Split a pnote body into chat turns. Each turn is written by addPnote/
+     * updatePnote as "YYYY-MM-DD HH:MM (author[ to assigned]) text", one per
+     * line-ish; a reply appends another. We split on that leading stamp so the
+     * UI can render each as a chat bubble aligned by author.
+     *
+     * @return list<array{author: string, is_self: bool, time_label: string, text: string}>
+     */
+    private function parseThreadTurns(string $body, string $noteOwner, string $authUser): array
+    {
+        $body = trim($body);
+        if ($body === '') {
+            return [];
+        }
+
+        // Match each "YYYY-MM-DD HH:MM (author...) " marker and its following text.
+        $pattern = '/(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\s*\(([^)]*)\)\s*/';
+        if (preg_match($pattern, $body) !== 1) {
+            // No stamps (legacy/plain body) — treat the whole thing as one turn.
+            return [[
+                'author' => $this->formatUserName($noteOwner),
+                'is_self' => strcasecmp($noteOwner, $authUser) === 0,
+                'time_label' => '',
+                'text' => $body,
+            ]];
+        }
+
+        $turns = [];
+        $matches = [];
+        preg_match_all($pattern, $body, $matches, PREG_OFFSET_CAPTURE);
+        $count = count($matches[0]);
+
+        // Text before the first stamp is the original (unstamped) message —
+        // keep it as a leading turn so it doesn't vanish once a reply is appended.
+        $firstStart = (int) $matches[0][0][1];
+        if ($firstStart > 0) {
+            $preamble = trim(substr($body, 0, $firstStart));
+            if ($preamble !== '') {
+                $turns[] = [
+                    'author' => $this->formatUserName($noteOwner) ?: $noteOwner,
+                    'is_self' => strcasecmp($noteOwner, $authUser) === 0,
+                    'time_label' => '',
+                    'text' => $preamble,
+                ];
+            }
+        }
+
+        for ($i = 0; $i < $count; $i++) {
+            [$whole, $start] = $matches[0][$i];
+            $stamp = $matches[1][$i][0];
+            $authorRaw = trim($matches[2][$i][0]);
+            $textStart = $start + strlen($whole);
+            $textEnd = $i + 1 < $count ? (int) $matches[0][$i + 1][1] : strlen($body);
+            $text = trim(substr($body, $textStart, $textEnd - $textStart));
+            if ($text === '') {
+                // A stamp with no following text — nothing to show as a bubble.
+                continue;
+            }
+
+            // "(author to assigned)" — the sender is the part before " to ".
+            $author = $authorRaw;
+            if (($pos = stripos($authorRaw, ' to ')) !== false) {
+                $author = trim(substr($authorRaw, 0, $pos));
+            }
+
+            $turns[] = [
+                'author' => $this->formatUserName($author) ?: $author,
+                'is_self' => strcasecmp($author, $authUser) === 0,
+                'time_label' => $this->formatDateTime($stamp) ?? $stamp,
+                'text' => $text,
+            ];
+        }
+
+        return $turns;
+    }
+
+    /** Plain-text one-line snippet of a note body for list rows. */
+    private function buildPreview(string $body): string
+    {
+        // pnote bodies can carry a "|user|date|" audit prefix + HTML links.
+        $text = preg_replace('/\|[^|]*\|[^|]*\|/', ' ', $body) ?? $body;
+
+        // Threads accumulate "YYYY-MM-DD HH:MM (author to x) reply" turns; preview
+        // the newest turn (text after the last stamp), like a chat inbox row.
+        $stamp = '/\d{4}-\d{2}-\d{2} \d{2}:\d{2}\s*\([^)]*\)\s*/';
+        if (preg_match_all($stamp, $text, $m, PREG_OFFSET_CAPTURE) >= 1) {
+            [$whole, $start] = $m[0][count($m[0]) - 1];
+            $text = substr($text, $start + strlen($whole));
+        }
+
+        $text = trim(html_entity_decode(strip_tags($text), ENT_QUOTES, 'UTF-8'));
+        $text = (string) preg_replace('/\s+/', ' ', $text);
+
+        return $this->clipText($text, 120);
     }
 
     /**
@@ -1063,7 +1248,9 @@ class CommunicationsHubService
         }
 
         try {
-            return (new \DateTime($date))->format('j M Y g:i A');
+            // Regional convention is DD/MM/YYYY + 24h (PRD) — this was the only
+            // surface still rendering "16 Jul 2026 10:00 PM".
+            return (new \DateTime($date))->format('d/m/Y H:i');
         } catch (\Exception) {
             return null;
         }

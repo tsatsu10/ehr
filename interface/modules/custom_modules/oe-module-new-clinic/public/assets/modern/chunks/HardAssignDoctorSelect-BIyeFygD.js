@@ -1,0 +1,2 @@
+import{f as e,y as t}from"./dist-BQ-rlMkt.js";import{t as n}from"./native-select-DM83M6NG.js";var r=t();function i({id:t,doctors:i,value:a,onChange:o,disabled:s=!1,className:c}){return(0,r.jsxs)(n,{id:t,className:e(`h-8`,c),value:a,disabled:s,onChange:e=>o(e.target.value),children:[(0,r.jsx)(`option`,{value:``,children:`Shared pool — no hard assignment`}),i.map(e=>(0,r.jsxs)(`option`,{value:String(e.user_id),children:[e.display_name,e.taking_patients?``:` (not taking patients)`]},e.user_id))]})}export{i as t};
+//# sourceMappingURL=HardAssignDoctorSelect-BIyeFygD.js.map

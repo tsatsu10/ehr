@@ -63,7 +63,10 @@ class LabShortcutService
                     $encounter,
                     $modulePublic . 'lab.php'
                 ),
-            'results' => ($GLOBALS['webroot'] ?? '') . '/interface/patient_file/summary/labdata.php?set_pid=' . urlencode((string) $pid),
+            // Native chart labs section (the chart resolver already handles the
+            // lab role) — replaces the stock labdata screen.
+            'results' => $modulePublic . 'patient-chart.php?pid=' . urlencode((string) $pid)
+                . '&tab=clinical&anchor=clinical-labs',
         };
 
         $this->identityStrip->markFromShortcut($visitId, 'lab', $shortcut);

@@ -64,9 +64,9 @@ class ClinicalDocDocumentationStatusServiceTest extends TestCase
                     parent::__construct(catalog: $catalog, config: $this->testConfig);
                 }
 
-                public function isFormdirSignedOnEncounter(int $encounterId, int $pid, string $formdir): bool
+                public function getSignedFormdirsOnEncounter(int $encounterId, int $pid, array $formdirs): array
                 {
-                    return false;
+                    return [];
                 }
             };
 
@@ -122,9 +122,9 @@ class ClinicalDocDocumentationStatusServiceTest extends TestCase
                     parent::__construct(catalog: $catalog, config: $this->testConfig);
                 }
 
-                public function isFormdirSignedOnEncounter(int $encounterId, int $pid, string $formdir): bool
+                public function getSignedFormdirsOnEncounter(int $encounterId, int $pid, array $formdirs): array
                 {
-                    return false;
+                    return [];
                 }
             };
 
@@ -158,9 +158,14 @@ class ClinicalDocDocumentationStatusServiceTest extends TestCase
     {
         $config = new ClinicConfigService();
         $sign = new class extends EncounterSignService {
-            public function isFormdirSignedOnEncounter(int $encounterId, int $pid, string $formdir): bool
+            public function getSignedFormdirsOnEncounter(int $encounterId, int $pid, array $formdirs): array
             {
-                return true;
+                $signed = [];
+                foreach ($formdirs as $formdir) {
+                    $signed[strtolower((string) $formdir)] = true;
+                }
+
+                return $signed;
             }
         };
 

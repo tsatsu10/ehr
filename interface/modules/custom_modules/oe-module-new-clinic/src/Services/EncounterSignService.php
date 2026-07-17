@@ -218,30 +218,79 @@ class EncounterSignService
         return $formdir;
     }
 
+    /**
+     * Batched sibling of isFormdirSignedOnEncounter(): of the given formdirs, which
+     * have a signed (e-sign locked) latest form on the encounter. Runs one forms
+     * query + one esign query instead of the two-per-formdir the single-form check
+     * does — callers checking a whole required-forms set (documentation status,
+     * whole-encounter signed) should use this to avoid an N+1. Same semantics as
+     * isFormdirSignedOnEncounter (latest non-deleted form by date, esign is_lock=1).
+     *
+     * @param list<string> $formdirs
+     * @return array<string, true>  set of lower(formdir) that are signed
+     */
+    public function getSignedFormdirsOnEncounter(int $encounterId, int $pid, array $formdirs): array
+    {
+        $wanted = [];
+        foreach ($formdirs as $formdir) {
+            $lc = strtolower(trim((string) $formdir));
+            if ($lc !== '') {
+                $wanted[$lc] = true;
+            }
+        }
+        if ($wanted === []) {
+            return [];
+        }
+
+        $keys = array_keys($wanted);
+        $formPlaceholders = implode(',', array_fill(0, count($keys), '?'));
+        $rows = QueryUtils::fetchRecords(
+            "SELECT id, LOWER(formdir) AS fd FROM forms
+             WHERE encounter = ? AND pid = ? AND deleted = 0 AND LOWER(formdir) IN ($formPlaceholders)
+             ORDER BY date DESC, id DESC",
+            array_merge([$encounterId, $pid], $keys)
+        ) ?: [];
+
+        $latestByFormdir = [];
+        foreach ($rows as $row) {
+            $fd = (string) ($row['fd'] ?? '');
+            if ($fd === '' || isset($latestByFormdir[$fd])) {
+                continue; // first seen is the latest (ordered by date DESC)
+            }
+            $latestByFormdir[$fd] = (int) ($row['id'] ?? 0);
+        }
+
+        $formIds = array_values(array_filter($latestByFormdir, static fn (int $id): bool => $id > 0));
+        if ($formIds === []) {
+            return [];
+        }
+
+        $signPlaceholders = implode(',', array_fill(0, count($formIds), '?'));
+        $signedRows = QueryUtils::fetchRecords(
+            "SELECT tid FROM esign_signatures
+             WHERE tid IN ($signPlaceholders) AND `table` = 'forms' AND is_lock = 1",
+            $formIds
+        ) ?: [];
+        $signedIds = [];
+        foreach ($signedRows as $row) {
+            $signedIds[(int) ($row['tid'] ?? 0)] = true;
+        }
+
+        $signed = [];
+        foreach ($latestByFormdir as $fd => $id) {
+            if (isset($signedIds[$id])) {
+                $signed[$fd] = true;
+            }
+        }
+
+        return $signed;
+    }
+
     public function isFormdirSignedOnEncounter(int $encounterId, int $pid, string $formdir): bool
     {
-        $row = QueryUtils::querySingleRow(
-            'SELECT id FROM forms
-             WHERE encounter = ? AND pid = ? AND deleted = 0 AND LOWER(formdir) = ?
-             ORDER BY date DESC LIMIT 1',
-            [$encounterId, $pid, strtolower($formdir)]
+        return isset(
+            $this->getSignedFormdirsOnEncounter($encounterId, $pid, [$formdir])[strtolower($formdir)]
         );
-        if (!is_array($row)) {
-            return false;
-        }
-
-        $formsRowId = (int) ($row['id'] ?? 0);
-        if ($formsRowId <= 0) {
-            return false;
-        }
-
-        $signed = QueryUtils::querySingleRow(
-            "SELECT tid FROM esign_signatures
-             WHERE tid = ? AND `table` = 'forms' AND is_lock = 1 LIMIT 1",
-            [$formsRowId]
-        );
-
-        return is_array($signed);
     }
 
     /**

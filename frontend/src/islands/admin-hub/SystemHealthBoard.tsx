@@ -51,7 +51,7 @@ function overallLabel(status: SystemHealthPayload['overall_status']): string {
 }
 
 function overallClass(status: SystemHealthPayload['overall_status']): string {
-  if (status === 'ok') return 'text-green-600';
+  if (status === 'ok') return 'text-[var(--color-oe-cta,#2bb350)]';
   if (status === 'warning') return 'text-[var(--color-oe-warning,#ea580c)]';
   return 'text-[var(--oe-nc-danger,#dc2626)]';
 }
@@ -119,9 +119,9 @@ function HealthChipCard({
         {chip.key === 'backup' && showCompleteBackup && (
           <Button
             type="button"
-            variant="outline"
+            variant="ctaOutline"
             size="sm"
-            className="self-start border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+            className="self-start"
             disabled={backupCompleting}
             onClick={onCompleteBackup}
           >

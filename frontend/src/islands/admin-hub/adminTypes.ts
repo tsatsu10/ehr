@@ -21,15 +21,9 @@ export interface AdminHubProps {
   clinicFacilityId: number;
 }
 
-export interface CalendarCategory {
-  pc_catid: number | string;
-  name: string;
-}
-
 export interface VisitTypeRow {
   id: number;
   label: string;
-  pc_catid: number;
   service_profile: string;
   referral_required: boolean;
   is_default: boolean;
@@ -72,6 +66,23 @@ export interface DirectoryContactRow {
   fax: string;
   email: string;
   notes: string;
+}
+
+export interface FacilityRow {
+  id: number;
+  name: string;
+  phone: string;
+  email: string;
+  website: string;
+  street: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country_code: string;
+  color: string;
+  service_location: boolean;
+  billing_location: boolean;
+  inactive: boolean;
 }
 
 export interface FeeCategoryOption {
@@ -384,10 +395,10 @@ export interface AdminConfigPayload {
   clinic_facility_label?: string;
   settings: Record<string, unknown>;
   visit_types?: VisitTypeRow[];
-  calendar_categories?: CalendarCategory[];
   fee_schedule?: FeeScheduleRow[];
   directory_contacts?: DirectoryContactRow[];
   directory_types?: DirectoryContactType[];
+  facilities?: FacilityRow[];
   categories?: FeeCategoryOption[];
   templates?: FeeTemplate[];
   billing_code_types?: BillingCodeType[];

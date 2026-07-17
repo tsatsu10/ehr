@@ -19,8 +19,13 @@ use OpenEMR\Modules\NewClinic\Services\ClinicalDocAccessService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocCatalogService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocFormOpenService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocVisitSummaryService;
+use OpenEMR\Modules\NewClinic\Services\ClinicalInstructionsEditorService;
 use OpenEMR\Modules\NewClinic\Services\EncounterNoteService;
 use OpenEMR\Modules\NewClinic\Services\ProcedureOrderFormService;
+use OpenEMR\Modules\NewClinic\Services\CertificateService;
+use OpenEMR\Modules\NewClinic\Services\EyeExamService;
+use OpenEMR\Modules\NewClinic\Services\ScreeningAssessmentService;
+use OpenEMR\Modules\NewClinic\Services\VitalsEditorService;
 
 final class ClinicalDocActionHandler implements AjaxActionHandlerInterface
 {
@@ -42,6 +47,16 @@ final class ClinicalDocActionHandler implements AjaxActionHandlerInterface
         'encounter_note.unlock',
         'proc_order.form_data',
         'proc_order.save',
+        'clinical_doc.instructions_get',
+        'clinical_doc.instructions_save',
+        'clinical_doc.screening_get',
+        'clinical_doc.screening_save',
+        'clinical_doc.vitals_get',
+        'clinical_doc.vitals_save',
+        'clinical_doc.certificate_get',
+        'clinical_doc.certificate_save',
+        'clinical_doc.eye_exam_get',
+        'clinical_doc.eye_exam_save',
     ];
 
     public function __construct(
@@ -311,6 +326,157 @@ final class ClinicalDocActionHandler implements AjaxActionHandlerInterface
                 try {
                     $payload = $this->host->svc(ProcedureOrderFormService::class)->saveOrder($body, $userId);
                     $this->host->respond(true, 'Order saved', $payload);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                } catch (\RuntimeException $e) {
+                    $code = (int) ($e->getCode() ?: 403);
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                }
+                break;
+            case 'clinical_doc.instructions_get':
+                $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                try {
+                    $payload = $this->host->svc(ClinicalInstructionsEditorService::class)
+                        ->getInstructions($visitId, $userId);
+                    $this->host->respond(true, 'ok', $payload);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                } catch (\RuntimeException $e) {
+                    $code = (int) ($e->getCode() ?: 403);
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                }
+                break;
+            case 'clinical_doc.instructions_save':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                try {
+                    $payload = $this->host->svc(ClinicalInstructionsEditorService::class)
+                        ->saveInstructions($body, $userId);
+                    $this->host->respond(true, 'Saved', $payload);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                } catch (\RuntimeException $e) {
+                    $code = (int) ($e->getCode() ?: 403);
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                }
+                break;
+            case 'clinical_doc.screening_get':
+                $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                $instrument = (string) ($_REQUEST['instrument'] ?? '');
+                try {
+                    $payload = $this->host->svc(ScreeningAssessmentService::class)
+                        ->getAssessment($visitId, $instrument, $userId);
+                    $this->host->respond(true, 'ok', $payload);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                } catch (\RuntimeException $e) {
+                    $code = (int) ($e->getCode() ?: 403);
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                }
+                break;
+            case 'clinical_doc.screening_save':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                try {
+                    $payload = $this->host->svc(ScreeningAssessmentService::class)
+                        ->saveAssessment($body, $userId);
+                    $this->host->respond(true, 'Saved', $payload);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                } catch (\RuntimeException $e) {
+                    $code = (int) ($e->getCode() ?: 403);
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                }
+                break;
+            case 'clinical_doc.vitals_get':
+                $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                try {
+                    $payload = $this->host->svc(VitalsEditorService::class)
+                        ->getVitals($visitId, $userId);
+                    $this->host->respond(true, 'ok', $payload);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                } catch (\RuntimeException $e) {
+                    $code = (int) ($e->getCode() ?: 403);
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                }
+                break;
+            case 'clinical_doc.vitals_save':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                try {
+                    $payload = $this->host->svc(VitalsEditorService::class)
+                        ->saveVitals($body, $userId);
+                    $this->host->respond(true, 'Saved', $payload);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                } catch (\RuntimeException $e) {
+                    $code = (int) ($e->getCode() ?: 403);
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                }
+                break;
+            case 'clinical_doc.certificate_get':
+                $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                try {
+                    $payload = $this->host->svc(CertificateService::class)
+                        ->getCertificate($visitId, $userId);
+                    $this->host->respond(true, 'ok', $payload);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                } catch (\RuntimeException $e) {
+                    $code = (int) ($e->getCode() ?: 403);
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                }
+                break;
+            case 'clinical_doc.certificate_save':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                try {
+                    $payload = $this->host->svc(CertificateService::class)
+                        ->saveCertificate($body, $userId);
+                    $this->host->respond(true, 'Saved', $payload);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                } catch (\RuntimeException $e) {
+                    $code = (int) ($e->getCode() ?: 403);
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                }
+                break;
+            case 'clinical_doc.eye_exam_get':
+                $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                try {
+                    $payload = $this->host->svc(EyeExamService::class)
+                        ->getExam($visitId, $userId);
+                    $this->host->respond(true, 'ok', $payload);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                } catch (\RuntimeException $e) {
+                    $code = (int) ($e->getCode() ?: 403);
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], $code);
+                }
+                break;
+            case 'clinical_doc.eye_exam_save':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                try {
+                    $payload = $this->host->svc(EyeExamService::class)
+                        ->saveExam($body, $userId);
+                    $this->host->respond(true, 'Saved', $payload);
                 } catch (\InvalidArgumentException $e) {
                     $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
                 } catch (\RuntimeException $e) {

@@ -27,7 +27,12 @@ class ClinicalDocDocumentationStatusService
      * @param array<string, mixed> $visit
      * @return array<string, mixed>
      */
-    public function getStatusForVisit(array $visit, ?int $facilityId = null): array
+    /**
+     * @param bool $includeNotePreview Building the native-note preview is a non-trivial
+     *        extra read; callers that only need the required-forms status (e.g. the
+     *        Clinical Doc hub's sign overview) pass false to skip it.
+     */
+    public function getStatusForVisit(array $visit, ?int $facilityId = null, bool $includeNotePreview = true): array
     {
         $visitId = (int) ($visit['id'] ?? 0);
         $pid = (int) ($visit['pid'] ?? 0);
@@ -39,16 +44,35 @@ class ClinicalDocDocumentationStatusService
         $hubEnabled = $this->hubLinks->isHubEnabled($facilityId);
         $unsignedRequired = [];
         if ($encounterId > 0) {
+            $resolved = [];
             foreach ($this->signService->getRequiredDocumentationSpecs($visit, $facilityId) as $spec) {
-                $formdir = $this->catalog->resolveRegistryDirectory($spec['formdir']);
-                if ($this->signService->isFormdirSignedOnEncounter($encounterId, $pid, $formdir)) {
-                    continue;
-                }
-                $unsignedRequired[] = [
-                    'formdir' => $formdir,
-                    'title' => $this->resolveFormTitle($formdir, $spec['title']),
-                    'started' => $this->isFormdirStartedOnEncounter($encounterId, $pid, $formdir),
+                $resolved[] = [
+                    'formdir' => $this->catalog->resolveRegistryDirectory($spec['formdir']),
+                    'title' => (string) ($spec['title'] ?? ''),
                 ];
+            }
+            if ($resolved !== []) {
+                // Batch both checks over the required-forms set instead of two point
+                // queries each: signed via the authoritative EncounterSignService batch
+                // (keeps the e-sign check as the single source of truth), started via
+                // one encounter-forms load.
+                $signedFormdirs = $this->signService->getSignedFormdirsOnEncounter(
+                    $encounterId,
+                    $pid,
+                    array_column($resolved, 'formdir')
+                );
+                $startedFormMap = $this->loadEncounterFormMap($encounterId, $pid);
+                foreach ($resolved as $row) {
+                    $formdir = $row['formdir'];
+                    if (isset($signedFormdirs[strtolower($formdir)])) {
+                        continue;
+                    }
+                    $unsignedRequired[] = [
+                        'formdir' => $formdir,
+                        'title' => $this->resolveFormTitle($formdir, $row['title']),
+                        'started' => isset($startedFormMap[strtolower($formdir)]),
+                    ];
+                }
             }
         }
 
@@ -59,7 +83,7 @@ class ClinicalDocDocumentationStatusService
             'documentation_hub_url' => $hubEnabled && $visitId > 0
                 ? ClinicalDocHubLinkService::buildHubUrl($visitId)
                 : null,
-            'encounter_note_preview' => $visitId > 0
+            'encounter_note_preview' => ($includeNotePreview && $visitId > 0)
                 ? $this->encounterNote->buildNotePreview($visitId, $facilityId)
                 : null,
         ];
@@ -97,15 +121,29 @@ class ClinicalDocDocumentationStatusService
         return $fallback;
     }
 
-    private function isFormdirStartedOnEncounter(int $encounterId, int $pid, string $formdir): bool
+    /**
+     * lower(formdir) => a (non-deleted) forms row exists on the encounter, in one query.
+     * Used only for the non-compliance "started?" flag; the "signed?" check goes through
+     * EncounterSignService.
+     *
+     * @return array<string, true>
+     */
+    private function loadEncounterFormMap(int $encounterId, int $pid): array
     {
-        $row = QueryUtils::querySingleRow(
-            'SELECT id FROM forms
-             WHERE encounter = ? AND pid = ? AND deleted = 0 AND LOWER(formdir) = ?
-             LIMIT 1',
-            [$encounterId, $pid, strtolower($formdir)]
-        );
+        $rows = QueryUtils::fetchRecords(
+            'SELECT DISTINCT LOWER(formdir) AS fd FROM forms
+             WHERE encounter = ? AND pid = ? AND deleted = 0',
+            [$encounterId, $pid]
+        ) ?: [];
 
-        return is_array($row);
+        $map = [];
+        foreach ($rows as $row) {
+            $fd = (string) ($row['fd'] ?? '');
+            if ($fd !== '') {
+                $map[$fd] = true;
+            }
+        }
+
+        return $map;
     }
 }

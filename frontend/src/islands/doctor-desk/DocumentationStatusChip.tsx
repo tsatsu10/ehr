@@ -3,6 +3,7 @@
  */
 
 import { Badge } from '@components/ui/badge';
+import { t } from '@core/i18n';
 import type { DocumentationStatus } from '@core/types';
 
 interface DocumentationStatusChipProps {
@@ -17,7 +18,7 @@ export function DocumentationStatusChip({
   encounterSigned,
 }: DocumentationStatusChipProps) {
   if (encounterSigned) {
-    return <Badge variant="success" className="ml-2">Signed</Badge>;
+    return <Badge variant="success" className="ml-2">{t('Signed')}</Badge>;
   }
 
   const unsigned = documentationStatus?.unsigned_required ?? [];
@@ -27,11 +28,11 @@ export function DocumentationStatusChip({
     const previewHint = preview?.cc_preview
       ? ` · ${preview.cc_preview}`
       : (preview?.problem_count ?? 0) > 0
-        ? ` · ${preview?.problem_count} problems`
+        ? ` · ${t('{count} problems', { count: preview?.problem_count ?? 0 })}`
         : '';
     return (
       <Badge variant={requireSign ? 'danger' : 'warning'} className="ml-2" title={labels + previewHint}>
-        Unsigned: {labels}
+        {t('Unsigned: {labels}', { labels })}
         {previewHint}
       </Badge>
     );
@@ -40,7 +41,7 @@ export function DocumentationStatusChip({
   if (preview?.cc_preview && !preview.signed) {
     return (
       <Badge variant="neutral" className="ml-2" title={preview.cc_preview}>
-        Draft · {preview.cc_preview}
+        {t('Draft · {preview}', { preview: preview.cc_preview })}
       </Badge>
     );
   }
@@ -48,14 +49,14 @@ export function DocumentationStatusChip({
   if (requireSign) {
     return (
       <Badge variant="danger" className="ml-2">
-        Unsigned — sign before complete
+        {t('Unsigned — sign before complete')}
       </Badge>
     );
   }
 
   return (
     <Badge variant="warning" className="ml-2">
-      Unsigned — payment blocked
+      {t('Unsigned — payment blocked')}
     </Badge>
   );
 }

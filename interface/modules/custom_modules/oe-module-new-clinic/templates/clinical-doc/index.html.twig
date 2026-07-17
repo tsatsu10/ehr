@@ -36,9 +36,6 @@
     </div>
     <span class="nc-text-muted nc-text-sm nc-mb-1 nc-mr-2" id="nc-clinicaldoc-context"></span>
     <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1 nc-mr-1" href="{{ doctor_desk_url|attr }}">{{ 'Doctor Desk'|xlt }}</a>
-    {% if can_show_advanced %}
-    <a class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-warning nc-mb-1 nc-mr-1" id="nc-clinicaldoc-advanced" href="#" target="_top">{{ 'Advanced (stock forms)'|xlt }}</a>
-    {% endif %}
     <button type="button" class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-secondary nc-mb-1" id="nc-clinicaldoc-refresh" aria-label="{{ 'Refresh'|xlt }}">
         <i class="fa fa-refresh" aria-hidden="true"></i>
     </button>

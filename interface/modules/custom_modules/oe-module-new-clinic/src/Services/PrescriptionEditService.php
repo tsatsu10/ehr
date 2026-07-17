@@ -39,6 +39,7 @@ class PrescriptionEditService
         if (
             !AclMain::aclCheckCore('new_clinic', 'new_pharmacy')
             && !AclMain::aclCheckCore('new_clinic', 'new_pharmacy_lead')
+            && !AclMain::aclCheckCore('new_clinic', 'new_doctor')
             && !AclMain::aclCheckCore('new_clinic', 'new_admin')
         ) {
             throw new \RuntimeException('Forbidden', 403);
@@ -46,21 +47,49 @@ class PrescriptionEditService
     }
 
     /**
-     * PharmacyShortcutService::preflight() already requires 'in_pharmacy'
-     * before it ever builds the redirect to this page, so under normal
-     * navigation visit_id is guaranteed to be at that state -- but a stale
-     * tab or bookmarked rx-edit.php URL can still present an old visit_id
-     * that has since moved on (or never reached pharmacy at all). Without
-     * this check, that would silently attach a new prescription to the
-     * wrong encounter instead of the one currently at the pharmacy desk.
+     * This native Rx form is shared by two desks: the Pharmacy Desk "Add Rx"
+     * shortcut (visit sitting 'in_pharmacy') and the Doctor Desk "Full Rx form"
+     * shortcut during consult (visit sitting 'with_doctor'). The desk shortcuts
+     * (PharmacyShortcutService / ConsultShortcutService) check the state at
+     * redirect-build time, but a stale tab or bookmarked rx-edit.php URL can
+     * still carry an old visit_id that has since moved on -- without this check
+     * a prescription would silently attach to the wrong encounter.
+     *
+     * The allowed state is tied to the actor's role, so a stale 'with_doctor'
+     * visit is still rejected for a pharmacist and vice-versa (the regression
+     * this guards against).
      *
      * @param array<string, mixed> $visit
      */
-    private function assertVisitInPharmacy(array $visit): void
+    private function assertVisitInActiveWork(array $visit): void
     {
-        if (($visit['state'] ?? '') !== 'in_pharmacy') {
-            throw new \InvalidArgumentException('Visit is not in active pharmacy work');
+        $state = (string) ($visit['state'] ?? '');
+        if (!in_array($state, $this->allowedWorkStates(), true)) {
+            throw new \InvalidArgumentException('Visit is not in active work for prescribing');
         }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function allowedWorkStates(): array
+    {
+        $states = [];
+        if (
+            AclMain::aclCheckCore('new_clinic', 'new_pharmacy')
+            || AclMain::aclCheckCore('new_clinic', 'new_pharmacy_lead')
+            || AclMain::aclCheckCore('new_clinic', 'new_admin')
+        ) {
+            $states[] = 'in_pharmacy';
+        }
+        if (
+            AclMain::aclCheckCore('new_clinic', 'new_doctor')
+            || AclMain::aclCheckCore('new_clinic', 'new_admin')
+        ) {
+            $states[] = 'with_doctor';
+        }
+
+        return $states;
     }
 
     /**
@@ -71,7 +100,7 @@ class PrescriptionEditService
         $this->assertAccess();
 
         $visit = $this->queueService->getVisitForActor($visitId);
-        $this->assertVisitInPharmacy($visit);
+        $this->assertVisitInActiveWork($visit);
         $pid = (int) ($visit['pid'] ?? 0);
         $encounter = (int) ($visit['encounter'] ?? 0);
         if ($pid <= 0) {
@@ -159,7 +188,16 @@ class PrescriptionEditService
 
         $visitId = (int) ($input['visit_id'] ?? 0);
         $visit = $this->queueService->getVisitForActor($visitId);
-        $this->assertVisitInPharmacy($visit);
+        $this->assertVisitInActiveWork($visit);
+        // On a consult visit a doctor may only prescribe on their own patient
+        // (mirrors ProcedureOrderFormService's with_doctor assignment guard).
+        if (
+            ($visit['state'] ?? '') === 'with_doctor'
+            && (int) ($visit['assigned_provider_id'] ?? 0) !== $actorUserId
+            && !AclMain::aclCheckCore('new_clinic', 'new_admin')
+        ) {
+            throw new \InvalidArgumentException('Visit is assigned to another provider');
+        }
         $pid = (int) ($visit['pid'] ?? 0);
         $encounter = (int) ($visit['encounter'] ?? 0);
         if ($pid <= 0 || $encounter <= 0) {

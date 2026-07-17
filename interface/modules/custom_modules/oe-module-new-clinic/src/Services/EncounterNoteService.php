@@ -905,7 +905,6 @@ class EncounterNoteService
      */
     private function loadBackgroundPrefill(int $pid): array
     {
-        $webroot = $GLOBALS['webroot'] ?? '';
         $problemRows = QueryUtils::fetchRecords(
             "SELECT title, diagnosis, comments
              FROM lists WHERE pid = ? AND type = 'medical_problem' AND activity = 1
@@ -962,16 +961,25 @@ class EncounterNoteService
             'problems' => $problems,
             'social' => $social,
             'edit_urls' => [
-                'problems' => $webroot . '/interface/patient_file/summary/stats_full.php?active=problem&set_pid='
-                    . urlencode((string) $pid),
-                'allergies' => $webroot . '/interface/patient_file/summary/stats_full.php?active=all&set_pid='
-                    . urlencode((string) $pid),
-                'medications' => $webroot . '/interface/patient_file/summary/stats_full.php?active=med&set_pid='
-                    . urlencode((string) $pid),
-                'history' => $webroot . '/interface/patient_file/history/history_full.php?set_pid='
-                    . urlencode((string) $pid),
+                'problems' => self::chartClinicalUrl($pid, 'clinical-problems'),
+                'allergies' => self::chartClinicalUrl($pid, 'clinical-allergies'),
+                'medications' => self::chartClinicalUrl($pid, 'clinical-meds'),
+                'history' => self::chartClinicalUrl($pid, 'clinical-background'),
             ],
         ];
+    }
+
+    /**
+     * Native patient chart clinical section (hosts the native editors, with the
+     * chart's own flag-gated stock fallbacks) — replaces the old direct links
+     * to the stock stats_full / history_full screens.
+     */
+    private static function chartClinicalUrl(int $pid, string $anchor): string
+    {
+        return ($GLOBALS['webroot'] ?? '')
+            . '/interface/modules/custom_modules/oe-module-new-clinic/public/patient-chart.php?pid='
+            . urlencode((string) $pid)
+            . '&tab=clinical&anchor=' . urlencode($anchor);
     }
 
     /**
@@ -1022,7 +1030,6 @@ class EncounterNoteService
      */
     private function loadAllergiesPrefill(int $pid): array
     {
-        $webroot = $GLOBALS['webroot'] ?? '';
         $rows = QueryUtils::fetchRecords(
             "SELECT title FROM lists WHERE pid = ? AND type = 'allergy' AND activity = 1 ORDER BY id DESC LIMIT 8",
             [$pid]
@@ -1051,8 +1058,7 @@ class EncounterNoteService
             'undocumented' => $undocumented,
             'nkda' => $nkda,
             'summary' => $summary !== '' ? $summary : null,
-            'edit_url' => $webroot . '/interface/patient_file/summary/stats_full.php?active=all&set_pid='
-                . urlencode((string) $pid),
+            'edit_url' => self::chartClinicalUrl($pid, 'clinical-allergies'),
         ];
     }
 
@@ -1061,7 +1067,6 @@ class EncounterNoteService
      */
     private function loadMedicationsPrefill(int $pid, int $encounter): array
     {
-        $webroot = $GLOBALS['webroot'] ?? '';
         $items = [];
         if ($encounter > 0) {
             $rxRows = QueryUtils::fetchRecords(
@@ -1096,8 +1101,7 @@ class EncounterNoteService
         return [
             'items' => $items,
             'summary' => $items !== [] ? implode('; ', $items) : null,
-            'edit_url' => $webroot . '/interface/patient_file/summary/stats_full.php?active=med&set_pid='
-                . urlencode((string) $pid),
+            'edit_url' => self::chartClinicalUrl($pid, 'clinical-meds'),
         ];
     }
 

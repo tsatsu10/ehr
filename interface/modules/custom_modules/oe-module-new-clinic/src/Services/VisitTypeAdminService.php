@@ -26,10 +26,27 @@ class VisitTypeAdminService
         'pharmacy_walkin' => 'Pharmacy walk-in — OTC or external Rx only',
     ];
 
+    /** @var array<int, string> per-request cache of facility id → display name */
+    private array $facilityNameCache = [];
+
     public function __construct(
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
     ) {
+    }
+
+    /** Human label for a row's scope: the facility's own name, or "All facilities" for a global (0) row. */
+    private function scopeLabelFor(int $facilityId): string
+    {
+        if ($facilityId === 0) {
+            return 'All facilities';
+        }
+        if (!isset($this->facilityNameCache[$facilityId])) {
+            $row = QueryUtils::querySingleRow("SELECT name FROM facility WHERE id = ?", [$facilityId]);
+            $name = is_array($row) ? trim((string) ($row['name'] ?? '')) : '';
+            $this->facilityNameCache[$facilityId] = $name !== '' ? $name : ('Facility ' . $facilityId);
+        }
+        return $this->facilityNameCache[$facilityId];
     }
 
     /**
@@ -43,7 +60,6 @@ class VisitTypeAdminService
         return [
             'facility_id' => $facilityId,
             'visit_types' => $this->listForAdmin($facilityId, $defaultId),
-            'calendar_categories' => $this->listCalendarCategories(),
             'default_visit_type_id' => $defaultId,
             'service_profiles' => self::SERVICE_PROFILES,
         ];
@@ -74,23 +90,53 @@ class VisitTypeAdminService
     }
 
     /**
-     * @return array<int, array<string, mixed>>
+     * Every booked calendar appointment still needs a legacy pc_catid FK
+     * (openemr_postcalendar_events schema) — but New Clinic no longer asks
+     * admins to manage that table directly. Visit types are the single
+     * admin-facing list (Clinic Setup); this resolves one shared, always-
+     * valid "appointment" category for new visit types to point at,
+     * bootstrapping it if the category table is empty (fresh install).
      */
-    public function listCalendarCategories(): array
+    private function resolveBookingCategoryId(): int
     {
-        $rows = QueryUtils::fetchRecords(
-            "SELECT pc_catid, pc_catname
-             FROM openemr_postcalendar_categories
-             WHERE pc_active = 1
-             ORDER BY pc_seq ASC, pc_catname ASC"
-        ) ?: [];
+        $row = QueryUtils::querySingleRow(
+            "SELECT pc_catid FROM openemr_postcalendar_categories
+             WHERE pc_active = 1 AND pc_cattype = 0
+             ORDER BY pc_seq ASC, pc_catid ASC LIMIT 1"
+        );
+        $catId = is_array($row) ? (int) ($row['pc_catid'] ?? 0) : 0;
+        if ($catId > 0) {
+            return $catId;
+        }
 
-        return array_map(static function (array $row): array {
-            return [
-                'pc_catid' => (int) ($row['pc_catid'] ?? 0),
-                'name' => (string) ($row['pc_catname'] ?? ''),
-            ];
-        }, $rows);
+        $nextSeq = (int) (QueryUtils::querySingleRow(
+            'SELECT COALESCE(MAX(pc_seq), 0) + 1 AS next_seq FROM openemr_postcalendar_categories'
+        )['next_seq'] ?? 1);
+
+        return (int) QueryUtils::sqlInsert(
+            "INSERT INTO openemr_postcalendar_categories (pc_catname, pc_cattype, pc_active, pc_seq)
+             VALUES ('Office Visit', 0, 1, ?)",
+            [$nextSeq]
+        );
+    }
+
+    /**
+     * Visit-type lookup for the calendar booking sheet — same visibility
+     * rule (active + facility scope + desk-toggle filtering) as
+     * listForDesk(), so a client can never book a service-profile that's
+     * been disabled or archived since the page loaded.
+     *
+     * @return array{id: int, label: string, pc_catid: int}|null
+     */
+    public function getVisitTypeForBooking(int $visitTypeId, int $facilityId): ?array
+    {
+        foreach ($this->listForDesk($facilityId) as $vt) {
+            if ((int) $vt['id'] === $visitTypeId) {
+                return ['id' => (int) $vt['id'], 'label' => (string) $vt['label'], 'pc_catid' => (int) $vt['pc_catid']];
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -102,7 +148,6 @@ class VisitTypeAdminService
         $facilityId = $this->visitScope->resolveActorFacilityId($facilityId > 0 ? $facilityId : null);
         $visitTypeId = (int) ($input['id'] ?? 0);
         $label = mb_substr(trim((string) ($input['label'] ?? '')), 0, 128);
-        $pcCatid = (int) ($input['pc_catid'] ?? 0);
         $serviceProfile = (string) ($input['service_profile'] ?? 'full_opd');
         $referralRequired = !empty($input['referral_required']) ? 1 : 0;
         $setDefault = !empty($input['is_default']);
@@ -117,13 +162,16 @@ class VisitTypeAdminService
         }
 
         $this->assertValidServiceProfile($serviceProfile);
-        $this->assertCalendarCategoryExists($pcCatid);
         $this->assertProfileAllowedForClinic($serviceProfile, $targetFacilityId);
 
         if ($visitTypeId > 0) {
             $existing = $this->getVisitTypeRow($visitTypeId);
             if (empty($existing)) {
                 throw new \InvalidArgumentException('Visit type not found');
+            }
+            $pcCatid = (int) ($existing['pc_catid'] ?? 0);
+            if ($pcCatid <= 0) {
+                $pcCatid = $this->resolveBookingCategoryId();
             }
 
             sqlStatement(
@@ -140,7 +188,7 @@ class VisitTypeAdminService
                 "INSERT INTO new_visit_type
                  (facility_id, label, pc_catid, service_profile, referral_required, cashier_fee_hint_ids, is_active)
                  VALUES (?, ?, ?, ?, ?, ?, 1)",
-                [$targetFacilityId, $label, $pcCatid, $serviceProfile, $referralRequired, $feeHintsJson]
+                [$targetFacilityId, $label, $this->resolveBookingCategoryId(), $serviceProfile, $referralRequired, $feeHintsJson]
             );
             $action = 'created';
         }
@@ -228,12 +276,32 @@ class VisitTypeAdminService
             [$facilityId]
         ) ?: [];
 
+        // A facility can override a global (facility_id = 0) visit type by
+        // adding its own with the same name — e.g. every pilot clinic ships
+        // global "Lab-only (direct)" / "Pharmacy walk-in" defaults, and a
+        // clinic customizing them ends up with both rows in the table. Desk
+        // dropdowns must show that name ONCE (the facility-specific one
+        // wins); the admin table intentionally still lists both so the
+        // override is visible and manageable.
+        $facilityLabels = [];
+        foreach ($rows as $row) {
+            if ((int) ($row['facility_id'] ?? 0) !== 0) {
+                $facilityLabels[mb_strtolower(trim((string) ($row['label'] ?? '')))] = true;
+            }
+        }
+
         $enableAncillary = $this->config->getInt('enable_ancillary_services', 0, $facilityId) === 1;
         $enableLab = $this->config->getInt('enable_lab_role', 0, $facilityId) === 1;
         $enablePharmacy = $this->config->getInt('enable_pharmacy_role', 0, $facilityId) === 1;
 
         $filtered = [];
         foreach ($rows as $row) {
+            $isGlobalDefault = (int) ($row['facility_id'] ?? 0) === 0;
+            $labelKey = mb_strtolower(trim((string) ($row['label'] ?? '')));
+            if ($isGlobalDefault && $labelKey !== '' && isset($facilityLabels[$labelKey])) {
+                continue;
+            }
+
             $profile = (string) ($row['service_profile'] ?? 'full_opd');
             if ($profile !== 'full_opd' && !$enableAncillary) {
                 continue;
@@ -268,21 +336,6 @@ class VisitTypeAdminService
     {
         if (!self::isValidServiceProfile($profile)) {
             throw new \InvalidArgumentException('Invalid service profile');
-        }
-    }
-
-    private function assertCalendarCategoryExists(int $pcCatid): void
-    {
-        if ($pcCatid <= 0) {
-            throw new \InvalidArgumentException('Calendar category is required');
-        }
-
-        $row = QueryUtils::querySingleRow(
-            "SELECT pc_catid FROM openemr_postcalendar_categories WHERE pc_catid = ? AND pc_active = 1",
-            [$pcCatid]
-        );
-        if (empty($row)) {
-            throw new \InvalidArgumentException('Invalid calendar category');
         }
     }
 
@@ -343,7 +396,7 @@ class VisitTypeAdminService
             'cashier_fee_hint_ids' => $this->decodeFeeHintIds($row['cashier_fee_hint_ids'] ?? null),
             'is_active' => (int) ($row['is_active'] ?? 0) === 1,
             'is_default' => $defaultId > 0 && (int) ($row['id'] ?? 0) === $defaultId,
-            'scope_label' => (int) ($row['facility_id'] ?? 0) === 0 ? 'All facilities' : 'This facility',
+            'scope_label' => $this->scopeLabelFor((int) ($row['facility_id'] ?? 0)),
         ];
     }
 

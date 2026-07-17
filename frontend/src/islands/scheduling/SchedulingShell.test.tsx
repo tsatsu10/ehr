@@ -50,6 +50,7 @@ vi.mock('./schedulingApi', () => ({
   moveCalendarAppointment: vi.fn(),
   resizeCalendarAppointment: vi.fn(),
   bookCalendarAppointment: vi.fn(),
+  fetchFreeSlots: vi.fn().mockResolvedValue({ slots: [], interval_minutes: 15 }),
 }));
 
 const props: SchedulingProps = {
@@ -80,7 +81,8 @@ describe('SchedulingShell', () => {
 
   it('renders shared filter bar and calendar lens', async () => {
     render(<SchedulingShell {...props} />);
-    expect(screen.getByLabelText(/Facility/i)).toBeInTheDocument();
+    // Facility picker is gone — scheduling runs against the resolved facility.
+    expect(screen.queryByLabelText(/Facility/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/Provider/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Date/i)).toHaveValue('2026-06-30');
     expect(screen.getByRole('tab', { name: /Calendar/i })).toHaveAttribute('aria-selected', 'true');
@@ -94,5 +96,46 @@ describe('SchedulingShell', () => {
     await waitFor(() => {
       expect(window.location.search).toContain('lens=flow');
     });
+  });
+
+  it('steps the date forward with the › button', async () => {
+    render(<SchedulingShell {...props} />);
+    await screen.findByText(/0 appointments/i);
+
+    fireEvent.click(screen.getByRole('button', { name: /next day/i }));
+
+    expect(screen.getByLabelText(/Date/i)).toHaveValue('2026-07-01');
+  });
+
+  it('steps the date with the ArrowRight keyboard shortcut', async () => {
+    render(<SchedulingShell {...props} />);
+    await screen.findByText(/0 appointments/i);
+
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Date/i)).toHaveValue('2026-07-01');
+    });
+  });
+
+  it('switches the calendar view with the w shortcut', async () => {
+    render(<SchedulingShell {...props} />);
+    await screen.findByText(/0 appointments/i);
+
+    fireEvent.keyDown(window, { key: 'w' });
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /Week/i })).toHaveAttribute('aria-selected', 'true');
+    });
+  });
+
+  it('ignores shortcuts while typing in an input', async () => {
+    render(<SchedulingShell {...props} />);
+    await screen.findByText(/0 appointments/i);
+
+    const dateInput = screen.getByLabelText(/Date/i);
+    fireEvent.keyDown(dateInput, { key: 'ArrowRight' });
+
+    expect(dateInput).toHaveValue('2026-06-30');
   });
 });

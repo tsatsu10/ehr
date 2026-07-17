@@ -53,6 +53,7 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
         'admin.duplicates.list',
         'admin.directory.save',
         'admin.directory.delete',
+        'admin.facility.save',
         'admin.roles.grant_self',
         'admin.roles.templates',
         'admin.staff.list',
@@ -227,6 +228,25 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                         $userId
                     );
                     $this->host->respond(true, 'Contact deleted', ['directory_contacts' => $contacts]);
+                    break;
+                case 'admin.facility.save':
+                    if ($method !== 'POST') {
+                        $this->host->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->host->readJsonBody();
+                    $this->host->verifyCsrf($body);
+                    $scope = strtolower(trim((string) ($body['scope'] ?? 'facility')));
+                    if ($scope !== 'global') {
+                        $scope = 'facility';
+                    }
+                    $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    $result = $this->host->svc(ClinicAdminService::class)->saveFacility(
+                        (array) ($body['facility'] ?? $body),
+                        $userId,
+                        $scope,
+                        $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
+                    );
+                    $this->host->respond(true, 'Facility saved', $result);
                     break;
                 case 'admin.fee.save':
                     if ($method !== 'POST') {

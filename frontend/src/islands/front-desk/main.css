@@ -183,7 +183,7 @@
 
 .nc-front-desk-react-active .nc-front-desk-search-panel__title {
   margin: 0;
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--oe-nc-text, #1e293b);
@@ -270,7 +270,7 @@
 
 .nc-front-desk-react-active .nc-front-desk-preview-shell__empty-title {
   margin: 0;
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
   font-size: 1.125rem;
   font-weight: 600;
 }
@@ -890,7 +890,7 @@
 /* ── Preview empty / loading ────────────────────────────────────────────── */
 
 .nc-front-desk-react-active .nc-preview-empty-title {
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
   color: var(--oe-nc-text, #111827);
 }
 

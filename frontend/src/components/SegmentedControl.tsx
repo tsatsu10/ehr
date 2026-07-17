@@ -15,10 +15,10 @@ interface SegmentedControlProps {
 }
 
 const segmentBase =
-  'min-h-11 cursor-pointer rounded border-none bg-transparent px-2.5 py-1.5 text-[0.8125rem] font-medium leading-tight text-[var(--oe-nc-text-muted)] hover:bg-white hover:text-[var(--oe-nc-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--oe-nc-primary)]';
+  'min-h-11 cursor-pointer rounded-[9px] border-none bg-transparent px-4 py-1.5 text-[0.8125rem] font-semibold leading-tight text-[var(--oe-nc-text-muted)] hover:text-[var(--oe-nc-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--oe-nc-primary)]';
 
 const segmentSelected =
-  'bg-white font-semibold text-[var(--oe-nc-primary)] shadow-[var(--oe-nc-shadow-sm,0_1px_2px_rgba(0,0,0,0.05))]';
+  'bg-[var(--oe-nc-surface)] text-[var(--oe-nc-text)] shadow-[0_1px_3px_rgba(0,0,0,0.12)]';
 
 export function SegmentedControl({
   segments,
@@ -30,7 +30,7 @@ export function SegmentedControl({
   return (
     <div
       className={cn(
-        'nc-segmented-control inline-flex flex-wrap gap-1 rounded-md border border-[var(--oe-nc-border)] bg-slate-50 p-0.5',
+        'nc-segmented-control inline-flex flex-wrap gap-0.5 rounded-xl bg-[var(--oe-nc-bg-muted)] p-[3px]',
         className,
       )}
       role="tablist"

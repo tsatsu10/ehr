@@ -23,7 +23,8 @@
         scheduledIntegrationEnabled:   scheduled_integration_enabled ? true : false,
         appointmentsTodayCount:        appointments_today_count|default(0)|number_format(0, '', ''),
         calendarUrl:                   calendar_url,
-        recallsUrl:                    recalls_url|default(null)
+        recallsUrl:                    recalls_url|default(null),
+        enablePayerBilling:            enable_payer_billing ? true : false
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}

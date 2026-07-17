@@ -45,6 +45,15 @@ class PatientChartClinicalService
             // D4 — when on, the Clinical tab edits problems/allergies/meds in a native
             // drawer instead of the stock add_edit_issue.php popup.
             'native_issue_editor' => $this->config->isEnabled('enable_native_issue_editor', 0, $facilityId),
+            // D-HIST-9 — when on, "Edit history" on Background opens the native drawer
+            // (curated West-Africa field set) instead of the stock history_full.php form.
+            'native_history_editor' => $this->config->isEnabled('enable_native_history_editor', 0, $facilityId),
+            // D-HIST-10 — when on, the drawer's "Full history form" opens the full native editor
+            // (superset: risk factors, sleep, extra relatives) instead of stock history_full.php.
+            'native_history_full_form' => $this->config->isEnabled('enable_native_history_full_form', 0, $facilityId),
+            // D-IMM-1 — when on, Add/Edit on the Immunizations section opens the native drawer
+            // (Ghana EPI vaccine set) instead of the stock immunizations.php form.
+            'native_immunization_editor' => $this->config->isEnabled('enable_native_immunization_editor', 0, $facilityId),
             'background' => $this->buildBackgroundSection($pid, $webroot),
             'problems' => $this->buildListSection($pid, 'medical_problem', $webroot, 'clinical-problems'),
             'allergies' => $this->buildAllergySection($pid, $webroot),
@@ -94,10 +103,14 @@ class PatientChartClinicalService
      */
     private function buildBackgroundSection(int $pid, string $webroot): array
     {
+        // usertext12/13/14 are reserved by the native history editor (D-HIST-9) for
+        // sickle cell, herbal/traditional medicine, and occupation — fields with no
+        // dedicated stock column. Kept in sync with PatientHistoryEditorService.
         $row = QueryUtils::querySingleRow(
             "SELECT tobacco, alcohol, recreational_drugs, exercise_patterns,
                     history_mother, history_father, history_siblings,
                     relatives_diabetes, relatives_high_blood_pressure,
+                    usertext12, usertext13, usertext14,
                     additional_history, date
              FROM history_data WHERE pid = ? ORDER BY id DESC LIMIT 1",
             [$pid]
@@ -109,20 +122,24 @@ class PatientChartClinicalService
                 'history_mother' => 'Mother',
                 'history_father' => 'Father',
                 'history_siblings' => 'Siblings',
+                'usertext12' => 'Family — sickle cell',
+                'relatives_diabetes' => 'Family — diabetes',
+                'relatives_high_blood_pressure' => 'Family — hypertension',
                 'tobacco' => 'Tobacco',
                 'alcohol' => 'Alcohol',
                 'recreational_drugs' => 'Substance use',
+                'usertext13' => 'Herbal / traditional medicine',
+                'usertext14' => 'Occupation',
                 'exercise_patterns' => 'Exercise',
-                'relatives_diabetes' => 'Family — diabetes',
-                'relatives_high_blood_pressure' => 'Family — hypertension',
                 'additional_history' => 'General history',
             ];
             foreach ($fieldLabels as $field => $label) {
                 $value = trim((string) ($row[$field] ?? ''));
                 if ($value !== '') {
+                    // Structured markers store 'yes' — render them as a clean "Yes".
                     $lines[] = [
                         'label' => $label,
-                        'value' => $this->clipText($value, 200),
+                        'value' => $value === 'yes' ? 'Yes' : $this->clipText($value, 200),
                     ];
                 }
             }
@@ -458,9 +475,10 @@ class PatientChartClinicalService
         $placeOrderUrl = null;
         if ($encounterId > 0) {
             try {
-                $placeOrderUrl = $this->procedureOrderLinks->buildNewOrderUrl(
+                $placeOrderUrl = $this->procedureOrderLinks->buildNewOrderUrlPreferNative(
                     $pid,
                     $encounterId,
+                    'chart',
                     $this->procedureOrderLinks->buildPatientChartReturnUrl($pid)
                 );
             } catch (\InvalidArgumentException) {

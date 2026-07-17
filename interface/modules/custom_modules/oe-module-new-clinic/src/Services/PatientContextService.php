@@ -246,8 +246,6 @@ class PatientContextService
                 'missing_fields' => $completionResult['missing'] ?? [],
                 'missing_labels' => $completionResult['missing_labels'] ?? [],
                 'nearest_missing_field' => ($completionResult['missing_labels'][0] ?? null),
-                'demographics_url' => ($GLOBALS['webroot'] ?? '')
-                    . '/interface/patient_file/summary/demographics.php?set_pid=' . urlencode((string) $pid),
                 'chart_url' => PatientCompletionService::chartUrl($pid, 'profile'),
                 'chart_open_url' => PatientCompletionService::chartUrl($pid, null),
                 'billing_threshold' => $this->completionService->getBillingThreshold(),

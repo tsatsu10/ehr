@@ -41,9 +41,9 @@ export function DeskQueueStatusBar({
       className={cn(
         'mb-4 grid items-center gap-x-4 gap-y-2 rounded-xl',
         hasActions ? 'grid-cols-[1fr_auto]' : 'grid-cols-1',
-        'border border-[var(--oe-clinical-border)] bg-[var(--oe-clinical-surface)]',
-        'px-5 py-3.5 text-sm shadow-[var(--oe-clinical-shadow-sm)]',
-        compact && '[&_.nc-desk-stat-group]:gap-x-3.5 [&_.nc-desk-stat-group]:text-[var(--oe-clinical-text-xs)]',
+        'border border-[var(--oe-nc-border)] bg-[var(--oe-nc-surface)]',
+        'px-5 py-3.5 text-sm shadow-[var(--shadow-sm)]',
+        compact && '[&_.nc-desk-stat-group]:gap-x-3.5 [&_.nc-desk-stat-group]:text-[0.8125rem]',
       )}
       role="status"
       aria-label={ariaLabel}
@@ -54,7 +54,7 @@ export function DeskQueueStatusBar({
           <Fragment key={`${item.label}-${index}`}>
             {index > 0 && (
               <span
-                className="hidden h-4 w-px shrink-0 bg-[var(--oe-clinical-border)] sm:inline-block"
+                className="hidden h-4 w-px shrink-0 bg-[var(--oe-nc-border)] sm:inline-block"
                 aria-hidden="true"
               />
             )}
@@ -77,7 +77,7 @@ export function DeskQueueStatusBar({
               title="Refresh"
             >
               <RefreshCw className={cn(
-                'h-4 w-4 text-[var(--oe-clinical-text-muted)]',
+                'h-4 w-4 text-[var(--oe-nc-text-muted)]',
                 loading && 'animate-spin',
               )} />
             </Button>
@@ -92,8 +92,8 @@ function StatusItem({ label, value, href, icon }: DeskStatusItem) {
   const inner = (
     <span className="inline-flex items-center gap-2 whitespace-nowrap leading-none">
       {icon}
-      <span className="font-semibold tabular-nums text-[var(--oe-clinical-text)] text-base">{value}</span>
-      <span className="text-[var(--oe-clinical-text-muted)] font-medium">{label}</span>
+      <span className="font-semibold tabular-nums text-[var(--oe-nc-text)] text-base">{value}</span>
+      <span className="text-[var(--oe-nc-text-muted)] font-medium">{label}</span>
     </span>
   );
   if (href) {
@@ -101,8 +101,8 @@ function StatusItem({ label, value, href, icon }: DeskStatusItem) {
       <a href={href} target="_top" className="group text-inherit no-underline hover:opacity-90 transition-opacity">
         <span className="inline-flex items-center gap-2 whitespace-nowrap leading-none">
           {icon}
-          <span className="font-semibold tabular-nums text-[var(--oe-clinical-primary)] text-base group-hover:text-[var(--oe-clinical-primary-hover)]">{value}</span>
-          <span className="text-[var(--oe-clinical-text-muted)] font-medium">{label}</span>
+          <span className="font-semibold tabular-nums text-[var(--oe-nc-primary)] text-base group-hover:text-[var(--oe-nc-primary-hover)]">{value}</span>
+          <span className="text-[var(--oe-nc-text-muted)] font-medium">{label}</span>
         </span>
       </a>
     );

@@ -1,5 +1,6 @@
 import { SlideOver } from '@components/SlideOver';
 import { Button } from '@components/ui/button';
+import { t } from '@core/i18n';
 import type {
   DoctorDoneTodayRow,
   DoctorQueueCard,
@@ -38,8 +39,8 @@ export function DoctorMobileQueueBar({
   }
 
   const label = waitingCount > 0
-    ? `${waitingCount} patient${waitingCount === 1 ? '' : 's'} ready`
-    : 'Doctor queue';
+    ? (waitingCount === 1 ? t('1 patient ready') : t('{count} patients ready', { count: waitingCount }))
+    : t('Doctor queue');
 
   return (
     <div className="nc-doctor-mobile-queue-bar">
@@ -75,7 +76,7 @@ export function DoctorMobileQueueSheet({
     <SlideOver
       open={open}
       onClose={onClose}
-      title={`My queue (${waitingCount} waiting)`}
+      title={t('My queue ({count} waiting)', { count: waitingCount })}
       id="nc-doctor-mobile-queue-sheet"
       placement="bottom"
     >

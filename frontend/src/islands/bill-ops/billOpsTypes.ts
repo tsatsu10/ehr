@@ -14,7 +14,7 @@ export interface BillOpsHubProps {
   canClose: boolean;
   canOutstanding: boolean;
   canInsurance: boolean;
-  canEdiHistory: boolean;
+  canPayerBilling: boolean;
   reopenOnCorrection: boolean;
   webroot: string;
   initialVisitId?: number;
@@ -24,6 +24,28 @@ export interface BillOpsHubProps {
     currency_decimals?: number;
     currency_symbol_position?: 'before' | 'after';
   };
+}
+
+export interface PayerScheme {
+  id: number;
+  name: string;
+}
+
+export interface PayerPriceRow {
+  id: number;
+  insurance_company_id: number;
+  item_code: string;
+  item_name: string;
+  price_amount: number;
+  updated_at: string;
+}
+
+/** Response from bill_ops.payer_prices */
+export interface PayerPricesData {
+  enabled: boolean;
+  schemes: PayerScheme[];
+  insurance_company_id: number;
+  rows: PayerPriceRow[];
 }
 
 export interface ChargeLine {

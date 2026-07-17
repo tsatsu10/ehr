@@ -18,6 +18,13 @@
                 id="nc-labops-tab-sendout">
             {{ 'Send-out'|xlt }} <span class="nc-badge nc-badge-neutral" id="nc-labops-count-sendout">0</span>
         </button>
+        {% if enable_followup %}
+        <button type="button"
+                class="nc-btn nc-btn-sm nc-btn-outline nc-btn-outline-primary{% if initial_tab == 'followup' %} active{% endif %}"
+                id="nc-labops-tab-followup">
+            {{ 'Follow-up'|xlt }}
+        </button>
+        {% endif %}
     </div>
     <input type="date"
            class="nc-input nc-input-sm nc-mr-2 nc-mb-1"
@@ -56,7 +63,8 @@
         initialTab: initial_tab,
         canEnter: can_enter ? true : false,
         canRelease: can_release ? true : false,
-        canManageCatalog: can_manage_catalog ? true : false
+        canManageCatalog: can_manage_catalog ? true : false,
+        enableFollowup:   enable_followup ? true : false
     }|json_encode|e('html_attr') }}"
 ></div>
 {% else %}

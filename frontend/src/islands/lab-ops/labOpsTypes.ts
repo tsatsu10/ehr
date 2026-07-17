@@ -1,4 +1,4 @@
-export type LabOpsTab = 'pending' | 'in_progress' | 'send_out';
+export type LabOpsTab = 'pending' | 'in_progress' | 'send_out' | 'followup';
 export type FulfillmentFilter = 'all' | 'in_house' | 'send_out';
 export type SetupModel = 'in_house' | 'hybrid' | 'send_out_only';
 
@@ -10,6 +10,30 @@ export interface LabOpsHubProps {
   canEnter: boolean;
   canRelease: boolean;
   canManageCatalog: boolean;
+  /** CP-4 — Follow-up tab (flag ON only; the twig button is flag-gated too). */
+  enableFollowup?: boolean;
+}
+
+/** CP-4 — one row in either follow-up list. */
+export interface FollowUpRow {
+  order_id: number;
+  pid: number;
+  patient_name: string;
+  pubpid: string;
+  date: string;
+  priority?: string;
+  detail: string;
+  age_days: number;
+  age_bucket: string;
+  chart_url: string;
+}
+
+export interface FollowUpData {
+  window_days: number;
+  row_cap: number;
+  unresulted: FollowUpRow[];
+  abnormal_no_followup: FollowUpRow[];
+  generated_at: string;
 }
 
 export interface WorklistCounts {

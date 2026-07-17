@@ -91,6 +91,21 @@ class BillOpsAccessService
             && $this->config->getInt('enable_insurance', 0, $facilityId) === 1;
     }
 
+    /**
+     * CBILL-4a — payer-aware pricing admin screen. Requires the CBILL-3 scheme-split flag
+     * as a prerequisite (payer prices are meaningless without the scheme-split claim flow).
+     */
+    public function isPayerBillingEnabled(?int $facilityId = null): bool
+    {
+        if ($facilityId === null || $facilityId <= 0) {
+            $facilityId = $this->visitScope->resolveDeskFacilityId();
+        }
+
+        return $this->isInsuranceVaultEnabled($facilityId)
+            && $this->config->getInt('enable_insurance_scheme', 0, $facilityId) === 1
+            && $this->config->getInt('enable_payer_billing', 0, $facilityId) === 1;
+    }
+
     public function assertHubEnabled(?int $facilityId = null): void
     {
         if (!$this->isHubEnabled($facilityId)) {

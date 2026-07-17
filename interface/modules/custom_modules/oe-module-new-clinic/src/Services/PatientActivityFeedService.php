@@ -504,6 +504,7 @@ class PatientActivityFeedService
         $rows = QueryUtils::fetchRecords(
             "SELECT es.id AS signature_id, es.datetime AS occurred_at, u.username AS user,
                     f.encounter AS encounter_id, nv.id AS visit_id, nv.queue_number,
+                    nv.facility_id AS visit_facility_id,
                     u.fname, u.lname
              FROM esign_signatures es
              INNER JOIN forms f ON f.id = es.tid AND es.`table` = 'forms'
@@ -550,7 +551,7 @@ class PatientActivityFeedService
         $rows = QueryUtils::fetchRecords(
             "SELECT f.id AS forms_row_id, f.form_id, f.form_name, f.formdir, f.date AS occurred_at,
                     f.user, f.encounter AS encounter_id,
-                    nv.id AS visit_id, nv.queue_number
+                    nv.id AS visit_id, nv.queue_number, nv.facility_id AS visit_facility_id
              FROM forms f
              LEFT JOIN new_visit v ON v.pid = f.pid AND v.encounter = f.encounter
              LEFT JOIN new_visit nv ON nv.pid = f.pid AND nv.encounter = f.encounter
@@ -1150,8 +1151,6 @@ class PatientActivityFeedService
         if ($signer === '') {
             $signer = trim((string) ($row['user'] ?? 'Staff'));
         }
-        $webroot = $GLOBALS['webroot'] ?? '';
-
         return [
             'event_type' => 'encounter_signed',
             'event_id' => 'encounter_signed:' . $visitId . ':' . $signatureId,
@@ -1172,7 +1171,13 @@ class PatientActivityFeedService
             'secondary_action' => $encounterId > 0 ? [
                 'label' => 'Open encounter',
                 'kind' => 'core',
-                'target' => EncounterSignService::buildEncounterUrl($webroot, $pid, $encounterId),
+                // Native consult page when the native engine is on (stock fallback inside).
+                'target' => $this->signService->buildOpenUrlForVisit([
+                    'id' => $visitId,
+                    'pid' => $pid,
+                    'encounter' => $encounterId,
+                    'facility_id' => (int) ($row['visit_facility_id'] ?? 0),
+                ]),
             ] : null,
         ];
     }
@@ -1196,8 +1201,6 @@ class PatientActivityFeedService
             $author = 'Staff';
         }
         $createdAt = (string) ($row['occurred_at'] ?? '');
-        $webroot = $GLOBALS['webroot'] ?? '';
-
         return [
             'event_type' => 'encounter_document_saved',
             'event_id' => 'encounter_document_saved:' . $visitId . ':' . $formsRowId,
@@ -1220,7 +1223,13 @@ class PatientActivityFeedService
             'secondary_action' => $encounterId > 0 ? [
                 'label' => 'View documentation',
                 'kind' => 'core',
-                'target' => EncounterSignService::buildEncounterUrl($webroot, $pid, $encounterId),
+                // Native consult page when the native engine is on (stock fallback inside).
+                'target' => $this->signService->buildOpenUrlForVisit([
+                    'id' => $visitId,
+                    'pid' => $pid,
+                    'encounter' => $encounterId,
+                    'facility_id' => (int) ($row['visit_facility_id'] ?? 0),
+                ]),
             ] : null,
         ];
     }

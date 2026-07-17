@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 0.1.3 |
+| **Document version** | 0.1.4 |
 | **Status** | Draft for review — **Module M14** integrated in PRD v1.20.29; **M5 Cashier** remains V1 golden-path payment; D-BILL-1 **closed**; O-BILL-1–4 **closed**; O-BILL-5 **open** (PRD §24.2) |
 | **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.29), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.34), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.34), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.7), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.28) |
 | **Audience** | Product, design, billing leads, clinic owners, implementers, QA |
@@ -490,27 +490,28 @@ Outstanding — 12 patients — Total owed: 3,420.00
 
 ---
 
-## 13. Insurance backlog gateway (M14-F05)
+## 13. Insurance backlog gateway (M14-F05) — retired, replaced by CBILL-4
 
-### 13.1 Purpose
+### 13.1 Purpose (superseded)
 
-When `enable_insurance = true` (non-default), clinic may still have **legacy claims or ERA files**. NG3 excludes insurance from **golden path** — not from **admin vault**.
+When `enable_insurance = true` (non-default), the clinic may still have **legacy claims or ERA files**. NG3 excludes insurance from **golden path** — not from **admin vault**. This was the original V1 answer: a thin gateway to stock US billing tools, kept only as a rare escape hatch.
 
-### 13.2 UI
+**Retired (2026-07-16):** the vault's six link cards (Billing Manager, ERA upload, EOB posting, Eligibility 270/271, EDI history) have been **removed from the Insurance tab**. They spoke US X12/HIPAA EDI protocol, which has no equivalent for NHIS or West African private schemes — keeping them only added confusion about which section of the tab was the real, native workflow. The Insurance tab is now **entirely the CBILL-4 native system** (see
+[Insurance Foundation spec](../new/NEW_CLINIC_V1_INSURANCE_FOUNDATION_REDESIGN.md)): the "Scheme claims to submit" register (CBILL-3) plus payer-aware pricing (CBILL-4a). Stock OpenEMR's `billing_report.php` / `era_payments.php` / etc. still exist and are still reachable directly by an admin who genuinely needs them (nothing was deleted from core) — they are simply no longer surfaced as a New Clinic feature.
 
-Single **Insurance vault** tab with cards:
+### 13.2 UI (historical — no longer built)
+
+~~Single **Insurance vault** tab with cards~~ — see §13.1. The table below is kept for history only:
 
 | Card | Stock target | When shown |
 |------|--------------|------------|
-| Billing Manager | `billing_report.php` | `enable_insurance` |
-| ERA upload | `era_payments.php` | Same |
-| EOB posting | `sl_eob_search.php` | Same |
-| Eligibility 270/271 | `edi_270.php`, `edi_271.php` | Same |
-| EDI history | `edih_view.php` | `enable_edihistory_in_left_menu` |
+| ~~Billing Manager~~ | `billing_report.php` | Removed |
+| ~~ERA upload~~ | `era_payments.php` | Removed |
+| ~~EOB posting~~ | `sl_eob_search.php` | Removed |
+| ~~Eligibility 270/271~~ | `edi_270.php`, `edi_271.php` | Removed |
+| ~~EDI history~~ | `edih_view.php` | Removed |
 
-Each opens in **new tab** with banner: *“Legacy US billing tool — not used for daily cash workflow.”*
-
-**ACL:** `new_bill_ops_insurance` → `new_admin` only.
+**ACL:** `new_bill_ops_insurance` → `new_admin` only — unchanged, now gates the native Scheme claims + Payer prices screens instead.
 
 ---
 
@@ -636,6 +637,7 @@ M14 **does not** add parallel charge/payment tables. Writes use:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.1.4 | 2026-07-16 | **§13 M14-F05 retired** — the six legacy US billing/EDI vault link cards removed from the Insurance tab (user decision: they only confused the native workflow, since none of them can serve NHIS/West African schemes anyway). Insurance tab is now entirely the CBILL-3/4 native system. Stock screens still exist in core, just no longer surfaced. |
 | 0.1.3 | 2026-06-22 | Hygiene pass — §15.1/§16.2 normative titles; O-BILL-5 → PRD §24.2; companion sync PRD v1.20.29 |
 | 0.1.2 | 2026-06-22 | Medium-gap pass — O-BILL-1–4 closed → PRD D-BILL-2–6; M7-F14 vs F04; §8 title; PRD v1.20.28 |
 | 0.1.1 | 2026-06-22 | PRD integration pass — D-BILL-1 closed; PAGE_DESIGNS §7.25–§7.26; PRD §8/§4.4/§12.4/§13.1/§21.1u/§17.4.7; O-BILL-4 closed |

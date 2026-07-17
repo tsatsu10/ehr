@@ -3,14 +3,14 @@
  */
 .nc-t1,
 .nc-t1 .nc-content {
-    font-family: "Noto Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
 }
 
 .nc-t1 .nc-page-heading-title,
 .nc-t1 .nc-brand-name,
 .nc-widget-card-title,
 .nc-patient-banner-name {
-    font-family: "Figtree", "Noto Sans", sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
 }
 
 /* —— status-pill —— */
@@ -51,7 +51,7 @@
 }
 
 .nc-status-pill-info .nc-status-pill-dot {
-    background: #2563eb;
+    background: #0071e3;
 }
 
 .nc-status-pill-warning {
@@ -77,7 +77,7 @@
 .nc-status-pill-neutral {
     background: #f8fafc;
     color: #475569;
-    border-color: #e2e8f0;
+    border-color: rgba(0, 0, 0, 0.08);
 }
 
 .nc-status-pill-neutral .nc-status-pill-dot {
@@ -332,7 +332,7 @@
 
 .nc-progress-bar-track {
     height: 0.5rem;
-    background: #e2e8f0;
+    background: rgba(0, 0, 0, 0.08);
     border-radius: 999px;
     overflow: hidden;
 }
@@ -560,8 +560,8 @@ button.nc-list-group-item-action + button.nc-list-group-item-action {
 
 /* —— queue-card (legacy ui-components.js; React uses queueCardStyles.ts + nc-queue-card hook) —— */
 .nc-queue-card {
-    border: 1px solid #cbd5e1;
-    border-left: 3px solid #2563eb;
+    border: 1px solid rgba(0, 0, 0, 0.16);
+    border-left: 3px solid #0071e3;
     box-shadow: none;
     border-radius: 0.5rem;
     padding: 0.65rem 0.75rem;
@@ -581,7 +581,7 @@ button.nc-list-group-item-action + button.nc-list-group-item-action {
     height: 2.25rem;
     margin-top: 0.05rem;
     border-radius: 50%;
-    background: #2563eb;
+    background: #0071e3;
     color: #fff;
     font-size: 0.75rem;
     font-weight: 700;
@@ -649,12 +649,12 @@ button.nc-list-group-item-action + button.nc-list-group-item-action {
 }
 
 .nc-queue-card-active {
-    border-color: #2563eb !important;
+    border-color: #0071e3 !important;
     background: #eff6ff !important;
 }
 
 .nc-queue-card-mine {
-    border-left-color: #2563eb !important;
+    border-left-color: #0071e3 !important;
     border-left-width: 4px !important;
 }
 
@@ -728,13 +728,13 @@ button.nc-list-group-item-action + button.nc-list-group-item-action {
 .nc-completion-bar {
     height: 4px;
     border-radius: 999px;
-    background: #e2e8f0;
+    background: rgba(0, 0, 0, 0.08);
     overflow: hidden;
 }
 
 .nc-completion-bar-fill {
     height: 100%;
-    background: var(--oe-nc-primary, #2563eb);
+    background: var(--oe-nc-primary, #0071e3);
     border-radius: 999px;
     transition: width 150ms ease;
 }
@@ -801,7 +801,7 @@ button.nc-list-group-item-action + button.nc-list-group-item-action {
     justify-content: space-between;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--oe-nc-border, #e2e8f0);
+    border-bottom: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.08));
 }
 
 .nc-slide-over-body {
@@ -812,10 +812,162 @@ button.nc-list-group-item-action + button.nc-list-group-item-action {
 
 .nc-slide-over-footer {
     padding: 0.75rem 1rem;
-    border-top: 1px solid var(--oe-nc-border, #e2e8f0);
+    border-top: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.08));
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
+}
+
+/* Non-layered like the footer above: BS4 Reboot's unlayered
+   `header { display: block }` and h2 type styles beat the Tailwind
+   utilities on SheetHeader/SheetTitle, stacking the close button
+   under an oversized title. */
+.nc-slide-over-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.08));
+}
+
+.nc-slide-over-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--oe-nc-text, #1d1d1f);
+}
+
+/* —— anchor-rendered shadcn controls (nc-ui-btn / nc-ui-badge) ——
+   BS4 Reboot (inside the core theme CSS, unlayered) declares
+   `a { color: …; background-color: transparent; text-decoration: … }`,
+   which beats every LAYERED Tailwind color utility on <a>-rendered
+   Buttons/Badges (asChild links): solid link-buttons rendered as white
+   text on a transparent background, link/badge text took the core
+   theme's blue. These rules re-assert the same token values from
+   non-layered CSS, scoped to anchors only so real <button>s keep pure
+   utility behavior. Keep the values in sync with ui/button.tsx and
+   ui/badge.tsx variants. */
+a.nc-ui-btn,
+a.nc-ui-btn:hover,
+a.nc-ui-badge,
+a.nc-ui-badge:hover {
+    text-decoration: none;
+}
+
+a.nc-ui-btn--default,
+a.nc-ui-btn--default:hover {
+    color: #fff;
+    background-color: var(--oe-nc-primary, #0071e3);
+}
+
+a.nc-ui-btn--default:hover {
+    background-color: color-mix(in srgb, var(--oe-nc-primary, #0071e3) 90%, transparent);
+}
+
+a.nc-ui-btn--cta,
+a.nc-ui-btn--cta:hover {
+    color: #fff;
+    background-color: var(--oe-nc-cta, #2bb350);
+}
+
+a.nc-ui-btn--cta:hover {
+    background-color: color-mix(in srgb, var(--oe-nc-cta, #2bb350) 90%, transparent);
+}
+
+a.nc-ui-btn--danger,
+a.nc-ui-btn--danger:hover {
+    color: #fff;
+    background-color: var(--oe-nc-danger, #e0362c);
+}
+
+a.nc-ui-btn--danger:hover {
+    background-color: color-mix(in srgb, var(--oe-nc-danger, #e0362c) 90%, transparent);
+}
+
+a.nc-ui-btn--warning,
+a.nc-ui-btn--warning:hover {
+    color: #fff;
+    background-color: #f59e0b;
+}
+
+a.nc-ui-btn--warning:hover {
+    background-color: #d97706;
+}
+
+a.nc-ui-btn--outline,
+a.nc-ui-btn--ghost {
+    color: var(--oe-nc-text, #1d1d1f);
+    background-color: transparent;
+}
+
+a.nc-ui-btn--outline:hover,
+a.nc-ui-btn--ghost:hover {
+    color: var(--oe-nc-text, #1d1d1f);
+    background-color: var(--oe-nc-bg-tint, #f5f5f7);
+}
+
+a.nc-ui-btn--secondary,
+a.nc-ui-btn--secondary:hover {
+    color: var(--oe-nc-text, #1d1d1f);
+    background-color: var(--oe-nc-bg-tint, #f5f5f7);
+}
+
+a.nc-ui-btn--secondary:hover {
+    background-color: var(--oe-nc-border, rgba(0, 0, 0, 0.08));
+}
+
+a.nc-ui-btn--link,
+a.nc-ui-btn--link:hover {
+    color: var(--oe-nc-primary, #0071e3);
+    background-color: transparent;
+}
+
+a.nc-ui-btn--link:hover {
+    text-decoration: underline;
+}
+
+a.nc-ui-badge--default,
+a.nc-ui-badge--default:hover {
+    color: #fff;
+    background-color: var(--oe-nc-primary, #0071e3);
+}
+
+a.nc-ui-badge--success,
+a.nc-ui-badge--success:hover {
+    color: #045d44;
+    background-color: #e9f5f0;
+}
+
+a.nc-ui-badge--warning,
+a.nc-ui-badge--warning:hover {
+    color: #8f3c06;
+    background-color: #faf1e4;
+}
+
+a.nc-ui-badge--danger,
+a.nc-ui-badge--danger:hover {
+    color: #8f1c13;
+    background-color: #f9ecea;
+}
+
+a.nc-ui-badge--info,
+a.nc-ui-badge--info:hover {
+    color: var(--oe-nc-primary, #0071e3);
+    background-color: var(--oe-nc-primary-tint, #e8f1fc);
+}
+
+a.nc-ui-badge--neutral,
+a.nc-ui-badge--neutral:hover {
+    color: #48484c;
+    background-color: #ececef;
+}
+
+a.nc-ui-badge--outline,
+a.nc-ui-badge--outline:hover {
+    color: var(--oe-nc-text, #1d1d1f);
+    background-color: transparent;
 }
 
 /* —— desk-status-bar (DeskQueueStatusBar) —— */
@@ -874,7 +1026,7 @@ button.nc-list-group-item-action + button.nc-list-group-item-action {
 }
 
 .nc-desk-status-bar a:hover .nc-desk-status-bar-value {
-    color: #2563eb;
+    color: #0071e3;
 }
 
 .nc-desk-status-bar-value {
@@ -1033,10 +1185,25 @@ button.nc-list-group-item-action + button.nc-list-group-item-action {
     font-size: 0.8125rem;
 }
 
+/* Selected tab in an outline button-group (Communications lens, report-hub,
+   bill/lab/pharm-ops, clinical-doc). This used to paint the active button
+   `background: #fff` — mimicking the SegmentedControl's white pill, but WITHOUT
+   its grey track. On the page's near-white ground that made "selected" and
+   "unselected" visually identical (white vs transparent, same blue text/border),
+   so you could not tell which lens you were on. Fill it instead: unambiguous on
+   any ground. */
 .nc-btn-group .nc-btn-outline-primary.active {
-    background: #fff;
+    background: var(--oe-nc-primary);
+    border-color: var(--oe-nc-primary);
+    color: #fff;
     font-weight: 600;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Count pill inside a selected tab has to invert too, or it disappears. */
+.nc-btn-group .nc-btn-outline-primary.active .nc-badge {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
 }
 
 .nc-callout {
@@ -1437,13 +1604,13 @@ body.nc-modal-open {
 }
 
 .nc-status-pill-info {
-    background: var(--oe-nc-primary-tint, #e8eef5);
-    color: var(--oe-nc-primary, #1b3a5f);
+    background: var(--oe-nc-primary-tint, #e8f1fc);
+    color: var(--oe-nc-primary, #0071e3);
     border-color: #b9c9da;
 }
 
 .nc-status-pill-info .nc-status-pill-dot {
-    background: var(--oe-nc-primary, #1b3a5f);
+    background: var(--oe-nc-primary, #0071e3);
 }
 
 /* Badges match */
@@ -1481,7 +1648,7 @@ body.nc-modal-open {
 }
 
 .nc-queue-card-urgent {
-    border-left-color: var(--oe-nc-danger, #b42318);
+    border-left-color: var(--oe-nc-danger, #e0362c);
 }
 
 /* Zebra striping for registers (tables + flush list groups) */
@@ -1491,7 +1658,7 @@ body.nc-modal-open {
 }
 
 .nc-t1 .nc-widget-card table tbody tr:hover > td {
-    background: var(--oe-nc-primary-tint, #e8eef5);
+    background: var(--oe-nc-primary-tint, #e8f1fc);
 }
 
 /* Buttons and inputs: squared */
@@ -1595,14 +1762,64 @@ body.nc-modal-open {
  */
 .nc-checkbox {
     background-color: var(--oe-nc-surface, #fff);
-    border: 1px solid var(--oe-nc-border, #d3dce3);
+    border: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.08));
     border-radius: var(--oe-nc-radius-sm, 0.125rem);
     color: var(--oe-nc-surface, #fff);
     padding: 0;
 }
 .nc-checkbox[data-state="checked"],
 .nc-checkbox[data-state="indeterminate"] {
-    background-color: var(--oe-nc-primary, #1b3a5f);
-    border-color: var(--oe-nc-primary, #1b3a5f);
+    background-color: var(--oe-nc-primary, #0071e3);
+    border-color: var(--oe-nc-primary, #0071e3);
     color: #fff;
+}
+
+/*
+ * Radix switch (toggle) — same unlayered-CSS reasoning as .nc-checkbox above:
+ * this paints both states directly so it survives Bootstrap's unlayered
+ * cascade instead of relying on Tailwind's @layer utilities.
+ */
+.nc-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    box-sizing: border-box;
+    width: 2.25rem;
+    height: 1.25rem;
+    padding: 2px;
+    border: none;
+    border-radius: 9999px;
+    background-color: var(--oe-nc-border, rgba(0, 0, 0, 0.16));
+    cursor: pointer;
+    transition: background-color 150ms ease;
+}
+.nc-switch[data-state="checked"] {
+    background-color: var(--oe-nc-primary, #0071e3);
+}
+.nc-switch:focus-visible {
+    outline: 2px solid var(--oe-nc-primary, #0071e3);
+    outline-offset: 2px;
+}
+.nc-switch[disabled] {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+.nc-switch__thumb {
+    display: block;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    background-color: #fff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+    transform: translateX(0);
+    transition: transform 150ms ease;
+}
+.nc-switch[data-state="checked"] .nc-switch__thumb {
+    transform: translateX(1rem);
+}
+@media (prefers-reduced-motion: reduce) {
+    .nc-switch,
+    .nc-switch__thumb {
+        transition: none;
+    }
 }

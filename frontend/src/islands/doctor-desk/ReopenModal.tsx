@@ -7,6 +7,7 @@ import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Label } from '@components/ui/label';
 import { Textarea } from '@components/ui/textarea';
 import { useEffect, useState } from 'react';
+import { t } from '@core/i18n';
 import type { DoctorReopenableRow, DoctorConsultPayload } from '@core/types';
 import { postDoctorAction } from './postDoctorAction';
 
@@ -51,7 +52,7 @@ export function ReopenModal({
     if (blocked || submitting) return;
 
     if (trimmedReason.length < 10) {
-      setError('Please enter a reason of at least 10 characters');
+      setError(t('Please enter a reason of at least 10 characters'));
       return;
     }
 
@@ -79,7 +80,7 @@ export function ReopenModal({
         onClose();
         return;
       }
-      setError(result.message || 'Reopen failed');
+      setError(result.message || t('Reopen failed'));
       return;
     }
 
@@ -90,14 +91,14 @@ export function ReopenModal({
     <ConfirmModal
       open={open}
       onClose={onClose}
-      title="Reopen consult"
+      title={t('Reopen consult')}
       titleId="nc-doctor-reopen-title"
       modalId="nc-doctor-reopen-modal"
-      confirmLabel="Reopen consult"
+      confirmLabel={t('Reopen consult')}
       confirmVariant="warning"
       confirmDisabled={blocked || trimmedReason.length < 10}
       submitting={submitting}
-      submittingLabel="Reopening…"
+      submittingLabel={t('Reopening…')}
       onConfirm={() => void handleConfirm()}
       identityBanner={(
         <IdentityConfirmBanner
@@ -108,10 +109,10 @@ export function ReopenModal({
       )}
     >
       <p className="text-[var(--oe-nc-text-muted)] text-sm mb-3">
-        Return this visit to your desk for new lab or Rx orders. Signed documentation stays locked.
+        {t('Return this visit to your desk for new lab or Rx orders. Signed documentation stays locked.')}
       </p>
       <div className="grid gap-2">
-        <Label htmlFor="nc-reopen-reason">Reason (required, min 10 characters)</Label>
+        <Label htmlFor="nc-reopen-reason">{t('Reason (required, min 10 characters)')}</Label>
         <Textarea
           id="nc-reopen-reason"
           rows={3}

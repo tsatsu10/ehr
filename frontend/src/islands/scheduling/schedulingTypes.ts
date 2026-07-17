@@ -39,6 +39,13 @@ export interface SchedulingLabels {
   allProviders: string;
   showFilters: string;
   hideFilters: string;
+  today: string;
+  previousDay: string;
+  nextDay: string;
+  previousWeek: string;
+  nextWeek: string;
+  previousMonth: string;
+  nextMonth: string;
   flowBoardMode2Hint: string;
   calendarAppointments: string;
   loadingCalendar: string;
@@ -99,11 +106,17 @@ export interface SchedulingLabels {
   bookingHint: string;
   patient: string;
   provider: string;
-  category: string;
+  visitType: string;
   time: string;
   durationMin: string;
   comments: string;
   bookingValidation: string;
+  nextFreeTimes: string;
+  providerColors: string;
+  shortcutHint: string;
+  noFreeSlots: string;
+  freeSlotsError: string;
+  retry: string;
   recallSheetNew: string;
   recallSheetEdit: string;
   recallSheetAria: string;
@@ -131,7 +144,6 @@ export interface SchedulingLabels {
   listColStatus: string;
   listColWait: string;
   listColActions: string;
-  selectedPatient: string;
   reasonPlaceholder: string;
   deleteRecallConfirm: string;
   weekMoreEvents: string;
@@ -164,6 +176,23 @@ export interface SchedulingLabels {
   notifyPatientAbort: string;
   notifyMoveLabel: string;
   notifyResizeLabel: string;
+  flowBoardRunningLate: string;
+  recallLastSeenPrefix: string;
+  recallNeverSeen: string;
+  calendarBlockTag: string;
+  changePatient: string;
+  whenLabel: string;
+  cancelAppointmentAction: string;
+  cancelAppointmentConfirm: string;
+  cancelAppointmentKeep: string;
+  errorCancelAppointment: string;
+  repeatLabel: string;
+  repeatNone: string;
+  repeatWeekly: string;
+  repeatBiweekly: string;
+  repeatMonthly: string;
+  repeatUntilLabel: string;
+  repeatUntilRequired: string;
 }
 
 export const LENS_LABELS: Record<SchedulingLens, string> = {
@@ -188,6 +217,8 @@ export interface FlowBoardCard {
   minutes_in_status: number;
   alert_minutes: number;
   alert_level: 'ok' | 'warn' | 'over';
+  /** Booked but not arrived past the appointment time (today only). */
+  running_late?: boolean;
   is_recurring: boolean;
   has_tracker: boolean;
   next_status: string | null;
@@ -236,7 +267,12 @@ export interface CalendarEvent {
   provider_id: number;
   provider_label: string;
   category_id: number;
+  /** The visit type / reason for this appointment (from pc_title). */
   category_label: string;
+  /** Matched visit type id (0 when it doesn't map to a current type / is a block). */
+  visit_type_id?: number;
+  /** True for clinic/group blocks with no patient (read-only chip). */
+  is_block?: boolean;
   status: string;
   status_label: string;
   is_recurring: boolean;
@@ -254,9 +290,19 @@ export interface CalendarDayPayload {
   facility_id: number;
   provider_id: number | null;
   interval_minutes: number;
+  /** Clinic day bounds (hour 0–24) so the grid spans real hours, not a fixed 08–18. */
+  open_hour?: number;
+  close_hour?: number;
   events: CalendarEvent[];
+  /** Bookable visit types (Admin → Clinic Setup) — same list Front Desk's Start Visit uses */
   categories: SchedulingOption[];
+  /** Facility's default visit type id (server-resolved, falls back to the first entry) */
+  default_visit_type_id?: number;
   providers: SchedulingOption[];
+  /** providerId → "#rrggbb" (admin pick or palette default) — the provider dot for who */
+  provider_colors?: Record<number, string>;
+  /** visitTypeId → "#rrggbb" (palette by type) — the chip fill colour */
+  visit_type_colors?: Record<number, string>;
   revision: string;
   poll_interval_ms: number;
   can_book: boolean;
@@ -280,7 +326,7 @@ export interface CalendarBookingDraft {
   providerId: number;
   pid: number;
   patientLabel: string;
-  categoryId: number;
+  visitTypeId: number;
   durationMinutes: number;
   comments: string;
   recallId?: number;
@@ -314,6 +360,10 @@ export interface RecallRow {
   produced_event_date: string;
   outcome_note: string;
   contact: string;
+  /** Patient's last encounter date (Y-m-d, '' when never seen). */
+  last_seen_date?: string;
+  /** Human "3 months ago" for last_seen_date ('' when never seen). */
+  last_seen_label?: string;
   recall_type?: string;
   recall_type_label?: string;
   messaging?: {

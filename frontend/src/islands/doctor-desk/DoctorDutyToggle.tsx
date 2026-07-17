@@ -1,4 +1,5 @@
 import { Button } from '@components/ui/button';
+import { t } from '@core/i18n';
 import { cn } from '@/lib/utils';
 
 interface DoctorDutyToggleProps {
@@ -21,7 +22,7 @@ export function DoctorDutyToggle({ taking, saving, onToggle }: DoctorDutyToggleP
       disabled={saving}
       aria-pressed={taking}
       onClick={() => onToggle(!taking)}
-      title={taking ? 'You are taking patients — click to pause' : 'You are paused — click to take patients'}
+      title={taking ? t('You are taking patients — click to pause') : t('You are paused — click to take patients')}
     >
       <span
         className={cn(
@@ -30,7 +31,7 @@ export function DoctorDutyToggle({ taking, saving, onToggle }: DoctorDutyToggleP
         )}
         aria-hidden="true"
       />
-      {taking ? 'Taking patients' : 'Paused'}
+      {taking ? t('Taking patients') : t('Paused')}
     </Button>
   );
 }

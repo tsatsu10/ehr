@@ -69,7 +69,7 @@
 
 .nc-vb-controls-panel__title {
   margin: 0;
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
   font-size: 1rem;
   font-weight: 600;
 }
@@ -229,7 +229,7 @@
   font-weight: 600;
   font-size: 0.875rem;
   color: var(--oe-nc-text, #1e293b);
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
 }
 
 .nc-vb-column-count {
@@ -315,7 +315,7 @@
 }
 
 .nc-vb-kiosk-toolbar-title strong {
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
   font-size: 1.1rem;
   color: var(--oe-nc-text, #164e63);
 }

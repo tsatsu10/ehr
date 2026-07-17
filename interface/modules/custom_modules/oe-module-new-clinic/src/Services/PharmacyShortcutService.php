@@ -49,7 +49,13 @@ class PharmacyShortcutService
         $modulePublic = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
 
         $redirectUrl = match ($shortcut) {
-            'dispense' => $webroot . '/interface/patient_file/encounter/encounter_top.php',
+            // Stock has no dedicated "dispense" route -- dispensing an existing
+            // Rx is a modal action (interface/drugs/dispense_drug.php) reachable
+            // only from that Rx's own edit screen, which is reached from the
+            // patient's prescription list. This used to point at the generic
+            // encounter shell (encounter_top.php), which has no prescription or
+            // dispense content at all -- a genuine dead end.
+            'dispense' => $webroot . '/controller.php?prescription&list&id=' . urlencode((string) $pid),
             'rx_edit' => $this->rxEditPolicy->isNativeRxEditEnabled((int) ($visit['facility_id'] ?? 0))
                 ? $modulePublic . 'rx-edit.php?visit_id=' . urlencode((string) $visitId) . '&return_to=pharmacy'
                 : $webroot . '/controller.php?prescription&edit&id=&pid=' . urlencode((string) $pid),

@@ -21,6 +21,7 @@ import {
 } from '@components/ui/dialog';
 import { Label } from '@components/ui/label';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { t } from '@core/i18n';
 import type {
   DoctorVisit,
   LabPanelCatalogData,
@@ -80,7 +81,7 @@ export function LabPanelModal({
     })
       .then(setCatalog)
       .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Failed to load catalog');
+        setError(err instanceof Error ? err.message : t('Failed to load catalog'));
       })
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -119,7 +120,7 @@ export function LabPanelModal({
 
     const ids = [...selected];
     if (ids.length === 0) {
-      setError('Select at least one test.');
+      setError(t('Select at least one test.'));
       return;
     }
 
@@ -137,7 +138,7 @@ export function LabPanelModal({
     setSubmitting(false);
 
     if (!result.ok) {
-      setError(result.message || 'Order failed');
+      setError(result.message || t('Order failed'));
       return;
     }
 
@@ -149,8 +150,9 @@ export function LabPanelModal({
   if (!visit) return null;
 
   const hintParts: string[] = [];
-  if (catalog?.provider_name) hintParts.push(`From ${catalog.provider_name}`);
-  if (catalog?.auto_bill_on_order) hintParts.push('Mapped tests auto-add cashier charges');
+  if (catalog?.provider_name) hintParts.push(t('From {name}', { name: catalog.provider_name }));
+  if (catalog?.auto_bill_on_order) hintParts.push(t('Mapped tests auto-add cashier charges'));
+  const hintText = hintParts.length > 0 ? `${hintParts.join(' — ')}.` : '';
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
@@ -160,23 +162,23 @@ export function LabPanelModal({
         aria-labelledby="nc-doctor-lab-panel-title"
       >
         <DialogHeader>
-          <DialogTitle id="nc-doctor-lab-panel-title">Quick lab order</DialogTitle>
-          <DialogClose aria-label="Close">
+          <DialogTitle id="nc-doctor-lab-panel-title">{t('Quick lab order')}</DialogTitle>
+          <DialogClose aria-label={t('Close')}>
             <span aria-hidden="true">&times;</span>
           </DialogClose>
         </DialogHeader>
         <DialogBody>
           {hintParts.length > 0 && (
             <p className="text-[var(--oe-nc-text-muted)] text-sm mb-3" id="nc-lab-panel-hint">
-              {hintParts.join(' — ')}.
+              {hintText}
             </p>
           )}
 
           <div id="nc-lab-panel-tests" className="nc-catalog-picker">
-            {loading && <p className="text-[var(--oe-nc-text-muted)] text-sm mb-0">Loading tests…</p>}
+            {loading && <p className="text-[var(--oe-nc-text-muted)] text-sm mb-0">{t('Loading tests…')}</p>}
             {!loading && catalog && !catalog.has_catalog && (
               <p className={deskCalloutClass('warn', 'text-sm mb-0')}>
-                Lab catalog is not ready. Use Full lab form or complete Lab Operations setup.
+                {t('Lab catalog is not ready. Use Full lab form or complete Lab Operations setup.')}
               </p>
             )}
             {!loading && catalog?.has_catalog && tests.map((test: LabPanelCatalogTest) => (
@@ -201,7 +203,7 @@ export function LabPanelModal({
                       {formatDoctorMoney(test.fee_amount)}
                     </span>
                   ) : (
-                    <span className="text-[var(--oe-nc-text-muted)]"> (no fee mapped)</span>
+                    <span className="text-[var(--oe-nc-text-muted)]"> ({t('no fee mapped')})</span>
                   )}
                 </Label>
               </div>
@@ -217,11 +219,11 @@ export function LabPanelModal({
                 id="nc-lab-panel-starter"
                 onClick={applyStarterPanel}
               >
-                Starter panel
+                {t('Starter panel')}
               </Button>
               <span className="text-[var(--oe-nc-text-muted)] text-sm" id="nc-lab-panel-total">
                 {estimatedTotal != null
-                  ? `Estimated: ${formatDoctorMoney(estimatedTotal)}`
+                  ? t('Estimated: {amount}', { amount: formatDoctorMoney(estimatedTotal) })
                   : ''}
               </span>
             </div>
@@ -240,10 +242,10 @@ export function LabPanelModal({
             className="nc-lab-panel-full-form mr-auto"
             onClick={onFullLabForm}
           >
-            Full lab form
+            {t('Full lab form')}
           </Button>
           <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
+            {t('Cancel')}
           </Button>
           <Button
             type="button"
@@ -251,7 +253,7 @@ export function LabPanelModal({
             disabled={submitting || blocked || !catalog?.has_catalog}
             onClick={() => void handlePlace()}
           >
-            {submitting ? 'Placing order…' : 'Place order'}
+            {submitting ? t('Placing order…') : t('Place order')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -264,19 +266,20 @@ export function labPanelPlaceNotice(result: LabPanelPlaceResult): { message: str
   const billing = result.billing ?? {};
   if ((billing.posted_count ?? 0) > 0) {
     return {
-      message: `${billing.posted_count} lab charge(s) posted to encounter (${formatDoctorMoney(
-        billing.charges_total,
-      )}).`,
+      message: t('{count} lab charge(s) posted to encounter ({amount}).', {
+        count: billing.posted_count ?? 0,
+        amount: formatDoctorMoney(billing.charges_total),
+      }),
       variant: 'info',
     };
   }
   if ((billing.unmapped_codes ?? []).length > 0) {
     return {
-      message: 'Lab order placed. Map fees in Lab Ops setup to auto-post charges.',
+      message: t('Lab order placed. Map fees in Lab Ops setup to auto-post charges.'),
       variant: 'info',
     };
   }
-  return { message: 'Lab order placed for this visit.', variant: 'success' };
+  return { message: t('Lab order placed for this visit.'), variant: 'success' };
 }
 
 /** Notice after returning from full lab form shortcut (pageshow). */
@@ -284,12 +287,12 @@ export function labReturnNotice(chips: RoutingChips | undefined): { message: str
   if (!chips?.lab_ordered) return null;
   if (chips.lab_order_incomplete) {
     return {
-      message: 'Lab order saved but no tests were added. Open Order lab again and add at least one test line.',
+      message: t('Lab order saved but no tests were added. Open Order lab again and add at least one test line.'),
       variant: 'warning',
     };
   }
   return {
-    message: 'Lab order saved for this visit. Continue the consult or route to lab when finished.',
+    message: t('Lab order saved for this visit. Continue the consult or route to lab when finished.'),
     variant: 'success',
   };
 }

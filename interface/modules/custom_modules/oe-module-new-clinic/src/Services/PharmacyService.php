@@ -393,7 +393,9 @@ class PharmacyService
             }, $prescriptions);
         }
 
-        return array_map(static function (array $row): array {
+        $dispensedTotals = $this->fetchDispensedTotals(array_column($prescriptions, 'id'));
+
+        return array_map(static function (array $row) use ($dispensedTotals): array {
             $drugId = (int) ($row['drug_id'] ?? 0);
             unset($row['drug_id']);
             if ($drugId > 0) {
@@ -404,8 +406,54 @@ class PharmacyService
                 }
             }
 
+            // Some units may already be out the door via a partial dispense even though the
+            // prescription as a whole hasn't been marked filled -- reuse the same
+            // ordered-vs-dispensed classification the Pharm-Ops worklist uses.
+            if ($row['status'] === 'to_dispense') {
+                $qtyDispensed = $dispensedTotals[(int) $row['id']] ?? 0;
+                $qtyOrdered = PharmOpsWorklistService::parseQuantity((string) ($row['quantity'] ?? ''));
+                $classified = PharmOpsWorklistService::classifyDispenseStatus($qtyOrdered, $qtyDispensed, false);
+                if ($classified === null) {
+                    $row['status'] = 'dispensed';
+                } elseif ($classified === 'partial') {
+                    $row['status'] = 'partial';
+                    $row['qty_dispensed'] = $qtyDispensed;
+                }
+            }
+
             return $row;
         }, $prescriptions);
+    }
+
+    /**
+     * @param array<int, int> $prescriptionIds
+     * @return array<int, int> prescription_id => total quantity already dispensed via drug_sales
+     */
+    private function fetchDispensedTotals(array $prescriptionIds): array
+    {
+        $prescriptionIds = array_values(array_unique(array_filter(
+            array_map('intval', $prescriptionIds),
+            static fn (int $id): bool => $id > 0
+        )));
+        if ($prescriptionIds === []) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($prescriptionIds), '?'));
+        $rows = QueryUtils::fetchRecords(
+            "SELECT prescription_id, SUM(quantity) AS qty_dispensed
+             FROM drug_sales
+             WHERE prescription_id IN ({$placeholders})
+             GROUP BY prescription_id",
+            $prescriptionIds
+        ) ?: [];
+
+        $totals = [];
+        foreach ($rows as $row) {
+            $totals[(int) ($row['prescription_id'] ?? 0)] = (int) ($row['qty_dispensed'] ?? 0);
+        }
+
+        return $totals;
     }
 
     /**
@@ -435,9 +483,18 @@ class PharmacyService
         );
     }
 
-    public function rxListUrl(int $pid): string
+    public function rxListUrl(int $pid, ?int $facilityId = null): string
     {
         $webroot = $GLOBALS['webroot'] ?? '';
+
+        if ($facilityId === null || $facilityId <= 0) {
+            $facilityId = $this->config->resolveReaderFacilityId();
+        }
+        if ((new PrescriptionHistoryPolicy())->isNativeRxHistoryEnabled($facilityId)) {
+            return $webroot
+                . '/interface/modules/custom_modules/oe-module-new-clinic/public/rx-history.php?pid='
+                . urlencode((string) $pid);
+        }
 
         return $webroot . '/controller.php?prescription&list&id=' . urlencode((string) $pid);
     }

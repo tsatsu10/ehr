@@ -17,6 +17,7 @@ use OpenEMR\Modules\NewClinic\Services\EncounterSessionService;
 use OpenEMR\Modules\NewClinic\Services\PharmacyService;
 use OpenEMR\Modules\NewClinic\Services\PharmacyShortcutService;
 use OpenEMR\Modules\NewClinic\Services\PrescriptionEditService;
+use OpenEMR\Modules\NewClinic\Services\PrescriptionHistoryService;
 
 final class PharmacyActionHandler implements AjaxActionHandlerInterface
 {
@@ -33,6 +34,7 @@ final class PharmacyActionHandler implements AjaxActionHandlerInterface
         'pharmacy.rx_form_data',
         'pharmacy.rx_search_drugs',
         'pharmacy.rx_save',
+        'pharmacy.rx_history',
     ];
 
     public function __construct(
@@ -174,6 +176,16 @@ final class PharmacyActionHandler implements AjaxActionHandlerInterface
                 $this->host->verifyCsrf($body);
                 $saved = $this->host->svc(PrescriptionEditService::class)->savePrescription($body, $userId);
                 $this->host->respond(true, 'ok', $saved);
+                break;
+            case 'pharmacy.rx_history':
+                $historyPid = (int) ($_REQUEST['pid'] ?? 0);
+                $page = max(1, (int) ($_REQUEST['page'] ?? 1));
+                $pageSize = (int) ($_REQUEST['page_size'] ?? PrescriptionHistoryService::PAGE_SIZE_DEFAULT);
+                $search = (string) ($_REQUEST['search'] ?? '');
+                $status = (string) ($_REQUEST['status'] ?? 'all');
+                $history = $this->host->svc(PrescriptionHistoryService::class)
+                    ->getHistory($historyPid, $page, $pageSize, $search, $status);
+                $this->host->respond(true, 'ok', $history);
                 break;
             default:
                 $this->host->respond(false, 'Unknown action', ['code' => 'not_found'], 404);

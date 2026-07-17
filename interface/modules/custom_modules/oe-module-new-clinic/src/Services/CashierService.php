@@ -641,6 +641,8 @@ class CashierService
             $authoritativeLines[] = [
                 'source' => 'billing',
                 'source_id' => (int) ($charge['id'] ?? 0),
+                'item_code' => (string) ($charge['code'] ?? ''),
+                'units' => max((int) ($charge['units'] ?? 1), 1),
                 'description' => (string) ($charge['description'] ?? ''),
                 'amount' => round((float) ($charge['amount'] ?? 0), 2),
                 'covered' => isset($coveredKeys[$key]),
@@ -651,6 +653,8 @@ class CashierService
             $authoritativeLines[] = [
                 'source' => 'drug',
                 'source_id' => (int) ($drug['sale_id'] ?? 0),
+                'item_code' => 'drug:' . (int) ($drug['drug_id'] ?? 0),
+                'units' => max((int) ($drug['quantity'] ?? 1), 1),
                 'description' => (string) ($drug['description'] ?? ''),
                 'amount' => round((float) ($drug['amount'] ?? 0), 2),
                 'covered' => isset($coveredKeys[$key]),
@@ -659,11 +663,34 @@ class CashierService
 
         $split = $schemeService->splitTotals($authoritativeLines);
         // Sum is guaranteed to equal totalDue by construction; this is a defensive sanity check.
+        // Deliberately checked against the CASH-priced split, before any payer pricing below —
+        // payer pricing only changes what the scheme is billed, never what this sanity check
+        // validates (that coverage flags didn't create or destroy a line).
         if (abs(($split['patient_pay'] + $split['scheme_owed']) - $totalDue) > 0.01) {
             throw new \InvalidArgumentException('Coverage lines do not add up to the visit total');
         }
         $patientPay = $split['patient_pay'];
-        $schemeOwed = $split['scheme_owed'];
+
+        // CBILL-4a — payer-aware pricing. Covered lines bill the scheme at its own price
+        // (e.g. NHIS tariff) when one is on file; uncovered lines, and covered lines with no
+        // override, are unaffected. The patient always pays the cash price regardless.
+        $claimLines = $authoritativeLines;
+        $payerPriceService = new PayerPriceService();
+        if ($payerPriceService->isEnabled($facilityId)) {
+            foreach ($claimLines as &$claimLine) {
+                if (!empty($claimLine['covered'])) {
+                    $claimLine['amount'] = $payerPriceService->resolveLineAmount(
+                        $facilityId,
+                        $schemeId,
+                        (string) ($claimLine['item_code'] ?? ''),
+                        (int) ($claimLine['units'] ?? 1),
+                        (float) $claimLine['amount']
+                    );
+                }
+            }
+            unset($claimLine);
+        }
+        $schemeOwed = $schemeService->splitTotals($claimLines)['scheme_owed'];
 
         // Same profile-completion rule as partial pay: complete profile required (no override).
         $completionGate = $this->assessCompletionGate($pid, true);
@@ -693,7 +720,7 @@ class CashierService
         $committed = false;
         $postedPaymentId = 0;
         try {
-            $claimId = $schemeService->createClaim($visit, $schemeId, $membershipNumber, $authoritativeLines, $actorUserId);
+            $claimId = $schemeService->createClaim($visit, $schemeId, $membershipNumber, $claimLines, $actorUserId);
             if ($patientPay > 0) {
                 $postedPaymentId = $this->postPatientPayment(
                     $pid,
@@ -1328,25 +1355,9 @@ class CashierService
 
     private function allocateReceiptNumber(int $facilityId): string
     {
-        if ($facilityId <= 0) {
-            $facilityId = $this->visitScope->resolveDefaultFacilityId();
-        }
-
-        $counterDate = date('Y-m-d');
-        sqlStatement(
-            "INSERT INTO new_receipt_counter (facility_id, counter_date, last_seq)
-             VALUES (?, ?, 1)
-             ON DUPLICATE KEY UPDATE last_seq = last_seq + 1",
-            [$facilityId, $counterDate]
-        );
-
-        $row = QueryUtils::querySingleRow(
-            "SELECT last_seq FROM new_receipt_counter WHERE facility_id = ? AND counter_date = ?",
-            [$facilityId, $counterDate]
-        );
-        $seq = is_array($row) ? (int) ($row['last_seq'] ?? 1) : 1;
-
-        return sprintf('%d-%s-%04d', $facilityId, date('Ymd'), $seq);
+        // CP-2 — shared with the deposits/other-payments flow so one atomic
+        // counter serves every receipt shape.
+        return (new ReceiptNumberService($this->visitScope))->allocate($facilityId);
     }
 
     /**

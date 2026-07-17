@@ -45,6 +45,8 @@ $webroot = $GLOBALS['webroot'] ?? '';
 $moduleUrl = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public';
 $access = new LabOpsAccessService();
 $reactLabOps = $config->get('enable_react_lab_ops', '1') === '1';
+// CP-4 — Follow-up tab (unresulted orders + abnormal without follow-up).
+$followUpOn = $config->getInt('enable_lab_followup_views', 0, $facilityId) === 1;
 
 (new PageController())->renderForAnyAcl(
     'lab-ops/index.html.twig',
@@ -55,9 +57,14 @@ $reactLabOps = $config->get('enable_react_lab_ops', '1') === '1';
         'shell_nav_id' => 'cliniclabops',
         'lab_desk_url' => $moduleUrl . '/lab.php',
         'visit_board_url' => $moduleUrl . '/visit-board.php',
-        'initial_tab' => in_array((string) ($_GET['tab'] ?? ''), ['pending', 'in_progress', 'send_out'], true)
+        'initial_tab' => in_array(
+            (string) ($_GET['tab'] ?? ''),
+            array_merge(['pending', 'in_progress', 'send_out'], $followUpOn ? ['followup'] : []),
+            true
+        )
             ? (string) $_GET['tab']
             : 'pending',
+        'enable_followup' => $followUpOn,
         'can_enter' => $access->canEnterResults(),
         'can_release' => $access->canReleaseResults(),
         'can_manage_catalog' => $access->canManageCatalog(),

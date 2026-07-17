@@ -11,7 +11,6 @@
 
 require_once dirname(__DIR__) . '/bootstrap.php';
 
-use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Modules\NewClinic\Controllers\PageController;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocAccessService;
@@ -63,8 +62,6 @@ if (!in_array($tabParam, $allowedTabs, true)) {
         'can_nursing' => $access->canViewNursing(),
         'can_orders' => $access->canViewOrders(),
         'can_specialty' => $access->canViewSpecialty() && $access->showSpecialtyLens($facilityId),
-        'can_show_advanced' => AclMain::aclCheckCore('new_clinic', 'new_admin')
-            || AclMain::aclCheckCore('admin', 'super'),
         'enable_react_clinical_doc_hub' => $reactHub,
     ]
 );

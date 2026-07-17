@@ -10,13 +10,12 @@ import {
   TableHeader,
   TableRow,
 } from '@components/ui/table';
-import type { CalendarCategory, VisitTypeRow } from '../adminTypes';
-import { categoryLabel, profileLabel } from '../adminUtils';
+import type { VisitTypeRow } from '../adminTypes';
+import { profileLabel } from '../adminUtils';
 import { AdminEmptyState, AdminSection } from '../adminUi';
 
 interface VisitTypesTabProps {
   visitTypes: VisitTypeRow[];
-  calendarCategories: CalendarCategory[];
   onAdd: () => void;
   onEdit: (row: VisitTypeRow) => void;
   onArchive: (row: VisitTypeRow) => void;
@@ -24,7 +23,6 @@ interface VisitTypesTabProps {
 
 export function VisitTypesTab({
   visitTypes,
-  calendarCategories,
   onAdd,
   onEdit,
   onArchive,
@@ -32,7 +30,7 @@ export function VisitTypesTab({
   return (
     <AdminSection
       title="Visit types"
-      description="Visit types map to calendar categories for encounters."
+      description="What patients can be booked or checked in as — shown on both Scheduling and Front Desk."
       icon={<CalendarDays className="h-4 w-4" aria-hidden />}
       action={
         <Button
@@ -53,7 +51,6 @@ export function VisitTypesTab({
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Calendar category</TableHead>
                   <TableHead>Profile</TableHead>
                   <TableHead>Scope</TableHead>
                   <TableHead>Status</TableHead>
@@ -68,7 +65,6 @@ export function VisitTypesTab({
                   return (
                     <TableRow key={row.id} className={row.is_active ? '' : 'text-[var(--oe-nc-text-muted)]'}>
                       <TableCell>{row.label}</TableCell>
-                      <TableCell>{categoryLabel(row.pc_catid, calendarCategories)}</TableCell>
                       <TableCell>{profileLabel(row.service_profile)}</TableCell>
                       <TableCell className="text-sm">{row.scope_label ?? ''}</TableCell>
                       <TableCell>{status}</TableCell>

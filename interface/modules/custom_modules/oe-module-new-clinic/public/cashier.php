@@ -33,5 +33,11 @@ $canMarkUnpaid = AclMain::aclCheckCore('new_clinic', 'new_visit_mark_outstanding
     'enable_partial_payment' => $config->getInt('enable_partial_payment', 0, $deskFacilityId) === 1,
     'can_partial_pay' => $canMarkUnpaid,
     'enable_insurance_scheme' => $config->getInt('enable_insurance_scheme', 0, $deskFacilityId) === 1,
+    // CBILL-4b — manual eligibility-check log (requires the scheme-split flag above).
+    'enable_payer_billing' => $config->getInt('enable_payer_billing', 0, $deskFacilityId) === 1,
+    // CP-2 — deposits/other payments: flag AND permission, computed server-side.
+    'can_other_payments' => $config->getInt('enable_cashier_other_payments', 0, $deskFacilityId) === 1
+        && (AclMain::aclCheckCore('new_clinic', 'new_cashier_other_payment')
+            || AclMain::aclCheckCore('new_clinic', 'new_admin')),
     'enable_react_cashier_desk' => $reactCashierDesk,
 ]);

@@ -34,6 +34,7 @@ class ClinicAdminService
         'pharmacy_auto_bill_on_dispense' => ['type' => 'bool', 'default' => '0'],
         'enable_partial_payment' => ['type' => 'bool', 'default' => '0'],
         'enable_insurance_scheme' => ['type' => 'bool', 'default' => '0'],
+        'enable_payer_billing' => ['type' => 'bool', 'default' => '0'],
         'report_hub_moh_pack' => ['type' => 'string', 'default' => 'ghana_v1'],
         'enable_lab_role' => ['type' => 'bool', 'default' => '0'],
         'enable_pharmacy_role' => ['type' => 'bool', 'default' => '0'],
@@ -165,12 +166,18 @@ class ClinicAdminService
         'enable_native_history_full_form' => ['type' => 'bool', 'default' => '0'],
         'enable_native_immunization_editor' => ['type' => 'bool', 'default' => '0'],
         'enable_native_referral_editor' => ['type' => 'bool', 'default' => '0'],
+        'enable_native_certificate' => ['type' => 'bool', 'default' => '0'],
+        'enable_native_eye_exam' => ['type' => 'bool', 'default' => '0'],
+        'enable_cashier_other_payments' => ['type' => 'bool', 'default' => '0'],
+        'enable_native_patient_notes' => ['type' => 'bool', 'default' => '0'],
+        'enable_lab_followup_views' => ['type' => 'bool', 'default' => '0'],
         'backup_target_dir' => ['type' => 'string', 'default' => '', 'maxLength' => 512],
         'backup_frequency_days' => ['type' => 'int', 'default' => '0', 'min' => 0, 'max' => 365],
         'backup_include_site_files' => ['type' => 'bool', 'default' => '0'],
         'admin_hub_setup_complete' => ['type' => 'bool', 'default' => '0'],
         'enable_office_notes' => ['type' => 'bool', 'default' => '0'],
         'enable_documents_native' => ['type' => 'bool', 'default' => '0'],
+        'enable_patient_chat' => ['type' => 'bool', 'default' => '0'],
         'pediatric_exact_dob_age' => ['type' => 'int', 'default' => '5', 'min' => 0, 'max' => 18],
         'currency_code' => ['type' => 'currency_code', 'default' => 'GHS'],
         'currency_symbol' => ['type' => 'currency_symbol', 'default' => 'GH₵'],
@@ -189,6 +196,7 @@ class ClinicAdminService
         private readonly VisitTypeAdminService $visitTypeAdmin = new VisitTypeAdminService(),
         private readonly FeeScheduleAdminService $feeScheduleAdmin = new FeeScheduleAdminService(),
         private readonly DirectoryContactService $directoryContacts = new DirectoryContactService(),
+        private readonly FacilityAdminService $facilityAdmin = new FacilityAdminService(),
         private readonly CashClinicProfileService $cashProfile = new CashClinicProfileService(),
         private readonly MoneyFormatService $moneyFormat = new MoneyFormatService(),
         private readonly ClinicalDocLbfWizardService $clinicalDocLbfWizard = new ClinicalDocLbfWizardService(),
@@ -241,6 +249,10 @@ class ClinicAdminService
         $clinicFacilityId = $this->visitScope->resolveDefaultFacilityId();
         $adminHubEnabled = !empty($settings['enable_admin_hub']);
 
+        // Build the form-bundle board once — the forms catalog derives its bundle
+        // list from the same board, so passing it in avoids a second ~0.25s build.
+        $formBundleBoard = $this->formBundle->getBoard($facilityId);
+
         $payload = [
             'facility_id' => $facilityId,
             'scope' => $facilityId === 0 ? 'global' : 'facility',
@@ -252,27 +264,31 @@ class ClinicAdminService
                 $facilityId,
                 (int) ($this->config->get('default_visit_type_id', '0', $facilityId) ?? '0')
             ),
-            'calendar_categories' => $this->visitTypeAdmin->listCalendarCategories(),
             'default_visit_type_id' => (int) ($this->config->get('default_visit_type_id', '0', $facilityId) ?? '0'),
             'service_profiles' => VisitTypeAdminService::SERVICE_PROFILES,
             'fee_schedule' => $this->feeScheduleAdmin->listForAdmin($facilityId),
             'fee_form' => $this->feeScheduleAdmin->getFormMeta(),
             'directory_contacts' => $this->directoryContacts->listForAdmin(),
             'directory_types' => $this->directoryContacts->listTypes(),
+            'facilities' => $this->facilityAdmin->listForAdmin(),
             'roles' => $this->rolesService->getRolesPayload(),
             'cash_profile' => $this->cashProfile->getProfileStatus($facilityId),
             'ghana_lbf_pack' => $this->clinicalDocLbfWizard->getPackStatus($facilityId),
             'referral_hospital_lbf_pack' => $this->referralHospitalLbfWizard->getPackStatus($facilityId),
             'ancillary_lbf_packs' => $this->ancillaryLbf->getAllPackStatus($facilityId),
-            'form_bundle_board' => $this->formBundle->getBoard($facilityId),
-            'forms_catalog' => $this->formsCatalog->getCatalog($facilityId),
+            'form_bundle_board' => $formBundleBoard,
+            'forms_catalog' => $this->formsCatalog->getCatalog($facilityId, $formBundleBoard),
             'completion_field_weights' => $this->completionFieldWeights->listForAdmin(),
         ];
 
         if ($adminHubEnabled) {
-            $payload['system_health'] = $this->healthService->getHealthStatus($facilityId);
+            // Compute health once and hand it to the setup checklist — getHealthStatus()
+            // runs a COUNT over the multi-million-row `log` table, so calling it twice
+            // (here + inside getProgress) doubled the settings-page load time.
+            $systemHealth = $this->healthService->getHealthStatus($facilityId);
+            $payload['system_health'] = $systemHealth;
             $payload['runbooks'] = $this->runbooks->getCatalog();
-            $payload['setup_progress'] = $this->setupProgress->getProgress($facilityId);
+            $payload['setup_progress'] = $this->setupProgress->getProgress($facilityId, $systemHealth);
             $payload['config_export'] = array_merge(
                 $this->configExport->getExportMeta(),
                 $this->configImport->getImportMeta()
@@ -280,6 +296,34 @@ class ClinicAdminService
         }
 
         return $payload;
+    }
+
+    /**
+     * Create/update a facility, then return the refreshed facility list AND the
+     * scope-bar labels. Renaming the clinic facility changes the name shown in
+     * the Admin Hub header/scope bar, so the caller needs the fresh labels to
+     * update in place without a full settings reload (which would clobber the
+     * main form's unsaved state).
+     *
+     * @param array<string, mixed> $input
+     * @return array<string, mixed>
+     */
+    public function saveFacility(
+        array $input,
+        int $actorUserId,
+        string $scope = 'facility',
+        ?int $requestedFacilityId = null
+    ): array {
+        $facilities = $this->facilityAdmin->save($input, $actorUserId);
+
+        $facilityId = $this->resolveSettingsFacilityId($scope, $requestedFacilityId);
+        $clinicFacilityId = $this->visitScope->resolveDefaultFacilityId();
+
+        return [
+            'facilities' => $facilities,
+            'scope_label' => $this->facilityScopeLabel($facilityId),
+            'clinic_facility_label' => $this->facilityLabel($clinicFacilityId),
+        ];
     }
 
     /**

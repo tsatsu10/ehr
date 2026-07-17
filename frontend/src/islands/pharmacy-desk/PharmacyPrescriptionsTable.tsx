@@ -25,12 +25,24 @@ interface PharmacyPrescriptionsTableProps {
   onAddRx?: () => void;
 }
 
-function rxStatusBadgeVariant(status: string): 'success' | 'warning' {
-  return status === 'dispensed' ? 'success' : 'warning';
+function rxStatusBadgeVariant(status: string): 'success' | 'warning' | 'danger' {
+  if (status === 'dispensed') {
+    return 'success';
+  }
+  if (status === 'partial') {
+    return 'danger';
+  }
+  return 'warning';
 }
 
-function statusLabel(status: string): string {
-  return status === 'dispensed' ? 'dispensed' : 'to dispense';
+function statusLabel(line: PharmacyPrescriptionLine): string {
+  if (line.status === 'dispensed') {
+    return 'dispensed';
+  }
+  if (line.status === 'partial') {
+    return line.qty_dispensed ? `partial (${line.qty_dispensed}/${line.quantity})` : 'partial';
+  }
+  return 'to dispense';
 }
 
 export function PharmacyPrescriptionsTable({
@@ -72,7 +84,7 @@ export function PharmacyPrescriptionsTable({
         {prescriptions.map((line) => {
           const stock = stockLabel(line.stock_status);
           const canDispenseLine = canDispense
-            && line.status === 'to_dispense'
+            && (line.status === 'to_dispense' || line.status === 'partial')
             && !dispenseBlocked;
 
           return (
@@ -96,7 +108,7 @@ export function PharmacyPrescriptionsTable({
               ) : null}
               <TableCell>
                 <Badge variant={rxStatusBadgeVariant(line.status)}>
-                  {statusLabel(line.status)}
+                  {statusLabel(line)}
                 </Badge>
               </TableCell>
               {canDispense || canPrintRx ? (

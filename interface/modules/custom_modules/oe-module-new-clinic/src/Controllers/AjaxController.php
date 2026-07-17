@@ -17,6 +17,7 @@ use OpenEMR\Modules\NewClinic\Controllers\Ajax\AjaxActionHandlerInterface;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\AdminActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\BillOpsActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\CashierActionHandler;
+use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ChatActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\ClinicalDocActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\CohortActionHandler;
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers\CommunicationsActionHandler;
@@ -332,6 +333,7 @@ class AjaxController
             new ProfileActionHandler($this),
             new OfficeNotesActionHandler($this),
             new DocumentsActionHandler($this),
+            new ChatActionHandler($this),
             new ReportsActionHandler($this),
             new SchedulingActionHandler($this),
             new QueueBridgeActionHandler($this),

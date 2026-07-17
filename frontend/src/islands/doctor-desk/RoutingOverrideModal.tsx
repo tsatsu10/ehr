@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Label } from '@components/ui/label';
 import { Textarea } from '@components/ui/textarea';
 import { ConfirmModal } from '@components/ConfirmModal';
+import { t } from '@core/i18n';
 import type { DoctorQueueCard } from '@core/types';
 
 interface RoutingOverrideModalProps {
@@ -21,25 +22,25 @@ export function RoutingOverrideModal({
 
   if (!card) return null;
 
-  const suggested = card.routing_suggested_provider_name ?? 'another doctor';
+  const suggested = card.routing_suggested_provider_name ?? t('another doctor');
 
   return (
     <ConfirmModal
       open
       onClose={onClose}
-      title="Take patient suggested for another doctor?"
-      confirmLabel="Take anyway"
+      title={t('Take patient suggested for another doctor?')}
+      confirmLabel={t('Take anyway')}
       confirmVariant="warning"
       confirmDisabled={reason.trim().length < 3}
       submitting={submitting}
-      submittingLabel="Taking…"
+      submittingLabel={t('Taking…')}
       onConfirm={() => onConfirm(reason.trim())}
     >
       <p className="mb-2">
-        Routing suggests <strong>{suggested}</strong> for this visit. You can still take the patient — advisory routing never blocks Take patient.
+        {t('Routing suggests')} <strong>{suggested}</strong> {t('for this visit. You can still take the patient — advisory routing never blocks Take patient.')}
       </p>
       <div className="space-y-1.5 mb-0">
-        <Label htmlFor="nc-routing-override-reason" className="normal-case">Reason (required)</Label>
+        <Label htmlFor="nc-routing-override-reason" className="normal-case">{t('Reason (required)')}</Label>
         <Textarea
           id="nc-routing-override-reason"
           rows={3}

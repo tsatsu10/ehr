@@ -8,7 +8,6 @@ function baseProps() {
     inPharmacy: true,
     onDispense: vi.fn(),
     onAddRx: vi.fn(),
-    onOpenDispenseCore: vi.fn(),
   };
 }
 

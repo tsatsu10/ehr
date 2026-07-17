@@ -109,6 +109,11 @@ export function FlowBoardCardView({
           {card.status_label}
         </div>
       )}
+      {card.running_late && (
+        <div className="text-sm mt-1">
+          <Badge variant="warning">{labels.flowBoardRunningLate}</Badge>
+        </div>
+      )}
       {card.queue_bridge_ex01 && (
         <div className="text-sm mt-1">
           <Badge variant="warning">{labels.noClinicalVisit}</Badge>

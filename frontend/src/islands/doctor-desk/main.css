@@ -93,7 +93,7 @@
 
 .nc-doctor-active-shell__empty-title {
   margin: 0;
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
   font-size: 1.125rem;
   font-weight: 600;
   color: var(--oe-nc-text, #1e293b);
@@ -126,7 +126,7 @@
 
 .nc-doctor-active-shell__hero-title {
   margin: 0;
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
   font-size: 1rem;
   font-weight: 600;
   color: var(--oe-nc-text, #1e293b);
@@ -151,7 +151,7 @@
 .nc-doctor-active-section__title {
   display: block;
   margin: 0;
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--oe-nc-text, #1e293b);
@@ -769,7 +769,7 @@
 
 .nc-doctor-queue-panel__title {
   margin: 0;
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--oe-nc-text, #1e293b);

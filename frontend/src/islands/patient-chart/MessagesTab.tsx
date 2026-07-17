@@ -2,6 +2,10 @@ import { MessageSquare, Plus } from 'lucide-react';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
+import { NativeSelect } from '@components/ui/native-select';
+import { Label } from '@components/ui/label';
+import { useState } from 'react';
+import { NoteDetailModal } from './NoteDetailModal';
 import {
   ChartEmptyState,
   ChartLoadingState,
@@ -16,16 +20,30 @@ interface MessagesTabProps {
   loadingMore: boolean;
   error: string | null;
   onLoadMore: () => void;
+  /** CP-5 — native note detail + activity filter (flag ON payload). */
+  ajaxUrl: string;
+  csrfToken: string;
+  pid: number;
+  activity: string;
+  onActivityChange: (next: string) => void;
 }
 
-function MessageRow({ item }: { item: ChartMessageRow }) {
+function MessageRow({ item, onOpen }: { item: ChartMessageRow; onOpen?: (id: number) => void }) {
   const variant = item.active === false ? 'neutral' : 'info';
 
   return (
     <article className="nc-chart-visit-row">
       <div className="flex flex-wrap justify-between gap-2">
         <div className="min-w-0 flex-1">
-          {item.detail_url ? (
+          {onOpen && item.id ? (
+            <Button
+              variant="link"
+              className="h-auto p-0 font-medium"
+              onClick={() => onOpen(item.id as number)}
+            >
+              {item.title ?? 'Message'}
+            </Button>
+          ) : item.detail_url ? (
             <a
               href={item.detail_url}
               target="_top"
@@ -53,7 +71,19 @@ function MessageRow({ item }: { item: ChartMessageRow }) {
   );
 }
 
-export function MessagesTab({ data, loading, loadingMore, error, onLoadMore }: MessagesTabProps) {
+export function MessagesTab({
+  data,
+  loading,
+  loadingMore,
+  error,
+  onLoadMore,
+  ajaxUrl,
+  csrfToken,
+  pid,
+  activity,
+  onActivityChange,
+}: MessagesTabProps) {
+  const [openNoteId, setOpenNoteId] = useState<number | null>(null);
   if (loading) {
     return <ChartLoadingState label="Loading messages…" />;
   }
@@ -106,13 +136,34 @@ export function MessagesTab({ data, loading, loadingMore, error, onLoadMore }: M
       <ChartSection
         title={`Messages (${data.message_total ?? 0})`}
         bodyClassName="pt-2"
+        action={data.native_notes ? (
+          <div className="flex items-center gap-2">
+            <Label htmlFor="nc-chart-notes-filter" className="normal-case font-normal text-sm text-[var(--oe-nc-text-muted)]">
+              Show
+            </Label>
+            <NativeSelect
+              id="nc-chart-notes-filter"
+              className="h-8 w-auto"
+              value={activity}
+              onChange={(e) => onActivityChange(e.target.value)}
+            >
+              <option value="all">All notes</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </NativeSelect>
+          </div>
+        ) : undefined}
       >
         {messages.length === 0 ? (
           <ChartEmptyState title="No chart messages for this patient" />
         ) : (
           <div id="nc-chart-messages-list" className="space-y-2">
             {messages.map((item, idx) => (
-              <MessageRow key={`msg-${item.title ?? idx}-${item.date ?? ''}`} item={item} />
+              <MessageRow
+                key={`msg-${item.title ?? idx}-${item.date ?? ''}`}
+                item={item}
+                onOpen={data.native_notes ? (id) => setOpenNoteId(id) : undefined}
+              />
             ))}
           </div>
         )}
@@ -141,6 +192,15 @@ export function MessagesTab({ data, loading, loadingMore, error, onLoadMore }: M
           </div>
         )}
       </ChartSection>
+
+      <NoteDetailModal
+        open={openNoteId !== null}
+        onClose={() => setOpenNoteId(null)}
+        ajaxUrl={ajaxUrl}
+        csrfToken={csrfToken}
+        pid={pid}
+        noteId={openNoteId}
+      />
     </ChartStack>
   );
 }

@@ -149,24 +149,35 @@ class PrescriptionEditServiceTest extends TestCase
      * this fix (PharmacyShortcutService::preflight() only checks it at
      * redirect-build time, which a stale tab bypasses entirely).
      */
-    public function testAssertVisitInPharmacyRejectsOtherStates(): void
+    public function testAssertVisitInActiveWorkRejectsStatesOutsideActiveWork(): void
     {
-        $method = new ReflectionMethod(PrescriptionEditService::class, 'assertVisitInPharmacy');
+        // The shared Rx form is reachable from the Pharmacy Desk ('in_pharmacy')
+        // and the Doctor Desk consult ('with_doctor'). Any other state means a
+        // stale tab carrying an old visit_id -- still rejected so a prescription
+        // can never attach to the wrong encounter. Pin the allowed states so the
+        // test does not depend on ACL/session context.
+        $service = new class extends PrescriptionEditService {
+            protected function allowedWorkStates(): array
+            {
+                return ['in_pharmacy', 'with_doctor'];
+            }
+        };
+        $method = new ReflectionMethod(PrescriptionEditService::class, 'assertVisitInActiveWork');
         $method->setAccessible(true);
-        $service = new PrescriptionEditService();
 
-        foreach (['with_doctor', 'ready_for_pharmacy', 'completed', ''] as $state) {
+        foreach (['ready_for_pharmacy', 'ready_for_doctor', 'completed', 'paid', ''] as $state) {
             try {
                 $method->invoke($service, ['state' => $state]);
                 $this->fail("Expected rejection for state '{$state}'");
             } catch (\InvalidArgumentException $e) {
-                $this->assertSame('Visit is not in active pharmacy work', $e->getMessage());
+                $this->assertSame('Visit is not in active work for prescribing', $e->getMessage());
             }
         }
 
-        // Does not throw for the one state this form is actually reachable from.
+        // The two active-work states the two desks legitimately reach this from.
         $method->invoke($service, ['state' => 'in_pharmacy']);
-        $this->addToAssertionCount(1);
+        $method->invoke($service, ['state' => 'with_doctor']);
+        $this->addToAssertionCount(2);
     }
 
     public function testGetFormDataAndSavePrescriptionCheckVisitStateBeforeTouchingData(): void
@@ -174,9 +185,9 @@ class PrescriptionEditServiceTest extends TestCase
         foreach (['getFormData', 'savePrescription'] as $methodName) {
             $body = $this->methodBody(PrescriptionEditService::class, $methodName);
             $this->assertStringContainsString(
-                'assertVisitInPharmacy',
+                'assertVisitInActiveWork',
                 $body,
-                "{$methodName} must check the visit is in_pharmacy before reading/writing prescriptions"
+                "{$methodName} must check the visit is in active work before reading/writing prescriptions"
             );
         }
     }

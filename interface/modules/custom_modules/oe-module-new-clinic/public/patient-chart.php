@@ -93,6 +93,7 @@ $canEditProfile = AclMain::aclCheckCore('new_clinic', 'new_reception')
         'registration_mode' => $config->get('registration_mode', 'desk_full_form') ?? 'desk_full_form',
         'enable_in_chart_patient_search' => $config->getInt('enable_in_chart_patient_search', 0, $facilityId) === 1,
         'enable_documents' => $config->getInt('enable_documents_native', 0, $facilityId) === 1,
+        'enable_patient_chat' => $config->getInt('enable_patient_chat', 0, $facilityId) === 1,
         'enable_labels' => $config->getInt('enable_letters_labels', 0, $facilityId) === 1,
         'enable_vitals_trends' => $config->getInt('enable_vitals_trends', 0, $facilityId) === 1,
         'can_flag_follow_up' => $canFlagFollowUp,

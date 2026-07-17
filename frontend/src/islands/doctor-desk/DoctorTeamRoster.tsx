@@ -1,3 +1,4 @@
+import { t } from '@core/i18n';
 import type { DoctorRosterRow } from './useDoctorRoster';
 
 interface DoctorTeamRosterProps {
@@ -20,7 +21,7 @@ export function DoctorTeamRoster({ doctors, myUserId, loading }: DoctorTeamRoste
   return (
     <details className="nc-doctor-team-roster">
       <summary className="nc-doctor-team-roster__summary">
-        {takingCount} of {doctors.length} taking patients
+        {t('{taking} of {total} taking patients', { taking: takingCount, total: doctors.length })}
       </summary>
       <ul className="nc-doctor-team-roster__list">
         {doctors.map((row) => {
@@ -29,17 +30,17 @@ export function DoctorTeamRoster({ doctors, myUserId, loading }: DoctorTeamRoste
             <li key={row.user_id} className="nc-doctor-team-roster__row">
               <span className="nc-doctor-team-roster__name">
                 {row.display_name}
-                {isSelf && <span className="nc-doctor-team-roster__you"> (you)</span>}
+                {isSelf && <span className="nc-doctor-team-roster__you"> {t('(you)')}</span>}
               </span>
               <span className="nc-doctor-team-roster__meta">
                 {row.taking_patients ? (
                   <>
-                    <span className="nc-doctor-team-roster__status nc-doctor-team-roster__status--on">On</span>
+                    <span className="nc-doctor-team-roster__status nc-doctor-team-roster__status--on">{t('On')}</span>
                     {' · '}
-                    {row.queue_load} in queue
+                    {t('{count} in queue', { count: row.queue_load })}
                   </>
                 ) : (
-                  <span className="nc-doctor-team-roster__status">Paused</span>
+                  <span className="nc-doctor-team-roster__status">{t('Paused')}</span>
                 )}
               </span>
             </li>

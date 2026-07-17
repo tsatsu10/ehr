@@ -38,8 +38,8 @@ export function ProcOrderForm({
   const [labId, setLabId] = useState(0);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [priority, setPriority] = useState('normal');
-  const [specimenType, setSpecimenType] = useState('');
-  const [specimenVolume, setSpecimenVolume] = useState('');
+  // Specimen is now per test line: procedure_type_id -> specimen option id.
+  const [lineSpecimens, setLineSpecimens] = useState<Record<number, string>>({});
   const [clinicalHx, setClinicalHx] = useState('');
   const [orderDiagnosis, setOrderDiagnosis] = useState('');
 
@@ -72,16 +72,23 @@ export function ProcOrderForm({
         );
 
         if (existing) {
-          setSpecimenType(existing.specimen_type);
-          setSpecimenVolume(existing.specimen_volume);
           setClinicalHx(existing.clinical_hx);
           setOrderDiagnosis(existing.order_diagnosis);
           const lab = payload.labs.find((l) => l.ppid === initialLab);
+          const labTests = lab?.tests ?? [];
+          const specimenByCode = new Map(existing.codes.map((c) => [c.procedure_code, c.specimen_type]));
           const codes = new Set(existing.codes.map((c) => c.procedure_code));
-          const preselected = (lab?.tests ?? [])
-            .filter((test) => codes.has(test.code))
-            .map((test) => test.procedure_type_id);
-          setSelected(new Set(preselected));
+          const matched = labTests.filter((test) => codes.has(test.code));
+          setSelected(new Set(matched.map((test) => test.procedure_type_id)));
+          const specimenMap: Record<number, string> = {};
+          for (const test of matched) {
+            specimenMap[test.procedure_type_id] = specimenByCode.get(test.code) || '';
+          }
+          setLineSpecimens(specimenMap);
+        } else if (payload.encounter_reason) {
+          // New order: seed Clinical history with the visit's chief complaint so
+          // the orderer doesn't retype what the consult already captured.
+          setClinicalHx(payload.encounter_reason);
         }
       })
       .catch((err) => {
@@ -115,11 +122,32 @@ export function ProcOrderForm({
     return any ? total : null;
   }, [activeLab, tests, selected]);
 
+  const specimenOptionIds = useMemo(
+    () => new Set((data?.specimen_options ?? []).map((o) => o.id)),
+    [data],
+  );
+
+  // The specimen shown/saved for a test: the staff choice if made, else the
+  // catalog default when it maps to a real option, else none.
+  const specimenFor = useCallback(
+    (test: ProcOrderTest): string => {
+      const chosen = lineSpecimens[test.procedure_type_id];
+      if (chosen !== undefined) return chosen;
+      return specimenOptionIds.has(test.specimen) ? test.specimen : '';
+    },
+    [lineSpecimens, specimenOptionIds],
+  );
+
+  const setLineSpecimen = useCallback((id: number, value: string) => {
+    setLineSpecimens((prev) => ({ ...prev, [id]: value }));
+  }, []);
+
   const changeLab = (nextLab: number) => {
     if (nextLab === labId) return;
     setLabId(nextLab);
     // Tests belong to a lab catalog — a lab switch clears the selection.
     setSelected(new Set());
+    setLineSpecimens({});
   };
 
   const toggleTest = useCallback((id: number, checked: boolean) => {
@@ -138,6 +166,13 @@ export function ProcOrderForm({
       setSaveError(t('Select at least one test for the order.'));
       return;
     }
+    const lineSpecimenPayload: Record<number, string> = {};
+    for (const test of tests) {
+      if (selected.has(test.procedure_type_id)) {
+        const s = specimenFor(test);
+        if (s) lineSpecimenPayload[test.procedure_type_id] = s;
+      }
+    }
     setSaving(true);
     setSaveError(null);
     try {
@@ -148,11 +183,10 @@ export function ProcOrderForm({
           procedure_order_id: procedureOrderId,
           lab_id: labId,
           order_priority: priority,
-          specimen_type: specimenType,
-          specimen_volume: specimenVolume,
           clinical_hx: clinicalHx,
           order_diagnosis: orderDiagnosis,
           procedure_type_ids: ids,
+          line_specimens: lineSpecimenPayload,
         },
       });
       const posted = result.billing?.posted_count ?? 0;
@@ -295,6 +329,26 @@ export function ProcOrderForm({
                       )
                     )}
                   </label>
+                  {isChecked && (
+                    <div className="nc-proc-order__test-specimen">
+                      <Label className="sr-only" htmlFor={`nc-proc-order-specimen-${test.procedure_type_id}`}>
+                        {t('Specimen for {name}', { name: test.name })}
+                      </Label>
+                      <NativeSelect
+                        id={`nc-proc-order-specimen-${test.procedure_type_id}`}
+                        className="h-8"
+                        value={specimenFor(test)}
+                        onChange={(e) => setLineSpecimen(test.procedure_type_id, e.target.value)}
+                      >
+                        <option value="">{t('— specimen —')}</option>
+                        {data.specimen_options.map((opt) => (
+                          <option key={opt.id} value={opt.id}>
+                            {opt.title}
+                          </option>
+                        ))}
+                      </NativeSelect>
+                    </div>
+                  )}
                 </li>
               );
             })}
@@ -312,47 +366,18 @@ export function ProcOrderForm({
       <section className="nc-proc-order__card">
         <div className="nc-proc-order__card-head">
           <Syringe className="h-4 w-4" aria-hidden="true" />
-          <h3 className="nc-proc-order__card-title">{t('Specimen & clinical details')}</h3>
-        </div>
-
-        <div className="nc-proc-order__grid">
-          <div className="nc-proc-order__field">
-            <Label htmlFor="nc-proc-order-specimen">{t('Specimen type')}</Label>
-            <NativeSelect
-              id="nc-proc-order-specimen"
-              value={specimenType}
-              onChange={(e) => setSpecimenType(e.target.value)}
-            >
-              <option value="">{t('— none —')}</option>
-              {data.specimen_options.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.title}
-                </option>
-              ))}
-            </NativeSelect>
-          </div>
-          <div className="nc-proc-order__field">
-            <Label htmlFor="nc-proc-order-volume">{t('Specimen volume')}</Label>
-            <input
-              id="nc-proc-order-volume"
-              className="nc-input"
-              type="text"
-              value={specimenVolume}
-              maxLength={30}
-              onChange={(e) => setSpecimenVolume(e.target.value)}
-            />
-          </div>
+          <h3 className="nc-proc-order__card-title">{t('Clinical details')}</h3>
         </div>
 
         <div className="nc-proc-order__field">
-          <Label htmlFor="nc-proc-order-diagnosis">{t('Order diagnosis')}</Label>
+          <Label htmlFor="nc-proc-order-diagnosis">{t('Diagnosis / reason for test')}</Label>
           <input
             id="nc-proc-order-diagnosis"
             className="nc-input"
             type="text"
             value={orderDiagnosis}
             maxLength={255}
-            placeholder={t('e.g. ICD10:E11.9 or free text')}
+            placeholder={t('e.g. suspected malaria, anaemia work-up')}
             onChange={(e) => setOrderDiagnosis(e.target.value)}
           />
         </div>

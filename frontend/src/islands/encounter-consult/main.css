@@ -67,7 +67,7 @@
 .nc-encounter-section-card__title {
   display: block;
   margin: 0;
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
   font-size: 1.125rem;
   font-weight: 600;
   line-height: 1.35;

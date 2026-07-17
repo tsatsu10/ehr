@@ -62,6 +62,7 @@ const islands: Record<string, string> = {
   'outreach':            resolve(here, 'src/islands/outreach/index.tsx'),
   'proc-order':          resolve(here, 'src/islands/proc-order/index.tsx'),
   'rx-edit':             resolve(here, 'src/islands/rx-edit/index.tsx'),
+  'rx-history':          resolve(here, 'src/islands/rx-history/index.tsx'),
 };
 
 export default defineConfig({

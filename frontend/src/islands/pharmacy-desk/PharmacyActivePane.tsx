@@ -91,7 +91,8 @@ export function PharmacyActivePane({
   const needsWalkinOutcome = !!walkinTriage?.enabled;
   const completeBlocked = needsWalkinOutcome && !walkinOutcome;
   const hasPrescriptions = (data.prescriptions?.length ?? 0) > 0;
-  const firstUndispensedId = data.prescriptions?.find((line) => line.status === 'to_dispense')?.id;
+  const firstUndispensedId = data.prescriptions
+    ?.find((line) => line.status === 'to_dispense' || line.status === 'partial')?.id;
   const firstPrintableId = data.prescriptions?.[0]?.id;
 
   const heroTitle = inPharmacy
@@ -165,7 +166,6 @@ export function PharmacyActivePane({
           <PharmacyShortcuts
             blocked={blocked || submitting}
             inPharmacy={inPharmacy}
-            pharmOpsEnabled={pharmOpsEnabled}
             canPrintRx={!!data.can_print_rx}
             rxListUrl={data.rx_list_url}
             showPharmacyService={
@@ -178,7 +178,6 @@ export function PharmacyActivePane({
             onAddRx={onOpenRxEdit}
             onPrintRx={data.can_print_rx ? handlePrintPrimary : undefined}
             onOpenPharmacyService={onOpenPharmacyService}
-            onOpenDispenseCore={onOpenDispense}
           />
         </PharmacyActiveSection>
 

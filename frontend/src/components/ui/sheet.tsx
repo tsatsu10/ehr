@@ -69,7 +69,9 @@ SheetContent.displayName = SheetPrimitive.Content.displayName;
 export const SheetHeader = ({ className, ...props }: HTMLAttributes<HTMLElement>) => (
   <header
     className={cn(
-      'flex items-center justify-between gap-3 border-b border-[var(--oe-nc-border,#e2e8f0)] px-4 py-3',
+      // nc-slide-over-header (components.css) carries the layout non-layered:
+      // BS4 Reboot's unlayered `header { display: block }` beats `flex` here.
+      'nc-slide-over-header flex items-center justify-between gap-3 border-b border-[var(--oe-nc-border,#e2e8f0)] px-4 py-3',
       className,
     )}
     {...props}
@@ -96,7 +98,8 @@ export const SheetTitle = forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Title
     ref={ref}
-    className={cn('mb-0 text-base font-semibold leading-tight text-[var(--oe-nc-text)]', className)}
+    // nc-slide-over-title (components.css) wins over BS4 Reboot's h2 type styles
+    className={cn('nc-slide-over-title mb-0 text-base font-semibold leading-tight text-[var(--oe-nc-text)]', className)}
     {...props}
   />
 ));

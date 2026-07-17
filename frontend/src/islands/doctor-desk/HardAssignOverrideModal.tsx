@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Label } from '@components/ui/label';
 import { Textarea } from '@components/ui/textarea';
 import { ConfirmModal } from '@components/ConfirmModal';
+import { t } from '@core/i18n';
 import type { DoctorQueueCard } from '@core/types';
 
 interface HardAssignOverrideModalProps {
@@ -21,25 +22,26 @@ export function HardAssignOverrideModal({
 
   if (!card) return null;
 
-  const assigned = card.hard_assigned_provider_name ?? 'another doctor';
+  const assigned = card.hard_assigned_provider_name ?? t('another doctor');
 
   return (
     <ConfirmModal
       open
       onClose={onClose}
-      title="Take patient assigned to another doctor?"
-      confirmLabel="Take with override"
+      title={t('Take patient assigned to another doctor?')}
+      confirmLabel={t('Take with override')}
       confirmVariant="warning"
       confirmDisabled={reason.trim().length < 3}
       submitting={submitting}
-      submittingLabel="Taking…"
+      submittingLabel={t('Taking…')}
       onConfirm={() => onConfirm(reason.trim())}
     >
       <p className="mb-2">
-        This visit is hard-assigned to <strong>{assigned}</strong>. Taking it requires an override reason.
+        {t('This visit is hard-assigned to')} <strong>{assigned}</strong>
+        {t('. Taking it requires an override reason.')}
       </p>
       <div className="space-y-1.5 mb-0">
-        <Label htmlFor="nc-hard-assign-override-reason" className="normal-case">Reason (required)</Label>
+        <Label htmlFor="nc-hard-assign-override-reason" className="normal-case">{t('Reason (required)')}</Label>
         <Textarea
           id="nc-hard-assign-override-reason"
           rows={3}

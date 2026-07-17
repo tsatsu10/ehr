@@ -13,6 +13,7 @@ import {
 } from '@components/ui/table';
 import { oeFetch } from '@core/oeFetch';
 import { ReferralWizard } from './ReferralWizard';
+import { ReferralEditorDrawer } from './ReferralEditorDrawer';
 import type { ReferralRow, ReferralsListData, ReferralSaveResult } from './chartDepthTypes';
 
 interface ReferralsPaneProps {
@@ -28,12 +29,14 @@ function ReferralRowView({
   canManage,
   onPrint,
   onStatus,
+  onEdit,
 }: {
   item: ReferralRow;
   busy: boolean;
   canManage: boolean;
   onPrint: (item: ReferralRow) => void;
   onStatus: (item: ReferralRow, status: string) => void;
+  onEdit: (item: ReferralRow) => void;
 }) {
   // Status transitions only apply to wizard-tracked rows (M11-F03 meta).
   const nextStatus =
@@ -72,7 +75,12 @@ function ReferralRowView({
             {nextLabel}
           </Button>
         )}
-        {item.edit_url && (
+        {item.can_native_edit && (
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => onEdit(item)}>
+            Edit
+          </Button>
+        )}
+        {!item.can_native_edit && item.edit_url && (
           <Button variant="outline" size="sm" asChild>
             <a href={item.edit_url} target="_top">
               Edit
@@ -91,6 +99,7 @@ export function ReferralsPane({ ajaxUrl, csrfToken, pid, encounterId }: Referral
   const [patientLabel, setPatientLabel] = useState('');
   const [wizardOpen, setWizardOpen] = useState(false);
   const [printConfirm, setPrintConfirm] = useState<ReferralRow | null>(null);
+  const [editId, setEditId] = useState<number | null>(null);
   const [rowBusyId, setRowBusyId] = useState<number | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -229,6 +238,19 @@ export function ReferralsPane({ ajaxUrl, csrfToken, pid, encounterId }: Referral
         </div>
       )}
 
+      <ReferralEditorDrawer
+        open={editId !== null}
+        onClose={() => setEditId(null)}
+        ajaxUrl={ajaxUrl}
+        csrfToken={csrfToken}
+        transactionId={editId}
+        patientLabel={patientLabel}
+        onSaved={() => {
+          setEditId(null);
+          setReloadKey((k) => k + 1);
+        }}
+      />
+
       <ReferralWizard
         open={wizardOpen}
         ajaxUrl={ajaxUrl}
@@ -294,6 +316,9 @@ export function ReferralsPane({ ajaxUrl, csrfToken, pid, encounterId }: Referral
                     }}
                     onStatus={(item, status) => {
                       void handleStatus(item, status);
+                    }}
+                    onEdit={(item) => {
+                      setEditId(item.transaction_id ?? null);
                     }}
                   />
                 ))}

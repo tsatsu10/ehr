@@ -38,6 +38,52 @@ class SchedulingFlowBoardServiceTest extends TestCase
         $service->advanceStatus(3, 1, '@', 1);
     }
 
+    public function testNextStatusFollowsLaneOrderNotRawStatusOrder(): void
+    {
+        $service = new SchedulingFlowBoardService();
+        $method = new \ReflectionMethod($service, 'mapAppointmentRow');
+        $method->setAccessible(true);
+
+        // Raw status order (-, x, @) deliberately differs from lane order (-, @):
+        // the pre-fix bug ignored laneConfig and would return 'x' (raw next).
+        $statuses = [
+            '-' => ['label' => 'Pending'],
+            'x' => ['label' => 'Cancelled-ish'],
+            '@' => ['label' => 'Arrived'],
+        ];
+        $laneConfig = [
+            ['lane_key' => 'waiting', 'status_codes' => ['-'], 'representative_status' => '-'],
+            ['lane_key' => 'with', 'status_codes' => ['@'], 'representative_status' => '@'],
+        ];
+        $row = [
+            'pid' => 1,
+            'pc_eid' => 2,
+            'pc_apptstatus' => '-',
+            'status' => '-',
+            'fname' => 'A',
+            'lname' => 'B',
+            'pc_startTime' => '09:00:00',
+            'pc_recurrtype' => 0,
+        ];
+
+        $card = $method->invoke($service, $row, $statuses, [], $laneConfig, null);
+
+        $this->assertSame('@', $card['next_status'], 'next_status must follow the lane map, not raw status order');
+    }
+
+    public function testStartMinutesParsesTimeOfDay(): void
+    {
+        $service = new SchedulingFlowBoardService();
+        $method = new \ReflectionMethod($service, 'startMinutes');
+        $method->setAccessible(true);
+
+        $this->assertSame(0, $method->invoke($service, '00:00:00'));
+        $this->assertSame(9 * 60 + 30, $method->invoke($service, '09:30:00'));
+        $this->assertSame(14 * 60 + 5, $method->invoke($service, '14:05'));
+        $this->assertNull($method->invoke($service, ''));
+        $this->assertNull($method->invoke($service, 'not-a-time'));
+    }
+
     public function testUpdateRoomRequiresEnabledHub(): void
     {
         $config = $this->createMock(ClinicConfigService::class);

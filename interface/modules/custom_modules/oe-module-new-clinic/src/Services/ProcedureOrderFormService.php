@@ -93,6 +93,9 @@ class ProcedureOrderFormService
             'encounter' => $encounter,
             'facility_id' => $facilityId,
             'patient_name' => $this->resolvePatientName($pid),
+            // Chief complaint from the consult, so the orderer doesn't retype it
+            // into Clinical history (the form pre-fills it for a new order).
+            'encounter_reason' => $this->loadEncounterReason($encounter),
             'labs' => $this->fetchLabCatalog($facilityId),
             'priority_options' => $this->fetchPriorityOptions(),
             'specimen_options' => $this->fetchListOptions('Specimen_Type'),
@@ -145,9 +148,19 @@ class ProcedureOrderFormService
         $clinicalHx = mb_substr(trim((string) ($body['clinical_hx'] ?? '')), 0, 255);
         $orderDiagnosis = mb_substr(trim((string) ($body['order_diagnosis'] ?? '')), 0, 255);
 
-        $lines = $this->resolveOrderLines($labId, $body['procedure_type_ids'] ?? []);
+        $lineSpecimens = is_array($body['line_specimens'] ?? null) ? $body['line_specimens'] : [];
+        $lines = $this->resolveOrderLines($labId, $body['procedure_type_ids'] ?? [], $lineSpecimens);
         if ($lines === []) {
             throw new \InvalidArgumentException('Select at least one test for the order');
+        }
+
+        // The order-level specimen field is now driven by the per-test lines:
+        // mirror the first test's specimen onto the order so stock screens,
+        // requisitions and results that read procedure_order.specimen_type keep
+        // showing a sensible value.
+        $primaryLineSpecimen = (string) ($lines[0]['specimen'] ?? '');
+        if ($primaryLineSpecimen !== '') {
+            $specimenType = $primaryLineSpecimen;
         }
 
         $orderProviderId = $this->resolveOrderProviderId($pid, $encounter, $actorUserId);
@@ -196,9 +209,14 @@ class ProcedureOrderFormService
             (new FormService())->addForm($encounter, $formTitle, $orderId, 'procedure_order', $pid, '1');
         }
 
-        // In-house charges only, posted once on create (avoid double-billing on edit).
+        // In-house charges for every test on the order, on create AND edit.
+        // postChargesForProcedureCodes() skips any test already billed on the
+        // encounter (its own billing-row guard), so re-posting on edit never
+        // double-charges -- while a test added on edit, or an order moved onto
+        // the in-house lab, still gets billed. (An earlier "charge only on
+        // create" gate silently left added tests unbilled -- a revenue leak.)
         $billing = null;
-        if ($isNew && $labId === $this->inHouseProviderId($facilityId)) {
+        if ($labId === $this->inHouseProviderId($facilityId)) {
             $billing = $this->orderCharges->postChargesForProcedureCodes(
                 $pid,
                 $encounter,
@@ -285,7 +303,7 @@ class ProcedureOrderFormService
     private function fetchProviderTests(int $ppid, int $facilityId, bool $withFees): array
     {
         $rows = QueryUtils::fetchRecords(
-            "SELECT procedure_type_id, name, procedure_code
+            "SELECT procedure_type_id, name, procedure_code, specimen
              FROM procedure_type
              WHERE lab_id = ? AND procedure_type = 'ord' AND activity = 1
              ORDER BY name ASC, procedure_code ASC",
@@ -308,6 +326,9 @@ class ProcedureOrderFormService
                 'procedure_type_id' => (int) ($row['procedure_type_id'] ?? 0),
                 'name' => (string) ($row['name'] ?? ''),
                 'code' => $code,
+                // Catalog default specimen for this test (forward-compatible; the
+                // form only uses it when it matches a Specimen_Type option).
+                'specimen' => (string) ($row['specimen'] ?? ''),
                 'fee_amount' => $fee ? (float) $fee['price_amount'] : null,
                 'has_fee' => $fee !== null,
             ];
@@ -316,9 +337,10 @@ class ProcedureOrderFormService
 
     /**
      * @param mixed $procedureTypeIds
-     * @return array<int, array{procedure_type_id: int, name: string, procedure_code: string}>
+     * @param array<int|string, mixed> $lineSpecimens procedure_type_id => specimen option id
+     * @return array<int, array{procedure_type_id: int, name: string, procedure_code: string, specimen: string}>
      */
-    private function resolveOrderLines(int $labId, $procedureTypeIds): array
+    private function resolveOrderLines(int $labId, $procedureTypeIds, array $lineSpecimens = []): array
     {
         if (!is_array($procedureTypeIds)) {
             return [];
@@ -333,7 +355,7 @@ class ProcedureOrderFormService
 
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
         $rows = QueryUtils::fetchRecords(
-            "SELECT procedure_type_id, name, procedure_code
+            "SELECT procedure_type_id, name, procedure_code, specimen
              FROM procedure_type
              WHERE lab_id = ? AND procedure_type = 'ord' AND activity = 1
                AND procedure_type_id IN ({$placeholders})",
@@ -342,10 +364,15 @@ class ProcedureOrderFormService
 
         $byId = [];
         foreach ($rows as $row) {
-            $byId[(int) ($row['procedure_type_id'] ?? 0)] = [
-                'procedure_type_id' => (int) ($row['procedure_type_id'] ?? 0),
+            $id = (int) ($row['procedure_type_id'] ?? 0);
+            // Staff override wins; otherwise fall back to the catalog default.
+            $override = trim((string) ($lineSpecimens[$id] ?? ''));
+            $specimen = $override !== '' ? $override : (string) ($row['specimen'] ?? '');
+            $byId[$id] = [
+                'procedure_type_id' => $id,
                 'name' => (string) ($row['name'] ?? ''),
                 'procedure_code' => (string) ($row['procedure_code'] ?? ''),
+                'specimen' => mb_substr($specimen, 0, 31),
             ];
         }
         if (count($byId) !== count($ids)) {
@@ -412,12 +439,26 @@ class ProcedureOrderFormService
         );
     }
 
+    private function loadEncounterReason(int $encounter): string
+    {
+        if ($encounter <= 0) {
+            return '';
+        }
+        $row = QueryUtils::querySingleRow(
+            'SELECT reason FROM form_encounter WHERE encounter = ? ORDER BY id DESC LIMIT 1',
+            [$encounter]
+        );
+
+        return is_array($row) ? trim((string) ($row['reason'] ?? '')) : '';
+    }
+
     /**
-     * @param array<int, array{procedure_type_id: int, name: string, procedure_code: string}> $lines
+     * @param array<int, array{procedure_type_id: int, name: string, procedure_code: string, specimen?: string}> $lines
      */
     private function replaceOrderLines(int $orderId, array $lines): void
     {
         sqlStatement('DELETE FROM procedure_order_code WHERE procedure_order_id = ?', [$orderId]);
+        sqlStatement('DELETE FROM new_lab_order_line_specimen WHERE procedure_order_id = ?', [$orderId]);
         $seq = 1;
         foreach ($lines as $line) {
             QueryUtils::sqlInsert(
@@ -429,6 +470,14 @@ class ProcedureOrderFormService
                     (string) $line['procedure_code'], (string) $line['name'], 'ord',
                 ]
             );
+            $specimen = mb_substr((string) ($line['specimen'] ?? ''), 0, 31);
+            if ($specimen !== '') {
+                QueryUtils::sqlInsert(
+                    'INSERT INTO new_lab_order_line_specimen SET
+                        procedure_order_id = ?, procedure_order_seq = ?, specimen_type = ?',
+                    [$orderId, $seq, $specimen]
+                );
+            }
             $seq++;
         }
     }
@@ -451,10 +500,14 @@ class ProcedureOrderFormService
         }
 
         $codes = QueryUtils::fetchRecords(
-            'SELECT procedure_order_seq, procedure_code, procedure_name
-             FROM procedure_order_code
-             WHERE procedure_order_id = ?
-             ORDER BY procedure_order_seq ASC',
+            'SELECT poc.procedure_order_seq, poc.procedure_code, poc.procedure_name,
+                    s.specimen_type AS line_specimen
+             FROM procedure_order_code poc
+             LEFT JOIN new_lab_order_line_specimen s
+                ON s.procedure_order_id = poc.procedure_order_id
+                AND s.procedure_order_seq = poc.procedure_order_seq
+             WHERE poc.procedure_order_id = ?
+             ORDER BY poc.procedure_order_seq ASC',
             [$procedureOrderId]
         ) ?: [];
 
@@ -469,6 +522,7 @@ class ProcedureOrderFormService
             'codes' => array_map(static fn (array $c): array => [
                 'procedure_code' => (string) ($c['procedure_code'] ?? ''),
                 'procedure_name' => (string) ($c['procedure_name'] ?? ''),
+                'specimen_type' => (string) ($c['line_specimen'] ?? ''),
             ], $codes),
         ];
     }

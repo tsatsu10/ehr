@@ -50,6 +50,7 @@ function buildEmbedContext(
       canClose: props.canBillOpsClose,
       canOutstanding: props.canBillOpsOutstanding,
       canInsurance: props.canBillOpsInsurance,
+      canPayerBilling: props.canBillOpsPayerBilling,
       reopenOnCorrection: props.reopenOnCorrection,
     },
     currencyFormat: props.currencyFormat,

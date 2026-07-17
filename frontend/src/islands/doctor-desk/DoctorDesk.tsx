@@ -11,6 +11,7 @@ import { oeFetch, OeFetchError } from '@core/oeFetch';
 import { resolveActionConflict, type DeskInterrupt } from '@core/deskConflict';
 import { getDeskActiveVisitId } from '@core/deskSessionStorage';
 import { useSharedDeviceSession } from '@core/useSharedDeviceSession';
+import { t } from '@core/i18n';
 import type {
   DoctorConsultPayload,
   DoctorDeskProps,
@@ -345,7 +346,7 @@ export function DoctorDesk({
         .find((v) => v.id === card.id);
 
       if (!match || match.claim_lost) {
-        setInterrupt({ type: 'visit_not_takeable', message: 'Visit is no longer in the queue.' });
+        setInterrupt({ type: 'visit_not_takeable', message: t('Visit is no longer in the queue.') });
         resetActivePane();
         void fetchQueue();
         return;
@@ -446,7 +447,7 @@ export function DoctorDesk({
 
   const handleReopened = useCallback((payload: DoctorConsultPayload) => {
     setReopenTarget(null);
-    showDeskToast('Consult reopened — you can order lab or Rx. Signed notes stay locked.', 'success');
+    showDeskToast(t('Consult reopened — you can order lab or Rx. Signed notes stay locked.'), 'success');
     applyConsultPayload(
       payload,
       setActiveVisit,
@@ -497,7 +498,7 @@ export function DoctorDesk({
           void fetchQueue();
           return;
         }
-        showDeskToast(result.message || 'Reopen failed', 'danger');
+        showDeskToast(result.message || t('Reopen failed'), 'danger');
         return;
       }
 
@@ -542,7 +543,7 @@ export function DoctorDesk({
           body: { visit_id: active.visit_id, row_version: active.row_version ?? 0 },
         });
         if (!result.ok) {
-          setInterrupt({ type: 'generic', message: result.message || 'Could not reopen this patient' });
+          setInterrupt({ type: 'generic', message: result.message || t('Could not reopen this patient') });
           return;
         }
         handleReopened(result.data);
@@ -551,17 +552,20 @@ export function DoctorDesk({
 
       if (active) {
         const STATE_LABELS: Record<string, string> = {
-          waiting: 'waiting for triage',
-          in_triage: 'in triage',
-          ready_for_doctor: 'waiting for a doctor',
-          with_doctor: 'with a doctor',
-          in_lab: 'in the lab',
-          in_pharmacy: 'in pharmacy',
+          waiting: t('waiting for triage'),
+          in_triage: t('in triage'),
+          ready_for_doctor: t('waiting for a doctor'),
+          with_doctor: t('with a doctor'),
+          in_lab: t('in the lab'),
+          in_pharmacy: t('in pharmacy'),
         };
-        const label = STATE_LABELS[active.state] ?? `in state "${active.state}"`;
+        const label = STATE_LABELS[active.state] ?? t('in state "{state}"', { state: active.state });
         setInterrupt({
           type: 'visit_not_takeable',
-          message: `${data.identity.display_name} already has an active visit (${label}).`,
+          message: t('{name} already has an active visit ({label}).', {
+            name: data.identity.display_name,
+            label,
+          }),
         });
         return;
       }
@@ -583,7 +587,7 @@ export function DoctorDesk({
     } catch (err) {
       setInterrupt({
         type: 'generic',
-        message: err instanceof Error ? err.message : 'Failed to look up patient',
+        message: err instanceof Error ? err.message : t('Failed to look up patient'),
       });
     }
   }, [ajaxUrl, csrfToken, facilityId, facilityParams, handleReopened]);
@@ -619,7 +623,7 @@ export function DoctorDesk({
       void fetchQueue();
     } catch (err) {
       setWalkIn((prev) =>
-        prev ? { ...prev, submitting: false, error: err instanceof Error ? err.message : 'Failed to start visit' } : prev
+        prev ? { ...prev, submitting: false, error: err instanceof Error ? err.message : t('Failed to start visit') } : prev
       );
     }
   }, [walkIn, ajaxUrl, csrfToken, facilityId, fetchQueue, sharedSession]);
@@ -699,10 +703,10 @@ export function DoctorDesk({
             id="nc-doctor-scope"
             value={scope}
             onChange={(e) => setScope(e.target.value === 'all' ? 'all' : 'me')}
-            aria-label="Queue scope"
+            aria-label={t('Queue scope')}
           >
-            <option value="me">Me</option>
-            <option value="all">All</option>
+            <option value="me">{t('Me')}</option>
+            <option value="all">{t('All')}</option>
           </NativeSelect>
         )}
       </>
@@ -728,16 +732,16 @@ export function DoctorDesk({
 
       <DeskQueueStatusBar
         id="nc-doctor-status-bar"
-        ariaLabel="Doctor desk status"
+        ariaLabel={t('Doctor desk status')}
         items={[
           {
-            label: 'Waiting',
+            label: t('Waiting'),
             value: queue.counts?.waiting ?? 0,
             href: (queue.counts?.waiting ?? 0) > 0 ? visitBoardUrl : undefined,
           },
-          { label: 'Done today', value: queue.counts?.done_today ?? 0 },
+          { label: t('Done today'), value: queue.counts?.done_today ?? 0 },
           ...(queue.canReopenConsult
-            ? [{ label: 'Reopenable', value: queue.counts?.reopenable_today ?? 0 }]
+            ? [{ label: t('Reopenable'), value: queue.counts?.reopenable_today ?? 0 }]
             : []),
         ]}
         loading={queue.queueLoading}

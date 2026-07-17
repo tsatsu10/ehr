@@ -1,8 +1,12 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OeFetchError } from '@core/oeFetch';
 import { allowedLenses, firstAllowedLens } from './useClinicalDocPageHeading';
 import { ClinicalDocHub } from './ClinicalDocHub';
+import { clearCertificateCachesForTest } from './CertificateDrawer';
+import { clearInstructionsCachesForTest } from './ClinicalInstructionsDrawer';
+import { clearScreeningCachesForTest } from './ScreeningDrawer';
+import { clearVitalsCachesForTest } from './VitalsDrawer';
 import type { ClinicalDocProps, ClinicalDocVisitSummary } from './clinicalDocTypes';
 
 const fetchVisitSummaryMock = vi.fn();
@@ -12,6 +16,12 @@ vi.mock('./ClinicalDocLensPane', async () => {
     ...actual,
     fetchVisitSummary: (...args: unknown[]) => fetchVisitSummaryMock(...args),
   };
+});
+
+const oeFetchMock = vi.fn();
+vi.mock('@core/oeFetch', async () => {
+  const actual = await vi.importActual<typeof import('@core/oeFetch')>('@core/oeFetch');
+  return { ...actual, oeFetch: (...args: unknown[]) => oeFetchMock(...args) };
 });
 
 const baseProps: ClinicalDocProps = {
@@ -39,6 +49,38 @@ function summary(overrides: Partial<ClinicalDocVisitSummary> = {}): ClinicalDocV
 }
 
 describe('ClinicalDocHub', () => {
+  beforeEach(() => {
+    clearScreeningCachesForTest();
+    clearInstructionsCachesForTest();
+    clearVitalsCachesForTest();
+    clearCertificateCachesForTest();
+    // The hub syncs ?visit_id into the URL on render — reset it or one test's
+    // visit leaks into the next test's readVisitIdFromUrl().
+    window.history.replaceState({}, '', '/');
+    fetchVisitSummaryMock.mockReset();
+    oeFetchMock.mockReset();
+  });
+
+  it('opens the native vitals drawer from a Vitals card', async () => {
+    fetchVisitSummaryMock.mockResolvedValue(summary({
+      cards: [{
+        id: 'nursing_vitals', lens: 'visit', formdir: 'vitals',
+        kind: 'form', title: 'Vitals', description: 'BP, temperature, SpO₂, etc.', started: true, form_id: 9,
+      }],
+    }));
+    oeFetchMock.mockResolvedValue({
+      enabled: true, visit_id: 72, vitals_id: 9, saved: true,
+      values: { bps: 120 },
+      fields: { required: ['bps'], units: { bps: 'mmHg' }, labels: { bps: 'BP systolic' } },
+    });
+    render(<ClinicalDocHub {...baseProps} initialVisitId={72} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue' }));
+    expect(await screen.findByRole('dialog', { name: 'Vitals' })).toBeInTheDocument();
+    expect(oeFetchMock).toHaveBeenCalledWith('clinical_doc.vitals_get', expect.objectContaining({
+      params: { visit_id: 72 },
+    }));
+  });
+
   it('shows the empty state with no visit_id and no oeFetch call', () => {
     render(<ClinicalDocHub {...baseProps} initialVisitId={null} />);
     expect(screen.getByText(/Open documentation from Doctor Desk/i)).toBeInTheDocument();
@@ -67,6 +109,88 @@ describe('ClinicalDocHub', () => {
     fetchVisitSummaryMock.mockRejectedValue(new Error('Network down'));
     render(<ClinicalDocHub {...baseProps} initialVisitId={72} />);
     await waitFor(() => expect(screen.getByText('Network down')).toBeInTheDocument());
+  });
+
+  it('opens the native instructions drawer from the card instead of navigating', async () => {
+    fetchVisitSummaryMock.mockResolvedValue(summary({
+      lenses: ['visit', 'nursing'],
+      cards: [{
+        id: 'nursing_ci', lens: 'visit', formdir: 'clinical_instructions',
+        kind: 'form', title: 'Clinical instructions', description: 'Patient education notes.',
+      }],
+    }));
+    oeFetchMock.mockResolvedValue({
+      enabled: true, visit_id: 72, form_id: null, instruction: '', snippets: [],
+    });
+    render(<ClinicalDocHub {...baseProps} initialVisitId={72} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Open form' }));
+    expect(await screen.findByRole('dialog', { name: 'Clinical instructions' })).toBeInTheDocument();
+    expect(oeFetchMock).toHaveBeenCalledWith('clinical_doc.instructions_get', expect.objectContaining({
+      params: { visit_id: 72 },
+    }));
+  });
+
+  it('auto-opens the native drawer when landed with ?open_form=clinical_instructions', async () => {
+    fetchVisitSummaryMock.mockResolvedValue(summary());
+    oeFetchMock.mockResolvedValue({
+      enabled: true, visit_id: 72, form_id: null, instruction: '', snippets: [],
+    });
+    window.history.replaceState({}, '', '/clinical-doc?visit_id=72&open_form=clinical_instructions');
+    render(<ClinicalDocHub {...baseProps} initialVisitId={72} />);
+    expect(await screen.findByRole('dialog', { name: 'Clinical instructions' })).toBeInTheDocument();
+    // Param is stripped so a refresh won't reopen it.
+    expect(new URLSearchParams(window.location.search).get('open_form')).toBeNull();
+  });
+
+  it('auto-opens the screening drawer when landed with ?open_form=phq9', async () => {
+    fetchVisitSummaryMock.mockResolvedValue(summary());
+    oeFetchMock.mockResolvedValue({
+      instrument: { id: 'phq9', title: 'PHQ-9', subtitle: 'Depression screen', stem: '', options: [], max_score: 27, items: [], bands: [], flag_rules: [] },
+      answers: {}, saved: false,
+    });
+    window.history.replaceState({}, '', '/clinical-doc?visit_id=72&open_form=phq9');
+    render(<ClinicalDocHub {...baseProps} initialVisitId={72} />);
+    expect(await screen.findByRole('dialog', { name: /PHQ-9/ })).toBeInTheDocument();
+    expect(new URLSearchParams(window.location.search).get('open_form')).toBeNull();
+  });
+
+  it('opens the native screening drawer from a PHQ-9 card', async () => {
+    fetchVisitSummaryMock.mockResolvedValue(summary({
+      lenses: ['visit', 'screening'],
+      cards: [{
+        id: 'screening_phq9', lens: 'visit', formdir: 'phq9',
+        kind: 'form', title: 'PHQ-9', description: 'Depression screen.',
+      }],
+    }));
+    oeFetchMock.mockResolvedValue({
+      instrument: { id: 'phq9', title: 'PHQ-9', subtitle: 'Depression screen', stem: '', options: [], max_score: 27, items: [], bands: [], flag_rules: [] },
+      answers: {}, saved: false,
+    });
+    render(<ClinicalDocHub {...baseProps} initialVisitId={72} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Open form' }));
+    expect(await screen.findByRole('dialog', { name: /PHQ-9/ })).toBeInTheDocument();
+    expect(oeFetchMock).toHaveBeenCalledWith('clinical_doc.screening_get', expect.objectContaining({
+      params: { visit_id: 72, instrument: 'phq9' },
+    }));
+  });
+
+  it('routes the "Add form" picker to the native drawer too', async () => {
+    fetchVisitSummaryMock.mockResolvedValue(summary({
+      addable_forms: [{
+        id: 'add_ci', lens: 'nursing', source_lens: 'nursing', formdir: 'clinical_instructions',
+        kind: 'form', title: 'Clinical instructions', description: 'Patient education notes.',
+      }],
+    }));
+    oeFetchMock.mockResolvedValue({
+      enabled: true, visit_id: 72, form_id: null, instruction: '', snippets: [],
+    });
+    render(<ClinicalDocHub {...baseProps} initialVisitId={72} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Add form' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Open' }));
+    expect(await screen.findByRole('dialog', { name: 'Clinical instructions' })).toBeInTheDocument();
+    expect(oeFetchMock).toHaveBeenCalledWith('clinical_doc.instructions_get', expect.objectContaining({
+      params: { visit_id: 72 },
+    }));
   });
 });
 

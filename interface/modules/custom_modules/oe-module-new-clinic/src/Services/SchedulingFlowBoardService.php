@@ -12,6 +12,7 @@
 namespace OpenEMR\Modules\NewClinic\Services;
 
 use OpenEMR\Common\Database\QueryUtils;
+use OpenEMR\Modules\NewClinic\Support\ApptStatusLabel;
 use OpenEMR\Services\AppointmentService;
 use OpenEMR\Services\ListService;
 use OpenEMR\Services\PatientTrackerService;
@@ -74,9 +75,12 @@ class SchedulingFlowBoardService
         ) ?: [];
 
         $ex01Map = $this->buildEx01Map($facilityId, $date);
+        // "Running late" is only meaningful for today, measured against the wall
+        // clock at load time.
+        $nowMinutes = $date === date('Y-m-d') ? ((int) date('G') * 60 + (int) date('i')) : null;
         $cards = [];
         foreach ($appointments as $row) {
-            $card = $this->mapAppointmentRow($row, $statuses, $ex01Map);
+            $card = $this->mapAppointmentRow($row, $statuses, $ex01Map, $laneConfig, $nowMinutes);
             if ($card !== null) {
                 $cards[] = $card;
             }
@@ -211,11 +215,20 @@ class SchedulingFlowBoardService
     }
 
     /**
+     * @param list<array<string, mixed>> $laneConfig resolved lane map — drives
+     *   next_status (advance to the next lane's representative status).
+     * @param int|null $nowMinutes minutes-since-midnight now, or null when the
+     *   board isn't today's (running-late only applies to today).
      * @return array<string, mixed>
      */
-    private function mapAppointmentRow(array $row, array $statuses, array $ex01Map): ?array
+    private function mapAppointmentRow(array $row, array $statuses, array $ex01Map, array $laneConfig, ?int $nowMinutes = null): ?array
     {
-        $pid = (int) ($row['pid'] ?? 0);
+        // fetchAppointments(tracker_board: true) SELECTs both p.pid and t.pid, and
+        // the LEFT-JOINed tracker's pid wins the assoc key. For a booked-but-not-
+        // arrived appointment there IS no tracker row, so `pid` comes back NULL and
+        // the card used to be dropped — silently killing the whole "Booked" lane.
+        // The event's own pc_pid is authoritative.
+        $pid = (int) ($row['pc_pid'] ?? $row['pid'] ?? 0);
         $pcEid = (int) ($row['pc_eid'] ?? 0);
         if ($pid <= 0 || $pcEid <= 0) {
             return null;
@@ -241,6 +254,12 @@ class SchedulingFlowBoardService
         $lname = trim((string) ($row['lname'] ?? ''));
         $startTime = (string) ($row['pc_startTime'] ?? '');
         $ex01Key = $pid . ':' . $pcEid;
+        // Booked but not arrived ("-" is the pre-check-in status) past the appt
+        // time on today's board = running late.
+        $runningLate = $nowMinutes !== null
+            && $effectiveStatus === '-'
+            && $this->startMinutes($startTime) !== null
+            && $this->startMinutes($startTime) < $nowMinutes;
 
         return [
             'pc_eid' => $pcEid,
@@ -248,7 +267,12 @@ class SchedulingFlowBoardService
             'pubpid' => (string) ($row['pubpid'] ?? ''),
             'patient_name' => trim($fname . ' ' . $lname) ?: ('PID ' . $pid),
             'appt_time_label' => $startTime !== '' ? substr($startTime, 0, 5) : null,
-            'category_label' => (string) ($row['pc_catname'] ?? ''),
+            // The visit type lives on pc_title; pc_catname is the shared legacy
+            // category ("Office Visit") every type collapses onto, so it told the
+            // user nothing. Same fix the calendar already carries.
+            'category_label' => trim((string) ($row['pc_title'] ?? '')) !== ''
+                ? trim((string) $row['pc_title'])
+                : trim((string) ($row['pc_catname'] ?? '')),
             'status' => $effectiveStatus,
             'status_label' => (string) ($statusMeta['label'] ?? $effectiveStatus),
             'room' => (string) ($row['room'] ?? $row['pc_room'] ?? ''),
@@ -256,6 +280,7 @@ class SchedulingFlowBoardService
             'minutes_in_status' => $minutesInStatus,
             'alert_minutes' => $alertMinutes,
             'alert_level' => $alertLevel,
+            'running_late' => $runningLate,
             'is_recurring' => (int) ($row['pc_recurrtype'] ?? 0) !== 0,
             'has_tracker' => !empty($row['id']),
             'next_status' => $this->nextStatusCode($effectiveStatus, $statuses, $laneConfig),
@@ -263,6 +288,16 @@ class SchedulingFlowBoardService
             'queue_bridge_ex01' => isset($ex01Map[$ex01Key]),
             'queue_bridge_fix_url' => $ex01Map[$ex01Key] ?? null,
         ];
+    }
+
+    /** Minutes since midnight for an "HH:MM(:SS)" start time, or null if unparseable. */
+    private function startMinutes(string $startTime): ?int
+    {
+        if (!preg_match('/^(\d{1,2}):(\d{2})/', $startTime, $m)) {
+            return null;
+        }
+
+        return ((int) $m[1]) * 60 + (int) $m[2];
     }
 
     /**
@@ -371,7 +406,7 @@ class SchedulingFlowBoardService
             $settings = PatientTrackerService::collectApptStatusSettings($code);
             $alertMinutes = is_array($settings) ? (int) ($settings['time_alert'] ?? 0) : 0;
             $lanes[$code] = [
-                'label' => (string) ($option['title'] ?? $code),
+                'label' => ApptStatusLabel::clean($code, (string) ($option['title'] ?? $code)),
                 'seq' => (int) ($option['seq'] ?? 0),
                 'is_check_in' => AppointmentService::isCheckInStatus($code),
                 'is_check_out' => AppointmentService::isCheckOutStatus($code),

@@ -11,6 +11,7 @@ import { BannerClinicalLink } from '@components/BannerClinicalLink';
 import { bannerPropsFromPreview } from '@components/bannerPreviewProps';
 import { buildAllergyChips } from '@components/patientBannerUtils';
 import { buildMrdClinicalDeepLink, MRD_CLINICAL_ANCHORS } from '@core/mrdBannerLinks';
+import { t } from '@core/i18n';
 import { cn } from '@/lib/utils';
 import { badgeVariants } from '@components/ui/badge';
 import { DocumentationStatusChip } from './DocumentationStatusChip';
@@ -57,7 +58,7 @@ export function DoctorPatientBanner({ preview, visit, signMeta, slim = false }: 
     <dl className="nc-doctor-banner-meta">
       {signMeta.routing_chips && (
         <div className="nc-doctor-banner-meta__row">
-          <dt className="nc-doctor-banner-meta__label">Routing</dt>
+          <dt className="nc-doctor-banner-meta__label">{t('Routing')}</dt>
           <dd className="nc-doctor-banner-meta__value">
             <RoutingChipsBadges
               chips={signMeta.routing_chips}
@@ -70,16 +71,16 @@ export function DoctorPatientBanner({ preview, visit, signMeta, slim = false }: 
       )}
 
       <div className="nc-doctor-banner-meta__row nc-doctor-banner-meta__row--inline">
-        <dt className="nc-doctor-banner-meta__label">Visit</dt>
+        <dt className="nc-doctor-banner-meta__label">{t('Visit')}</dt>
         <dd className="nc-doctor-banner-meta__value">
-          Encounter #{visit.encounter}
+          {t('Encounter #{encounter}', { encounter: visit.encounter })}
           {vitalsToday?.vitals_abnormal_today && (
             <BannerClinicalLink
               enabled={mrdEnabled}
               href={vitalsHref}
               className={cn(badgeVariants({ variant: 'danger' }), 'ml-1')}
             >
-              Vitals abnormal
+              {t('Vitals abnormal')}
             </BannerClinicalLink>
           )}
           <DocumentationStatusChip
@@ -91,7 +92,7 @@ export function DoctorPatientBanner({ preview, visit, signMeta, slim = false }: 
       </div>
 
       <div className="nc-doctor-banner-meta__row">
-        <dt className="nc-doctor-banner-meta__label">Vitals today</dt>
+        <dt className="nc-doctor-banner-meta__label">{t('Vitals today')}</dt>
         <dd className="nc-doctor-banner-meta__value">
           {vitalsToday?.summary ? (
             <BannerClinicalLink enabled={mrdEnabled} href={vitalsHref}>
@@ -103,7 +104,7 @@ export function DoctorPatientBanner({ preview, visit, signMeta, slim = false }: 
               href={vitalsHref}
               className="text-[var(--color-oe-warning,#ea580c)]"
             >
-              No vitals today
+              {t('No vitals today')}
             </BannerClinicalLink>
           )}
         </dd>

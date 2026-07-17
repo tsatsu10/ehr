@@ -1,13 +1,13 @@
 /**
  * StatusPill — visit-state badge built on shadcn Badge.
- * Clinical Console palette (2026-07-08).
+ * Console 26 palette (2026-07-16).
  */
 import { Badge, type BadgeProps } from './ui/badge';
 import type { PillVariant, VisitState } from '@core/types';
 
-/* Dots use the Clinical Console severity palette (tokens.css) */
+/* Dots use the severity palette; "waiting" carries the Console 26 accent */
 const VISIT_STATE: Record<VisitState, { variant: PillVariant; label: string; dot: string }> = {
-  waiting:              { variant: 'info',    label: 'Waiting',           dot: '#1b3a5f' },
+  waiting:              { variant: 'info',    label: 'Waiting',           dot: '#0071e3' },
   in_triage:            { variant: 'info',    label: 'In triage',         dot: '#0e7490' },
   ready_for_doctor:     { variant: 'warning', label: 'Ready for doctor',  dot: '#b45309' },
   with_doctor:          { variant: 'success', label: 'With doctor',       dot: '#047857' },

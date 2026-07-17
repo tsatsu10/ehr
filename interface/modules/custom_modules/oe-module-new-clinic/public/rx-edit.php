@@ -59,12 +59,18 @@ if ($visitId <= 0) {
 }
 
 $returnTo = strtolower(trim((string) ($_GET['return_to'] ?? 'pharmacy')));
-$returnUrl = $moduleUrl . '/pharmacy.php';
+// The Doctor Desk "Rx" shortcut and the Lab Desk reach this same native form;
+// send "Done" back to the desk the prescriber came from, not always pharmacy.
+$returnUrl = match ($returnTo) {
+    'doctor' => $moduleUrl . '/doctor.php',
+    'lab' => $moduleUrl . '/lab.php',
+    default => $moduleUrl . '/pharmacy.php',
+};
 
 (new PageController())->renderForAnyAcl(
     'rx-edit/index.html.twig',
     'Add / edit prescription',
-    ['new_pharmacy', 'new_pharmacy_lead', 'new_admin'],
+    ['new_pharmacy', 'new_pharmacy_lead', 'new_doctor', 'new_admin'],
     [
         'island_entry' => 'rx-edit',
         'shell_minimal' => true,

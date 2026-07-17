@@ -16,7 +16,6 @@ export interface PatientCompletion {
   missing_labels?: string[];
   chart_url?: string;
   chart_open_url?: string;
-  demographics_url?: string;
 }
 
 export interface PatientVitalsToday {

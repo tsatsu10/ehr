@@ -116,6 +116,15 @@ export function sortLanesByOrder(lanes: FlowBoardLane[], order: string[]): FlowB
   if (order.length === 0) {
     return lanes;
   }
+  // A saved order that doesn't cover every current lane is stale — it was saved
+  // against a different lane set. Applying it would drag the lanes it knows to
+  // the front and append the rest, wrecking the workflow order (this is exactly
+  // how a pref saved while the board was broken pushed "Arrived/Checked out"
+  // ahead of "Booked"). Fall back to the server's lane_seq order; the user can
+  // re-order from there and that new pref will cover every lane.
+  if (!lanes.every((lane) => order.includes(lane.status))) {
+    return lanes;
+  }
   const byStatus = new Map(lanes.map((lane) => [lane.status, lane]));
   const sorted: FlowBoardLane[] = [];
   for (const status of order) {

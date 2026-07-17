@@ -1,4 +1,3 @@
-import { Checkbox } from '@components/ui/checkbox';
 import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
 import {
@@ -8,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@components/ui/select';
-import { cn } from '@/lib/utils';
+import { Switch } from '@components/ui/switch';
 import type { AdminFieldDef } from './adminFieldDefs';
 
 interface AdminConfigFieldProps {
@@ -19,32 +18,39 @@ interface AdminConfigFieldProps {
 
 export function AdminConfigField({ def, value, onChange }: AdminConfigFieldProps) {
   const id = `cfg-${def.key}`;
-  const indentClass = def.indent ? `ml-${def.indent * 3}` : '';
+  const indentStyle = def.indent
+    ? {
+        marginLeft: `${def.indent * 1.25}rem`,
+        paddingLeft: '0.75rem',
+        borderLeft: '2px solid var(--oe-nc-border)',
+      }
+    : undefined;
   const hint = def.hint ? (
     <p className="text-xs text-[var(--oe-nc-text-muted)] m-0">{def.hint}</p>
   ) : null;
 
   if (def.type === 'bool') {
     return (
-      <div className={cn('flex items-start gap-2', def.indent ? 'mb-2' : 'mb-3', indentClass)}>
-        <Checkbox
-          id={id}
-          checked={Boolean(value)}
-          onCheckedChange={(checked) => onChange(def.key, checked === true)}
-        />
-        <div className="space-y-1">
+      <div className="nc-admin-setting-row flex items-start justify-between gap-4 py-2" style={indentStyle}>
+        <div className="min-w-0 flex-1 space-y-0.5">
           <Label htmlFor={id} className="font-normal normal-case cursor-pointer">
             {def.label}
           </Label>
           {hint}
         </div>
+        <Switch
+          id={id}
+          checked={Boolean(value)}
+          onCheckedChange={(checked) => onChange(def.key, checked)}
+          className="mt-0.5 shrink-0"
+        />
       </div>
     );
   }
 
   if (def.type === 'int') {
     return (
-      <div className={cn('space-y-1.5', indentClass, 'mb-3')}>
+      <div className="space-y-1.5 mb-3" style={indentStyle}>
         <Label htmlFor={id}>{def.label}</Label>
         <Input
           type="number"
@@ -64,7 +70,7 @@ export function AdminConfigField({ def, value, onChange }: AdminConfigFieldProps
     const strValue = value === undefined || value === null ? '' : String(value);
 
     return (
-      <div className={cn('space-y-1.5', indentClass, 'mb-3')}>
+      <div className="space-y-1.5 mb-3" style={indentStyle}>
         <Label htmlFor={id}>{def.label}</Label>
         <Select value={strValue} onValueChange={(next) => onChange(def.key, next)}>
           <SelectTrigger id={id} className="w-auto">
@@ -84,7 +90,7 @@ export function AdminConfigField({ def, value, onChange }: AdminConfigFieldProps
   }
 
   return (
-    <div className={cn('space-y-1.5', indentClass, 'mb-3')}>
+    <div className="space-y-1.5 mb-3" style={indentStyle}>
       <Label htmlFor={id}>{def.label}</Label>
       <Input
         type="text"

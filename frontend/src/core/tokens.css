@@ -6,7 +6,7 @@
  *
  * This file is imported by every island's main.css. Its job:
  *
- *   1. Import web fonts (Figtree + Noto Sans).
+ *   1. Declare the system font stack (no webfont import since Console 26).
  *   2. Expose the full --oe-nc-* token set (same as the module legacy CSS)
  *      on :root so islands share one source of truth.
  *   3. Register Tailwind @theme aliases so that CSS variables are available
@@ -20,11 +20,10 @@
 
 /* 1. Fonts ---------------------------------------------------------------- */
 /*
- * Loaded conditionally: skip if the host page already includes them
- * (OpenEMR shell may add them via the global theme). The @import must
- * be at the very top per CSS spec.
+ * "Console 26" identity (2026-07-16): system font stack — SF Pro on Apple
+ * devices, Segoe UI on Windows. No webfont download; the old Figtree/Noto
+ * Google Fonts import was removed with the retheme.
  */
-@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;700&display=swap');
 
 /* 2. Tailwind base + @theme ------------------------------------------------
  *
@@ -33,37 +32,42 @@
  * resulting utility classes (bg-oe-primary, text-oe-primary …) lose to
  * Bootstrap. We keep them so island styles can reference them cleanly.
  */
-/* Theme + utilities only — skip preflight so Bootstrap T1 shell padding survives island load */
+/* Theme + utilities only — skip preflight so Bootstrap T1 shell padding survives island load.
+   nc-ua-reset is declared FIRST so it is the lowest-priority layer: it beats UA defaults
+   (any author style does) but loses to theme/utilities and to unlayered BEM CSS. */
+@layer nc-ua-reset, theme, utilities;
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
 
 @theme {
-  /* Core palette — "Clinical Console" identity (updated 2026-07-08) */
-  --color-oe-primary:   #1b3a5f;  /* Clinical navy — 10.9:1 contrast */
-  --color-oe-secondary: #46647f;  /* Steel slate — 5.6:1 contrast */
-  --color-oe-cta:       #047857;  /* Medical green — 5.1:1 contrast */
-  --color-oe-bg:        #f4f6f8;  /* Slate paper */
-  --color-oe-text:      #1c2733;  /* Ink navy — 14.6:1 contrast */
-  --color-oe-muted:     #5b6b7b;  /* Muted slate — 5.6:1 contrast */
-  --color-oe-border:    #d3dce3;  /* Hairline */
+  /* Core palette — "Console 26" identity (updated 2026-07-16, artifact retheme) */
+  --color-oe-primary:   #0071e3;  /* System blue accent */
+  --color-oe-secondary: #6e6e73;  /* Neutral grey ink-2 */
+  --color-oe-cta:       #2bb350;  /* System green */
+  --color-oe-bg:        #f5f5f7;  /* Light grey ground */
+  --color-oe-text:      #1d1d1f;  /* Near-black ink */
+  --color-oe-muted:     #6e6e73;  /* Grey ink-2 */
+  --color-oe-border:    rgba(0, 0, 0, 0.08);  /* Hairline */
   --color-oe-surface:   #ffffff;
 
-  /* Danger / Warning — clinical severity indicators */
-  --color-oe-danger:    #b42318;  /* Clinical red — 6.9:1 contrast */
-  --color-oe-warning:   #b54708;  /* Clinical amber — 5.9:1 contrast */
+  /* Danger / Warning — darkened from the pill hues (#ff453a / #ff9f0a) only
+     enough to stay legible as TEXT on white; pills/backgrounds use the token
+     via color-mix so the visual read matches the design. */
+  --color-oe-danger:    #e0362c;
+  --color-oe-warning:   #c77700;
 
   /* Department (role) wayfinding colors (§6 shell) */
-  --color-oe-role-reception: #1d4ed8;
-  --color-oe-role-nurse:     #0e7490;
-  --color-oe-role-doctor:    #047857;
-  --color-oe-role-lab:       #b45309;
-  --color-oe-role-pharmacy:  #6d28d9;
-  --color-oe-role-cashier:   #c2410c;
-  --color-oe-role-admin:     #475569;
+  --color-oe-role-reception: #0a84ff;
+  --color-oe-role-nurse:     #2fb8cf;
+  --color-oe-role-doctor:    #2bb350;
+  --color-oe-role-lab:       #ff9f0a;
+  --color-oe-role-pharmacy:  #bf5af2;
+  --color-oe-role-cashier:   #ff6a00;
+  --color-oe-role-admin:     #8e8e93;
 
-  /* Typography — MASTER.md §Typography */
-  --font-sans:    'Noto Sans', system-ui, sans-serif;
-  --font-display: 'Figtree', system-ui, sans-serif;
+  /* Typography — system stack: SF Pro on Apple hardware, Segoe UI on Windows */
+  --font-sans:    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
 
   /* Spacing — MASTER.md §Spacing (matches --space-* names) */
   --spacing-xs:  0.25rem;   /* 4px  — tight gaps */
@@ -74,27 +78,27 @@
   --spacing-2xl: 3rem;      /* 48px — section margins */
   --spacing-3xl: 4rem;      /* 64px — hero padding */
 
-  /* Shadows — MASTER.md §Shadow Depths */
-  --shadow-oe-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-oe-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --shadow-oe-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-  --shadow-oe-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+  /* Shadows — soft floating depth (artifact card/pop shadows) */
+  --shadow-oe-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-oe-md: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-oe-lg: 0 12px 32px rgba(0, 0, 0, 0.14);
+  --shadow-oe-xl: 0 16px 40px rgba(0, 0, 0, 0.18);
 
-  /* Radius — Clinical Console: squared, instrument-like */
-  --radius-oe-sm: 0.125rem;  /* 2px — chips, badges */
-  --radius-oe-md: 0.25rem;   /* 4px — cards, inputs, buttons */
-  --radius-oe-lg: 0.375rem;  /* 6px — modals, slide-overs */
+  /* Radius — Console 26: soft, continuous curves */
+  --radius-oe-sm: 0.5rem;    /* 8px — chips, small controls */
+  --radius-oe-md: 0.75rem;   /* 12px — buttons, inputs */
+  --radius-oe-lg: 1.125rem;  /* 18px — inner cards, modals */
 
   /* Override Tailwind's default radius scale so every rounded-* utility in
-     island markup squares up without touching 22 islands (rounded-full is
-     untouched — avatars/dots stay circular). */
-  --radius-xs: 0.125rem;
-  --radius-sm: 0.125rem;
-  --radius-md: 0.25rem;
-  --radius-lg: 0.25rem;
-  --radius-xl: 0.375rem;
-  --radius-2xl: 0.375rem;
-  --radius-3xl: 0.5rem;
+     island markup rounds to the Console 26 curve without touching 22 islands
+     (rounded-full is untouched — avatars/dots stay circular). */
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1.125rem;
+  --radius-2xl: 1.375rem;
+  --radius-3xl: 1.5rem;
 
   /* Motion */
   --duration-oe-fast:   150ms;
@@ -112,30 +116,31 @@
  * for components that quote the spec directly.
  */
 :root {
-  /* Primary palette — --oe-nc-* ("Clinical Console" 2026-07-08) */
-  --oe-nc-primary:       #1b3a5f;  /* Clinical navy */
-  --oe-nc-primary-hover: #142c49;  /* Darker navy */
-  --oe-nc-primary-tint:  #e8eef5;  /* Navy surface tint */
-  --oe-nc-secondary:  #46647f;     /* Steel slate */
-  --oe-nc-cta:        #047857;     /* Medical green */
-  --oe-nc-bg:         #f4f6f8;     /* Slate paper */
-  --oe-nc-bg-tint:    #eef1f4;     /* Paper tint */
-  --oe-nc-bg-muted:   #e2e8ed;     /* Muted paper */
-  --oe-nc-text:       #1c2733;     /* Ink navy */
-  --oe-nc-text-muted: #5b6b7b;     /* Muted slate */
-  --oe-nc-border:     #d3dce3;     /* Hairline */
-  --oe-nc-border-strong: #9fb0be;
+  /* Primary palette — --oe-nc-* ("Console 26" 2026-07-16, artifact retheme) */
+  --oe-nc-primary:       #0071e3;  /* System blue accent */
+  --oe-nc-primary-hover: #0060c0;  /* Pressed blue */
+  --oe-nc-primary-tint:  #e8f1fc;  /* Blue surface tint */
+  --oe-nc-secondary:  #6e6e73;     /* Neutral grey ink-2 */
+  --oe-nc-cta:        #2bb350;     /* System green */
+  --oe-nc-bg:         #f5f5f7;     /* Light grey ground */
+  --oe-nc-bg-tint:    #f5f5f7;     /* Page ground (same grey — hover step on white) */
+  --oe-nc-bg-muted:   #ececef;     /* Segmented/chip ground */
+  --oe-nc-text:       #1d1d1f;     /* Near-black ink */
+  --oe-nc-text-muted: #6e6e73;     /* Grey ink-2 */
+  --oe-nc-border:     rgba(0, 0, 0, 0.08);   /* Hairline */
+  --oe-nc-border-strong: rgba(0, 0, 0, 0.16);
   --oe-nc-surface:    #ffffff;
-  --oe-nc-danger:     #b42318;
-  --oe-nc-warning:    #b54708;
+  --oe-nc-danger:     #e0362c;     /* Text-safe shift of pill red #ff453a */
+  --oe-nc-warning:    #c77700;     /* Text-safe shift of pill amber #ff9f0a */
 
-  /* Sidebar — dark console chrome (mirrors module tokens.css) */
-  --oe-nc-sidebar-bg: #14212e;
-  --oe-nc-sidebar-text: #c7d3de;
-  --oe-nc-sidebar-text-strong: #f2f6f9;
-  --oe-nc-sidebar-hover: rgba(255, 255, 255, 0.06);
-  --oe-nc-sidebar-active: rgba(255, 255, 255, 0.10);
-  --oe-nc-sidebar-border: rgba(255, 255, 255, 0.08);
+  /* Sidebar — frosted light rail (mirrors module tokens.css); the optional
+     dark variant lives behind the shell's nc-sidebar-dark toggle. */
+  --oe-nc-sidebar-bg: rgba(246, 246, 248, 0.78);
+  --oe-nc-sidebar-text: #6e6e73;
+  --oe-nc-sidebar-text-strong: #1d1d1f;
+  --oe-nc-sidebar-hover: rgba(0, 0, 0, 0.06);
+  --oe-nc-sidebar-active: rgba(0, 0, 0, 0.06);
+  --oe-nc-sidebar-border: rgba(0, 0, 0, 0.08);
 
   /* MASTER.md short-form aliases */
   --color-primary:    var(--oe-nc-primary);
@@ -153,20 +158,20 @@
   --oe-nc-sidebar-backdrop-z: 1035;
 
   /* Interaction tokens */
-  --oe-nc-radius:     0.25rem;
-  --oe-nc-radius-sm:  0.125rem;
-  --oe-nc-radius-lg:  0.375rem;
+  --oe-nc-radius:     0.75rem;
+  --oe-nc-radius-sm:  0.5rem;
+  --oe-nc-radius-lg:  1.125rem;
   --oe-nc-transition: 150ms ease;
-  --oe-nc-focus-ring: 0 0 0 3px rgba(27, 58, 95, 0.28);
+  --oe-nc-focus-ring: 0 0 0 3px rgba(0, 113, 227, 0.35);
 
   /* Department (role) wayfinding colors */
-  --oe-nc-role-reception: #1d4ed8;
-  --oe-nc-role-nurse:     #0e7490;
-  --oe-nc-role-doctor:    #047857;
-  --oe-nc-role-lab:       #b45309;
-  --oe-nc-role-pharmacy:  #6d28d9;
-  --oe-nc-role-cashier:   #c2410c;
-  --oe-nc-role-admin:     #475569;
+  --oe-nc-role-reception: #0a84ff;
+  --oe-nc-role-nurse:     #2fb8cf;
+  --oe-nc-role-doctor:    #2bb350;
+  --oe-nc-role-lab:       #ff9f0a;
+  --oe-nc-role-pharmacy:  #bf5af2;
+  --oe-nc-role-cashier:   #ff6a00;
+  --oe-nc-role-admin:     #8e8e93;
 
   /* Spacing — aligns with MASTER.md --space-* */
   --space-xs:  0.25rem;
@@ -177,11 +182,26 @@
   --space-2xl: 3rem;
   --space-3xl: 4rem;
 
-  /* Shadows — clinical soft depth (updated 2026-07-05) */
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.10), 0 4px 12px rgba(0, 0, 0, 0.05);
+  /* Shadows — soft floating depth (Console 26 card/pop, 2026-07-16) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.14);
+  --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.18);
+}
+
+/* 4. Button base reset -----------------------------------------------------
+ *
+ * Preflight is skipped (§2), so a <button> with no bg/border classes keeps
+ * the Windows UA chrome: 2px black outset border + buttonface grey. shadcn
+ * ghost/link variants and bare icon buttons assume a preflight-style reset.
+ * MUST live in the lowest layer (nc-ua-reset, declared in §2): an unlayered
+ * version beats @layer utilities and wipes bg-[...] off every solid button.
+ */
+@layer nc-ua-reset {
+  button {
+    background-color: transparent;
+    border: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

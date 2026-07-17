@@ -179,13 +179,11 @@ class PatientCompletionService
     }
 
     /**
-     * @return array{score: int, missing: array<int, string>, missing_labels: array<int, string>, status: string, demographics_url: string}
+     * @return array{score: int, missing: array<int, string>, missing_labels: array<int, string>, status: string, chart_url: string}
      */
     public function snapshot(int $pid, bool $forceRecompute = false): array
     {
         $result = $this->readCached($pid, $forceRecompute);
-        $result['demographics_url'] = ($GLOBALS['webroot'] ?? '')
-            . '/interface/patient_file/summary/demographics.php?set_pid=' . urlencode((string) $pid);
         $result['chart_url'] = self::chartUrl($pid);
         $result['billing_threshold'] = $this->getBillingThreshold();
 

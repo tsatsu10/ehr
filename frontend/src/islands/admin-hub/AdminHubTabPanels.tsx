@@ -8,6 +8,7 @@ import type {
   ConfigImportResult,
   DirectoryContactRow,
   DirectoryContactType,
+  FacilityRow,
   FormBundleBoardPayload,
   FormsCatalogItem,
   FormsCatalogPayload,
@@ -72,12 +73,12 @@ export interface AdminHubTabPanelsProps {
   setupCompleting: boolean;
   healthRefreshing: boolean;
   visitTypes: VisitTypeRow[];
-  calendarCategories: import('./adminTypes').AdminConfigPayload['calendar_categories'];
   feeSchedule: FeeScheduleRow[];
   feeCsv: string;
   feeImporting: boolean;
   directoryContacts: DirectoryContactRow[];
   directoryTypes: DirectoryContactType[];
+  facilities: FacilityRow[];
   onFieldChange: (key: string, value: unknown) => void;
   onImportGhanaLbfPack: (setAsConsultNote: boolean) => void;
   onImportReferralHospitalLbfPack: (setAsConsultNote: boolean) => void;
@@ -110,6 +111,7 @@ export interface AdminHubTabPanelsProps {
   onAddDirectoryContact: () => void;
   onEditDirectoryContact: (row: DirectoryContactRow) => void;
   onDeleteDirectoryContact: (row: DirectoryContactRow) => void;
+  onEditFacility: (row: FacilityRow) => void;
 }
 
 export function AdminHubTabPanels({
@@ -154,12 +156,12 @@ export function AdminHubTabPanels({
   setupCompleting,
   healthRefreshing,
   visitTypes,
-  calendarCategories,
   feeSchedule,
   feeCsv,
   feeImporting,
   directoryContacts,
   directoryTypes,
+  facilities,
   onFieldChange,
   onImportGhanaLbfPack,
   onImportReferralHospitalLbfPack,
@@ -192,6 +194,7 @@ export function AdminHubTabPanels({
   onAddDirectoryContact,
   onEditDirectoryContact,
   onDeleteDirectoryContact,
+  onEditFacility,
 }: AdminHubTabPanelsProps) {
   const roles = roleGroups ?? {};
 
@@ -249,9 +252,12 @@ export function AdminHubTabPanels({
           cashProfileApplying={cashProfileApplying}
           reconciliationStatus={reconciliationStatus}
           reconciliationRunning={reconciliationRunning}
+          facilities={facilities}
+          currentFacilityId={facilityId > 0 ? facilityId : clinicFacilityId}
           onFieldChange={onFieldChange}
           onApplyCashProfile={onApplyCashProfile}
           onRunReconciliation={onRunReconciliation}
+          onEditFacility={onEditFacility}
         />
       </AdminTabPanel>
 
@@ -320,7 +326,6 @@ export function AdminHubTabPanels({
       <AdminTabPanel tabId="types" active={activeTab === 'types'}>
         <VisitTypesTab
           visitTypes={visitTypes}
-          calendarCategories={calendarCategories ?? []}
           onAdd={onAddVisitType}
           onEdit={onEditVisitType}
           onArchive={onArchiveVisitType}

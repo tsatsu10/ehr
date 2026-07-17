@@ -4,6 +4,7 @@ import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
 import { NativeSelect } from '@components/ui/native-select';
+import { t } from '@core/i18n';
 
 export interface PatientEducationResource {
   title: string;
@@ -59,29 +60,28 @@ export function PatientEducationSlideOver({
       open={open}
       onClose={onClose}
       id="nc-doctor-education"
-      title="Patient handouts"
+      title={t('Patient handouts')}
       width="sm"
       footer={
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" size="sm" onClick={onClose}>Close</Button>
+          <Button type="button" variant="secondary" size="sm" onClick={onClose}>{t('Close')}</Button>
           <Button type="button" size="sm" disabled={!canOpen} onClick={openHandout}>
-            Open handout
+            {t('Open handout')}
           </Button>
         </div>
       }
     >
       {resources.length === 0 ? (
         <p className="text-sm text-[var(--oe-nc-text-muted)]">
-          No education resources are configured. An administrator can add them to the
-          “external_patient_education” list.
+          {t('No education resources are configured. An administrator can add them to the “external_patient_education” list.')}
         </p>
       ) : (
         <div className="space-y-3">
           <p className="text-sm text-[var(--oe-nc-text-muted)] mb-0">
-            Search a configured resource for a condition and open the handout in a new tab.
+            {t('Search a configured resource for a condition and open the handout in a new tab.')}
           </p>
           <div className="space-y-1.5">
-            <Label htmlFor="nc-doctor-education-resource">Resource</Label>
+            <Label htmlFor="nc-doctor-education-resource">{t('Resource')}</Label>
             <NativeSelect
               id="nc-doctor-education-resource"
               value={String(resourceIdx)}
@@ -93,11 +93,11 @@ export function PatientEducationSlideOver({
             </NativeSelect>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="nc-doctor-education-term">Condition or topic</Label>
+            <Label htmlFor="nc-doctor-education-term">{t('Condition or topic')}</Label>
             <Input
               id="nc-doctor-education-term"
               value={term}
-              placeholder="e.g. hypertension, malaria, diabetes"
+              placeholder={t('e.g. hypertension, malaria, diabetes')}
               onChange={(e) => setTerm(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && canOpen) openHandout(); }}
             />

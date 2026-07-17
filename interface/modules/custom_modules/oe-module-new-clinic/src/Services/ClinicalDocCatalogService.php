@@ -38,11 +38,11 @@ class ClinicalDocCatalogService
             ['formdir' => 'clinic_note', 'title' => 'Clinic Note', 'description' => 'Short free-text note.', 'kind' => 'form'],
             ['formdir' => 'dictation', 'title' => 'Dictation', 'description' => 'Audio/transcription workflow.', 'kind' => 'form'],
             ['formdir' => 'transfer_summary', 'title' => 'Transfer summary', 'description' => 'Referral narrative.', 'kind' => 'form'],
+            ['formdir' => 'nc_certificate', 'title' => 'Medical certificate', 'description' => 'Excuse duty / school note with a verify number.', 'kind' => 'form'],
         ],
         'screening' => [
             ['formdir' => 'phq9', 'title' => 'PHQ-9', 'description' => 'Depression screen.', 'kind' => 'form'],
             ['formdir' => 'gad7', 'title' => 'GAD-7', 'description' => 'Anxiety screen.', 'kind' => 'form'],
-            ['formdir' => 'questionnaire_assessments', 'title' => 'Questionnaires', 'description' => 'LForms / FHIR questionnaires.', 'kind' => 'form'],
         ],
         'nursing' => [
             ['formdir' => 'vitals', 'title' => 'Vitals', 'description' => 'BP, temperature, SpO₂, etc.', 'kind' => 'form'],
@@ -57,6 +57,7 @@ class ClinicalDocCatalogService
             ['formdir' => 'note', 'title' => 'Work/school note', 'description' => 'Excuse letter.', 'kind' => 'form'],
         ],
         'specialty' => [
+            ['formdir' => 'nc_eye_exam', 'title' => 'Eye exam', 'description' => 'Primary-care eye exam — acuity, pupils, IOP, fundus.', 'kind' => 'form'],
             ['formdir' => 'eye_mag', 'title' => 'Eye exam', 'description' => 'Ophthalmology exam.', 'kind' => 'form'],
             ['formdir' => 'bronchitis', 'title' => 'Bronchitis form', 'description' => 'Acute illness template.', 'kind' => 'form'],
             ['formdir' => 'ankleinjury', 'title' => 'Ankle evaluation', 'description' => 'Orthopedic injury template.', 'kind' => 'form'],
@@ -74,11 +75,11 @@ class ClinicalDocCatalogService
             ['formdir' => 'clinic_note', 'title' => 'Clinic Note', 'description' => 'Short free-text note.', 'kind' => 'form'],
             ['formdir' => 'dictation', 'title' => 'Dictation', 'description' => 'Audio/transcription workflow.', 'kind' => 'form'],
             ['formdir' => 'transfer_summary', 'title' => 'Transfer summary', 'description' => 'Referral narrative.', 'kind' => 'form'],
+            ['formdir' => 'nc_certificate', 'title' => 'Medical certificate', 'description' => 'Excuse duty / school note with a verify number.', 'kind' => 'form'],
         ],
         'screening' => [
             ['formdir' => 'phq9', 'title' => 'PHQ-9', 'description' => 'Depression screen.', 'kind' => 'form'],
             ['formdir' => 'gad7', 'title' => 'GAD-7', 'description' => 'Anxiety screen.', 'kind' => 'form'],
-            ['formdir' => 'questionnaire_assessments', 'title' => 'Questionnaires', 'description' => 'LForms / FHIR questionnaires.', 'kind' => 'form'],
         ],
         'nursing' => [
             ['formdir' => 'vitals', 'title' => 'Vitals', 'description' => 'BP, temperature, SpO₂, etc.', 'kind' => 'form'],
@@ -93,6 +94,7 @@ class ClinicalDocCatalogService
             ['formdir' => 'note', 'title' => 'Work/school note', 'description' => 'Excuse letter.', 'kind' => 'form'],
         ],
         'specialty' => [
+            ['formdir' => 'nc_eye_exam', 'title' => 'Eye exam', 'description' => 'Primary-care eye exam — acuity, pupils, IOP, fundus.', 'kind' => 'form'],
             ['formdir' => 'eye_mag', 'title' => 'Eye exam', 'description' => 'Ophthalmology exam.', 'kind' => 'form'],
             ['formdir' => 'bronchitis', 'title' => 'Bronchitis form', 'description' => 'Acute illness template.', 'kind' => 'form'],
             ['formdir' => 'ankleinjury', 'title' => 'Ankle evaluation', 'description' => 'Orthopedic injury template.', 'kind' => 'form'],
@@ -126,10 +128,24 @@ class ClinicalDocCatalogService
     /** @var array<string, string> raw formdir => resolved canonical directory, see resolveRegistryDirectory(). */
     private array $resolveRegistryDirectoryCache = [];
 
+    /**
+     * Per-request snapshots of the two small, slowly-changing form-metadata tables the
+     * card builder consults per formdir. Before this, resolveRegistryDirectory()/
+     * isRegistryFormActive()/canViewRegistryForm() each fired 1-3 point queries PER
+     * formdir PER lens — getCatalog() alone ran ~256 queries and getVisitSummary ~648.
+     * Loading each table once (both are tiny) and matching in PHP collapses that to two.
+     *
+     * @var array<string, array{directory: string, state: int, aco_spec: string}>|null  lower(directory) => row
+     */
+    private ?array $registryByDirectory = null;
+    /** @var array<string, true>|null  set of active LBF grp_form_id (grp_group_id='', grp_activity=1). */
+    private ?array $activeLbfFormIds = null;
+
     private ?ClinicalDocAccessService $access = null;
     private ?ClinicConfigService $config = null;
     private ?VisitScopeService $visitScope = null;
     private ?EncounterNoteEnginePolicy $enginePolicy = null;
+    private ?ScreeningInstrumentCatalog $screeningCatalog = null;
 
     public function __construct(
         ?ClinicalDocAccessService $access = null,
@@ -159,6 +175,25 @@ class ClinicalDocCatalogService
         }
 
         return $this->config;
+    }
+
+    private function getScreeningCatalog(): ScreeningInstrumentCatalog
+    {
+        if ($this->screeningCatalog === null) {
+            $this->screeningCatalog = new ScreeningInstrumentCatalog();
+        }
+
+        return $this->screeningCatalog;
+    }
+
+    /**
+     * A built-in native screener (PHQ-9 / GAD-7). These are the default screening
+     * cards (no feature flag) and show as virtual cards — not in the OpenEMR
+     * registry. The $facilityId parameter is kept for call-site compatibility.
+     */
+    public function isNativeScreeningFormdir(string $formdir, ?int $facilityId = null): bool
+    {
+        return $this->getScreeningCatalog()->isInstrument($formdir);
     }
 
     private function getVisitScope(): VisitScopeService
@@ -340,6 +375,10 @@ class ClinicalDocCatalogService
             return true;
         }
 
+        if ($this->isNativeScreeningFormdir($formdir, $facilityId)) {
+            return true;
+        }
+
         foreach ($this->allowedFormdirs($facilityId) as $allowed) {
             if (strcasecmp($allowed, $formdir) === 0) {
                 return true;
@@ -402,27 +441,65 @@ class ClinicalDocCatalogService
             return $this->resolveRegistryDirectoryCache[$formdir] = EncounterNoteService::NATIVE_FORMDIR;
         }
 
-        $row = QueryUtils::querySingleRow(
-            'SELECT directory FROM registry WHERE LOWER(directory) = ? AND state = 1 LIMIT 1',
-            [$formdir]
-        );
-
-        if (is_array($row)) {
-            return $this->resolveRegistryDirectoryCache[$formdir] = (string) ($row['directory'] ?? $formdir);
+        $registry = $this->registryByDirectory();
+        $entry = $registry[strtolower($formdir)] ?? null;
+        if ($entry !== null && $entry['state'] === 1) {
+            return $this->resolveRegistryDirectoryCache[$formdir] = $entry['directory'];
         }
 
+        $lbf = $this->activeLbfFormIds();
         foreach ($this->lbfFormIdCandidates($formdir) as $candidate) {
-            $lbfRow = QueryUtils::querySingleRow(
-                "SELECT grp_form_id FROM layout_group_properties
-                 WHERE grp_form_id = ? AND grp_group_id = '' AND grp_activity = 1 LIMIT 1",
-                [$candidate]
-            );
-            if (is_array($lbfRow)) {
-                return $this->resolveRegistryDirectoryCache[$formdir] = (string) ($lbfRow['grp_form_id'] ?? $candidate);
+            if (isset($lbf[$candidate])) {
+                return $this->resolveRegistryDirectoryCache[$formdir] = $candidate;
             }
         }
 
         return $this->resolveRegistryDirectoryCache[$formdir] = $formdir;
+    }
+
+    /**
+     * @return array<string, array{directory: string, state: int, aco_spec: string}>
+     */
+    private function registryByDirectory(): array
+    {
+        if ($this->registryByDirectory === null) {
+            $rows = QueryUtils::fetchRecords('SELECT directory, state, aco_spec FROM registry') ?: [];
+            $map = [];
+            foreach ($rows as $row) {
+                $dir = (string) ($row['directory'] ?? '');
+                if ($dir === '') {
+                    continue;
+                }
+                $map[strtolower($dir)] = [
+                    'directory' => $dir,
+                    'state' => (int) ($row['state'] ?? 0),
+                    'aco_spec' => trim((string) ($row['aco_spec'] ?? '')),
+                ];
+            }
+            $this->registryByDirectory = $map;
+        }
+
+        return $this->registryByDirectory;
+    }
+
+    /**
+     * @return array<string, true>
+     */
+    private function activeLbfFormIds(): array
+    {
+        if ($this->activeLbfFormIds === null) {
+            $rows = QueryUtils::fetchRecords(
+                "SELECT grp_form_id FROM layout_group_properties
+                 WHERE grp_group_id = '' AND grp_activity = 1"
+            ) ?: [];
+            $set = [];
+            foreach ($rows as $row) {
+                $set[(string) ($row['grp_form_id'] ?? '')] = true;
+            }
+            $this->activeLbfFormIds = $set;
+        }
+
+        return $this->activeLbfFormIds;
     }
 
     public function clearAllowedFormdirsCache(): void
@@ -430,6 +507,8 @@ class ClinicalDocCatalogService
         $this->allowedFormdirsCache = null;
         $this->cardsForLensCache = [];
         $this->resolveRegistryDirectoryCache = [];
+        $this->registryByDirectory = null;
+        $this->activeLbfFormIds = null;
     }
 
     public function isFormInstalledAndActive(string $formdir): bool
@@ -527,6 +606,12 @@ class ClinicalDocCatalogService
                 if (!$include && (str_contains($formdirLower, 'lab_intake') || str_contains($formdirLower, 'pharmacy_service'))) {
                     $include = true;
                 }
+                // The medical certificate is an everyday doctor document — it
+                // belongs on the This-visit tab, not buried in consult "More".
+                if ($formdirLower === 'nc_certificate') {
+                    $include = true;
+                    $card['more'] = false;
+                }
                 if (!$include) {
                     continue;
                 }
@@ -575,14 +660,22 @@ class ClinicalDocCatalogService
     {
         $raw = trim((string) ($this->getConfig()->get('clinical_doc_specialty_pack', '[]', $facilityId) ?? '[]'));
         $enabled = json_decode($raw, true);
-        if (!is_array($enabled) || $enabled === []) {
-            return [];
-        }
-        $enabled = array_map(static fn ($v): string => strtolower(trim((string) $v)), $enabled);
+        $enabled = is_array($enabled)
+            ? array_map(static fn ($v): string => strtolower(trim((string) $v)), $enabled)
+            : [];
 
         return array_values(array_filter(
             $defs,
-            static fn (array $def): bool => in_array(strtolower($def['formdir']), $enabled, true)
+            static function (array $def) use ($enabled): bool {
+                $formdir = strtolower($def['formdir']);
+                // The native eye exam carries its OWN flag (checked in buildCard);
+                // requiring pack membership on top would be a redundant third gate.
+                if ($formdir === 'nc_eye_exam') {
+                    return true;
+                }
+
+                return in_array($formdir, $enabled, true);
+            }
         ));
     }
 
@@ -596,8 +689,22 @@ class ClinicalDocCatalogService
         $formdir = strtolower(trim($canonical));
         $kind = $def['kind'];
         if ($kind === 'form') {
+            // The certificate card is flag-gated (its registry row always exists
+            // for encounter-summary rendering, so the registry check alone would
+            // show it with the flag off).
+            if ($formdir === 'nc_certificate'
+                && !$this->getConfig()->isEnabled('enable_native_certificate', 0, $facilityId)) {
+                return null;
+            }
+            if ($formdir === 'nc_eye_exam'
+                && !$this->getConfig()->isEnabled('enable_native_eye_exam', 0, $facilityId)) {
+                return null;
+            }
             if ($this->getEnginePolicy()->isNativeFormdir($formdir) && $this->getEnginePolicy()->isNativeEngineEnabled($facilityId)) {
                 // Virtual native consult card — not in OpenEMR registry.
+            } elseif ($this->isNativeScreeningFormdir($formdir, $facilityId)) {
+                // Virtual native screening card (PHQ-9 / GAD-7) — not registered;
+                // status + score are read from form_nc_screening at enrich time.
             } elseif (!$this->isRegistryFormActive($formdir)) {
                 return null;
             } elseif (!$this->canViewRegistryForm($canonical)) {
@@ -653,19 +760,12 @@ class ClinicalDocCatalogService
 
     private function canViewRegistryForm(string $canonical): bool
     {
-        if (!function_exists('getRegistryEntryByDirectory')) {
-            require_once $GLOBALS['fileroot'] . '/library/registry.inc.php';
-        }
-
-        $entry = getRegistryEntryByDirectory($canonical, 'aco_spec');
-        if (!is_array($entry) || empty($entry['aco_spec'])) {
+        $entry = $this->registryByDirectory()[strtolower($canonical)] ?? null;
+        $acoSpec = $entry !== null ? $entry['aco_spec'] : '';
+        if ($acoSpec === '') {
+            $lbf = $this->activeLbfFormIds();
             foreach ($this->lbfFormIdCandidates($canonical) as $candidate) {
-                $lbfRow = QueryUtils::querySingleRow(
-                    "SELECT grp_form_id FROM layout_group_properties
-                     WHERE grp_form_id = ? AND grp_group_id = '' AND grp_activity = 1 LIMIT 1",
-                    [$candidate]
-                );
-                if (is_array($lbfRow)) {
+                if (isset($lbf[$candidate])) {
                     return true;
                 }
             }
@@ -673,7 +773,7 @@ class ClinicalDocCatalogService
             return false;
         }
 
-        return AclMain::aclCheckAcoSpec($entry['aco_spec']);
+        return AclMain::aclCheckAcoSpec($acoSpec);
     }
 
     private function isRegistryFormActive(string $formdir): bool
@@ -682,22 +782,14 @@ class ClinicalDocCatalogService
             return false;
         }
 
-        $row = QueryUtils::querySingleRow(
-            'SELECT state FROM registry WHERE LOWER(directory) = ? LIMIT 1',
-            [strtolower($formdir)]
-        );
-
-        if (is_array($row) && (int) ($row['state'] ?? 0) === 1) {
+        $entry = $this->registryByDirectory()[strtolower($formdir)] ?? null;
+        if ($entry !== null && $entry['state'] === 1) {
             return true;
         }
 
+        $lbf = $this->activeLbfFormIds();
         foreach ($this->lbfFormIdCandidates($formdir) as $candidate) {
-            $lbfRow = QueryUtils::querySingleRow(
-                "SELECT grp_form_id FROM layout_group_properties
-                 WHERE grp_form_id = ? AND grp_group_id = '' AND grp_activity = 1 LIMIT 1",
-                [$candidate]
-            );
-            if (is_array($lbfRow)) {
+            if (isset($lbf[$candidate])) {
                 return true;
             }
         }

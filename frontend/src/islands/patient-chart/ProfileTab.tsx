@@ -6,6 +6,7 @@ import type { ChecklistLevel, PaymentsStripData, RegistrationGetData } from './p
 import { ChartStack } from './chartUi';
 import { PaymentsStrip } from './PaymentsStrip';
 import { ProfileChecklist } from './ProfileChecklist';
+import { ProfileInfoPanel } from './ProfileInfoPanel';
 
 interface ProfileTabProps {
   ajaxUrl: string;
@@ -72,6 +73,7 @@ export function ProfileTab({
           </Button>
         </div>
       )}
+      <ProfileInfoPanel data={checklist} />
       <PaymentsStrip data={payments} />
       <ProfileChecklist levels={levels} completion={completion} />
     </ChartStack>

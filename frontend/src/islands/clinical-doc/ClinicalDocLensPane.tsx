@@ -30,7 +30,14 @@ interface ClinicalDocLensPaneProps {
   doctorDeskUrl: string;
   onOpenError: (message: string) => void;
   onOpenLabPanel?: () => void;
+  onOpenInstructions?: () => void;
+  onOpenScreening?: (instrument: string) => void;
+  onOpenVitals?: () => void;
+  onOpenCertificate?: () => void;
+  onOpenEyeExam?: () => void;
 }
+
+const SCREENING_INSTRUMENTS = ['phq9', 'gad7'];
 
 async function openForm(
   ajaxUrl: string,
@@ -56,6 +63,15 @@ function statusLine(card: ClinicalDocCard): string {
   const previewLine = consultCardPreviewLine(card.note_preview);
   if (previewLine) {
     return previewLine;
+  }
+
+  if (SCREENING_INSTRUMENTS.includes(card.formdir.toLowerCase())) {
+    if (!card.started || typeof card.score_total !== 'number') {
+      return 'Not started';
+    }
+    const scoreText = `${card.score_total}/${card.score_max ?? '?'}${card.score_label ? ` · ${card.score_label}` : ''}`;
+    const savedText = card.last_saved_at ? ` · ${formatSavedAt(card.last_saved_at)}` : '';
+    return `${scoreText}${savedText}`;
   }
 
   if (!card.started) {
@@ -90,6 +106,11 @@ export function ClinicalDocLensPane({
   doctorDeskUrl,
   onOpenError,
   onOpenLabPanel,
+  onOpenInstructions,
+  onOpenScreening,
+  onOpenVitals,
+  onOpenCertificate,
+  onOpenEyeExam,
 }: ClinicalDocLensPaneProps) {
   if (!visitId) {
     return (
@@ -131,6 +152,42 @@ export function ClinicalDocLensPane({
       && (card.started || preview?.started)
       && preview?.validate_ready,
     );
+    const useNativeInstructions = Boolean(
+      onOpenInstructions
+      && card.formdir.toLowerCase() === 'clinical_instructions',
+    );
+    const screeningInstrument = SCREENING_INSTRUMENTS.includes(card.formdir.toLowerCase())
+      ? card.formdir.toLowerCase()
+      : null;
+    const useNativeScreening = Boolean(onOpenScreening && screeningInstrument);
+    const useNativeVitals = Boolean(onOpenVitals && card.formdir.toLowerCase() === 'vitals');
+    const useNativeCertificate = Boolean(onOpenCertificate && card.formdir.toLowerCase() === 'nc_certificate');
+    const useNativeEyeExam = Boolean(onOpenEyeExam && card.formdir.toLowerCase() === 'nc_eye_exam');
+    const handleOpen = () => {
+      if (useNativeInstructions) {
+        onOpenInstructions?.();
+        return;
+      }
+      if (useNativeScreening && screeningInstrument) {
+        onOpenScreening?.(screeningInstrument);
+        return;
+      }
+      if (useNativeVitals) {
+        onOpenVitals?.();
+        return;
+      }
+      if (useNativeCertificate) {
+        onOpenCertificate?.();
+        return;
+      }
+      if (useNativeEyeExam) {
+        onOpenEyeExam?.();
+        return;
+      }
+      void openForm(ajaxUrl, csrfToken, visitId, card, lens).catch((err: unknown) => {
+        onOpenError(err instanceof Error ? err.message : 'Could not open form');
+      });
+    };
 
     return (
     <article key={card.id} className="nc-clinicaldoc-card" role="listitem">
@@ -151,18 +208,40 @@ export function ClinicalDocLensPane({
         <p className="text-sm text-[var(--oe-nc-warning,#b54708)] mb-2">{card.bundle_health.status_label}</p>
       ) : null}
       <div className="flex flex-wrap gap-2">
+        {useNativeCertificate && (card.started || preview?.started) ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            title="Print the certificate"
+            onClick={() => {
+              window.open(`certificate-print.php?visit_id=${visitId}`, '_blank', 'noopener');
+            }}
+          >
+            Print
+          </Button>
+        ) : null}
+        {useNativeInstructions && (card.started || preview?.started) ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            title="Print the instructions for the patient"
+            onClick={() => {
+              window.open(`instructions-print.php?visit_id=${visitId}`, '_blank', 'noopener');
+            }}
+          >
+            Print
+          </Button>
+        ) : null}
         {card.signed || preview?.signed ? (
           <Button
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => {
-              void openForm(ajaxUrl, csrfToken, visitId, card, lens).catch((err: unknown) => {
-                onOpenError(err instanceof Error ? err.message : 'Could not open form');
-              });
-            }}
+            onClick={handleOpen}
           >
-            View note
+            {useNativeInstructions ? 'View' : 'View note'}
           </Button>
         ) : card.started || preview?.started ? (
           <>
@@ -170,11 +249,7 @@ export function ClinicalDocLensPane({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => {
-                void openForm(ajaxUrl, csrfToken, visitId, card, lens).catch((err: unknown) => {
-                  onOpenError(err instanceof Error ? err.message : 'Could not open form');
-                });
-              }}
+              onClick={handleOpen}
             >
               Continue
             </Button>
@@ -201,11 +276,7 @@ export function ClinicalDocLensPane({
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => {
-              void openForm(ajaxUrl, csrfToken, visitId, card, lens).catch((err: unknown) => {
-                onOpenError(err instanceof Error ? err.message : 'Could not open form');
-              });
-            }}
+            onClick={handleOpen}
           >
             Open form
           </Button>
@@ -226,6 +297,11 @@ export function ClinicalDocLensPane({
           csrfToken={csrfToken}
           lens={lens}
           onOpenError={onOpenError}
+          onOpenInstructions={onOpenInstructions}
+          onOpenVitals={onOpenVitals}
+          onOpenScreening={onOpenScreening}
+          onOpenCertificate={onOpenCertificate}
+          onOpenEyeExam={onOpenEyeExam}
         />
       ) : null}
       {lens === 'orders' && labPanelOrderEnabled && onOpenLabPanel ? (

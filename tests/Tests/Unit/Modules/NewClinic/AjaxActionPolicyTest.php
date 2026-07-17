@@ -38,6 +38,23 @@ class AjaxActionPolicyTest extends TestCase
         $this->assertSame('new_doctor', $policy->requiresSingleAcl('doctor.roster.set_taking'));
     }
 
+    public function testNativeRxFormActionsAllowPharmacyAndDoctor(): void
+    {
+        $policy = new AjaxActionPolicy();
+
+        // The rx-edit island is shared by the Pharmacy Desk "Add Rx" and the
+        // Doctor Desk "Full Rx form" -- both roles must reach its actions.
+        foreach (['pharmacy.rx_form_data', 'pharmacy.rx_search_drugs', 'pharmacy.rx_save'] as $action) {
+            $desc = $policy->describe($action);
+            $this->assertSame('any_acl', $desc['type'], "{$action} should be any_acl");
+            $this->assertContains('new_pharmacy', $desc['acls'], "{$action} must allow pharmacy");
+            $this->assertContains('new_doctor', $desc['acls'], "{$action} must allow doctor");
+        }
+
+        // The pharmacy Rx-history list stays pharmacy-only (not shared).
+        $this->assertSame('new_pharmacy', $policy->requiresSingleAcl('pharmacy.rx_history'));
+    }
+
     public function testDoctorRoutingReassignAllowsAdminOrReception(): void
     {
         $policy = new AjaxActionPolicy();
@@ -127,6 +144,10 @@ class AjaxActionPolicyTest extends TestCase
                 'communications.hub_counts', 'documents.list',
                 // SCALE-3.1: read-only since the rate limiter moved off $_SESSION.
                 'patients.search', 'patients.dup_check',
+                // Native editor bootstraps (screening-tab freeze fix).
+                'clinical_doc.instructions_get', 'clinical_doc.screening_get',
+                'clinical_doc.vitals_get', 'clinical_doc.certificate_get',
+                'clinical_doc.eye_exam_get',
             ] as $action
         ) {
             $this->assertTrue($policy->isReadOnly($action), "$action should be read-only");
@@ -153,6 +174,9 @@ class AjaxActionPolicyTest extends TestCase
                 'admin.config.save', 'admin.fee.save', 'admin.backup.run',
                 // clinical writes + exports (inline work / session pid)
                 'encounter_note.save', 'encounter_note.sign', 'clinical_doc.open_form',
+                'clinical_doc.instructions_save', 'clinical_doc.screening_save',
+                'clinical_doc.vitals_save', 'clinical_doc.certificate_save',
+                'clinical_doc.eye_exam_save',
                 'scheduling.calendar.book', 'scheduling.recalls.save',
                 'reports.export_run', 'reports.export_status', 'cohort.export',
                 'profile.switch_role', 'profile.mfa.enroll_start',

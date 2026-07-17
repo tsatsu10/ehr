@@ -213,6 +213,44 @@ export async function resizeCalendarAppointment(
   });
 }
 
+export async function cancelCalendarAppointment(
+  ajaxUrl: string,
+  csrfToken: string,
+  filters: SchedulingFilters,
+  view: CalendarView,
+  pcEid: number,
+): Promise<CalendarDayPayload> {
+  return oeFetch<CalendarDayPayload>('scheduling.calendar.cancel', {
+    method: 'POST',
+    ajaxUrl,
+    csrfToken,
+    json: {
+      pc_eid: pcEid,
+      view,
+      anchor_date: filters.date,
+      facility_id: filters.facilityId,
+      filter_provider_id: filters.providerId > 0 ? filters.providerId : null,
+    },
+  });
+}
+
+export async function fetchFreeSlots(
+  ajaxUrl: string,
+  csrfToken: string,
+  params: {
+    facility_id: number;
+    provider_id: number;
+    date: string;
+    duration_minutes: number;
+  },
+): Promise<{ slots: string[]; interval_minutes: number }> {
+  return oeFetch<{ slots: string[]; interval_minutes: number }>('scheduling.calendar.slots', {
+    ajaxUrl,
+    csrfToken,
+    params,
+  });
+}
+
 export async function bookCalendarAppointment(
   ajaxUrl: string,
   csrfToken: string,
@@ -220,12 +258,14 @@ export async function bookCalendarAppointment(
   body: {
     pid: number;
     provider_id: number;
-    pc_catid: number;
+    visit_type_id: number;
     date: string;
     time: string;
     duration_minutes: number;
     comments?: string;
     recall_id?: number;
+    repeat?: string;
+    repeat_until?: string;
   },
 ): Promise<CalendarDayPayload> {
   return oeFetch<CalendarDayPayload>('scheduling.calendar.book', {

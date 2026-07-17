@@ -85,7 +85,62 @@ describe('ClinicalTab referrals strip', () => {
     expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument();
   });
 
-  it('surfaces "Other transactions" so records requests stay reachable when the stock menu is hidden (D5)', () => {
+  it('opens the native Background editor as a button when the flag is on (D-HIST-9)', () => {
+    renderTab(null, {
+      native_history_editor: true,
+      background: {
+        anchor: 'clinical-background',
+        editor_url: '/interface/patient_file/history/history_full.php?set_pid=42',
+        lines: [{ label: 'Mother', value: 'Hypertension' }],
+      },
+    });
+    // Native affordance: "Edit history" is a button (opens the drawer), not a stock link.
+    expect(screen.getByRole('button', { name: 'Edit history' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Edit history' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the stock history link when the flag is off (D-HIST-9)', () => {
+    renderTab(null, {
+      background: {
+        anchor: 'clinical-background',
+        editor_url: '/interface/patient_file/history/history_full.php?set_pid=42',
+        lines: [{ label: 'Mother', value: 'Hypertension' }],
+      },
+    });
+    const link = screen.getByRole('link', { name: 'Edit history' });
+    expect(link).toHaveAttribute('href', '/interface/patient_file/history/history_full.php?set_pid=42');
+    expect(screen.queryByRole('button', { name: 'Edit history' })).not.toBeInTheDocument();
+  });
+
+  it('shows native Add/Edit on Immunizations when the editor is on (D-IMM-1)', () => {
+    renderTab(null, {
+      native_immunization_editor: true,
+      immunizations: {
+        anchor: 'clinical-immunizations',
+        items: [{ id: 3, title: 'BCG', detail: '10 Jan 2026' }],
+      },
+    });
+    expect(screen.getByText('BCG')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+  });
+
+  it('keeps the stock immunizations link when the editor is off', () => {
+    renderTab(null, {
+      immunizations: {
+        anchor: 'clinical-immunizations',
+        editor_url: '/interface/patient_file/summary/immunizations.php?set_pid=42',
+        items: [{ id: 3, title: 'BCG' }],
+      },
+    });
+    expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute(
+      'href',
+      '/interface/patient_file/summary/immunizations.php?set_pid=42',
+    );
+    expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument();
+  });
+
+  it('does not show the stock "Other transactions" link (removed by product decision)', () => {
     renderTab({
       hidden: false,
       items: [],
@@ -93,7 +148,8 @@ describe('ClinicalTab referrals strip', () => {
       stock_transactions_url: '/interface/patient_file/transaction/transactions.php?set_pid=42',
     });
 
-    const link = screen.getByRole('link', { name: 'Other transactions' });
-    expect(link).toHaveAttribute('href', '/interface/patient_file/transaction/transactions.php?set_pid=42');
+    expect(screen.queryByRole('link', { name: 'Other transactions' })).not.toBeInTheDocument();
+    // The referrals entry point remains.
+    expect(screen.getByRole('link', { name: 'Open referrals' })).toBeInTheDocument();
   });
 });

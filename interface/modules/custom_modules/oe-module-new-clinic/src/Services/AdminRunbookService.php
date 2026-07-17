@@ -118,7 +118,7 @@ class AdminRunbookService
                 'Merge duplicate patients',
                 'Advanced',
                 'Use stock duplicate patient merge tool.',
-                $webroot . '/interface/patient_file/merge_patients.php'
+                $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public/admin-merge-legacy.php'
             ),
             $this->card(
                 'RB-13',

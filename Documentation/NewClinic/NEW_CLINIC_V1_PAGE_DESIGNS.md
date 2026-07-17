@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| Document version | 0.6.51 |
+| Document version | 0.6.52 |
 | Status | Draft for review — aligned to PRD v1.20.50; **M1b Registration form** approved; companion specs COM + M1a **approved Phase 1**; Chart Depth §7.13–§7.16; Lab Ops §7.17–§7.20; Pharm Ops §7.21–§7.24; Bill Ops §7.25–§7.26; Admin Hub §7.27–§7.28; Report Hub §7.29; Clinical Doc Hub §7.30; Queue Bridge Hub §7.31; **Patient Registry** §7.32; **T1-F18 legacy strip** §4.11.8; M7 §7.10.18–7.10.20; **V1.1-PRINT-RX** §7.4.7 / §7.6.14 |
 | Companion to | [NEW_CLINIC_V1_PRD.md](./done/NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.49), [NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) (v1.0.0), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.36), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.6), [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) (v1.0.3), [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.1), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (v1.0.9), [NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) (v1.0.0), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.15), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.9), [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.9), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.4), [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.3) |
 | Audience | Product, design, frontend engineers, QA |
@@ -764,7 +764,7 @@ On mismatch, show blocking banner — role shortcuts disabled until **`restore_e
 | Lab | `orders` | `…/load_form.php?formname=procedure_order` |
 | Lab | `results` | `…/orders/orders_results.php` |
 | Lab | `labdata` | `…/patient_file/summary/labdata.php` |
-| Pharmacy | `rx_list` | pid-scoped Rx list — **no bind** |
+| Pharmacy | `rx_list` | pid-scoped Rx list — **no bind**; native `rx-history.php` (view + print only) behind `enable_native_rx_history` (default OFF), else stock `controller.php?prescription&list` |
 | Pharmacy | `dispense` | `drug_inventory.php` / in-house dispense — **bind required** |
 
 **Client pattern (Doctor, Lab, Pharmacy):**
@@ -2656,7 +2656,7 @@ Reception never sees OTC vs Rx choice at Start visit (D35).
 | Refer to OPD | Walk-in triage panel | Close visit `rx_required_refer_to_opd`; no dispense; prompt patient to reception (M9-F09) |
 | Patient declined | Walk-in triage panel | Close visit `rx_required_patient_declined` per config (M9-F10) |
 | Skip to payment | `ready_for_pharmacy` or `in_pharmacy` | Modal reason → `ready_for_payment` |
-| Open core Rx | Always | **Rx list** (pid-only, no bind) or **dispense** via `pharmacy_shortcut_preflight` when encounter-scoped (§4.13, §7.6.6a) |
+| Open core Rx | Always | **Rx list** (pid-only, no bind; native `rx-history.php` when `enable_native_rx_history`) or **dispense** via `pharmacy_shortcut_preflight` when encounter-scoped (§4.13, §7.6.6a) |
 | Print patient Rx | `enable_rx_print` = 1 | **M9-F20** → `pharm_ops.rx_print_pdf` (new tab); hub may be OFF; Type A send-out |
 
 ### 7.6.6a Encounter session binding — Pharmacy Desk (implements §4.13)
@@ -5390,6 +5390,7 @@ This is the consolidated QA checklist mapping every page to PRD F-IDs.
 |---------|------|---------|
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.6.52 | 2026-07-14 | **Native Prescription History (M9)** — §7.6.6a `rx_list`/"Open core Rx" rows note the native `rx-history.php` (paginated, view + print only) behind `enable_native_rx_history` (default OFF), replacing stock `controller.php?prescription&list` when on; still pid-scoped, no bind |
 | 0.6.50 | 2026-06-24 | **UI/UX plan integration** — §1 companion table adds [UI_UX_DESIGN_PLAN](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md); header companion versions synced post-audit (MRD v0.2.36, S1 v0.2.6, M18 v0.1.3, LAB/PHARM v0.1.9, ADMIN v0.1.4, M1a v1.0.8, REFERRALS v0.1.2) |
 | 0.6.49 | 2026-06-24 | **M10 audit closure** — §7.32 reception-only `fin0` cutover; `cohort.saved_filter`; SEC06 limits; §7.9.11a module toggles; PRD v1.20.49 / PATIENT_REGISTRY v0.2.1 |
 | 0.6.48 | 2026-06-24 | **Patient Registry (M10)** — §7.32 `patient-registry.php` wireframes, `cohort.*` AJAX, Finder cutover; PRD v1.20.48 / PATIENT_REGISTRY v0.2.0 |

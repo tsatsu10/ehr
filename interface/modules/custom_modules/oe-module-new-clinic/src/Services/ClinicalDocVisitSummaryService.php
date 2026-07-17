@@ -55,9 +55,14 @@ class ClinicalDocVisitSummaryService
         $catalog = $this->catalog->getCatalog($lens, $facilityId);
         $instances = $this->loadFormInstances($encounterId, $pid);
         $cards = $this->enrichCardsWithBundleHealth(
-            $this->enrichCardsWithNotePreview(
-                $this->mergeCardsWithInstances($catalog['cards'], $instances),
-                $visitId,
+            $this->enrichCardsWithScreeningStatus(
+                $this->enrichCardsWithNotePreview(
+                    $this->mergeCardsWithInstances($catalog['cards'], $instances),
+                    $visitId,
+                    $facilityId
+                ),
+                $encounterId,
+                $pid,
                 $facilityId
             ),
             $facilityId
@@ -101,7 +106,8 @@ class ClinicalDocVisitSummaryService
 
         if ($lens === 'visit') {
             $payload['sign_overview'] = $this->buildSignOverview($visit, $cards, $facilityId, $encounterSigned);
-            $payload['addable_forms'] = $this->buildAddableForms($encounterId, $pid, $facilityId);
+            // Reuse the form instances already loaded above instead of re-querying.
+            $payload['addable_forms'] = $this->buildAddableForms($encounterId, $pid, $facilityId, $instances);
         }
 
         return $payload;
@@ -157,6 +163,51 @@ class ClinicalDocVisitSummaryService
      * @param array<string, array<string, mixed>> $instances
      * @return list<array<string, mixed>>
      */
+    /**
+     * Enrich native screening cards (PHQ-9 / GAD-7) with their saved score/status
+     * from form_nc_screening — these are virtual cards with no `forms` row, so
+     * mergeCardsWithInstances leaves them unstarted. Native screening is the
+     * default (no flag). Instantiated at request time (not in the constructor) to
+     * avoid eager service trees.
+     *
+     * @param array<int, array<string, mixed>> $cards
+     * @return array<int, array<string, mixed>>
+     */
+    private function enrichCardsWithScreeningStatus(array $cards, int $encounterId, int $pid, int $facilityId): array
+    {
+        $statuses = (new ScreeningAssessmentService())->getEncounterStatuses($pid, $encounterId);
+        if (empty($statuses)) {
+            return $cards;
+        }
+
+        $catalog = new ScreeningInstrumentCatalog();
+        foreach ($cards as &$card) {
+            $formdir = strtolower((string) ($card['formdir'] ?? ''));
+            if (!isset($statuses[$formdir])) {
+                continue;
+            }
+            $status = $statuses[$formdir];
+            $def = $catalog->getInstrument($formdir) ?? [];
+            $label = '';
+            foreach (($def['bands'] ?? []) as $band) {
+                if ($status['total'] >= $band['min'] && $status['total'] <= $band['max']) {
+                    $label = $band['label'];
+                    break;
+                }
+            }
+            $card['started'] = true;
+            $card['last_saved_at'] = $status['last_saved_at'];
+            $card['score_total'] = $status['total'];
+            $card['score_max'] = (int) ($def['max_score'] ?? 0);
+            $card['score_severity'] = $status['severity'];
+            $card['score_label'] = $label;
+            $card['screening_flags'] = $status['flags'];
+        }
+        unset($card);
+
+        return $cards;
+    }
+
     private function mergeCardsWithInstances(array $cards, array $instances): array
     {
         $merged = [];
@@ -313,7 +364,8 @@ class ClinicalDocVisitSummaryService
      */
     private function buildSignOverview(array $visit, array $cards, int $facilityId, bool $encounterSigned): array
     {
-        $docStatus = $this->docStatus->getStatusForVisit($visit, $facilityId);
+        // Only unsigned_required is read below; skip the extra native-note preview build.
+        $docStatus = $this->docStatus->getStatusForVisit($visit, $facilityId, false);
         $started = 0;
         $signed = 0;
         $unsigned = 0;
@@ -341,12 +393,13 @@ class ClinicalDocVisitSummaryService
     /**
      * M17-F02 — bundle-limited forms not yet started on this encounter.
      *
+     * @param array<string, array<string, mixed>>|null $instances Reuse pre-loaded instances when available.
      * @return list<array<string, mixed>>
      */
-    private function buildAddableForms(int $encounterId, int $pid, int $facilityId): array
+    private function buildAddableForms(int $encounterId, int $pid, int $facilityId, ?array $instances = null): array
     {
         $fullCatalog = $this->catalog->getCatalog(null, $facilityId);
-        $instances = $this->loadFormInstances($encounterId, $pid);
+        $instances ??= $this->loadFormInstances($encounterId, $pid);
         $allCards = $this->mergeCardsWithInstances($fullCatalog['cards'], $instances);
 
         return array_values(array_filter(

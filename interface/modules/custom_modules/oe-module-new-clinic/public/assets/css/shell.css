@@ -7,7 +7,7 @@
     color: var(--oe-nc-text);
     background: var(--oe-nc-bg-tint);
     min-height: 100vh;
-    font-family: 'Noto Sans', system-ui, -apple-system, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
 }
 
 body.body_top:has(.nc-t1) {
@@ -369,6 +369,41 @@ body.body_top:has(.nc-t1) {
     transition: transform var(--oe-nc-transition);
 }
 
+.nc-sidebar-theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 44px;
+    margin-bottom: 0.5rem;
+    padding: 0.45rem 0.65rem;
+    border: 1px solid var(--oe-nc-border);
+    border-radius: var(--oe-nc-radius);
+    background: transparent;
+    color: var(--oe-nc-text-muted);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--oe-nc-transition), color var(--oe-nc-transition);
+}
+
+.nc-sidebar-theme-toggle:hover {
+    background: var(--oe-nc-bg-tint);
+    color: var(--oe-nc-text);
+}
+
+.nc-sidebar-theme-toggle:focus-visible {
+    outline: none;
+    box-shadow: var(--oe-nc-focus-ring);
+}
+
+.nc-sidebar-theme-toggle-icon {
+    display: inline-flex;
+    width: 1.25rem;
+    justify-content: center;
+}
+
 /* ── Brand + role (shared) ─────────────────────────────────────────────── */
 
 .nc-brand {
@@ -404,7 +439,7 @@ body.body_top:has(.nc-t1) {
 }
 
 .nc-brand-name {
-    font-family: 'Figtree', 'Noto Sans', system-ui, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
     font-weight: 700;
     font-size: 0.9375rem;
     line-height: 1.2;
@@ -742,8 +777,8 @@ body.body_top:has(.nc-t1) {
 }
 
 .nc-page-heading-title {
-    font-family: 'Figtree', 'Noto Sans', system-ui, sans-serif;
-    font-size: 1.375rem;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+    font-size: 1.875rem;
     font-weight: 700;
     letter-spacing: -0.02em;
     margin: 0;
@@ -751,9 +786,9 @@ body.body_top:has(.nc-t1) {
 }
 
 .nc-page-heading-subtitle {
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     color: var(--oe-nc-text-muted);
-    margin-top: 0.15rem;
+    margin-top: 0.25rem;
 }
 
 .nc-page-heading-actions {
@@ -988,185 +1023,212 @@ body.body_top:has(.nc-t1) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Clinical Console chrome (2026-07-08)
-   Dark navy sidebar + department-banded page headings.
-   Overrides the light-SaaS sidebar rules above — keep this section LAST.
+   Console 26 chrome (2026-07-16)
+   Frosted light rail + soft floating cards; the base light-SaaS rules above
+   carry text/link/role colors via the retokenized --oe-nc-* palette. Keep
+   this section LAST (before the dark variant below).
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Dark console sidebar ────────────────────────────────────────────────── */
+/* ── Frosted light rail (default) ────────────────────────────────────────── */
 
 .nc-sidebar {
-    background: var(--oe-nc-sidebar-bg, #14212e);
-    border-right: 1px solid var(--oe-nc-sidebar-border, rgba(255, 255, 255, 0.08));
-}
-
-.nc-sidebar .nc-brand-name {
-    color: var(--oe-nc-sidebar-text-strong, #f2f6f9);
-}
-
-.nc-sidebar .nc-brand-facility,
-.nc-sidebar .nc-brand-date {
-    color: var(--oe-nc-sidebar-text, #c7d3de);
-}
-
-.nc-sidebar .nc-brand-initials {
-    background: rgba(255, 255, 255, 0.12);
-    color: #f2f6f9;
-}
-
-.nc-sidebar .nc-sidebar-close {
-    color: var(--oe-nc-sidebar-text, #c7d3de);
-}
-
-.nc-sidebar .nc-sidebar-group-label {
-    color: rgba(199, 211, 222, 0.55);
+    background: var(--oe-nc-sidebar-bg, rgba(246, 246, 248, 0.78));
+    backdrop-filter: blur(24px) saturate(1.6);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+    border-right: 1px solid var(--oe-nc-sidebar-border, rgba(0, 0, 0, 0.08));
 }
 
 .nc-sidebar .nc-sidebar-link {
-    color: var(--oe-nc-sidebar-text, #c7d3de);
     border-radius: var(--oe-nc-radius);
 }
 
-.nc-sidebar .nc-sidebar-link:hover {
-    color: var(--oe-nc-sidebar-text-strong, #f2f6f9);
-    background: var(--oe-nc-sidebar-hover, rgba(255, 255, 255, 0.06));
-}
-
-.nc-sidebar .nc-sidebar-link.is-active {
-    color: var(--oe-nc-sidebar-text-strong, #f2f6f9);
-    background: var(--oe-nc-sidebar-active, rgba(255, 255, 255, 0.10));
-}
-
-/* Department accent: brightened for dark ground (4.5:1+ on #14212e) */
-.nc-sidebar {
-    --nc-dark-role-reception: #7ba3f5;
-    --nc-dark-role-nurse: #5ec7dd;
-    --nc-dark-role-doctor: #52c79a;
-    --nc-dark-role-lab: #e5a558;
-    --nc-dark-role-pharmacy: #b699f2;
-    --nc-dark-role-cashier: #ef9a6d;
-    --nc-dark-role-admin: #a5b6c5;
-}
-
-.nc-sidebar .nc-sidebar-link[data-desk-accent="reception"] .nc-sidebar-link-icon { color: var(--nc-dark-role-reception); }
-.nc-sidebar .nc-sidebar-link[data-desk-accent="nurse"] .nc-sidebar-link-icon { color: var(--nc-dark-role-nurse); }
-.nc-sidebar .nc-sidebar-link[data-desk-accent="doctor"] .nc-sidebar-link-icon { color: var(--nc-dark-role-doctor); }
-.nc-sidebar .nc-sidebar-link[data-desk-accent="lab"] .nc-sidebar-link-icon { color: var(--nc-dark-role-lab); }
-.nc-sidebar .nc-sidebar-link[data-desk-accent="pharmacy"] .nc-sidebar-link-icon { color: var(--nc-dark-role-pharmacy); }
-.nc-sidebar .nc-sidebar-link[data-desk-accent="cashier"] .nc-sidebar-link-icon { color: var(--nc-dark-role-cashier); }
-.nc-sidebar .nc-sidebar-link[data-desk-accent="admin"] .nc-sidebar-link-icon { color: var(--nc-dark-role-admin); }
-
-.nc-sidebar .nc-sidebar-link[data-desk-accent="reception"].is-active { --desk-accent: var(--nc-dark-role-reception); }
-.nc-sidebar .nc-sidebar-link[data-desk-accent="nurse"].is-active { --desk-accent: var(--nc-dark-role-nurse); }
-.nc-sidebar .nc-sidebar-link[data-desk-accent="doctor"].is-active { --desk-accent: var(--nc-dark-role-doctor); }
-.nc-sidebar .nc-sidebar-link[data-desk-accent="lab"].is-active { --desk-accent: var(--nc-dark-role-lab); }
-.nc-sidebar .nc-sidebar-link[data-desk-accent="pharmacy"].is-active { --desk-accent: var(--nc-dark-role-pharmacy); }
-.nc-sidebar .nc-sidebar-link[data-desk-accent="cashier"].is-active { --desk-accent: var(--nc-dark-role-cashier); }
-.nc-sidebar .nc-sidebar-link[data-desk-accent="admin"].is-active { --desk-accent: var(--nc-dark-role-admin); }
-
-.nc-sidebar .nc-sidebar-link[data-desk-accent].is-active {
-    background: var(--oe-nc-sidebar-active, rgba(255, 255, 255, 0.10));
-    color: var(--oe-nc-sidebar-text-strong, #f2f6f9);
-    box-shadow: inset 3px 0 0 var(--desk-accent, #7ba3f5);
-}
-
 .nc-sidebar .nc-sidebar-badge {
-    background: rgba(255, 255, 255, 0.10);
-    color: var(--oe-nc-sidebar-text, #c7d3de);
-    border-radius: var(--oe-nc-radius-sm, 0.125rem);
-}
-
-.nc-sidebar .nc-sidebar-link.is-active .nc-sidebar-badge {
-    background: var(--desk-accent, #7ba3f5);
-    color: #14212e;
+    border-radius: 999px;
 }
 
 .nc-sidebar .nc-sidebar-footer {
     background: transparent;
-    border-top: 1px solid var(--oe-nc-sidebar-border, rgba(255, 255, 255, 0.08));
-}
-
-.nc-sidebar .nc-sidebar-collapse {
-    border-color: var(--oe-nc-sidebar-border, rgba(255, 255, 255, 0.08));
-    color: var(--oe-nc-sidebar-text, #c7d3de);
-}
-
-.nc-sidebar .nc-sidebar-collapse:hover {
-    background: var(--oe-nc-sidebar-hover, rgba(255, 255, 255, 0.06));
-    color: var(--oe-nc-sidebar-text-strong, #f2f6f9);
+    border-top: 1px solid var(--oe-nc-sidebar-border, rgba(0, 0, 0, 0.08));
 }
 
 .nc-sidebar .nc-profile-card-trigger {
     background: transparent;
-    border-color: var(--oe-nc-sidebar-border, rgba(255, 255, 255, 0.08));
-    color: var(--oe-nc-sidebar-text-strong, #f2f6f9);
 }
 
-.nc-sidebar .nc-profile-card-trigger:hover,
-.nc-sidebar .nc-profile-card-trigger[aria-expanded="true"] {
-    background: var(--oe-nc-sidebar-hover, rgba(255, 255, 255, 0.06));
-    border-color: var(--oe-nc-sidebar-border, rgba(255, 255, 255, 0.08));
+/* ═══════════════════════════════════════════════════════════════════════════
+   Dark sidebar variant — opt-in via the sidebar footer toggle
+   (#nc-sidebar-theme-toggle), persisted client-side by shell.js under the
+   nc-sidebar-dark localStorage key. Console 26 dark rail: frosted near-black
+   glass with brightened role accents (4.5:1+ on the dark ground). The #nc-t1
+   id keeps every rule here ahead of the unscoped .nc-sidebar rules above.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+#nc-t1.nc-sidebar-dark .nc-sidebar {
+    --nc-dark-role-reception: #0a84ff;
+    --nc-dark-role-nurse: #64d2ff;
+    --nc-dark-role-doctor: #30d158;
+    --nc-dark-role-lab: #ffd60a;
+    --nc-dark-role-pharmacy: #bf5af2;
+    --nc-dark-role-cashier: #ff9f0a;
+    --nc-dark-role-admin: #a5b6c5;
+    background: rgba(28, 28, 30, 0.86);
+    border-right: 1px solid rgba(255, 255, 255, 0.10);
 }
 
-.nc-sidebar .nc-profile-card-avatar {
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-brand-name {
+    color: #f5f5f7;
+}
+
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-brand-facility,
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-brand-date {
+    color: #98989d;
+}
+
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-brand-initials {
     background: rgba(255, 255, 255, 0.12);
-    color: #f2f6f9;
+    color: #f5f5f7;
 }
 
-.nc-sidebar .nc-profile-card-name {
-    color: var(--oe-nc-sidebar-text-strong, #f2f6f9);
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-close {
+    color: #98989d;
 }
 
-.nc-sidebar .nc-profile-card-caret {
-    color: var(--oe-nc-sidebar-text, #c7d3de);
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-group-label {
+    color: rgba(152, 152, 157, 0.75);
 }
 
-/* Queue strip inside dark footer */
-.nc-sidebar .nc-queue-kpi,
-.nc-sidebar .nc-queue-kpi-mini {
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link {
+    color: #98989d;
+}
+
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link:hover {
+    color: #f5f5f7;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link.is-active {
+    color: #f5f5f7;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link[data-desk-accent="reception"] .nc-sidebar-link-icon { color: var(--nc-dark-role-reception); }
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link[data-desk-accent="nurse"] .nc-sidebar-link-icon { color: var(--nc-dark-role-nurse); }
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link[data-desk-accent="doctor"] .nc-sidebar-link-icon { color: var(--nc-dark-role-doctor); }
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link[data-desk-accent="lab"] .nc-sidebar-link-icon { color: var(--nc-dark-role-lab); }
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link[data-desk-accent="pharmacy"] .nc-sidebar-link-icon { color: var(--nc-dark-role-pharmacy); }
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link[data-desk-accent="cashier"] .nc-sidebar-link-icon { color: var(--nc-dark-role-cashier); }
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link[data-desk-accent="admin"] .nc-sidebar-link-icon { color: var(--nc-dark-role-admin); }
+
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link[data-desk-accent="reception"].is-active { --desk-accent: var(--nc-dark-role-reception); }
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link[data-desk-accent="nurse"].is-active { --desk-accent: var(--nc-dark-role-nurse); }
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link[data-desk-accent="doctor"].is-active { --desk-accent: var(--nc-dark-role-doctor); }
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link[data-desk-accent="lab"].is-active { --desk-accent: var(--nc-dark-role-lab); }
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link[data-desk-accent="pharmacy"].is-active { --desk-accent: var(--nc-dark-role-pharmacy); }
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link[data-desk-accent="cashier"].is-active { --desk-accent: var(--nc-dark-role-cashier); }
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link[data-desk-accent="admin"].is-active { --desk-accent: var(--nc-dark-role-admin); }
+
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link[data-desk-accent].is-active {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f5f5f7;
+    box-shadow: inset 3px 0 0 var(--desk-accent, var(--nc-dark-role-reception));
+}
+
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-badge {
+    background: rgba(255, 255, 255, 0.10);
+    color: #98989d;
+}
+
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-link.is-active .nc-sidebar-badge {
+    background: var(--desk-accent, var(--nc-dark-role-reception));
+    color: #1c1c1e;
+}
+
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-footer {
+    background: transparent;
+    border-top: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-collapse,
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-theme-toggle {
+    border-color: rgba(255, 255, 255, 0.10);
+    color: #98989d;
+}
+
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-collapse:hover,
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-sidebar-theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f5f5f7;
+}
+
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-profile-card-trigger {
+    background: transparent;
+    border-color: rgba(255, 255, 255, 0.10);
+    color: #f5f5f7;
+}
+
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-profile-card-trigger:hover,
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-profile-card-trigger[aria-expanded="true"] {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.10);
+}
+
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-profile-card-avatar {
+    background: rgba(255, 255, 255, 0.12);
+    color: #f5f5f7;
+}
+
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-profile-card-name {
+    color: #f5f5f7;
+}
+
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-profile-card-caret {
+    color: #98989d;
+}
+
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-queue-kpi,
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-queue-kpi-mini {
     background: rgba(255, 255, 255, 0.04);
-    border-color: var(--oe-nc-sidebar-border, rgba(255, 255, 255, 0.08));
+    border-color: rgba(255, 255, 255, 0.10);
 }
 
-.nc-sidebar .nc-queue-kpi-summary,
-.nc-sidebar .nc-queue-kpi-summary::after,
-.nc-sidebar .nc-queue-kpi-mini-label,
-.nc-sidebar .nc-queue-kpi-chip-label {
-    color: var(--oe-nc-sidebar-text, #c7d3de);
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-queue-kpi-summary,
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-queue-kpi-summary::after,
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-queue-kpi-mini-label,
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-queue-kpi-chip-label {
+    color: #98989d;
 }
 
-.nc-sidebar .nc-queue-kpi-summary-active,
-.nc-sidebar .nc-queue-kpi-chip-count {
-    color: var(--oe-nc-sidebar-text-strong, #f2f6f9);
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-queue-kpi-summary-active,
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-queue-kpi-chip-count {
+    color: #f5f5f7;
 }
 
-.nc-sidebar .nc-queue-kpi-summary-active [data-queue-active-total],
-.nc-sidebar .nc-queue-kpi-mini-count {
-    color: #7ba3f5;
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-queue-kpi-summary-active [data-queue-active-total],
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-queue-kpi-mini-count {
+    color: var(--nc-dark-role-reception);
 }
 
-.nc-sidebar .nc-queue-kpi-chip {
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-queue-kpi-chip {
     background: rgba(255, 255, 255, 0.04);
     border-color: rgba(255, 255, 255, 0.14);
 }
 
-.nc-sidebar .nc-queue-kpi-chip[data-stat-key="waiting"] { border-color: var(--nc-dark-role-reception); }
-.nc-sidebar .nc-queue-kpi-chip[data-stat-key="triage"] { border-color: var(--nc-dark-role-nurse); }
-.nc-sidebar .nc-queue-kpi-chip[data-stat-key="doctor"] { border-color: var(--nc-dark-role-doctor); }
-.nc-sidebar .nc-queue-kpi-chip[data-stat-key="lab"] { border-color: var(--nc-dark-role-lab); }
-.nc-sidebar .nc-queue-kpi-chip[data-stat-key="pharmacy"] { border-color: var(--nc-dark-role-pharmacy); }
-.nc-sidebar .nc-queue-kpi-chip[data-stat-key="payment"] { border-color: var(--nc-dark-role-cashier); }
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-queue-kpi-chip[data-stat-key="waiting"] { border-color: var(--nc-dark-role-reception); }
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-queue-kpi-chip[data-stat-key="triage"] { border-color: var(--nc-dark-role-nurse); }
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-queue-kpi-chip[data-stat-key="doctor"] { border-color: var(--nc-dark-role-doctor); }
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-queue-kpi-chip[data-stat-key="lab"] { border-color: var(--nc-dark-role-lab); }
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-queue-kpi-chip[data-stat-key="pharmacy"] { border-color: var(--nc-dark-role-pharmacy); }
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-queue-kpi-chip[data-stat-key="payment"] { border-color: var(--nc-dark-role-cashier); }
 
-.nc-sidebar .nc-queue-kpi-chip.is-updated {
+#nc-t1.nc-sidebar-dark .nc-sidebar .nc-queue-kpi-chip.is-updated {
     background: rgba(255, 255, 255, 0.10);
-    box-shadow: 0 0 0 1px #7ba3f5;
+    box-shadow: 0 0 0 1px var(--nc-dark-role-reception);
 }
 
-/* ── Department-banded page heading (wayfinding) ────────────────────────── */
+/* ── Page heading (Console 26: no department band; wayfinding lives in the
+      role-accented sidebar icons and mobile bar) ──────────────────────────── */
 
 .nc-page-heading {
-    border-left: 4px solid var(--oe-nc-role-accent, var(--oe-nc-primary));
-    padding-left: calc(var(--nc-content-gutter, 1.25rem) - 4px + 0.5rem);
     margin-top: 0.75rem;
 }
 

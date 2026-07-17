@@ -159,6 +159,7 @@ export interface FrontDeskProps {
   appointmentsTodayCount?: number;
   calendarUrl?: string;
   recallsUrl?: string;
+  enablePayerBilling?: boolean;
 }
 
 export interface RegistrationDupCandidate {

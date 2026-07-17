@@ -178,7 +178,7 @@ export function PaymentsPane({ fetchOptions, facilityId }: Props) {
               <TableCell>{row.patient_name}</TableCell>
               <TableCell className="text-right">{formatBillMoney(row.amount_paid)}</TableCell>
               <TableCell>{row.cashier ?? '—'}</TableCell>
-              <TableCell>#{row.queue_number}</TableCell>
+              <TableCell>{row.is_deposit ? 'Deposit' : `#${row.queue_number}`}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -196,7 +196,7 @@ export function PaymentsPane({ fetchOptions, facilityId }: Props) {
         <div className="border rounded p-3 mt-2">
           <h3 className="text-sm font-semibold">Payment detail</h3>
           <p className="text-sm mb-2">
-            Receipt {selected.receipt_number} · Visit #{selected.queue_number} ·{' '}
+            Receipt {selected.receipt_number} · {selected.is_deposit ? 'Deposit' : `Visit #${selected.queue_number}`} ·{' '}
             {formatBillMoney(selected.amount_paid)}
             {selected.posted_payment_id ? (
               <span className="text-[var(--oe-nc-text-muted)]"> · Posted #{selected.posted_payment_id}</span>

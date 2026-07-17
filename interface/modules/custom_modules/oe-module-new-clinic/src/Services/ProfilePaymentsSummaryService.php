@@ -43,7 +43,6 @@ class ProfilePaymentsSummaryService
                 'payments_strip_label' => null,
                 'can_view_history' => false,
                 'payment_history_url' => null,
-                'ledger_url' => $webroot . '/interface/reports/pat_ledger.php?form_pid=' . urlencode((string) $pid),
                 'currency_symbol' => $currencySymbol,
             ];
         }
@@ -67,7 +66,6 @@ class ProfilePaymentsSummaryService
             'payments_strip_label' => $this->buildStripLabel($balanceDue, $lastReceipt, $currencySymbol),
             'can_view_history' => $canViewHistory,
             'payment_history_url' => $canViewHistory ? $historyUrl : null,
-            'ledger_url' => $webroot . '/interface/reports/pat_ledger.php?form_pid=' . urlencode((string) $pid),
             'currency_symbol' => $currencySymbol,
         ];
     }

@@ -17,6 +17,7 @@ use OpenEMR\Modules\NewClinic\Services\SchedulingCalendarService;
 use OpenEMR\Modules\NewClinic\Services\SchedulingFlowBoardLaneMapService;
 use OpenEMR\Modules\NewClinic\Services\SchedulingFlowBoardPrefsService;
 use OpenEMR\Modules\NewClinic\Services\SchedulingFlowBoardService;
+use OpenEMR\Modules\NewClinic\Services\SchedulingProviderColorService;
 use OpenEMR\Modules\NewClinic\Services\SchedulingRecallsService;
 
 final class SchedulingActionHandler implements AjaxActionHandlerInterface
@@ -31,10 +32,14 @@ final class SchedulingActionHandler implements AjaxActionHandlerInterface
         'scheduling.flow_board.prefs.save',
         'scheduling.flow_board.lane_map',
         'scheduling.flow_board.lane_map.save',
+        'scheduling.provider_colors',
+        'scheduling.provider_colors.save',
         'scheduling.calendar.range',
+        'scheduling.calendar.slots',
         'scheduling.calendar.poll',
         'scheduling.calendar.move',
         'scheduling.calendar.resize',
+        'scheduling.calendar.cancel',
         'scheduling.calendar.book',
         'scheduling.recalls.list',
         'scheduling.recalls.save',
@@ -188,6 +193,32 @@ final class SchedulingActionHandler implements AjaxActionHandlerInterface
                         $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
                     }
                     break;
+                case 'scheduling.provider_colors':
+                    $facilityId = $this->host->resolveRequestFacilityId();
+                    try {
+                        $payload = $this->host->svc(SchedulingProviderColorService::class)->getAdminPayload($facilityId);
+                        $this->host->respond(true, 'ok', $payload);
+                    } catch (\RuntimeException $e) {
+                        $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.provider_colors.save':
+                    if ($method !== 'POST') {
+                        $this->host->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->host->readJsonBody();
+                    $this->host->verifyCsrf($body);
+                    $facilityId = $this->host->resolveRequestFacilityId();
+                    try {
+                        $colors = is_array($body['colors'] ?? null) ? $body['colors'] : [];
+                        $payload = $this->host->svc(SchedulingProviderColorService::class)->saveColors($facilityId, $colors);
+                        $this->host->respond(true, 'ok', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
                 case 'scheduling.calendar.range':
                     $facilityId = $this->host->resolveRequestFacilityId();
                     try {
@@ -199,6 +230,21 @@ final class SchedulingActionHandler implements AjaxActionHandlerInterface
                             $this->host->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null),
                         );
                         $this->host->respond(true, 'ok', $range);
+                    } catch (\RuntimeException $e) {
+                        $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.calendar.slots':
+                    $facilityId = $this->host->resolveRequestFacilityId();
+                    try {
+                        $slots = $this->host->svc(SchedulingCalendarService::class)->getFreeSlots($facilityId, [
+                            'provider_id' => $this->host->parseOptionalPositiveInt($_REQUEST['provider_id'] ?? null),
+                            'date' => $this->host->validDay($_REQUEST['date'] ?? '', date('Y-m-d')),
+                            'duration_minutes' => (int) ($_REQUEST['duration_minutes'] ?? 0),
+                        ]);
+                        $this->host->respond(true, 'ok', $slots);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
                     } catch (\RuntimeException $e) {
                         $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
                     }
@@ -244,6 +290,22 @@ final class SchedulingActionHandler implements AjaxActionHandlerInterface
                     try {
                         $facilityId = $this->host->resolveRequestFacilityId();
                         $payload = $this->host->svc(SchedulingCalendarService::class)->resizeAppointment($facilityId, $body, $userId);
+                        $this->host->respond(true, 'ok', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    } catch (\RuntimeException $e) {
+                        $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                    }
+                    break;
+                case 'scheduling.calendar.cancel':
+                    if ($method !== 'POST') {
+                        $this->host->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->host->readJsonBody();
+                    $this->host->verifyCsrf($body);
+                    try {
+                        $facilityId = $this->host->resolveRequestFacilityId();
+                        $payload = $this->host->svc(SchedulingCalendarService::class)->cancelAppointment($facilityId, $body, $userId);
                         $this->host->respond(true, 'ok', $payload);
                     } catch (\InvalidArgumentException $e) {
                         $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);

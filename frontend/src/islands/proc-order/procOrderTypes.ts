@@ -2,6 +2,8 @@ export interface ProcOrderTest {
   procedure_type_id: number;
   name: string;
   code: string;
+  /** Catalog default specimen (option id); '' when the catalog has none. */
+  specimen: string;
   fee_amount: number | null;
   has_fee: boolean;
 }
@@ -21,6 +23,8 @@ export interface ProcOrderOption {
 export interface ProcOrderExistingCode {
   procedure_code: string;
   procedure_name: string;
+  /** Per-test specimen (option id) chosen when the order was placed. */
+  specimen_type: string;
 }
 
 export interface ProcOrderExisting {
@@ -41,6 +45,8 @@ export interface ProcOrderFormData {
   encounter: number;
   facility_id: number;
   patient_name: string;
+  /** Chief complaint from the consult; pre-fills Clinical history on a new order. */
+  encounter_reason: string;
   labs: ProcOrderLab[];
   priority_options: ProcOrderOption[];
   specimen_options: ProcOrderOption[];

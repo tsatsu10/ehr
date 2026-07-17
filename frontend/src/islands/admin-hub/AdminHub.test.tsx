@@ -87,7 +87,6 @@ const configPayload = {
     currency_symbol_position: 'before',
   },
   visit_types: [],
-  calendar_categories: [{ pc_catid: 1, name: 'Office Visit' }],
   fee_schedule: [],
   categories: [{ value: 'consult', label: 'Consultation' }],
   templates: [],
@@ -230,6 +229,11 @@ describe('AdminHub', () => {
     expect(await screen.findByLabelText(/Enable triage desk/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Enable React Visit Board/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Enable React Front Desk/i)).not.toBeInTheDocument();
+
+    // Settings groups are collapsed by default now — search to reveal a field
+    // outside the first (default-open) group.
+    const search = await screen.findByLabelText(/Search settings/i);
+    fireEvent.change(search, { target: { value: 'Enable Billing Back Office hub' } });
     expect(await screen.findByLabelText(/Enable Billing Back Office hub/i)).toBeInTheDocument();
   }, 15000);
 

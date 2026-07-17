@@ -572,7 +572,8 @@ export function PharmacyDesk({
   }, [ajaxUrl, csrfToken]);
 
   const openFirstUndispensedDispense = useCallback(() => {
-    const firstId = selectData?.prescriptions?.find((line) => line.status === 'to_dispense')?.id;
+    const firstId = selectData?.prescriptions
+      ?.find((line) => line.status === 'to_dispense' || line.status === 'partial')?.id;
     setUndispensedOpen(false);
     if (firstId && pharmOpsEnabled && canDispense) {
       setDispenseRxId(firstId);

@@ -44,21 +44,35 @@ class ClinicalVitalsSeriesService
         }
 
         // Newest first for the LIMIT, then charted oldest→newest below.
+        // form_vitals has NO encounter column — the encounter linkage lives on
+        // the `forms` registry row, so join it (formdir 'vitals', not deleted).
         $rows = QueryUtils::fetchRecords(
-            "SELECT date, encounter, bps, bpd, pulse, respiration, temperature,
-                    weight, height, BMI, oxygen_saturation, head_circ
-             FROM form_vitals
-             WHERE pid = ? AND activity = 1 AND date IS NOT NULL AND date != '0000-00-00 00:00:00'
-             ORDER BY date DESC
+            "SELECT v.date, f.encounter, v.bps, v.bpd, v.pulse, v.respiration, v.temperature,
+                    v.weight, v.height, v.BMI, v.oxygen_saturation, v.head_circ
+             FROM form_vitals v
+             JOIN forms f ON f.form_id = v.id AND LOWER(f.formdir) = 'vitals' AND f.deleted = 0
+             WHERE v.pid = ? AND v.activity = 1 AND v.date IS NOT NULL AND v.date != '0000-00-00 00:00:00'
+             ORDER BY v.date DESC
              LIMIT " . self::MAX_READINGS,
             [$pid]
         ) ?: [];
         $rows = array_reverse($rows); // chronological for charting
 
-        $us = ((int) ($GLOBALS['units_of_measure'] ?? 1)) === 1;
-        $weightUnit = $us ? 'lb' : 'kg';
-        $lengthUnit = $us ? 'in' : 'cm';
-        $tempUnit = $us ? '°F' : '°C';
+        // Module convention (triage + the native vitals editor): weight/height
+        // are stored raw in kg/cm; temperature per the units global — convert it
+        // to °C for display like every other module surface. (The old code read
+        // a misspelled global — `units_of_measure` — and always labelled lb/in
+        // over kg/cm data.)
+        $validation = new VitalsValidationService();
+        foreach ($rows as &$row) {
+            if (isset($row['temperature']) && $row['temperature'] !== null && (float) $row['temperature'] != 0.0) {
+                $row['temperature'] = $validation->temperatureForEvaluation((float) $row['temperature']);
+            }
+        }
+        unset($row);
+        $weightUnit = 'kg';
+        $lengthUnit = 'cm';
+        $tempUnit = '°C';
 
         $measures = [];
 

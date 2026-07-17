@@ -3,19 +3,25 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
+/* The nc-ui-btn / nc-ui-btn--<variant> companions carry no styles in the
+   bundle — components.css (module shell, non-layered) re-asserts the color +
+   background for ANCHOR-rendered buttons (asChild links), where BS4 Reboot's
+   unlayered `a { color; background-color; text-decoration }` beats every
+   layered Tailwind utility (solid link-buttons rendered white-on-transparent). */
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--oe-nc-primary)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0',
+  'nc-ui-btn inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--oe-nc-primary)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0',
   {
     variants: {
       variant: {
-        default:   'bg-[var(--oe-nc-primary)] text-white shadow hover:bg-[var(--oe-nc-primary)]/90',
-        cta:       'bg-[var(--oe-nc-cta)] text-white shadow hover:bg-[var(--oe-nc-cta)]/90',
-        danger:    'bg-[var(--oe-nc-danger,#dc2626)] text-white shadow hover:bg-[var(--oe-nc-danger,#dc2626)]/90',
-        outline:   'border border-[var(--oe-nc-border)] bg-transparent text-[var(--oe-nc-text)] shadow-sm hover:bg-[var(--oe-nc-bg-tint)]',
-        ghost:     'bg-transparent text-[var(--oe-nc-text)] hover:bg-[var(--oe-nc-bg-tint)]',
-        secondary: 'bg-[var(--oe-nc-bg-tint)] text-[var(--oe-nc-text)] shadow-sm hover:bg-[var(--oe-nc-border)]',
-        link:      'text-[var(--oe-nc-primary)] underline-offset-4 hover:underline',
-        warning:   'bg-amber-500 text-white shadow hover:bg-amber-600',
+        default:   'nc-ui-btn--default bg-[var(--oe-nc-primary)] text-white shadow hover:bg-[var(--oe-nc-primary)]/90',
+        cta:       'nc-ui-btn--cta bg-[var(--oe-nc-cta)] text-white shadow hover:bg-[var(--oe-nc-cta)]/90',
+        danger:    'nc-ui-btn--danger bg-[var(--oe-nc-danger,#dc2626)] text-white shadow hover:bg-[var(--oe-nc-danger,#dc2626)]/90',
+        outline:   'nc-ui-btn--outline border border-[var(--oe-nc-border)] bg-transparent text-[var(--oe-nc-text)] shadow-sm hover:bg-[var(--oe-nc-bg-tint)]',
+        ctaOutline: 'nc-ui-btn--cta-outline border border-[color-mix(in_srgb,var(--oe-nc-cta)_45%,var(--oe-nc-border))] bg-transparent text-[var(--oe-nc-cta)] shadow-sm hover:bg-[color-mix(in_srgb,var(--oe-nc-cta)_10%,white)]',
+        ghost:     'nc-ui-btn--ghost bg-transparent text-[var(--oe-nc-text)] hover:bg-[var(--oe-nc-bg-tint)]',
+        secondary: 'nc-ui-btn--secondary bg-[var(--oe-nc-bg-tint)] text-[var(--oe-nc-text)] shadow-sm hover:bg-[var(--oe-nc-border)]',
+        link:      'nc-ui-btn--link text-[var(--oe-nc-primary)] underline-offset-4 hover:underline',
+        warning:   'nc-ui-btn--warning bg-amber-500 text-white shadow hover:bg-amber-600',
       },
       size: {
         default: 'h-9 px-4 py-2',

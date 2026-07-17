@@ -22,6 +22,9 @@ use OpenEMR\Modules\NewClinic\Services\PatientChartSearchService;
 use OpenEMR\Modules\NewClinic\Services\PatientChartService;
 use OpenEMR\Modules\NewClinic\Services\PatientContextService;
 use OpenEMR\Modules\NewClinic\Services\PatientDuplicateService;
+use OpenEMR\Modules\NewClinic\Services\PatientHistoryEditorService;
+use OpenEMR\Modules\NewClinic\Services\PatientImmunizationEditorService;
+use OpenEMR\Modules\NewClinic\Services\PatientPayerService;
 use OpenEMR\Modules\NewClinic\Services\PatientRegistrationService;
 use OpenEMR\Modules\NewClinic\Services\PatientSearchService;
 use OpenEMR\Modules\NewClinic\Services\RateLimitService;
@@ -36,13 +39,22 @@ final class PatientActionHandler implements AjaxActionHandlerInterface
         'patients.chart.clinical',
         'patients.chart.issue_get',
         'patients.chart.issue_save',
+        'patients.chart.history_get',
+        'patients.chart.history_save',
+        'patients.chart.immunization_options',
+        'patients.chart.immunization_get',
+        'patients.chart.immunization_save',
         'patients.chart.activity_feed',
         'patients.chart.messages',
+        'patients.note_detail',
         'patients.chart.search',
         'patients.dup_check',
         'patients.create',
         'patients.update',
         'patients.registration.get',
+        'patients.registration.payer_list',
+        'patients.registration.payer_add',
+        'patients.registration.payer_remove',
     ];
 
     public function __construct(
@@ -135,6 +147,75 @@ final class PatientActionHandler implements AjaxActionHandlerInterface
                     $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
                 }
                 break;
+            case 'patients.chart.history_get':
+                $pid = (int) ($_REQUEST['pid'] ?? 0);
+                $this->host->authorizeDeferredHandler('patients.chart.clinical', $pid);
+                $this->host->assertPatientChartPid($pid);
+                try {
+                    $history = $this->host->svc(PatientHistoryEditorService::class)->getForEdit($pid);
+                    $this->host->respond(true, 'ok', $history);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid'], (int) ($e->getCode() ?: 400));
+                }
+                break;
+            case 'patients.chart.history_save':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $pid = (int) ($_REQUEST['pid'] ?? 0);
+                $this->host->authorizeDeferredHandler('patients.chart.clinical', $pid);
+                $this->host->assertPatientChartPid($pid);
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                try {
+                    $saved = $this->host->svc(PatientHistoryEditorService::class)
+                        ->save($pid, (array) ($body['background'] ?? []), $userId);
+                    $this->host->respond(true, 'Saved', $saved);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid'], (int) ($e->getCode() ?: 400));
+                } catch (\RuntimeException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                }
+                break;
+            case 'patients.chart.immunization_options':
+                $pid = (int) ($_REQUEST['pid'] ?? 0);
+                $this->host->authorizeDeferredHandler('patients.chart.clinical', $pid);
+                $this->host->assertPatientChartPid($pid);
+                $this->host->respond(true, 'ok', [
+                    'vaccines' => $this->host->svc(PatientImmunizationEditorService::class)->vaccineOptions(),
+                ]);
+                break;
+            case 'patients.chart.immunization_get':
+                $pid = (int) ($_REQUEST['pid'] ?? 0);
+                $this->host->authorizeDeferredHandler('patients.chart.clinical', $pid);
+                $this->host->assertPatientChartPid($pid);
+                try {
+                    $shot = $this->host->svc(PatientImmunizationEditorService::class)
+                        ->getShot($pid, (int) ($_REQUEST['id'] ?? 0));
+                    $this->host->respond(true, 'ok', $shot);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'not_found'], (int) ($e->getCode() ?: 404));
+                }
+                break;
+            case 'patients.chart.immunization_save':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $pid = (int) ($_REQUEST['pid'] ?? 0);
+                $this->host->authorizeDeferredHandler('patients.chart.clinical', $pid);
+                $this->host->assertPatientChartPid($pid);
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                try {
+                    $saved = $this->host->svc(PatientImmunizationEditorService::class)
+                        ->saveShot($pid, (array) ($body['immunization'] ?? []), $userId);
+                    $this->host->respond(true, 'Saved', $saved);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid'], (int) ($e->getCode() ?: 400));
+                } catch (\RuntimeException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'forbidden'], (int) ($e->getCode() ?: 403));
+                }
+                break;
             case 'patients.chart.activity_feed':
                 $pid = (int) ($_REQUEST['pid'] ?? 0);
                 $this->host->authorizeDeferredHandler('patients.chart.activity_feed', $pid);
@@ -159,8 +240,23 @@ final class PatientActionHandler implements AjaxActionHandlerInterface
                 $this->host->assertPatientChartPid($pid);
                 $offset = max(0, (int) ($_REQUEST['offset'] ?? 0));
                 $limit = (int) ($_REQUEST['limit'] ?? PatientChartMessagesService::PAGE_SIZE);
-                $messages = $this->host->svc(PatientChartMessagesService::class)->getMessagesPayload($pid, $offset, $limit);
+                $messages = $this->host->svc(PatientChartMessagesService::class)->getMessagesPayload(
+                    $pid,
+                    $offset,
+                    $limit,
+                    (string) ($_REQUEST['activity'] ?? 'all')
+                );
                 $this->host->respond(true, 'ok', $messages);
+                break;
+            case 'patients.note_detail':
+                $pid = (int) ($_REQUEST['pid'] ?? 0);
+                $this->host->authorizeDeferredHandler('patients.note_detail', $pid);
+                $this->host->assertPatientChartPid($pid);
+                $detail = $this->host->svc(PatientChartMessagesService::class)->getNoteDetail(
+                    $pid,
+                    (int) ($_REQUEST['note_id'] ?? 0)
+                );
+                $this->host->respond(true, 'ok', $detail);
                 break;
             case 'patients.chart.search':
                 $pid = (int) ($_REQUEST['pid'] ?? 0);
@@ -231,6 +327,51 @@ final class PatientActionHandler implements AjaxActionHandlerInterface
                 $this->host->assertPatientChartPid($pid);
                 $form = $this->host->svc(PatientRegistrationService::class)->getFormData($pid);
                 $this->host->respond(true, 'ok', $form);
+                break;
+            case 'patients.registration.payer_list':
+                $pid = (int) ($_REQUEST['pid'] ?? 0);
+                $this->host->authorizeDeferredHandler('patients.registration.payer_list', $pid);
+                $this->host->assertPatientChartPid($pid);
+                $svc = $this->host->svc(PatientPayerService::class);
+                $this->host->respond(true, 'ok', [
+                    'enabled' => $svc->isEnabled($this->host->resolveRequestFacilityId()),
+                    'payers' => $svc->listForPatient($pid),
+                ]);
+                break;
+            case 'patients.registration.payer_add':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $pid = (int) ($body['pid'] ?? 0);
+                $this->host->authorizeDeferredHandler('patients.registration.payer_add', $pid);
+                $this->host->assertPatientChartPid($pid);
+                try {
+                    $saved = $this->host->svc(PatientPayerService::class)->addPayer(
+                        $pid,
+                        (string) ($body['rank'] ?? 'secondary'),
+                        (string) ($body['payer_type'] ?? 'nhis'),
+                        isset($body['insurance_company_id']) ? (int) $body['insurance_company_id'] : null,
+                        (string) ($body['membership_number'] ?? ''),
+                        isset($body['expiry_date']) ? (string) $body['expiry_date'] : null
+                    );
+                    $this->host->respond(true, 'Payer saved', $saved);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid'], 400);
+                }
+                break;
+            case 'patients.registration.payer_remove':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $pid = (int) ($body['pid'] ?? 0);
+                $this->host->authorizeDeferredHandler('patients.registration.payer_add', $pid);
+                $this->host->assertPatientChartPid($pid);
+                $this->host->svc(PatientPayerService::class)->removePayer($pid, (int) ($body['id'] ?? 0));
+                $this->host->respond(true, 'Payer removed', []);
                 break;
             default:
                 $this->host->respond(false, 'Unknown action', ['code' => 'not_found'], 404);

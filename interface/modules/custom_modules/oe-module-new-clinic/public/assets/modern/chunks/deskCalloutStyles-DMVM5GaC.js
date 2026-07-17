@@ -1,0 +1,2 @@
+import{f as e}from"./dist-BQ-rlMkt.js";var t={warn:`nc-warn-callout border-amber-300 bg-amber-50 text-amber-900`,error:`nc-error-callout border-red-300 bg-red-50 text-red-900`,info:`nc-info-callout border-blue-300 bg-blue-50 text-[#1e3a5f]`,success:`nc-success-callout border-green-300 bg-green-50 text-green-900`};function n(n,r){return e(`rounded-lg border px-4 py-3`,t[n],r)}export{n as t};
+//# sourceMappingURL=deskCalloutStyles-DMVM5GaC.js.map

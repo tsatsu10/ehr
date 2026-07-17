@@ -1,0 +1,2 @@
+import{C as e,S as t,o as n,x as r,y as i}from"./dist-BQ-rlMkt.js";var a=e(t(),1),o=e(r(),1),s=i(),c=[`a`,`button`,`div`,`form`,`h2`,`h3`,`img`,`input`,`label`,`li`,`nav`,`ol`,`p`,`select`,`span`,`svg`,`ul`].reduce((e,t)=>{let r=n(`Primitive.${t}`),i=a.forwardRef((e,n)=>{let{asChild:i,...a}=e,o=i?r:t;return typeof window<`u`&&(window[Symbol.for(`radix-ui`)]=!0),(0,s.jsx)(o,{...a,ref:n})});return i.displayName=`Primitive.${t}`,{...e,[t]:i}},{});function l(e,t){e&&o.flushSync(()=>e.dispatchEvent(t))}export{l as n,c as t};
+//# sourceMappingURL=dist-CQUvjK84.js.map

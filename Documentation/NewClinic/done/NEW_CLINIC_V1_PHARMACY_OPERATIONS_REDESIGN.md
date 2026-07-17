@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 0.1.9 |
+| **Document version** | 0.1.10 |
 | **Status** | Draft for review — **Module M13** integrated in PRD v1.20.29; **D-PHARM-3/4/5/6** closed; **D-REG-3** clinic currency; **D-STAFF-1** lead groups; PAGE_DESIGNS §7.21–§7.24; M9 remains V1 queue |
 | **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.29), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.34), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.34), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.28), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.8) |
 | **Audience** | Product, design, pharmacy leads, clinical leads, implementers, QA |
@@ -147,6 +147,7 @@ New Clinic **does not** duplicate this schema (same rule as lab `procedure_*` an
 
 - Doctor (or pharmacist on walk-in) creates Rx **in patient context** — encounter required for dispense, not always for list view.
 - New Clinic: M4 issues Rx during consult; M9 opens **Rx list** (pid-only) or **dispense** with `pharmacy_shortcut_preflight` + session bind (PRD Appendix F).
+- **2026-07-14:** the Rx list link is now replaceable by a native, paginated `rx-history.php` (view + print only — no bulk print/fax, no discontinue) behind `enable_native_rx_history` (default OFF); OFF keeps this exact stock `controller.php?prescription&list` bridge. Editing stays on the native `rx-edit.php` and only for the one prescription still tied to a visit currently `in_pharmacy` — historical rows from finished visits are view/print only, matching the safety gate already on `rx-edit.php`.
 
 ### 3.3 Inventory & lots — `interface/drugs/`
 
@@ -922,6 +923,7 @@ Envelope: PAGE_DESIGNS §6 JSON shape.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.1.10 | 2026-07-14 | **Native Prescription History** — §3.2 notes the native, paginated `rx-history.php` (view + print only) behind `enable_native_rx_history` (default OFF), replacing the stock Rx list link; editing stays on `rx-edit.php`, gated to visits currently `in_pharmacy` |
 | 0.1.9 | 2026-06-24 | **Consistency audit fixes** — added formal **M9-F21** row to §9.1 enhancements table (block Pharmacy complete on undispensed Rx, D-PHARM-5 — previously only referenced in ACL/phasing/tests); added EX-07/M18-F15 cross-ref (§20 item 15) |
 | 0.1.8 | 2026-06-22 | Hygiene pass — §8 title; companion sync PRD v1.20.29 / USER_WORKFLOWS v1.9.34 |
 | 0.1.7 | 2026-06-22 | **D-STAFF-1** — §17.1 `new_pharmacy` / `new_pharmacy_lead`; receive lead-only; PRD v1.20.25 |

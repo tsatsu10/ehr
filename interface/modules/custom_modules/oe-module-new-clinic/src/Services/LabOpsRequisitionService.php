@@ -56,12 +56,17 @@ class LabOpsRequisitionService
         $this->facilityScope->assertPatientAccessible($pid);
 
         $lines = QueryUtils::fetchRecords(
-            'SELECT procedure_order_title, procedure_code, procedure_order_seq
-             FROM procedure_order_code
-             WHERE procedure_order_id = ?
-             ORDER BY procedure_order_seq ASC',
+            'SELECT poc.procedure_order_title, poc.procedure_code, poc.procedure_order_seq,
+                    s.specimen_type AS line_specimen
+             FROM procedure_order_code poc
+             LEFT JOIN new_lab_order_line_specimen s
+                ON s.procedure_order_id = poc.procedure_order_id
+                AND s.procedure_order_seq = poc.procedure_order_seq
+             WHERE poc.procedure_order_id = ?
+             ORDER BY poc.procedure_order_seq ASC',
             [$procedureOrderId]
         ) ?: [];
+        $specimenTitles = $this->specimenTitleMap();
 
         $facilityId = $this->visitScope->resolveDefaultFacilityId();
         $facility = $facilityId > 0
@@ -75,9 +80,11 @@ class LabOpsRequisitionService
             $fee = $this->lookupFeeForCode($code, $facilityId);
             $amount = (float) ($fee['price_amount'] ?? 0);
             $total += $amount;
+            $specimenId = (string) ($line['line_specimen'] ?? '');
             $tests[] = [
                 'title' => (string) ($line['procedure_order_title'] ?? ''),
                 'code' => $code,
+                'specimen' => $specimenId !== '' ? ($specimenTitles[$specimenId] ?? $specimenId) : '',
                 'price_display' => $fee['price_display'] ?? null,
                 'price_amount' => $amount > 0 ? $amount : null,
             ];
@@ -114,6 +121,28 @@ class LabOpsRequisitionService
             'total_display' => $this->formatMoney($total, $facilityId),
             'currency_code' => (string) $this->config->get('currency_code', 'GHS', $facilityId),
         ];
+    }
+
+    /**
+     * option_id => human title for the Specimen_Type list, so the requisition
+     * prints "Blood specimen" rather than the stored SNOMED option id.
+     *
+     * @return array<string, string>
+     */
+    private function specimenTitleMap(): array
+    {
+        $rows = QueryUtils::fetchRecords(
+            "SELECT option_id, title FROM list_options
+             WHERE list_id = 'Specimen_Type' AND activity = 1",
+            []
+        ) ?: [];
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(string) ($row['option_id'] ?? '')] = (string) ($row['title'] ?? '');
+        }
+
+        return $map;
     }
 
     /**

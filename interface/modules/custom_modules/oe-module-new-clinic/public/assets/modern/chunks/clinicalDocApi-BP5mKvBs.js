@@ -1,2 +1,0 @@
-import{g as e}from"./dist-tbPPP6CB.js";async function t(t,n,r){return e(`clinical_doc.favorites`,{ajaxUrl:t,csrfToken:n,params:{visit_id:r}})}async function n(t,n,r,i,a){let o=a?.lens??i.source_lens??i.lens??`visit`,s=await e(`clinical_doc.open_form`,{ajaxUrl:t,csrfToken:n,method:`POST`,json:{visit_id:r,formdir:i.formdir,lens:o,action:i.started&&i.form_id?`edit`:`new`,form_id:i.form_id??void 0,return_to:a?.returnTo??`hub`,...a?.focus===`sign`?{focus:`sign`}:{}}});window.location.assign(s.redirect_url)}export{n,t};
-//# sourceMappingURL=clinicalDocApi-BP5mKvBs.js.map

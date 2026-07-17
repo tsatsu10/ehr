@@ -165,20 +165,6 @@ class ShellService
             'config' => 'enable_queue_bridge',
         ],
         [
-            'id' => 'clinicdochub',
-            'label' => 'Documentation',
-            'path' => 'clinical-doc/index.php',
-            'acos' => [
-                'new_clinical_doc_hub',
-                'new_doctor',
-                'new_nurse',
-                'new_admin',
-            ],
-            'group' => 'hubs',
-            'icon' => 'fa-file-medical',
-            'config' => 'enable_clinical_doc_hub',
-        ],
-        [
             'id' => 'clinicrp',
             'label' => 'Reports',
             'path' => 'reports.php',

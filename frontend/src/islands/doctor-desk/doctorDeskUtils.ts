@@ -1,5 +1,6 @@
 import type { CurrencyFormat } from '@core/formatMoney';
 import { formatMoney as formatMoneyCore } from '@core/formatMoney';
+import { t } from '@core/i18n';
 import type { DoctorConsultPayload } from '@core/types';
 
 let currencyFormat: CurrencyFormat = {
@@ -31,15 +32,15 @@ export function rxReturnNotice(payload: DoctorConsultPayload): DoctorDeskNotice 
   const count = payload.prescriptions?.length ?? 0;
   if (count === 0) {
     return {
-      message: 'No prescriptions on this encounter yet. Use Prescribe to add medication.',
+      message: t('No prescriptions on this encounter yet. Use Prescribe to add medication.'),
       variant: 'info',
     };
   }
 
   return {
     message: count === 1
-      ? 'Prescription list updated — 1 line with current stock badges.'
-      : `Prescription list updated — ${count} lines with current stock badges.`,
+      ? t('Prescription list updated — 1 line with current stock badges.')
+      : t('Prescription list updated — {count} lines with current stock badges.', { count }),
     variant: 'success',
   };
 }

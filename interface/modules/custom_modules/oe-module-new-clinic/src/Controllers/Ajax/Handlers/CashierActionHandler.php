@@ -13,7 +13,9 @@ namespace OpenEMR\Modules\NewClinic\Controllers\Ajax\Handlers;
 
 use OpenEMR\Modules\NewClinic\Controllers\Ajax\AjaxActionHandlerInterface;
 use OpenEMR\Modules\NewClinic\Controllers\AjaxController;
+use OpenEMR\Modules\NewClinic\Services\CashierOtherPaymentService;
 use OpenEMR\Modules\NewClinic\Services\CashierService;
+use OpenEMR\Modules\NewClinic\Services\EligibilityCheckService;
 use OpenEMR\Modules\NewClinic\Services\SchemeClaimService;
 
 final class CashierActionHandler implements AjaxActionHandlerInterface
@@ -28,8 +30,12 @@ final class CashierActionHandler implements AjaxActionHandlerInterface
         'cashier.pay_partial',
         'cashier.scheme.list',
         'cashier.scheme.pay',
+        'cashier.other_payment.context',
+        'cashier.other_payment.post',
         'cashier.mark_unpaid',
         'cashier.close_zero',
+        'cashier.eligibility_check',
+        'cashier.eligibility_status',
     ];
 
     public function __construct(
@@ -66,6 +72,21 @@ final class CashierActionHandler implements AjaxActionHandlerInterface
                     $userId
                 );
                 $this->host->respond(true, 'ok', $payload);
+                break;
+            case 'cashier.other_payment.context':
+                $context = $this->host->svc(CashierOtherPaymentService::class)->getContext(
+                    (int) ($_REQUEST['pid'] ?? 0)
+                );
+                $this->host->respond(true, 'ok', $context);
+                break;
+            case 'cashier.other_payment.post':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $posted = $this->host->svc(CashierOtherPaymentService::class)->post($body, $userId);
+                $this->host->respond(true, 'ok', $posted);
                 break;
             case 'cashier.resolve_patient':
                 if ($method !== 'POST') {
@@ -188,6 +209,32 @@ final class CashierActionHandler implements AjaxActionHandlerInterface
                     (string) ($body['reason'] ?? '')
                 );
                 $this->host->respond(true, 'Visit closed without charge', $result);
+                break;
+            case 'cashier.eligibility_check':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $logged = $this->host->svc(EligibilityCheckService::class)->logCheck(
+                    (int) ($body['pid'] ?? 0),
+                    isset($body['visit_id']) ? (int) $body['visit_id'] : null,
+                    (int) ($body['insurance_company_id'] ?? 0),
+                    (string) ($body['membership_number'] ?? ''),
+                    (string) ($body['method'] ?? 'other'),
+                    (string) ($body['result'] ?? 'unknown'),
+                    (string) ($body['reference_code'] ?? ''),
+                    (string) ($body['note'] ?? ''),
+                    $userId
+                );
+                $this->host->respond(true, 'Eligibility check logged', $logged);
+                break;
+            case 'cashier.eligibility_status':
+                $params = $this->host->readRequestParams($method);
+                $checks = $this->host->svc(EligibilityCheckService::class)->latestForPatient(
+                    (int) ($params['pid'] ?? 0)
+                );
+                $this->host->respond(true, 'ok', ['checks' => $checks]);
                 break;
             default:
                 $this->host->respond(false, 'Unknown action', ['code' => 'not_found'], 404);

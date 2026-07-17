@@ -1,2 +1,0 @@
-import{T as e,v as t,w as n}from"./dist-tbPPP6CB.js";var r=e(n(),1);function i(e,n,i={}){let a=(0,r.useRef)(e),o=i.respectPollBackoff??!0;(0,r.useEffect)(()=>{a.current=e},[e]),(0,r.useEffect)(()=>{if(n===null)return;let e=n*(.9+Math.random()*.2),r=window.setInterval(()=>{document.hidden||o&&t()||a.current()},e);return()=>window.clearInterval(r)},[n,o])}export{i as t};
-//# sourceMappingURL=useInterval-DQjryswt.js.map

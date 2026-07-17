@@ -7,6 +7,7 @@ import { SlideOver } from '@components/SlideOver';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Button } from '@components/ui/button';
 import { oeFetch } from '@core/oeFetch';
+import { t } from '@core/i18n';
 import type { DoctorVisit } from '@core/types';
 import type { ClinicalDocCard } from '../clinical-doc/clinicalDocTypes';
 import {
@@ -30,16 +31,16 @@ interface DocFavoritesDrawerProps {
 
 function statusLine(card: ClinicalDocCard): string {
   if (!card.started) {
-    return card.primary ? 'Required · Not started' : 'Not started';
+    return card.primary ? t('Required · Not started') : t('Not started');
   }
   const parts: string[] = [];
   if (card.signed) {
-    parts.push('Signed');
+    parts.push(t('Signed'));
   } else {
-    parts.push('Not signed');
+    parts.push(t('Not signed'));
   }
   if (card.last_saved_at) {
-    parts.push(`Saved ${card.last_saved_at}`);
+    parts.push(t('Saved {date}', { date: card.last_saved_at }));
   }
   return parts.join(' · ');
 }
@@ -74,7 +75,7 @@ export function DocFavoritesDrawer({
         setHubUrl(data.documentation_hub_url ?? null);
       })
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : 'Could not load form favorites');
+        setError(err instanceof Error ? err.message : t('Could not load form favorites'));
       })
       .finally(() => setLoading(false));
   }, [ajaxUrl, csrfToken, open, visit]);
@@ -92,7 +93,7 @@ export function DocFavoritesDrawer({
       await openClinicalDocForm(ajaxUrl, csrfToken, visit.id, card, { returnTo: 'doctor' });
     } catch (err) {
       setOpening(null);
-      onError(err instanceof Error ? err.message : 'Could not open form');
+      onError(err instanceof Error ? err.message : t('Could not open form'));
     }
   }, [ajaxUrl, blocked, csrfToken, onError, visit]);
 
@@ -113,7 +114,7 @@ export function DocFavoritesDrawer({
       });
       window.location.assign(data.redirect_url);
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Could not open documentation hub');
+      onError(err instanceof Error ? err.message : t('Could not open documentation hub'));
     }
   }, [ajaxUrl, blocked, csrfToken, onError, visit]);
 
@@ -121,8 +122,8 @@ export function DocFavoritesDrawer({
     <SlideOver
       open={open}
       onClose={onClose}
-      title="Quick forms"
-      ariaLabel="Clinical form favorites"
+      title={t('Quick forms')}
+      ariaLabel={t('Clinical form favorites')}
       id="nc-doctor-doc-favorites"
       width="sm"
       footer={(
@@ -133,14 +134,14 @@ export function DocFavoritesDrawer({
           disabled={blocked || !hubUrl}
           onClick={() => { void openFullHub(); }}
         >
-          Open full documentation
+          {t('Open full documentation')}
         </Button>
       )}
     >
-      {loading ? <p className="text-[var(--oe-nc-text-muted)] mb-0">Loading favorites…</p> : null}
+      {loading ? <p className="text-[var(--oe-nc-text-muted)] mb-0">{t('Loading favorites…')}</p> : null}
       {error ? <div className={deskCalloutClass('error', 'py-2')}>{error}</div> : null}
       {!loading && !error && favorites.length === 0 ? (
-        <p className="text-[var(--oe-nc-text-muted)] mb-0">No pinned forms are available for your role and clinic setup.</p>
+        <p className="text-[var(--oe-nc-text-muted)] mb-0">{t('No pinned forms are available for your role and clinic setup.')}</p>
       ) : null}
       <div className="nc-list-group nc-list-group-flush">
         {favorites.map((card) => (
@@ -159,7 +160,7 @@ export function DocFavoritesDrawer({
                 disabled={blocked || opening === card.id}
                 onClick={() => { void openFavorite(card); }}
               >
-                {opening === card.id ? 'Opening…' : card.started ? 'Continue' : 'Open'}
+                {opening === card.id ? t('Opening…') : card.started ? t('Continue') : t('Open')}
               </Button>
             </div>
           </div>

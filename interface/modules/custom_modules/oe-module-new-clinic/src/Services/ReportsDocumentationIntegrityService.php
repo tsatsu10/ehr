@@ -38,9 +38,9 @@ class ReportsDocumentationIntegrityService
 
         $esignByEncounter = $this->fetchEsignEventsByEncounter($encounterIds);
         $reopenByVisit = $this->fetchReopenEventsByVisit($visitIds);
-        $overrideByVisit = $this->fetchOverrideEventsByVisit($visitIds);
+        $overrideByVisit = $this->fetchOverrideEventsByVisit($visitIds, $startDate, $endDate);
 
-        $webroot = $GLOBALS['webroot'] ?? '';
+        $signService = new EncounterSignService();
         $rows = [];
         $summary = [
             'visits_with_events' => 0,
@@ -79,8 +79,10 @@ class ReportsDocumentationIntegrityService
                 'pubpid' => (string) ($visit['pubpid'] ?? ''),
                 'display_name' => trim($fname . ' ' . $lname),
                 'encounter_id' => $encounterId > 0 ? $encounterId : null,
+                // Native consult page when the native engine is on (stock fallback
+                // inside); the report is facility-scoped so inject that facility.
                 'encounter_url' => $encounterId > 0
-                    ? EncounterSignService::buildEncounterUrl($webroot, (int) ($visit['pid'] ?? 0), $encounterId)
+                    ? $signService->buildOpenUrlForVisit($visit + ['facility_id' => $facilityId])
                     : null,
                 'esign_events' => $esignEvents,
                 'reopened_events' => $reopenEvents,
@@ -337,7 +339,7 @@ class ReportsDocumentationIntegrityService
      * @param array<int, int> $visitIds
      * @return array<int, array<int, array<string, mixed>>>
      */
-    private function fetchOverrideEventsByVisit(array $visitIds): array
+    private function fetchOverrideEventsByVisit(array $visitIds, string $startDate, string $endDate): array
     {
         $visitIds = array_values(array_unique(array_filter($visitIds, static fn (int $id): bool => $id > 0)));
         if ($visitIds === []) {
@@ -345,13 +347,25 @@ class ReportsDocumentationIntegrityService
         }
 
         $visitIdSet = array_fill_keys($visitIds, true);
+        // Bound the scan to the report window (+2-day trailing buffer): the visit
+        // id lives in the log comment, not an indexed column, so without a date
+        // bound this pulled EVERY 'new_visit' audit row ever written into PHP just
+        // to keep the few in range. E-sign overrides are logged at completion/
+        // payment time — same-day in the cash-clinic flow — so the window safely
+        // contains them. Lead with `category IN (...)` + the date range so the
+        // (category, date) index seeks just the matching rows.
+        $windowStart = $startDate . ' 00:00:00';
+        $windowEnd = (new \DateTimeImmutable($endDate))->modify('+2 day')->format('Y-m-d 00:00:00');
         $rows = QueryUtils::fetchRecords(
             "SELECT l.date, l.user, l.groupname, l.success, l.comments, l.category
              FROM log l
-             WHERE (l.category = 'new_visit'
-                    AND (l.success = 'esign_override' OR l.user = 'esign_override'))
-                OR l.category = 'esign_override'
-             ORDER BY l.date ASC, l.id ASC"
+             WHERE l.category IN ('new_visit', 'esign_override')
+               AND l.date >= ? AND l.date < ?
+               AND (l.category = 'esign_override'
+                    OR l.success = 'esign_override'
+                    OR l.user = 'esign_override')
+             ORDER BY l.date ASC, l.id ASC",
+            [$windowStart, $windowEnd]
         ) ?: [];
 
         $grouped = [];

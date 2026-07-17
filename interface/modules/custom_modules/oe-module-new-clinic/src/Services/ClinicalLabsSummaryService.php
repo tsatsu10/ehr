@@ -65,10 +65,12 @@ class ClinicalLabsSummaryService
         $placeOrderUrl = null;
         if ($encounterId > 0) {
             try {
-                $placeOrderUrl = $this->procedureOrderLinks->buildNewOrderUrl(
+                $placeOrderUrl = $this->procedureOrderLinks->buildNewOrderUrlPreferNative(
                     $pid,
                     $encounterId,
-                    $this->procedureOrderLinks->buildPatientChartReturnUrl($pid)
+                    'chart',
+                    $this->procedureOrderLinks->buildPatientChartReturnUrl($pid),
+                    $facilityId
                 );
             } catch (\InvalidArgumentException) {
                 $placeOrderUrl = null;

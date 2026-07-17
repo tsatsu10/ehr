@@ -22,6 +22,7 @@ use OpenEMR\Modules\NewClinic\Services\EncounterSignService;
 use OpenEMR\Modules\NewClinic\Services\PatientActivityFeedService;
 use OpenEMR\Modules\NewClinic\Services\PatientDuplicateService;
 use OpenEMR\Modules\NewClinic\Services\PhoneNormalizer;
+use OpenEMR\Modules\NewClinic\Services\ReceiptNumberService;
 use OpenEMR\Modules\NewClinic\Services\ReconciliationService;
 use OpenEMR\Modules\NewClinic\Services\ReportsService;
 use OpenEMR\Modules\NewClinic\Services\VisitFsm;
@@ -48,10 +49,17 @@ class NewClinicMandatoryContractTest extends TestCase
 
     public function testMandatory02ReceiptNumberAllocationIsAtomic(): void
     {
-        $body = $this->methodBody(CashierService::class, 'allocateReceiptNumber');
+        // CP-2 — CashierService::allocateReceiptNumber now delegates to
+        // ReceiptNumberService so checkout and the deposits/other-payments
+        // flow share ONE atomic counter (two allocators would risk duplicate
+        // receipt numbers). The mandatory contract is checked at the shared
+        // implementation, plus that CashierService still delegates to it.
+        $delegatingBody = $this->methodBody(CashierService::class, 'allocateReceiptNumber');
+        $this->assertStringContainsString('ReceiptNumberService', $delegatingBody);
 
-        $this->assertStringContainsString('ON DUPLICATE KEY UPDATE last_seq = last_seq + 1', $body);
-        $this->assertStringContainsString('new_receipt_counter', $body);
+        $atomicBody = $this->methodBody(ReceiptNumberService::class, 'allocate');
+        $this->assertStringContainsString('ON DUPLICATE KEY UPDATE last_seq = last_seq + 1', $atomicBody);
+        $this->assertStringContainsString('new_receipt_counter', $atomicBody);
     }
 
     public function testMandatory03CheckoutIdempotencyUsesClientRequestId(): void

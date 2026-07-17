@@ -24,6 +24,11 @@ export interface ClinicalDocCard {
   signed?: boolean;
   pin?: number;
   note_preview?: EncounterNotePreview;
+  score_total?: number;
+  score_max?: number;
+  score_severity?: string;
+  score_label?: string;
+  screening_flags?: string[];
   bundle_health?: {
     installed: boolean;
     esign_ok: boolean;

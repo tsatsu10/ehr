@@ -4,139 +4,332 @@
     <meta charset="utf-8">
     <title>{{ 'Prescription'|xlt }} — {{ rx.patient.display_name|text }}</title>
     <style>
+        :root {
+            --rx-accent: #6d28d9;
+            --rx-accent-tint: #f3eefc;
+            --rx-ink: #16181d;
+            --rx-muted: #5b6270;
+            --rx-line: #d8dbe2;
+        }
+        * { box-sizing: border-box; }
         body {
-            font-family: Georgia, 'Times New Roman', serif;
-            margin: 0;
-            padding: 1.25rem;
-            color: #111;
+            font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+            margin: 0 auto;
+            padding: 0 1.5rem 1.5rem;
+            color: var(--rx-ink);
             max-width: 210mm;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        .accent-bar {
+            height: 6px;
+            background: var(--rx-accent);
+            margin: 0 -1.5rem 1.25rem;
+        }
+        .toolbar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .toolbar button {
+            font: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .toolbar .btn-print {
+            background: var(--rx-accent);
+            color: #fff;
+            border: 1px solid var(--rx-accent);
+        }
+        .toolbar .btn-close {
+            background: #fff;
+            color: var(--rx-ink);
+            border: 1px solid var(--rx-line);
         }
         .clinic-header {
-            text-align: center;
-            nc-border-b: 2px solid #111;
-            padding-bottom: 0.75rem;
-            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            border-bottom: 2px solid var(--rx-ink);
+            padding-bottom: 0.85rem;
+            margin-bottom: 1.1rem;
         }
         .clinic-name {
-            font-size: 1.25rem;
-            font-weight: bold;
-            letter-spacing: 0.02em;
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
         }
         .clinic-meta {
-            font-size: 0.85rem;
-            color: #444;
-            margin-top: 0.25rem;
+            font-size: 0.82rem;
+            color: var(--rx-muted);
+            margin-top: 0.2rem;
         }
-        .rx-title {
-            text-align: center;
-            font-size: 1rem;
-            font-weight: bold;
+        .doc-meta {
+            text-align: right;
+            font-size: 0.78rem;
+            color: var(--rx-muted);
+        }
+        .doc-meta .doc-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--rx-accent);
+            margin-bottom: 0.2rem;
+        }
+        .section-label {
+            font-size: 0.72rem;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.08em;
-            margin: 1rem 0;
+            color: var(--rx-muted);
+            margin-bottom: 0.4rem;
         }
-        .patient-block {
-            margin-bottom: 1rem;
-            font-size: 0.95rem;
+        .patient-card {
+            border: 1px solid var(--rx-line);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1.1rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.35rem 1rem;
         }
-        .patient-block strong {
-            display: inline-block;
-            min-width: 5rem;
+        .patient-card .field-label {
+            font-size: 0.72rem;
+            color: var(--rx-muted);
+            display: block;
         }
-        .drug-block {
-            border: 1px solid #222;
-            padding: 1rem;
-            margin: 1rem 0;
+        .patient-card .field-value {
+            font-size: 0.98rem;
+            font-weight: 600;
+        }
+        .rx-block {
+            border: 1.5px solid var(--rx-ink);
+            border-radius: 10px;
+            padding: 1.1rem 1.25rem;
+            margin-bottom: 1.1rem;
+        }
+        .rx-block-head {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.65rem;
+        }
+        .rx-symbol {
+            flex: 0 0 auto;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            background: var(--rx-accent-tint);
+            color: var(--rx-accent);
+            border: 1.5px solid var(--rx-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            font-weight: 700;
         }
         .drug-name {
-            font-size: 1.15rem;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+            font-weight: 700;
         }
         .sig-line {
-            font-size: 1rem;
-            margin: 0.35rem 0;
+            font-size: 1.02rem;
+            font-weight: 600;
+            margin: 0.6rem 0 0.75rem;
+        }
+        .rx-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem 1rem;
+            border-top: 1px dashed var(--rx-line);
+            padding-top: 0.65rem;
+        }
+        .rx-detail-grid .field-label {
+            font-size: 0.72rem;
+            color: var(--rx-muted);
+            display: block;
+        }
+        .rx-detail-grid .field-value {
+            font-size: 0.92rem;
+            font-weight: 600;
+        }
+        .rx-note {
+            margin-top: 0.65rem;
+            padding: 0.5rem 0.7rem;
+            background: var(--rx-accent-tint);
+            border-radius: 6px;
+            font-size: 0.88rem;
         }
         .prescriber {
-            margin-top: 2rem;
-            nc-border-t: 1px solid #999;
-            padding-top: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 2rem;
+            margin-top: 1.75rem;
+            padding-top: 0.4rem;
         }
-        .prescriber-line {
-            margin: 0.35rem 0;
+        .signature-block {
+            flex: 1 1 auto;
+        }
+        .signature-rule {
+            border-top: 1px solid var(--rx-ink);
+            width: 14rem;
+            margin-bottom: 0.3rem;
+            padding-top: 0.3rem;
+        }
+        .prescriber-name {
+            font-weight: 700;
+        }
+        .prescriber-meta {
+            font-size: 0.82rem;
+            color: var(--rx-muted);
+        }
+        .date-block {
+            text-align: right;
+            font-size: 0.85rem;
+        }
+        .date-block .field-label {
+            font-size: 0.72rem;
+            color: var(--rx-muted);
+            display: block;
         }
         .footer-note {
-            margin-top: 1.5rem;
-            font-size: 0.8rem;
-            color: #555;
-            text-align: center;
-        }
-        .no-print {
-            margin-bottom: 1rem;
+            margin-top: 1.75rem;
+            border-top: 1px dashed var(--rx-line);
+            padding-top: 0.6rem;
+            font-size: 0.75rem;
+            color: var(--rx-muted);
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
         }
         @media print {
-            .no-print { display: none; }
-            body { padding: 0.5in; }
+            .toolbar { display: none; }
+            .accent-bar { margin: 0 0 1.25rem; }
+            body { padding: 0.4in 0.5in; }
         }
     </style>
 </head>
 <body>
-    <div class="no-print">
-        <button type="button" onclick="window.print()">{{ 'Print'|xlt }}</button>
-        <button type="button" onclick="window.close()">{{ 'Close'|xlt }}</button>
+    <div class="accent-bar"></div>
+
+    <div class="toolbar">
+        <button type="button" class="btn-print" onclick="window.print()">{{ 'Print'|xlt }}</button>
+        <button type="button" class="btn-close" onclick="window.close()">{{ 'Close'|xlt }}</button>
     </div>
 
     <header class="clinic-header">
-        <div class="clinic-name">{{ rx.clinic.name|text }}</div>
-        {% if rx.clinic.address or rx.clinic.phone %}
-        <div class="clinic-meta">
-            {% if rx.clinic.address %}{{ rx.clinic.address|text }}{% endif %}
-            {% if rx.clinic.phone %} · {{ rx.clinic.phone|text }}{% endif %}
+        <div>
+            <div class="clinic-name">{{ rx.clinic.name|text }}</div>
+            {% if rx.clinic.address or rx.clinic.phone %}
+            <div class="clinic-meta">
+                {% if rx.clinic.address %}{{ rx.clinic.address|text }}{% endif %}
+                {% if rx.clinic.phone %} · {{ rx.clinic.phone|text }}{% endif %}
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
+        <div class="doc-meta">
+            <div class="doc-title">{{ 'Prescription'|xlt }}</div>
+            <div>{{ 'Ref'|xlt }} #{{ rx.prescription_id|text }}</div>
+            <div>{{ rx.printed_at|text }}</div>
+        </div>
     </header>
 
-    <div class="rx-title">{{ 'Prescription'|xlt }}</div>
-
-    <div class="patient-block">
-        <div><strong>{{ 'Patient'|xlt }}:</strong> {{ rx.patient.display_name|text }}</div>
+    <div class="section-label">{{ 'Patient'|xlt }}</div>
+    <div class="patient-card">
+        <div>
+            <span class="field-label">{{ 'Name'|xlt }}</span>
+            <span class="field-value">{{ rx.patient.display_name|text }}</span>
+        </div>
         {% if rx.patient.mrn %}
-        <div><strong>{{ 'MRN'|xlt }}:</strong> {{ rx.patient.mrn|text }}</div>
+        <div>
+            <span class="field-label">{{ 'MRN'|xlt }}</span>
+            <span class="field-value">{{ rx.patient.mrn|text }}</span>
+        </div>
         {% endif %}
         {% if rx.patient.age_display or rx.patient.sex_display %}
         <div>
-            <strong>{{ 'Age / Sex'|xlt }}:</strong>
-            {% if rx.patient.age_display %}{{ rx.patient.age_display|text }}{% endif %}
-            {% if rx.patient.sex_display %} · {{ rx.patient.sex_display|text }}{% endif %}
+            <span class="field-label">{{ 'Age / Sex'|xlt }}</span>
+            <span class="field-value">
+                {% if rx.patient.age_display %}{{ rx.patient.age_display|text }}{% endif %}
+                {% if rx.patient.sex_display %} · {{ rx.patient.sex_display|text }}{% endif %}
+            </span>
+        </div>
+        {% endif %}
+        {% if rx.patient.dob %}
+        <div>
+            <span class="field-label">{{ 'DOB'|xlt }}</span>
+            <span class="field-value">{{ rx.patient.dob|text }}</span>
         </div>
         {% endif %}
     </div>
 
-    <div class="drug-block">
-        <div class="drug-name">℞ {{ rx.drug.display_name|text }}</div>
+    <div class="rx-block">
+        <div class="rx-block-head">
+            <div class="rx-symbol">℞</div>
+            <div class="drug-name">{{ rx.drug.display_name|text }}</div>
+        </div>
+
         {% if rx.drug.sig %}
-        <div class="sig-line"><strong>{{ 'Sig'|xlt }}:</strong> {{ rx.drug.sig|text }}</div>
+        <div class="sig-line">{{ rx.drug.sig|text }}</div>
         {% endif %}
-        {% if rx.drug.quantity %}
-        <div class="sig-line"><strong>{{ 'Qty'|xlt }}:</strong> {{ rx.drug.quantity|text }}</div>
-        {% endif %}
-        {% if rx.drug.refills is defined and rx.drug.refills > 0 %}
-        <div class="sig-line"><strong>{{ 'Refills'|xlt }}:</strong> {{ rx.drug.refills|text }}</div>
-        {% endif %}
+
+        <div class="rx-detail-grid">
+            {% if rx.drug.quantity %}
+            <div>
+                <span class="field-label">{{ 'Qty'|xlt }}</span>
+                <span class="field-value">{{ rx.drug.quantity|text }}</span>
+            </div>
+            {% endif %}
+            {% if rx.drug.refills is defined and rx.drug.refills > 0 %}
+            <div>
+                <span class="field-label">{{ 'Refills'|xlt }}</span>
+                <span class="field-value">{{ rx.drug.refills|text }}</span>
+            </div>
+            {% endif %}
+            {% if rx.drug.start_date %}
+            <div>
+                <span class="field-label">{{ 'Start'|xlt }}</span>
+                <span class="field-value">{{ rx.drug.start_date|text }}</span>
+            </div>
+            {% endif %}
+            {% if rx.drug.end_date %}
+            <div>
+                <span class="field-label">{{ 'End'|xlt }}</span>
+                <span class="field-value">{{ rx.drug.end_date|text }}</span>
+            </div>
+            {% endif %}
+        </div>
+
         {% if rx.drug.note %}
-        <div class="sig-line"><strong>{{ 'Note'|xlt }}:</strong> {{ rx.drug.note|text }}</div>
+        <div class="rx-note"><strong>{{ 'Note'|xlt }}:</strong> {{ rx.drug.note|text }}</div>
         {% endif %}
     </div>
 
     <div class="prescriber">
-        <div class="prescriber-line"><strong>{{ 'Prescriber'|xlt }}:</strong> {{ rx.prescriber.display_name|text }}</div>
-        {% if rx.prescriber.reg_number %}
-        <div class="prescriber-line"><strong>{{ 'Reg #'|xlt }}:</strong> {{ rx.prescriber.reg_number|text }}</div>
-        {% endif %}
-        <div class="prescriber-line"><strong>{{ 'Date'|xlt }}:</strong> {{ rx.printed_at|text }}</div>
+        <div class="signature-block">
+            <div class="signature-rule"></div>
+            <div class="prescriber-name">{{ rx.prescriber.display_name|text }}</div>
+            {% if rx.prescriber.reg_number %}
+            <div class="prescriber-meta">{{ 'Reg #'|xlt }} {{ rx.prescriber.reg_number|text }}</div>
+            {% endif %}
+        </div>
+        <div class="date-block">
+            <span class="field-label">{{ 'Date'|xlt }}</span>
+            {{ rx.printed_at|text }}
+        </div>
     </div>
 
-    <div class="footer-note">{{ 'For dispensing at a licensed community pharmacy.'|xlt }}</div>
+    <div class="footer-note">
+        <span>{{ 'For dispensing at a licensed community pharmacy.'|xlt }}</span>
+        <span>{{ 'Ref'|xlt }} #{{ rx.prescription_id|text }}</span>
+    </div>
 
     {% if auto_print %}
     <script>window.addEventListener('load', function () { window.print(); });</script>

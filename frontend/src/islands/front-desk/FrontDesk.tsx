@@ -35,6 +35,7 @@ export function FrontDesk({
   appointmentsTodayCount = 0,
   calendarUrl,
   recallsUrl,
+  enablePayerBilling = false,
 }: FrontDeskProps) {
   const desk = useFrontDesk({ ajaxUrl, csrfToken, facilityId, pinnedPreview, scheduledIntegrationEnabled });
   const { message: liveMessage, politeness: livePoliteness, announce } = useLiveAnnounce();
@@ -91,6 +92,7 @@ export function FrontDesk({
       canSkipTriage={canSkipTriage}
       canRevisitOverride={canRevisitOverride}
       enforceCompletionOnRevisit={enforceCompletionOnRevisit}
+      enablePayerBilling={enablePayerBilling}
       wizardMode={isMobile}
       embedded={isMobile}
       registrationWorkRef={registrationWorkRef}

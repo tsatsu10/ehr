@@ -1,0 +1,172 @@
+- generic [ref=f8e2]:
+  - complementary "Clinic navigation" [ref=f8e3]:
+    - generic [ref=f8e4]:
+      - generic [ref=f8e5]:
+        - generic [ref=f8e6]: OP
+        - paragraph [ref=f8e8]: OpenEMR
+      - text: 
+    - generic [ref=f8e9]: Thu 16 Jul 2026 · 09:23
+    - navigation "Module pages" [ref=f8e10]:
+      - generic [ref=f8e11]:
+        - generic [ref=f8e12]: Desks
+        - list "Desks" [ref=f8e13]:
+          - listitem [ref=f8e14]:
+            - link "Front Desk 2" [ref=f8e15] [cursor=pointer]:
+              - /url: /openemr/clinic/front-desk
+              - generic [ref=f8e16]: 
+              - generic [ref=f8e18]: Front Desk
+              - generic [ref=f8e19]: "2"
+          - listitem [ref=f8e20]:
+            - link "Triage 2" [ref=f8e21] [cursor=pointer]:
+              - /url: /openemr/clinic/triage
+              - generic [ref=f8e22]: 
+              - generic [ref=f8e24]: Triage
+              - generic [ref=f8e25]: "2"
+          - listitem [ref=f8e26]:
+            - link "Doctor 15" [ref=f8e27] [cursor=pointer]:
+              - /url: /openemr/clinic/doctor
+              - generic [ref=f8e28]: 
+              - generic [ref=f8e30]: Doctor
+              - generic [ref=f8e31]: "15"
+          - listitem [ref=f8e32]:
+            - link "Lab 2" [ref=f8e33] [cursor=pointer]:
+              - /url: /openemr/clinic/lab
+              - generic [ref=f8e34]: 
+              - generic [ref=f8e36]: Lab
+              - generic [ref=f8e37]: "2"
+          - listitem [ref=f8e38]:
+            - link "Pharmacy 2" [ref=f8e39] [cursor=pointer]:
+              - /url: /openemr/clinic/pharmacy
+              - generic [ref=f8e40]: 
+              - generic [ref=f8e42]: Pharmacy
+              - generic [ref=f8e43]: "2"
+          - listitem [ref=f8e44]:
+            - link "Cashier 2" [ref=f8e45] [cursor=pointer]:
+              - /url: /openemr/clinic/cashier
+              - generic [ref=f8e46]: 
+              - generic [ref=f8e48]: Cashier
+              - generic [ref=f8e49]: "2"
+      - generic [ref=f8e50]:
+        - generic [ref=f8e51]: Operations
+        - list "Operations" [ref=f8e52]:
+          - listitem [ref=f8e53]:
+            - link "Lab Ops" [ref=f8e54] [cursor=pointer]:
+              - /url: /openemr/interface/modules/custom_modules/oe-module-new-clinic/public/lab-ops/index.php
+              - generic [ref=f8e55]: 
+          - listitem [ref=f8e58]:
+            - link "Pharm Ops" [ref=f8e59] [cursor=pointer]:
+              - /url: /openemr/interface/modules/custom_modules/oe-module-new-clinic/public/pharm-ops/index.php
+              - generic [ref=f8e60]: 
+          - listitem [ref=f8e63]:
+            - link "Billing" [ref=f8e64] [cursor=pointer]:
+              - /url: /openemr/interface/modules/custom_modules/oe-module-new-clinic/public/bill-ops/index.php
+              - generic [ref=f8e65]: 
+          - listitem [ref=f8e68]:
+            - link "Visit Board" [ref=f8e69] [cursor=pointer]:
+              - /url: /openemr/clinic/visit-board
+              - generic [ref=f8e70]: 
+          - listitem [ref=f8e73]:
+            - link "Scheduling" [ref=f8e74] [cursor=pointer]:
+              - /url: /openemr/interface/modules/custom_modules/oe-module-new-clinic/public/scheduling/index.php
+              - generic [ref=f8e75]: 
+      - generic [ref=f8e78]:
+        - generic [ref=f8e79]: Hubs
+        - list "Hubs" [ref=f8e80]:
+          - listitem [ref=f8e81]:
+            - link "Reporting" [ref=f8e82] [cursor=pointer]:
+              - /url: /openemr/interface/modules/custom_modules/oe-module-new-clinic/public/report-hub/index.php
+              - generic [ref=f8e83]: 
+          - listitem [ref=f8e86]:
+            - link "Queue Bridge" [ref=f8e87] [cursor=pointer]:
+              - /url: /openemr/interface/modules/custom_modules/oe-module-new-clinic/public/queue-bridge/index.php
+              - generic [ref=f8e88]: 
+          - listitem [ref=f8e91]:
+            - link "Clinic Setup" [ref=f8e92] [cursor=pointer]:
+              - /url: /openemr/clinic/admin
+              - generic [ref=f8e93]: 
+          - listitem [ref=f8e96]:
+            - link "Messages" [ref=f8e97] [cursor=pointer]:
+              - /url: /openemr/clinic/communications
+              - generic [ref=f8e98]: 
+          - listitem [ref=f8e101]:
+            - link "Office Notes" [ref=f8e102] [cursor=pointer]:
+              - /url: /openemr/clinic/office-notes
+              - generic [ref=f8e103]: 
+          - listitem [ref=f8e106]:
+            - link "Registry" [ref=f8e107] [cursor=pointer]:
+              - /url: /openemr/clinic/patient-registry
+              - generic [ref=f8e108]: 
+    - generic [ref=f8e111]:
+      - 'group "Today`s queue counts" [ref=f8e112]':
+        - generic "Queue 25 active " [ref=f8e113] [cursor=pointer]:
+          - generic [ref=f8e114]: Queue
+          - generic [ref=f8e115]: 25 active
+          - text: 
+      - generic [ref=f8e116]:
+        - button "Active role menu" [ref=f8e117] [cursor=pointer]:
+          - generic [ref=f8e118]: TD
+          - generic [ref=f8e120]:
+            - generic [ref=f8e121]: Tsatsu Degbotse
+            - generic [ref=f8e122]: "Reception Tsatsu`s desk"
+          - generic [ref=f8e123]: 
+        - text:           
+      - button "Switch sidebar to dark appearance" [ref=f8e125] [cursor=pointer]:
+        - generic [ref=f8e126]: Dark sidebar
+      - button "Collapse sidebar" [expanded] [ref=f8e127] [cursor=pointer]:
+        - generic [ref=f8e128]: 
+        - generic [ref=f8e130]: Collapse
+  - generic [ref=f8e131]:
+    - text: 
+    - main [ref=f8e132]:
+      - generic [ref=f8e133]:
+        - heading "Scheduling & Flow" [level=1] [ref=f8e135]
+        - generic [ref=f8e137]:
+          - generic [ref=f8e138]: Calendar · 2026-07-16
+          - link "Front Desk" [ref=f8e139] [cursor=pointer]:
+            - /url: /openemr/interface/modules/custom_modules/oe-module-new-clinic/public/front-desk.php
+          - link "Visit Board" [ref=f8e140] [cursor=pointer]:
+            - /url: /openemr/interface/modules/custom_modules/oe-module-new-clinic/public/visit-board.php
+          - link "Queue Bridge" [ref=f8e141] [cursor=pointer]:
+            - /url: /openemr/interface/modules/custom_modules/oe-module-new-clinic/public/queue-bridge/index.php
+          - button "Refresh" [ref=f8e142] [cursor=pointer]:
+            - generic [ref=f8e143]: 
+          - generic [ref=f8e144]: Updated 09:23 AM
+      - generic [ref=f8e146]:
+        - region "Notifications alt+T"
+        - generic [ref=f8e147]:
+          - generic [ref=f8e148]:
+            - tablist "Scheduling lenses" [ref=f8e149]:
+              - tab "Calendar" [selected] [ref=f8e150] [cursor=pointer]
+              - tab "Flow Board" [ref=f8e151] [cursor=pointer]
+              - tab "Recalls" [ref=f8e152] [cursor=pointer]
+            - button "+ Book appointment" [ref=f8e153] [cursor=pointer]
+          - generic [ref=f8e155]:
+            - generic "Scheduling filters" [ref=f8e156]:
+              - generic [ref=f8e157]:
+                - generic [ref=f8e158]:
+                  - generic [ref=f8e159]: Facility
+                  - combobox "Facility" [ref=f8e160]:
+                    - option "Your Clinic Name Here" [selected]
+                - generic [ref=f8e161]:
+                  - generic [ref=f8e162]: Provider
+                  - combobox "Provider" [ref=f8e163]:
+                    - option "All providers" [selected]
+                    - option "Degbotse, Tsatsu"
+                - generic [ref=f8e164]:
+                  - generic [ref=f8e165]: Date
+                  - textbox "Date" [ref=f8e166]: 2026-07-16
+            - generic [ref=f8e168]:
+              - generic [ref=f8e170]:
+                - paragraph [ref=f8e171]: 1 appointment on 16/07/2026. Slot grid uses 15-minute intervals.
+                - tablist "Calendar layout" [ref=f8e172]:
+                  - tab "Agenda" [selected] [ref=f8e173] [cursor=pointer]
+                  - tab "Day grid" [ref=f8e174] [cursor=pointer]
+                  - tab "Week" [ref=f8e175] [cursor=pointer]
+                  - tab "Month" [ref=f8e176] [cursor=pointer]
+              - list [ref=f8e177]:
+                - listitem "10:00–10:15 Recurring Fixture7671, Office Visit, - None" [ref=f8e178] [cursor=pointer]:
+                  - generic [ref=f8e179]: 10:00–10:15
+                  - generic [ref=f8e180]:
+                    - generic [ref=f8e181]: Recurring Fixture7671
+                    - generic [ref=f8e182]: Office Visit · Degbotse, Tsatsu
+                  - generic [ref=f8e183]: "- None"

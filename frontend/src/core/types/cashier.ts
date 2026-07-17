@@ -239,6 +239,10 @@ export interface CashierDeskProps {
   canPartialPay?: boolean;
   /** CBILL-3 — insurance scheme-split feature flag */
   enableInsuranceScheme?: boolean;
+  /** CBILL-4b — payer-aware pricing + eligibility-check log feature flag */
+  enablePayerBilling?: boolean;
+  /** CP-2 — deposits/other-payments flag + permission (server-computed) */
+  canOtherPayments?: boolean;
   sharedDeviceWarning?: boolean;
   currencyFormat?: {
     currency_code?: string;

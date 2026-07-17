@@ -7,6 +7,10 @@
     var REFRESH_MS = 30000;
     var SIDEBAR_COLLAPSED_KEY = 'nc-sidebar-collapsed';
     var SIDEBAR_COLLAPSED_KEY_LEGACY = 'oe-nc-sidebar-collapsed';
+    // Console 26 (2026-07-16): light frosted rail is the default; the toggle
+    // stores an opt-in DARK preference. (The pre-retheme 'nc-sidebar-light'
+    // key is obsolete and deliberately ignored.)
+    var SIDEBAR_DARK_KEY = 'nc-sidebar-dark';
     // SCALE-3.2 — when the server rate-limits queue.counts (429 + retry_after_ms),
     // pause the badge poll until the budget window rolls over.
     var pollBackoffUntil = 0;
@@ -51,8 +55,10 @@
         var openBtn = document.getElementById('nc-sidebar-open');
         var closeBtn = document.getElementById('nc-sidebar-close');
         var collapseBtn = document.getElementById('nc-sidebar-collapse');
+        var themeToggleBtn = document.getElementById('nc-sidebar-theme-toggle');
 
         applyCollapsedState(root);
+        applySidebarTheme(root);
 
         function openMobile() {
             sidebar.classList.add('is-open');
@@ -119,6 +125,54 @@
                 closeMobile();
             }
         });
+
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', function () {
+                var dark = root.classList.toggle('nc-sidebar-dark');
+                setSidebarThemeToggleState(themeToggleBtn, dark);
+                try {
+                    window.localStorage.setItem(SIDEBAR_DARK_KEY, dark ? '1' : '0');
+                } catch (e) {
+                    /* ignore */
+                }
+            });
+        }
+    }
+
+    function setSidebarThemeToggleState(themeToggleBtn, dark) {
+        if (!themeToggleBtn) {
+            return;
+        }
+        themeToggleBtn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+        themeToggleBtn.setAttribute(
+            'aria-label',
+            dark ? 'Switch sidebar to light appearance' : 'Switch sidebar to dark appearance'
+        );
+        var icon = themeToggleBtn.querySelector('.nc-sidebar-theme-toggle-icon i');
+        if (icon) {
+            icon.className = dark ? 'fa fa-sun-o' : 'fa fa-moon-o';
+        }
+        var label = themeToggleBtn.querySelector('.nc-sidebar-expand-only');
+        if (label) {
+            label.textContent = dark ? 'Light sidebar' : 'Dark sidebar';
+        }
+    }
+
+    function applySidebarTheme(root) {
+        var themeToggleBtn = document.getElementById('nc-sidebar-theme-toggle');
+        var dark = false;
+
+        try {
+            dark = window.localStorage.getItem(SIDEBAR_DARK_KEY) === '1';
+        } catch (e) {
+            dark = false;
+        }
+
+        if (dark) {
+            root.classList.add('nc-sidebar-dark');
+        }
+
+        setSidebarThemeToggleState(themeToggleBtn, dark);
     }
 
     function applyCollapsedState(root) {

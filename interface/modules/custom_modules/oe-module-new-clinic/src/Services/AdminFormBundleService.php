@@ -15,6 +15,9 @@ use OpenEMR\Common\Database\QueryUtils;
 
 class AdminFormBundleService
 {
+    /** @var array<int, list<array<string, mixed>>> per-request cache of the (tiny, config-derived) spec list per facility */
+    private array $formSpecsCache = [];
+
     public function __construct(
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly ClinicalDocCatalogService $catalog = new ClinicalDocCatalogService(),
@@ -84,12 +87,16 @@ class AdminFormBundleService
      */
     private function formSpecs(int $facilityId): array
     {
+        if (isset($this->formSpecsCache[$facilityId])) {
+            return $this->formSpecsCache[$facilityId];
+        }
+
         $consult = strtolower(trim((string) ($this->config->get('consult_note_formdir', 'soap', $facilityId) ?? 'soap')));
         if ($consult === '') {
             $consult = 'soap';
         }
 
-        return [
+        return $this->formSpecsCache[$facilityId] = [
             [
                 'key' => 'consult_note',
                 'title' => 'Consult note',
@@ -273,12 +280,13 @@ class AdminFormBundleService
 
             $installed = $this->catalog->isFormInstalledAndActive($resolved);
             $esignOk = $installed && $this->isEsignReady($resolved);
+            $esignDetail = $this->esignDetail($resolved, $installed, $esignOk);
 
             return [
                 'installed' => $installed,
                 'esign_ok' => $esignOk,
-                'esign_detail' => $this->esignDetail($resolved, $installed, $esignOk),
-                'status_label' => $this->statusLabel($installed, $esignOk, $this->esignDetail($resolved, $installed, $esignOk)),
+                'esign_detail' => $esignDetail,
+                'status_label' => $this->statusLabel($installed, $esignOk, $esignDetail),
             ];
         }
 

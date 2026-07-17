@@ -74,7 +74,7 @@
 }
 
 .nc-reporthub-lens-title {
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
   font-weight: 600;
   color: var(--oe-nc-text, #111827);
 }
@@ -113,7 +113,7 @@
 
 .nc-reporthub-stat-value {
   display: block;
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
   font-size: 1.35rem;
   font-weight: 600;
   line-height: 1.2;
@@ -205,7 +205,7 @@
 }
 
 .nc-reporthub-card-title {
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
   font-weight: 600;
   color: var(--oe-nc-text, #111827);
 }
@@ -301,7 +301,7 @@
 }
 
 .nc-reporthub-embed-panel-title {
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
   font-weight: 600;
 }
 
@@ -364,7 +364,7 @@
 }
 
 .nc-reporthub-stock-embed-title {
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
   font-weight: 600;
 }
 
@@ -395,7 +395,7 @@
 }
 
 .nc-reporthub-empty-title {
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
   font-weight: 600;
   color: var(--oe-nc-text, #111827);
 }

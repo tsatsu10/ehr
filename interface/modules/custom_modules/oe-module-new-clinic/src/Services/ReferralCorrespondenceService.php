@@ -99,6 +99,7 @@ class ReferralCorrespondenceService
         $items = $this->fetchReferralItems($pid, $visitDate, $limit, $offset);
         $webroot = $GLOBALS['webroot'] ?? '';
         $canManage = AclMain::aclCheckCore('new_clinic', 'new_chart_depth_referral');
+        $nativeEditor = $this->isNativeEditorEnabled();
 
         // D-REF-8 — identity line for the print confirm (Patient · MRN).
         $patientRow = QueryUtils::querySingleRow(
@@ -114,14 +115,21 @@ class ReferralCorrespondenceService
             'pid' => $pid,
             'patient_label' => $patientLabel,
             'encounter_id' => $encounterId,
-            'items' => array_map(function (array $item) use ($webroot, $canManage): array {
+            'items' => array_map(function (array $item) use ($webroot, $canManage, $nativeEditor): array {
+                $transactionId = (int) ($item['transaction_id'] ?? 0);
+                // CP-1 — native editor flag ON: edit opens the drawer (no stock
+                // URL) and print uses the native parity page. Flag OFF: exactly
+                // the stock links as before (PRD §5.6).
                 $item['print_url'] = $canManage
-                    ? $webroot . '/interface/patient_file/transaction/print_referral.php?transid='
-                        . urlencode((string) ($item['transaction_id'] ?? 0))
+                    ? ($nativeEditor
+                        ? self::nativePrintUrl($webroot, $transactionId)
+                        : $webroot . '/interface/patient_file/transaction/print_referral.php?transid='
+                            . urlencode((string) $transactionId))
                     : null;
-                $item['edit_url'] = $canManage
+                $item['can_native_edit'] = $canManage && $nativeEditor;
+                $item['edit_url'] = ($canManage && !$nativeEditor)
                     ? $webroot . '/interface/patient_file/transaction/add_transaction.php?transid='
-                        . urlencode((string) ($item['transaction_id'] ?? 0))
+                        . urlencode((string) $transactionId)
                         . '&title=LBTref&inmode=edit'
                     : null;
 
@@ -136,6 +144,21 @@ class ReferralCorrespondenceService
                 ? $webroot . '/interface/patient_file/transaction/add_transaction.php?title=LBTref'
                 : null,
         ];
+    }
+
+    /** CP-1 — facility-scoped native referral editor/print flag. */
+    public function isNativeEditorEnabled(): bool
+    {
+        $facilityId = $this->visitScope->resolveDefaultFacilityId();
+
+        return $this->config->getInt('enable_native_referral_editor', 0, $facilityId) === 1;
+    }
+
+    private static function nativePrintUrl(string $webroot, int $transactionId): string
+    {
+        return $webroot
+            . '/interface/modules/custom_modules/oe-module-new-clinic/public/chart-depth/referral-print.php?transid='
+            . urlencode((string) $transactionId);
     }
 
     /**
@@ -227,9 +250,11 @@ class ReferralCorrespondenceService
         return [
             'transaction_id' => (int) $transactionId,
             'status' => 'draft',
-            'print_url' => $webroot
-                . '/interface/patient_file/transaction/print_referral.php?transid='
-                . urlencode((string) $transactionId),
+            'print_url' => $this->isNativeEditorEnabled()
+                ? self::nativePrintUrl($webroot, (int) $transactionId)
+                : $webroot
+                    . '/interface/patient_file/transaction/print_referral.php?transid='
+                    . urlencode((string) $transactionId),
         ];
     }
 
@@ -264,9 +289,11 @@ class ReferralCorrespondenceService
         return [
             'transaction_id' => $transactionId,
             'status' => $this->loadMeta($transactionId)['status'] ?? 'printed',
-            'print_url' => $webroot
-                . '/interface/patient_file/transaction/print_referral.php?transid='
-                . urlencode((string) $transactionId),
+            'print_url' => $this->isNativeEditorEnabled()
+                ? self::nativePrintUrl($webroot, $transactionId)
+                : $webroot
+                    . '/interface/patient_file/transaction/print_referral.php?transid='
+                    . urlencode((string) $transactionId),
         ];
     }
 
@@ -303,6 +330,262 @@ class ReferralCorrespondenceService
             'transaction_id' => $transactionId,
             'status' => $status,
         ];
+    }
+
+    /**
+     * CP-1 — editable LBTref working set for the native drawer. Mirrors the
+     * stock add_transaction.php field semantics (values live in lbt_data).
+     * Deliberately excludes refer_from / refer_external / refer_vitals /
+     * refer_related_code / billing_facility_id — rarely used here; the stock
+     * form remains reachable via the "Advanced (stock form)" escape.
+     *
+     * @var array<string, int> field_id => max length
+     */
+    private const EDITOR_FIELDS = [
+        'refer_date' => 10,
+        'refer_to' => 255,
+        'refer_diag' => 255,
+        'refer_risk_level' => 31,
+        'body' => 4000,
+        'reply_date' => 10,
+        'reply_init_diag' => 255,
+        'reply_final_diag' => 255,
+        'reply_findings' => 4000,
+        'reply_services' => 4000,
+        'reply_recommend' => 4000,
+    ];
+
+    /**
+     * CP-1 — native editor read model: current LBTref values + risk options.
+     *
+     * @return array<string, mixed>
+     */
+    public function getReferralEditor(int $transactionId): array
+    {
+        $this->assertReferralEnabled();
+        $this->assertCanManage();
+        if (!$this->isNativeEditorEnabled()) {
+            throw new \RuntimeException('Native referral editor is not enabled', 403);
+        }
+
+        $referral = $this->loadReferralTransaction($transactionId);
+        $pid = (int) $referral['pid'];
+        $this->facilityScope->assertPatientAccessible($pid);
+
+        $values = $this->loadEditorValues($transactionId);
+
+        $meta = QueryUtils::querySingleRow(
+            'SELECT status, destination_facility, destination_department
+             FROM new_referral_meta WHERE transaction_id = ? LIMIT 1',
+            [$transactionId]
+        );
+
+        return [
+            'transaction_id' => $transactionId,
+            'pid' => $pid,
+            'fields' => $values,
+            // Optimistic-concurrency token: the drawer sends this back on save so
+            // a stale edit can't silently overwrite someone else's change.
+            'fingerprint' => self::editorFingerprint($values),
+            'has_meta' => is_array($meta),
+            'status' => is_array($meta) ? (string) ($meta['status'] ?? 'draft') : null,
+            'risk_levels' => $this->riskLevelOptions(),
+        ];
+    }
+
+    /**
+     * Deterministic token over the editable field values (fixed EDITOR_FIELDS
+     * order). Public static so the concurrency contract is unit-testable.
+     *
+     * @param array<string, string> $values
+     */
+    public static function editorFingerprint(array $values): string
+    {
+        $ordered = [];
+        foreach (array_keys(self::EDITOR_FIELDS) as $fieldId) {
+            $ordered[$fieldId] = (string) ($values[$fieldId] ?? '');
+        }
+
+        return sha1((string) json_encode($ordered));
+    }
+
+    /**
+     * CP-1 — native editor save: upserts the whitelisted LBTref fields in
+     * lbt_data (REPLACE semantics, matching stock add_transaction.php) and
+     * keeps new_referral_meta's destination in step when refer_to changes.
+     *
+     * @param array<string, mixed> $body
+     * @return array<string, mixed>
+     */
+    public function updateReferral(int $transactionId, array $body, int $actorUserId): array
+    {
+        $this->assertReferralEnabled();
+        $this->assertCanManage();
+        if (!$this->isNativeEditorEnabled()) {
+            throw new \RuntimeException('Native referral editor is not enabled', 403);
+        }
+
+        $referral = $this->loadReferralTransaction($transactionId);
+        $pid = (int) $referral['pid'];
+        $this->facilityScope->assertPatientAccessible($pid);
+
+        $fields = is_array($body['fields'] ?? null) ? $body['fields'] : [];
+        $clean = self::validateEditorFields($fields, $this->riskLevelOptionIds());
+        if ($clean === []) {
+            throw new \InvalidArgumentException('Nothing to save');
+        }
+        if (array_key_exists('refer_to', $clean) && trim($clean['refer_to']) === '') {
+            throw new \InvalidArgumentException('Refer to is required');
+        }
+
+        // Optimistic concurrency: when the drawer sends the fingerprint it loaded,
+        // refuse with 409 if the referral changed underneath (same pattern as the
+        // pharmacy stock adjust). The drawer keeps the user's typing and lets them
+        // decide, so nothing is silently overwritten OR silently lost.
+        $expectedFingerprint = trim((string) ($body['expected_fingerprint'] ?? ''));
+        if ($expectedFingerprint !== '') {
+            $currentFingerprint = self::editorFingerprint($this->loadEditorValues($transactionId));
+            if (!hash_equals($currentFingerprint, $expectedFingerprint)) {
+                throw new \RuntimeException(
+                    'This referral was changed by someone else while you were editing.',
+                    409
+                );
+            }
+        }
+
+        // One transaction so a mid-loop failure can't leave a half-edited
+        // referral (fields + meta move together).
+        require_once dirname(__DIR__, 6) . '/library/sql.inc.php';
+        sqlBeginTrans();
+        $committed = false;
+        try {
+            foreach ($clean as $fieldId => $value) {
+                QueryUtils::sqlStatementThrowException(
+                    'REPLACE INTO lbt_data (form_id, field_id, field_value) VALUES (?, ?, ?)',
+                    [$transactionId, $fieldId, $value]
+                );
+            }
+
+            // Keep the wizard's meta destination readable in the hub list when the
+            // free-text refer_to is edited ("Facility — Department" convention).
+            if (array_key_exists('refer_to', $clean)) {
+                $parts = array_map('trim', explode('—', $clean['refer_to'], 2));
+                QueryUtils::sqlStatementThrowException(
+                    'UPDATE new_referral_meta
+                     SET destination_facility = ?, destination_department = ?
+                     WHERE transaction_id = ?',
+                    [
+                        $parts[0] !== '' ? mb_substr($parts[0], 0, 255) : null,
+                        isset($parts[1]) && $parts[1] !== '' ? mb_substr($parts[1], 0, 128) : null,
+                        $transactionId,
+                    ]
+                );
+            }
+
+            sqlCommitTrans(true);
+            $committed = true;
+        } catch (\Throwable $e) {
+            if (!$committed) {
+                sqlCommitTrans(false);
+            }
+            throw $e;
+        }
+
+        EventAuditLogger::getInstance()->newEvent(
+            'new_clinic',
+            'chart_depth',
+            $actorUserId,
+            1,
+            'chart_depth.referral_updated transaction_id=' . $transactionId
+            . ' pid=' . $pid
+            . ' fields=' . implode(',', array_keys($clean))
+        );
+
+        return [
+            'transaction_id' => $transactionId,
+            'saved_fields' => array_keys($clean),
+        ];
+    }
+
+    /**
+     * Pure validation for the editor save — visible for unit tests.
+     *
+     * @param array<string, mixed> $fields
+     * @param array<int, string> $validRiskIds
+     * @return array<string, string> whitelisted field_id => trimmed value
+     */
+    public static function validateEditorFields(array $fields, array $validRiskIds): array
+    {
+        $clean = [];
+        foreach (self::EDITOR_FIELDS as $fieldId => $maxLen) {
+            if (!array_key_exists($fieldId, $fields)) {
+                continue;
+            }
+            $value = trim((string) $fields[$fieldId]);
+            if (mb_strlen($value) > $maxLen) {
+                throw new \InvalidArgumentException('Value too long for ' . $fieldId);
+            }
+            if (in_array($fieldId, ['refer_date', 'reply_date'], true) && $value !== '') {
+                $parsed = \DateTime::createFromFormat('Y-m-d', $value);
+                if (!$parsed || $parsed->format('Y-m-d') !== $value) {
+                    throw new \InvalidArgumentException('Invalid date for ' . $fieldId);
+                }
+            }
+            if ($fieldId === 'refer_risk_level' && $value !== '' && !in_array($value, $validRiskIds, true)) {
+                throw new \InvalidArgumentException('Unknown risk level');
+            }
+            $clean[$fieldId] = $value;
+        }
+
+        return $clean;
+    }
+
+    /**
+     * Current editable field values from the lbt_data pivot (blank-filled).
+     *
+     * @return array<string, string>
+     */
+    private function loadEditorValues(int $transactionId): array
+    {
+        $values = array_fill_keys(array_keys(self::EDITOR_FIELDS), '');
+        $rows = QueryUtils::fetchRecords(
+            'SELECT field_id, field_value FROM lbt_data WHERE form_id = ?',
+            [$transactionId]
+        ) ?: [];
+        foreach ($rows as $row) {
+            $fieldId = (string) ($row['field_id'] ?? '');
+            if (array_key_exists($fieldId, self::EDITOR_FIELDS)) {
+                $values[$fieldId] = (string) ($row['field_value'] ?? '');
+            }
+        }
+
+        return $values;
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string}>
+     */
+    private function riskLevelOptions(): array
+    {
+        $rows = QueryUtils::fetchRecords(
+            "SELECT option_id, title FROM list_options
+             WHERE list_id = 'risklevel' AND activity = 1
+             ORDER BY seq, title",
+            []
+        ) ?: [];
+
+        return array_map(static fn (array $row): array => [
+            'value' => (string) ($row['option_id'] ?? ''),
+            'label' => (string) ($row['title'] ?? ''),
+        ], $rows);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function riskLevelOptionIds(): array
+    {
+        return array_map(static fn (array $opt): string => $opt['value'], $this->riskLevelOptions());
     }
 
     protected function assertCanManage(): void

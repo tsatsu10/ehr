@@ -5,6 +5,7 @@
 import type { DoctorConsultPayload, DoctorSupervisorMeta } from '@core/types';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Button } from '@components/ui/button';
+import { t } from '@core/i18n';
 import { DoctorPatientBanner, type DoctorSignMeta } from './DoctorPatientBanner';
 import { ConsultShortcuts, type ShortcutKind } from './ConsultShortcuts';
 import { SupervisorCombobox } from './SupervisorCombobox';
@@ -77,7 +78,7 @@ export function DoctorActivePane({
       <DoctorActiveShell>
         <div className="nc-doctor-active-shell__content">
           <div className={deskCalloutClass('error', 'm-0 text-sm')} role="alert">
-            Failed to load consult.
+            {t('Failed to load consult.')}
           </div>
         </div>
       </DoctorActiveShell>
@@ -92,10 +93,13 @@ export function DoctorActivePane({
     <DoctorActiveShell className="nc-doctor-active-shell--with-sticky-footer">
       <header className="nc-doctor-active-shell__hero">
         <h2 className="nc-doctor-active-shell__hero-title">
-          Active consult · #{visit.queue_number} {preview.identity.display_name}
+          {t('Active consult · #{queueNumber} {name}', {
+            queueNumber: visit.queue_number,
+            name: preview.identity.display_name,
+          })}
         </h2>
         <p className="nc-doctor-active-shell__hero-sub">
-          {visit.visit_type_label || 'Visit'}
+          {visit.visit_type_label || t('Visit')}
           {visit.chief_complaint ? ` — ${visit.chief_complaint}` : ''}
         </p>
       </header>
@@ -136,10 +140,10 @@ export function DoctorActivePane({
 
         {(payload.pharm_ops_enabled || payload.rx_print_enabled) && (
           <DoctorActiveSection
-            title={payload.pharm_ops_enabled ? 'Prescriptions (stock)' : 'Prescriptions'}
+            title={payload.pharm_ops_enabled ? t('Prescriptions (stock)') : t('Prescriptions')}
             description={
               payload.pharm_ops_enabled
-                ? 'Quantity on hand is read-only when Pharmacy Operations is enabled.'
+                ? t('Quantity on hand is read-only when Pharmacy Operations is enabled.')
                 : undefined
             }
           >
@@ -148,7 +152,7 @@ export function DoctorActivePane({
                 <div className="mb-2 flex justify-end">
                   <Button variant="outline" size="sm" asChild>
                     <a href={payload.rx_list_url} target="_blank" rel="noopener noreferrer">
-                      Open Rx list
+                      {payload.rx_list_url.includes('rx-history.php') ? t('Rx history') : t('Open Rx list')}
                     </a>
                   </Button>
                 </div>
@@ -172,17 +176,17 @@ export function DoctorActivePane({
           disabled={completeDisabled}
           title={
             completeDisabled && signMeta.require_esign_before_complete_consult && !signMeta.encounter_signed
-              ? 'Sign documentation in the encounter first'
+              ? t('Sign documentation in the encounter first')
               : undefined
           }
           onClick={onComplete}
         >
-          Complete consult
+          {t('Complete consult')}
         </Button>
         {visitBoardUrl && (
           <Button variant="outline" size="sm" asChild>
             <a href={visitBoardUrl} target="_top">
-              View on Visit Board
+              {t('View on Visit Board')}
             </a>
           </Button>
         )}

@@ -16,6 +16,7 @@ use OpenEMR\Modules\NewClinic\Controllers\AjaxController;
 use OpenEMR\Modules\NewClinic\Services\LabOpsOrderMetaService;
 use OpenEMR\Modules\NewClinic\Services\LabOpsResultService;
 use OpenEMR\Modules\NewClinic\Services\LabOpsSetupService;
+use OpenEMR\Modules\NewClinic\Services\LabOpsFollowUpService;
 use OpenEMR\Modules\NewClinic\Services\LabOpsWorklistService;
 use OpenEMR\Modules\NewClinic\Services\LabQcRuleService;
 use OpenEMR\Modules\NewClinic\Services\LabResultValidationService;
@@ -25,6 +26,7 @@ final class LabOpsActionHandler implements AjaxActionHandlerInterface
     /** @var array<int, string> */
     private const ACTIONS = [
         'lab_ops.worklist',
+        'lab_ops.followup',
         'lab_ops.result_get',
         'lab_ops.result_save',
         'lab_ops.result_release',
@@ -67,6 +69,14 @@ final class LabOpsActionHandler implements AjaxActionHandlerInterface
                     'urgent_first' => $body['urgent_first'] ?? true,
                 ], $userId);
                 $this->host->respond(true, 'ok', $worklist);
+                break;
+            case 'lab_ops.followup':
+                $params = $this->host->readRequestParams($method);
+                $followUp = $this->host->svc(LabOpsFollowUpService::class)->getFollowUp(
+                    (int) ($params['facility_id'] ?? 0),
+                    (int) ($params['window_days'] ?? 14)
+                );
+                $this->host->respond(true, 'ok', $followUp);
                 break;
             case 'lab_ops.result_get':
                 $orderId = (int) ($_REQUEST['procedure_order_id'] ?? 0);

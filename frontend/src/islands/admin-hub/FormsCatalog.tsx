@@ -119,8 +119,7 @@ export function FormsCatalog({ catalog, togglingId, onToggle }: FormsCatalogProp
                       <Button
                         type="button"
                         size="sm"
-                        variant={item.enabled ? 'default' : 'outline'}
-                        className={item.enabled ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : undefined}
+                        variant={item.enabled ? 'cta' : 'outline'}
                         disabled={!canToggle || togglingId === item.id}
                         title={
                           blockedOff

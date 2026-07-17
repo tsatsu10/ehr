@@ -87,7 +87,7 @@ export function ReportHubEmbedView({
             canClose={context.billOps.canClose}
             canOutstanding={context.billOps.canOutstanding}
             canInsurance={context.billOps.canInsurance}
-            canEdiHistory={context.billOps.canEdiHistory}
+            canPayerBilling={context.billOps.canPayerBilling}
             reopenOnCorrection={context.billOps.reopenOnCorrection}
             webroot={context.webroot}
             currencyFormat={context.currencyFormat}

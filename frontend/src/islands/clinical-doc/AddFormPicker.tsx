@@ -20,7 +20,14 @@ interface AddFormPickerProps {
   csrfToken: string;
   lens: ClinicalDocLens;
   onOpenError: (message: string) => void;
+  onOpenInstructions?: () => void;
+  onOpenVitals?: () => void;
+  onOpenScreening?: (instrument: string) => void;
+  onOpenCertificate?: () => void;
+  onOpenEyeExam?: () => void;
 }
+
+const NATIVE_SCREENING = ['phq9', 'gad7'];
 
 export function AddFormPicker({
   addableForms,
@@ -29,6 +36,11 @@ export function AddFormPicker({
   csrfToken,
   lens,
   onOpenError,
+  onOpenInstructions,
+  onOpenVitals,
+  onOpenScreening,
+  onOpenCertificate,
+  onOpenEyeExam,
 }: AddFormPickerProps) {
   const [open, setOpen] = useState(false);
 
@@ -73,6 +85,34 @@ export function AddFormPicker({
                       size="sm"
                       className="ml-2"
                       onClick={() => {
+                        // Native editors open their drawer directly (consistent
+                        // with the lens-pane cards), never the stock bridge.
+                        const fd = card.formdir.toLowerCase();
+                        if (onOpenInstructions && fd === 'clinical_instructions') {
+                          setOpen(false);
+                          onOpenInstructions();
+                          return;
+                        }
+                        if (onOpenVitals && fd === 'vitals') {
+                          setOpen(false);
+                          onOpenVitals();
+                          return;
+                        }
+                        if (onOpenScreening && NATIVE_SCREENING.includes(fd)) {
+                          setOpen(false);
+                          onOpenScreening(fd);
+                          return;
+                        }
+                        if (onOpenCertificate && fd === 'nc_certificate') {
+                          setOpen(false);
+                          onOpenCertificate();
+                          return;
+                        }
+                        if (onOpenEyeExam && fd === 'nc_eye_exam') {
+                          setOpen(false);
+                          onOpenEyeExam();
+                          return;
+                        }
                         void openClinicalDocForm(ajaxUrl, csrfToken, visitId, card, {
                           lens: card.source_lens ?? card.lens ?? lens,
                           returnTo: 'hub',

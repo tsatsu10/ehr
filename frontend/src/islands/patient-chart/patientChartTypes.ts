@@ -6,7 +6,8 @@ export type ChartTabId =
   | 'visits'
   | 'clinical'
   | 'documents'
-  | 'messages';
+  | 'messages'
+  | 'chat';
 
 export const CHART_TAB_IDS: ChartTabId[] = [
   'overview',
@@ -15,6 +16,7 @@ export const CHART_TAB_IDS: ChartTabId[] = [
   'clinical',
   'documents',
   'messages',
+  'chat',
 ];
 
 export interface PatientChartProps {
@@ -30,6 +32,8 @@ export interface PatientChartProps {
   registrationMode: string;
   enableInChartPatientSearch?: boolean;
   enableDocuments?: boolean;
+  /** Patient chart Chat tab (enable_patient_chat) — staff-facing thread, no delivery provider yet. */
+  enablePatientChat?: boolean;
   /** GAP-A A4 — chart/address/barcode label prints (enable_letters_labels). */
   enableLabels?: boolean;
   labelPrintUrl?: string;
@@ -43,6 +47,12 @@ export interface PatientChartProps {
   canFlagFollowUp?: boolean;
   /** B2 (G9) — enable the Clinical-tab Vitals Trends panel (enable_vitals_trends). */
   enableVitalsTrends?: boolean;
+  /**
+   * Whether the current user may edit the profile (front desk, nurse, admin).
+   * Everyone else sees a read-only Profile tab with no Edit button. Server-side,
+   * patients.update enforces the same set (AjaxActionPolicy::PROFILE_EDIT_ACL_ANY).
+   */
+  canEditProfile?: boolean;
 }
 
 export interface PatientDocument {
@@ -198,6 +208,41 @@ export interface ChecklistLevel {
 export interface RegistrationGetData {
   completion_by_level?: ChecklistLevel[];
   completion?: PatientCompletion;
+  // The demographic values are already returned by patients.registration.get (getFormData) —
+  // the Profile tab reads them for a read-only info panel (D-PROF-1).
+  pubpid?: string;
+  section_1?: {
+    fname?: string;
+    lname?: string;
+    mname?: string;
+    sex?: string;
+    phone?: string;
+    national_id?: string;
+    reach_contact_name?: string;
+    reach_contact_phone?: string;
+    reach_contact_relationship?: string;
+    DOB?: string;
+    age_years?: number | string | null;
+  };
+  section_2?: {
+    street?: string;
+    landmark?: string;
+    nationality?: string;
+    place_of_birth?: string;
+    phone_home?: string;
+    email?: string;
+    emergency_contact_name?: string;
+    emergency_contact_phone?: string;
+  };
+  section_3?: {
+    blood_group?: string;
+    religion?: string;
+    education_level?: string;
+    occupation?: string;
+  };
+  section_4?: {
+    insurance_label?: string;
+  };
 }
 
 export interface PaymentsStripData {
@@ -334,6 +379,66 @@ export interface ClinicalData {
   hidden_sections?: string[];
   /** D4 — edit problems/allergies/meds in a native drawer instead of the stock popup. */
   native_issue_editor?: boolean;
+  /** D-HIST-9 — edit Background in a native drawer instead of stock history_full.php. */
+  native_history_editor?: boolean;
+  /** D-HIST-10 — open the full native History editor instead of stock history_full.php. */
+  native_history_full_form?: boolean;
+  /** D-IMM-1 — Add/Edit immunizations in a native drawer instead of stock immunizations.php. */
+  native_immunization_editor?: boolean;
+}
+
+/** D-IMM-1 — one vaccine option for the immunization drawer dropdown. */
+export interface VaccineOption {
+  id: string;
+  label: string;
+}
+
+/** D-IMM-1 — an immunization record's editable fields. */
+export interface ImmunizationEditorData {
+  id: number;
+  vaccine_id: string;
+  administered_date: string;
+  lot_number: string;
+  note: string;
+  given_elsewhere: boolean;
+}
+
+/** D-HIST-9/10 — background fields for the native history editor drawer. The `sleep`,
+ *  `suicide`, `risk_factors` and `risk_other` fields are only shown in the full-form mode. */
+export interface HistoryEditorData {
+  text: {
+    family_mother: string;
+    family_father: string;
+    family_siblings: string;
+    tobacco: string;
+    alcohol: string;
+    recreational_drugs: string;
+    exercise: string;
+    herbal_medicine: string;
+    occupation: string;
+    past_medical_history: string;
+    last_hb: string;
+    sleep: string;
+  };
+  family_conditions: {
+    sickle_cell: boolean;
+    hypertension: boolean;
+    diabetes: boolean;
+    heart: boolean;
+    stroke: boolean;
+    tuberculosis: boolean;
+    cancer: boolean;
+    epilepsy: boolean;
+    mental_illness: boolean;
+    suicide: boolean;
+  };
+  dates: {
+    last_bp_date: string;
+    last_glucose_date: string;
+  };
+  risk_factors: string[];
+  risk_other: string;
+  stock_editor_url: string;
 }
 
 export interface ClinicalReferralsStrip {
@@ -399,6 +504,8 @@ export interface VitalsSeriesData {
 }
 
 export interface ChartMessageRow {
+  /** pnotes id — present on messages (not rule reminders); drives CP-5 detail. */
+  id?: number;
   title?: string;
   preview?: string;
   author?: string;
@@ -417,7 +524,23 @@ export interface ChartMessagesData {
   offset?: number;
   editor_urls?: {
     add_message?: string;
-    pnotes?: string;
+    pnotes?: string | null;
     dated_reminders?: string;
   };
+  /** CP-5 — flag ON: native detail modal + activity filter. */
+  native_notes?: boolean;
+  activity?: string;
+}
+
+export interface ChartChatMessage {
+  id: number;
+  /** 'out' = staff-authored (everything today); 'in' reserved for a future delivery provider. */
+  direction: 'out' | 'in';
+  body: string;
+  author?: string;
+  created_at: string;
+}
+
+export interface ChartChatData {
+  messages: ChartChatMessage[];
 }

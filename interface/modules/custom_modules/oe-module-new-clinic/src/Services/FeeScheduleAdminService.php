@@ -30,10 +30,27 @@ class FeeScheduleAdminService
         'other' => 'Other',
     ];
 
+    /** @var array<int, string> per-request cache of facility id → display name */
+    private array $facilityNameCache = [];
+
     public function __construct(
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
     ) {
+    }
+
+    /** Human label for a row's scope: the facility's own name, or "All facilities" for a global (0) row. */
+    private function scopeLabelFor(int $facilityId): string
+    {
+        if ($facilityId === 0) {
+            return 'All facilities';
+        }
+        if (!isset($this->facilityNameCache[$facilityId])) {
+            $row = QueryUtils::querySingleRow("SELECT name FROM facility WHERE id = ?", [$facilityId]);
+            $name = is_array($row) ? trim((string) ($row['name'] ?? '')) : '';
+            $this->facilityNameCache[$facilityId] = $name !== '' ? $name : ('Facility ' . $facilityId);
+        }
+        return $this->facilityNameCache[$facilityId];
     }
 
     /**
@@ -624,7 +641,7 @@ class FeeScheduleAdminService
                     'category_label' => self::CATEGORIES[$rowCategory] ?? ($rowCategory !== '' ? $rowCategory : '—'),
                     'old_price' => $old,
                     'new_price' => $new,
-                    'scope_label' => (int) ($row['facility_id'] ?? 0) === 0 ? 'All facilities' : 'This facility',
+                    'scope_label' => $this->scopeLabelFor((int) ($row['facility_id'] ?? 0)),
                 ];
             }
         }
@@ -767,7 +784,7 @@ class FeeScheduleAdminService
             'is_active' => (int) ($row['is_active'] ?? 0) === 1,
             'sort_order' => (int) ($row['sort_order'] ?? 0),
             'updated_at' => (string) ($row['updated_at'] ?? ''),
-            'scope_label' => (int) ($row['facility_id'] ?? 0) === 0 ? 'All facilities' : 'This facility',
+            'scope_label' => $this->scopeLabelFor((int) ($row['facility_id'] ?? 0)),
         ];
     }
 }

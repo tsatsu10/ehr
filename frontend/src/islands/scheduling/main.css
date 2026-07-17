@@ -1,19 +1,37 @@
 @import '../../core/tokens.css';
 
+/* The shared control's `py-2` class collides with core Bootstrap's
+   `.py-2 { padding: 0.5rem !important }` in style_light.css — that !important
+   freezes 8px of vertical padding, which clips the 16px value inside the 32px
+   box (the provider name looked squeezed between the borders). Tailwind never
+   loads in this island, so `text-sm`/`h-8` no-op and BS4 wins; the only way to
+   beat an !important utility is a higher-specificity !important of our own. */
 .nc-scheduling-filters input,
 .nc-scheduling-filters select {
-  min-height: calc(1.5em + 0.5rem + 2px);
+  min-height: 2.25rem;
+  height: 2.25rem;
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
+  font-size: 0.875rem;
+  line-height: 1.4;
 }
 
 .nc-scheduling-lens {
   min-height: 12rem;
 }
 
+/* Kanban: lanes are a single horizontal track that scrolls, so the workflow
+   reads left-to-right (Booked → Arrived → Roomed → With provider → Checked out).
+   auto-fill/1fr wrapped them into rows once there were >2 lanes, which broke the
+   reading order entirely. */
 .nc-flowboard-board {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(15rem, 1fr);
   gap: 1rem;
   align-items: start;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
 }
 
 .nc-flowboard-lane {
@@ -21,8 +39,10 @@
 }
 
 .nc-flowboard-lane-head {
-  border-bottom: 1px solid var(--oe-nc-border, #e2e8f0);
-  padding-bottom: 0.35rem;
+  border-bottom: none;
+  padding-bottom: 0.5rem;
+  font-weight: 700;
+  font-size: 0.8125rem;
 }
 
 .nc-flowboard-card--alert-warn {
@@ -45,11 +65,43 @@
   width: 100%;
 }
 
+/* Lane header toggle + reorder arrows — artifact lane-head anatomy: bold ink
+   label (not a blue link), quiet pill arrows (the toggle is a link-variant
+   Button and the arrows outline-variant; these non-layered rules outrank
+   their Tailwind utility classes). */
+.nc-flowboard-lane-toggle {
+  background: transparent;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.375rem;
+  color: var(--oe-nc-text, #1d1d1f);
+  text-decoration: none;
+}
+
+.nc-flowboard-lane-toggle:hover {
+  background: var(--oe-nc-bg-muted, #ececef);
+  color: var(--oe-nc-text, #1d1d1f);
+  text-decoration: none;
+}
+
+.nc-flowboard-lane-reorder button {
+  background: var(--oe-nc-bg-muted, #ececef);
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: none;
+  color: var(--oe-nc-text-muted, #6e6e73);
+}
+
+.nc-flowboard-lane-reorder button:hover {
+  background: var(--oe-nc-bg-muted, #ececef);
+  color: var(--oe-nc-text, #1d1d1f);
+}
+
 .nc-flowboard-lane[draggable="true"] {
   cursor: grab;
 }
 
-.nc-flowboard-lane-reorder .btn {
+.nc-flowboard-lane-reorder button {
   min-width: 2rem;
 }
 
@@ -84,94 +136,484 @@
 }
 
 .nc-flowboard-lane-cards--drag-over {
-  outline: 2px dashed var(--oe-nc-primary, #3b82f6);
+  outline: 2px dashed var(--oe-nc-primary, #0071e3);
   outline-offset: 2px;
-  border-radius: 0.25rem;
+  border-radius: 0.75rem;
 }
 
 .nc-calendar-day-event-wrap {
   position: relative;
 }
 
-.nc-calendar-day-resize-handle {
-  height: 0.35rem;
-  margin-top: 0.15rem;
-  border-radius: 0.125rem;
-  /* Calendar-specific accent blue — no shared --oe-nc-* token covers this narrow
-     drag/resize-affordance use, so it's a deliberate raw color, not an oversight. */
-  background: rgba(59, 130, 246, 0.35);
-  cursor: ns-resize;
+/* First-paint skeleton while the calendar loads. */
+.nc-calendar-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 0.5rem;
 }
 
+/* Placeholder for the "N appointments on …" line, so the toolbar row keeps its
+   height while the count is unknown. */
+.nc-calendar-skeleton-text {
+  display: inline-block;
+  width: 16rem;
+  max-width: 100%;
+  height: 0.9rem;
+  border-radius: 0.45rem;
+  background: var(--oe-nc-bg-muted, #ececef);
+}
+
+.nc-calendar-skeleton-row {
+  height: 2.75rem;
+  border-radius: 0.875rem;
+  background: linear-gradient(
+    90deg,
+    var(--oe-nc-bg-muted, #ececef) 25%,
+    color-mix(in srgb, var(--oe-nc-bg-muted, #ececef) 55%, white) 37%,
+    var(--oe-nc-bg-muted, #ececef) 63%
+  );
+  background-size: 400% 100%;
+  animation: nc-skeleton-shimmer 1.4s ease infinite;
+}
+
+@keyframes nc-skeleton-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nc-calendar-skeleton-row {
+    animation: none;
+  }
+}
+
+/* Double-booked slot — stack the appointments with a little breathing room
+   instead of hiding all but the first. */
+.nc-calendar-day-cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Resize grip — hidden at rest so cards read clean; a subtle neutral grip
+   surfaces on hover of the event. */
+.nc-calendar-day-resize-handle {
+  height: 5px;
+  margin: 2px auto 0;
+  width: 2rem;
+  border-radius: 3px;
+  background: transparent;
+  cursor: ns-resize;
+  transition: background 120ms ease;
+}
+
+.nc-calendar-day-event-wrap:hover .nc-calendar-day-resize-handle {
+  background: color-mix(in srgb, var(--oe-nc-text-muted, #6e6e73) 35%, transparent);
+}
+
+/* Month grid — borderless: crisp 1px grid lines come from a hairline ground
+   showing through 1px gaps between white day tiles (Apple month calendar). */
 .nc-calendar-month-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.35rem;
+  gap: 1px;
+  background: rgba(0, 0, 0, 0.07);
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.nc-calendar-month-dow {
+  background: var(--oe-nc-surface, #fff);
+  padding: 0.4rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--oe-nc-text-muted, #6e6e73);
 }
 
 .nc-calendar-month-cell {
-  min-height: 5.5rem;
-  border: 1px solid var(--oe-nc-border, #e2e8f0);
-  border-radius: 0.25rem;
-  padding: 0.25rem;
+  min-height: 5.75rem;
+  padding: 0.3rem 0.35rem;
+  background: var(--oe-nc-surface, #fff);
+  overflow: hidden;
 }
 
 .nc-calendar-month-cell--muted {
-  opacity: 0.55;
+  background: color-mix(in srgb, var(--oe-nc-bg, #f5f5f7) 60%, white);
 }
 
+.nc-calendar-month-cell--muted .nc-calendar-month-date {
+  color: var(--oe-nc-text-muted, #6e6e73);
+  opacity: 0.7;
+}
+
+.nc-calendar-month-date {
+  font-weight: 600;
+  color: var(--oe-nc-text, #1d1d1f);
+  margin-bottom: 0.15rem;
+}
+
+/* Month event — compact one-line pill, tinted by visit type (fill + accent bar
+   set inline) so a booking is highlighted like the day/week/agenda chips.
+   Clipped with an ellipsis so it never bleeds into the next day cell. */
 .nc-calendar-month-event {
-  display: block;
+  display: block !important;
   width: 100%;
-  font-size: 0.75rem;
-}
-
-.nc-calendar-agenda-row {
-  border: 1px solid var(--oe-nc-border, #e2e8f0);
+  margin-bottom: 2px;
+  padding: 0.1rem 0.35rem;
   border-radius: 0.375rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--oe-nc-text, #1d1d1f) !important;
+  text-align: left;
+  text-decoration: none !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: filter 120ms ease;
 }
 
-.nc-calendar-day-table {
+/* Works on any tint (unlike a fixed hover bg, which the inline fill would beat). */
+.nc-calendar-month-event:hover {
+  filter: brightness(0.95);
+}
+
+.nc-calendar-month-event--block {
+  font-style: italic;
+  border-left-style: dashed !important;
+}
+
+/* Agenda — premium cards: soft float, provider-colour left rail (inline),
+   generous rhythm; mono time gutter | name + meta | status pill. */
+.nc-calendar-agenda-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 0.875rem;
+  background: var(--oe-nc-surface, #fff);
+  padding: 0.8rem 1rem 0.8rem 1.1rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 150ms ease, transform 150ms ease;
+}
+
+.nc-calendar-agenda-row:hover {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nc-calendar-agenda-row,
+  .nc-calendar-agenda-row:hover {
+    transform: none;
+    transition: none;
+  }
+}
+
+.nc-calendar-agenda-time {
+  flex-shrink: 0;
+  min-width: 5.5rem;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--oe-nc-text-muted, #6e6e73);
+}
+
+.nc-calendar-agenda-main {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.nc-calendar-agenda-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--oe-nc-text, #1d1d1f);
+}
+
+.nc-calendar-agenda-meta {
+  font-size: 0.78125rem;
+  color: var(--oe-nc-text-muted, #6e6e73);
+}
+
+/* Week header — weekday label over the date number; today circled in accent.
+   th-qualified so it outranks the shared table-head alignment rule. */
+th.nc-calendar-dowhead {
+  text-align: center;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.nc-calendar-dow {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--oe-nc-text-muted, #6e6e73);
+}
+
+.nc-calendar-dom {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  margin-top: 0.125rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--oe-nc-text, #1d1d1f);
+}
+
+.nc-calendar-dom--today {
+  background: var(--oe-nc-primary, #0071e3);
+  color: #fff;
+  border-radius: 999px;
+}
+
+/* Month grid: same today marker as the week header's circled date */
+.nc-calendar-month-date--today {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  background: var(--oe-nc-primary, #0071e3);
+  color: #fff;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Premium calendar grids (Console 26) — Apple-style resource/time views.
+   The shared shadcn tables render borderless: instead of a spreadsheet of
+   ruled cells we draw faint horizontal HAIRLINES per slot (stronger on the
+   hour), a quiet right-aligned time gutter, and float appointments as soft
+   tinted cards. These non-layered rules outrank the shadcn utility borders.
+   ─────────────────────────────────────────────────────────────────────── */
+.nc-calendar-grid {
   table-layout: fixed;
+  position: relative;
+}
+
+.nc-calendar-grid td,
+.nc-calendar-grid th {
+  border: 0;
+}
+
+/* Slot hairlines — quarter-hour rows barely there, the hour a touch stronger. */
+.nc-calendar-grid tbody tr {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.045);
+}
+
+.nc-calendar-grid tbody tr.nc-calendar-row-hour {
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.nc-calendar-grid tbody tr.nc-calendar-row-hour:first-child {
+  border-top: 0;
+}
+
+/* Header row — clean, no bottom rule fighting the first hairline. */
+.nc-calendar-grid thead tr {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .nc-calendar-day-time-col {
-  width: 4.5rem;
+  width: 4rem;
   white-space: nowrap;
+}
+
+/* Hour label floated up to sit ON the hairline, right-aligned, muted micro-type. */
+.nc-calendar-time-label {
+  position: relative;
+  vertical-align: top;
+  padding: 0 0.6rem 0 0 !important;
+  text-align: right;
+}
+
+.nc-calendar-time-label span {
+  position: relative;
+  top: -0.55rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  color: var(--oe-nc-text-muted, #6e6e73);
 }
 
 .nc-calendar-day-cell {
   vertical-align: top;
-  min-height: 2.5rem;
+  min-height: 2.25rem;
+  padding: 0.15rem 0.25rem !important;
 }
 
+/* Appointment card — soft tinted fill + a bold provider-colour accent bar
+   (both set inline per chip); premium float on hover. Legible ink text on the
+   light tint whatever the provider colour. Overrides the Button `secondary`
+   variant the chip is built on. */
 .nc-calendar-day-event {
-  /* Same deliberate accent blue as .nc-calendar-day-resize-handle above. */
-  background: rgba(59, 130, 246, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.25);
-  border-radius: 0.25rem;
-  padding: 0.25rem 0.35rem;
+  background: color-mix(in srgb, var(--oe-nc-primary, #0071e3) 14%, white);
+  border: none;
+  border-left: 4px solid var(--oe-nc-primary, #0071e3);
+  border-radius: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  color: var(--oe-nc-text, #1d1d1f);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 150ms ease, transform 150ms ease;
 }
 
+.nc-calendar-day-event:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.nc-calendar-day-event strong {
+  color: var(--oe-nc-text, #1d1d1f);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Ink, not muted grey: the subtitle sits on a coloured tint, where muted grey
+   drops below WCAG AA (~4:1) on the darker chip colours. Hierarchy is carried
+   by the smaller size + the bold name above it. */
+.nc-calendar-day-event span {
+  color: var(--oe-nc-text, #1d1d1f);
+}
+
+/* Name + visit-type lines clip to one line each so a narrow week column chip
+   stays compact instead of growing to fit a long name/reason. */
+.nc-calendar-day-event-name,
+.nc-calendar-day-event-cat {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nc-calendar-day-event-cat {
+  font-size: 0.6875rem;
+}
+
+/* Clinic/group block (no patient) — reads as muted "other", dashed accent bar,
+   never draggable. */
+.nc-calendar-day-event--block {
+  background: color-mix(in srgb, var(--oe-nc-text-muted, #6e6e73) 10%, white) !important;
+  border-left-style: dashed !important;
+  font-style: italic;
+}
+
+.nc-calendar-agenda-row--block {
+  border-left-style: dashed;
+  background: var(--oe-nc-surface, #fff);
+}
+
+/* Empty bookable slot — the quiet "+" only surfaces on hover, so the grid
+   reads as clean whitespace at rest (UA button defaults reset; preflight is
+   skipped in this shell). */
 .nc-calendar-day-slot {
   line-height: 1;
-  min-height: 1.75rem;
+  min-height: 1.6rem;
+  background: transparent;
+  border: none;
+  border-radius: 0.5rem;
+  color: transparent;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.nc-calendar-day-cell:hover .nc-calendar-day-slot {
+  color: var(--oe-nc-text-muted, #6e6e73);
+  background: color-mix(in srgb, var(--oe-nc-primary, #0071e3) 6%, white);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nc-calendar-day-event,
+  .nc-calendar-day-event:hover {
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Signature: the live "now" line — a thin accent rule with a gutter dot at
+   the current time, only on today. The hallmark of a premium calendar. */
+.nc-calendar-now-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1.5px solid var(--oe-nc-primary, #0071e3);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.nc-calendar-now-line::before {
+  content: "";
+  position: absolute;
+  left: 3.4rem;
+  top: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--oe-nc-primary, #0071e3);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--oe-nc-primary, #0071e3) 22%, transparent);
+}
+
+/* Appointment peek — floating overlay so the details are always in view,
+   even when the clicked event sits deep in a tall month grid. Backdrop dims
+   the page and closes on click; the card is centered and self-contained. */
+.nc-calendar-peek-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1055;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  /* Faint scrim — enough to catch outside-clicks and lift the card, without
+     the heavy dimming of a true modal (this is a peek, often anchored to the
+     clicked event). */
+  background: rgba(0, 0, 0, 0.12);
 }
 
 .nc-calendar-peek {
-  border: 1px solid var(--oe-nc-border, #e2e8f0);
-  border-radius: 0.25rem;
-  padding: 0.75rem;
-  margin-top: 0.75rem;
+  width: 100%;
+  max-width: 24rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  border: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.08));
+  border-radius: 1.125rem;
+  padding: 1rem;
   background: var(--oe-nc-surface, #fff);
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(0, 0, 0, 0.14));
 }
 
 .nc-flowboard-card {
-  border: 1px solid var(--oe-nc-border, #e2e8f0);
-  border-radius: 0.25rem;
-  padding: 0.5rem;
-  margin-bottom: 0.5rem;
+  border: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.08));
+  border-radius: 1.125rem;
+  padding: 0.8125rem;
+  margin-bottom: 0.625rem;
   background: var(--oe-nc-surface, #fff);
+  box-shadow: var(--shadow-md, 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06));
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.nc-flowboard-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(0, 0, 0, 0.14));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nc-flowboard-card,
+  .nc-flowboard-card:hover {
+    transform: none;
+    transition: none;
+  }
 }
 
 .nc-recalls .nc-segmented-control {
@@ -181,4 +623,253 @@
 
 #nc-recalls-search {
   min-width: 12rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Book appointment sheet (Console 26) — sectioned form: patient hero card,
+   visit-type colour chips, a grouped "When" block, notes. Layout is real CSS
+   (not Tailwind utilities) so it renders regardless of the island's cascade.
+   ─────────────────────────────────────────────────────────────────────── */
+.nc-book-hint {
+  margin: 0 0 1.25rem;
+  font-size: 0.8125rem;
+  color: var(--oe-nc-text-muted, #6e6e73);
+}
+
+.nc-book-section {
+  margin-bottom: 1.25rem;
+}
+
+.nc-book-section--last {
+  margin-bottom: 0;
+}
+
+.nc-book-section-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--oe-nc-text-muted, #6e6e73);
+}
+
+/* Consistent control height inside the sheet, independent of Tailwind. */
+.nc-book-section select,
+.nc-book-when input,
+.nc-book-repeat-until input {
+  min-height: 2.5rem;
+  height: 2.5rem;
+}
+
+.nc-book-repeat-until {
+  margin-top: 0.75rem;
+}
+
+/* Selected-patient hero card */
+.nc-book-patient-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.08));
+  border-radius: 0.875rem;
+  background: var(--oe-nc-surface, #fff);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.nc-book-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--oe-nc-primary, #0071e3);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.nc-book-patient-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--oe-nc-text, #1d1d1f);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nc-book-change {
+  flex-shrink: 0;
+  border: 0;
+  padding: 0.25rem 0.4rem;
+  background: transparent;
+  color: var(--oe-nc-primary, #0071e3);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 0.5rem;
+}
+
+.nc-book-change:hover {
+  background: color-mix(in srgb, var(--oe-nc-primary, #0071e3) 8%, transparent);
+}
+
+/* Visit type — dropdown (scales to many types) with a colour swatch showing
+   the selected type's calendar colour. */
+.nc-book-vt-select {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.nc-book-vt-select select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.nc-book-vt-swatch {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+/* "When" — time + duration side by side, then free-time chips below */
+.nc-book-when {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.nc-book-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.nc-book-field label {
+  margin-bottom: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--oe-nc-text, #1d1d1f);
+}
+
+.nc-book-slots {
+  margin-top: 0.85rem;
+}
+
+/* —— booking sheet: "Next free times" slot chips —— */
+.nc-slot-chips-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--oe-nc-text-muted, #6e6e73);
+}
+
+.nc-slot-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.nc-slot-chip {
+  min-height: 2rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.08));
+  border-radius: 999px;
+  background: var(--oe-nc-surface, #fff);
+  color: var(--oe-nc-text, #1d1d1f);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background var(--oe-nc-transition, 150ms ease), border-color var(--oe-nc-transition, 150ms ease);
+}
+
+.nc-slot-chip:hover {
+  background: var(--oe-nc-primary-tint, #e8f1fc);
+  border-color: var(--oe-nc-primary, #0071e3);
+}
+
+.nc-slot-chip:focus-visible {
+  outline: none;
+  box-shadow: var(--oe-nc-focus-ring, 0 0 0 3px rgba(0, 113, 227, 0.35));
+}
+
+.nc-slot-chip.is-selected {
+  background: var(--oe-nc-primary, #0071e3);
+  border-color: var(--oe-nc-primary, #0071e3);
+  color: #fff;
+}
+
+.nc-slot-chip--skeleton {
+  width: 3.4rem;
+  background: var(--oe-nc-bg-muted, #ececef);
+  border-color: transparent;
+  cursor: default;
+}
+
+.nc-slot-chips-note {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--oe-nc-text-muted, #6e6e73);
+}
+
+.nc-slot-chips-retry {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--oe-nc-primary, #0071e3);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* —— provider wayfinding (multi-provider day/week/agenda) —— */
+.nc-provider-dot {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-right: 0.35rem;
+  border-radius: 50%;
+  vertical-align: baseline;
+  flex-shrink: 0;
+}
+
+.nc-provider-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin-top: 0.4rem;
+  font-size: 0.8125rem;
+  color: var(--oe-nc-text, #1d1d1f);
+}
+
+.nc-provider-legend-item {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* Keyboard shortcut hint — desktop only */
+.nc-shortcut-hint {
+  margin-left: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--oe-nc-text-muted, #6e6e73);
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .nc-shortcut-hint {
+    display: none;
+  }
 }

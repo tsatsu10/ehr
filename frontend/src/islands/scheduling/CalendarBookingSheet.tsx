@@ -8,8 +8,20 @@ import { NativeSelect } from '@components/ui/native-select';
 import { Textarea } from '@components/ui/textarea';
 import type { CalendarBookingDraft, CalendarDayPayload, SchedulingFilters, SchedulingLabels } from './schedulingTypes';
 import { ALL_PROVIDERS_ID } from './schedulingTypes';
-import { bookCalendarAppointment } from './schedulingApi';
+import { bookCalendarAppointment, fetchFreeSlots } from './schedulingApi';
 import { resolveSchedulingLabels } from './schedulingLabels';
+import { visitTypeColor } from './schedulingCalendarUtils';
+
+/** Initials for the selected-patient avatar, from a "Surname, First" display name. */
+function patientInitials(name: string): string {
+  const parts = name.replace(',', ' ').split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    return '?';
+  }
+  const first = parts[0][0] ?? '';
+  const last = parts.length > 1 ? (parts[parts.length - 1][0] ?? '') : '';
+  return (first + last).toUpperCase();
+}
 
 interface CalendarBookingSheetProps {
   open: boolean;
@@ -40,16 +52,23 @@ export function CalendarBookingSheet({
   const [pid, setPid] = useState(0);
   const [patientLabel, setPatientLabel] = useState('');
   const [providerId, setProviderId] = useState(0);
-  const [categoryId, setCategoryId] = useState(0);
+  const [visitTypeId, setVisitTypeId] = useState(0);
   const [time, setTime] = useState('09:00');
   const [durationMinutes, setDurationMinutes] = useState(15);
   const [comments, setComments] = useState('');
+  const [repeat, setRepeat] = useState('none');
+  const [repeatUntil, setRepeatUntil] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [slots, setSlots] = useState<string[] | null>(null);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [slotsError, setSlotsError] = useState(false);
+  const [slotsRetryToken, setSlotsRetryToken] = useState(0);
 
   const interval = payload?.interval_minutes ?? 15;
   const providers = useMemo(() => payload?.providers ?? [], [payload?.providers]);
-  const categories = useMemo(() => payload?.categories ?? [], [payload?.categories]);
+  // Wire key is "categories" for historical reasons; the options are visit types.
+  const visitTypes = useMemo(() => payload?.categories ?? [], [payload?.categories]);
 
   useEffect(() => {
     if (!open) {
@@ -59,21 +78,66 @@ export function CalendarBookingSheet({
     setPid(draft?.pid ?? 0);
     setPatientLabel(draft?.patientLabel ?? '');
     setProviderId(
+      // "|| " not "??": callers (CalendarLens) pass providerId: 0 as their own
+      // "undecided, you pick" sentinel when the "All providers" filter is
+      // active — 0 is falsy but not nullish, so ?? would leave it stuck at 0
+      // and silently block Save (the field would visually show the sole/first
+      // provider selected while the real state stayed unset).
       draft?.providerId
-      ?? (filters.providerId > ALL_PROVIDERS_ID ? filters.providerId : (providers[0]?.id ?? 0)),
+      || (filters.providerId > ALL_PROVIDERS_ID ? filters.providerId : (providers[0]?.id ?? 0)),
     );
-    setCategoryId(draft?.categoryId ?? categories[0]?.id ?? 0);
+    setVisitTypeId(draft?.visitTypeId ?? ((payload?.default_visit_type_id || visitTypes[0]?.id) ?? 0));
     setTime(draft?.time ?? '09:00');
     setDurationMinutes(draft?.durationMinutes ?? interval);
     setComments(draft?.comments ?? '');
-  }, [open, draft, filters.providerId, providers, categories, interval]);
+    setRepeat('none');
+    setRepeatUntil('');
+  }, [open, draft, filters.providerId, providers, visitTypes, interval, payload?.default_visit_type_id]);
 
-  const canSave = pid > 0 && providerId > 0 && categoryId > 0 && time !== '';
+  // A repeating appointment needs an end date; otherwise no extra requirement.
+  const repeatValid = repeat === 'none' || repeatUntil !== '';
+  const canSave = pid > 0 && providerId > 0 && visitTypeId > 0 && time !== '' && repeatValid;
   const draftRecallId = draft?.recallId;
+
+  // "Next free times" chips — suggestions only; save still runs the server
+  // conflict check, so a stale chip fails safely. Debounced so stepping the
+  // duration spinner doesn't fire a request per tick.
+  useEffect(() => {
+    if (!open || providerId <= 0) {
+      setSlots(null);
+      return undefined;
+    }
+    let cancelled = false;
+    setSlotsLoading(true);
+    setSlotsError(false);
+    const timer = window.setTimeout(() => {
+      fetchFreeSlots(ajaxUrl, csrfToken, {
+        facility_id: filters.facilityId,
+        provider_id: providerId,
+        date: filters.date,
+        duration_minutes: durationMinutes,
+      }).then((result) => {
+        if (!cancelled) {
+          setSlots(result.slots ?? []);
+          setSlotsLoading(false);
+        }
+      }).catch(() => {
+        if (!cancelled) {
+          setSlots(null);
+          setSlotsError(true);
+          setSlotsLoading(false);
+        }
+      });
+    }, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [open, ajaxUrl, csrfToken, filters.facilityId, filters.date, providerId, durationMinutes, slotsRetryToken]);
 
   const handleSave = useCallback(async () => {
     if (!canSave) {
-      setError(labels.bookingValidation);
+      setError(repeat !== 'none' && repeatUntil === '' ? labels.repeatUntilRequired : labels.bookingValidation);
       return;
     }
     setSaving(true);
@@ -82,12 +146,14 @@ export function CalendarBookingSheet({
       const day = await bookCalendarAppointment(ajaxUrl, csrfToken, filters, {
         pid,
         provider_id: providerId,
-        pc_catid: categoryId,
+        visit_type_id: visitTypeId,
         date: filters.date,
         time,
         duration_minutes: durationMinutes,
         comments,
         recall_id: recallId > 0 ? recallId : draftRecallId,
+        repeat: repeat !== 'none' ? repeat : undefined,
+        repeat_until: repeat !== 'none' ? repeatUntil : undefined,
       });
       onBooked(day);
       onClose();
@@ -99,19 +165,22 @@ export function CalendarBookingSheet({
   }, [
     ajaxUrl,
     canSave,
-    categoryId,
+    visitTypeId,
     comments,
     csrfToken,
     durationMinutes,
     filters,
     labels.bookingValidation,
     labels.errorBookingFailed,
+    labels.repeatUntilRequired,
     onBooked,
     onClose,
     pid,
     providerId,
     recallId,
     draftRecallId,
+    repeat,
+    repeatUntil,
     time,
   ]);
 
@@ -140,31 +209,67 @@ export function CalendarBookingSheet({
         </div>
       )}
     >
-      <p className="text-[var(--oe-nc-text-muted)] text-sm">{labels.bookingHint}</p>
-      <PatientSearchDropdown
-        ajaxUrl={ajaxUrl}
-        csrfToken={csrfToken}
-        inputId="nc-scheduling-book-patient"
-        resultsId="nc-scheduling-book-patient-results"
-        label={labels.patient}
-        onSelectPatient={(selectedPid, row) => {
-          setPid(selectedPid);
-          setPatientLabel(row?.display_name ?? `PID ${selectedPid}`);
-        }}
-      />
-      {patientLabel && (
-        <p className="text-sm text-[var(--oe-nc-text-muted)] mb-3">
-          {labels.selectedPatient}
-          :
-          {' '}
-          <strong>{patientLabel}</strong>
-        </p>
-      )}
-      <div className="nc-form-group">
-        <label htmlFor="nc-scheduling-book-provider">{labels.provider}</label>
+      <p className="nc-book-hint">{labels.bookingHint}</p>
+
+      {/* Patient — the hero: a search until one is chosen, then a compact card. */}
+      <div className="nc-book-section">
+        {pid > 0 ? (
+          <>
+            <span className="nc-book-section-label">{labels.patient}</span>
+            <div className="nc-book-patient-card">
+              <span className="nc-book-avatar" aria-hidden="true">{patientInitials(patientLabel)}</span>
+              <span className="nc-book-patient-name">{patientLabel || `PID ${pid}`}</span>
+              <button
+                type="button"
+                className="nc-book-change"
+                onClick={() => { setPid(0); setPatientLabel(''); }}
+              >
+                {labels.changePatient}
+              </button>
+            </div>
+          </>
+        ) : (
+          <PatientSearchDropdown
+            ajaxUrl={ajaxUrl}
+            csrfToken={csrfToken}
+            inputId="nc-scheduling-book-patient"
+            resultsId="nc-scheduling-book-patient-results"
+            label={labels.patient}
+            onSelectPatient={(selectedPid, row) => {
+              setPid(selectedPid);
+              setPatientLabel(row?.display_name ?? `PID ${selectedPid}`);
+            }}
+          />
+        )}
+      </div>
+
+      {/* Visit type — a dropdown (scales to many types) with a colour swatch
+          showing the selected type's calendar colour. */}
+      <div className="nc-book-section">
+        <label className="nc-book-section-label" htmlFor="nc-scheduling-book-visit-type">{labels.visitType}</label>
+        <div className="nc-book-vt-select">
+          <span
+            className="nc-book-vt-swatch"
+            style={{ background: visitTypeColor(visitTypeId, payload?.visit_type_colors) }}
+            aria-hidden="true"
+          />
+          <NativeSelect
+            id="nc-scheduling-book-visit-type"
+            value={visitTypeId}
+            onChange={(e) => setVisitTypeId(Number.parseInt(e.target.value, 10))}
+          >
+            {visitTypes.map((visitType) => (
+              <option key={visitType.id} value={visitType.id}>{visitType.label}</option>
+            ))}
+          </NativeSelect>
+        </div>
+      </div>
+
+      {/* Provider */}
+      <div className="nc-book-section">
+        <label className="nc-book-section-label" htmlFor="nc-scheduling-book-provider">{labels.provider}</label>
         <NativeSelect
           id="nc-scheduling-book-provider"
-          className="h-8"
           value={providerId}
           onChange={(e) => setProviderId(Number.parseInt(e.target.value, 10))}
         >
@@ -173,45 +278,103 @@ export function CalendarBookingSheet({
           ))}
         </NativeSelect>
       </div>
-      <div className="nc-form-group">
-        <label htmlFor="nc-scheduling-book-category">{labels.category}</label>
+
+      {/* When — time + duration, then the next-free-time chips. */}
+      <div className="nc-book-section">
+        <span className="nc-book-section-label">{labels.whenLabel}</span>
+        <div className="nc-book-when">
+          <div className="nc-book-field">
+            <label htmlFor="nc-scheduling-book-time">{labels.time}</label>
+            <Input
+              id="nc-scheduling-book-time"
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value.slice(0, 5))}
+            />
+          </div>
+          <div className="nc-book-field">
+            <label htmlFor="nc-scheduling-book-duration">{labels.durationMin}</label>
+            <Input
+              id="nc-scheduling-book-duration"
+              type="number"
+              min={interval}
+              step={interval}
+              value={durationMinutes}
+              onChange={(e) => setDurationMinutes(Number.parseInt(e.target.value, 10) || interval)}
+            />
+          </div>
+        </div>
+        <div className="nc-book-slots" aria-live="polite">
+          <span className="nc-slot-chips-label">{labels.nextFreeTimes}</span>
+          {slotsLoading && (
+            <div className="nc-slot-chips" aria-hidden="true">
+              {[0, 1, 2, 3, 4].map((i) => <span key={i} className="nc-slot-chip nc-slot-chip--skeleton" />)}
+            </div>
+          )}
+          {!slotsLoading && slotsError && (
+            <p className="nc-slot-chips-note">
+              {labels.freeSlotsError}
+              {' '}
+              <button
+                type="button"
+                className="nc-slot-chips-retry"
+                onClick={() => setSlotsRetryToken((value) => value + 1)}
+              >
+                {labels.retry}
+              </button>
+            </p>
+          )}
+          {!slotsLoading && !slotsError && slots !== null && slots.length === 0 && (
+            <p className="nc-slot-chips-note">{labels.noFreeSlots}</p>
+          )}
+          {!slotsLoading && !slotsError && slots !== null && slots.length > 0 && (
+            <div className="nc-slot-chips">
+              {slots.map((slot) => (
+                <button
+                  key={slot}
+                  type="button"
+                  className={`nc-slot-chip${time === slot ? ' is-selected' : ''}`}
+                  aria-pressed={time === slot}
+                  onClick={() => setTime(slot)}
+                >
+                  {slot}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Repeats — one recurring series (weekly/every 2 weeks/monthly) until a date. */}
+      <div className="nc-book-section">
+        <label className="nc-book-section-label" htmlFor="nc-scheduling-book-repeat">{labels.repeatLabel}</label>
         <NativeSelect
-          id="nc-scheduling-book-category"
-          className="h-8"
-          value={categoryId}
-          onChange={(e) => setCategoryId(Number.parseInt(e.target.value, 10))}
+          id="nc-scheduling-book-repeat"
+          value={repeat}
+          onChange={(e) => setRepeat(e.target.value)}
         >
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>{category.label}</option>
-          ))}
+          <option value="none">{labels.repeatNone}</option>
+          <option value="weekly">{labels.repeatWeekly}</option>
+          <option value="biweekly">{labels.repeatBiweekly}</option>
+          <option value="monthly">{labels.repeatMonthly}</option>
         </NativeSelect>
+        {repeat !== 'none' && (
+          <div className="nc-book-field nc-book-repeat-until">
+            <label htmlFor="nc-scheduling-book-repeat-until">{labels.repeatUntilLabel}</label>
+            <Input
+              id="nc-scheduling-book-repeat-until"
+              type="date"
+              value={repeatUntil}
+              min={filters.date}
+              onChange={(e) => setRepeatUntil(e.target.value)}
+            />
+          </div>
+        )}
       </div>
-      <div className="grid grid-cols-12 gap-3">
-        <div className="nc-form-group col-span-6">
-          <label htmlFor="nc-scheduling-book-time">{labels.time}</label>
-          <Input
-            id="nc-scheduling-book-time"
-            type="time"
-            className="h-8"
-            value={time}
-            onChange={(e) => setTime(e.target.value.slice(0, 5))}
-          />
-        </div>
-        <div className="nc-form-group col-span-6">
-          <label htmlFor="nc-scheduling-book-duration">{labels.durationMin}</label>
-          <Input
-            id="nc-scheduling-book-duration"
-            type="number"
-            min={interval}
-            step={interval}
-            className="h-8"
-            value={durationMinutes}
-            onChange={(e) => setDurationMinutes(Number.parseInt(e.target.value, 10) || interval)}
-          />
-        </div>
-      </div>
-      <div className="nc-form-group mb-0">
-        <label htmlFor="nc-scheduling-book-comments">{labels.comments}</label>
+
+      {/* Notes */}
+      <div className="nc-book-section nc-book-section--last">
+        <label className="nc-book-section-label" htmlFor="nc-scheduling-book-comments">{labels.comments}</label>
         <Textarea
           id="nc-scheduling-book-comments"
           className="min-h-[4.5rem]"

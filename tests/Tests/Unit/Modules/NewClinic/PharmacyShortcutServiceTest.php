@@ -63,6 +63,29 @@ class PharmacyShortcutServiceTest extends TestCase
         $this->makeService()->preflight(5, 'dispense', 7);
     }
 
+    /**
+     * Regression guard (2026-07-14, live-reported): the 'dispense' shortcut
+     * used to redirect to the generic encounter shell (encounter_top.php),
+     * which has no prescription/dispense content at all -- a dead end. Stock
+     * OpenEMR has no dedicated dispense route; dispensing an existing Rx is a
+     * modal action reachable only from that Rx's edit screen, itself reached
+     * from the patient's prescription list -- so that's the correct landing
+     * page.
+     */
+    public function testDispenseShortcutRoutesToStockPrescriptionListNotEncounterShell(): void
+    {
+        $this->queue->method('getVisitForActor')->willReturn([
+            'id' => 5, 'state' => 'in_pharmacy', 'pid' => 10, 'facility_id' => 3,
+            'assigned_provider_id' => 0,
+        ]);
+
+        $result = $this->makeService()->preflight(5, 'dispense', 7);
+
+        $this->assertSame('dispense', $result['shortcut']);
+        $this->assertStringContainsString('controller.php?prescription&list&id=10', $result['redirect_url']);
+        $this->assertStringNotContainsString('encounter_top.php', $result['redirect_url']);
+    }
+
     public function testRxEditShortcutFallsBackToStockBridgeWhenNativeFormDisabled(): void
     {
         $this->queue->method('getVisitForActor')->willReturn([

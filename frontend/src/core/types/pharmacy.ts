@@ -76,11 +76,13 @@ export interface PharmacyPrescriptionLine {
   sig: string;
   quantity: string;
   refills?: number;
-  status: 'dispensed' | 'to_dispense';
+  status: 'dispensed' | 'to_dispense' | 'partial';
   start_date?: string | null;
   end_date?: string | null;
   stock_status?: 'in_stock' | 'low' | 'out_of_stock' | 'unknown' | string;
   qoh_display?: string;
+  /** Units already sold against this prescription; present only when status is 'partial'. */
+  qty_dispensed?: number;
 }
 
 /** Response from pharmacy.queue */

@@ -1,44 +1,47 @@
 /**
- * New Clinic design tokens — "Clinical Console" identity (2026-07-08)
+ * New Clinic design tokens — "Console 26" identity (2026-07-16)
  * ============================================================
- * Deep clinical navy + department wayfinding colors, squared corners,
- * hairline borders, minimal shadows. An instrument, not an app.
+ * Light grey ground, white floating cards with soft layered shadows,
+ * system-blue accent, continuous rounded curves, system font stack
+ * (SF Pro on Apple hardware, Segoe UI on Windows). Rethemed from the
+ * squared "Clinical Console" identity to match the Console 26 concept
+ * mock (artifact 90c44362).
  *
  * MUST stay in sync with frontend/src/core/tokens.css (React islands).
  */
 :root {
     /* Core palette */
-    --oe-nc-primary: #1b3a5f;         /* Clinical navy — 10.9:1 on white */
-    --oe-nc-primary-hover: #142c49;
-    --oe-nc-primary-tint: #e8eef5;    /* Navy 8% surface tint */
-    --oe-nc-secondary: #46647f;       /* Steel slate */
-    --oe-nc-cta: #047857;             /* Medical green */
-    --oe-nc-bg: #f4f6f8;              /* Slate paper */
-    --oe-nc-bg-tint: #eef1f4;
-    --oe-nc-bg-muted: #e2e8ed;
-    --oe-nc-text: #1c2733;            /* Ink navy */
-    --oe-nc-text-muted: #5b6b7b;
-    --oe-nc-border: #d3dce3;          /* Hairline */
-    --oe-nc-border-strong: #9fb0be;
+    --oe-nc-primary: #0071e3;         /* System blue accent */
+    --oe-nc-primary-hover: #0060c0;
+    --oe-nc-primary-tint: #e8f1fc;    /* Blue surface tint */
+    --oe-nc-secondary: #6e6e73;       /* Neutral grey ink-2 */
+    --oe-nc-cta: #2bb350;             /* System green */
+    --oe-nc-bg: #f5f5f7;              /* Light grey ground */
+    --oe-nc-bg-tint: #f5f5f7;         /* Page ground (hover step on white) */
+    --oe-nc-bg-muted: #ececef;        /* Segmented/chip ground */
+    --oe-nc-text: #1d1d1f;            /* Near-black ink */
+    --oe-nc-text-muted: #6e6e73;
+    --oe-nc-border: rgba(0, 0, 0, 0.08);   /* Hairline */
+    --oe-nc-border-strong: rgba(0, 0, 0, 0.16);
     --oe-nc-surface: #ffffff;
-    --oe-nc-danger: #b42318;
-    --oe-nc-warning: #b54708;
+    --oe-nc-danger: #e0362c;          /* Text-safe shift of pill red #ff453a */
+    --oe-nc-warning: #c77700;         /* Text-safe shift of pill amber #ff9f0a */
 
-    /* Shape — squared, instrument-like */
-    --oe-nc-radius: 0.25rem;          /* 4px default */
-    --oe-nc-radius-sm: 0.125rem;      /* 2px chips/badges */
-    --oe-nc-radius-lg: 0.375rem;      /* 6px modals */
+    /* Shape — soft continuous curves */
+    --oe-nc-radius: 0.75rem;          /* 12px buttons/inputs */
+    --oe-nc-radius-sm: 0.5rem;        /* 8px chips/badges */
+    --oe-nc-radius-lg: 1.125rem;      /* 18px inner cards/modals */
     --oe-nc-transition: 150ms ease;
-    --oe-nc-focus-ring: 0 0 0 3px rgba(27, 58, 95, 0.28);
+    --oe-nc-focus-ring: 0 0 0 3px rgba(0, 113, 227, 0.35);
 
     /* Department (role) wayfinding colors — single source of truth */
-    --oe-nc-role-reception: #1d4ed8;
-    --oe-nc-role-nurse: #0e7490;
-    --oe-nc-role-doctor: #047857;
-    --oe-nc-role-lab: #b45309;
-    --oe-nc-role-pharmacy: #6d28d9;
-    --oe-nc-role-cashier: #c2410c;
-    --oe-nc-role-admin: #475569;
+    --oe-nc-role-reception: #0a84ff;
+    --oe-nc-role-nurse: #2fb8cf;
+    --oe-nc-role-doctor: #2bb350;
+    --oe-nc-role-lab: #ff9f0a;
+    --oe-nc-role-pharmacy: #bf5af2;
+    --oe-nc-role-cashier: #ff6a00;
+    --oe-nc-role-admin: #8e8e93;
 
     /* Layout */
     --oe-nc-content-gutter: 1.25rem;
@@ -49,21 +52,40 @@
     --oe-nc-sidebar-z: 1040;
     --oe-nc-sidebar-backdrop-z: 1035;
 
-    /* Sidebar — dark console chrome */
-    --oe-nc-sidebar-bg: #14212e;
-    --oe-nc-sidebar-text: #c7d3de;
-    --oe-nc-sidebar-text-strong: #f2f6f9;
-    --oe-nc-sidebar-hover: rgba(255, 255, 255, 0.06);
-    --oe-nc-sidebar-active: rgba(255, 255, 255, 0.10);
-    --oe-nc-sidebar-border: rgba(255, 255, 255, 0.08);
+    /* Sidebar — frosted light rail (default); the dark variant lives behind
+       the shell's nc-sidebar-dark toggle in shell.css/shell.js. */
+    --oe-nc-sidebar-bg: rgba(246, 246, 248, 0.78);
+    --oe-nc-sidebar-text: #6e6e73;
+    --oe-nc-sidebar-text-strong: #1d1d1f;
+    --oe-nc-sidebar-hover: rgba(0, 0, 0, 0.06);
+    --oe-nc-sidebar-active: rgba(0, 0, 0, 0.06);
+    --oe-nc-sidebar-border: rgba(0, 0, 0, 0.08);
 
-    /* Depth — hairline first, shadows minimal */
-    --shadow-md: 0 1px 2px rgba(20, 33, 46, 0.05);
-    --shadow-lg: 0 4px 12px rgba(20, 33, 46, 0.08);
+    /* Depth — soft floating cards */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.14);
 }
 
 @media (prefers-reduced-motion: reduce) {
     :root {
         --oe-nc-transition: 0ms;
+    }
+}
+
+/* Button base reset — Tailwind preflight is skipped in this shell, so a
+   <button> with no bg/border rules keeps the Windows UA chrome (2px black
+   outset border + buttonface grey). BEM-styled islands don't bundle the
+   React-side reset in core/tokens.css, so it lives here too — this file
+   loads on every module page.
+   MUST stay inside @layer nc-ua-reset: this file loads first, so the layer
+   is declared first and stays lowest-priority — it beats UA defaults but
+   loses to island @layer utilities and to all unlayered BEM/class rules.
+   An unlayered version here would override Tailwind bg-[...] utilities on
+   every React island (that bug shipped briefly on 2026-07-16). */
+@layer nc-ua-reset {
+    button {
+        background-color: transparent;
+        border: 0;
     }
 }

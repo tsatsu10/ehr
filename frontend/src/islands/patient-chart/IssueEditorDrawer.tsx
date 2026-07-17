@@ -5,6 +5,7 @@ import {
   SheetHeader,
   SheetTitle,
   sheetBodyClass,
+  sheetWidthClass,
 } from '@components/ui/sheet';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
@@ -133,7 +134,7 @@ export function IssueEditorDrawer({
 
   return (
     <Sheet open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
-      <SheetContent side="right" aria-labelledby="nc-issue-editor-title">
+      <SheetContent side="right" className={sheetWidthClass.md} aria-labelledby="nc-issue-editor-title">
         <SheetHeader>
           <SheetTitle id="nc-issue-editor-title">
             {issueId > 0 ? `Edit ${noun}` : `Add ${noun}`}

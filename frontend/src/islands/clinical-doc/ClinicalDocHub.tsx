@@ -7,6 +7,11 @@ import { OeFetchError } from '@core/oeFetch';
 import type { DoctorVisit, LabPanelPlaceResult } from '@core/types';
 import { LabPanelModal } from '../doctor-desk/LabPanelModal';
 import { ClinicalDocLensPane, fetchVisitSummary } from './ClinicalDocLensPane';
+import { ClinicalInstructionsDrawer } from './ClinicalInstructionsDrawer';
+import { CertificateDrawer } from './CertificateDrawer';
+import { EyeExamDrawer } from './EyeExamDrawer';
+import { ScreeningDrawer } from './ScreeningDrawer';
+import { VitalsDrawer } from './VitalsDrawer';
 import { openClinicalDocForm } from './clinicalDocApi';
 import type {
   ClinicalDocCard,
@@ -52,6 +57,11 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
   const [noEncounter, setNoEncounter] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
   const [labPanelOpen, setLabPanelOpen] = useState(false);
+  const [instructionsOpen, setInstructionsOpen] = useState(false);
+  const [screeningInstrument, setScreeningInstrument] = useState<string | null>(null);
+  const [vitalsOpen, setVitalsOpen] = useState(false);
+  const [certificateOpen, setCertificateOpen] = useState(false);
+  const [eyeExamOpen, setEyeExamOpen] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
 
   useEffect(() => {
@@ -60,6 +70,31 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
       setVisitId(fromUrl);
     }
   }, [visitId]);
+
+  // Callers that navigate to the hub (Doctor Desk favorites, deep links, or the
+  // openForm fallback) land with ?open_form=<formdir> — open the matching native
+  // drawer and strip the param so a refresh doesn't reopen it.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const openForm = params.get('open_form');
+    if (!openForm) return;
+    if (openForm === 'clinical_instructions') {
+      setInstructionsOpen(true);
+    } else if (openForm === 'phq9' || openForm === 'gad7') {
+      setScreeningInstrument(openForm);
+    } else if (openForm === 'vitals') {
+      setVitalsOpen(true);
+    } else if (openForm === 'nc_certificate') {
+      setCertificateOpen(true);
+    } else if (openForm === 'nc_eye_exam') {
+      setEyeExamOpen(true);
+    } else {
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.delete('open_form');
+    window.history.replaceState({}, '', url.toString());
+  }, []);
 
   const loadSummary = useCallback(async () => {
     if (!visitId) {
@@ -187,8 +222,74 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
           doctorDeskUrl={props.doctorDeskUrl}
           onOpenError={setOpenError}
           onOpenLabPanel={() => setLabPanelOpen(true)}
+          onOpenInstructions={() => setInstructionsOpen(true)}
+          onOpenScreening={(instrument) => setScreeningInstrument(instrument)}
+          onOpenVitals={() => setVitalsOpen(true)}
+          onOpenCertificate={() => setCertificateOpen(true)}
+          onOpenEyeExam={() => setEyeExamOpen(true)}
         />
       )}
+      <ClinicalInstructionsDrawer
+        open={instructionsOpen}
+        onClose={() => setInstructionsOpen(false)}
+        ajaxUrl={props.ajaxUrl}
+        csrfToken={props.csrfToken}
+        visitId={visitId}
+        patientLabel={patientName ? `${patientName}${pubpid ? ` · ${pubpid}` : ''}` : ''}
+        onSaved={() => {
+          setInstructionsOpen(false);
+          refresh();
+        }}
+      />
+      <ScreeningDrawer
+        open={screeningInstrument !== null}
+        onClose={() => setScreeningInstrument(null)}
+        ajaxUrl={props.ajaxUrl}
+        csrfToken={props.csrfToken}
+        visitId={visitId}
+        instrument={screeningInstrument}
+        patientLabel={patientName ? `${patientName}${pubpid ? ` · ${pubpid}` : ''}` : ''}
+        onSaved={() => {
+          setScreeningInstrument(null);
+          refresh();
+        }}
+      />
+      <EyeExamDrawer
+        open={eyeExamOpen}
+        onClose={() => setEyeExamOpen(false)}
+        ajaxUrl={props.ajaxUrl}
+        csrfToken={props.csrfToken}
+        visitId={visitId}
+        patientLabel={patientName ? `${patientName}${pubpid ? ` · ${pubpid}` : ''}` : ''}
+        onSaved={() => {
+          setEyeExamOpen(false);
+          refresh();
+        }}
+      />
+      <CertificateDrawer
+        open={certificateOpen}
+        onClose={() => setCertificateOpen(false)}
+        ajaxUrl={props.ajaxUrl}
+        csrfToken={props.csrfToken}
+        visitId={visitId}
+        patientLabel={patientName ? `${patientName}${pubpid ? ` · ${pubpid}` : ''}` : ''}
+        onSaved={() => {
+          setCertificateOpen(false);
+          refresh();
+        }}
+      />
+      <VitalsDrawer
+        open={vitalsOpen}
+        onClose={() => setVitalsOpen(false)}
+        ajaxUrl={props.ajaxUrl}
+        csrfToken={props.csrfToken}
+        visitId={visitId}
+        patientLabel={patientName ? `${patientName}${pubpid ? ` · ${pubpid}` : ''}` : ''}
+        onSaved={() => {
+          setVitalsOpen(false);
+          refresh();
+        }}
+      />
       <LabPanelModal
         open={labPanelOpen}
         visit={doctorVisit}

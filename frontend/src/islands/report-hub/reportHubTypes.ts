@@ -37,6 +37,7 @@ export interface ReportHubBillOpsEmbedProps {
   canClose: boolean;
   canOutstanding: boolean;
   canInsurance: boolean;
+  canPayerBilling: boolean;
   reopenOnCorrection: boolean;
 }
 
@@ -100,6 +101,7 @@ export interface ReportHubProps {
   canBillOpsClose: boolean;
   canBillOpsOutstanding: boolean;
   canBillOpsInsurance: boolean;
+  canBillOpsPayerBilling: boolean;
   reopenOnCorrection: boolean;
   runbooks?: ReportHubRunbookCard[];
   currencyFormat?: ReportHubEmbedContext['currencyFormat'];

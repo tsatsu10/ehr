@@ -1,0 +1,24 @@
+20260715:210729 EDI_History Setup should not overwrite existing data.<br />
+Setup: directory C:/xampp/htdocs/openemr/sites/default\documents\edi<br />
+created folder C:/xampp/htdocs/openemr/sites/default\documents\edi\history<br />
+created folder C:/xampp/htdocs/openemr/sites/default\documents\edi\history\csv<br />
+created folder C:/xampp/htdocs/openemr/sites/default\documents\edi\history\archive<br />
+created folder C:/xampp/htdocs/openemr/sites/default\documents\edi\history\log<br />
+created folder C:/xampp/htdocs/openemr/sites/default\documents\edi\history\tmp
+folder for f837 exists C:/xampp/htdocs/openemr/sites/default\documents\edi<br />
+created type folder C:/xampp/htdocs/openemr/sites/default\documents\edi\history\f997<br />
+created type folder C:/xampp/htdocs/openemr/sites/default\documents\edi\history\f276<br />
+created type folder C:/xampp/htdocs/openemr/sites/default\documents\edi\history\f277<br />
+created type folder C:/xampp/htdocs/openemr/sites/default\documents\edi\history\f270<br />
+created type folder C:/xampp/htdocs/openemr/sites/default\documents\edi\history\f271<br />
+created type folder C:/xampp/htdocs/openemr/sites/default\documents\edi\history\f278<br />
+
+20260715:210729 _GET request 
+ srvinfo => yes  csrf_token_form => ab2d68019f189fe4e1111d2bfa4496df0cb3aba3 
+20260715:210729 _GET request 
+ loglist => yes  csrf_token_form => ab2d68019f189fe4e1111d2bfa4496df0cb3aba3 
+20260715:210730 _GET request 
+ archlist => yes  csrf_token_form => ab2d68019f189fe4e1111d2bfa4496df0cb3aba3 
+20260715:210730 csv_archive_select_list: using C:/xampp/htdocs/openemr/sites/default\documents\edi\history\archive
+20260715:210730 _GET request 
+ csvtbllist => yes  csrf_token_form => ab2d68019f189fe4e1111d2bfa4496df0cb3aba3 

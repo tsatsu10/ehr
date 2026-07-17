@@ -17,10 +17,13 @@ interface PageHeadingOptions {
   onRefresh: () => void;
 }
 
-const TAB_BUTTONS: { tab: LabOpsTab; buttonId: string; countId: string }[] = [
+const TAB_BUTTONS: { tab: LabOpsTab; buttonId: string; countId: string | null }[] = [
   { tab: 'pending', buttonId: 'nc-labops-tab-pending', countId: 'nc-labops-count-pending' },
   { tab: 'in_progress', buttonId: 'nc-labops-tab-progress', countId: 'nc-labops-count-progress' },
   { tab: 'send_out', buttonId: 'nc-labops-tab-sendout', countId: 'nc-labops-count-sendout' },
+  // CP-4 — button only exists in the DOM when the flag renders it (bindClick
+  // tolerates a missing element).
+  { tab: 'followup', buttonId: 'nc-labops-tab-followup', countId: null },
 ];
 
 function bindClick(id: string, handler: () => void): (() => void) | undefined {
@@ -53,7 +56,7 @@ export function useLabOpsPageHeading({
       const btn = document.getElementById(buttonId);
       if (btn) btn.classList.toggle('active', tab === t);
 
-      const countEl = document.getElementById(countId);
+      const countEl = countId ? document.getElementById(countId) : null;
       if (countEl) {
         const key = t === 'in_progress' ? 'in_progress' : t;
         countEl.textContent = String(counts[key as keyof WorklistCounts] ?? 0);

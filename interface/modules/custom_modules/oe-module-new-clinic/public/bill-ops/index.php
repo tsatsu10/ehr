@@ -90,11 +90,8 @@ if (!in_array($initialTab, $allowedTabs, true)) {
         'can_close' => $access->canCloseDay(),
         'can_outstanding' => $access->isOutstandingEnabled($facilityId) && $access->canViewOutstanding(),
         'can_insurance' => $access->isInsuranceVaultEnabled($facilityId) && $access->canViewInsuranceVault(),
-        // Spec'd 6th vault card (M14-F05) — gated on the same core menu global that
-        // controls whether stock OpenEMR shows "EDI History" at all.
-        'can_edi_history' => $access->isInsuranceVaultEnabled($facilityId)
-            && $access->canViewInsuranceVault()
-            && !empty($GLOBALS['enable_edihistory_in_left_menu']),
+        // CBILL-4a — payer-aware price overrides admin screen.
+        'can_payer_billing' => $access->isPayerBillingEnabled($facilityId) && $access->canViewInsuranceVault(),
         'enable_react_bill_ops' => $reactBillOps,
         'reopen_on_correction' => $config->getInt('bill_ops_reopen_on_correction', 0, $facilityId) === 1,
     ]

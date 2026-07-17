@@ -24,6 +24,8 @@ import {
 } from '@components/ui/table';
 import { VitalsTrendsPanel } from './VitalsTrendsPanel';
 import { IssueEditorDrawer } from './IssueEditorDrawer';
+import { BackgroundEditorDrawer } from './BackgroundEditorDrawer';
+import { ImmunizationEditorDrawer } from './ImmunizationEditorDrawer';
 import type {
   ClinicalBackgroundSection,
   ClinicalData,
@@ -58,16 +60,23 @@ function ClinicalListSectionBlock({
   section,
   emptyLabel,
   onEditIssue,
+  onEditImmunization,
 }: {
   title: string;
   section: ClinicalListSection;
   emptyLabel: string;
   /** When set (native editor on) and the section has an issue type, edits open the drawer. */
   onEditIssue?: (type: string, id: number) => void;
+  /** D-IMM-1 — when set (immunization editor on), Add/Edit open the native immunization drawer. */
+  onEditImmunization?: (id: number) => void;
 }) {
   const items = section.items ?? [];
   // Native editing only applies to real issue sections (problems/allergies/meds).
   const nativeType = onEditIssue && section.type ? section.type : null;
+  // A unified "open the native editor for id" handler (0 = add new), issues or immunizations.
+  const nativeEdit: ((id: number) => void) | null = nativeType
+    ? (id: number) => onEditIssue?.(nativeType, id)
+    : (onEditImmunization ?? null);
 
   let body: React.ReactNode;
   if (section.undocumented) {
@@ -83,12 +92,12 @@ function ClinicalListSectionBlock({
               <strong>{item.title}</strong>
               {item.detail && <div className="text-sm text-[var(--oe-nc-text-muted)]">{item.detail}</div>}
             </div>
-            {nativeType && item.id ? (
+            {nativeEdit && item.id ? (
               <Button
                 variant="link"
                 size="sm"
                 className="h-auto shrink-0 p-0"
-                onClick={() => onEditIssue?.(nativeType, item.id ?? 0)}
+                onClick={() => nativeEdit(item.id ?? 0)}
               >
                 Edit
               </Button>
@@ -102,9 +111,9 @@ function ClinicalListSectionBlock({
   }
 
   let action: React.ReactNode;
-  if (nativeType) {
+  if (nativeEdit) {
     action = (
-      <Button variant="outline" size="sm" onClick={() => onEditIssue?.(nativeType, 0)}>
+      <Button variant="outline" size="sm" onClick={() => nativeEdit(0)}>
         Add
       </Button>
     );
@@ -131,8 +140,32 @@ function ClinicalListSectionBlock({
   );
 }
 
-function ClinicalBackground({ section }: { section: ClinicalBackgroundSection }) {
+function ClinicalBackground({
+  section,
+  onEditHistory,
+}: {
+  section: ClinicalBackgroundSection;
+  /** When set (native editor on), "Edit history" opens the drawer instead of the stock form. */
+  onEditHistory?: () => void;
+}) {
   const lines = section.lines ?? [];
+
+  let action: React.ReactNode;
+  if (onEditHistory) {
+    action = (
+      <Button variant="outline" size="sm" onClick={onEditHistory}>
+        Edit history
+      </Button>
+    );
+  } else if (section.editor_url) {
+    action = (
+      <Button variant="outline" size="sm" asChild>
+        <a href={section.editor_url} target="_top">
+          Edit history
+        </a>
+      </Button>
+    );
+  }
 
   return (
     <ChartSection
@@ -140,15 +173,7 @@ function ClinicalBackground({ section }: { section: ClinicalBackgroundSection })
       title="Background"
       description="Medical history and social context"
       icon={<Stethoscope className="h-4 w-4" aria-hidden />}
-      action={
-        section.editor_url ? (
-          <Button variant="outline" size="sm" asChild>
-            <a href={section.editor_url} target="_top">
-              Edit history
-            </a>
-          </Button>
-        ) : undefined
-      }
+      action={action}
       bodyClassName="py-3"
     >
       {lines.length ? (
@@ -347,22 +372,13 @@ function ReferralsStrip({
       icon={<Share2 className="h-4 w-4" aria-hidden />}
       variant="muted"
       action={
-        strip.open_referrals_url || strip.stock_transactions_url ? (
+        strip.open_referrals_url ? (
           <div className="flex flex-wrap gap-2">
-            {strip.open_referrals_url && (
-              <Button variant="outline" size="sm" asChild>
-                <a href={strip.open_referrals_url} target="_top">
-                  Open referrals
-                </a>
-              </Button>
-            )}
-            {strip.stock_transactions_url && (
-              <Button variant="outline" size="sm" asChild>
-                <a href={strip.stock_transactions_url} target="_top">
-                  Other transactions
-                </a>
-              </Button>
-            )}
+            <Button variant="outline" size="sm" asChild>
+              <a href={strip.open_referrals_url} target="_top">
+                Open referrals
+              </a>
+            </Button>
           </div>
         ) : undefined
       }
@@ -510,6 +526,8 @@ export function ClinicalTab({
     type: '',
     id: 0,
   });
+  const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
+  const [immunDrawer, setImmunDrawer] = useState<{ open: boolean; id: number }>({ open: false, id: 0 });
 
   useEffect(() => {
     if (!clinicalAnchor || !data || scrolledRef.current) return;
@@ -539,7 +557,10 @@ export function ClinicalTab({
 
   return (
     <ChartStack>
-      <ClinicalBackground section={data.background ?? {}} />
+      <ClinicalBackground
+        section={data.background ?? {}}
+        onEditHistory={data.native_history_editor ? () => setHistoryDrawerOpen(true) : undefined}
+      />
       {!isHidden('problems') && (
         <ClinicalListSectionBlock
           title="Problems"
@@ -569,6 +590,9 @@ export function ClinicalTab({
           title="Immunizations"
           section={immunizations ?? {}}
           emptyLabel="No immunizations on file."
+          onEditImmunization={
+            data.native_immunization_editor ? (id: number) => setImmunDrawer({ open: true, id }) : undefined
+          }
         />
       )}
       {referralsStrip && <ReferralsStrip strip={referralsStrip} />}
@@ -591,6 +615,34 @@ export function ClinicalTab({
           onClose={() => setIssueDrawer((s) => ({ ...s, open: false }))}
           onSaved={() => {
             setIssueDrawer((s) => ({ ...s, open: false }));
+            onRefresh();
+          }}
+        />
+      )}
+      {data.native_history_editor && (
+        <BackgroundEditorDrawer
+          open={historyDrawerOpen}
+          pid={pid}
+          ajaxUrl={ajaxUrl}
+          csrfToken={csrfToken}
+          fullFormEnabled={data.native_history_full_form}
+          onClose={() => setHistoryDrawerOpen(false)}
+          onSaved={() => {
+            setHistoryDrawerOpen(false);
+            onRefresh();
+          }}
+        />
+      )}
+      {data.native_immunization_editor && (
+        <ImmunizationEditorDrawer
+          open={immunDrawer.open}
+          pid={pid}
+          shotId={immunDrawer.id}
+          ajaxUrl={ajaxUrl}
+          csrfToken={csrfToken}
+          onClose={() => setImmunDrawer((s) => ({ ...s, open: false }))}
+          onSaved={() => {
+            setImmunDrawer((s) => ({ ...s, open: false }));
             onRefresh();
           }}
         />

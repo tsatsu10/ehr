@@ -1,3 +1,9 @@
+/* Tailwind utilities + shadcn tokens — without this import the SlideOver /
+ * Dialog primitives render UNSTYLED and invisible (position/width/overlay are
+ * all utility classes), leaving an invisible open modal that blocks every
+ * click: the page looks normal but is frozen. */
+@import '../../core/tokens.css';
+
 .nc-clinicaldoc {
   max-width: 960px;
 }
@@ -14,7 +20,7 @@
 }
 
 .nc-clinicaldoc-card {
-  border: 1px solid var(--oe-nc-border, #d3dce3);
+  border: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.08));
   border-radius: 0.5rem;
   padding: 1rem;
   background: var(--nc-surface, #fff);
@@ -30,16 +36,16 @@
 
 .nc-clinicaldoc-empty {
   padding: 1.5rem;
-  border: 1px dashed var(--oe-nc-border, #d3dce3);
+  border: 1px dashed var(--oe-nc-border, rgba(0, 0, 0, 0.08));
   border-radius: 0.5rem;
-  background: var(--oe-nc-bg-tint, #eef1f4);
+  background: var(--oe-nc-bg-tint, #f5f5f7);
 }
 
 .nc-clinicaldoc-sign-overview {
   padding: 1rem;
-  border: 1px solid var(--oe-nc-border, #d3dce3);
+  border: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.08));
   border-radius: 0.5rem;
-  background: var(--oe-nc-bg-tint, #eef1f4);
+  background: var(--oe-nc-bg-tint, #f5f5f7);
 }
 
 .nc-clinicaldoc-sign-overview-stats .badge {
@@ -48,7 +54,200 @@
 
 .nc-clinicaldoc-lab-panel {
   padding: 0.75rem 1rem;
-  border: 1px dashed var(--oe-nc-border, #d3dce3);
+  border: 1px dashed var(--oe-nc-border, rgba(0, 0, 0, 0.08));
   border-radius: 0.5rem;
-  background: var(--oe-nc-bg-tint, #eef1f4);
+  background: var(--oe-nc-bg-tint, #f5f5f7);
+}
+
+/* Screening drawer (nc-scrn-*) — non-layered BEM so the host page's legacy
+ * fieldset/legend chrome can't restyle the questions. Answer options are large
+ * tappable pills (44px targets) with the hidden-but-full-size radio input as the
+ * real control (keyboard + screen-reader semantics preserved). */
+.nc-scrn-stem {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: var(--oe-nc-text-muted, #6b7280);
+}
+
+.nc-scrn-item {
+  margin: 0 0 1.25rem;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.nc-scrn-question {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  float: none;
+  width: 100%;
+  margin: 0 0 0.5rem;
+  /* The core theme styles `legend` with !important (grey bar + padding) —
+   * matching !important at class specificity is the only way to beat it. */
+  padding: 0 !important;
+  background: none !important;
+  background-color: transparent !important;
+  color: var(--oe-nc-text, #1d1d1f) !important;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.nc-scrn-question-text {
+  min-width: 0;
+}
+
+.nc-scrn-qnum {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-top: 0.05rem;
+  border-radius: 9999px;
+  background: var(--oe-nc-bg-tint, #f5f5f7);
+  color: var(--oe-nc-text-muted, #6b7280);
+  font-size: 0.75rem;
+  font-weight: 700;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.nc-scrn-qnum.is-answered {
+  background: var(--oe-nc-primary, #0071e3);
+  color: #fff;
+}
+
+.nc-scrn-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.nc-scrn-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.12));
+  border-radius: 0.625rem;
+  background: var(--oe-nc-surface, #fff);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--oe-nc-text, #1d1d1f);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.nc-scrn-option:hover {
+  border-color: var(--oe-nc-primary, #0071e3);
+  background: var(--oe-nc-primary-tint, #eaf3fe);
+}
+
+.nc-scrn-option.is-selected {
+  border-color: var(--oe-nc-primary, #0071e3);
+  background: var(--oe-nc-primary, #0071e3);
+  color: #fff;
+  font-weight: 600;
+}
+
+.nc-scrn-option-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.nc-scrn-option:has(.nc-scrn-option-input:focus-visible) {
+  box-shadow: var(--oe-nc-focus-ring, 0 0 0 3px rgba(0, 113, 227, 0.3));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nc-scrn-option,
+  .nc-scrn-qnum {
+    transition: none;
+  }
+}
+
+.nc-scrn-result {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.nc-scrn-score {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--oe-nc-text, #1d1d1f);
+}
+
+.nc-scrn-progress {
+  font-size: 0.75rem;
+  color: var(--oe-nc-text-muted, #6b7280);
+}
+
+.nc-scrn-sev {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.nc-scrn-sev--low {
+  background: var(--oe-nc-primary-tint, #eaf3fe);
+  color: var(--oe-nc-primary, #0071e3);
+}
+
+.nc-scrn-sev--mid {
+  background: color-mix(in srgb, var(--oe-nc-warning, #b45309) 12%, #fff);
+  color: var(--oe-nc-warning, #b45309);
+}
+
+.nc-scrn-sev--high {
+  background: color-mix(in srgb, var(--oe-nc-danger, #b91c1c) 10%, #fff);
+  color: var(--oe-nc-danger, #b91c1c);
+}
+
+/* Eye-exam finding chips — toggleable pills sharing the nc-scrn pill look. */
+.nc-eye-chip {
+  border: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.12));
+  background: var(--oe-nc-surface, #fff);
+  color: var(--oe-nc-text, #1d1d1f);
+  cursor: pointer;
+  min-height: 32px;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.nc-eye-chip:hover {
+  border-color: var(--oe-nc-primary, #0071e3);
+}
+
+.nc-eye-chip.is-selected {
+  border-color: var(--oe-nc-primary, #0071e3);
+  background: var(--oe-nc-primary, #0071e3);
+  color: #fff;
+}
+
+.nc-eye-chip:focus-visible {
+  outline: none;
+  box-shadow: var(--oe-nc-focus-ring, 0 0 0 3px rgba(0, 113, 227, 0.3));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nc-eye-chip {
+    transition: none;
+  }
 }

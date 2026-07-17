@@ -2,14 +2,13 @@
  * CashierShortcuts — core billing escape hatches under More.
  */
 
-import { ExternalLink, FileSpreadsheet } from 'lucide-react';
+import { FileSpreadsheet } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 interface CashierShortcutsProps {
   feeSheetUrl?: string;
   feeSheetLabel?: string;
   feeSheetExternal?: boolean;
-  frontPaymentUrl?: string;
 }
 
 interface MoreLinkProps {
@@ -37,7 +36,6 @@ export function CashierShortcuts({
   feeSheetUrl,
   feeSheetLabel,
   feeSheetExternal = true,
-  frontPaymentUrl,
 }: CashierShortcutsProps) {
   const links: MoreLinkProps[] = [];
 
@@ -47,13 +45,6 @@ export function CashierShortcuts({
       label: feeSheetLabel || 'Open fee sheet',
       href: feeSheetUrl,
       external: feeSheetExternal,
-    });
-  }
-  if (frontPaymentUrl) {
-    links.push({
-      icon: ExternalLink,
-      label: 'Open payments (core)',
-      href: frontPaymentUrl,
     });
   }
 

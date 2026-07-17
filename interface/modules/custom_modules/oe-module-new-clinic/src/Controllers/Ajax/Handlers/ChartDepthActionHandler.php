@@ -40,6 +40,8 @@ final class ChartDepthActionHandler implements AjaxActionHandlerInterface
         'chart_depth.referral_save',
         'chart_depth.referral_print',
         'chart_depth.referral_status',
+        'chart_depth.referral_editor_get',
+        'chart_depth.referral_update',
         'letters.templates',
         'letters.render',
     ];
@@ -210,6 +212,25 @@ final class ChartDepthActionHandler implements AjaxActionHandlerInterface
                     $userId
                 );
                 $this->host->respond(true, 'ok', $result);
+                break;
+            case 'chart_depth.referral_editor_get':
+                $editor = $this->host->svc(ReferralCorrespondenceService::class)->getReferralEditor(
+                    (int) ($_REQUEST['transaction_id'] ?? 0)
+                );
+                $this->host->respond(true, 'ok', $editor);
+                break;
+            case 'chart_depth.referral_update':
+                if ($method !== 'POST') {
+                    $this->host->respond(false, 'POST required', [], 405);
+                }
+                $body = $this->host->readJsonBody();
+                $this->host->verifyCsrf($body);
+                $updated = $this->host->svc(ReferralCorrespondenceService::class)->updateReferral(
+                    (int) ($body['transaction_id'] ?? 0),
+                    $body,
+                    $userId
+                );
+                $this->host->respond(true, 'ok', $updated);
                 break;
             case 'chart_depth.referral_status':
                 if ($method !== 'POST') {

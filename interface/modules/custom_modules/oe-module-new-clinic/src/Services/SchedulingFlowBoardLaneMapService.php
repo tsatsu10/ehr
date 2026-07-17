@@ -12,6 +12,7 @@
 namespace OpenEMR\Modules\NewClinic\Services;
 
 use OpenEMR\Common\Database\QueryUtils;
+use OpenEMR\Modules\NewClinic\Support\ApptStatusLabel;
 use OpenEMR\Services\AppointmentService;
 use OpenEMR\Services\ListService;
 use OpenEMR\Services\PatientTrackerService;
@@ -218,7 +219,7 @@ class SchedulingFlowBoardLaneMapService
             $settings = PatientTrackerService::collectApptStatusSettings($code);
             $alertMinutes = is_array($settings) ? (int) ($settings['time_alert'] ?? 0) : 0;
             $statuses[$code] = [
-                'label' => (string) ($option['title'] ?? $code),
+                'label' => ApptStatusLabel::clean($code, (string) ($option['title'] ?? $code)),
                 'seq' => (int) ($option['seq'] ?? 0),
                 'is_check_in' => AppointmentService::isCheckInStatus($code),
                 'is_check_out' => AppointmentService::isCheckOutStatus($code),

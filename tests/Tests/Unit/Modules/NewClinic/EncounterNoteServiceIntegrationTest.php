@@ -39,6 +39,9 @@ class EncounterNoteServiceIntegrationTest extends TestCase
             require_once dirname(__DIR__, 5) . '/interface/globals.php';
             self::$bootstrapped = true;
         }
+        // CLI has no client address; the audit logger's sanitize path warns
+        // on the missing key otherwise.
+        $_SERVER['REMOTE_ADDR'] = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
 
         $this->facilityId = (new VisitScopeService())->resolveDefaultFacilityId();
         if ($this->facilityId <= 0) {

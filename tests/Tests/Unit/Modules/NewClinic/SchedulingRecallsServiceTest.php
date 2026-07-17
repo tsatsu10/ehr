@@ -51,6 +51,25 @@ class SchedulingRecallsServiceTest extends TestCase
         $service->updateStatus(0, 'contacted', null, 1);
     }
 
+    public function testRelativeSinceProducesCoarseHumanLabels(): void
+    {
+        $service = new SchedulingRecallsService(
+            $this->createMock(SchedulingAccessService::class),
+            new VisitScopeService(),
+        );
+        $method = new \ReflectionMethod($service, 'relativeSince');
+        $method->setAccessible(true);
+        $today = '2026-07-17';
+
+        $this->assertSame('', $method->invoke($service, '', $today));
+        $this->assertSame('', $method->invoke($service, '2026-08-01', $today)); // future → unknown
+        $this->assertSame('yesterday', $method->invoke($service, '2026-07-16', $today));
+        $this->assertSame('5 days ago', $method->invoke($service, '2026-07-12', $today));
+        $this->assertSame('3 weeks ago', $method->invoke($service, '2026-06-25', $today));
+        $this->assertSame('3 months ago', $method->invoke($service, '2026-04-17', $today));
+        $this->assertSame('1 year ago', $method->invoke($service, '2025-06-17', $today));
+    }
+
     public function testSnoozeValidatesRecallId(): void
     {
         $access = $this->createMock(SchedulingAccessService::class);

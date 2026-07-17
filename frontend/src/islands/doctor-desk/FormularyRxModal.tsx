@@ -19,6 +19,7 @@ import {
 } from '@components/ui/dialog';
 import { Label } from '@components/ui/label';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { t } from '@core/i18n';
 import type {
   DoctorVisit,
   FormularyRxCatalogData,
@@ -79,7 +80,7 @@ export function FormularyRxModal({
     })
       .then(setCatalog)
       .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Failed to load formulary');
+        setError(err instanceof Error ? err.message : t('Failed to load formulary'));
       })
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -118,7 +119,7 @@ export function FormularyRxModal({
 
     const ids = [...selected];
     if (ids.length === 0) {
-      setError('Select at least one medication.');
+      setError(t('Select at least one medication.'));
       return;
     }
 
@@ -136,7 +137,7 @@ export function FormularyRxModal({
     setSubmitting(false);
 
     if (!result.ok) {
-      setError(result.message || 'Prescribe failed');
+      setError(result.message || t('Prescribe failed'));
       return;
     }
 
@@ -155,21 +156,21 @@ export function FormularyRxModal({
         aria-labelledby="nc-doctor-formulary-rx-title"
       >
         <DialogHeader>
-          <DialogTitle id="nc-doctor-formulary-rx-title">Quick prescribe</DialogTitle>
-          <DialogClose aria-label="Close">
+          <DialogTitle id="nc-doctor-formulary-rx-title">{t('Quick prescribe')}</DialogTitle>
+          <DialogClose aria-label={t('Close')}>
             <span aria-hidden="true">&times;</span>
           </DialogClose>
         </DialogHeader>
         <DialogBody>
           <p className="text-[var(--oe-nc-text-muted)] text-sm mb-3">
-            Pick from the clinic OPD formulary. Stock quantity on hand is shown when Pharmacy Operations is enabled.
+            {t('Pick from the clinic OPD formulary. Stock quantity on hand is shown when Pharmacy Operations is enabled.')}
           </p>
 
           <div id="nc-formulary-rx-drugs" className="nc-catalog-picker">
-            {loading && <p className="text-[var(--oe-nc-text-muted)] text-sm mb-0">Loading formulary…</p>}
+            {loading && <p className="text-[var(--oe-nc-text-muted)] text-sm mb-0">{t('Loading formulary…')}</p>}
             {!loading && catalog && !catalog.has_catalog && (
               <p className={deskCalloutClass('warn', 'text-sm mb-0')}>
-                Formulary is not ready. Use Full Rx form or import the starter pack in Pharm Ops setup.
+                {t('Formulary is not ready. Use Full Rx form or import the starter pack in Pharm Ops setup.')}
               </p>
             )}
             {!loading && catalog?.has_catalog && drugs.map((drug: FormularyRxCatalogDrug) => (
@@ -189,7 +190,7 @@ export function FormularyRxModal({
                     <span className="text-[var(--oe-nc-text-muted)]"> — {drug.dosage}</span>
                   ) : null}
                   {drug.quantity ? (
-                    <span className="text-[var(--oe-nc-text-muted)]"> · qty {drug.quantity}</span>
+                    <span className="text-[var(--oe-nc-text-muted)]"> · {t('qty {qty}', { qty: drug.quantity })}</span>
                   ) : null}
                   {drug.has_fee ? (
                     <span className="text-[var(--oe-nc-text-muted)]">
@@ -217,11 +218,11 @@ export function FormularyRxModal({
                 id="nc-formulary-rx-starter"
                 onClick={applyStarterPack}
               >
-                Starter pack
+                {t('Starter pack')}
               </Button>
               <span className="text-[var(--oe-nc-text-muted)] text-sm" id="nc-formulary-rx-total">
                 {estimatedTotal != null
-                  ? `Est. unit fees: ${formatDoctorMoney(estimatedTotal)}`
+                  ? t('Est. unit fees: {amount}', { amount: formatDoctorMoney(estimatedTotal) })
                   : ''}
               </span>
             </div>
@@ -240,10 +241,10 @@ export function FormularyRxModal({
             className="nc-formulary-rx-full-form mr-auto"
             onClick={onFullRxForm}
           >
-            Full Rx form
+            {t('Full Rx form')}
           </Button>
           <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
+            {t('Cancel')}
           </Button>
           <Button
             type="button"
@@ -251,7 +252,7 @@ export function FormularyRxModal({
             disabled={submitting || blocked || !catalog?.has_catalog}
             onClick={() => void handlePlace()}
           >
-            {submitting ? 'Prescribing…' : 'Add prescriptions'}
+            {submitting ? t('Prescribing…') : t('Add prescriptions')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -262,11 +263,11 @@ export function FormularyRxModal({
 export function formularyRxPlaceNotice(result: FormularyRxPlaceResult): { message: string; variant: 'success' | 'info' } {
   const count = result.prescription_count ?? result.prescription_ids?.length ?? 0;
   if (count === 1) {
-    return { message: '1 prescription added to this encounter.', variant: 'success' };
+    return { message: t('1 prescription added to this encounter.'), variant: 'success' };
   }
 
   return {
-    message: `${count} prescriptions added to this encounter.`,
+    message: t('{count} prescriptions added to this encounter.', { count }),
     variant: 'success',
   };
 }

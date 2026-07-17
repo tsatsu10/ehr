@@ -30,8 +30,10 @@ import { CashierQueue } from './CashierQueue';
 import { CashierActivePane, type CashierActiveMode } from './CashierActivePane';
 import { CashierDeskLayout } from './cashierDeskUi';
 import { CashierMobileQueueBar, CashierMobileQueueSheet } from './CashierMobileQueueSheet';
+import { OtherPaymentModal } from './OtherPaymentModal';
 import { PayConfirmModal } from './PayConfirmModal';
 import { PartialPayModal } from './PartialPayModal';
+import { EligibilityCheckWidget } from '@components/EligibilityCheckWidget';
 import { SchemeSplitModal } from './SchemeSplitModal';
 import { ReceiptModal } from './ReceiptModal';
 import { CloseZeroModal } from './CloseZeroModal';
@@ -101,6 +103,8 @@ export function CashierDesk({
   enablePartialPayment = false,
   canPartialPay = false,
   enableInsuranceScheme = false,
+  enablePayerBilling = false,
+  canOtherPayments = false,
   sharedDeviceWarning = false,
   currencyFormat,
 }: CashierDeskProps) {
@@ -124,6 +128,7 @@ export function CashierDesk({
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [searchHint, setSearchHint] = useState<PatientSearchHint | null>(null);
 
+  const [otherPaymentOpen, setOtherPaymentOpen] = useState(false);
   const [mode, setMode] = useState<CashierActiveMode>('idle');
   const [selectData, setSelectData] = useState<CashierSelectData | null>(null);
   const [signMeta, setSignMeta] = useState<CashierSignMeta | null>(null);
@@ -726,29 +731,42 @@ export function CashierDesk({
       <div className="nc-cashier-desk">
         <CashierDeskLayout
           activePane={(
-            <CashierActivePane
-              mode={mode}
-              data={mergedSelectData}
-              staged={staged}
-              signMeta={signMeta}
-              visitBoardUrl={visitBoardUrl}
-              canMarkUnpaid={canMarkUnpaid}
-              canPartialPay={canPartialPay}
-              enablePartialPayment={enablePartialPayment}
-              enableInsuranceScheme={enableInsuranceScheme}
-              esignOverrideAllowed={esignOverrideAllowed}
-              blocked={sharedSession.blocked}
-              posting={posting}
-              paneError={paneError}
-              onStagedChange={setStaged}
-              onPostCharges={() => void handlePostChargesClick()}
-              onTakePayment={handleTakePaymentClick}
-              onEsignOverride={handleEsignOverrideClick}
-              onMarkUnpaid={() => setMarkUnpaidOpen(true)}
-              onCloseZero={() => setCloseZeroOpen(true)}
-              onPartialPay={() => setPartialOpen(true)}
-              onSchemeSplit={() => setSchemeOpen(true)}
-            />
+            <>
+              {enableInsuranceScheme && enablePayerBilling && mergedSelectData?.preview?.identity?.pid && (
+                <div className="mb-3">
+                  <EligibilityCheckWidget
+                    ajaxUrl={ajaxUrl}
+                    csrfToken={csrfToken}
+                    pid={mergedSelectData.preview.identity.pid}
+                    visitId={mergedSelectData.visit?.id}
+                    enabled
+                  />
+                </div>
+              )}
+              <CashierActivePane
+                mode={mode}
+                data={mergedSelectData}
+                staged={staged}
+                signMeta={signMeta}
+                visitBoardUrl={visitBoardUrl}
+                canMarkUnpaid={canMarkUnpaid}
+                canPartialPay={canPartialPay}
+                enablePartialPayment={enablePartialPayment}
+                enableInsuranceScheme={enableInsuranceScheme}
+                esignOverrideAllowed={esignOverrideAllowed}
+                blocked={sharedSession.blocked}
+                posting={posting}
+                paneError={paneError}
+                onStagedChange={setStaged}
+                onPostCharges={() => void handlePostChargesClick()}
+                onTakePayment={handleTakePaymentClick}
+                onEsignOverride={handleEsignOverrideClick}
+                onMarkUnpaid={() => setMarkUnpaidOpen(true)}
+                onCloseZero={() => setCloseZeroOpen(true)}
+                onPartialPay={() => setPartialOpen(true)}
+                onSchemeSplit={() => setSchemeOpen(true)}
+              />
+            </>
           )}
           queue={(
             <CashierQueue
@@ -762,6 +780,7 @@ export function CashierDesk({
               searchHint={searchHint}
               onSelectVisit={(card) => void selectVisit(card.id)}
               onSelectPatient={(pid) => void handleResolvePatient(pid)}
+              onOtherPayment={canOtherPayments ? () => setOtherPaymentOpen(true) : undefined}
             />
           )}
         />
@@ -885,6 +904,13 @@ export function CashierDesk({
           setCloseZeroError(null);
         }}
         onConfirm={(reason) => void handleCloseZero(reason)}
+      />
+
+      <OtherPaymentModal
+        open={otherPaymentOpen}
+        onClose={() => setOtherPaymentOpen(false)}
+        ajaxUrl={ajaxUrl}
+        csrfToken={csrfToken}
       />
 
       <MarkUnpaidModal

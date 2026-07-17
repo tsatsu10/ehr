@@ -28,6 +28,9 @@ $facilityId = $visitScope->resolveDeskFacilityId($sessionFacility);
 
 $visitId = (int) ($_GET['visit_id'] ?? 0);
 $formsRowId = (int) ($_GET['form_id'] ?? 0);
+// Patient-chart / Lab Ops callers already hold the domain id (procedure_order.
+// procedure_order_id) and pass it directly, rather than the forms-table row id.
+$procedureOrderIdParam = (int) ($_GET['procedure_order_id'] ?? 0);
 $webroot = $GLOBALS['webroot'] ?? '';
 $moduleUrl = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public';
 
@@ -63,8 +66,8 @@ if ($visitId <= 0) {
 // The clinical-doc catalog passes `form_id` = forms.id; the domain id is
 // forms.form_id (== procedure_order.procedure_order_id). Resolve it here so the
 // island/service only ever deal with the unambiguous procedure_order_id.
-$procedureOrderId = 0;
-if ($formsRowId > 0) {
+$procedureOrderId = $procedureOrderIdParam;
+if ($procedureOrderId <= 0 && $formsRowId > 0) {
     $row = QueryUtils::querySingleRow(
         "SELECT form_id FROM forms
          WHERE id = ? AND deleted = 0 AND LOWER(formdir) = 'procedure_order' LIMIT 1",
@@ -75,9 +78,14 @@ if ($formsRowId > 0) {
 
 $returnTo = strtolower(trim((string) ($_GET['return_to'] ?? 'hub')));
 $returnTab = trim((string) ($_GET['tab'] ?? 'orders'));
+// Patient-chart "Place order" carries its own pid so we can send the doctor
+// back to the exact chart they came from.
+$returnPid = (int) ($_GET['pid'] ?? 0);
 $returnUrl = match ($returnTo) {
     'doctor' => $moduleUrl . '/doctor.php',
     'lab' => $moduleUrl . '/lab.php',
+    'labops' => $moduleUrl . '/lab-ops/index.php',
+    'chart' => $moduleUrl . '/patient-chart.php?pid=' . urlencode((string) $returnPid) . '&tab=clinical',
     default => $moduleUrl . '/clinical-doc/index.php?visit_id=' . urlencode((string) $visitId)
         . '&tab=' . urlencode($returnTab !== '' ? $returnTab : 'orders'),
 };

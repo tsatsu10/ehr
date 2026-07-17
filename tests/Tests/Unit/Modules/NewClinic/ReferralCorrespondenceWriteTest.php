@@ -168,4 +168,83 @@ class ReferralCorrespondenceWriteTest extends TestCase
             }
         };
     }
+
+    public function testValidateEditorFieldsAcceptsWorkingSet(): void
+    {
+        $clean = ReferralCorrespondenceService::validateEditorFields([
+            'refer_date' => ' 2026-07-15 ',
+            'refer_to' => 'Regional Hospital — Surgery',
+            'refer_risk_level' => 'high',
+            'body' => 'Suspected appendicitis',
+            'unknown_field' => 'ignored',
+        ], ['low', 'medium', 'high']);
+
+        $this->assertSame('2026-07-15', $clean['refer_date']);
+        $this->assertSame('Regional Hospital — Surgery', $clean['refer_to']);
+        $this->assertSame('high', $clean['refer_risk_level']);
+        $this->assertArrayNotHasKey('unknown_field', $clean);
+    }
+
+    public function testValidateEditorFieldsRejectsBadDate(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        ReferralCorrespondenceService::validateEditorFields(
+            ['refer_date' => '15/07/2026'],
+            []
+        );
+    }
+
+    public function testValidateEditorFieldsRejectsUnknownRiskLevel(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Unknown risk level');
+        ReferralCorrespondenceService::validateEditorFields(
+            ['refer_risk_level' => 'catastrophic'],
+            ['low', 'medium', 'high']
+        );
+    }
+
+    public function testValidateEditorFieldsRejectsOversizeValue(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        ReferralCorrespondenceService::validateEditorFields(
+            ['refer_to' => str_repeat('x', 300)],
+            []
+        );
+    }
+
+    public function testEditorFingerprintIsDeterministicAndOrderInsensitive(): void
+    {
+        $a = ReferralCorrespondenceService::editorFingerprint([
+            'refer_to' => 'Regional Hospital',
+            'refer_date' => '2026-07-15',
+        ]);
+        $b = ReferralCorrespondenceService::editorFingerprint([
+            'refer_date' => '2026-07-15',
+            'refer_to' => 'Regional Hospital',
+        ]);
+        $c = ReferralCorrespondenceService::editorFingerprint([
+            'refer_date' => '2026-07-15',
+            'refer_to' => 'Regional Hospital — Surgery',
+        ]);
+
+        // Same values in any key order → same token; any value change → new token.
+        $this->assertSame($a, $b);
+        $this->assertNotSame($a, $c);
+        $this->assertSame(40, strlen($a));
+    }
+
+    public function testAjaxPolicyMapsEditorActionsToReferralAcl(): void
+    {
+        $policy = new \OpenEMR\Modules\NewClinic\Services\AjaxActionPolicy();
+
+        $this->assertSame(
+            'new_chart_depth_referral',
+            $policy->describe('chart_depth.referral_editor_get')['acl'] ?? null
+        );
+        $this->assertSame(
+            'new_chart_depth_referral',
+            $policy->describe('chart_depth.referral_update')['acl'] ?? null
+        );
+    }
 }

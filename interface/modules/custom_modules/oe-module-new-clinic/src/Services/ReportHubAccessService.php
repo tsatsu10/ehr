@@ -280,6 +280,16 @@ class ReportHubAccessService
             return ($this->aclChecker)('new_clinic', $aco);
         }
 
-        return AclMain::aclCheckCore('new_clinic', $aco);
+        // Per-request memo (SCALE-1.3). AclMain::aclCheckCore hits gacl_* with 2 queries per
+        // call and does not cache; the catalog checks the same handful of ACOs once per lens
+        // entry — measured 245 gacl queries (~2.6 s) on one reports.catalog request. A user's
+        // ACL cannot change mid-request, so caching per ACO is safe. Static (not instance)
+        // because the catalog builds fresh service instances per lens.
+        static $memo = [];
+        if (!array_key_exists($aco, $memo)) {
+            $memo[$aco] = AclMain::aclCheckCore('new_clinic', $aco);
+        }
+
+        return $memo[$aco];
     }
 }

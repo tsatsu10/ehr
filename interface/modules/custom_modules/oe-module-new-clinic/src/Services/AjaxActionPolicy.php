@@ -57,8 +57,9 @@ class AjaxActionPolicy
         'cashier.charges.post' => 'new_cashier',
         'cashier.pay' => 'new_cashier',
         'cashier.pay_partial' => 'new_visit_mark_outstanding',
-        'cashier.scheme.list' => 'new_cashier',
         'cashier.scheme.pay' => 'new_cashier',
+        'cashier.other_payment.context' => 'new_cashier_other_payment',
+        'cashier.other_payment.post' => 'new_cashier_other_payment',
         'cashier.mark_unpaid' => 'new_visit_mark_outstanding',
         'cashier.close_zero' => 'new_close_without_charge',
         'lab.select' => 'new_lab',
@@ -91,6 +92,7 @@ class AjaxActionPolicy
         'admin.duplicates.list' => 'new_admin',
         'admin.directory.save' => 'new_admin',
         'admin.directory.delete' => 'new_admin',
+        'admin.facility.save' => 'new_admin',
         'outreach.presets' => 'new_admin',
         'outreach.preview' => 'new_admin',
         'outreach.queue' => 'new_admin',
@@ -134,6 +136,8 @@ class AjaxActionPolicy
         'chart_depth.referral_save' => 'new_chart_depth_referral',
         'chart_depth.referral_print' => 'new_chart_depth_referral',
         'chart_depth.referral_status' => 'new_chart_depth_referral',
+        'chart_depth.referral_editor_get' => 'new_chart_depth_referral',
+        'chart_depth.referral_update' => 'new_chart_depth_referral',
         'admin.health_status' => 'new_admin',
         'admin.perf.summary' => 'new_admin',
         'admin.backup.run' => 'new_admin',
@@ -247,6 +251,7 @@ class AjaxActionPolicy
     /** @var array<int, string> */
     private const LAB_OPS_READ_ACTIONS = [
         'lab_ops.worklist',
+        'lab_ops.followup',
         'lab_ops.result_get',
         'lab_ops.setup_status',
     ];
@@ -348,7 +353,9 @@ class AjaxActionPolicy
         'scheduling.flow_board.poll',
         'scheduling.flow_board.prefs',
         'scheduling.flow_board.lane_map',
+        'scheduling.provider_colors',
         'scheduling.calendar.range',
+        'scheduling.calendar.slots',
         'scheduling.calendar.poll',
         'scheduling.recalls.list',
     ];
@@ -359,9 +366,11 @@ class AjaxActionPolicy
         'scheduling.flow_board.room',
         'scheduling.flow_board.prefs.save',
         'scheduling.flow_board.lane_map.save',
+        'scheduling.provider_colors.save',
         'scheduling.calendar.book',
         'scheduling.calendar.move',
         'scheduling.calendar.resize',
+        'scheduling.calendar.cancel',
         'scheduling.recalls.save',
         'scheduling.recalls.delete',
         'scheduling.recalls.update_status',
@@ -417,6 +426,23 @@ class AjaxActionPolicy
         // clinical-doc write access (the service also calls assertWriteAccess()).
         'proc_order.form_data',
         'proc_order.save',
+        // Native Clinical Instructions editor — both bootstrap (get) and save
+        // require clinical-doc write access (the service asserts write on each).
+        'clinical_doc.instructions_get',
+        'clinical_doc.instructions_save',
+        // Native screening questionnaires (PHQ-9 / GAD-7) — get + save both need
+        // clinical-doc write access (the service asserts write on each).
+        'clinical_doc.screening_get',
+        'clinical_doc.screening_save',
+        // Native vitals editor — same access model.
+        'clinical_doc.vitals_get',
+        'clinical_doc.vitals_save',
+        // Medical certificate — same access model.
+        'clinical_doc.certificate_get',
+        'clinical_doc.certificate_save',
+        // Primary-care eye exam — same access model.
+        'clinical_doc.eye_exam_get',
+        'clinical_doc.eye_exam_save',
     ];
 
     /** @var array<int, string> */
@@ -458,11 +484,14 @@ class AjaxActionPolicy
         'bill_ops.outstanding_list',
     ];
 
-    /** @var array<int, string> CBILL-3 — scheme claim register (insurance-vault gated) */
+    /** @var array<int, string> CBILL-3/4a — scheme claim register + payer prices (insurance-vault gated) */
     private const BILL_OPS_INSURANCE_ACTIONS = [
         'bill_ops.scheme_claims',
         'bill_ops.scheme_claims_export',
         'bill_ops.scheme_claim_status',
+        'bill_ops.payer_prices',
+        'bill_ops.payer_price_upsert',
+        'bill_ops.payer_price_delete',
     ];
 
     /** @var array<int, string> */
@@ -534,6 +563,27 @@ class AjaxActionPolicy
         'pharmacy.rx_save',
     ];
 
+    /**
+     * CBILL-4b — logging/reading an eligibility check, and the payer picker it needs,
+     * happen wherever a payer is on file: front desk (registration) or the cashier
+     * (scheme selection). Any-of, not desk-specific. `cashier.scheme.list` moved here
+     * from a cashier-only SINGLE_ACL entry so reception can populate the same picker.
+     *
+     * @var array<int, string>
+     */
+    private const ELIGIBILITY_CHECK_ACTIONS = [
+        'cashier.eligibility_check',
+        'cashier.eligibility_status',
+        'cashier.scheme.list',
+    ];
+
+    /** @var array<int, string> */
+    private const ELIGIBILITY_CHECK_ACLS = [
+        'new_cashier',
+        'new_reception',
+        'new_admin',
+    ];
+
     /** @var array<int, string> */
     private const RX_FORM_ACLS = [
         'new_pharmacy',
@@ -564,6 +614,7 @@ class AjaxActionPolicy
     private const CHART_READ_ACTIONS = [
         'patients.preview',
         'patients.registration.get',
+        'patients.registration.payer_list',
         'patients.chart.visits',
         'patients.chart.clinical',
         'patients.chart.issue_get',
@@ -575,6 +626,9 @@ class AjaxActionPolicy
         'patients.chart.immunization_save',
         'patients.chart.activity_feed',
         'patients.chart.messages',
+        'chat.list',
+        'chat.send',
+        'patients.note_detail',
         'patients.chart.search',
         'mrd.profile_payments_summary',
         'chart_depth.payments_list',
@@ -649,7 +703,9 @@ class AjaxActionPolicy
         'scheduling.flow_board.poll' => true,
         'scheduling.flow_board.prefs' => true,
         'scheduling.flow_board.lane_map' => true,
+        'scheduling.provider_colors' => true,
         'scheduling.calendar.range' => true,
+        'scheduling.calendar.slots' => true,
         'scheduling.calendar.poll' => true,
         'scheduling.recalls.list' => true,
         // Communications reads.
@@ -674,6 +730,8 @@ class AjaxActionPolicy
         'patients.registration.get' => true,
         'patients.chart.clinical' => true,
         'patients.chart.messages' => true,
+        'chat.list' => true,
+        'patients.note_detail' => true,
         'patients.chart.activity_feed' => true,
         'patients.chart.history_get' => true,
         'patients.chart.immunization_options' => true,
@@ -686,6 +744,7 @@ class AjaxActionPolicy
         'mrd.profile_payments_summary' => true,
         // Lab/Pharmacy ops reads.
         'lab_ops.worklist' => true,
+        'lab_ops.followup' => true,
         'lab_ops.result_get' => true,
         'lab_ops.setup_status' => true,
         'lab_ops.fee_map_list' => true,
@@ -726,6 +785,15 @@ class AjaxActionPolicy
         'clinical_doc.catalog' => true,
         'clinical_doc.sign_status' => true,
         'clinical_doc.favorites' => true,
+        // Native editor bootstraps (pure reads; the matching _save actions stay
+        // locked). Without these, rapid drawer open/close cycles queue their GETs
+        // on the session lock and the next drawer sits on "Loading…" for seconds
+        // with the modal blocking the page (the screening-tab freeze).
+        'clinical_doc.instructions_get' => true,
+        'clinical_doc.screening_get' => true,
+        'clinical_doc.vitals_get' => true,
+        'clinical_doc.certificate_get' => true,
+        'clinical_doc.eye_exam_get' => true,
         // Bill-ops reads.
         'bill_ops.visit_charges' => true,
         'bill_ops.payments_search' => true,
@@ -838,6 +906,10 @@ class AjaxActionPolicy
 
         if (in_array($action, self::RX_FORM_ACTIONS, true)) {
             return ['type' => 'any_acl', 'acls' => self::RX_FORM_ACLS];
+        }
+
+        if (in_array($action, self::ELIGIBILITY_CHECK_ACTIONS, true)) {
+            return ['type' => 'any_acl', 'acls' => self::ELIGIBILITY_CHECK_ACLS];
         }
 
         if (isset(self::SINGLE_ACL[$action])) {
@@ -993,7 +1065,9 @@ class AjaxActionPolicy
             return ['type' => 'any_acl', 'acls' => ['new_admin', 'new_reception']];
         }
 
-        if ($action === 'patients.update') {
+        if ($action === 'patients.update'
+            || $action === 'patients.registration.payer_add'
+            || $action === 'patients.registration.payer_remove') {
             return ['type' => 'any_acl', 'acls' => self::PROFILE_EDIT_ACL_ANY];
         }
 

@@ -4,9 +4,6 @@
     <meta charset="UTF-8">
     <title>{{ page_title|xlt }}</title>
     {{ header_html|raw }}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700&family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ assets_url }}/css/tokens.css?v={{ asset_version }}">
     <link rel="stylesheet" href="{{ assets_url }}/css/shell.css?v={{ asset_version }}">
     <link rel="stylesheet" href="{{ assets_url }}/css/components.css?v={{ asset_version }}">
@@ -22,6 +19,33 @@
      data-queue-poll-ms="{{ queue_poll_ms|default(30000) }}"
      data-lang-code="{{ lang_code|default('en') }}"
      data-i18n-url="{{ i18n_url|default('')|attr }}">
+
+    {# Stamp saved sidebar preferences BEFORE the sidebar parses/paints.
+       shell.js (end of body) also applies these, but by then the light
+       expanded rail has already painted — a visible flash of the wrong
+       theme on every load for users with dark/collapsed saved, and a
+       stuck-wrong sidebar if the script is delayed. Keys/classes must
+       stay in sync with shell.js. #}
+    <script>
+        (function () {
+            try {
+                var cls = [];
+                if (window.localStorage.getItem('nc-sidebar-dark') === '1') {
+                    cls.push('nc-sidebar-dark');
+                }
+                if (
+                    window.localStorage.getItem('nc-sidebar-collapsed') === '1'
+                    || window.localStorage.getItem('oe-nc-sidebar-collapsed') === '1'
+                ) {
+                    cls.push('nc-t1-sidebar-collapsed');
+                }
+                if (cls.length) {
+                    var root = document.getElementById('nc-t1');
+                    root.className += ' ' + cls.join(' ');
+                }
+            } catch (e) { /* storage blocked — default light/expanded */ }
+        })();
+    </script>
 
     {% if not shell_minimal|default(false) %}
     <div class="nc-sidebar-backdrop" id="nc-sidebar-backdrop" hidden aria-hidden="true"></div>
@@ -178,6 +202,17 @@
                     </a>
                 </div>
             </div>
+
+            <button type="button"
+                    class="nc-sidebar-theme-toggle"
+                    id="nc-sidebar-theme-toggle"
+                    aria-pressed="false"
+                    aria-label="{{ 'Switch sidebar to dark appearance'|xlt }}">
+                <span class="nc-sidebar-theme-toggle-icon" aria-hidden="true">
+                    <i class="fa fa-moon-o"></i>
+                </span>
+                <span class="nc-sidebar-expand-only">{{ 'Dark sidebar'|xlt }}</span>
+            </button>
 
             <button type="button"
                     class="nc-sidebar-collapse nc-hidden nc-flex-lg"

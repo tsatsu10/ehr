@@ -1,7 +1,7 @@
 # New Clinic — Cashier Billing Completion Plan (CBILL-*)
 
-**Version:** v0.1.3
-**Status:** CBILL-1 **built + live-smoke validated** (`pharmacy_auto_bill_on_dispense` default OFF); CBILL-2 **built + live-smoke validated** (`enable_partial_payment` default OFF); CBILL-3 scoped (gated on a PRD amendment)
+**Version:** v0.1.5
+**Status:** CBILL-1 **built + live-smoke validated** (`pharmacy_auto_bill_on_dispense` default OFF); CBILL-2 **built + live-smoke validated** (`enable_partial_payment` default OFF); CBILL-3 **built + validated** (`enable_insurance_scheme` default OFF, PRD D-BILL-8); CBILL-4 **designed, not yet built** (`enable_payer_billing` default OFF, PRD D-BILL-9)
 **Owner:** Engineering
 **Related:** M5 Cashier · M13 Pharmacy Ops · M14 Billing Back Office (V1.2-BILL) ·
 [PRD](../done/NEW_CLINIC_V1_PRD.md) · [Pharmacy Ops Redesign](../done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md)
@@ -24,7 +24,7 @@ some lines, the patient pays the rest in cash) — are absent from the New Clini
 The core "Open payments (core)" escape hatch (`front_payment.php`) exists partly to cover
 these, but paying there does **not** advance the `new_visit` FSM, so it is a footgun.
 
-This plan closes the cashier billing story in three dependency-ordered slices.
+This plan closes the cashier billing story in four dependency-ordered slices.
 
 ## 2. Scope and non-scope
 
@@ -35,12 +35,20 @@ This plan closes the cashier billing story in three dependency-ordered slices.
 - **CBILL-3** — insurance scheme split (scheme-covered vs patient-pay lines; collect the
   patient part now; track the scheme part as a claim to submit). **Requires a PRD amendment**
   (insurance is a formal non-goal — PRD §3.2 NG3, principle "cash truth").
+- **CBILL-4** — payer-aware pricing, a manual eligibility-check log, more than one payer per
+  patient/claim, and claim age/rejection tracking on top of CBILL-3. **Requires a PRD
+  amendment** (D-BILL-9). See the dedicated
+  [Insurance Foundation spec](./NEW_CLINIC_V1_INSURANCE_FOUNDATION_REDESIGN.md) — full detail
+  lives there, not in this plan doc.
 
-**Explicit non-scope (all slices):**
-- Electronic NHIS claim submission (CLAIM-it), automatic G-DRG tariff lookup, and scheme
-  pre-authorization automation. Claims are tracked and exported for **manual** submission.
-- Insurance eligibility checks, coordination of benefits, copay-vs-coinsurance math beyond a
-  flat per-line covered/not-covered split, claim aging dashboards (that is M14 territory).
+**Explicit non-scope (all slices, including CBILL-4):**
+- Electronic NHIS claim submission (CLAIM-it XML), any live NHIA/HMO API or portal
+  integration, and automated USSD dialing. Eligibility and claim tracking stay **manual** —
+  staff perform the check/submission themselves; the system only logs it.
+- Coordination of benefits / automatic multi-payer split math, claim **batching** for
+  submission, and pre-authorization workflow automation. CBILL-4 lets a clinic record more
+  than one payer and log an eligibility check, but a human still decides the split and still
+  performs the check — see the CBILL-4 spec §2 for the precise line.
 - Refunds / payment reversal (stays core / M14 correction).
 - Re-opening a `completed` visit (PRD §6.4b — unchanged).
 
@@ -51,11 +59,13 @@ This plan closes the cashier billing story in three dependency-ordered slices.
 | **CBILL-1** | Pharmacy charges at the cashier | Small | — | `pharmacy_auto_bill_on_dispense` (OFF) | No |
 | **CBILL-2** | Partial payment / balance | Medium | CBILL-1 | `enable_partial_payment` (OFF) | **Done — D-BILL-7** (amends D-BILL-2) |
 | **CBILL-3** | Insurance scheme split | Large | CBILL-2 | `enable_insurance_scheme` (OFF) | **Done — D-BILL-8** (unblocked) |
+| **CBILL-4** | Payer pricing, eligibility log, multi-payer, claim aging | Large | CBILL-3 | `enable_payer_billing` (OFF) | **Done — D-BILL-9** (unblocked) |
 
 Order rationale: CBILL-1 makes the bill *complete*; CBILL-2 introduces "amount due vs paid
 vs balance"; CBILL-3 reuses that same balance machinery to split "scheme owes" from "patient
-owes." Building them in order means each slice extends the last instead of three half-done
-threads.
+owes"; CBILL-4 makes what a scheme owes **accurate** (payer pricing) and **trackable**
+(eligibility log, aging, rejection). Building them in order means each slice extends the
+last instead of four half-done threads.
 
 ---
 
@@ -249,13 +259,20 @@ annual-limit tracking (likely out of V1).
 2. CBILL-2: new `new_visit` sub-state vs pure AR balance — decide in the CBILL-2 spec.
 3. CBILL-3: does the clinic accept NHIS at all, or private schemes only? Affects whether
    G-DRG tariff structure matters (research suggests many private clinics decline NHIS).
+   **Answered by CBILL-4:** payer-aware pricing is generalised to any payer, not NHIS-specific
+   — a private-only clinic simply never configures NHIS price overrides.
 4. CBILL-3 claim register home: extend M14 Billing Back Office (`enable_bill_ops_*`) vs a new
    M5 surface.
+5. CBILL-4 open questions (payer-price CSV import, claim batching shape, second-payer
+   registration UX, rejection-note structure) — tracked in the
+   [Insurance Foundation spec](./NEW_CLINIC_V1_INSURANCE_FOUNDATION_REDESIGN.md) §8, not
+   duplicated here.
 
 ## 8. Version history
 
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
+| v0.1.5 | 2026-07-15 | Engineering | CBILL-4 scoped + PRD-authorised (D-BILL-9): payer-aware pricing, manual eligibility-check log (grounded in NHIS `*842#` USSD research), multi-payer patient/claim, claims-workbench aging + rejection tracking. Full design in the new [Insurance Foundation spec](./NEW_CLINIC_V1_INSURANCE_FOUNDATION_REDESIGN.md); this plan doc only updated for roadmap/status sync. Not yet built. |
 | v0.1.0 | 2026-07-15 | Engineering | Initial plan: 3-slice cashier billing roadmap; CBILL-1 (pharmacy charges) full spec; CBILL-2/CBILL-3 scoped; CBILL-3 gated on PRD amendment; Ghana insurance research captured. |
 | v0.1.1 | 2026-07-15 | Engineering | CBILL-1 built: flag `pharmacy_auto_bill_on_dispense` (install.sql + admin), `CashierService` drug-charge read/fold/mark-billed across queue/select/pay, `DrugChargesTable` + Medicines section, tests. Verified: PHP verify PASS, 711 vitest pass, `npm run check` green, live SQL schema smoke PASS. Pending: live e2e payment run with flag ON. |
 | v0.1.2 | 2026-07-15 | Engineering | CBILL-1 live-smoke validated on the dev DB (seeded medicine on a real `ready_for_payment` visit, drove the real `CashierService`): `selectVisit` surfaces the medicine + folds it into `charges_total`; `getCashierQueue` card total includes it; `markDrugSalesBilled` flips `billed=1` + stamps `bill_date` — all PASS on live data, seed cleaned up, flag restored OFF, no collateral changes. Flag-OFF path covered by unit test (in-process config cache makes it untestable in one CLI run). Full `recordPayment` transition/AR-post is unchanged pre-existing code; its two new pieces (drug total fold, mark-billed) are the live-validated ones. Committed `643d9cb2`. |

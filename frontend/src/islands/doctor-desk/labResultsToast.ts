@@ -1,3 +1,4 @@
+import { t } from '@core/i18n';
 import type { DoctorDeskNotice } from './doctorDeskUtils';
 
 const STORAGE_PREFIX = 'nc-doctor-lab-toast-seen:';
@@ -42,7 +43,7 @@ export function buildLabResultsReadyNotice(
   markLabResultsToastSeen(visitId);
 
   return {
-    message: `Lab results ready for ${displayName} (queue #${queueNumber}).`,
+    message: t('Lab results ready for {name} (queue #{queueNumber}).', { name: displayName, queueNumber }),
     variant: 'success',
   };
 }

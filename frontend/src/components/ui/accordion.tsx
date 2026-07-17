@@ -16,8 +16,8 @@ export const AccordionItem = forwardRef<
   <AccordionPrimitive.Item
     ref={ref}
     className={cn(
-      'mb-2 overflow-hidden rounded-[0.25rem] border border-[var(--oe-nc-border,#d3dce3)] bg-white',
-      'data-[state=open]:border-[var(--oe-nc-primary,#1b3a5f)] data-[state=open]:shadow-[0_0_0_3px_rgba(27,58,95,0.08)]',
+      'mb-2 overflow-hidden rounded-[var(--oe-nc-radius,0.75rem)] border border-[var(--oe-nc-border,rgba(0,0,0,0.08))] bg-white',
+      'data-[state=open]:border-[var(--oe-nc-primary,#0071e3)] data-[state=open]:shadow-[0_0_0_3px_rgba(0,113,227,0.08)]',
       className,
     )}
     {...props}
@@ -33,9 +33,9 @@ export const AccordionTrigger = forwardRef<
     <AccordionPrimitive.Trigger
       ref={ref}
       className={cn(
-        'flex w-full cursor-pointer items-center justify-between gap-2 border-0 bg-[var(--oe-nc-bg-tint,#f8fafc)] px-4 py-3.5 text-left font-display text-[0.9375rem] font-semibold text-[var(--oe-nc-text,#111827)]',
-        'hover:bg-[var(--oe-nc-bg,#eff6ff)] focus-visible:outline-none focus-visible:shadow-[inset_var(--oe-nc-focus-ring)]',
-        'data-[state=open]:border-b data-[state=open]:border-[var(--oe-nc-border,#e2e8f0)] data-[state=open]:bg-[var(--oe-nc-bg,#eff6ff)] group',
+        'flex w-full cursor-pointer items-center justify-between gap-2 border-0 bg-[var(--oe-nc-bg-tint,#f5f5f7)] px-4 py-3.5 text-left font-display text-[0.9375rem] font-semibold text-[var(--oe-nc-text,#1d1d1f)]',
+        'hover:bg-[var(--oe-nc-bg,#f5f5f7)] focus-visible:outline-none focus-visible:shadow-[inset_var(--oe-nc-focus-ring)]',
+        'data-[state=open]:border-b data-[state=open]:border-[var(--oe-nc-border,rgba(0,0,0,0.08))] data-[state=open]:bg-[var(--oe-nc-bg,#f5f5f7)] group',
         className,
       )}
       {...props}

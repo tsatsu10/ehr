@@ -1,6 +1,12 @@
 import { createDeskUi } from '@components/DeskUi';
 import { Stethoscope } from 'lucide-react';
 
+// NOTE: createDeskUi() runs at module scope and its returned components close
+// over these strings at call time -- calling t() here would freeze whatever
+// locale was active at import time (the "no module-scope t()" rule in
+// @core/i18n). DeskUi is also shared by the other (not-yet-migrated) desks,
+// so this factory's config stays plain English until DeskUi itself is
+// reworked to resolve labels at render time.
 const ui = createDeskUi({
   prefix: 'doctor',
   queueAriaLabel: 'Doctor queue',

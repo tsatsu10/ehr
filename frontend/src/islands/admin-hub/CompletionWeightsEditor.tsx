@@ -113,7 +113,7 @@ export function CompletionWeightsEditor({
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className={`mb-0 font-bold ${totalValid ? 'text-green-600' : 'text-[var(--oe-nc-danger,#dc2626)]'}`}>
+          <p className={`mb-0 font-bold ${totalValid ? 'text-[var(--color-oe-cta,#2bb350)]' : 'text-[var(--oe-nc-danger,#dc2626)]'}`}>
             Active total: {activeTotal} / {targetTotal}
           </p>
           <Button

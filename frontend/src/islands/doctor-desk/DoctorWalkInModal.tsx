@@ -23,6 +23,7 @@ import {
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Label } from '@components/ui/label';
 import { NativeSelect } from '@components/ui/native-select';
+import { t } from '@core/i18n';
 import type { VisitType } from '@core/types';
 
 interface DoctorWalkInModalProps {
@@ -64,8 +65,8 @@ export function DoctorWalkInModal({
         aria-labelledby="nc-doctor-walk-in-title"
       >
         <DialogHeader>
-          <DialogTitle id="nc-doctor-walk-in-title">Start visit with doctor</DialogTitle>
-          <DialogClose aria-label="Close">
+          <DialogTitle id="nc-doctor-walk-in-title">{t('Start visit with doctor')}</DialogTitle>
+          <DialogClose aria-label={t('Close')}>
             <span aria-hidden="true">&times;</span>
           </DialogClose>
         </DialogHeader>
@@ -75,13 +76,13 @@ export function DoctorWalkInModal({
             <PatientContextBanner layout="compact" identity={patientIdentity} className="mb-3" />
           ) : null}
           <p className="text-[var(--oe-nc-text-muted)] text-sm mb-3">
-            No visit today for this patient. Skip Front Desk and Triage and start the consult now?
+            {t('No visit today for this patient. Skip Front Desk and Triage and start the consult now?')}
           </p>
 
           <div className="space-y-1.5 mb-3">
-            <Label htmlFor="nc-doctor-walk-in-visit-type" className="normal-case">Visit type</Label>
+            <Label htmlFor="nc-doctor-walk-in-visit-type" className="normal-case">{t('Visit type')}</Label>
             {visitTypes.length === 0 ? (
-              <div className={deskCalloutClass('warn', 'py-2')}>No visit types configured</div>
+              <div className={deskCalloutClass('warn', 'py-2')}>{t('No visit types configured')}</div>
             ) : (
               <NativeSelect
                 id="nc-doctor-walk-in-visit-type"
@@ -104,14 +105,14 @@ export function DoctorWalkInModal({
 
         <DialogFooter>
           <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
-            Cancel
+            {t('Cancel')}
           </Button>
           <Button
             type="button"
             onClick={handleConfirm}
             disabled={submitting || visitTypes.length === 0}
           >
-            {submitting ? 'Starting…' : 'Start consult'}
+            {submitting ? t('Starting…') : t('Start consult')}
           </Button>
         </DialogFooter>
       </DialogContent>

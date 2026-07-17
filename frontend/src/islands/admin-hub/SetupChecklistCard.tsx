@@ -45,7 +45,7 @@ export function SetupChecklistCard({
           <Button
             type="button"
             size="sm"
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            variant="cta"
             disabled={completing}
             onClick={onMarkComplete}
           >

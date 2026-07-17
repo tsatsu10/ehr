@@ -121,6 +121,20 @@ export interface ReferralRow {
   occurred_at?: string;
   print_url?: string;
   edit_url?: string;
+  /** CP-1 — flag ON: edit opens the native drawer instead of the stock form. */
+  can_native_edit?: boolean;
+}
+
+/** CP-1 — native referral editor payload (chart_depth.referral_editor_get). */
+export interface ReferralEditorData {
+  transaction_id: number;
+  pid: number;
+  fields: Record<string, string>;
+  /** Optimistic-concurrency token — echoed back as expected_fingerprint on save. */
+  fingerprint?: string;
+  has_meta: boolean;
+  status: string | null;
+  risk_levels: { value: string; label: string }[];
 }
 
 export interface ReferralSaveResult {

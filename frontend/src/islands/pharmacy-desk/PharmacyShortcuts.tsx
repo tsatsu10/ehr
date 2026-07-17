@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils';
 interface PharmacyShortcutsProps {
   blocked: boolean;
   inPharmacy: boolean;
-  pharmOpsEnabled?: boolean;
   canPrintRx?: boolean;
   rxListUrl?: string;
   showPharmacyService?: boolean;
@@ -22,7 +21,6 @@ interface PharmacyShortcutsProps {
   onAddRx: () => void;
   onPrintRx?: () => void;
   onOpenPharmacyService?: () => void;
-  onOpenDispenseCore: () => void;
 }
 
 interface PrimaryActionProps {
@@ -95,7 +93,6 @@ function MoreLink({
 export function PharmacyShortcuts({
   blocked,
   inPharmacy,
-  pharmOpsEnabled = false,
   canPrintRx = false,
   rxListUrl,
   showPharmacyService = false,
@@ -106,7 +103,6 @@ export function PharmacyShortcuts({
   onAddRx,
   onPrintRx,
   onOpenPharmacyService,
-  onOpenDispenseCore,
 }: PharmacyShortcutsProps) {
   const disabled = blocked || !inPharmacy;
   const moreLinks: {
@@ -117,19 +113,11 @@ export function PharmacyShortcuts({
   }[] = [];
 
   if (rxListUrl) {
-    moreLinks.push({ label: 'Open Rx list (core)', id: 'nc-pharmacy-open-rx-list', href: rxListUrl });
-  }
-  if (pharmOpsEnabled) {
+    const rxListIsNative = rxListUrl.includes('rx-history.php');
     moreLinks.push({
-      label: 'Advanced dispense (core)',
-      id: 'nc-pharmacy-open-dispense',
-      onClick: onOpenDispenseCore,
-    });
-  } else {
-    moreLinks.push({
-      label: 'Encounter / dispense (core)',
-      id: 'nc-pharmacy-open-dispense',
-      onClick: onOpenDispenseCore,
+      label: rxListIsNative ? 'Rx history' : 'Open Rx list (core)',
+      id: 'nc-pharmacy-open-rx-list',
+      href: rxListUrl,
     });
   }
   if (showPharmacyService && onOpenPharmacyService) {

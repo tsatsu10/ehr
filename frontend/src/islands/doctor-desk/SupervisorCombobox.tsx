@@ -11,6 +11,7 @@ import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
 import { X } from 'lucide-react';
 import { oeFetch } from '@core/oeFetch';
+import { t } from '@core/i18n';
 import type { DoctorProviderSearchResult, DoctorSupervisorMeta, DoctorVisit } from '@core/types';
 
 interface SupervisorComboboxProps {
@@ -70,13 +71,15 @@ export function SupervisorCombobox({
       setResultsOpen(false);
       onUpdated(meta);
       if (meta.supervisor_id && meta.supervisor_display_name) {
-        onNotice(`Supervising provider updated: ${meta.supervisor_display_name}`, 'success');
+        onNotice(t('Supervising provider updated: {name}', { name: meta.supervisor_display_name }), 'success');
       } else {
-        onNotice('Supervising provider cleared', 'success');
+        onNotice(t('Supervising provider cleared'), 'success');
       }
     } catch (err) {
       onNotice(
-        `Failed to update supervisor: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        t('Failed to update supervisor: {reason}', {
+          reason: err instanceof Error ? err.message : t('Unknown error'),
+        }),
         'danger',
       );
     } finally {
@@ -130,14 +133,14 @@ export function SupervisorCombobox({
   return (
     <div className="nc-supervisor-combobox mb-3">
       <Label htmlFor="nc-supervisor-search" className="mb-1.5 block">
-        <strong>Supervising provider</strong>
+        <strong>{t('Supervising provider')}</strong>
       </Label>
       <div className="flex">
         <Input
           type="text"
           className="rounded-r-none"
           id="nc-supervisor-search"
-          placeholder="Search providers..."
+          placeholder={t('Search providers...')}
           autoComplete="off"
           value={query}
           disabled={blocked || submitting}
@@ -151,7 +154,7 @@ export function SupervisorCombobox({
             variant="outline"
             className="rounded-l-none border-l-0 px-3"
             id="nc-supervisor-clear"
-            title="Clear"
+            title={t('Clear')}
             disabled={blocked || submitting}
             onClick={() => void setSupervisor(null)}
           >
@@ -169,7 +172,7 @@ export function SupervisorCombobox({
           {searchError ? (
             <div className="nc-list-group-item text-[var(--oe-nc-danger,#dc2626)] text-sm">{searchError}</div>
           ) : results.length === 0 ? (
-            <div className="nc-list-group-item text-[var(--oe-nc-text-muted)] text-sm">No providers found</div>
+            <div className="nc-list-group-item text-[var(--oe-nc-text-muted)] text-sm">{t('No providers found')}</div>
           ) : (
             results.map((provider) => (
               <button
@@ -194,7 +197,7 @@ export function SupervisorCombobox({
             {supervisor.supervisor_display_name}
           </Badge>
           {supervisor.supervisor_from_profile && (
-            <span className="text-sm text-[var(--oe-nc-text-muted)] ml-2">(Default from your profile)</span>
+            <span className="text-sm text-[var(--oe-nc-text-muted)] ml-2">{t('(Default from your profile)')}</span>
           )}
         </div>
       )}

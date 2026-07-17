@@ -1,0 +1,2 @@
+import{C as e,S as t,g as n}from"./dist-BQ-rlMkt.js";var r=e(t(),1);function i(e,t,i={}){let a=(0,r.useRef)(e),o=i.respectPollBackoff??!0;(0,r.useEffect)(()=>{a.current=e},[e]),(0,r.useEffect)(()=>{if(t===null)return;let e=t*(.9+Math.random()*.2),r=window.setInterval(()=>{document.hidden||o&&n()||a.current()},e);return()=>window.clearInterval(r)},[t,o])}export{i as t};
+//# sourceMappingURL=useInterval-DoP4VQDm.js.map

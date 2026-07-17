@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SegmentedControl } from '@components/SegmentedControl';
 import { DataTable, DataTableStatusRow } from '@components/DataTable';
+import { RowActionsMenu, type RowActionItem } from '@components/RowActionsMenu';
 import { ConfirmModal } from '@components/ConfirmModal';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Badge } from '@components/ui/badge';
@@ -168,7 +169,7 @@ export function RecallsLens({
         providerId: row.provider_id,
         pid: row.pid,
         patientLabel: row.patient_name,
-        categoryId: day.categories[0]?.id ?? 0,
+        visitTypeId: (day.default_visit_type_id || day.categories[0]?.id) ?? 0,
         durationMinutes: day.interval_minutes,
         comments: row.reason,
         recallId: row.recall_id,
@@ -244,6 +245,38 @@ export function RecallsLens({
     }
   };
 
+  // Secondary row actions live behind an overflow menu; Log outcome + Book stay
+  // visible as the two primary actions. Manage-only items are gated the same way
+  // the inline buttons were (data.can_manage); Front Desk is always available.
+  const buildRecallActions = (row: RecallRow): RowActionItem[] => {
+    const items: RowActionItem[] = [];
+    const canManage = !!data?.can_manage;
+    if (canManage && row.produced_eid != null && row.produced_eid > 0) {
+      items.push({
+        id: 'view-appt',
+        label: labels.crossLinkViewAppointment,
+        href: calendarUrlForDate(moduleUrl, filters, row.produced_event_date || row.due_date),
+      });
+    }
+    if (canManage) {
+      items.push({
+        id: 'flow',
+        label: labels.crossLinkFlowBoard,
+        href: flowBoardUrlForDate(moduleUrl, filters, row.due_date),
+      });
+      items.push({ id: 'snooze', label: labels.recallSnooze, onClick: () => { void handleSnooze(row); }, disabled: busy });
+      if (data?.messaging_enabled) {
+        items.push({ id: 'remind', label: labels.recallSendReminder, onClick: () => { void handleSendReminder(row); }, disabled: busy });
+      }
+      items.push({ id: 'edit', label: labels.recallEdit, onClick: () => openEdit(row), disabled: busy });
+    }
+    items.push({ id: 'frontdesk', label: labels.frontDesk, href: frontDeskUrl });
+    if (canManage) {
+      items.push({ id: 'delete', label: labels.recallDelete, onClick: () => setPendingDelete(row), destructive: true, disabled: busy });
+    }
+    return items;
+  };
+
   if (loading && !data) {
     return <p className="text-[var(--oe-nc-text-muted)]">{labels.loadingRecalls}</p>;
   }
@@ -308,8 +341,13 @@ export function RecallsLens({
                 {' '}
                 {row.pubpid}
               </span>
+              <span className="text-[var(--oe-nc-text-muted)] text-sm block">
+                {row.last_seen_label
+                  ? `${labels.recallLastSeenPrefix} ${row.last_seen_label}`
+                  : labels.recallNeverSeen}
+              </span>
             </td>
-            <td className={row.bucket === 'overdue' ? 'text-[var(--oe-nc-danger,#dc2626)] text-sm' : 'text-sm'}>
+            <td className={row.bucket === 'overdue' ? 'text-[var(--oe-nc-danger)] text-sm' : 'text-sm'}>
               {dueLabel(row)}
             </td>
             <td className="text-sm">{row.reason || '—'}</td>
@@ -318,96 +356,39 @@ export function RecallsLens({
             </td>
             <td className="text-sm text-[var(--oe-nc-text-muted)]">{row.contact}</td>
             <td className="text-sm">
-              {data.can_manage && (
-                <div className="flex flex-wrap">
-                  {row.produced_eid != null && row.produced_eid > 0 && (
-                    <Button variant="link" size="sm" className="h-auto p-0 mr-2" asChild>
-                      <a
-                        href={calendarUrlForDate(
-                          moduleUrl,
-                          filters,
-                          row.produced_event_date || row.due_date,
-                        )}
-                      >
-                        {labels.crossLinkViewAppointment}
-                      </a>
-                    </Button>
-                  )}
-                  <Button variant="link" size="sm" className="h-auto p-0 mr-2" asChild>
-                    <a href={flowBoardUrlForDate(moduleUrl, filters, row.due_date)}>
-                      {labels.crossLinkFlowBoard}
-                    </a>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="link"
-                    size="sm"
-                    className="h-auto p-0 mr-2"
-                    disabled={busy}
-                    onClick={() => {
-                      setOutcomeRow(row);
-                      setOutcomeStatus('contacted');
-                    }}
-                  >
-                    {labels.recallLogOutcome}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="link"
-                    size="sm"
-                    className="h-auto p-0 mr-2"
-                    disabled={busy}
-                    onClick={() => { void openBooking(row); }}
-                  >
-                    {labels.recallBookAppt}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="link"
-                    size="sm"
-                    className="h-auto p-0 mr-2"
-                    disabled={busy}
-                    onClick={() => { void handleSnooze(row); }}
-                  >
-                    {labels.recallSnooze}
-                  </Button>
-                  {data.messaging_enabled && (
+              <div className="flex flex-wrap items-center gap-1">
+                {data.can_manage && (
+                  <>
                     <Button
                       type="button"
                       variant="link"
                       size="sm"
                       className="h-auto p-0 mr-2"
                       disabled={busy}
-                      onClick={() => { void handleSendReminder(row); }}
+                      onClick={() => {
+                        setOutcomeRow(row);
+                        setOutcomeStatus('contacted');
+                      }}
                     >
-                      {labels.recallSendReminder}
+                      {labels.recallLogOutcome}
                     </Button>
-                  )}
-                  <Button
-                    type="button"
-                    variant="link"
-                    size="sm"
-                    className="h-auto p-0 mr-2"
-                    disabled={busy}
-                    onClick={() => openEdit(row)}
-                  >
-                    {labels.recallEdit}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="link"
-                    size="sm"
-                    className="h-auto p-0 text-(--oe-nc-danger,#dc2626) hover:text-(--oe-nc-danger,#dc2626)"
-                    disabled={busy}
-                    onClick={() => setPendingDelete(row)}
-                  >
-                    {labels.recallDelete}
-                  </Button>
-                </div>
-              )}
-              <Button variant="link" size="sm" className="h-auto p-0" asChild>
-                <a href={frontDeskUrl}>{labels.frontDesk}</a>
-              </Button>
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 mr-2"
+                      disabled={busy}
+                      onClick={() => { void openBooking(row); }}
+                    >
+                      {labels.recallBookAppt}
+                    </Button>
+                  </>
+                )}
+                <RowActionsMenu
+                  label={`Actions for ${row.patient_name}`}
+                  items={buildRecallActions(row)}
+                />
+              </div>
             </td>
           </tr>
         ))}

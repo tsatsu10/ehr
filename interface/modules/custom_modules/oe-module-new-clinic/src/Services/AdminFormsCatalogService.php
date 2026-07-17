@@ -39,14 +39,20 @@ class AdminFormsCatalogService
     /**
      * @return array<string, mixed>
      */
-    public function getCatalog(?int $facilityId = null): array
+    /**
+     * @param array<string, mixed>|null $board Pre-computed form-bundle board to reuse.
+     *        getBoard() is a non-trivial build (~0.25s); the settings payload already
+     *        computes it, so pass it in to avoid building it a second time per request.
+     * @return array<string, mixed>
+     */
+    public function getCatalog(?int $facilityId = null, ?array $board = null): array
     {
         if ($facilityId === null || $facilityId < 0) {
             $facilityId = 0;
         }
 
         $webroot = $GLOBALS['webroot'] ?? '';
-        $bundleFormdirs = $this->bundleFormdirs($facilityId);
+        $bundleFormdirs = $this->bundleFormdirs($facilityId, $board);
         $rows = QueryUtils::fetchRecords(
             'SELECT id, name, directory, state, category, priority, nickname, sql_run
              FROM registry
@@ -162,12 +168,13 @@ class AdminFormsCatalogService
     }
 
     /**
+     * @param array<string, mixed>|null $board Reuse a pre-computed board when available.
      * @return list<string>
      */
-    private function bundleFormdirs(int $facilityId): array
+    private function bundleFormdirs(int $facilityId, ?array $board = null): array
     {
         $formdirs = [];
-        $board = $this->bundle->getBoard($facilityId);
+        $board ??= $this->bundle->getBoard($facilityId);
         foreach ($board['rows'] as $row) {
             if (!is_array($row)) {
                 continue;

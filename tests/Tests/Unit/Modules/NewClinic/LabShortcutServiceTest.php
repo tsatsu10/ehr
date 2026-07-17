@@ -86,7 +86,9 @@ class LabShortcutServiceTest extends TestCase
         $result = $this->makeService()->preflight(5, 'RESULTS', 7);
 
         $this->assertSame('results', $result['shortcut']);
-        $this->assertStringContainsString('labdata.php?set_pid=10', $result['redirect_url']);
+        // Results now open the native chart labs section, not stock labdata.php.
+        $this->assertStringContainsString('patient-chart.php?pid=10', $result['redirect_url']);
+        $this->assertStringContainsString('anchor=clinical-labs', $result['redirect_url']);
     }
 
     /**

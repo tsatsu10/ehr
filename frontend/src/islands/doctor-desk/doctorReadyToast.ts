@@ -1,3 +1,4 @@
+import { t } from '@core/i18n';
 import type { DoctorDeskNotice } from './doctorDeskUtils';
 
 const STORAGE_PREFIX = 'nc-doctor-ready-toast-seen:';
@@ -45,7 +46,10 @@ export function pickDoctorReadyNotice(
 
     markDoctorReadyToastSeen(item.visit_id);
     return {
-      message: `Patient ready: ${item.display_name} (queue #${item.queue_number}).`,
+      message: t('Patient ready: {name} (queue #{queueNumber}).', {
+        name: item.display_name,
+        queueNumber: item.queue_number,
+      }),
       variant: 'info',
     };
   }

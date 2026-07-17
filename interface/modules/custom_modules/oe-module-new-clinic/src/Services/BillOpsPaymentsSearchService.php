@@ -80,10 +80,11 @@ class BillOpsPaymentsSearchService
             }
         }
 
+        // LEFT JOIN: deposits (CP-2) have no visit but must stay searchable.
         $countRow = QueryUtils::querySingleRow(
             "SELECT COUNT(*) AS cnt
              FROM new_receipt r
-             INNER JOIN new_visit v ON v.id = r.visit_id
+             LEFT JOIN new_visit v ON v.id = r.visit_id
              INNER JOIN patient_data pd ON pd.pid = r.pid
              WHERE r.facility_id = ?
              AND r.created_at >= ? AND r.created_at <= ?
@@ -100,7 +101,7 @@ class BillOpsPaymentsSearchService
                     pd.fname, pd.lname, pd.pubpid,
                     u.fname AS cashier_fname, u.lname AS cashier_lname
              FROM new_receipt r
-             INNER JOIN new_visit v ON v.id = r.visit_id
+             LEFT JOIN new_visit v ON v.id = r.visit_id
              INNER JOIN patient_data pd ON pd.pid = r.pid
              LEFT JOIN users u ON u.id = r.actor_user_id
              WHERE r.facility_id = ?
@@ -138,10 +139,11 @@ class BillOpsPaymentsSearchService
         }
 
         $facilityId = $this->visitScope->resolveDeskFacilityId();
+        // LEFT JOIN: deposits (CP-2) have no visit but are reversible too.
         $receipt = QueryUtils::querySingleRow(
             "SELECT r.*, v.state AS visit_state, v.row_version AS visit_version
              FROM new_receipt r
-             INNER JOIN new_visit v ON v.id = r.visit_id
+             LEFT JOIN new_visit v ON v.id = r.visit_id
              WHERE r.id = ? AND r.facility_id = ?",
             [$receiptId, $facilityId]
         );
@@ -202,24 +204,28 @@ class BillOpsPaymentsSearchService
                 [$pid, $actorUserId, $reference, -$amount, $reference]
             );
 
-            $sequence = QueryUtils::querySingleRow(
-                "SELECT IFNULL(MAX(sequence_no), 0) + 1 AS seq FROM ar_activity WHERE pid = ? AND encounter = ?",
-                [$pid, $encounter]
-            );
+            // Mirror the original posting shape: deposits (no encounter) were
+            // posted without ar_activity, so their reversal skips it too.
+            if ($encounter > 0) {
+                $sequence = QueryUtils::querySingleRow(
+                    "SELECT IFNULL(MAX(sequence_no), 0) + 1 AS seq FROM ar_activity WHERE pid = ? AND encounter = ?",
+                    [$pid, $encounter]
+                );
 
-            sqlInsert(
-                "INSERT INTO ar_activity (pid, encounter, sequence_no, code_type, code, modifier, payer_type,
-                 post_time, post_user, session_id, pay_amount, account_code)
-                 VALUES (?, ?, ?, '', '', '', 0, NOW(), ?, ?, ?, 'PP')",
-                [
-                    $pid,
-                    $encounter,
-                    (int) ($sequence['seq'] ?? 1),
-                    $actorUserId,
-                    $sessionId,
-                    -$amount,
-                ]
-            );
+                sqlInsert(
+                    "INSERT INTO ar_activity (pid, encounter, sequence_no, code_type, code, modifier, payer_type,
+                     post_time, post_user, session_id, pay_amount, account_code)
+                     VALUES (?, ?, ?, '', '', '', 0, NOW(), ?, ?, ?, 'PP')",
+                    [
+                        $pid,
+                        $encounter,
+                        (int) ($sequence['seq'] ?? 1),
+                        $actorUserId,
+                        $sessionId,
+                        -$amount,
+                    ]
+                );
+            }
 
             frontPayment($pid, $encounter, 'cash', $reference, 0, -$amount, date('Y-m-d H:i:s'));
 
@@ -280,6 +286,8 @@ class BillOpsPaymentsSearchService
             'reversed_at' => !empty($row['reversed_at']) ? (string) $row['reversed_at'] : null,
             'reversal_reason' => !empty($row['reversal_reason']) ? (string) $row['reversal_reason'] : null,
             'visit_id' => (int) ($row['visit_id'] ?? 0),
+            // CP-2 — receipts without a visit are deposits/prepayments.
+            'is_deposit' => ($row['visit_id'] ?? null) === null,
             'queue_number' => (int) ($row['queue_number'] ?? 0),
             'visit_date' => (string) ($row['visit_date'] ?? ''),
             'visit_state' => (string) ($row['visit_state'] ?? ''),

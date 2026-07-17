@@ -16,7 +16,7 @@
 }
 
 .nc-chart-shell-title {
-  font-family: var(--font-display, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-display, system-ui, sans-serif);
 }
 
 .nc-chart-tabs-sticky {
@@ -329,6 +329,101 @@
 .nc-chart-docs__no-preview {
   padding: 2rem 1rem;
   text-align: center;
+}
+
+.nc-chart-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.nc-chart-chat__thread {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 8rem;
+  max-height: 28rem;
+  overflow-y: auto;
+  padding: 0.25rem;
+}
+
+.nc-chart-chat__row {
+  display: flex;
+  flex-direction: column;
+  max-width: 34rem;
+}
+
+.nc-chart-chat__row--out {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.nc-chart-chat__row--in {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.nc-chart-chat__bubble {
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.nc-chart-chat__row--out .nc-chart-chat__bubble {
+  background: var(--oe-nc-primary);
+  border-bottom-right-radius: 0.25rem;
+}
+
+.nc-chart-chat__row--out .nc-chart-chat__bubble-body {
+  color: #fff;
+}
+
+.nc-chart-chat__row--in .nc-chart-chat__bubble {
+  background: var(--oe-nc-bg-tint, #f8fafc);
+  border: 1px solid var(--oe-nc-border);
+  border-bottom-left-radius: 0.25rem;
+}
+
+.nc-chart-chat__row--in .nc-chart-chat__bubble-body {
+  color: var(--oe-nc-text);
+}
+
+.nc-chart-chat__bubble-body {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.nc-chart-chat__meta {
+  margin-top: 0.25rem;
+  font-size: 0.6875rem;
+  color: var(--oe-nc-text-muted);
+}
+
+.nc-chart-chat__composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.nc-chart-chat__composer-input {
+  flex: 1 1 auto;
+  resize: vertical;
+  min-height: 2.75rem;
+  max-height: 8rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--oe-nc-border);
+  border-radius: 0.5rem;
+  background: var(--oe-nc-surface);
+  color: var(--oe-nc-text);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.nc-chart-chat__composer-input:focus-visible {
+  outline: 2px solid var(--oe-nc-primary);
+  outline-offset: 1px;
 }
 
 @media (prefers-reduced-motion: reduce) {

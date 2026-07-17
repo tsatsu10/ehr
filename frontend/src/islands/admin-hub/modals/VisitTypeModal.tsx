@@ -24,7 +24,6 @@ import {
   SelectValue,
 } from '@components/ui/select';
 import type {
-  CalendarCategory,
   FeeScheduleRow,
   VisitTypeRow,
 } from '../adminTypes';
@@ -32,7 +31,6 @@ import type {
 interface VisitTypeModalProps {
   open: boolean;
   row: VisitTypeRow | null;
-  calendarCategories: CalendarCategory[];
   feeSchedule: FeeScheduleRow[];
   saving: boolean;
   error: string | null;
@@ -40,7 +38,6 @@ interface VisitTypeModalProps {
   onSave: (payload: {
     id: number;
     label: string;
-    pc_catid: number;
     service_profile: string;
     referral_required: boolean;
     is_default: boolean;
@@ -51,7 +48,6 @@ interface VisitTypeModalProps {
 export function VisitTypeModal({
   open,
   row,
-  calendarCategories,
   feeSchedule,
   saving,
   error,
@@ -59,7 +55,6 @@ export function VisitTypeModal({
   onSave,
 }: VisitTypeModalProps) {
   const [label, setLabel] = useState('');
-  const [pcCatid, setPcCatid] = useState(0);
   const [serviceProfile, setServiceProfile] = useState('full_opd');
   const [referralRequired, setReferralRequired] = useState(false);
   const [isDefault, setIsDefault] = useState(false);
@@ -70,12 +65,11 @@ export function VisitTypeModal({
   useEffect(() => {
     if (!open) return;
     setLabel(row?.label ?? '');
-    setPcCatid(row?.pc_catid ?? Number(calendarCategories[0]?.pc_catid ?? 0));
     setServiceProfile(row?.service_profile ?? 'full_opd');
     setReferralRequired(Boolean(row?.referral_required));
     setIsDefault(Boolean(row?.is_default));
     setFeeHintIds(row?.cashier_fee_hint_ids ?? []);
-  }, [open, row, calendarCategories]);
+  }, [open, row]);
 
   const activeFees = feeSchedule.filter((f) => f.is_active !== false);
 
@@ -110,24 +104,6 @@ export function VisitTypeModal({
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
                 />
-              </div>
-              <div className="space-y-1.5 mb-3">
-                <Label htmlFor="nc-admin-visit-type-category">Calendar category</Label>
-                <Select
-                  value={String(pcCatid)}
-                  onValueChange={(val) => setPcCatid(Number.parseInt(val, 10))}
-                >
-                  <SelectTrigger id="nc-admin-visit-type-category">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {calendarCategories.map((cat) => (
-                      <SelectItem key={cat.pc_catid} value={String(cat.pc_catid)}>
-                        {cat.name} ({cat.pc_catid})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
               <div className="space-y-1.5 mb-3">
                 <Label htmlFor="nc-admin-visit-type-profile">Service profile</Label>
@@ -208,7 +184,6 @@ export function VisitTypeModal({
             onClick={() => onSave({
               id: row?.id ?? 0,
               label: label.trim(),
-              pc_catid: pcCatid,
               service_profile: serviceProfile,
               referral_required: referralRequired,
               is_default: isDefault,

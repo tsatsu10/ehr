@@ -54,6 +54,9 @@ $moduleUrl = $GLOBALS['webroot'] . '/interface/modules/custom_modules/oe-module-
         ? $schedulingUrls['scheduling_url']
         : ($GLOBALS['webroot'] . '/interface/main/main_info.php'),
     'recalls_url' => $schedulingEnabled ? $schedulingUrls['recalls_url'] : null,
+    // CBILL-4b — manual eligibility-check log (requires the CBILL-4a payer-billing flag).
+    'enable_payer_billing' => $deskConfig->getInt('enable_insurance_scheme', 0, $facilityId) === 1
+        && $deskConfig->getInt('enable_payer_billing', 0, $facilityId) === 1,
     'enable_react_front_desk' => $reactFrontDesk,
     'shell_desk_focus' => $reactFrontDesk,
 ]);

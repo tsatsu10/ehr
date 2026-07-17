@@ -14,6 +14,7 @@ export interface AdminFieldDef {
 
 export interface AdminFieldSection {
   title?: string;
+  description?: string;
   fields: AdminFieldDef[];
 }
 
@@ -74,6 +75,7 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'pharmacy_auto_bill_on_dispense',
   'enable_partial_payment',
   'enable_insurance_scheme',
+  'enable_payer_billing',
   'pharmacy_service_formdir',
   'enable_pharm_rx_favorites',
   'enable_native_rx_edit',
@@ -139,6 +141,11 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'enable_native_history_full_form',
   'enable_native_immunization_editor',
   'enable_native_referral_editor',
+  'enable_native_certificate',
+  'enable_native_eye_exam',
+  'enable_cashier_other_payments',
+  'enable_native_patient_notes',
+  'enable_lab_followup_views',
   'enable_lab_panel_order',
   'enable_native_proc_order',
   'enable_debootstrap_shell',
@@ -146,6 +153,7 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'enable_bill_ops_outstanding',
   'enable_office_notes',
   'enable_documents_native',
+  'enable_patient_chat',
   'enable_report_hub',
   'report_hub_show_us_quality',
   'report_hub_async_export_threshold',
@@ -188,6 +196,8 @@ export const ADMIN_SETTING_KEYS: string[] = [
 
 export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
   {
+    title: 'Desks & queue basics',
+    description: 'Core queue behavior that applies clinic-wide, outside any single desk.',
     fields: [
       { key: 'enable_triage', type: 'bool', label: 'Enable triage desk' },
       {
@@ -196,6 +206,28 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         label: 'Link Front Desk to OpenEMR calendar (appointment check-in)',
         hint: 'When on, patients with an appointment today show an Appointment today chip and Start visit & check in on Front Desk. Book appointments in Calendar first.',
       },
+      {
+        key: 'allow_multiple_visits_per_day',
+        type: 'bool',
+        label: 'Allow multiple visits per patient per day',
+      },
+      {
+        key: 'enable_aggressive_orphan_facility_repair',
+        type: 'bool',
+        label: 'Claim zero-facility visits to this desk (multi-site only)',
+      },
+      {
+        key: 'auto_dismiss_product_registration',
+        type: 'bool',
+        label: 'Auto-dismiss OpenEMR product registration prompt',
+        hint: 'Runs once per session when enabled. Disable to keep the stock OpenEMR registration modal.',
+      },
+    ],
+  },
+  {
+    title: 'Lab desk & Lab Operations (M12)',
+    description: 'Lab desk visibility and the optional Lab Operations hub for ordering, intake, and results workflow.',
+    fields: [
       { key: 'enable_lab_role', type: 'bool', label: 'Enable lab desk' },
       {
         key: 'enable_lab_ops',
@@ -209,6 +241,13 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         type: 'bool',
         label: 'Panel quick order on Doctor Desk (V1.1-LAB-ORD)',
         hint: 'Lets doctors order a lab panel directly from the active consult. Requires Lab Operations hub.',
+        indent: 2,
+      },
+      {
+        key: 'enable_lab_followup_views',
+        type: 'bool',
+        label: 'Lab follow-up views (CP-4)',
+        hint: 'Adds a Follow-up tab to Lab Ops with two safety lists: orders never resulted, and abnormal results where the patient has not been back since. Replaces the stock pending-orders/pending-followup reports. Requires Lab Operations hub. Default OFF.',
         indent: 2,
       },
       {
@@ -232,6 +271,12 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         hint: 'When off, lab test charges must be added to the bill manually before checkout.',
         indent: 2,
       },
+    ],
+  },
+  {
+    title: 'Pharmacy desk & Pharmacy Operations (M13)',
+    description: 'Pharmacy desk visibility, the optional Pharmacy Operations hub, and community/external Rx tools.',
+    fields: [
       { key: 'enable_pharmacy_role', type: 'bool', label: 'Enable pharmacy desk' },
       {
         key: 'enable_ancillary_services',
@@ -295,27 +340,6 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         indent: 1,
       },
       {
-        key: 'pharmacy_auto_bill_on_dispense',
-        type: 'bool',
-        label: 'Show dispensed medicines on the cashier bill (CBILL-1)',
-        hint: 'When on, medicines dispensed on a visit are added to the cashier total, payment, and are marked paid at checkout. When off, medicine sales are collected separately and never appear at the cashier.',
-        indent: 1,
-      },
-      {
-        key: 'enable_partial_payment',
-        type: 'bool',
-        label: 'Allow partial payment at the cashier (CBILL-2)',
-        hint: 'When on, a manager (with the "mark left unpaid" permission) can accept less than the full total and complete the visit; the remainder becomes an outstanding balance. Turn on the "owed to clinic" outstanding list too, to see and follow up those balances.',
-        indent: 1,
-      },
-      {
-        key: 'enable_insurance_scheme',
-        type: 'bool',
-        label: 'Insurance scheme-split at the cashier (CBILL-3)',
-        hint: 'When on, the cashier can mark a visit as covered by a scheme and tick each charge scheme-covered vs patient-pay. The patient part is collected now; the scheme part goes to a manual "scheme claims to submit" list. Manual only — no automated claims/eligibility. Default OFF = cash-only, no insurance UI.',
-        indent: 1,
-      },
-      {
         key: 'pharmacy_service_formdir',
         type: 'string',
         label: 'Pharmacy service note form directory',
@@ -366,11 +390,43 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         max: 365,
         indent: 2,
       },
+    ],
+  },
+  {
+    title: 'Cashier billing behavior (CBILL)',
+    description: 'How medicine charges, partial payment, and insurance schemes flow through to the cashier.',
+    fields: [
       {
-        key: 'allow_multiple_visits_per_day',
+        key: 'pharmacy_auto_bill_on_dispense',
         type: 'bool',
-        label: 'Allow multiple visits per patient per day',
+        label: 'Show dispensed medicines on the cashier bill (CBILL-1)',
+        hint: 'When on, medicines dispensed on a visit are added to the cashier total, payment, and are marked paid at checkout. When off, medicine sales are collected separately and never appear at the cashier.',
       },
+      {
+        key: 'enable_partial_payment',
+        type: 'bool',
+        label: 'Allow partial payment at the cashier (CBILL-2)',
+        hint: 'When on, a manager (with the "mark left unpaid" permission) can accept less than the full total and complete the visit; the remainder becomes an outstanding balance. Turn on the "owed to clinic" outstanding list too, to see and follow up those balances.',
+      },
+      {
+        key: 'enable_insurance_scheme',
+        type: 'bool',
+        label: 'Insurance scheme-split at the cashier (CBILL-3)',
+        hint: 'When on, the cashier can mark a visit as covered by a scheme and tick each charge scheme-covered vs patient-pay. The patient part is collected now; the scheme part goes to a manual "scheme claims to submit" list. Manual only — no automated claims/eligibility. Default OFF = cash-only, no insurance UI.',
+      },
+      {
+        key: 'enable_payer_billing',
+        type: 'bool',
+        label: 'Payer-aware pricing (CBILL-4a)',
+        hint: 'When on, a payer (e.g. NHIS) can have its own price for an item, separate from the clinic cash price — set in Billing back office → Insurance → Payer prices. Items with no override still bill at the normal cash price. Requires the scheme-split setting above.',
+        indent: 1,
+      },
+    ],
+  },
+  {
+    title: 'Multi-doctor & routing',
+    description: 'On-duty roster, advisory routing suggestions, and optional hard provider assignment.',
+    fields: [
       {
         key: 'enable_multi_doctor_filters',
         type: 'bool',
@@ -460,17 +516,12 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         hint: 'Requires in-app notify. Delivery not implemented in V1.2a.',
         indent: 2,
       },
-      {
-        key: 'enable_aggressive_orphan_facility_repair',
-        type: 'bool',
-        label: 'Claim zero-facility visits to this desk (multi-site only)',
-      },
-      {
-        key: 'auto_dismiss_product_registration',
-        type: 'bool',
-        label: 'Auto-dismiss OpenEMR product registration prompt',
-        hint: 'Runs once per session when enabled. Disable to keep the stock OpenEMR registration modal.',
-      },
+    ],
+  },
+  {
+    title: 'Chart depth & clinical add-ons',
+    description: 'Payment history, referrals, export, and native chart editors (problems, history, immunizations, notes).',
+    fields: [
       {
         key: 'enable_chart_depth',
         type: 'bool',
@@ -539,12 +590,39 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         indent: 1,
       },
       {
+        key: 'enable_native_patient_notes',
+        type: 'bool',
+        label: 'Native patient notes on the chart (CP-5)',
+        hint: 'When on, the chart Messages tab gets its own Active/Inactive/All filter and each note opens in a native read view — replacing the stock patient-notes screen for viewing. Any staff member who can open the chart sees all the patient’s notes (same rule as the stock screen); writing still happens in the Communications hub. Default OFF.',
+        indent: 1,
+      },
+      {
         key: 'enable_native_referral_editor',
         type: 'bool',
         label: 'Native referral editor + print (CP-1)',
         hint: 'When on, Edit on a referral opens a native drawer (referral date, refer-to, reason, diagnosis, risk level, and the reply/counter-referral section) and Print uses the native parity page — instead of the stock transaction form and print screen. Writes the same referral record; the stock form stays reachable via "Advanced (stock form)". Referral ACL enforced. Default OFF.',
         indent: 1,
       },
+      {
+        key: 'enable_native_certificate',
+        type: 'bool',
+        label: 'Medical certificate (excuse duty / school note)',
+        hint: 'When on, the Clinical Documentation This-visit tab gets a "Medical certificate" card: excuse duty, school absence, fit-to-resume, or attendance-only certificates with rest dates, a per-clinic serial number (MC-YYYY-NNNNN) an employer can phone to verify, the issuing clinician taken from the login (never typed), and a letterhead print with reprint logging. Diagnosis appears only when the consent box is ticked. Default OFF.',
+        indent: 1,
+      },
+      {
+        key: 'enable_native_eye_exam',
+        type: 'bool',
+        label: 'Native eye exam (primary care)',
+        hint: 'When on, the Clinical Documentation Specialty lens gets a right-sized "Eye exam" card: visual acuity per eye in 6/x notation (with CF/HM/PL low-vision options), pupils and RAPD, optional eye pressure, front-of-eye and fundus quick-pick findings with "not examined" recorded honestly, an optional spectacle prescription, and a refer-to-specialist flag. Replaces the disabled stock ophthalmology suite for everyday use. The Specialty lens itself must also be enabled. Default OFF.',
+        indent: 1,
+      },
+    ],
+  },
+  {
+    title: 'Communications & registry',
+    description: 'Staff messaging, outreach campaigns, and clinic-wide patient cohort search.',
+    fields: [
       {
         key: 'communications_hub_enable',
         type: 'bool',
@@ -572,6 +650,7 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
   },
   {
     title: 'Registration & duplicate detection (M1)',
+    description: 'Front desk registration flow and the duplicate-patient safety net.',
     fields: [
       {
         key: 'registration_mode',
@@ -617,6 +696,7 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
   },
   {
     title: 'Safety & chart integration',
+    description: 'Shared-device warnings and the legacy chart context strip shown on stock OpenEMR pages.',
     fields: [
       {
         key: 'enable_shared_device_session_warning',
@@ -652,6 +732,7 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
   },
   {
     title: 'Ops polish (V1.1-OPS)',
+    description: 'Smaller day-to-day conveniences for the front line — polling speed, banner chips, payment extras.',
     fields: [
       {
         key: 'enable_faster_queue_interrupts',
@@ -678,6 +759,12 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         type: 'bool',
         label: 'MoMo payment at cashier',
         hint: 'Lets cashier record mobile-money payments with a manual transaction reference (no API integration).',
+      },
+      {
+        key: 'enable_cashier_other_payments',
+        type: 'bool',
+        label: 'Deposits / other payments at cashier (CP-2)',
+        hint: 'Adds "Record other payment" to the Cashier Desk: take a deposit (no visit) or collect money still owed on a past visit — the two flows that previously needed the stock front payment screen. Issues a normal receipt (reversible in Billing back office). Needs the "Record Deposits / Other Payments" permission (cashier leads and admins by default). The stock screen link stays until parity sign-off. Default OFF.',
       },
       {
         key: 'enable_pinned_reception_preview',
@@ -743,6 +830,7 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
   },
   {
     title: 'Billing back office (M14)',
+    description: 'Post-pilot billing corrections, outstanding balances, and legacy insurance tools.',
     fields: [
       {
         key: 'enable_bill_ops',
@@ -775,6 +863,7 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
   },
   {
     title: 'Admin Hub (M15)',
+    description: 'System health, native backups, and duplicate-patient review for this Admin Hub.',
     fields: [
       {
         key: 'enable_admin_hub',
@@ -837,6 +926,7 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
   },
   {
     title: 'Office Notes & Documents (GAP-A)',
+    description: 'Native sticky notes, chart documents, and staff-to-patient chat log.',
     fields: [
       {
         key: 'enable_office_notes',
@@ -850,10 +940,17 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         label: 'Enable native Documents (patient chart tab + unfiled inbox)',
         hint: 'Native document upload/browse in the patient chart, plus the report-hub "Unfiled documents" lens (also requires Reporting Operations Hub below). Legacy documents screens stay reachable when OFF.',
       },
+      {
+        key: 'enable_patient_chat',
+        type: 'bool',
+        label: 'Enable patient chart Chat tab',
+        hint: 'Adds a Chat tab to the patient chart for staff to log messages against a patient. Staff-facing only for now — nothing is sent to the patient\'s phone yet, this is not connected to SMS or WhatsApp.',
+      },
     ],
   },
   {
     title: 'Reporting Operations Hub (M16)',
+    description: 'Curated periodic and compliance reporting, including Ministry of Health packs.',
     fields: [
       {
         key: 'enable_report_hub',
@@ -889,6 +986,7 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
   },
   {
     title: 'Scheduling & Flow (S1)',
+    description: 'Calendar, Flow Board, and Recalls lenses under the Scheduling & Flow shell.',
     fields: [
       {
         key: 'enable_scheduling_redesign',
@@ -900,6 +998,7 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
   },
   {
     title: 'Queue Bridge Hub (M18)',
+    description: 'Schedule-vs-queue exception worklist and end-of-day warnings.',
     fields: [
       {
         key: 'enable_queue_bridge',
@@ -925,6 +1024,7 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
   },
   {
     title: 'Clinical Documentation Hub (M17)',
+    description: 'Curated consult note engine, form bundles, and screening/specialty lenses.',
     fields: [
       {
         key: 'enable_clinical_doc_hub',
@@ -1028,6 +1128,7 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
   },
   {
     title: 'Regional, branding & advanced',
+    description: 'Timezone, logo, and low-level rate limits. Most clinics never need to touch these.',
     fields: [
       {
         key: 'clinic_tz',

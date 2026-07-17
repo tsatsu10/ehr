@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useInterval } from '@core/useInterval';
+import { useModalDismiss } from '@components/useModalDismiss';
+import { ConfirmModal } from '@components/ConfirmModal';
 import { SegmentedControl } from '@components/SegmentedControl';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
 import {
+  cancelCalendarAppointment,
   fetchCalendarRange,
   moveCalendarAppointment,
   pollCalendarRange,
@@ -26,7 +29,11 @@ import {
   defaultCalendarLayout,
   formatDateDisplay,
   isCalendarUnchanged,
+  positionPeek,
+  providerColor,
+  visitTypeColor,
   type CalendarLayout,
+  type PeekAnchor,
 } from './schedulingCalendarUtils';
 import { resolveSchedulingLabels } from './schedulingLabels';
 import type { SchedulingLabels } from './schedulingTypes';
@@ -38,6 +45,10 @@ interface CalendarLensProps {
   refreshToken: number;
   bookSignal: number;
   frontDeskUrl: string;
+  /** Controlled layout (shell owns it for the date stepper + keyboard shortcuts). */
+  layout?: CalendarLayout;
+  /** Lets the shell mirror the active layout (drives the filter-bar date stepper unit). */
+  onLayoutChange?: (layout: CalendarLayout) => void;
   labels?: Partial<SchedulingLabels>;
 }
 
@@ -75,19 +86,80 @@ export function CalendarLens({
   refreshToken,
   bookSignal,
   frontDeskUrl,
+  layout: controlledLayout,
+  onLayoutChange,
   labels: labelOverrides,
 }: CalendarLensProps) {
   const labels = resolveSchedulingLabels(labelOverrides);
   const [data, setData] = useState<CalendarDayPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [layout, setLayout] = useState<CalendarLayout>(defaultCalendarLayout);
+  const [internalLayout, setInternalLayout] = useState<CalendarLayout>(defaultCalendarLayout);
+  const layout = controlledLayout ?? internalLayout;
+  const setLayout = useCallback((next: CalendarLayout) => {
+    setInternalLayout(next);
+    onLayoutChange?.(next);
+  }, [onLayoutChange]);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [peekAnchor, setPeekAnchor] = useState<PeekAnchor | null>(null);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingDraft, setBookingDraft] = useState<CalendarBookingDraft | null>(null);
   const [moveError, setMoveError] = useState<string | null>(null);
   const [pendingChange, setPendingChange] = useState<PendingCalendarChange | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<CalendarEvent | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(false);
   const revisionRef = useRef('');
+
+  const peekReturnFocusRef = useRef<HTMLElement | null>(null);
+  const selectEvent = useCallback((event: CalendarEvent, anchorRect?: DOMRect | PeekAnchor) => {
+    // Remember the trigger so focus returns to the clicked appointment on close.
+    peekReturnFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    setSelectedEvent(event);
+    setPeekAnchor(anchorRect
+      ? { top: anchorRect.top, left: anchorRect.left, width: anchorRect.width, height: anchorRect.height }
+      : null);
+  }, []);
+  const closePeek = useCallback(() => {
+    setSelectedEvent(null);
+    setPeekAnchor(null);
+    const returnTo = peekReturnFocusRef.current;
+    peekReturnFocusRef.current = null;
+    if (returnTo && document.contains(returnTo)) {
+      returnTo.focus();
+    }
+  }, []);
+  useModalDismiss(selectedEvent !== null, closePeek);
+
+  const peekRef = useRef<HTMLDivElement>(null);
+  // Move focus into the peek when it opens so keyboard/SR users land on the
+  // dialog it announces (aria-modal), not stranded on the trigger behind it.
+  useEffect(() => {
+    if (selectedEvent) {
+      peekRef.current?.focus();
+    }
+  }, [selectedEvent]);
+  const [peekStyle, setPeekStyle] = useState<CSSProperties | undefined>(undefined);
+  useLayoutEffect(() => {
+    if (!selectedEvent || !peekAnchor) {
+      setPeekStyle(undefined); // no anchor → CSS centers it
+      return;
+    }
+    const card = peekRef.current;
+    if (!card) {
+      return;
+    }
+    const { top, left } = positionPeek(
+      peekAnchor,
+      card.offsetWidth,
+      card.offsetHeight,
+      window.innerWidth,
+      window.innerHeight,
+    );
+    setPeekStyle({ position: 'fixed', top, left, margin: 0 });
+  }, [selectedEvent, peekAnchor]);
 
   const apiView = useMemo((): CalendarView => {
     if (layout === 'week') return 'week';
@@ -154,7 +226,7 @@ export function CalendarLens({
       providerId: filters.providerId > ALL_PROVIDERS_ID ? filters.providerId : 0,
       pid: 0,
       patientLabel: '',
-      categoryId: data.categories[0]?.id ?? 0,
+      visitTypeId: (data.default_visit_type_id || data.categories[0]?.id) ?? 0,
       durationMinutes: data.interval_minutes,
       comments: '',
     });
@@ -173,6 +245,10 @@ export function CalendarLens({
     return withEvents.length > 0 ? withEvents : data.providers;
   }, [data, filters.providerId]);
 
+  const visibleProviderIds = useMemo(() => visibleProviders.map((p) => p.id), [visibleProviders]);
+  const multiProviderView = visibleProviders.length > 1;
+  const showLegendToggle = multiProviderView && (layout === 'day' || layout === 'week' || layout === 'agenda');
+
   const openBooking = (draft?: Partial<CalendarBookingDraft> & { date?: string }) => {
     if (!data?.can_book) {
       return;
@@ -184,7 +260,7 @@ export function CalendarLens({
         ?? (filters.providerId > ALL_PROVIDERS_ID ? filters.providerId : (data.providers[0]?.id ?? 0)),
       pid: draft?.pid ?? 0,
       patientLabel: draft?.patientLabel ?? '',
-      categoryId: draft?.categoryId ?? data.categories[0]?.id ?? 0,
+      visitTypeId: draft?.visitTypeId ?? ((data.default_visit_type_id || data.categories[0]?.id) ?? 0),
       durationMinutes: draft?.durationMinutes ?? data.interval_minutes,
       comments: draft?.comments ?? '',
     });
@@ -267,6 +343,24 @@ export function CalendarLens({
       setMoveError(err instanceof Error ? err.message : labels.errorResizeAppointment);
     }
   }, [ajaxUrl, csrfToken, filters, apiView, data, applyPayload, labels.errorResizeAppointment]);
+
+  const handleCancel = useCallback(async () => {
+    if (!cancelTarget) {
+      return;
+    }
+    setCancelling(true);
+    setMoveError(null);
+    try {
+      const payload = await cancelCalendarAppointment(ajaxUrl, csrfToken, filters, apiView, cancelTarget.pc_eid);
+      applyPayload(payload);
+      setCancelTarget(null);
+      closePeek();
+    } catch (err) {
+      setMoveError(err instanceof Error ? err.message : labels.errorCancelAppointment);
+    } finally {
+      setCancelling(false);
+    }
+  }, [cancelTarget, ajaxUrl, csrfToken, filters, apiView, applyPayload, closePeek, labels.errorCancelAppointment]);
 
   const pendingIsRecurring = pendingChange?.kind === 'move'
     ? pendingChange.isRecurring
@@ -388,8 +482,40 @@ export function CalendarLens({
     })();
   }, [ajaxUrl, apiView, applyPayload, csrfToken, data, filters, labels.errorMoveAppointment, pendingChange]);
 
+  // The view switcher works without data, so keep it (and the toolbar row)
+  // mounted while loading — skeletonising the whole lens made the tabs pop in
+  // after the fetch, jumping the layout on every first paint.
+  const layoutSegments = ([
+    ['agenda', labels.calendarAgenda],
+    ['day', labels.calendarDayGrid],
+    ['week', labels.calendarWeek],
+    ['month', labels.calendarMonth],
+  ] as [CalendarLayout, string][]).map(([mode, label]) => ({ id: mode, label }));
+
+  const layoutToolbar = (countSlot: React.ReactNode) => (
+    <div className="flex flex-wrap items-center justify-between mb-3">
+      <p className="text-[var(--oe-nc-text-muted)] text-sm mb-2 md:mb-0">{countSlot}</p>
+      <SegmentedControl
+        className="mb-2"
+        segments={layoutSegments}
+        value={layout}
+        onChange={(id) => setLayout(id as CalendarLayout)}
+        ariaLabel="Calendar layout"
+      />
+      <span className="nc-shortcut-hint" aria-hidden="true">{labels.shortcutHint}</span>
+    </div>
+  );
+
   if (loading && !data) {
-    return <p className="text-[var(--oe-nc-text-muted)]">{labels.loadingCalendar}</p>;
+    return (
+      <div className="nc-calendar" aria-busy="true">
+        <span className="sr-only">{labels.loadingCalendar}</span>
+        {layoutToolbar(<span className="nc-calendar-skeleton-text" aria-hidden="true" />)}
+        <div className="nc-calendar-skeleton" aria-hidden="true">
+          {[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="nc-calendar-skeleton-row" />)}
+        </div>
+      </div>
+    );
   }
 
   if (error && !data) {
@@ -405,8 +531,8 @@ export function CalendarLens({
       <div className="sr-only" aria-live="polite" aria-atomic="true">
         {moveError ?? ''}
       </div>
-      <div className="flex flex-wrap items-center justify-between mb-3">
-        <p className="text-[var(--oe-nc-text-muted)] text-sm mb-2 md:mb-0">
+      {layoutToolbar(
+        <>
           {data.events.length}
           {' '}
           {data.events.length === 1 ? labels.calendarAppointmentSingular : labels.calendarAppointments}
@@ -436,23 +562,37 @@ export function CalendarLens({
           {' '}
           {data.interval_minutes}
           -minute intervals.
-        </p>
-        <SegmentedControl
-          className="mb-2"
-          segments={([
-            ['agenda', labels.calendarAgenda],
-            ['day', labels.calendarDayGrid],
-            ['week', labels.calendarWeek],
-            ['month', labels.calendarMonth],
-          ] as [CalendarLayout, string][]).map(([mode, label]) => ({
-            id: mode,
-            label,
-          }))}
-          value={layout}
-          onChange={(id) => setLayout(id as CalendarLayout)}
-          ariaLabel="Calendar layout"
-        />
-      </div>
+        </>,
+      )}
+
+      {showLegendToggle && (
+        <div className="mb-2">
+          <Button
+            type="button"
+            variant="link"
+            size="sm"
+            className="h-auto p-0"
+            aria-expanded={legendOpen}
+            onClick={() => setLegendOpen((value) => !value)}
+          >
+            {labels.providerColors}
+          </Button>
+          {legendOpen && (
+            <div className="nc-provider-legend" role="list" aria-label={labels.providerColors}>
+              {visibleProviders.map((provider) => (
+                <span key={provider.id} className="nc-provider-legend-item" role="listitem">
+                  <span
+                    className="nc-provider-dot"
+                    style={{ background: providerColor(provider.id, data.provider_colors, visibleProviderIds) }}
+                    aria-hidden="true"
+                  />
+                  {provider.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {moveError && <div className={deskCalloutClass('warn', 'py-2')}>{moveError}</div>}
 
@@ -462,30 +602,49 @@ export function CalendarLens({
             <p className="text-[var(--oe-nc-text-muted)] text-sm">{labels.calendarNoAppointments}</p>
           )}
           {data.events
-            .filter((event) => layout !== 'agenda' || event.event_date === data.date)
+            .filter((event) => event.event_date === data.date)
             .map((event) => (
             <Button
               key={event.pc_eid}
               type="button"
               variant="secondary"
-              className="nc-calendar-agenda-row mb-2 h-auto w-full justify-start text-left font-normal"
+              className={`nc-calendar-agenda-row mb-2 h-auto w-full justify-start text-left font-normal${event.is_block ? ' nc-calendar-agenda-row--block' : ''}`}
               role="listitem"
+              // Visit-type colour as a left rail (border, not box-shadow, so the
+              // card's float shadow + hover lift survive).
+              style={{ borderLeft: `4px solid ${visitTypeColor(event.visit_type_id, data.visit_type_colors)}` }}
               aria-label={`${formatSlotRange(event)} ${event.patient_name}, ${event.category_label}, ${event.status_label}`}
-              onClick={() => setSelectedEvent(event)}
+              onClick={(e) => selectEvent(event, e.currentTarget.getBoundingClientRect())}
             >
-              <div className="flex justify-between items-start w-full">
-                <strong className="text-sm">
-                  {event.event_date !== data.date ? `${formatDateDisplay(event.event_date)} ` : ''}
-                  {formatSlotRange(event)}
-                </strong>
-                <Badge variant="outline">{event.status_label}</Badge>
-              </div>
-              <div className="text-sm">{event.patient_name}</div>
-              <div className="text-[var(--oe-nc-text-muted)] text-sm">
-                {event.category_label}
-                {' · '}
-                {event.provider_label}
-              </div>
+              <span className="nc-calendar-agenda-time">
+                {event.event_date !== data.date ? `${formatDateDisplay(event.event_date)} ` : ''}
+                {formatSlotRange(event)}
+              </span>
+              <span className="nc-calendar-agenda-main">
+                <span className="nc-calendar-agenda-name">
+                  {event.patient_name}
+                </span>
+                <span className="nc-calendar-agenda-meta">
+                  {!event.is_block && (
+                    <>
+                      {event.category_label}
+                      {' · '}
+                      {multiProviderView && (
+                        <span
+                          className="nc-provider-dot"
+                          style={{ background: providerColor(event.provider_id, data.provider_colors, visibleProviderIds) }}
+                          aria-hidden="true"
+                        />
+                      )}
+                      {event.provider_label}
+                    </>
+                  )}
+                  {event.is_block && labels.calendarBlockTag}
+                </span>
+              </span>
+              {event.is_block
+                ? <Badge variant="neutral">{labels.calendarBlockTag}</Badge>
+                : <Badge variant="outline">{event.status_label}</Badge>}
             </Button>
           ))}
         </div>
@@ -494,7 +653,7 @@ export function CalendarLens({
           data={data}
           visibleProviders={visibleProviders}
           canBook={data.can_book}
-          onSelectEvent={setSelectedEvent}
+          onSelectEvent={selectEvent}
           onBookSlot={(draft) => openBooking(draft)}
           onMoveEvent={handleMoveEvent}
           onResizeEvent={handleResizeEvent}
@@ -504,7 +663,7 @@ export function CalendarLens({
           data={data}
           visibleProviders={visibleProviders}
           canBook={data.can_book}
-          onSelectEvent={setSelectedEvent}
+          onSelectEvent={selectEvent}
           onBookSlot={(draft) => openBooking(draft)}
           onMoveEvent={handleMoveEvent}
         />
@@ -512,61 +671,104 @@ export function CalendarLens({
         <CalendarMonthGrid
           data={data}
           canBook={data.can_book}
-          onSelectEvent={setSelectedEvent}
+          onSelectEvent={selectEvent}
           onMoveEvent={handleMoveEvent}
         />
       )}
 
       {selectedEvent && (
-        <div className="nc-calendar-peek">
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <strong>{selectedEvent.patient_name}</strong>
-              <div className="text-[var(--oe-nc-text-muted)] text-sm">
-                MRN
-                {' '}
-                {selectedEvent.pubpid}
-                {' · '}
-                {formatSlotRange(selectedEvent)}
+        // Floating overlay (not an inline panel): a click on an event anywhere
+        // in the grid — especially deep in a tall month grid — must show the
+        // details in view, not append a card far below the fold.
+        <div
+          className="nc-calendar-peek-backdrop"
+          onClick={closePeek}
+        >
+          <div
+            ref={peekRef}
+            className="nc-calendar-peek"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${selectedEvent.patient_name} appointment`}
+            tabIndex={-1}
+            style={peekStyle}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <strong>{selectedEvent.patient_name}</strong>
+                <div className="text-[var(--oe-nc-text-muted)] text-sm">
+                  {!selectedEvent.is_block && (
+                    <>
+                      MRN
+                      {' '}
+                      {selectedEvent.pubpid}
+                      {' · '}
+                    </>
+                  )}
+                  {formatDateDisplay(selectedEvent.event_date)}
+                  {' · '}
+                  {formatSlotRange(selectedEvent)}
+                </div>
               </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 text-[var(--oe-nc-text-muted)]"
+                aria-label="Close"
+                onClick={closePeek}
+              >
+                <span aria-hidden="true">&times;</span>
+              </Button>
             </div>
+            <p className="text-sm mb-2">
+              {selectedEvent.category_label}
+              {selectedEvent.is_block ? (
+                <>
+                  {' · '}
+                  <Badge variant="neutral">{labels.calendarBlockTag}</Badge>
+                </>
+              ) : (
+                <>
+                  {' · '}
+                  {selectedEvent.provider_label}
+                  {' · '}
+                  <Badge variant="outline">{selectedEvent.status_label}</Badge>
+                </>
+              )}
+            </p>
+            {selectedEvent.comments && (
+              <p className="text-sm text-[var(--oe-nc-text-muted)] mb-2">{selectedEvent.comments}</p>
+            )}
+            {selectedEvent.is_recurring && (
+              <p className="text-sm text-[var(--oe-nc-text-muted)] mb-2">Recurring series</p>
+            )}
+            <Button variant="outline" size="sm" className="mr-2" asChild>
+              <a href={frontDeskUrl}>
+                {labels.frontDesk}
+              </a>
+            </Button>
+            {data.can_book && !selectedEvent.is_block && !selectedEvent.is_recurring && (
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="mr-2 text-(--oe-nc-danger) hover:text-(--oe-nc-danger)"
+                onClick={() => setCancelTarget(selectedEvent)}
+              >
+                {labels.cancelAppointmentAction}
+              </Button>
+            )}
             <Button
               type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0 text-[var(--oe-nc-text-muted)]"
-              aria-label="Close"
-              onClick={() => setSelectedEvent(null)}
+              variant="link"
+              size="sm"
+              onClick={closePeek}
             >
-              <span aria-hidden="true">&times;</span>
+              {labels.close}
             </Button>
           </div>
-          <p className="text-sm mb-2">
-            {selectedEvent.category_label}
-            {' · '}
-            {selectedEvent.provider_label}
-            {' · '}
-            <Badge variant="outline">{selectedEvent.status_label}</Badge>
-          </p>
-          {selectedEvent.comments && (
-            <p className="text-sm text-[var(--oe-nc-text-muted)] mb-2">{selectedEvent.comments}</p>
-          )}
-          {selectedEvent.is_recurring && (
-            <p className="text-sm text-[var(--oe-nc-text-muted)] mb-2">Recurring series</p>
-          )}
-          <Button variant="outline" size="sm" className="mr-2" asChild>
-            <a href={frontDeskUrl}>
-              {labels.frontDesk}
-            </a>
-          </Button>
-          <Button
-            type="button"
-            variant="link"
-            size="sm"
-            onClick={() => setSelectedEvent(null)}
-          >
-            {labels.close}
-          </Button>
         </div>
       )}
 
@@ -591,6 +793,25 @@ export function CalendarLens({
         onSelect={handleRecurrScopeSelect}
         onCancel={() => setPendingChange(null)}
       />
+
+      <ConfirmModal
+        open={cancelTarget !== null}
+        onClose={() => setCancelTarget(null)}
+        title={labels.cancelAppointmentConfirm}
+        confirmLabel={labels.cancelAppointmentAction}
+        cancelLabel={labels.cancelAppointmentKeep}
+        confirmVariant="danger"
+        submitting={cancelling}
+        onConfirm={() => { void handleCancel(); }}
+      >
+        <p className="text-sm text-[var(--oe-nc-text-muted)]">
+          {cancelTarget?.patient_name}
+          {' · '}
+          {cancelTarget ? formatDateDisplay(cancelTarget.event_date) : ''}
+          {' · '}
+          {cancelTarget ? formatSlotRange(cancelTarget) : ''}
+        </p>
+      </ConfirmModal>
 
       <CalendarNotifyModal
         open={awaitingNotify}

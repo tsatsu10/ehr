@@ -13,6 +13,7 @@ import {
   Stethoscope,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { t } from '@core/i18n';
 import { cn } from '@/lib/utils';
 import type { ShortcutKind } from './doctorShortcutNav';
 
@@ -103,7 +104,7 @@ export function ConsultShortcuts({
 
   if (clinicalDocHubEnabled) {
     moreLinks.push({
-      label: 'Documentation hub',
+      label: t('Documentation hub'),
       disabled: blocked,
       dataShortcut: 'encounter_hub',
       onClick: () => handleShortcut('encounter_hub'),
@@ -111,14 +112,14 @@ export function ConsultShortcuts({
   }
   if (clinicalDocHubEnabled && onOpenDocFavorites) {
     moreLinks.push({
-      label: 'Quick forms',
+      label: t('Quick forms'),
       disabled: blocked,
       onClick: onOpenDocFavorites,
     });
   }
   if (labPanelOrderEnabled) {
     moreLinks.push({
-      label: 'Full lab form',
+      label: t('Full lab form'),
       disabled: blocked,
       dataShortcut: 'lab-full',
       onClick: () => handleShortcut('lab'),
@@ -126,7 +127,7 @@ export function ConsultShortcuts({
   }
   if (formularyRxEnabled) {
     moreLinks.push({
-      label: 'Full Rx form',
+      label: t('Full Rx form'),
       disabled: blocked,
       dataShortcut: 'rx-full',
       onClick: () => handleShortcut('rx'),
@@ -134,7 +135,7 @@ export function ConsultShortcuts({
   }
   if (onOpenPatientEducation) {
     moreLinks.push({
-      label: 'Patient handouts',
+      label: t('Patient handouts'),
       disabled: blocked,
       dataShortcut: 'patient-education',
       onClick: onOpenPatientEducation,
@@ -146,14 +147,14 @@ export function ConsultShortcuts({
       <div className="nc-doctor-shortcuts__primary">
         <PrimaryAction
           icon={Stethoscope}
-          label="Encounter"
+          label={t('Encounter')}
           disabled={blocked}
           dataShortcut="encounter"
           onClick={() => handleShortcut('encounter')}
         />
         <PrimaryAction
           icon={FlaskConical}
-          label={labPanelOrderEnabled ? 'Lab order' : 'Order lab'}
+          label={labPanelOrderEnabled ? t('Lab order') : t('Order lab')}
           disabled={blocked}
           dataShortcut="lab"
           onClick={() => {
@@ -166,7 +167,7 @@ export function ConsultShortcuts({
         />
         <PrimaryAction
           icon={Pill}
-          label={formularyRxEnabled ? 'Prescribe' : 'Rx'}
+          label={formularyRxEnabled ? t('Prescribe') : t('Rx')}
           disabled={blocked}
           dataShortcut="rx"
           onClick={() => {
@@ -179,7 +180,7 @@ export function ConsultShortcuts({
         />
         <PrimaryAction
           icon={FileText}
-          label="Chart"
+          label={t('Chart')}
           disabled={blocked}
           dataShortcut="chart"
           external
@@ -189,7 +190,7 @@ export function ConsultShortcuts({
 
       {moreLinks.length > 0 && (
         <div className={cn('nc-doctor-shortcut-more', blocked && 'nc-doctor-shortcut-more--disabled')}>
-          <span className="nc-doctor-shortcut-more__label">More</span>
+          <span className="nc-doctor-shortcut-more__label">{t('More')}</span>
           {moreLinks.map((link) => (
             <MoreLink key={link.label} {...link} />
           ))}

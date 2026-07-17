@@ -349,7 +349,6 @@ export function CashierActivePane({
           feeSheetUrl={data.advanced_billing_url}
           feeSheetLabel={data.advanced_billing_label}
           feeSheetExternal={data.advanced_billing_external !== false}
-          frontPaymentUrl={data.front_payment_url}
         />
 
         {paneError && (

@@ -22,12 +22,14 @@ import type {
   WorklistSummary,
 } from './labOpsTypes';
 import { LAB_OPS_POLL_MS } from './labOpsTypes';
+import { LabOpsFollowUpPane } from './LabOpsFollowUpPane';
 import { useLabOpsPageHeading } from './useLabOpsPageHeading';
 
 const EMPTY_COUNTS: WorklistCounts = { pending: 0, in_progress: 0, send_out: 0 };
 
-function initialTab(value: string): LabOpsTab {
+function initialTab(value: string, enableFollowup: boolean): LabOpsTab {
   if (value === 'in_progress' || value === 'send_out') return value;
+  if (value === 'followup' && enableFollowup) return value;
   return 'pending';
 }
 
@@ -45,8 +47,9 @@ export function LabOpsHub({
   canEnter,
   canRelease,
   canManageCatalog,
+  enableFollowup = false,
 }: LabOpsHubProps) {
-  const [tab, setTab] = useState<LabOpsTab>(() => initialTab(initialTabProp));
+  const [tab, setTab] = useState<LabOpsTab>(() => initialTab(initialTabProp, enableFollowup));
   const [date, setDate] = useState(initialDate);
   const [fulfillment, setFulfillment] = useState<FulfillmentFilter>('all');
   const [urgentFirst, setUrgentFirst] = useState(true);
@@ -72,6 +75,7 @@ export function LabOpsHub({
   const fetchOptions = useMemo(() => ({ ajaxUrl, csrfToken }), [ajaxUrl, csrfToken]);
 
   const loadWorklist = useCallback(async () => {
+    if (tab === 'followup') return; // CP-4 — the pane loads its own data
     setLoadError(null);
     try {
       const facility = Number(facilityId ?? 0);
@@ -211,6 +215,9 @@ export function LabOpsHub({
 
       {summary ? <LabOpsSummaryBar summary={summary} /> : null}
 
+      {tab === 'followup' && enableFollowup ? (
+        <LabOpsFollowUpPane ajaxUrl={ajaxUrl} csrfToken={csrfToken} facilityId={facilityId} />
+      ) : (
       <LabOpsWorklist
         tab={tab}
         rows={rows}
@@ -227,6 +234,7 @@ export function LabOpsHub({
           setRejectNote('');
         }}
       />
+      )}
 
       <RejectSpecimenModal
         open={rejectOrderId !== null}

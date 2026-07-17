@@ -47,6 +47,7 @@
             <tr>
                 <th>{{ 'Test'|xlt }}</th>
                 <th>{{ 'Code'|xlt }}</th>
+                <th>{{ 'Specimen'|xlt }}</th>
                 <th>{{ 'Est. price'|xlt }}</th>
             </tr>
         </thead>
@@ -55,6 +56,7 @@
             <tr>
                 <td>{{ test.title|text }}</td>
                 <td>{{ test.code|text }}</td>
+                <td>{{ test.specimen ? test.specimen|text : '—' }}</td>
                 <td>{{ test.price_display ? test.price_display|text : '—' }}</td>
             </tr>
             {% endfor %}

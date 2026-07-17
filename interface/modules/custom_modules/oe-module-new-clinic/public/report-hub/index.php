@@ -93,6 +93,9 @@ if (!in_array($tabParam, $allowedTabs, true)) {
         'can_bill_ops_close' => $billOpsLinked && $billOpsAccess->canCloseDay(),
         'can_bill_ops_outstanding' => $billOpsLinked && $access->isBillOpsOutstandingEnabled($facilityId) && $billOpsAccess->canViewOutstanding(),
         'can_bill_ops_insurance' => $billOpsLinked && $billOpsAccess->isInsuranceVaultEnabled($facilityId) && $billOpsAccess->canViewInsuranceVault(),
+        'can_bill_ops_payer_billing' => $billOpsLinked
+            && $billOpsAccess->isPayerBillingEnabled($facilityId)
+            && $billOpsAccess->canViewInsuranceVault(),
         'reopen_on_correction' => $config->getInt('bill_ops_reopen_on_correction', 0, $facilityId) === 1,
         'enable_react_report_hub' => $reactReportHub,
         'report_runbooks' => (new ReportHubRunbookService())->getCatalog()['cards'],

@@ -17,14 +17,15 @@ function formData(overrides: Partial<ProcOrderFormData> = {}): ProcOrderFormData
     encounter: 3,
     facility_id: 1,
     patient_name: 'Ama Owusu',
+    encounter_reason: '',
     labs: [
       {
         ppid: 1,
         name: 'OpenEMR Lab',
         is_inhouse: true,
         tests: [
-          { procedure_type_id: 101, name: 'Malaria RDT', code: 'MAL', fee_amount: 20, has_fee: true },
-          { procedure_type_id: 102, name: 'Full Blood Count', code: 'FBC', fee_amount: null, has_fee: false },
+          { procedure_type_id: 101, name: 'Malaria RDT', code: 'MAL', specimen: '', fee_amount: 20, has_fee: true },
+          { procedure_type_id: 102, name: 'Full Blood Count', code: 'FBC', specimen: '', fee_amount: null, has_fee: false },
         ],
       },
     ],
@@ -140,17 +141,47 @@ describe('ProcOrderForm', () => {
           specimen_volume: '5ml',
           clinical_hx: 'fever 3 days',
           order_diagnosis: 'ICD10:B54',
-          codes: [{ procedure_code: 'MAL', procedure_name: 'Malaria RDT' }],
+          codes: [{ procedure_code: 'MAL', procedure_name: 'Malaria RDT', specimen_type: '119297000' }],
         },
       }) as never,
     );
     render(<ProcOrderForm {...baseProps()} procedureOrderId={55} />);
 
     expect(await screen.findByText('Edit lab / procedure order')).toBeInTheDocument();
-    expect(screen.getByLabelText(/Malaria RDT/)).toBeChecked();
-    expect(screen.getByLabelText(/Full Blood Count/)).not.toBeChecked();
+    // Anchored so it matches the test checkbox, not the "Specimen for Malaria RDT" picker.
+    expect(screen.getByLabelText(/^Malaria RDT/)).toBeChecked();
+    expect(screen.getByLabelText(/^Full Blood Count/)).not.toBeChecked();
+    // The per-test specimen chosen when the order was placed is pre-filled.
+    expect((screen.getByLabelText(/Specimen for Malaria RDT/) as HTMLSelectElement).value).toBe('119297000');
     // Save button reflects edit mode.
     expect(screen.getByRole('button', { name: 'Save order' })).toBeEnabled();
+  });
+
+  it('lets each test carry its own specimen and posts them in line_specimens', async () => {
+    mockedFetch.mockImplementation((action) =>
+      Promise.resolve((action === 'proc_order.form_data' ? formData() : saveResult) as never),
+    );
+    render(<ProcOrderForm {...baseProps()} />);
+    await screen.findByText('Malaria RDT');
+
+    fireEvent.click(screen.getByLabelText(/Malaria RDT/));
+    // A specimen picker appears for the ticked test; choose Blood.
+    fireEvent.change(screen.getByLabelText(/Specimen for Malaria RDT/), {
+      target: { value: '119297000' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Place order' }));
+
+    await waitFor(() =>
+      expect(mockedFetch).toHaveBeenCalledWith(
+        'proc_order.save',
+        expect.objectContaining({
+          json: expect.objectContaining({
+            procedure_type_ids: [101],
+            line_specimens: { 101: '119297000' },
+          }),
+        }),
+      ),
+    );
   });
 
   it('shows the Urgent badge for the default "high"-id priority option', async () => {
@@ -181,5 +212,19 @@ describe('ProcOrderForm', () => {
 
     await screen.findByText('Edit lab / procedure order');
     expect(within(screen.getByRole('banner')).getByText('Urgent')).toBeInTheDocument();
+  });
+
+  it('pre-fills clinical history from the visit reason and drops the orphaned volume field', async () => {
+    mockedFetch.mockResolvedValue(formData({ encounter_reason: 'fever and chills 2 days' }) as never);
+    render(<ProcOrderForm {...baseProps()} />);
+
+    await screen.findByText('Malaria RDT');
+    // Chief complaint seeds Clinical history so the orderer doesn't retype it.
+    expect((screen.getByLabelText('Clinical history') as HTMLTextAreaElement).value).toBe('fever and chills 2 days');
+    // "Order diagnosis" was relabelled to something staff will actually fill in.
+    expect(screen.getByLabelText('Diagnosis / reason for test')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Order diagnosis')).not.toBeInTheDocument();
+    // Order-level specimen volume is gone now that specimen is per test.
+    expect(screen.queryByLabelText('Specimen volume')).not.toBeInTheDocument();
   });
 });

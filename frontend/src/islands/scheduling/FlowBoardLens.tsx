@@ -3,6 +3,7 @@ import { useInterval } from '@core/useInterval';
 import { useDeskViewport } from '@core/useDeskViewport';
 import { SegmentedControl } from '@components/SegmentedControl';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
+import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
 import { ncShadcnTableClass } from '@components/ncTableStyles';
 import {
@@ -308,7 +309,12 @@ export function FlowBoardLens({
                 <TableRow key={card.pc_eid}>
                   <TableCell>{card.appt_time_label ?? '—'}</TableCell>
                   <TableCell>{card.patient_name}</TableCell>
-                  <TableCell>{card.status_label}</TableCell>
+                  <TableCell>
+                    {card.status_label}
+                    {card.running_late && (
+                      <Badge variant="warning" className="ml-2">{labels.flowBoardRunningLate}</Badge>
+                    )}
+                  </TableCell>
                   <TableCell>{card.minutes_in_status > 0 ? `${card.minutes_in_status}m` : '—'}</TableCell>
                   <TableCell>
                     {card.next_status && data?.can_advance && !card.is_recurring && (

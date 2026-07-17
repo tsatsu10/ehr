@@ -82,10 +82,9 @@ export function QueueCard({ card, privacyMode = false, onClick, selected = false
       className={cn(
         queueCardShellClass({ urgent: isUrgent, active: selected, claimLost: isClaimLost, muted }),
         'overflow-hidden p-0 shadow-none',
-        // Clinical styling
-        'border-[var(--oe-clinical-border)]',
-        'hover:border-[var(--oe-clinical-primary-light)]',
-        'hover:shadow-[var(--oe-clinical-shadow-md)]',
+        'border-[var(--oe-nc-border)]',
+        'hover:border-[var(--oe-nc-primary)]',
+        'hover:shadow-[var(--shadow-md)]',
         'transition-all duration-200',
       )}
     >
@@ -105,12 +104,12 @@ export function QueueCard({ card, privacyMode = false, onClick, selected = false
       >
         <div className={cn(queueCardRowClass, 'gap-3 p-3')}>
           {/* Clinical Avatar - Larger with photo support */}
-          <Avatar className="shrink-0 h-12 w-12 ring-2 ring-[var(--oe-clinical-border)]">
+          <Avatar className="shrink-0 h-12 w-12 ring-2 ring-[var(--oe-nc-border)]">
             {card.photo_url && <AvatarImage src={card.photo_url} alt={displayName} />}
             <AvatarFallback className={cn(
               'text-sm font-semibold',
-              isUrgent && 'bg-[var(--oe-clinical-warning-bg)] text-[var(--oe-clinical-warning)]',
-              isClaimLost && 'bg-[var(--oe-clinical-muted)] text-[var(--oe-clinical-text-muted)]',
+              isUrgent && 'bg-[#faf1e4] text-[var(--oe-nc-warning)]',
+              isClaimLost && 'bg-[var(--oe-nc-bg-muted)] text-[var(--oe-nc-text-muted)]',
             )}>
               {patientInitials(card.display_name)}
             </AvatarFallback>
@@ -120,13 +119,13 @@ export function QueueCard({ card, privacyMode = false, onClick, selected = false
             <div className={cn(queueCardHeaderClass, 'gap-2 mb-1')}>
               <span className={cn(
                 queueCardQueueNumClass,
-                'text-[var(--oe-clinical-text-muted)] font-semibold',
+                'text-[var(--oe-nc-text-muted)] font-semibold',
               )}>
                 #{card.queue_number}
               </span>
               <span className={cn(
                 queueCardNameClass,
-                'text-[var(--oe-clinical-text)] font-semibold',
+                'text-[var(--oe-nc-text)] font-semibold',
               )}>
                 {displayName}
               </span>
@@ -158,7 +157,7 @@ export function QueueCard({ card, privacyMode = false, onClick, selected = false
               {isStale && (
                 <span className={cn(
                   queueCardStaleBadgeClass,
-                  'text-[var(--oe-clinical-warning)]',
+                  'text-[var(--oe-nc-warning)]',
                 )} title={`Visit opened on ${card.visit_date.slice(0, 10)}`}>
                   <Clock className="h-3 w-3" aria-hidden="true" /> {formatStaleDate(card.visit_date)}
                 </span>
@@ -167,7 +166,7 @@ export function QueueCard({ card, privacyMode = false, onClick, selected = false
 
             <div className={cn(
               queueCardMetaClass,
-              'text-[var(--oe-clinical-text-muted)] text-[var(--oe-clinical-text-xs)] mb-1',
+              'text-[var(--oe-nc-text-muted)] text-[0.8125rem] mb-1',
             )}>
               {card.sex} · {card.age_years} · <WaitTimeSpan card={card} suffix=" waiting" /> · {card.visit_type_label}
             </div>
@@ -175,7 +174,7 @@ export function QueueCard({ card, privacyMode = false, onClick, selected = false
             {card.chief_complaint && (
               <div className={cn(
                 queueCardCcClass,
-                'text-[var(--oe-clinical-text)] text-sm mb-2',
+                'text-[var(--oe-nc-text)] text-sm mb-2',
               )}>
                 CC: {card.chief_complaint}
               </div>
