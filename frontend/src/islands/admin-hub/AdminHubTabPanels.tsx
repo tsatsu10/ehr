@@ -363,7 +363,6 @@ export function AdminHubTabPanels({
         <PatientImportPanel
           ajaxUrl={ajaxUrl}
           csrfToken={csrfToken}
-          facilityId={facilityId > 0 ? facilityId : clinicFacilityId}
         />
       </AdminTabPanel>
     </>

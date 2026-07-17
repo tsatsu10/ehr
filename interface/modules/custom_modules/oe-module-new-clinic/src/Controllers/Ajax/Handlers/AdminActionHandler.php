@@ -922,10 +922,13 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                     }
                     $body = $this->host->readJsonBody();
                     $this->host->verifyCsrf($body);
-                    if ((string) ($this->host->svc(ClinicConfigService::class)->get('enable_patient_import', '0') ?? '0') !== '1') {
+                    // Facility comes from the session ONLY — never the client body — so a
+                    // tampered request can't import into a facility the caller doesn't
+                    // actually belong to.
+                    $importFacilityId = (int) ($_SESSION['facilityId'] ?? 0);
+                    if (!$this->host->svc(ClinicConfigService::class)->isEnabled('enable_patient_import', 0, $importFacilityId)) {
                         $this->host->respond(false, 'Patient import is not enabled', [], 403);
                     }
-                    $importFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
                     $importPayload = $this->host->svc(PatientImportService::class)->processChunk(
                         is_array($body['rows'] ?? null) ? $body['rows'] : [],
                         !empty($body['dry_run']),

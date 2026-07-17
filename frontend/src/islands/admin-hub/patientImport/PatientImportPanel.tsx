@@ -20,7 +20,6 @@ const PREVIEW_ROW_CAP = 200;
 interface Props {
   ajaxUrl: string;
   csrfToken: string;
-  facilityId: number;
   /** Test seam: preloads the file content, skipping the FileReader. */
   initialCsvText?: string;
 }
@@ -60,9 +59,10 @@ function StatTile({ label, value, tone }: { label: string; value: number; tone: 
   );
 }
 
-export function PatientImportPanel({ ajaxUrl, csrfToken, facilityId, initialCsvText }: Props) {
+export function PatientImportPanel({ ajaxUrl, csrfToken, initialCsvText }: Props) {
   const [step, setStep] = useState<Step>('upload');
   const [fileError, setFileError] = useState<string | null>(null);
+  const [fileWarning, setFileWarning] = useState<string | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<string[][]>([]);
   const [mapping, setMapping] = useState<ColumnMapping>([]);
@@ -71,14 +71,17 @@ export function PatientImportPanel({ ajaxUrl, csrfToken, facilityId, initialCsvT
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [fileName, setFileName] = useState('');
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const isFirstRender = useRef(true);
 
   const loadCsvText = useCallback((text: string) => {
     const parsed = parseCsv(text);
     if (parsed.error) {
       setFileError(parsed.error);
+      setFileWarning(null);
       return;
     }
     setFileError(null);
+    setFileWarning(parsed.warning);
     setHeaders(parsed.headers);
     setRows(parsed.rows);
     setMapping(autoMatch(parsed.headers));
@@ -92,7 +95,16 @@ export function PatientImportPanel({ ajaxUrl, csrfToken, facilityId, initialCsvT
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialCsvText]);
 
-  useEffect(() => { headingRef.current?.focus(); }, [step]);
+  useEffect(() => {
+    // Don't steal focus on first mount (the page/shell may have already
+    // placed focus somewhere sensible) — only move it when the step actually
+    // changes, so each new step's heading gets announced.
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    headingRef.current?.focus();
+  }, [step]);
 
   const handleFileChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -107,6 +119,7 @@ export function PatientImportPanel({ ajaxUrl, csrfToken, facilityId, initialCsvT
   const resetAll = useCallback(() => {
     setStep('upload');
     setFileError(null);
+    setFileWarning(null);
     setHeaders([]);
     setRows([]);
     setMapping([]);
@@ -119,6 +132,7 @@ export function PatientImportPanel({ ajaxUrl, csrfToken, facilityId, initialCsvT
   const backToUpload = useCallback(() => {
     setStep('upload');
     setFileError(null);
+    setFileWarning(null);
     setHeaders([]);
     setRows([]);
     setMapping([]);
@@ -146,7 +160,7 @@ export function PatientImportPanel({ ajaxUrl, csrfToken, facilityId, initialCsvT
           .map((r) => ({ ...r, row_number: Number(r.row_number) }));
         const data = await oeFetch<ChunkResponse>('admin.patient_import.chunk', {
           ajaxUrl, csrfToken,
-          json: { facility_id: facilityId, dry_run: dryRun ? 1 : 0, rows: chunk },
+          json: { dry_run: dryRun ? 1 : 0, rows: chunk },
         });
         collected.push(...data.results);
         setProgress(Math.min(1, (start + chunk.length) / Math.max(1, sendableRows.length)));
@@ -167,7 +181,7 @@ export function PatientImportPanel({ ajaxUrl, csrfToken, facilityId, initialCsvT
       setFileError(e instanceof Error ? e.message : 'Something went wrong — nothing else was imported.');
       setStep(dryRun ? 'match' : 'done');
     }
-  }, [ajaxUrl, csrfToken, facilityId, sendableRows, inFileDups, mappedRows]);
+  }, [ajaxUrl, csrfToken, sendableRows, inFileDups, mappedRows]);
 
   const handleMappingChange = useCallback((col: number, value: string) => {
     setMapping((prev) => {
@@ -244,6 +258,9 @@ export function PatientImportPanel({ ajaxUrl, csrfToken, facilityId, initialCsvT
             {fileName ? `File: ${fileName}. ` : ''}
             Tell us which file column holds each piece of patient information.
           </p>
+          {fileWarning && (
+            <div className={deskCalloutClass('warn', 'mb-3')}>{fileWarning}</div>
+          )}
           <div className="overflow-x-auto">
             <table className="nc-import-table">
               <thead>

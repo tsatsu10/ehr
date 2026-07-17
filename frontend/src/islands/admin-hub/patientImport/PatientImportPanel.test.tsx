@@ -17,21 +17,29 @@ describe('PatientImportPanel', () => {
       summary: { processed: 2, ok: 2, duplicates: 0, errors: 0 },
     });
 
-    render(<PatientImportPanel ajaxUrl="/ajax" csrfToken="tok" facilityId={3} initialCsvText={CSV} />);
+    render(<PatientImportPanel ajaxUrl="/ajax" csrfToken="tok" initialCsvText={CSV} />);
 
     // Auto-matched columns are shown on the match step.
     expect(await screen.findByText(/match columns/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /check file/i }));
 
-    await waitFor(() => expect(screen.getByText(/2/)).toBeInTheDocument());
+    const willImportTile = (await screen.findByText('Will import')).closest('.nc-import-stat-tile');
+    expect(willImportTile).not.toBeNull();
+    await waitFor(() => expect(within(willImportTile as HTMLElement).getByText('2')).toBeInTheDocument());
     expect(oeFetchMock).toHaveBeenCalledWith(
       'admin.patient_import.chunk',
       expect.objectContaining({ json: expect.objectContaining({ dry_run: 1 }) })
     );
+    // The client no longer decides which facility to import into — the
+    // session on the server side is the sole source of truth (Task B).
+    expect(oeFetchMock).toHaveBeenCalledWith(
+      'admin.patient_import.chunk',
+      expect.objectContaining({ json: expect.not.objectContaining({ facility_id: expect.anything() }) })
+    );
   });
 
   it('blocks Continue until first and last name are mapped', async () => {
-    render(<PatientImportPanel ajaxUrl="/ajax" csrfToken="tok" facilityId={3} initialCsvText={'a,b\n1,2\n'} />);
+    render(<PatientImportPanel ajaxUrl="/ajax" csrfToken="tok" initialCsvText={'a,b\n1,2\n'} />);
     const btn = await screen.findByRole('button', { name: /check file/i });
     expect(btn).toBeDisabled();
     expect(screen.getByText(/first name and last name/i)).toBeInTheDocument();
@@ -51,7 +59,7 @@ describe('PatientImportPanel', () => {
       })
       .mockRejectedValueOnce(new Error('Connection lost'));
 
-    render(<PatientImportPanel ajaxUrl="/ajax" csrfToken="tok" facilityId={3} initialCsvText={CSV} />);
+    render(<PatientImportPanel ajaxUrl="/ajax" csrfToken="tok" initialCsvText={CSV} />);
 
     fireEvent.click(await screen.findByRole('button', { name: /check file/i }));
 
