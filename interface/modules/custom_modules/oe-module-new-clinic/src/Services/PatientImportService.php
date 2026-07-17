@@ -196,4 +196,162 @@ class PatientImportService
 
         return $pattern;
     }
+
+    /**
+     * Process one chunk of mapped rows. Dry run and commit share this path;
+     * $dryRun disables the writes only. The duplicate index is rebuilt from the
+     * DB per request (stateless), so rows committed by earlier chunks are seen.
+     *
+     * @param array<int, array<string, mixed>> $rows each with 'row_number' plus IMPORT_FIELDS
+     * @return array{results: array<int, array<string, mixed>>, summary: array<string, int>}
+     */
+    public function processChunk(array $rows, bool $dryRun, int $actorUserId, int $facilityId): array
+    {
+        if (count($rows) > self::MAX_CHUNK_ROWS) {
+            throw new \InvalidArgumentException('Too many rows in one request (max ' . self::MAX_CHUNK_ROWS . ')');
+        }
+
+        $index = $this->buildDuplicateIndex();
+        $results = [];
+        $summary = ['processed' => 0, 'ok' => 0, 'duplicates' => 0, 'errors' => 0];
+
+        foreach ($rows as $row) {
+            $rowNumber = (int) ($row['row_number'] ?? 0);
+            $summary['processed']++;
+
+            $normalized = $this->normalizeRow($row);
+            $displayName = trim(((string) ($row['fname'] ?? '')) . ' ' . ((string) ($row['lname'] ?? '')));
+            if (!$normalized['ok']) {
+                $summary['errors']++;
+                $results[] = ['row_number' => $rowNumber, 'status' => 'error', 'reason' => $normalized['reason'], 'name' => $displayName, 'pid' => null];
+                continue;
+            }
+
+            $data = $normalized['data'];
+            $dupReason = $this->resolveDuplicate($data, $index);
+            if ($dupReason !== '') {
+                $summary['duplicates']++;
+                $results[] = ['row_number' => $rowNumber, 'status' => 'duplicate', 'reason' => $dupReason, 'name' => $displayName, 'pid' => null];
+                continue;
+            }
+
+            $pid = null;
+            if (!$dryRun) {
+                $pid = $this->insertPatient($data, $facilityId);
+            }
+
+            // Keep in-chunk repeats from double-importing (and from double-counting in dry run).
+            foreach ($this->indexKeysFor($data) as $bucket => $key) {
+                if ($key !== '') {
+                    $index[$bucket][$key] = true;
+                }
+            }
+
+            $summary['ok']++;
+            $results[] = [
+                'row_number' => $rowNumber,
+                'status' => $dryRun ? 'ok' : 'imported',
+                'reason' => '',
+                'name' => $displayName,
+                'pid' => $pid,
+            ];
+        }
+
+        if (!$dryRun) {
+            EventAuditLogger::getInstance()->newEvent(
+                'new_clinic',
+                'admin.patient_import.chunk',
+                $actorUserId,
+                1,
+                'imported=' . $summary['ok'] . ' duplicates=' . $summary['duplicates'] . ' errors=' . $summary['errors']
+            );
+        }
+
+        return ['results' => $results, 'summary' => $summary];
+    }
+
+    /**
+     * One bounded query over patient_data → in-memory match keys. Admin-only,
+     * user-triggered, never on a poll timer (SCALE R-rules).
+     *
+     * @return array{name_dob: array<string, true>, name_phone: array<string, true>, national_id: array<string, true>}
+     */
+    private function buildDuplicateIndex(): array
+    {
+        $rows = QueryUtils::fetchRecords(
+            "SELECT fname, lname, DOB, phone_normalized, ss FROM patient_data"
+        ) ?: [];
+
+        $index = ['name_dob' => [], 'name_phone' => [], 'national_id' => []];
+        foreach ($rows as $row) {
+            $keys = $this->indexKeysFor([
+                'fname' => (string) ($row['fname'] ?? ''),
+                'lname' => (string) ($row['lname'] ?? ''),
+                'dob' => (string) ($row['DOB'] ?? ''),
+                'phone' => (string) ($row['phone_normalized'] ?? ''),
+                'national_id' => (string) ($row['ss'] ?? ''),
+            ]);
+            foreach ($keys as $bucket => $key) {
+                if ($key !== '') {
+                    $index[$bucket][$key] = true;
+                }
+            }
+        }
+
+        return $index;
+    }
+
+    /**
+     * Create the patient the same way M1b registration does (parity: same
+     * PatientService path, phone_normalized, meta row, dup score refresh).
+     *
+     * @param array<string, string> $d normalized row data
+     */
+    private function insertPatient(array $d, int $facilityId): int
+    {
+        $patientData = [
+            'fname' => $d['fname'],
+            'lname' => $d['lname'],
+            'mname' => $d['mname'],
+            'sex' => $d['sex'],
+            'phone_cell' => $d['phone'],
+            'street' => $d['street'],
+            'country_code' => 'GH',
+        ];
+        if ($d['dob'] !== '') {
+            $patientData['DOB'] = $d['dob'];
+        }
+        if ($d['national_id'] !== '') {
+            $patientData['ss'] = $d['national_id'];
+        }
+
+        $result = (new PatientService())->insert($patientData);
+        if (!$result->isValid() || !$result->hasData()) {
+            throw new \InvalidArgumentException('Could not create patient');
+        }
+        $pid = (int) $result->getFirstDataResult()['pid'];
+
+        if ($d['phone'] !== '') {
+            QueryUtils::sqlStatementThrowException(
+                "UPDATE patient_data SET phone_normalized = ? WHERE pid = ?",
+                [$d['phone'], $pid]
+            );
+        }
+        // No facility_id write here: patient_data has no facility_id column in
+        // this schema (confirmed via SHOW COLUMNS), and M1b registration
+        // (PatientRegistrationService::createSectionOne) never sets one either.
+        // $facilityId is accepted for interface parity with processChunk() and
+        // for any future facility-aware write, but is intentionally unused now.
+
+        QueryUtils::sqlInsert(
+            "INSERT INTO new_patient_meta (pid, dob_estimated, disability_flag, insurance_type, old_clinic_number)
+             VALUES (?, 0, 0, 'cash', ?)",
+            [$pid, $d['old_clinic_number'] !== '' ? $d['old_clinic_number'] : null]
+        );
+
+        require_once $GLOBALS['fileroot'] . '/library/patient.inc.php';
+        updateDupScore($pid);
+
+        return $pid;
+    }
 }

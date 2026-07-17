@@ -162,4 +162,11 @@ class PatientImportServiceTest extends TestCase
         $this->assertSame(255, mb_strlen($r['data']['street']));
         $this->assertStringContainsString('Z', $r['data']['street']);
     }
+
+    public function testChunkTooLargeThrows(): void
+    {
+        $rows = array_fill(0, PatientImportService::MAX_CHUNK_ROWS + 1, ['row_number' => 2, 'fname' => 'A', 'lname' => 'Bb', 'dob' => '01/01/2000']);
+        $this->expectException(\InvalidArgumentException::class);
+        $this->service()->processChunk($rows, true, 1, 3);
+    }
 }
