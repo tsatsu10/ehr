@@ -15,11 +15,13 @@ use OpenEMR\Modules\NewClinic\Controllers\Ajax\AjaxActionHandlerInterface;
 use OpenEMR\Modules\NewClinic\Controllers\AjaxController;
 use OpenEMR\Modules\NewClinic\Services\AclAdminService;
 use OpenEMR\Modules\NewClinic\Services\ClinicAdminService;
+use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\DirectoryContactService;
 use OpenEMR\Modules\NewClinic\Services\FacilityUserAdminService;
 use OpenEMR\Modules\NewClinic\Services\FeeScheduleAdminService;
 use OpenEMR\Modules\NewClinic\Services\GeoService;
 use OpenEMR\Modules\NewClinic\Services\HisPackImportService;
+use OpenEMR\Modules\NewClinic\Services\PatientImportService;
 use OpenEMR\Modules\NewClinic\Services\PerfCounterService;
 use OpenEMR\Modules\NewClinic\Services\ReconciliationService;
 use OpenEMR\Modules\NewClinic\Services\AdminBackupService;
@@ -98,7 +100,8 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
         'admin.setup.mark_item',
         'admin.setup.complete',
         'admin.config.export',
-        'admin.config.import'
+        'admin.config.import',
+        'admin.patient_import.chunk',
     ];
 
     public function __construct(
@@ -912,6 +915,24 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                     } catch (\InvalidArgumentException $e) {
                         $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
                     }
+                    break;
+                case 'admin.patient_import.chunk':
+                    if ($method !== 'POST') {
+                        $this->host->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->host->readJsonBody();
+                    $this->host->verifyCsrf($body);
+                    if ((string) ($this->host->svc(ClinicConfigService::class)->get('enable_patient_import', '0') ?? '0') !== '1') {
+                        $this->host->respond(false, 'Patient import is not enabled', [], 403);
+                    }
+                    $importFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    $importPayload = $this->host->svc(PatientImportService::class)->processChunk(
+                        is_array($body['rows'] ?? null) ? $body['rows'] : [],
+                        !empty($body['dry_run']),
+                        $userId,
+                        $importFacilityId
+                    );
+                    $this->host->respond(true, 'ok', $importPayload);
                     break;
 
             default:

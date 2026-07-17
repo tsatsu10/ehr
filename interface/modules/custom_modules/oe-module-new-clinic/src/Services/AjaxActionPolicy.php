@@ -147,6 +147,7 @@ class AjaxActionPolicy
         'admin.setup.complete' => 'new_admin',
         'admin.config.export' => 'new_admin',
         'admin.config.import' => 'new_admin',
+        'admin.patient_import.chunk' => 'new_admin',
         'admin.completion_weights.save' => 'new_admin',
         'clinical_doc.import_ghana_pack' => 'new_admin',
         'clinical_doc.import_referral_hospital_pack' => 'new_admin',
