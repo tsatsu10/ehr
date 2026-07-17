@@ -28,4 +28,19 @@ describe('parseCsv', () => {
     const out = parseCsv('name,phone\nAma,024\n,\n');
     expect(out.rows).toHaveLength(1);
   });
+
+  it('has no warning for a clean file', () => {
+    const out = parseCsv('name,phone\nAma,024\n');
+    expect(out.warning).toBeNull();
+  });
+
+  it('flags an unterminated quote as a warning without failing the parse', () => {
+    // The unclosed quote on row 2 makes papaparse record a non-fatal
+    // "MissingQuotes" error, but it still returns usable rows.
+    const out = parseCsv('name,phone\nAma,"024\nKwame,025\n');
+    expect(out.error).toBeNull();
+    expect(out.rows.length).toBeGreaterThan(0);
+    expect(out.warning).toMatch(/formatting issue/i);
+    expect(out.warning).toMatch(/row 2/i);
+  });
 });
