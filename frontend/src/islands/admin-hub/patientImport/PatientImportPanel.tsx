@@ -71,7 +71,6 @@ export function PatientImportPanel({ ajaxUrl, csrfToken, facilityId, initialCsvT
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [fileName, setFileName] = useState('');
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadCsvText = useCallback((text: string) => {
     const parsed = parseCsv(text);
@@ -157,6 +156,14 @@ export function PatientImportPanel({ ajaxUrl, csrfToken, facilityId, initialCsvT
       setStep(dryRun ? 'preview' : 'done');
       if (!dryRun) showDeskToast('Import finished', 'success');
     } catch (e) {
+      // A chunk can fail partway through. Whatever chunks already succeeded —
+      // plus any client-side in-file duplicates flagged before we ever sent a
+      // request — are real outcomes and must replace whatever `results` held
+      // before this call (the dry-run preview, on a real import). Otherwise
+      // the Done screen would show the dry-run's prediction instead of what
+      // was actually committed, right next to a "safe to re-run" message.
+      collected.sort((a, b) => a.row_number - b.row_number);
+      setResults(collected);
       setFileError(e instanceof Error ? e.message : 'Something went wrong — nothing else was imported.');
       setStep(dryRun ? 'match' : 'done');
     }
@@ -202,7 +209,6 @@ export function PatientImportPanel({ ajaxUrl, csrfToken, facilityId, initialCsvT
             </label>
             <input
               id="nc-patient-import-file"
-              ref={fileInputRef}
               type="file"
               accept=".csv,text/csv"
               className="nc-import-file-input"

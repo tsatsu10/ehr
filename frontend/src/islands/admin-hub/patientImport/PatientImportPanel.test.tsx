@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { PatientImportPanel } from './PatientImportPanel';
 
@@ -35,5 +35,39 @@ describe('PatientImportPanel', () => {
     const btn = await screen.findByRole('button', { name: /check file/i });
     expect(btn).toBeDisabled();
     expect(screen.getByText(/first name and last name/i)).toBeInTheDocument();
+  });
+
+  it('shows the real partial results — not the stale dry-run preview — after a commit failure', async () => {
+    // The dry-run ("Check file") call succeeds and predicts 2 importable rows.
+    // The real commit call (after confirming "Import") then fails outright,
+    // so nothing was actually imported.
+    oeFetchMock
+      .mockResolvedValueOnce({
+        results: [
+          { row_number: 2, status: 'ok', reason: '', name: 'Ama Mensah', pid: null },
+          { row_number: 3, status: 'ok', reason: '', name: 'Kwame Boateng', pid: null },
+        ],
+        summary: { processed: 2, ok: 2, duplicates: 0, errors: 0 },
+      })
+      .mockRejectedValueOnce(new Error('Connection lost'));
+
+    render(<PatientImportPanel ajaxUrl="/ajax" csrfToken="tok" facilityId={3} initialCsvText={CSV} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /check file/i }));
+
+    const importTrigger = await screen.findByRole('button', { name: /import 2 patients/i });
+    fireEvent.click(importTrigger);
+
+    const confirmButton = await screen.findByRole('button', { name: /^import$/i });
+    fireEvent.click(confirmButton);
+
+    // The failure is surfaced...
+    expect(await screen.findByRole('alert')).toHaveTextContent(/connection lost/i);
+
+    // ...and the Done screen reflects that ZERO rows actually committed before
+    // the failure, not the dry-run's "2 will import" prediction.
+    const importedTile = (await screen.findByText('Imported')).closest('.nc-import-stat-tile');
+    expect(importedTile).not.toBeNull();
+    expect(within(importedTile as HTMLElement).getByText('0')).toBeInTheDocument();
   });
 });
