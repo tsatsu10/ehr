@@ -135,4 +135,31 @@ class PatientImportServiceTest extends TestCase
         $index = ['name_dob' => [], 'name_phone' => [], 'national_id' => ['GHA-1' => true]];
         $this->assertNotSame('', $svc->resolveDuplicate($data, $index));
     }
+
+    public function testOverlongNameFails(): void
+    {
+        $r = $this->service()->normalizeRow(['fname' => str_repeat('A', 81), 'lname' => 'Mensah', 'dob' => '12/03/1988']);
+        $this->assertFalse($r['ok']);
+        $this->assertStringContainsString('too long', strtolower($r['reason']));
+    }
+
+    public function testOverlongOldClinicNumberFails(): void
+    {
+        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'dob' => '12/03/1988', 'old_clinic_number' => str_repeat('X', 41)]);
+        $this->assertFalse($r['ok']);
+    }
+
+    public function testOverlongNationalIdFails(): void
+    {
+        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'dob' => '12/03/1988', 'national_id' => str_repeat('Y', 41)]);
+        $this->assertFalse($r['ok']);
+    }
+
+    public function testStreetIsTruncatedTo255(): void
+    {
+        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'dob' => '12/03/1988', 'street' => str_repeat('Z', 300)]);
+        $this->assertTrue($r['ok']);
+        $this->assertSame(255, mb_strlen($r['data']['street']));
+        $this->assertStringContainsString('Z', $r['data']['street']);
+    }
 }
