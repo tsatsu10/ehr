@@ -6,6 +6,7 @@ const SYNONYMS: [ImportField, string[]][] = [
   ['mname', ['middlename', 'middle', 'othernames', 'other']],
   ['sex', ['sex', 'gender']],
   ['dob', ['dob', 'dateofbirth', 'birthdate', 'birthday', 'born']],
+  ['age', ['age', 'ageyears', 'years', 'estimatedage']],
   ['phone', ['phone', 'phoneno', 'mobile', 'mobileno', 'telephone', 'tel', 'contact', 'contactno', 'cell']],
   ['street', ['address', 'streetaddress', 'street', 'residence', 'location', 'homeaddress']],
   ['old_clinic_number', ['oldclinicnumber', 'oldid', 'cardno', 'cardnumber', 'folderno', 'foldernumber', 'opdno', 'opdnumber', 'hospitalno', 'hospitalnumber', 'patientid', 'patientno', 'recordno', 'mrn']],

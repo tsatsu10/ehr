@@ -47,7 +47,7 @@ class PatientImportServiceTest extends TestCase
 
     public function testIsoDateAccepted(): void
     {
-        $r = $this->service()->normalizeRow(['fname' => 'K', 'lname' => 'Boateng', 'dob' => '1975-11-02']);
+        $r = $this->service()->normalizeRow(['fname' => 'K', 'lname' => 'Boateng', 'sex' => 'M', 'dob' => '1975-11-02']);
         $this->assertTrue($r['ok']);
         $this->assertSame('1975-11-02', $r['data']['dob']);
     }
@@ -65,29 +65,70 @@ class PatientImportServiceTest extends TestCase
         $this->assertFalse($r['ok']);
     }
 
-    public function testNeedsDobOrPhone(): void
+    public function testNeedsDobOrAge(): void
     {
-        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah']);
+        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'sex' => 'F']);
         $this->assertFalse($r['ok']);
-        $this->assertStringContainsString('date of birth or a phone', $r['reason']);
+        $this->assertStringContainsString('date of birth or an age', $r['reason']);
+    }
+
+    /** Per the audit amendment, a phone number alone no longer satisfies the identity rule. */
+    public function testPhoneAloneNoLongerSatisfiesIdentityRule(): void
+    {
+        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'sex' => 'F', 'phone' => '0244123456']);
+        $this->assertFalse($r['ok']);
+        $this->assertStringContainsString('date of birth or an age', $r['reason']);
+    }
+
+    public function testAgeSynthesizesEstimatedDob(): void
+    {
+        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'sex' => 'F', 'age' => '30']);
+        $this->assertTrue($r['ok']);
+        $expectedYear = (int) date('Y') - 30;
+        $this->assertSame(sprintf('%04d-07-01', $expectedYear), $r['data']['dob']);
+        $this->assertSame('1', $r['data']['dob_estimated']);
+    }
+
+    public function testAgeOutOfRangeFails(): void
+    {
+        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'sex' => 'F', 'age' => '131']);
+        $this->assertFalse($r['ok']);
+        $this->assertStringContainsString('age', strtolower($r['reason']));
+    }
+
+    public function testNonNumericAgeFails(): void
+    {
+        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'sex' => 'F', 'age' => 'thirty']);
+        $this->assertFalse($r['ok']);
+        $this->assertStringContainsString('age', strtolower($r['reason']));
+    }
+
+    public function testAgeIgnoredWhenRealDobPresent(): void
+    {
+        $r = $this->service()->normalizeRow([
+            'fname' => 'Ama', 'lname' => 'Mensah', 'sex' => 'F', 'dob' => '12/03/1988', 'age' => '5',
+        ]);
+        $this->assertTrue($r['ok']);
+        $this->assertSame('1988-03-12', $r['data']['dob']);
+        $this->assertSame('0', $r['data']['dob_estimated']);
     }
 
     public function testBadDateFails(): void
     {
-        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'dob' => '31/02/1990']);
+        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'sex' => 'F', 'dob' => '31/02/1990']);
         $this->assertFalse($r['ok']);
     }
 
     public function testTwoDigitYearFails(): void
     {
-        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'dob' => '12/03/88']);
+        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'sex' => 'F', 'dob' => '12/03/88']);
         $this->assertFalse($r['ok']);
         $this->assertStringContainsString('4-digit', $r['reason']);
     }
 
     public function testFutureDateFails(): void
     {
-        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'dob' => '12/03/2099']);
+        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'sex' => 'F', 'dob' => '12/03/2099']);
         $this->assertFalse($r['ok']);
     }
 
@@ -97,16 +138,16 @@ class PatientImportServiceTest extends TestCase
         $this->assertFalse($r['ok']);
     }
 
-    public function testBlankSexAllowed(): void
+    public function testBlankSexFails(): void
     {
         $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'dob' => '12/03/1988', 'sex' => '']);
-        $this->assertTrue($r['ok']);
-        $this->assertSame('', $r['data']['sex']);
+        $this->assertFalse($r['ok']);
+        $this->assertSame('Sex is required — use M or F', $r['reason']);
     }
 
     public function testInvalidPhoneFails(): void
     {
-        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'phone' => '12345']);
+        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'sex' => 'F', 'phone' => '12345']);
         $this->assertFalse($r['ok']);
         $this->assertStringContainsString('phone', strtolower($r['reason']));
     }
@@ -114,7 +155,7 @@ class PatientImportServiceTest extends TestCase
     public function testDuplicateByNameDob(): void
     {
         $svc = $this->service();
-        $data = $svc->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'dob' => '12/03/1988'])['data'];
+        $data = $svc->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'sex' => 'F', 'dob' => '12/03/1988'])['data'];
         $index = ['name_dob' => ['ama|mensah|1988-03-12' => true], 'name_phone' => [], 'national_id' => []];
         $this->assertNotSame('', $svc->resolveDuplicate($data, $index));
     }
@@ -122,7 +163,7 @@ class PatientImportServiceTest extends TestCase
     public function testPhoneAloneIsNotDuplicate(): void
     {
         $svc = $this->service();
-        $data = $svc->normalizeRow(['fname' => 'Kojo', 'lname' => 'Mensah', 'dob' => '01/01/2015', 'phone' => '0244123456'])['data'];
+        $data = $svc->normalizeRow(['fname' => 'Kojo', 'lname' => 'Mensah', 'sex' => 'M', 'dob' => '01/01/2015', 'phone' => '0244123456'])['data'];
         // Same phone in the clinic (a parent) but different name+dob and no name_phone entry for THIS name.
         $index = ['name_dob' => ['ama|mensah|1988-03-12' => true], 'name_phone' => ['ama|mensah|0244123456' => true], 'national_id' => []];
         $this->assertSame('', $svc->resolveDuplicate($data, $index));
@@ -131,7 +172,7 @@ class PatientImportServiceTest extends TestCase
     public function testDuplicateByNationalId(): void
     {
         $svc = $this->service();
-        $data = $svc->normalizeRow(['fname' => 'Ama', 'lname' => 'Owusu', 'dob' => '02/02/1990', 'national_id' => 'GHA-1'])['data'];
+        $data = $svc->normalizeRow(['fname' => 'Ama', 'lname' => 'Owusu', 'sex' => 'F', 'dob' => '02/02/1990', 'national_id' => 'GHA-1'])['data'];
         $index = ['name_dob' => [], 'name_phone' => [], 'national_id' => ['GHA-1' => true]];
         $this->assertNotSame('', $svc->resolveDuplicate($data, $index));
     }
@@ -157,7 +198,7 @@ class PatientImportServiceTest extends TestCase
 
     public function testStreetIsTruncatedTo255(): void
     {
-        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'dob' => '12/03/1988', 'street' => str_repeat('Z', 300)]);
+        $r = $this->service()->normalizeRow(['fname' => 'Ama', 'lname' => 'Mensah', 'sex' => 'F', 'dob' => '12/03/1988', 'street' => str_repeat('Z', 300)]);
         $this->assertTrue($r['ok']);
         $this->assertSame(255, mb_strlen($r['data']['street']));
         $this->assertStringContainsString('Z', $r['data']['street']);
@@ -210,9 +251,9 @@ class PatientImportServiceTest extends TestCase
         };
 
         $rows = [
-            ['row_number' => 2, 'fname' => 'Ama', 'lname' => 'Mensah', 'dob' => '01/01/2000'],
-            ['row_number' => 3, 'fname' => 'Kojo', 'lname' => 'Failme', 'dob' => '02/02/2001'],
-            ['row_number' => 4, 'fname' => 'Efua', 'lname' => 'Boateng', 'dob' => '03/03/2002'],
+            ['row_number' => 2, 'fname' => 'Ama', 'lname' => 'Mensah', 'sex' => 'F', 'dob' => '01/01/2000'],
+            ['row_number' => 3, 'fname' => 'Kojo', 'lname' => 'Failme', 'sex' => 'M', 'dob' => '02/02/2001'],
+            ['row_number' => 4, 'fname' => 'Efua', 'lname' => 'Boateng', 'sex' => 'F', 'dob' => '03/03/2002'],
         ];
 
         $out = $svc->processChunk($rows, false, 1, 0);
@@ -222,11 +263,193 @@ class PatientImportServiceTest extends TestCase
         $this->assertSame('imported', $out['results'][0]['status']);
         $this->assertSame(999, $out['results'][0]['pid']);
 
+        // Per the audit amendment (Task D), a raw SQL/DB exception message is never
+        // shown to the user — only a generic, safe reason. The real message goes to
+        // error_log() instead (see testDbFailureReasonIsLoggedNotShown).
         $this->assertSame('error', $out['results'][1]['status']);
-        $this->assertStringContainsString('simulated database failure', $out['results'][1]['reason']);
+        $this->assertStringNotContainsString('simulated database failure', $out['results'][1]['reason']);
+        $this->assertStringContainsString('Could not save this patient', $out['results'][1]['reason']);
         $this->assertNull($out['results'][1]['pid']);
 
         $this->assertSame('imported', $out['results'][2]['status']);
         $this->assertSame(999, $out['results'][2]['pid']);
+    }
+
+    /**
+     * Task D: the raw exception message must not leak to the user for a generic
+     * save failure — it belongs in the server log, tagged with the row number,
+     * so support can diagnose it without exposing internals in the UI.
+     */
+    public function testDbFailureReasonIsLoggedNotShown(): void
+    {
+        $config = new class extends ClinicConfigService {
+            public function get(string $key, ?string $default = null, int $facilityId = 0): ?string
+            {
+                return $default;
+            }
+        };
+
+        $svc = new class (config: $config) extends PatientImportService {
+            protected function buildDuplicateIndex(): array
+            {
+                return ['name_dob' => [], 'name_phone' => [], 'national_id' => []];
+            }
+
+            protected function insertPatient(array $d, int $facilityId): int
+            {
+                throw new \RuntimeException('secret column mismatch on pid 4471');
+            }
+
+            protected function logChunkAudit(int $actorUserId, array $summary): void
+            {
+            }
+        };
+
+        $tmpLog = tempnam(sys_get_temp_dir(), 'nc_import_test_');
+        $priorErrorLog = ini_set('error_log', $tmpLog);
+        try {
+            $out = $svc->processChunk(
+                [['row_number' => 7, 'fname' => 'Ama', 'lname' => 'Mensah', 'sex' => 'F', 'dob' => '01/01/2000']],
+                false,
+                1,
+                0
+            );
+        } finally {
+            ini_set('error_log', $priorErrorLog === false ? '' : $priorErrorLog);
+        }
+
+        $this->assertStringNotContainsString('secret column mismatch', $out['results'][0]['reason']);
+
+        $logged = (string) file_get_contents($tmpLog);
+        unlink($tmpLog);
+        $this->assertStringContainsString('secret column mismatch on pid 4471', $logged);
+        $this->assertStringContainsString('7', $logged);
+    }
+
+    /**
+     * Task D: a *validation*-shaped create failure (e.g. core PatientValidator
+     * rejecting the row) is user-actionable, so — unlike a raw SQL error — its
+     * message is safe to show as-is, not sanitized away.
+     */
+    public function testValidationFailureReasonIsShownAsIs(): void
+    {
+        $config = new class extends ClinicConfigService {
+            public function get(string $key, ?string $default = null, int $facilityId = 0): ?string
+            {
+                return $default;
+            }
+        };
+
+        $svc = new class (config: $config) extends PatientImportService {
+            protected function buildDuplicateIndex(): array
+            {
+                return ['name_dob' => [], 'name_phone' => [], 'national_id' => []];
+            }
+
+            protected function insertPatient(array $d, int $facilityId): int
+            {
+                throw new \OpenEMR\Modules\NewClinic\Exceptions\PatientImportValidationException(
+                    'Could not create patient (sex: Sex is required)'
+                );
+            }
+
+            protected function logChunkAudit(int $actorUserId, array $summary): void
+            {
+            }
+        };
+
+        $out = $svc->processChunk(
+            [['row_number' => 5, 'fname' => 'Ama', 'lname' => 'Mensah', 'sex' => 'F', 'dob' => '01/01/2000']],
+            false,
+            1,
+            0
+        );
+
+        $this->assertSame('Could not create patient (sex: Sex is required)', $out['results'][0]['reason']);
+    }
+
+    /**
+     * Circuit breaker (Task C): 10 consecutive insert failures stop the whole
+     * chunk rather than silently grinding through hundreds of doomed rows (e.g. a
+     * full DB outage mid-import). The counter must reset on any success.
+     */
+    public function testCircuitBreakerStopsAfterTenConsecutiveFailures(): void
+    {
+        $config = new class extends ClinicConfigService {
+            public function get(string $key, ?string $default = null, int $facilityId = 0): ?string
+            {
+                return $default;
+            }
+        };
+
+        $svc = new class (config: $config) extends PatientImportService {
+            protected function buildDuplicateIndex(): array
+            {
+                return ['name_dob' => [], 'name_phone' => [], 'national_id' => []];
+            }
+
+            protected function insertPatient(array $d, int $facilityId): int
+            {
+                throw new \RuntimeException('simulated outage');
+            }
+
+            protected function logChunkAudit(int $actorUserId, array $summary): void
+            {
+            }
+        };
+
+        $rows = [];
+        for ($i = 0; $i < 15; $i++) {
+            $rows[] = ['row_number' => $i + 2, 'fname' => 'Patient', 'lname' => 'Number' . $i, 'sex' => 'F', 'dob' => '01/01/2000'];
+        }
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Import stopped after repeated save failures — fix the reported rows and re-run');
+        $svc->processChunk($rows, false, 1, 0);
+    }
+
+    public function testCircuitBreakerProcessesExactlyTenErrorRowsBeforeStopping(): void
+    {
+        $config = new class extends ClinicConfigService {
+            public function get(string $key, ?string $default = null, int $facilityId = 0): ?string
+            {
+                return $default;
+            }
+        };
+
+        $svc = new class (config: $config) extends PatientImportService {
+            public int $insertAttempts = 0;
+
+            protected function buildDuplicateIndex(): array
+            {
+                return ['name_dob' => [], 'name_phone' => [], 'national_id' => []];
+            }
+
+            protected function insertPatient(array $d, int $facilityId): int
+            {
+                $this->insertAttempts++;
+                throw new \RuntimeException('simulated outage');
+            }
+
+            protected function logChunkAudit(int $actorUserId, array $summary): void
+            {
+            }
+        };
+
+        $rows = [];
+        for ($i = 0; $i < 15; $i++) {
+            $rows[] = ['row_number' => $i + 2, 'fname' => 'Patient', 'lname' => 'Number' . $i, 'sex' => 'F', 'dob' => '01/01/2000'];
+        }
+
+        try {
+            $svc->processChunk($rows, false, 1, 0);
+            $this->fail('Expected a RuntimeException after 10 consecutive failures');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('Import stopped after repeated save failures — fix the reported rows and re-run', $e->getMessage());
+        }
+
+        // Exactly 10 rows were attempted (and thus turned into 'error' results
+        // inside the loop) before the breaker tripped — rows 11-15 never ran.
+        $this->assertSame(10, $svc->insertAttempts);
     }
 }

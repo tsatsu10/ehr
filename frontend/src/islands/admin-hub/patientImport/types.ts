@@ -1,5 +1,5 @@
 export type ImportField =
-  | 'fname' | 'lname' | 'mname' | 'sex' | 'dob' | 'phone'
+  | 'fname' | 'lname' | 'mname' | 'sex' | 'dob' | 'age' | 'phone'
   | 'street' | 'old_clinic_number' | 'national_id';
 
 export const IMPORT_FIELD_LABELS: Record<ImportField, string> = {
@@ -8,6 +8,7 @@ export const IMPORT_FIELD_LABELS: Record<ImportField, string> = {
   mname: 'Middle name',
   sex: 'Sex',
   dob: 'Date of birth',
+  age: 'Age (years)',
   phone: 'Phone',
   street: 'Address',
   old_clinic_number: 'Old clinic number',
@@ -20,6 +21,8 @@ export interface ParsedCsv {
   headers: string[];
   rows: string[][];
   error: string | null;
+  /** Non-fatal parse issue (e.g. a ragged row) — file still usable, but flagged. */
+  warning: string | null;
 }
 
 /** File column index -> our field, or null for "don't import". */

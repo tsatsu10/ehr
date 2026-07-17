@@ -13,6 +13,7 @@ namespace OpenEMR\Modules\NewClinic\Services;
 
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Logging\EventAuditLogger;
+use OpenEMR\Modules\NewClinic\Exceptions\PatientImportValidationException;
 use OpenEMR\Services\PatientService;
 use OpenEMR\Validators\ProcessingResult;
 
@@ -20,9 +21,12 @@ class PatientImportService
 {
     public const MAX_CHUNK_ROWS = 200;
 
+    /** Circuit breaker (Task C): stop the chunk after this many CONSECUTIVE insert failures. */
+    private const MAX_CONSECUTIVE_FAILURES = 10;
+
     /** @var list<string> */
     public const IMPORT_FIELDS = [
-        'fname', 'lname', 'mname', 'sex', 'dob', 'phone',
+        'fname', 'lname', 'mname', 'sex', 'dob', 'age', 'phone',
         'street', 'old_clinic_number', 'national_id',
     ];
 
@@ -66,9 +70,15 @@ class PatientImportService
             return $this->bad('National ID is too long (40 characters max)');
         }
 
+        // Sex is REQUIRED (audit amendment): core PatientValidator rejects an
+        // empty sex at insert, so allowing blank here would pass dry run and
+        // fail 100% at commit.
+        if ($d['sex'] === '') {
+            return $this->bad('Sex is required — use M or F');
+        }
         $sex = $this->normalizeSex($d['sex']);
         if ($sex === null) {
-            return $this->bad('Sex not recognized — use M, F, Male, or Female (or leave blank)');
+            return $this->bad('Sex not recognized — use M, F, Male, or Female');
         }
         $d['sex'] = $sex;
 
@@ -84,6 +94,17 @@ class PatientImportService
             $d['dob'] = $dob;
         }
 
+        if ($d['age'] !== '') {
+            if (preg_match('~^\d{1,3}$~', $d['age']) !== 1) {
+                return $this->bad('Age must be a whole number of years (0-130)');
+            }
+            $ageYears = (int) $d['age'];
+            if ($ageYears > 130) {
+                return $this->bad('Age must be a whole number of years (0-130)');
+            }
+            $d['age'] = (string) $ageYears;
+        }
+
         if ($d['phone'] !== '') {
             $normalized = $this->phoneNormalizer->normalize($d['phone']);
             $pattern = $this->safePhoneRegex(
@@ -95,8 +116,18 @@ class PatientImportService
             $d['phone'] = $normalized;
         }
 
-        if ($d['dob'] === '' && $d['phone'] === '') {
-            return $this->bad('Each patient needs a date of birth or a phone number');
+        // Identity rule (audit amendment): core PatientValidator requires a DOB
+        // at insert, so a phone number alone is no longer sufficient. A row with
+        // an age but no DOB gets an estimated DOB of July 1st of the birth year —
+        // mirroring PatientRegistrationService::parseSectionOneFields — and is
+        // flagged dob_estimated so the chart shows it's not a real birth date.
+        if ($d['dob'] !== '') {
+            $d['dob_estimated'] = '0';
+        } elseif ($d['age'] !== '') {
+            $d['dob'] = sprintf('%04d-07-01', (int) date('Y') - (int) $d['age']);
+            $d['dob_estimated'] = '1';
+        } else {
+            return $this->bad('Each patient needs a date of birth or an age');
         }
 
         return ['ok' => true, 'reason' => '', 'data' => $d];
@@ -215,6 +246,7 @@ class PatientImportService
         $index = $this->buildDuplicateIndex();
         $results = [];
         $summary = ['processed' => 0, 'ok' => 0, 'duplicates' => 0, 'errors' => 0];
+        $consecutiveFailures = 0;
 
         foreach ($rows as $row) {
             $rowNumber = (int) ($row['row_number'] ?? 0);
@@ -240,18 +272,25 @@ class PatientImportService
             if (!$dryRun) {
                 try {
                     $pid = $this->insertPatient($data, $facilityId);
-                } catch (\Throwable $e) {
+                } catch (\Exception $e) {
                     $summary['errors']++;
+                    $consecutiveFailures++;
                     $results[] = [
                         'row_number' => $rowNumber,
                         'status' => 'error',
-                        'reason' => 'Could not save this patient: ' . $e->getMessage(),
+                        'reason' => $this->describeInsertFailure($e, $rowNumber),
                         'name' => $displayName,
                         'pid' => null,
                     ];
+                    if ($consecutiveFailures >= self::MAX_CONSECUTIVE_FAILURES) {
+                        throw new \RuntimeException(
+                            'Import stopped after repeated save failures — fix the reported rows and re-run'
+                        );
+                    }
                     continue;
                 }
             }
+            $consecutiveFailures = 0;
 
             // Keep in-chunk repeats from double-importing (and from double-counting in dry run).
             foreach ($this->indexKeysFor($data) as $bucket => $key) {
@@ -334,6 +373,9 @@ class PatientImportService
      */
     protected function insertPatient(array $d, int $facilityId): int
     {
+        // DOB is always present at this point (normalizeRow() guarantees a real
+        // or estimated one — the audit amendment's identity rule), so it is
+        // always sent: core PatientValidator requires it at insert.
         $patientData = [
             'fname' => $d['fname'],
             'lname' => $d['lname'],
@@ -342,40 +384,63 @@ class PatientImportService
             'phone_cell' => $d['phone'],
             'street' => $d['street'],
             'country_code' => 'GH',
+            'DOB' => $d['dob'],
         ];
-        if ($d['dob'] !== '') {
-            $patientData['DOB'] = $d['dob'];
-        }
         if ($d['national_id'] !== '') {
             $patientData['ss'] = $d['national_id'];
         }
 
-        $result = (new PatientService())->insert($patientData);
-        if (!$result->isValid() || !$result->hasData()) {
-            throw new \InvalidArgumentException('Could not create patient' . $this->describeValidationFailure($result));
-        }
-        $pid = (int) $result->getFirstDataResult()['pid'];
+        // Task C: patient insert -> phone_normalized -> meta insert -> dup score
+        // refresh are wrapped in one DB transaction so a row that fails partway
+        // through never leaves a half-created patient (a patient row with no
+        // matching new_patient_meta row) behind. This mirrors the
+        // sqlBeginTrans()/sqlCommitTrans()/catch idiom used elsewhere in this
+        // module (e.g. CashierService::postPayment()) — EXCEPT the catch path
+        // calls sqlRollbackTrans() directly rather than the module's usual
+        // `sqlCommitTrans(false)`: library/sql.inc.php's sqlCommitTrans()
+        // wrapper does not forward its $ok argument to ADODB (it always calls
+        // `CommitTrans()` with no args), so `sqlCommitTrans(false)` silently
+        // COMMITS instead of rolling back everywhere else it's used in this
+        // module. sqlRollbackTrans() calls ADODB's RollbackTrans() directly and
+        // is unaffected by that bug.
+        require_once dirname(__DIR__, 6) . '/library/sql.inc.php';
 
-        if ($d['phone'] !== '') {
-            QueryUtils::sqlStatementThrowException(
-                "UPDATE patient_data SET phone_normalized = ? WHERE pid = ?",
-                [$d['phone'], $pid]
+        sqlBeginTrans();
+        try {
+            $result = (new PatientService())->insert($patientData);
+            if (!$result->isValid() || !$result->hasData()) {
+                throw new PatientImportValidationException(
+                    'Could not create patient' . $this->describeValidationFailure($result)
+                );
+            }
+            $pid = (int) $result->getFirstDataResult()['pid'];
+
+            if ($d['phone'] !== '') {
+                QueryUtils::sqlStatementThrowException(
+                    "UPDATE patient_data SET phone_normalized = ? WHERE pid = ?",
+                    [$d['phone'], $pid]
+                );
+            }
+            // No facility_id write here: patient_data has no facility_id column in
+            // this schema (confirmed via SHOW COLUMNS), and M1b registration
+            // (PatientRegistrationService::createSectionOne) never sets one either.
+            // $facilityId is accepted for interface parity with processChunk() and
+            // for any future facility-aware write, but is intentionally unused now.
+
+            QueryUtils::sqlInsert(
+                "INSERT INTO new_patient_meta (pid, dob_estimated, disability_flag, insurance_type, old_clinic_number)
+                 VALUES (?, ?, 0, 'cash', ?)",
+                [$pid, (int) ($d['dob_estimated'] ?? '0'), $d['old_clinic_number'] !== '' ? $d['old_clinic_number'] : null]
             );
+
+            require_once $GLOBALS['fileroot'] . '/library/patient.inc.php';
+            updateDupScore($pid);
+
+            sqlCommitTrans();
+        } catch (\Throwable $e) {
+            sqlRollbackTrans();
+            throw $e;
         }
-        // No facility_id write here: patient_data has no facility_id column in
-        // this schema (confirmed via SHOW COLUMNS), and M1b registration
-        // (PatientRegistrationService::createSectionOne) never sets one either.
-        // $facilityId is accepted for interface parity with processChunk() and
-        // for any future facility-aware write, but is intentionally unused now.
-
-        QueryUtils::sqlInsert(
-            "INSERT INTO new_patient_meta (pid, dob_estimated, disability_flag, insurance_type, old_clinic_number)
-             VALUES (?, 0, 0, 'cash', ?)",
-            [$pid, $d['old_clinic_number'] !== '' ? $d['old_clinic_number'] : null]
-        );
-
-        require_once $GLOBALS['fileroot'] . '/library/patient.inc.php';
-        updateDupScore($pid);
 
         return $pid;
     }
@@ -405,5 +470,24 @@ class PatientImportService
         }
 
         return $parts !== [] ? ' (' . implode('; ', $parts) . ')' : '';
+    }
+
+    /**
+     * Task D: a validation-shaped failure (PatientImportValidationException,
+     * thrown by insertPatient() when core PatientValidator rejects the row) is
+     * user-actionable, so its message is shown as-is. Anything else (a real SQL
+     * or DB exception) can contain internals we don't want in the UI, so the
+     * user sees a generic reason and the real message goes to the server log,
+     * tagged with the row number so support can find it.
+     */
+    private function describeInsertFailure(\Exception $e, int $rowNumber): string
+    {
+        if ($e instanceof PatientImportValidationException) {
+            return $e->getMessage();
+        }
+
+        error_log('PatientImportService: row ' . $rowNumber . ' failed to save: ' . $e->getMessage());
+
+        return 'Could not save this patient — see server log';
     }
 }

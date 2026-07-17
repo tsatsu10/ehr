@@ -4,7 +4,7 @@ import { buildReportCsv, buildTemplateCsv } from './csvBuilders';
 describe('csv builders', () => {
   it('template has the documented headers and 2 example rows', () => {
     const lines = buildTemplateCsv().trim().split('\n');
-    expect(lines[0]).toBe('first_name,last_name,middle_name,sex,date_of_birth,phone,address,old_clinic_number,national_id');
+    expect(lines[0]).toBe('first_name,last_name,middle_name,sex,date_of_birth,age,phone,address,old_clinic_number,national_id');
     expect(lines).toHaveLength(3);
   });
 

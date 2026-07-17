@@ -1,12 +1,12 @@
 import type { RowResult } from './types';
 
-const TEMPLATE_HEADERS = 'first_name,last_name,middle_name,sex,date_of_birth,phone,address,old_clinic_number,national_id';
+const TEMPLATE_HEADERS = 'first_name,last_name,middle_name,sex,date_of_birth,age,phone,address,old_clinic_number,national_id';
 
 export function buildTemplateCsv(): string {
   return [
     TEMPLATE_HEADERS,
-    'Ama,Mensah,,Female,12/03/1988,0244123456,"12 Ring Road, Accra",OPD-0031,',
-    'Kwame,Boateng,Kofi,Male,1975-11-02,0209876543,,,',
+    'Ama,Mensah,,Female,12/03/1988,,0244123456,"12 Ring Road, Accra",OPD-0031,',
+    'Kwame,Boateng,Kofi,Male,,36,0209876543,,,',
   ].join('\n') + '\n';
 }
 
