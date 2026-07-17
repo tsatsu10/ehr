@@ -121,10 +121,14 @@ class PatientSearchService
                 $conditions[] = 'SOUNDEX(pd.lname) = SOUNDEX(?)';
                 $bind[] = $token;
             }
+            $conditions[] = 'npm.old_clinic_number = ?';
+            $bind[] = trim($query);
         } else {
             $like = '%' . $query . '%';
             $conditions[] = '(pd.lname LIKE ? OR pd.fname LIKE ? OR pd.mname LIKE ?)';
             array_push($bind, $like, $like, $like);
+            $conditions[] = 'npm.old_clinic_number = ?';
+            $bind[] = trim($query);
         }
 
         $where = '(' . implode(' OR ', $conditions) . ')' . $filter['sql'];
@@ -132,7 +136,7 @@ class PatientSearchService
 
         $sql = "SELECT pd.pid, pd.fname, pd.mname, pd.lname, pd.sex, pd.DOB, pd.pubpid,
                        pd.phone_cell, pd.phone_normalized,
-                       npc.completion_score, npm.dob_estimated,
+                       npc.completion_score, npm.dob_estimated, npm.old_clinic_number,
                        (SELECT MAX(fe.date) FROM form_encounter fe WHERE fe.pid = pd.pid) AS last_visit_date
                 FROM patient_data pd
                 LEFT JOIN new_patient_completion npc ON npc.pid = pd.pid
@@ -146,6 +150,16 @@ class PatientSearchService
     private function scoreRow(array $row, string $query): int
     {
         $score = 0;
+
+        // Exact old-clinic-number match (fetchCandidates' npm.old_clinic_number = ?
+        // condition) has no name-token overlap, so without this it would clear the
+        // SQL filter but still score 0 and get silently dropped below by the
+        // `$score > 0` gate in search(). Award it top score so the match survives
+        // and sorts first.
+        $oldClinicNumber = trim((string) ($row['old_clinic_number'] ?? ''));
+        if ($oldClinicNumber !== '' && strcasecmp($oldClinicNumber, trim($query)) === 0) {
+            $score += 100;
+        }
 
         $tokens = array_values(array_filter(explode(' ', $this->normalizeQuery($query)), fn ($t) => strlen($t) >= 2));
         $fname = strtolower((string) ($row['fname'] ?? ''));

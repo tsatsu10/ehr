@@ -1,0 +1,2 @@
+import{b as e}from"./dist-DcvEr_SB.js";function t(t,n=`info`){switch(n){case`success`:e.success(t);break;case`warning`:e.warning(t);break;case`danger`:e.error(t);break;case`info`:e(t);break;default:e(n)}}function n(e){e?.message&&t(e.message,e.variant)}export{t as n,n as t};
+//# sourceMappingURL=deskToast-NQQ8LwTV.js.map

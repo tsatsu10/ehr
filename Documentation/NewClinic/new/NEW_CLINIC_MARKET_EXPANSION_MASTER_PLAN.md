@@ -1,6 +1,6 @@
 # New Clinic — Market Expansion Master Plan (Product · Delivery · Business)
 
-**Version:** v0.1.3 · **Date:** 2026-07-09 · **Status:** Draft for review
+**Version:** v0.1.4 · **Date:** 2026-07-17 · **Status:** Draft for review
 **v0.1.1:** T4 broadened from corporate-only to all third-party payers — adds private health
 insurance / HMO billing (MKT-PHI-*), Ghana PHIS and Nigeria HMO market numbers.
 **v0.1.2:** second-pass audit — §3.0 cross-segment realities (mobile money tender, Ghana Card
@@ -135,6 +135,9 @@ Things that are not "a market" but shape all of them — surfaced by second-pass
     mapping tool with dry-run report, per user-rule §2 scripts discipline), plus a
     per-source checklist (what we take: demographics, balances, allergies; what we don't:
     full encounter history in V1). Sold as part of setup fee; see §7.4 (migration offering).
+    **(delivered 2026-07-17, patient importer — Admin Hub)**: demographics-only V1 shipped
+    (self-serve CSV upload, column matching, dry-run report, skip-and-report duplicates);
+    balances/allergies importer remains a future scope decision.
 
 ### T0 — Single private cash clinic (the proof segment)
 
@@ -351,7 +354,7 @@ One backlog, three sources: existing GAP-A–D plan (platform completeness), SCA
 
 | Wave | Contents | Why this order |
 |---|---|---|
-| **W1 — Pilot enablement** | Pilot readiness pack items; **MKT-MOMO-1 tender types + per-tender reconciliation**; MKT-GHCARD-1 Ghana Card field; MKT-MIG-1 migration kit; Outage Runbook (docs — **delivered**, `NEW_CLINIC_OUTAGE_RUNBOOK.md`); GAP-A1 office notes, GAP-A2 documents, GAP-A5 patient follow-ups, GAP-A6 MFA | Everything a single live clinic needs day-to-day; MoMo tender is pilot-blocking (week-one reality); A2 (documents) is the highest daily-value gap |
+| **W1 — Pilot enablement** | Pilot readiness pack items; **MKT-MOMO-1 tender types + per-tender reconciliation**; MKT-GHCARD-1 Ghana Card field; MKT-MIG-1 migration kit (docs — **delivered 2026-07-17, patient importer — Admin Hub**); Outage Runbook (docs — **delivered**, `NEW_CLINIC_OUTAGE_RUNBOOK.md`); GAP-A1 office notes, GAP-A2 documents, GAP-A5 patient follow-ups, GAP-A6 MFA | Everything a single live clinic needs day-to-day; MoMo tender is pilot-blocking (week-one reality); A2 (documents) is the highest daily-value gap |
 | **W2 — Retention & outreach** | GAP-B1 outreach/SMS (with provider decision, §9-Q1 of gap plan), GAP-A3 address book, GAP-A4 letters/labels, GAP-B2 trends | SMS recalls/campaigns are the killer regional feature and feed T2 (ANC recall) directly |
 | **W3 — Chain & admin depth** | MKT-CHAIN-1..3, GAP-C1 audit browser, GAP-C2 codes CRUD, GAP-C3 lists, GAP-C4 formulary | T1 sales need roll-ups; C2/C4 are prerequisites for chain price-push and NHIS tariffs |
 | **W4 — NHIS** | MKT-NHIS-1..5 (after discovery + PRD amendment) | The domestic unlock; deliberately after the platform is stable under real use |
@@ -530,7 +533,9 @@ competitive weapon, not legal boilerplate — put it on the sales one-pager.
   (§3.0): scoped import (demographics, balances, allergies — not full encounter history in
   V1), priced in the setup fee tier (simple CSV: included; messy legacy export: premium).
   Document per-source checklists as we encounter them (LHIMS export, Excel registers, paper
-  backlog re-entry playbook).
+  backlog re-entry playbook). **(delivered 2026-07-17, patient importer — Admin Hub)**: the
+  demographics slice of the pitch is real today — self-serve CSV import with dry-run report,
+  old-clinic-number carry-over, and skip-and-report duplicate handling.
 - **Channels that fit this market:** clinic-owner associations and private medical
   practitioner associations; medical suppliers/distributors as referral partners (they visit
   every clinic already — commission per closed deal); NHIS claims consultants (for T3);
@@ -674,3 +679,4 @@ tickets per facility per month (target <2 after onboarding) · onboarding cost p
 | v0.1.1 | 2026-07-07 | Private health insurance added (was missing): T4 generalized to third-party payers — shared payer engine (MKT-PAYER-1..3) with corporate and PHI (MKT-PHI-1..3) flavours; Ghana PHIS (12 licensed schemes, ~500k+ lives) and Nigeria HMO (83 accredited, ~2.17M enrollees, 1.18M Lagos) numbers; T6 gated on MKT-PHI; W5, pricing, TL;DR synced |
 | v0.1.2 | 2026-07-07 | Second-pass blind-spot audit: §3.0 cross-segment realities (MKT-MOMO-1, MKT-GHCARD-1, MKT-WA-1, MKT-MIG-1, Outage Runbook); §6.4 upstream OpenEMR patch policy; §7.3 fleet ops; §7.4 migration offering + LHIMS-displaced leads; §7.5 E&O, trademark, grants; five new risks; MoMo in pilot KPIs; open questions 7–10 |
 | v0.1.3 | 2026-07-09 | Hosting posture decided: §7.2 option 1 becomes on-prem primary + bundled one-way VPS read-replica (owner remote reports, off-site backup, remote support); VPS-primary demoted to opt-in secondary flavor with written no-offline-mode caveat; master-master replication and V1 offline-sync clients explicitly ruled out (append-only capture app noted as V2, PRD amendment required); §7.1 same-price-both-flavors principle; TL;DR synced; companion replication deployment prompt doc added |
+| v0.1.4 | 2026-07-17 | `MKT-MIG-1` marked delivered (patient importer — Admin Hub, demographics-only V1: self-serve CSV upload, dry-run report, skip-and-report duplicates, old clinic number carried over); §3.0, W1 wave table, and §7.4 updated; see `NEW_CLINIC_PATIENT_IMPORTER_PLAN.md` |

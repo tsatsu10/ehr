@@ -1,0 +1,2 @@
+import{y as e}from"./dist-DcvEr_SB.js";import{t}from"./badge-kUf6B_vn.js";import{n}from"./patientBannerUtils--Wf2pVIG.js";var r=e();function i({score:e,threshold:i=70,className:a}){return(0,r.jsxs)(t,{variant:n(e,i),className:a,children:[e,`% complete`]})}export{i as t};
+//# sourceMappingURL=CompletionScorePill-C30C-jcT.js.map

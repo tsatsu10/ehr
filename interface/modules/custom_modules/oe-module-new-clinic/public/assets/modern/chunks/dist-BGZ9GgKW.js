@@ -1,0 +1,2 @@
+import{S as e,o as t,w as n,x as r,y as i}from"./dist-DcvEr_SB.js";var a=n(e(),1),o=n(r(),1),s=i(),c=[`a`,`button`,`div`,`form`,`h2`,`h3`,`img`,`input`,`label`,`li`,`nav`,`ol`,`p`,`select`,`span`,`svg`,`ul`].reduce((e,n)=>{let r=t(`Primitive.${n}`),i=a.forwardRef((e,t)=>{let{asChild:i,...a}=e,o=i?r:n;return typeof window<`u`&&(window[Symbol.for(`radix-ui`)]=!0),(0,s.jsx)(o,{...a,ref:t})});return i.displayName=`Primitive.${n}`,{...e,[n]:i}},{});function l(e,t){e&&o.flushSync(()=>e.dispatchEvent(t))}export{l as n,c as t};
+//# sourceMappingURL=dist-BGZ9GgKW.js.map

@@ -1,0 +1,2 @@
+import{S as e,w as t}from"./dist-DcvEr_SB.js";var n=t(e(),1);function r(e,t){(0,n.useEffect)(()=>{if(!e)return;let n=e=>{e.key===`Escape`&&(e.preventDefault(),t())};return document.addEventListener(`keydown`,n),()=>document.removeEventListener(`keydown`,n)},[e,t])}export{r as t};
+//# sourceMappingURL=useModalDismiss-wavMyOB0.js.map

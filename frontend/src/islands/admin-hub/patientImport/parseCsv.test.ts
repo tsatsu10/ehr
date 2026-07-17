@@ -19,6 +19,12 @@ describe('parseCsv', () => {
     expect(parseCsv('').error).toMatch(/empty/i);
   });
 
+  it('rejects a header-only file with no patient rows', () => {
+    const out = parseCsv('first_name,last_name,sex,date_of_birth,age,phone,address,old_clinic_number,national_id\n');
+    expect(out.error).toMatch(/header row and at least one patient row/i);
+    expect(out.rows).toHaveLength(0);
+  });
+
   it('rejects files over the row cap with a split hint', () => {
     const big = 'name\n' + Array.from({ length: MAX_IMPORT_ROWS + 1 }, (_, i) => `P${i}`).join('\n');
     expect(parseCsv(big).error).toMatch(/5,?000/);

@@ -408,6 +408,68 @@ class PatientImportServiceTest extends TestCase
         $svc->processChunk($rows, false, 1, 0);
     }
 
+    /**
+     * A breaker trip must still emit exactly one audit event for the counts
+     * accumulated so far — otherwise a chunk that trips after a partial run of
+     * real successes leaves no audit trail for what was actually committed.
+     */
+    public function testCircuitBreakerTripStillLogsAuditWithAccumulatedCounts(): void
+    {
+        $config = new class extends ClinicConfigService {
+            public function get(string $key, ?string $default = null, int $facilityId = 0): ?string
+            {
+                return $default;
+            }
+        };
+
+        $svc = new class (config: $config) extends PatientImportService {
+            /** @var list<array<string, int>> */
+            public array $auditCalls = [];
+
+            protected function buildDuplicateIndex(): array
+            {
+                return ['name_dob' => [], 'name_phone' => [], 'national_id' => []];
+            }
+
+            protected function insertPatient(array $d, int $facilityId): int
+            {
+                if ($d['lname'] === 'Ok') {
+                    return 999;
+                }
+                throw new \RuntimeException('simulated outage');
+            }
+
+            protected function logChunkAudit(int $actorUserId, array $summary): void
+            {
+                $this->auditCalls[] = $summary;
+            }
+        };
+
+        // Two real successes, then 10 consecutive failures to trip the breaker.
+        $rows = [
+            ['row_number' => 2, 'fname' => 'Patient', 'lname' => 'Ok', 'sex' => 'F', 'dob' => '01/01/2000'],
+            ['row_number' => 3, 'fname' => 'Patient', 'lname' => 'Ok', 'sex' => 'F', 'dob' => '01/01/2001'],
+        ];
+        for ($i = 0; $i < 10; $i++) {
+            $rows[] = ['row_number' => $i + 4, 'fname' => 'Patient', 'lname' => 'Fail' . $i, 'sex' => 'F', 'dob' => '01/01/2000'];
+        }
+
+        try {
+            $svc->processChunk($rows, false, 1, 0);
+            $this->fail('Expected a RuntimeException after 10 consecutive failures');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('Import stopped after repeated save failures — fix the reported rows and re-run', $e->getMessage());
+        }
+
+        // Exactly one audit call — the breaker throw must not also hit the
+        // normal post-loop audit call (the exception exits processChunk first).
+        $this->assertCount(1, $svc->auditCalls);
+        $this->assertSame(
+            ['processed' => 12, 'ok' => 2, 'duplicates' => 0, 'errors' => 10],
+            $svc->auditCalls[0]
+        );
+    }
+
     public function testCircuitBreakerProcessesExactlyTenErrorRowsBeforeStopping(): void
     {
         $config = new class extends ClinicConfigService {

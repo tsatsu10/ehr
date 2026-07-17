@@ -283,6 +283,10 @@ class PatientImportService
                         'pid' => null,
                     ];
                     if ($consecutiveFailures >= self::MAX_CONSECUTIVE_FAILURES) {
+                        // Rows already committed earlier in this chunk must still get an
+                        // audit event — without this, a breaker trip silently drops the
+                        // audit trail for whatever succeeded before the outage started.
+                        $this->logChunkAudit($actorUserId, $summary);
                         throw new \RuntimeException(
                             'Import stopped after repeated save failures — fix the reported rows and re-run'
                         );

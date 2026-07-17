@@ -19,4 +19,14 @@ describe('findInFileDuplicates', () => {
     ];
     expect(findInFileDuplicates(rows as Record<string, string>[]).size).toBe(0);
   });
+
+  it('flags a later row repeating the same national ID even with a different name', () => {
+    const rows = [
+      { fname: 'Ama', lname: 'Mensah', national_id: 'GHA-0099' },
+      { fname: 'Yaw', lname: 'Owusu', national_id: 'GHA-0099' },
+    ];
+    const dups = findInFileDuplicates(rows as Record<string, string>[]);
+    expect(dups.has(0)).toBe(false);
+    expect(dups.get(1)).toMatch(/same national id/i);
+  });
 });

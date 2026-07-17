@@ -1,0 +1,2 @@
+import{S as e,w as t}from"./dist-DcvEr_SB.js";var n=t(e(),1);function r(e){let t=n.useRef(e);return n.useEffect(()=>{t.current=e}),n.useMemo(()=>((...e)=>t.current?.(...e)),[])}export{r as t};
+//# sourceMappingURL=dist--wZexNVE.js.map

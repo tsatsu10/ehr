@@ -65,6 +65,27 @@ class PatientSearchServiceTest extends TestCase
         $this->assertSame(0, $noHit);
     }
 
+    /**
+     * fetchCandidates() matches rows on an exact npm.old_clinic_number hit even
+     * when there's no name-token overlap. scoreRow() must score that hit above 0
+     * or search()'s `$score > 0` gate silently drops it before the caller ever
+     * sees it (the bug this test guards against).
+     */
+    public function testScoreRowAwardsScoreForExactOldClinicNumberMatch(): void
+    {
+        $service = $this->makeService();
+        $score = new ReflectionMethod(PatientSearchService::class, 'scoreRow');
+
+        $hit = $score->invoke($service, ['fname' => 'Kwame', 'lname' => 'Boateng', 'old_clinic_number' => 'IMP-002'], 'IMP-002');
+        $this->assertGreaterThan(0, $hit);
+
+        $caseInsensitiveHit = $score->invoke($service, ['fname' => 'Kwame', 'lname' => 'Boateng', 'old_clinic_number' => 'imp-002'], 'IMP-002');
+        $this->assertGreaterThan(0, $caseInsensitiveHit);
+
+        $miss = $score->invoke($service, ['fname' => 'Kwame', 'lname' => 'Boateng', 'old_clinic_number' => 'IMP-999'], 'IMP-002');
+        $this->assertSame(0, $miss);
+    }
+
     public function testAgeYearsHandlesMissingAndSentinelDob(): void
     {
         $service = $this->makeService();
