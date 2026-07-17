@@ -169,4 +169,64 @@ class PatientImportServiceTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->service()->processChunk($rows, true, 1, 3);
     }
+
+    /**
+     * A row-level insert failure (e.g. a transient DB error on one row) must not
+     * abort the whole chunk: earlier successes stay committed, the failing row
+     * becomes an 'error' result, and later rows still get a chance to import.
+     */
+    public function testInsertFailureDoesNotAbortChunk(): void
+    {
+        $config = new class extends ClinicConfigService {
+            public function get(string $key, ?string $default = null, int $facilityId = 0): ?string
+            {
+                return $default;
+            }
+        };
+
+        $svc = new class (config: $config) extends PatientImportService {
+            protected function buildDuplicateIndex(): array
+            {
+                // Keep this test DB-free: no real patient_data query.
+                return ['name_dob' => [], 'name_phone' => [], 'national_id' => []];
+            }
+
+            protected function insertPatient(array $d, int $facilityId): int
+            {
+                // Keep this test DB-free: no real PatientService::insert call.
+                if ($d['lname'] === 'Failme') {
+                    throw new \RuntimeException('simulated database failure');
+                }
+
+                return 999;
+            }
+
+            protected function logChunkAudit(int $actorUserId, array $summary): void
+            {
+                // Keep this test DB-free: EventAuditLogger::recordLogItem() has no
+                // enable_auditlog gate and would otherwise write a real row into the
+                // `log` table via the live DB connection the test bootstrap opens.
+            }
+        };
+
+        $rows = [
+            ['row_number' => 2, 'fname' => 'Ama', 'lname' => 'Mensah', 'dob' => '01/01/2000'],
+            ['row_number' => 3, 'fname' => 'Kojo', 'lname' => 'Failme', 'dob' => '02/02/2001'],
+            ['row_number' => 4, 'fname' => 'Efua', 'lname' => 'Boateng', 'dob' => '03/03/2002'],
+        ];
+
+        $out = $svc->processChunk($rows, false, 1, 0);
+
+        $this->assertSame(['processed' => 3, 'ok' => 2, 'duplicates' => 0, 'errors' => 1], $out['summary']);
+
+        $this->assertSame('imported', $out['results'][0]['status']);
+        $this->assertSame(999, $out['results'][0]['pid']);
+
+        $this->assertSame('error', $out['results'][1]['status']);
+        $this->assertStringContainsString('simulated database failure', $out['results'][1]['reason']);
+        $this->assertNull($out['results'][1]['pid']);
+
+        $this->assertSame('imported', $out['results'][2]['status']);
+        $this->assertSame(999, $out['results'][2]['pid']);
+    }
 }

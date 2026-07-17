@@ -14,6 +14,7 @@ namespace OpenEMR\Modules\NewClinic\Services;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Logging\EventAuditLogger;
 use OpenEMR\Services\PatientService;
+use OpenEMR\Validators\ProcessingResult;
 
 class PatientImportService
 {
@@ -237,7 +238,19 @@ class PatientImportService
 
             $pid = null;
             if (!$dryRun) {
-                $pid = $this->insertPatient($data, $facilityId);
+                try {
+                    $pid = $this->insertPatient($data, $facilityId);
+                } catch (\Throwable $e) {
+                    $summary['errors']++;
+                    $results[] = [
+                        'row_number' => $rowNumber,
+                        'status' => 'error',
+                        'reason' => 'Could not save this patient: ' . $e->getMessage(),
+                        'name' => $displayName,
+                        'pid' => null,
+                    ];
+                    continue;
+                }
             }
 
             // Keep in-chunk repeats from double-importing (and from double-counting in dry run).
@@ -258,16 +271,28 @@ class PatientImportService
         }
 
         if (!$dryRun) {
-            EventAuditLogger::getInstance()->newEvent(
-                'new_clinic',
-                'admin.patient_import.chunk',
-                $actorUserId,
-                1,
-                'imported=' . $summary['ok'] . ' duplicates=' . $summary['duplicates'] . ' errors=' . $summary['errors']
-            );
+            $this->logChunkAudit($actorUserId, $summary);
         }
 
         return ['results' => $results, 'summary' => $summary];
+    }
+
+    /**
+     * Separated from processChunk() so it always fires exactly once per commit
+     * chunk (with accurate counts, even when some rows errored) and so tests can
+     * no-op it without touching the real audit log.
+     *
+     * @param array<string, int> $summary
+     */
+    protected function logChunkAudit(int $actorUserId, array $summary): void
+    {
+        EventAuditLogger::getInstance()->newEvent(
+            'new_clinic',
+            'admin.patient_import.chunk',
+            $actorUserId,
+            1,
+            'imported=' . $summary['ok'] . ' duplicates=' . $summary['duplicates'] . ' errors=' . $summary['errors']
+        );
     }
 
     /**
@@ -276,7 +301,7 @@ class PatientImportService
      *
      * @return array{name_dob: array<string, true>, name_phone: array<string, true>, national_id: array<string, true>}
      */
-    private function buildDuplicateIndex(): array
+    protected function buildDuplicateIndex(): array
     {
         $rows = QueryUtils::fetchRecords(
             "SELECT fname, lname, DOB, phone_normalized, ss FROM patient_data"
@@ -307,7 +332,7 @@ class PatientImportService
      *
      * @param array<string, string> $d normalized row data
      */
-    private function insertPatient(array $d, int $facilityId): int
+    protected function insertPatient(array $d, int $facilityId): int
     {
         $patientData = [
             'fname' => $d['fname'],
@@ -327,7 +352,7 @@ class PatientImportService
 
         $result = (new PatientService())->insert($patientData);
         if (!$result->isValid() || !$result->hasData()) {
-            throw new \InvalidArgumentException('Could not create patient');
+            throw new \InvalidArgumentException('Could not create patient' . $this->describeValidationFailure($result));
         }
         $pid = (int) $result->getFirstDataResult()['pid'];
 
@@ -353,5 +378,32 @@ class PatientImportService
         updateDupScore($pid);
 
         return $pid;
+    }
+
+    /**
+     * PatientValidator::validate() (via BaseValidator::validate()) shapes
+     * validation messages as field => (string | array<string, string>). Flatten
+     * whatever is there into a short, readable detail; return '' when there's
+     * nothing to add so the caller can fall back to a plain message.
+     */
+    private function describeValidationFailure(ProcessingResult $result): string
+    {
+        $messages = $result->getValidationMessages();
+        if (empty($messages) || !is_array($messages)) {
+            return '';
+        }
+
+        $parts = [];
+        foreach ($messages as $field => $fieldMessages) {
+            if (is_array($fieldMessages)) {
+                foreach ($fieldMessages as $rule => $detail) {
+                    $parts[] = is_string($rule) ? "{$field}: {$detail}" : "{$field}: {$rule}";
+                }
+            } else {
+                $parts[] = "{$field}: {$fieldMessages}";
+            }
+        }
+
+        return $parts !== [] ? ' (' . implode('; ', $parts) . ')' : '';
     }
 }
