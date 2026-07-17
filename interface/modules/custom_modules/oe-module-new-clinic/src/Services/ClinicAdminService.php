@@ -178,6 +178,7 @@ class ClinicAdminService
         'enable_office_notes' => ['type' => 'bool', 'default' => '0'],
         'enable_documents_native' => ['type' => 'bool', 'default' => '0'],
         'enable_patient_chat' => ['type' => 'bool', 'default' => '0'],
+        'enable_patient_import' => ['type' => 'bool', 'default' => '0'],
         'pediatric_exact_dob_age' => ['type' => 'int', 'default' => '5', 'min' => 0, 'max' => 18],
         'currency_code' => ['type' => 'currency_code', 'default' => 'GHS'],
         'currency_symbol' => ['type' => 'currency_symbol', 'default' => 'GH₵'],

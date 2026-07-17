@@ -1955,3 +1955,12 @@ CREATE TABLE IF NOT EXISTS `new_clinic_patient_chat_message` (
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_patient_chat', '0');
 #EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_patient_import
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_patient_import', '0');
+#EndIf
+
+#IfMissingColumn new_patient_meta old_clinic_number
+ALTER TABLE `new_patient_meta` ADD COLUMN `old_clinic_number` VARCHAR(40) NULL;
+#EndIf
