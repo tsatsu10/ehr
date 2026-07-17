@@ -26,6 +26,7 @@ import { CompletionTab } from './tabs/CompletionTab';
 import { DirectoryTab } from './tabs/DirectoryTab';
 import { FeesTab } from './tabs/FeesTab';
 import { FormsTab } from './tabs/FormsTab';
+import { PatientImportPanel } from './patientImport/PatientImportPanel';
 import { PeopleAccessTab } from './tabs/PeopleAccessTab';
 import { QueueRolesTab } from './tabs/QueueRolesTab';
 import { SystemTab } from './tabs/SystemTab';
@@ -355,6 +356,14 @@ export function AdminHubTabPanels({
           onAdd={onAddDirectoryContact}
           onEdit={onEditDirectoryContact}
           onDelete={onDeleteDirectoryContact}
+        />
+      </AdminTabPanel>
+
+      <AdminTabPanel tabId="import" active={activeTab === 'import'}>
+        <PatientImportPanel
+          ajaxUrl={ajaxUrl}
+          csrfToken={csrfToken}
+          facilityId={facilityId > 0 ? facilityId : clinicFacilityId}
         />
       </AdminTabPanel>
     </>

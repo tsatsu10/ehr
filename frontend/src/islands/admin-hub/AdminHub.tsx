@@ -163,21 +163,28 @@ export function AdminHub({
   );
 
   const adminHubEnabled = settings.enable_admin_hub === true;
+  const patientImportEnabled = settings.enable_patient_import === true;
   const visibleTabs = useMemo(
     () => ADMIN_TABS.filter((tab) => {
       if (tab.id === 'system' || tab.id === 'forms') {
         return adminHubEnabled;
       }
+      if (tab.id === 'import') {
+        return patientImportEnabled;
+      }
       return true;
     }),
-    [adminHubEnabled]
+    [adminHubEnabled, patientImportEnabled]
   );
 
   useEffect(() => {
     if (!adminHubEnabled && (activeTab === 'system' || activeTab === 'forms')) {
       setActiveTab('queue');
     }
-  }, [adminHubEnabled, activeTab]);
+    if (!patientImportEnabled && activeTab === 'import') {
+      setActiveTab('queue');
+    }
+  }, [adminHubEnabled, patientImportEnabled, activeTab]);
 
   const clinicName = clinicFacilityLabel || 'your clinic';
   const scopeHint = scope === 'global'

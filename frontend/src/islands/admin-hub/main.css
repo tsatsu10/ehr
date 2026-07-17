@@ -181,3 +181,92 @@
   font-size: 0.875rem;
   color: var(--oe-nc-text, #1d1d1f);
 }
+
+/* —— patient importer (MKT-MIG-1, Admin Hub "Import patients" tab) —— */
+.nc-import-upload-card {
+  border: 1px dashed var(--oe-nc-border, #cbd5e1);
+  border-radius: 0.75rem;
+  background: var(--oe-nc-bg-tint, #f8fafc);
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.nc-import-file-input {
+  display: block;
+  margin: 0 auto;
+}
+
+.nc-import-table {
+  width: 100%;
+  font-size: 0.875rem;
+  border-collapse: collapse;
+}
+
+.nc-import-table th,
+.nc-import-table td {
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  text-align: left;
+}
+
+.nc-import-table thead tr {
+  border-bottom: 1px solid var(--oe-nc-border, #cbd5e1);
+}
+
+.nc-import-table tbody tr {
+  border-bottom: 1px solid color-mix(in srgb, var(--oe-nc-border, #cbd5e1) 60%, transparent);
+}
+
+.nc-import-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.nc-import-stat-tile {
+  flex: 1 1 12rem;
+  border-radius: 0.5rem;
+  border-width: 1px;
+  border-style: solid;
+  padding: 0.75rem 1rem;
+}
+
+.nc-import-stat-tile__label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--oe-nc-text-muted, #64748b);
+}
+
+.nc-import-stat-tile__value {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.nc-import-stat-tile--success {
+  border-color: color-mix(in srgb, var(--oe-nc-cta, #047857) 40%, var(--oe-nc-border, #cbd5e1));
+  background: color-mix(in srgb, var(--oe-nc-cta, #047857) 8%, white);
+}
+
+.nc-import-stat-tile--success .nc-import-stat-tile__value {
+  color: var(--oe-nc-cta, #047857);
+}
+
+.nc-import-stat-tile--warn {
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.nc-import-stat-tile--warn .nc-import-stat-tile__value {
+  color: #b45309;
+}
+
+.nc-import-stat-tile--danger {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.nc-import-stat-tile--danger .nc-import-stat-tile__value {
+  color: #b91c1c;
+}

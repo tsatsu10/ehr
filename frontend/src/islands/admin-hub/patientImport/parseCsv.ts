@@ -2,7 +2,7 @@ import Papa from 'papaparse';
 import { MAX_IMPORT_ROWS, type ParsedCsv } from './types';
 
 export function parseCsv(text: string): ParsedCsv {
-  const clean = text.replace(/^﻿/, '');
+  const clean = text.replace(/^\uFEFF/, '');
   if (clean.trim() === '') {
     return { headers: [], rows: [], error: 'The file is empty.' };
   }
