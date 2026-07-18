@@ -74,7 +74,9 @@ function MoreLink({ label, disabled, dataShortcut, onClick }: MoreLinkProps) {
   return (
     <button
       type="button"
-      className="nc-doctor-shortcut-more__link"
+      // nc-shortcut-btn is the styling-free DOM hook every shortcut carries —
+      // the e2e specs target `.nc-shortcut-btn[data-shortcut=…]` (PRD M4-F19).
+      className="nc-doctor-shortcut-more__link nc-shortcut-btn"
       data-shortcut={dataShortcut}
       disabled={disabled}
       onClick={onClick}
