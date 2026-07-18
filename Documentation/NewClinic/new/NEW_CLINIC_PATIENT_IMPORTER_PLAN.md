@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Version:** v0.2.1 · **Date:** 2026-07-17 · **Status:** Delivered (V1) — browser-smoked 2026-07-17
+**Version:** v0.2.1 · **Date:** 2026-07-18 · **Status:** Delivered (V1) — full in-browser smoke passed 2026-07-18 (flag round-trip, messy-CSV dry run, import, idempotent re-run, old-number search, audit trail)
 
 **Goal:** A self-serve "Import patients" tab in the Admin Hub that lets a clinic upload a CSV of their existing patients, match its columns to our fields, see a dry-run report, and import demographics — with duplicates skipped and reported, never merged.
 
