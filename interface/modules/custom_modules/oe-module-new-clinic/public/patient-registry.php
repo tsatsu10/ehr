@@ -22,12 +22,6 @@ $visitScope = new VisitScopeService();
 $sessionFacility = !empty($_SESSION['facilityId']) ? (int) $_SESSION['facilityId'] : null;
 $facilityId = $visitScope->resolveDeskFacilityId($sessionFacility);
 
-if (!$config->isEnabled('enable_patient_registry', 0, $facilityId)) {
-    $webroot = $GLOBALS['webroot'] ?? '';
-    header('Location: ' . $webroot . '/interface/main/finder/dynamic_finder.php', true, 302);
-    exit;
-}
-
 $moduleUrl = $GLOBALS['webroot'] . '/interface/modules/custom_modules/oe-module-new-clinic/public';
 $reactPatientRegistry = $config->get('enable_react_patient_registry', '1') === '1';
 $schedulingEnabled = (new SchedulingAccessService())->isHubEnabled($facilityId);

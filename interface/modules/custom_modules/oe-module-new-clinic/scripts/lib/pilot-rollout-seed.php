@@ -27,12 +27,9 @@ function pilotRolloutEnsureProductFlags(ClinicConfigService $config, ?array $fac
     $flags = [
         'enable_triage' => '1',
         'enable_scheduled_integration' => '1',
-        'enable_scheduling_redesign' => '1',
         'enable_react_scheduling' => '1',
         'enable_lab_role' => '1',
         'enable_lab_ops' => '1',
-        'communications_hub_enable' => '1',
-        'enable_patient_registry' => '1',
         'enable_chart_depth' => '1',
         'enable_chart_depth_finance' => '1',
         'enable_chart_depth_referral' => '1',

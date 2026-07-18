@@ -13,7 +13,6 @@ namespace OpenEMR\Tests\Unit\Modules\NewClinic;
 
 require_once __DIR__ . '/ModuleAutoload.php';
 
-use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\ScheduledIntegrationService;
 use OpenEMR\Modules\NewClinic\Services\SchedulingAccessService;
 use OpenEMR\Modules\NewClinic\Services\RecallDueService;
@@ -24,11 +23,9 @@ class RecallDueServiceTest extends TestCase
 {
     public function testChipHiddenWhenSchedulingHubDisabled(): void
     {
-        $config = $this->createMock(ClinicConfigService::class);
-        $config->method('getInt')->willReturn(0);
         $scheduled = $this->createMock(ScheduledIntegrationService::class);
-        $scheduled->method('isEnabled')->willReturn(true);
-        $access = new SchedulingAccessService($config, $scheduled, new VisitScopeService());
+        $scheduled->method('isEnabled')->willReturn(false);
+        $access = new SchedulingAccessService($scheduled, new VisitScopeService());
 
         $service = new RecallDueService($scheduled, $access);
 

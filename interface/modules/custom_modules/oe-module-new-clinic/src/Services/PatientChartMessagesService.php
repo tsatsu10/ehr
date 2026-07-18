@@ -133,17 +133,14 @@ class PatientChartMessagesService
     }
 
     /**
-     * New message / Reminders route to the native Communications hub when it is
-     * enabled for the facility (flag OFF keeps the stock pnotes screens, PRD
-     * §5.6). "All notes" stays stock either way — the hub has no per-patient
-     * note list, so swapping it would lose function.
+     * New message / Reminders always route to the native Communications hub.
+     * "All notes" stays stock unless CP-5 native notes is on — the hub has no
+     * per-patient note list, so swapping it would lose function.
      *
      * @return array<string, string>
      */
     private function buildEditorUrls(int $pid, string $webroot): array
     {
-        $facilityId = (new VisitScopeService())->resolveDeskFacilityId();
-        $hubOn = (new ClinicConfigService())->isEnabled('communications_hub_enable', 0, $facilityId);
         $hubUrl = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public/communications.php';
 
         return [
@@ -153,14 +150,8 @@ class PatientChartMessagesService
                 : $webroot
                     . '/interface/patient_file/summary/pnotes_full.php?set_pid='
                     . urlencode((string) $pid),
-            'add_message' => $hubOn
-                ? $hubUrl . '?task=addnew&pid=' . urlencode((string) $pid)
-                : $webroot
-                    . '/interface/patient_file/summary/pnotes_full_add.php?set_pid='
-                    . urlencode((string) $pid),
-            'dated_reminders' => $hubOn
-                ? $hubUrl . '?lens=reminders'
-                : $webroot . '/interface/main/dated_reminders/dated_reminders.php',
+            'add_message' => $hubUrl . '?task=addnew&pid=' . urlencode((string) $pid),
+            'dated_reminders' => $hubUrl . '?lens=reminders',
         ];
     }
 

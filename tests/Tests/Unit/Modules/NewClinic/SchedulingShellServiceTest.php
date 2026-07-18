@@ -13,52 +13,34 @@ namespace OpenEMR\Tests\Unit\Modules\NewClinic;
 
 require_once __DIR__ . '/ModuleAutoload.php';
 
-use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
-use OpenEMR\Modules\NewClinic\Services\ScheduledIntegrationService;
-use OpenEMR\Modules\NewClinic\Services\SchedulingAccessService;
 use OpenEMR\Modules\NewClinic\Services\SchedulingShellService;
-use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 use PHPUnit\Framework\TestCase;
 
 class SchedulingShellServiceTest extends TestCase
 {
-    public function testResolveIntegrationUrlsUsesLegacyWhenRedesignOff(): void
+    public function testResolveIntegrationUrlsAlwaysUsesS1(): void
     {
         $GLOBALS['webroot'] = '/openemr';
-        $config = $this->createMock(ClinicConfigService::class);
-        $config->method('getInt')->willReturn(0);
-        $scheduled = $this->createMock(ScheduledIntegrationService::class);
-        $scheduled->method('isEnabled')->willReturn(true);
-        $access = new SchedulingAccessService($config, $scheduled, new VisitScopeService());
-        $service = new SchedulingShellService(schedulingAccess: $access);
+        $service = new SchedulingShellService();
 
         $urls = $service->resolveIntegrationUrls(3);
 
-        $this->assertStringContainsString('patient_tracker.php', $urls['flow_board_url']);
-        $this->assertStringContainsString('calendar/index.php', $urls['scheduling_url']);
+        $this->assertStringContainsString('scheduling/index.php?lens=calendar', $urls['scheduling_url']);
+        $this->assertStringContainsString('scheduling/index.php?lens=flow', $urls['flow_board_url']);
+        $this->assertStringContainsString('scheduling/index.php?lens=recalls', $urls['recalls_url']);
     }
 
-    public function testResolveIntegrationUrlsUsesS1WhenRedesignOn(): void
+    public function testResolveIntegrationUrlsNeverPointsAtStockScreens(): void
     {
         $GLOBALS['webroot'] = '/openemr';
-        $config = $this->createMock(ClinicConfigService::class);
-        $config->method('getInt')->willReturnCallback(
-            static function (string $key, int $default = 0, int $facilityId = 0): int {
-                if ($key === 'enable_scheduling_redesign') {
-                    return 1;
-                }
+        $service = new SchedulingShellService();
 
-                return $default;
-            }
-        );
-        $scheduled = $this->createMock(ScheduledIntegrationService::class);
-        $scheduled->method('isEnabled')->willReturn(true);
-        $access = new SchedulingAccessService($config, $scheduled, new VisitScopeService());
-        $service = new SchedulingShellService(schedulingAccess: $access);
+        $urls = $service->resolveIntegrationUrls(0);
 
-        $urls = $service->resolveIntegrationUrls(3);
-
-        $this->assertStringContainsString('scheduling/index.php?lens=flow', $urls['flow_board_url']);
-        $this->assertStringContainsString('scheduling/index.php?lens=calendar', $urls['scheduling_url']);
+        foreach ($urls as $url) {
+            $this->assertStringNotContainsString('patient_tracker.php', $url);
+            $this->assertStringNotContainsString('main/calendar/index.php', $url);
+            $this->assertStringNotContainsString('messages.php', $url);
+        }
     }
 }

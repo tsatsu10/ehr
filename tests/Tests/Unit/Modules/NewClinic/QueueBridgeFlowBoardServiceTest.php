@@ -11,7 +11,6 @@ namespace OpenEMR\Tests\Unit\Modules\NewClinic;
 
 require_once __DIR__ . '/ModuleAutoload.php';
 
-use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\QueueBridgeFlowBoardService;
 use OpenEMR\Modules\NewClinic\Services\QueueBridgeSurfaceService;
 use OpenEMR\Modules\NewClinic\Services\ScheduledIntegrationService;
@@ -29,12 +28,10 @@ class QueueBridgeFlowBoardServiceTest extends TestCase
         $this->assertFalse($service->shouldBufferCurrentRequest());
     }
 
-    public function testShouldBufferFalseForPatientTrackerWhenSchedulingRedesignOn(): void
+    public function testShouldBufferFalseForPatientTrackerWhenSchedulingHubOn(): void
     {
         $_SERVER['SCRIPT_NAME'] = '/openemr/interface/patient_tracker/patient_tracker.php';
 
-        $config = $this->createMock(ClinicConfigService::class);
-        $config->method('getInt')->willReturn(1);
         $scheduled = $this->createMock(ScheduledIntegrationService::class);
         $scheduled->method('isEnabled')->willReturn(true);
         $surface = $this->createMock(QueueBridgeSurfaceService::class);
@@ -43,7 +40,7 @@ class QueueBridgeFlowBoardServiceTest extends TestCase
         $service = new QueueBridgeFlowBoardService(
             $surface,
             new VisitScopeService(),
-            new SchedulingAccessService($config, $scheduled, new VisitScopeService()),
+            new SchedulingAccessService($scheduled, new VisitScopeService()),
         );
 
         $this->assertFalse($service->shouldBufferCurrentRequest());

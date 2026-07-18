@@ -25,8 +25,8 @@ if ($facilityId <= 0) {
 }
 
 $config = new ClinicConfigService();
+// The Patient Registry is always on now — only the React kill switch + search redirect remain.
 $flags = [
-    'enable_patient_registry' => '1',
     'enable_react_patient_registry' => '1',
     'registry_redirect_global_search' => '1',
 ];

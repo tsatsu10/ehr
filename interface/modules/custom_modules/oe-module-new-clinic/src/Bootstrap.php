@@ -20,7 +20,6 @@ use OpenEMR\Events\Main\Tabs\RenderEvent;
 use OpenEMR\Menu\MenuEvent;
 use OpenEMR\Menu\PatientMenuEvent;
 use OpenEMR\Modules\NewClinic\Services\EncounterIdentityStripService;
-use OpenEMR\Modules\NewClinic\Services\HistoryEditorWrapService;
 use OpenEMR\Modules\NewClinic\Services\LegacyChartContextService;
 use OpenEMR\Modules\NewClinic\Services\DeepLinkRestoreSessionService;
 use OpenEMR\Modules\NewClinic\Services\QueueBridgeFlowBoardService;
@@ -69,7 +68,6 @@ class Bootstrap
     {
         $this->registerTemplateEvents();
         $this->registerEncounterIdentityStrip();
-        $this->registerHistoryEditorWrap();
         $this->registerLegacyChartContextStrip();
         $this->registerLedgerCashProfileWrap();
         $this->registerStockChartWrap();
@@ -109,13 +107,6 @@ class Bootstrap
     {
         (new \OpenEMR\Modules\NewClinic\Support\EncounterIdentityStripInjector(
             new EncounterIdentityStripService($this->twig)
-        ))->startIfNeeded();
-    }
-
-    private function registerHistoryEditorWrap(): void
-    {
-        (new \OpenEMR\Modules\NewClinic\Support\HistoryEditorWrapInjector(
-            new HistoryEditorWrapService($this->twig)
         ))->startIfNeeded();
     }
 
@@ -208,7 +199,7 @@ class Bootstrap
                     $deskAclOr('new_nurse'),
                     $deskAclOr('new_admin'),
                 ],
-                'config' => 'enable_scheduling_redesign',
+                'requires_scheduled_integration' => true,
             ],
             ['id' => 'clinicvb', 'label' => 'Visit Board', 'url' => $base . 'visit-board.php', 'acl' => [
                 $deskAclOr('new_reception'),
@@ -286,14 +277,14 @@ class Bootstrap
             ],
             ['id' => 'clinicad', 'label' => 'Clinic Setup', 'url' => $base . 'admin.php', 'acl' => $deskAclOr('new_admin')],
             ['id' => 'clinicrp', 'label' => 'Daily Reports', 'url' => $base . 'reports.php', 'acl' => $deskAclOr('reports')],
-            ['id' => 'clinicmsg', 'label' => 'Messages', 'url' => $base . 'communications.php', 'acl' => ['patients', 'notes'], 'config' => 'communications_hub_enable'],
-            ['id' => 'clinicnotes', 'label' => 'Office Notes', 'url' => $base . 'office-notes.php', 'acl' => ['encounters', 'notes'], 'config' => 'enable_office_notes'],
+            ['id' => 'clinicmsg', 'label' => 'Messages', 'url' => $base . 'communications.php', 'acl' => ['patients', 'notes']],
+            ['id' => 'clinicnotes', 'label' => 'Office Notes', 'url' => $base . 'office-notes.php', 'acl' => ['encounters', 'notes']],
             ['id' => 'clinicreg', 'label' => 'Patient Registry', 'url' => $base . 'patient-registry.php', 'acl' => [
                 $deskAclOr('new_registry'),
                 $deskAclOr('new_doctor'),
                 $deskAclOr('new_nurse'),
                 $deskAclOr('new_admin'),
-            ], 'config' => 'enable_patient_registry'],
+            ]],
         ];
 
         $config = new ClinicConfigService();
@@ -310,12 +301,13 @@ class Bootstrap
                 if (!$config->isEnabled($item['config'], $defaultOn ? 1 : 0)) {
                     continue;
                 }
-                if ($item['config'] === 'enable_scheduling_redesign' && !$scheduledIntegration->isEnabled(0)) {
-                    continue;
-                }
                 if ($item['config'] === 'enable_queue_bridge' && !$scheduledIntegration->isEnabled(0)) {
                     continue;
                 }
+            }
+
+            if (!empty($item['requires_scheduled_integration']) && !$scheduledIntegration->isEnabled(0)) {
+                continue;
             }
 
             $child = new stdClass();

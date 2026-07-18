@@ -39,8 +39,6 @@ const configPayload = {
     enable_chart_depth_finance: false,
     enable_chart_depth_referral: false,
     enable_chart_depth_export: false,
-    communications_hub_enable: false,
-    enable_patient_registry: false,
     registry_redirect_global_search: false,
     enable_shared_device_session_warning: false,
     enable_legacy_patient_context_overlay: false,

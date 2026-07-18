@@ -19,9 +19,9 @@
  *   userdate12 = last glucose check date
  * Do not reassign these columns in the HIS layout without updating this map.
  *
- * Behind `enable_native_history_editor` (PRD §5.6, default OFF); the stock editor stays the
- * fallback and one click away until parity sign-off. Edit ACL mirrors the stock History
- * editor exactly (`patients` / `med`).
+ * Permanent surface: the native quick editor + full form (D-HIST-10) replaced the stock
+ * history_full.php editor after parity sign-off — no flag, no stock fallback link. Edit ACL
+ * mirrors the stock History editor exactly (`patients` / `med`).
  *
  * @package   OpenEMR
  * @link      https://www.open-emr.org
@@ -97,22 +97,6 @@ class PatientHistoryEditorService
     // Cap for the varchar(255)-backed spare columns (usertext13/14, last_hemoglobin).
     private const SHORT_TEXT_MAX = 250;
 
-    public function __construct(
-        private readonly ClinicConfigService $config = new ClinicConfigService(),
-    ) {
-    }
-
-    public function isEnabled(?int $facilityId = null): bool
-    {
-        return $this->config->isEnabled('enable_native_history_editor', 0, $facilityId);
-    }
-
-    /** D-HIST-10 — the full native History form replacing stock history_full.php. */
-    public function isFullFormEnabled(?int $facilityId = null): bool
-    {
-        return $this->config->isEnabled('enable_native_history_full_form', 0, $facilityId);
-    }
-
     /**
      * Current curated background fields, for pre-filling the editor form.
      *
@@ -153,17 +137,12 @@ class PatientHistoryEditorService
         $storedRisk = array_filter(array_map('trim', explode(',', (string) ($row[self::RISK_FACTORS_COL] ?? ''))));
         $riskFactors = array_values(array_intersect($storedRisk, self::RISK_FACTOR_KEYS));
 
-        $webroot = rtrim((string) ($GLOBALS['webroot'] ?? ''), '/');
-
         return [
             'text' => $text,
             'family_conditions' => $conditions,
             'dates' => $dates,
             'risk_factors' => $riskFactors,
             'risk_other' => (string) ($row[self::RISK_OTHER_COL] ?? ''),
-            // Escape hatch to the full stock editor for any HIS field not managed here.
-            'stock_editor_url' => $webroot
-                . '/interface/patient_file/history/history_full.php?set_pid=' . $pid,
         ];
     }
 
@@ -175,9 +154,6 @@ class PatientHistoryEditorService
      */
     public function save(int $pid, array $input, int $actorUserId): array
     {
-        if (!$this->isEnabled()) {
-            throw new \RuntimeException('Native history editor is not enabled', 403);
-        }
         if ($pid <= 0) {
             throw new \InvalidArgumentException('Invalid patient', 400);
         }

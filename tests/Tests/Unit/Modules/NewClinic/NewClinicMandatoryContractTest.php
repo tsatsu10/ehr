@@ -1161,9 +1161,9 @@ class NewClinicMandatoryContractTest extends TestCase
             . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-v11-scheduling.php';
         $this->assertFileExists($pilotScript, 'Pilot S1 scheduling enable script must exist');
         $pilotBody = file_get_contents($pilotScript);
-        $this->assertStringContainsString('enable_scheduling_redesign', $pilotBody);
         $this->assertStringContainsString('enable_scheduled_integration', $pilotBody);
         $this->assertStringContainsString('enable_react_scheduling', $pilotBody);
+        $this->assertStringNotContainsString("config->set('enable_scheduling_redesign'", $pilotBody);
 
         $fixtureScript = dirname(__DIR__, 5)
             . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/v11-scheduling-smoke-fixture.php';
@@ -1269,8 +1269,8 @@ class NewClinicMandatoryContractTest extends TestCase
             . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-v11-comms.php';
         $this->assertFileExists($pilotScript, 'Pilot V1.1-COM enable script must exist');
         $pilotBody = file_get_contents($pilotScript);
-        $this->assertStringContainsString('communications_hub_enable', $pilotBody);
         $this->assertStringContainsString('enable_react_communications_hub', $pilotBody);
+        $this->assertStringNotContainsString("config->set('communications_hub_enable'", $pilotBody);
 
         $seedScript = dirname(__DIR__, 5)
             . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/v11-comms-fixture-seed.php';

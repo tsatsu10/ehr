@@ -258,8 +258,6 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_chart_depth_finance', '0'),
 (0, 'enable_chart_depth_referral', '0'),
 (0, 'enable_chart_depth_export', '0'),
-(0, 'communications_hub_enable', '0'),
-(0, 'enable_patient_registry', '0'),
 (0, 'require_esign_before_complete_consult', '0'),
 (0, 'rate_limit_patients_search', '30'),
 (0, 'rate_limit_dup_check', '60'),
@@ -462,11 +460,6 @@ WHERE `facility_id` = 0 AND `config_key` = 'registration_mode' AND `config_value
 UPDATE `new_completion_field_weight` SET `is_active` = 0 WHERE `field_key` IN ('city', 'state');
 #EndIf
 
-#IfNotRow2D new_clinic_config facility_id 0 config_key enable_office_notes
-INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
-(0, 'enable_office_notes', '0');
-#EndIf
-
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_documents_native
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_documents_native', '0');
@@ -507,15 +500,6 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_chart_depth_export', '0');
 #EndIf
 
-#IfNotRow2D new_clinic_config facility_id 0 config_key communications_hub_enable
-INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
-(0, 'communications_hub_enable', '0');
-#EndIf
-
-#IfNotRow2D new_clinic_config facility_id 0 config_key enable_patient_registry
-INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
-(0, 'enable_patient_registry', '0');
-#EndIf
 
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_scheduled_integration
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
@@ -628,9 +612,8 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_react_queue_bridge', '1');
 #EndIf
 
-#IfNotRow2D new_clinic_config facility_id 0 config_key enable_scheduling_redesign
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_react_scheduling
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
-(0, 'enable_scheduling_redesign', '0'),
 (0, 'enable_react_scheduling', '1');
 #EndIf
 

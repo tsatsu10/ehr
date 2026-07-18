@@ -10,8 +10,7 @@
     data-props="{{ {
         ajaxUrl: ajax_url,
         csrfToken: csrf_token,
-        webroot: webroot,
-        legacyUrl: legacy_url
+        webroot: webroot
     }|json_encode|e('html_attr') }}"
 ></div>
 {% endblock %}

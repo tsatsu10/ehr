@@ -67,9 +67,6 @@ const props: SchedulingProps = {
   canBook: true,
   facilities: [{ id: 3, label: 'Main Clinic' }],
   providers: [{ id: 10, label: 'Smith, Jane' }],
-  legacyCalendarUrl: '/legacy/calendar',
-  legacyFlowBoardUrl: '/legacy/flow',
-  legacyRecallsUrl: '/legacy/recalls',
   webroot: '/openemr',
   authUserId: 1,
 };

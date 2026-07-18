@@ -27,7 +27,6 @@ class SchedulingAccessService
     private $aclChecker;
 
     public function __construct(
-        private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly ScheduledIntegrationService $scheduledIntegration = new ScheduledIntegrationService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
         ?callable $aclChecker = null,
@@ -35,17 +34,17 @@ class SchedulingAccessService
         $this->aclChecker = $aclChecker;
     }
 
+    /**
+     * The S1 redesign is the permanent scheduling surface — the only remaining
+     * gate is whether scheduled integration (appointments) is on at all.
+     */
     public function isHubEnabled(?int $facilityId = null): bool
     {
         if ($facilityId === null || $facilityId < 0) {
             $facilityId = $this->visitScope->resolveDeskFacilityId();
         }
 
-        if (!$this->scheduledIntegration->isEnabled($facilityId)) {
-            return false;
-        }
-
-        return $this->config->getInt('enable_scheduling_redesign', 0, $facilityId) === 1;
+        return $this->scheduledIntegration->isEnabled($facilityId);
     }
 
     public function assertHubEnabled(?int $facilityId = null): void

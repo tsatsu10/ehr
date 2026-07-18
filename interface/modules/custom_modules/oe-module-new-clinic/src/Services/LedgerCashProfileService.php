@@ -17,7 +17,7 @@ namespace OpenEMR\Modules\NewClinic\Services;
 
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Modules\NewClinic\GlobalConfig;
-use OpenEMR\Modules\NewClinic\Support\HistoryEditorWrapGate;
+use OpenEMR\Modules\NewClinic\Support\RequestScriptName;
 
 class LedgerCashProfileService
 {
@@ -29,7 +29,7 @@ class LedgerCashProfileService
 
     public function shouldBufferCurrentRequest(): bool
     {
-        $script = HistoryEditorWrapGate::currentScriptName();
+        $script = RequestScriptName::current();
         if (!str_ends_with($script, '/reports/pat_ledger.php')) {
             return false;
         }

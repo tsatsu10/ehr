@@ -151,13 +151,7 @@ class MainMenuRestrictService
             return false;
         }
 
-        if ($this->currentUserHasClinicalFinderAccess()) {
-            return false;
-        }
-
-        $facilityId = $facilityId ?? $this->visitScope->resolveDefaultFacilityId();
-
-        return $this->config->isEnabled('enable_patient_registry', 0, $facilityId);
+        return !$this->currentUserHasClinicalFinderAccess();
     }
 
     public function shouldHideStockLabMenusForCurrentUser(?int $facilityId = null): bool
@@ -273,7 +267,7 @@ class MainMenuRestrictService
 
         $facilityId = $facilityId ?? $this->visitScope->resolveDefaultFacilityId();
 
-        return (new SchedulingAccessService($this->config))->isHubEnabled($facilityId);
+        return (new SchedulingAccessService())->isHubEnabled($facilityId);
     }
 
     /**

@@ -20,7 +20,7 @@ namespace OpenEMR\Modules\NewClinic\Services;
 
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Modules\NewClinic\GlobalConfig;
-use OpenEMR\Modules\NewClinic\Support\HistoryEditorWrapGate;
+use OpenEMR\Modules\NewClinic\Support\RequestScriptName;
 
 class StockChartWrapService
 {
@@ -68,7 +68,7 @@ class StockChartWrapService
 
     private function currentPage(): ?string
     {
-        $script = HistoryEditorWrapGate::currentScriptName();
+        $script = RequestScriptName::current();
         if (str_ends_with($script, '/patient_file/report/patient_report.php')) {
             return 'report';
         }

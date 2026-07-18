@@ -218,17 +218,6 @@ class ClinicAdminServiceTest extends TestCase
         $this->assertSame('1', $normalized['enable_scheduled_integration']);
     }
 
-    public function testApplySettingDependenciesEnablesScheduledIntegrationWhenSchedulingRedesignOn(): void
-    {
-        $normalized = ClinicAdminService::applySettingDependencies([
-            'enable_scheduling_redesign' => '1',
-            'enable_scheduled_integration' => '0',
-        ]);
-
-        $this->assertSame('1', $normalized['enable_scheduling_redesign']);
-        $this->assertSame('1', $normalized['enable_scheduled_integration']);
-    }
-
     public function testApplySettingDependenciesEnablesReactAdminHubWhenAdminHubOn(): void
     {
         $normalized = ClinicAdminService::applySettingDependencies([

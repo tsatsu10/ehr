@@ -130,7 +130,6 @@ class ShellService
             'acos' => ['new_reception', 'new_reception_lead', 'new_nurse', 'new_admin'],
             'group' => 'operations',
             'icon' => 'fa-calendar-alt',
-            'config' => 'enable_scheduling_redesign',
             'requires_scheduled_integration' => true,
         ],
         [
@@ -188,7 +187,6 @@ class ShellService
             'core_acl' => ['patients', 'notes'],
             'group' => 'hubs',
             'icon' => 'fa-envelope',
-            'config' => 'communications_hub_enable',
         ],
         [
             'id' => 'clinicnotes',
@@ -198,7 +196,6 @@ class ShellService
             'core_acl' => ['encounters', 'notes'],
             'group' => 'hubs',
             'icon' => 'fa-sticky-note',
-            'config' => 'enable_office_notes',
         ],
         [
             'id' => 'clinicreg',
@@ -207,7 +204,6 @@ class ShellService
             'acos' => ['new_registry', 'new_doctor', 'new_nurse', 'new_admin'],
             'group' => 'hubs',
             'icon' => 'fa-users',
-            'config' => 'enable_patient_registry',
         ],
     ];
 
@@ -351,10 +347,11 @@ class ShellService
                 if (!$this->config->isEnabled($item['config'], $defaultOn ? 1 : 0, $deskFacilityId)) {
                     continue;
                 }
-                if (!empty($item['requires_scheduled_integration'])
-                    && !$this->scheduledIntegration->isEnabled($deskFacilityId)) {
-                    continue;
-                }
+            }
+
+            if (!empty($item['requires_scheduled_integration'])
+                && !$this->scheduledIntegration->isEnabled($deskFacilityId)) {
+                continue;
             }
 
             if (!empty($item['core_acl'])) {

@@ -3,9 +3,8 @@
 /**
  * Office Notes — clinic-wide staff sticky notes (React island, GAP-A / A1).
  *
- * Smart-vs-legacy: when `enable_office_notes` is OFF (default), redirect to the stock
- * office_comments_full.php screen (100% legacy). The legacy screen stays reachable
- * until this replacement passes parity sign-off.
+ * Permanent surface: replaced the stock office_comments_full.php screen after
+ * parity sign-off — there is no legacy fallback.
  *
  * @package   OpenEMR
  * @link      https://www.open-emr.org
@@ -16,24 +15,8 @@
 require_once __DIR__ . '/bootstrap.php';
 
 use OpenEMR\Modules\NewClinic\Controllers\PageController;
-use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
-use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
-
-$config = new ClinicConfigService();
-$visitScope = new VisitScopeService();
-$sessionFacility = !empty($_SESSION['facilityId']) ? (int) $_SESSION['facilityId'] : null;
-$facilityId = $visitScope->resolveDeskFacilityId($sessionFacility);
-
-if (!$config->isEnabled('enable_office_notes', 0, $facilityId)) {
-    $webroot = $GLOBALS['webroot'] ?? '';
-    header('Location: ' . $webroot . '/interface/main/onotes/office_comments_full.php', true, 302);
-    exit;
-}
-
-$webroot = $GLOBALS['webroot'] ?? '';
 
 (new PageController())->renderForEncounterNotesAcl('office-notes.html.twig', 'Office Notes', [
     'island_entry' => 'office-notes',
     'shell_nav_id' => 'clinicnotes',
-    'legacy_url' => $webroot . '/interface/main/onotes/office_comments_full.php',
 ]);

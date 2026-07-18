@@ -26,11 +26,9 @@ class MainMenuIntegrationsService
 
     public function applyMenuIntegrations(MenuEvent $event): MenuEvent
     {
-        $facilityId = $this->visitScope->resolveDefaultFacilityId();
         $menu = $event->getMenu();
 
-        if ($this->config->isEnabled('communications_hub_enable', 0, $facilityId)
-            && AclMain::aclCheckCore('patients', 'notes')) {
+        if (AclMain::aclCheckCore('patients', 'notes')) {
             $hubUrl = Bootstrap::MODULE_INSTALLATION_PATH . '/public/top-redirect.php?dest='
                 . rawurlencode('communications.php');
             $this->rewriteMenuUrlById($menu, 'msg0', $hubUrl);
@@ -48,7 +46,6 @@ class MainMenuIntegrationsService
     {
         $facilityId = $facilityId ?? $this->visitScope->resolveDefaultFacilityId();
         $redirect = $this->config->isEnabled('registry_redirect_global_search', 0, $facilityId)
-            && $this->config->isEnabled('enable_patient_registry', 0, $facilityId)
             && $this->menuRestrict->shouldHideFinderForCurrentUser($facilityId);
 
         $frontDeskUrl = ($GLOBALS['webroot'] ?? '')

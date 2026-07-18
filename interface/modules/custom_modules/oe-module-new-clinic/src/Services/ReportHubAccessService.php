@@ -187,11 +187,7 @@ class ReportHubAccessService
 
     public function isPatientRegistryEnabled(?int $facilityId = null): bool
     {
-        if ($facilityId === null || $facilityId <= 0) {
-            $facilityId = $this->visitScope->resolveDeskFacilityId();
-        }
-
-        return $this->config->getInt('enable_patient_registry', 0, $facilityId) === 1;
+        return true;
     }
 
     public function isAncillaryServicesEnabled(?int $facilityId = null): bool

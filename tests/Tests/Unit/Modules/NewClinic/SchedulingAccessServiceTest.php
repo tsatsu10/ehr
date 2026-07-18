@@ -13,7 +13,6 @@ namespace OpenEMR\Tests\Unit\Modules\NewClinic;
 
 require_once __DIR__ . '/ModuleAutoload.php';
 
-use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\ScheduledIntegrationService;
 use OpenEMR\Modules\NewClinic\Services\SchedulingAccessService;
 use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
@@ -21,11 +20,18 @@ use PHPUnit\Framework\TestCase;
 
 class SchedulingAccessServiceTest extends TestCase
 {
-    public function testHubDisabledWithoutRedesignFlag(): void
+    public function testHubDisabledWithoutScheduledIntegration(): void
     {
         $access = $this->makeAccess(false, static fn (string $aco): bool => $aco === 'new_reception');
 
         $this->assertFalse($access->isHubEnabled(3));
+    }
+
+    public function testHubEnabledWhenScheduledIntegrationOn(): void
+    {
+        $access = $this->makeAccess(true, static fn (string $aco): bool => true);
+
+        $this->assertTrue($access->isHubEnabled(3));
     }
 
     public function testAssertHubAccessFailsWhenHubOff(): void
@@ -48,22 +54,10 @@ class SchedulingAccessServiceTest extends TestCase
 
     private function makeAccess(bool $hubEnabled, ?callable $aclChecker = null): SchedulingAccessService
     {
-        $config = $this->createMock(ClinicConfigService::class);
-        $config->method('getInt')->willReturnCallback(
-            static function (string $key, int $default = 0, int $facilityId = 0) use ($hubEnabled): int {
-                if ($key === 'enable_scheduling_redesign') {
-                    return $hubEnabled ? 1 : 0;
-                }
-
-                return $default;
-            }
-        );
-
         $scheduled = $this->createMock(ScheduledIntegrationService::class);
-        $scheduled->method('isEnabled')->willReturn(true);
+        $scheduled->method('isEnabled')->willReturn($hubEnabled);
 
         return new SchedulingAccessService(
-            $config,
             $scheduled,
             new VisitScopeService(),
             $aclChecker

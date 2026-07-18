@@ -26,9 +26,6 @@ export interface SchedulingProps {
   canBook: boolean;
   facilities: SchedulingOption[];
   providers: SchedulingOption[];
-  legacyCalendarUrl: string;
-  legacyFlowBoardUrl: string;
-  legacyRecallsUrl: string;
   webroot: string;
   labels?: SchedulingLabels;
 }

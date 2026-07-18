@@ -13,7 +13,6 @@ namespace OpenEMR\Tests\Unit\Modules\NewClinic;
 
 require_once __DIR__ . '/ModuleAutoload.php';
 
-use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\ScheduledIntegrationService;
 use OpenEMR\Modules\NewClinic\Services\SchedulingAccessService;
 use OpenEMR\Modules\NewClinic\Services\SchedulingFlowBoardService;
@@ -24,13 +23,11 @@ class SchedulingFlowBoardServiceTest extends TestCase
 {
     public function testAdvanceStatusRequiresEnabledHub(): void
     {
-        $config = $this->createMock(ClinicConfigService::class);
-        $config->method('getInt')->willReturn(0);
         $scheduled = $this->createMock(ScheduledIntegrationService::class);
-        $scheduled->method('isEnabled')->willReturn(true);
+        $scheduled->method('isEnabled')->willReturn(false);
 
         $service = new SchedulingFlowBoardService(
-            new SchedulingAccessService($config, $scheduled, new VisitScopeService())
+            new SchedulingAccessService($scheduled, new VisitScopeService())
         );
 
         $this->expectException(\RuntimeException::class);
@@ -86,13 +83,11 @@ class SchedulingFlowBoardServiceTest extends TestCase
 
     public function testUpdateRoomRequiresEnabledHub(): void
     {
-        $config = $this->createMock(ClinicConfigService::class);
-        $config->method('getInt')->willReturn(0);
         $scheduled = $this->createMock(ScheduledIntegrationService::class);
-        $scheduled->method('isEnabled')->willReturn(true);
+        $scheduled->method('isEnabled')->willReturn(false);
 
         $service = new SchedulingFlowBoardService(
-            new SchedulingAccessService($config, $scheduled, new VisitScopeService())
+            new SchedulingAccessService($scheduled, new VisitScopeService())
         );
 
         $this->expectException(\RuntimeException::class);
@@ -102,12 +97,10 @@ class SchedulingFlowBoardServiceTest extends TestCase
 
     public function testPollBoardReturnsUnchangedWhenRevisionMatches(): void
     {
-        $config = $this->createMock(ClinicConfigService::class);
-        $config->method('getInt')->willReturn(1);
         $scheduled = $this->createMock(ScheduledIntegrationService::class);
         $scheduled->method('isEnabled')->willReturn(true);
 
-        $access = new SchedulingAccessService($config, $scheduled, new VisitScopeService());
+        $access = new SchedulingAccessService($scheduled, new VisitScopeService());
         $service = $this->getMockBuilder(SchedulingFlowBoardService::class)
             ->setConstructorArgs([$access, new VisitScopeService()])
             ->onlyMethods(['getBoard'])

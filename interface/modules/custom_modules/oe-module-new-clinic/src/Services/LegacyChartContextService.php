@@ -16,7 +16,7 @@ use OpenEMR\Common\Twig\TwigContainer;
 use OpenEMR\Modules\NewClinic\Bootstrap;
 use OpenEMR\Modules\NewClinic\GlobalConfig;
 use OpenEMR\Modules\NewClinic\Support\ActivePatientPidResolver;
-use OpenEMR\Modules\NewClinic\Support\HistoryEditorWrapGate;
+use OpenEMR\Modules\NewClinic\Support\RequestScriptName;
 use Twig\Environment;
 
 class LegacyChartContextService
@@ -70,10 +70,6 @@ class LegacyChartContextService
 
     public function shouldBufferCurrentRequest(): bool
     {
-        if (HistoryEditorWrapGate::displacesLegacyStrip($this->config, $this->visitScope)) {
-            return false;
-        }
-
         if (!$this->isOverlayEnabled() || !$this->userHasClinicRole()) {
             return false;
         }
@@ -245,7 +241,7 @@ class LegacyChartContextService
 
     private function requestMatchesAllowlist(): bool
     {
-        $script = HistoryEditorWrapGate::currentScriptName();
+        $script = RequestScriptName::current();
         if (str_contains($script, '/oe-module-new-clinic/')) {
             return false;
         }

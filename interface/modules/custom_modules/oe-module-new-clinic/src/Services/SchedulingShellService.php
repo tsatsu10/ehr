@@ -1,7 +1,7 @@
 <?php
 
 /**
- * S1 Scheduling & Flow — shell bootstrap payload (filters, legacy links)
+ * S1 Scheduling & Flow — shell bootstrap payload (filters, deep links)
  *
  * @package   OpenEMR
  * @link      https://www.open-emr.org
@@ -19,7 +19,6 @@ class SchedulingShellService
     public function __construct(
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
         private readonly ClinicDateService $clinicDate = new ClinicDateService(),
-        private readonly SchedulingAccessService $schedulingAccess = new SchedulingAccessService(),
     ) {
     }
 
@@ -29,23 +28,18 @@ class SchedulingShellService
     public function getBootstrapPayload(int $facilityId): array
     {
         $facilityId = $this->visitScope->resolveDeskFacilityId($facilityId > 0 ? $facilityId : null);
-        $webroot = (string) ($GLOBALS['webroot'] ?? '');
 
         return [
             'default_facility_id' => $facilityId,
             'default_date' => $this->clinicDate->today(),
             'facilities' => $this->listServiceFacilities(),
             'providers' => $this->listCalendarProviders($facilityId),
-            'legacy_urls' => [
-                'calendar' => $webroot . '/interface/main/calendar/index.php',
-                'flow_board' => $webroot . '/interface/patient_tracker/patient_tracker.php',
-                'recalls' => $webroot . '/interface/main/messages/messages.php?go=Recalls',
-            ],
         ];
     }
 
     /**
-     * Deep links for calendar / flow board / recalls — S1 when redesign ON, else legacy core URLs.
+     * Deep links for calendar / flow board / recalls — always the S1 hub;
+     * the stock calendar/tracker/recalls screens are no longer linked.
      *
      * @return array{scheduling_url: string, flow_board_url: string, recalls_url: string}
      */
@@ -54,18 +48,10 @@ class SchedulingShellService
         $webroot = (string) ($GLOBALS['webroot'] ?? '');
         $modulePublic = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
 
-        if ($this->schedulingAccess->isHubEnabled($facilityId)) {
-            return [
-                'scheduling_url' => $modulePublic . 'scheduling/index.php?lens=calendar',
-                'flow_board_url' => $modulePublic . 'scheduling/index.php?lens=flow',
-                'recalls_url' => $modulePublic . 'scheduling/index.php?lens=recalls',
-            ];
-        }
-
         return [
-            'scheduling_url' => $webroot . '/interface/main/calendar/index.php',
-            'flow_board_url' => $webroot . '/interface/patient_tracker/patient_tracker.php',
-            'recalls_url' => $webroot . '/interface/main/messages/messages.php?go=Recalls',
+            'scheduling_url' => $modulePublic . 'scheduling/index.php?lens=calendar',
+            'flow_board_url' => $modulePublic . 'scheduling/index.php?lens=flow',
+            'recalls_url' => $modulePublic . 'scheduling/index.php?lens=recalls',
         ];
     }
 

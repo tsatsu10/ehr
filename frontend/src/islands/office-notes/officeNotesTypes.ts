@@ -22,6 +22,4 @@ export interface OfficeNotesProps {
   ajaxUrl: string;
   csrfToken: string;
   webroot?: string;
-  /** Stock office_comments_full.php — reachable until parity sign-off. */
-  legacyUrl?: string;
 }

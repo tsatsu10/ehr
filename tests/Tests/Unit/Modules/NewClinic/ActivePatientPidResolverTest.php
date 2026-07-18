@@ -12,7 +12,6 @@ namespace OpenEMR\Tests\Unit\Modules\NewClinic;
 require_once __DIR__ . '/ModuleAutoload.php';
 
 use OpenEMR\Modules\NewClinic\Support\ActivePatientPidResolver;
-use OpenEMR\Modules\NewClinic\Support\HistoryEditorWrapGate;
 use PHPUnit\Framework\TestCase;
 
 class ActivePatientPidResolverTest extends TestCase

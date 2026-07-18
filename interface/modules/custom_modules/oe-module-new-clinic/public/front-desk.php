@@ -17,7 +17,6 @@ use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\AppointmentTodayService;
 use OpenEMR\Modules\NewClinic\Services\ScheduledIntegrationService;
 use OpenEMR\Modules\NewClinic\Services\SchedulingShellService;
-use OpenEMR\Modules\NewClinic\Services\SchedulingAccessService;
 use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 
 $visitScope = new VisitScopeService();
@@ -27,7 +26,6 @@ $facilityId = $visitScope->resolveDeskFacilityId(
 $scheduledIntegration = new ScheduledIntegrationService();
 $appointmentToday = new AppointmentTodayService();
 $schedulingUrls = (new SchedulingShellService())->resolveIntegrationUrls($facilityId);
-$schedulingEnabled = (new SchedulingAccessService())->isHubEnabled($facilityId);
 $deskConfig = new ClinicConfigService();
 $config = $deskConfig;
 
@@ -50,10 +48,8 @@ $moduleUrl = $GLOBALS['webroot'] . '/interface/modules/custom_modules/oe-module-
     'appointments_today_count' => $scheduledIntegration->isEnabled($facilityId)
         ? $appointmentToday->countTodayAtFacility($facilityId)
         : 0,
-    'calendar_url' => $schedulingEnabled
-        ? $schedulingUrls['scheduling_url']
-        : ($GLOBALS['webroot'] . '/interface/main/main_info.php'),
-    'recalls_url' => $schedulingEnabled ? $schedulingUrls['recalls_url'] : null,
+    'calendar_url' => $schedulingUrls['scheduling_url'],
+    'recalls_url' => $schedulingUrls['recalls_url'],
     // CBILL-4b — manual eligibility-check log (requires the CBILL-4a payer-billing flag).
     'enable_payer_billing' => $deskConfig->getInt('enable_insurance_scheme', 0, $facilityId) === 1
         && $deskConfig->getInt('enable_payer_billing', 0, $facilityId) === 1,

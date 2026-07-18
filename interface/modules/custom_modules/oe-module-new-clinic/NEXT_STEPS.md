@@ -274,7 +274,7 @@ php interface/modules/custom_modules/oe-module-new-clinic/acl/seed_pilot_users.p
 cd frontend && npm run build
 ```
 
-`enable_scheduling_redesign` admin default is `'1'` for **new** facility rows only. Existing databases keep their stored value until you run the pilot script above.
+The S1 shell is always on (no `enable_scheduling_redesign` flag anymore) — it only requires `enable_scheduled_integration`.
 
 E2E smoke (S1 calendar / flow / recalls subset):
 
@@ -421,7 +421,7 @@ Report hub only (subset):
 php interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-report-hub.php
 ```
 
-Also enable as needed via Admin Hub: `communications_hub_enable`, `enable_chart_depth`, `enable_bill_ops`, `enable_report_hub` (included in `pilot-rollout.php`).
+Also enable as needed via Admin Hub: `enable_chart_depth`, `enable_bill_ops`, `enable_report_hub` (included in `pilot-rollout.php`). The Communications Hub, Patient Registry, Office Notes, and the S1 scheduling shell are always on.
 
 Seed desk users and smoke:
 

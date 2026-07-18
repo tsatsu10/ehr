@@ -23,7 +23,6 @@ class PatientChartClinicalService
         private readonly ProcedureOrderDeepLinkService $procedureOrderLinks = new ProcedureOrderDeepLinkService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
         private readonly ClinicalDocHubLinkService $docHubLinks = new ClinicalDocHubLinkService(),
-        private readonly HistoryEditorWrapService $historyEditorWrap = new HistoryEditorWrapService(),
         private readonly EncounterNoteService $encounterNote = new EncounterNoteService(),
         private readonly ClinicConfigService $config = new ClinicConfigService(),
     ) {
@@ -45,16 +44,10 @@ class PatientChartClinicalService
             // D4 — when on, the Clinical tab edits problems/allergies/meds in a native
             // drawer instead of the stock add_edit_issue.php popup.
             'native_issue_editor' => $this->config->isEnabled('enable_native_issue_editor', 0, $facilityId),
-            // D-HIST-9 — when on, "Edit history" on Background opens the native drawer
-            // (curated West-Africa field set) instead of the stock history_full.php form.
-            'native_history_editor' => $this->config->isEnabled('enable_native_history_editor', 0, $facilityId),
-            // D-HIST-10 — when on, the drawer's "Full history form" opens the full native editor
-            // (superset: risk factors, sleep, extra relatives) instead of stock history_full.php.
-            'native_history_full_form' => $this->config->isEnabled('enable_native_history_full_form', 0, $facilityId),
             // D-IMM-1 — when on, Add/Edit on the Immunizations section opens the native drawer
             // (Ghana EPI vaccine set) instead of the stock immunizations.php form.
             'native_immunization_editor' => $this->config->isEnabled('enable_native_immunization_editor', 0, $facilityId),
-            'background' => $this->buildBackgroundSection($pid, $webroot),
+            'background' => $this->buildBackgroundSection($pid),
             'problems' => $this->buildListSection($pid, 'medical_problem', $webroot, 'clinical-problems'),
             'allergies' => $this->buildAllergySection($pid, $webroot),
             'medications' => $this->buildListSection($pid, 'medication', $webroot, 'clinical-meds'),
@@ -101,7 +94,7 @@ class PatientChartClinicalService
     /**
      * @return array<string, mixed>
      */
-    private function buildBackgroundSection(int $pid, string $webroot): array
+    private function buildBackgroundSection(int $pid): array
     {
         // usertext12/13/14 are reserved by the native history editor (D-HIST-9) for
         // sickle cell, herbal/traditional medicine, and occupation — fields with no
@@ -153,12 +146,6 @@ class PatientChartClinicalService
             'empty' => $lines === [] && $sdoh['chips'] === [],
             'sdoh_chips' => $sdoh['chips'],
             'sdoh_more' => $sdoh['more'],
-            'editor_url' => $this->historyEditorWrap->appendReturnParam(
-                $webroot
-                . '/interface/patient_file/history/history_full.php?set_pid='
-                . urlencode((string) $pid),
-                $pid
-            ),
             'last_updated' => is_array($row) ? ($row['date'] ?? null) : null,
         ];
     }

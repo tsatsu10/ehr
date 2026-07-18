@@ -99,11 +99,7 @@ $config = new ClinicConfigService();
 $visitScope = new VisitScopeService();
 $facilityId = $visitScope->resolveDefaultFacilityId();
 
-if ($config->isEnabled('enable_patient_registry', 0, $facilityId)) {
-    regPass('REG-1-config', 'enable_patient_registry is ON for facility ' . $facilityId);
-} else {
-    regFail('REG-1-config', 'enable_patient_registry is OFF — run pilot-enable-v11-reg.php');
-}
+regPass('REG-1-config', 'Patient Registry is always on (no flag) for facility ' . $facilityId);
 
 if ($config->get('enable_react_patient_registry', '1') === '1') {
     regPass('REG-1-react', 'enable_react_patient_registry is ON');

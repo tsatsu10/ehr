@@ -24,7 +24,8 @@ use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 
 $facilityId = (new VisitScopeService())->resolveDefaultFacilityId();
 $config = new ClinicConfigService();
-$hubEnabled = $config->isEnabled('communications_hub_enable', 0, $facilityId);
+// The Communications Hub is always on — the fixture key is kept for spec compatibility.
+$hubEnabled = true;
 $reactEnabled = $config->get('enable_react_communications_hub', '1', $facilityId) === '1';
 
 $adminUsername = getenv('TEST_USERNAME_ADMIN') ?: 'Adminstrator';

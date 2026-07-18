@@ -137,9 +137,9 @@ export function QueueRolesTab({
     || settings.enable_clinical_doc_hub === '1'
     || settings.enable_clinical_doc_hub === 1;
   const referralHospitalBundle = settings.clinical_doc_bundle === 'referral_hospital_v1';
-  const schedulingEnabled = settings.enable_scheduling_redesign === true
-    || settings.enable_scheduling_redesign === '1'
-    || settings.enable_scheduling_redesign === 1;
+  const schedulingEnabled = settings.enable_scheduled_integration === true
+    || settings.enable_scheduled_integration === '1'
+    || settings.enable_scheduled_integration === 1;
 
   const trimmedQuery = query.trim().toLowerCase();
   const searching = trimmedQuery.length > 0;
@@ -285,6 +285,12 @@ export function QueueRolesTab({
                     </div>
                   ))}
                 </div>
+
+                {section.title === 'Scheduling & Flow (S1)' && !schedulingEnabled && (
+                  <p className="mb-0 py-1 text-sm text-[var(--oe-nc-text-muted)]">
+                    Turn on “Link Front Desk to OpenEMR calendar” (Desks &amp; queue basics) to configure Flow Board lanes and provider colors.
+                  </p>
+                )}
 
                 {section.title === 'Scheduling & Flow (S1)' && schedulingEnabled && (
                   <>

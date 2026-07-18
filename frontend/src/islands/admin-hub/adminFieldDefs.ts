@@ -106,9 +106,7 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'enable_chart_depth_export',
   'enable_letters_labels',
   'enable_vitals_trends',
-  'communications_hub_enable',
   'enable_outreach',
-  'enable_patient_registry',
   'registry_redirect_global_search',
   'enable_shared_device_session_warning',
   'enable_history_editor_wrap',
@@ -152,7 +150,6 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'enable_debootstrap_shell',
   'enable_bill_ops',
   'enable_bill_ops_outstanding',
-  'enable_office_notes',
   'enable_documents_native',
   'enable_patient_chat',
   'enable_report_hub',
@@ -160,7 +157,6 @@ export const ADMIN_SETTING_KEYS: string[] = [
   'report_hub_async_export_threshold',
   'report_hub_moh_pack',
   'enable_queue_bridge',
-  'enable_scheduling_redesign',
   'queue_bridge_show_recurring_info',
   'queue_bridge_eod_block',
   'bill_ops_reopen_on_correction',
@@ -622,30 +618,18 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
   },
   {
     title: 'Communications & registry',
-    description: 'Staff messaging, outreach campaigns, and clinic-wide patient cohort search.',
+    description: 'Outreach campaigns and registry search behavior. The Communications Hub and Patient Registry are always on.',
     fields: [
-      {
-        key: 'communications_hub_enable',
-        type: 'bool',
-        label: 'Enable Communications Hub (staff messages + reminders)',
-      },
       {
         key: 'enable_outreach',
         type: 'bool',
         label: 'Enable Outreach (batch SMS/email campaigns) (GAP-B)',
         hint: 'Cohort → compose → dry-run preview → queue. Requires a configured messaging gateway to actually send; queued campaigns record intent only until then.',
-        indent: 1,
-      },
-      {
-        key: 'enable_patient_registry',
-        type: 'bool',
-        label: 'Enable Patient Registry cohort search (M10)',
       },
       {
         key: 'registry_redirect_global_search',
         type: 'bool',
-        label: 'Redirect global search (#anySearchBox) to Front Desk when registry is on (reception)',
-        indent: 1,
+        label: 'Redirect global search (#anySearchBox) to Front Desk (reception)',
       },
     ],
   },
@@ -932,15 +916,9 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
     ],
   },
   {
-    title: 'Office Notes & Documents (GAP-A)',
-    description: 'Native sticky notes, chart documents, and staff-to-patient chat log.',
+    title: 'Documents & patient chat (GAP-A)',
+    description: 'Chart documents and staff-to-patient chat log. Office Notes is always on.',
     fields: [
-      {
-        key: 'enable_office_notes',
-        type: 'bool',
-        label: 'Enable Office Notes',
-        hint: 'Native clinic-wide sticky notes island. Legacy notes screen stays reachable when OFF.',
-      },
       {
         key: 'enable_documents_native',
         type: 'bool',
@@ -993,15 +971,8 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
   },
   {
     title: 'Scheduling & Flow (S1)',
-    description: 'Calendar, Flow Board, and Recalls lenses under the Scheduling & Flow shell.',
-    fields: [
-      {
-        key: 'enable_scheduling_redesign',
-        type: 'bool',
-        label: 'Enable Scheduling & Flow shell',
-        hint: 'Shows Clinic → Scheduling & Flow (Calendar, Flow Board, Recalls lenses). Requires calendar integration above. Default OFF until parity verified.',
-      },
-    ],
+    description: 'Flow Board lanes and provider colors for the Scheduling & Flow shell. The shell itself is always on when calendar integration is enabled.',
+    fields: [],
   },
   {
     title: 'Queue Bridge Hub (M18)',

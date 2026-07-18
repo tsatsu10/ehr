@@ -37,11 +37,10 @@ class MainMenuIntegrationsServiceTest extends TestCase
         return new MainMenuIntegrationsService($config, $visitScope, $menuRestrict);
     }
 
-    public function testGlobalSearchRedirectsWhenRegistryAndRedirectOnForReceptionUser(): void
+    public function testGlobalSearchRedirectsWhenRedirectOnForReceptionUser(): void
     {
         $service = $this->makeService([
             'registry_redirect_global_search' => true,
-            'enable_patient_registry' => true,
         ], true);
 
         $result = $service->globalSearchRedirectConfig(1);
@@ -50,11 +49,10 @@ class MainMenuIntegrationsServiceTest extends TestCase
         $this->assertStringContainsString('top-redirect.php?dest=front-desk.php', $result['front_desk_url']);
     }
 
-    public function testNoRedirectWhenRegistryDisabled(): void
+    public function testNoRedirectWhenRedirectFlagOff(): void
     {
         $service = $this->makeService([
-            'registry_redirect_global_search' => true,
-            'enable_patient_registry' => false,
+            'registry_redirect_global_search' => false,
         ], true);
 
         $this->assertFalse($service->globalSearchRedirectConfig(1)['redirect']);
@@ -64,7 +62,6 @@ class MainMenuIntegrationsServiceTest extends TestCase
     {
         $service = $this->makeService([
             'registry_redirect_global_search' => true,
-            'enable_patient_registry' => true,
         ], false);
 
         $this->assertFalse($service->globalSearchRedirectConfig(1)['redirect']);

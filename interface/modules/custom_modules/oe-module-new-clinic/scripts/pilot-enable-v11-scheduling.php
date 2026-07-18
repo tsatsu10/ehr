@@ -29,12 +29,11 @@ $defaultFacilityId = (new VisitScopeService())->resolveDefaultFacilityId();
 
 pilotEnsureNewClinicAclObjects();
 
+// The S1 shell is always on now — only integration + the React kill switch remain.
 foreach ($facilityIds as $facilityId) {
     $config->set('enable_scheduled_integration', '1', $facilityId);
-    $config->set('enable_scheduling_redesign', '1', $facilityId);
     $config->set('enable_react_scheduling', '1', $facilityId);
     echo "Set enable_scheduled_integration=1 for facility {$facilityId}.\n";
-    echo "Set enable_scheduling_redesign=1 for facility {$facilityId}.\n";
     echo "Set enable_react_scheduling=1 for facility {$facilityId}.\n";
 }
 
@@ -43,7 +42,6 @@ $scheduledOn = (new ScheduledIntegrationService())->isEnabled($defaultFacilityId
 
 echo 'Set S1 Scheduling & Flow flags for facilities: ' . implode(', ', $facilityIds) . ".\n";
 echo "  enable_scheduled_integration\n";
-echo "  enable_scheduling_redesign\n";
 echo "  enable_react_scheduling\n";
 echo '  scheduled_integration=' . ($scheduledOn ? 'yes' : 'no') . "\n";
 echo '  scheduling_hub_ready=' . ($access->isHubEnabled($defaultFacilityId) ? 'yes' : 'no') . "\n";

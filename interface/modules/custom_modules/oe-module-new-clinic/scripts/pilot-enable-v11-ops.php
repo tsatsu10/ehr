@@ -26,7 +26,6 @@ if ($facilityId <= 0) {
 
 $config = new ClinicConfigService();
 $flags = [
-    'enable_scheduling_redesign' => '1',
     'enable_faster_queue_interrupts' => '1',
     'faster_queue_interrupt_poll_seconds' => '10',
     'enable_similar_surname_queue_warning' => '1',

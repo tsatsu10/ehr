@@ -19,7 +19,7 @@ import type {
 } from './officeNotesTypes';
 import { formatNoteDateTime, officeNoteFilters } from './officeNotesUi';
 
-export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps) {
+export function OfficeNotes({ ajaxUrl, csrfToken }: OfficeNotesProps) {
   const [notes, setNotes] = useState<OfficeNote[]>([]);
   const [total, setTotal] = useState(0);
   const [pageSize, setPageSize] = useState(20);
@@ -191,11 +191,6 @@ export function OfficeNotes({ ajaxUrl, csrfToken, legacyUrl }: OfficeNotesProps)
             {t('Shared notes visible to all clinic staff — shift handovers, closures, reminders.')}
           </p>
         </div>
-        {legacyUrl && (
-          <a className="nc-office-notes__legacy-link" href={legacyUrl}>
-            {t('Open classic view')}
-          </a>
-        )}
       </header>
 
       <WidgetCard title={t('Add a note')} bodyPad="pad">

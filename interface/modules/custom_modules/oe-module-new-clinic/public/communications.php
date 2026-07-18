@@ -15,19 +15,8 @@ use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Modules\NewClinic\Controllers\PageController;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\CommHubUserSettingsService;
-use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 
 $config = new ClinicConfigService();
-$visitScope = new VisitScopeService();
-$sessionFacility = !empty($_SESSION['facilityId']) ? (int) $_SESSION['facilityId'] : null;
-$facilityId = $visitScope->resolveDeskFacilityId($sessionFacility);
-
-if (!$config->isEnabled('communications_hub_enable', 0, $facilityId)) {
-    $webroot = $GLOBALS['webroot'] ?? '';
-    header('Location: ' . $webroot . '/interface/main/messages/messages.php?form_active=1', true, 302);
-    exit;
-}
-
 $webroot = $GLOBALS['webroot'] ?? '';
 $moduleUrl = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/public';
 $reactCommunicationsHub = $config->get('enable_react_communications_hub', '1') === '1';
