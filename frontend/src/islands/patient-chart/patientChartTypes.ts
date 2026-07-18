@@ -315,7 +315,6 @@ export interface ClinicalBackgroundLine {
 
 export interface ClinicalBackgroundSection {
   anchor?: string;
-  editor_url?: string;
   lines?: ClinicalBackgroundLine[];
   /** T1-F20 — SDOH screening summary chips (max 4) */
   sdoh_chips?: string[];
@@ -379,10 +378,6 @@ export interface ClinicalData {
   hidden_sections?: string[];
   /** D4 — edit problems/allergies/meds in a native drawer instead of the stock popup. */
   native_issue_editor?: boolean;
-  /** D-HIST-9 — edit Background in a native drawer instead of stock history_full.php. */
-  native_history_editor?: boolean;
-  /** D-HIST-10 — open the full native History editor instead of stock history_full.php. */
-  native_history_full_form?: boolean;
   /** D-IMM-1 — Add/Edit immunizations in a native drawer instead of stock immunizations.php. */
   native_immunization_editor?: boolean;
 }
@@ -438,7 +433,6 @@ export interface HistoryEditorData {
   };
   risk_factors: string[];
   risk_other: string;
-  stock_editor_url: string;
 }
 
 export interface ClinicalReferralsStrip {

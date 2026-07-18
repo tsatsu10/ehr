@@ -41,20 +41,19 @@ const historyPayload = {
     mental_illness: false,
   },
   dates: { last_bp_date: '', last_glucose_date: '' },
-  stock_editor_url: '/interface/patient_file/history/history_full.php?set_pid=42',
 };
 
 describe('BackgroundEditorDrawer', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('loads existing background and offers the stock full-form escape hatch', async () => {
+  it('loads existing background and offers the native full-form switch (no stock link)', async () => {
     mockedFetch.mockResolvedValue(historyPayload as never);
     render(<BackgroundEditorDrawer {...baseProps} />);
 
     expect(await screen.findByDisplayValue('Hypertension')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Farmer')).toBeInTheDocument();
-    const link = screen.getByRole('link', { name: /Full history form/i });
-    expect(link).toHaveAttribute('href', historyPayload.stock_editor_url);
+    expect(screen.getByRole('button', { name: /Full form/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Full history form/i })).not.toBeInTheDocument();
     // Regression: the panel must carry an explicit width class, or it collapses to a
     // sliver off-screen (panelRightClass sets no width). A max-width alone is not enough.
     expect(screen.getByRole('dialog').className).toMatch(/\bw-\[/);
@@ -104,9 +103,9 @@ describe('BackgroundEditorDrawer', () => {
 
   it('switches to full mode and shows the extra sections (D-HIST-10)', async () => {
     mockedFetch.mockResolvedValue(historyPayload as never);
-    render(<BackgroundEditorDrawer {...baseProps} fullFormEnabled />);
+    render(<BackgroundEditorDrawer {...baseProps} />);
 
-    // Quick mode first — a "Full form" switch, not the stock link.
+    // Quick mode first — a "Full form" switch.
     fireEvent.click(await screen.findByRole('button', { name: /Full form/i }));
 
     expect(screen.getByText('Edit full history')).toBeInTheDocument();

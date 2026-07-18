@@ -145,27 +145,16 @@ function ClinicalBackground({
   onEditHistory,
 }: {
   section: ClinicalBackgroundSection;
-  /** When set (native editor on), "Edit history" opens the drawer instead of the stock form. */
-  onEditHistory?: () => void;
+  /** "Edit history" opens the native drawer (D-HIST-9 permanent). */
+  onEditHistory: () => void;
 }) {
   const lines = section.lines ?? [];
 
-  let action: React.ReactNode;
-  if (onEditHistory) {
-    action = (
-      <Button variant="outline" size="sm" onClick={onEditHistory}>
-        Edit history
-      </Button>
-    );
-  } else if (section.editor_url) {
-    action = (
-      <Button variant="outline" size="sm" asChild>
-        <a href={section.editor_url} target="_top">
-          Edit history
-        </a>
-      </Button>
-    );
-  }
+  const action: React.ReactNode = (
+    <Button variant="outline" size="sm" onClick={onEditHistory}>
+      Edit history
+    </Button>
+  );
 
   return (
     <ChartSection
@@ -559,7 +548,7 @@ export function ClinicalTab({
     <ChartStack>
       <ClinicalBackground
         section={data.background ?? {}}
-        onEditHistory={data.native_history_editor ? () => setHistoryDrawerOpen(true) : undefined}
+        onEditHistory={() => setHistoryDrawerOpen(true)}
       />
       {!isHidden('problems') && (
         <ClinicalListSectionBlock
@@ -619,20 +608,17 @@ export function ClinicalTab({
           }}
         />
       )}
-      {data.native_history_editor && (
-        <BackgroundEditorDrawer
-          open={historyDrawerOpen}
-          pid={pid}
-          ajaxUrl={ajaxUrl}
-          csrfToken={csrfToken}
-          fullFormEnabled={data.native_history_full_form}
-          onClose={() => setHistoryDrawerOpen(false)}
-          onSaved={() => {
-            setHistoryDrawerOpen(false);
-            onRefresh();
-          }}
-        />
-      )}
+      <BackgroundEditorDrawer
+        open={historyDrawerOpen}
+        pid={pid}
+        ajaxUrl={ajaxUrl}
+        csrfToken={csrfToken}
+        onClose={() => setHistoryDrawerOpen(false)}
+        onSaved={() => {
+          setHistoryDrawerOpen(false);
+          onRefresh();
+        }}
+      />
       {data.native_immunization_editor && (
         <ImmunizationEditorDrawer
           open={immunDrawer.open}

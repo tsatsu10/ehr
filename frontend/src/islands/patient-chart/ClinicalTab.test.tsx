@@ -85,31 +85,16 @@ describe('ClinicalTab referrals strip', () => {
     expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument();
   });
 
-  it('opens the native Background editor as a button when the flag is on (D-HIST-9)', () => {
+  it('always opens the native Background editor as a button (D-HIST-9 permanent)', () => {
     renderTab(null, {
-      native_history_editor: true,
       background: {
         anchor: 'clinical-background',
-        editor_url: '/interface/patient_file/history/history_full.php?set_pid=42',
         lines: [{ label: 'Mother', value: 'Hypertension' }],
       },
     });
-    // Native affordance: "Edit history" is a button (opens the drawer), not a stock link.
+    // Native affordance: "Edit history" is a button (opens the drawer), never a stock link.
     expect(screen.getByRole('button', { name: 'Edit history' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Edit history' })).not.toBeInTheDocument();
-  });
-
-  it('keeps the stock history link when the flag is off (D-HIST-9)', () => {
-    renderTab(null, {
-      background: {
-        anchor: 'clinical-background',
-        editor_url: '/interface/patient_file/history/history_full.php?set_pid=42',
-        lines: [{ label: 'Mother', value: 'Hypertension' }],
-      },
-    });
-    const link = screen.getByRole('link', { name: 'Edit history' });
-    expect(link).toHaveAttribute('href', '/interface/patient_file/history/history_full.php?set_pid=42');
-    expect(screen.queryByRole('button', { name: 'Edit history' })).not.toBeInTheDocument();
   });
 
   it('shows native Add/Edit on Immunizations when the editor is on (D-IMM-1)', () => {

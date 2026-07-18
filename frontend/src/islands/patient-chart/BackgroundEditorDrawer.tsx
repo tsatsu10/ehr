@@ -25,11 +25,10 @@ import type { HistoryEditorData } from './patientChartTypes';
 
 /**
  * D-HIST-9/10 — native Background/history editor. A West-Africa-first field set that writes
- * the canonical history record instead of the stock history_full.php form.
- *  - Quick mode (D-HIST-9, `enable_native_history_editor`): the fields staff touch daily.
- *  - Full mode (D-HIST-10, `enable_native_history_full_form`): a superset adding WHO-PEN risk
- *    factors, sleep, and the sensitive family conditions behind a reveal.
- * The stock editor stays reachable as "Advanced".
+ * the canonical history record. Permanent replacement for stock history_full.php.
+ *  - Quick mode (D-HIST-9): the fields staff touch daily.
+ *  - Full mode (D-HIST-10): a superset adding WHO-PEN risk factors, sleep, and the
+ *    sensitive family conditions behind a reveal.
  */
 
 type Mode = 'quick' | 'full';
@@ -41,8 +40,6 @@ interface BackgroundEditorDrawerProps {
   pid: number;
   ajaxUrl: string;
   csrfToken: string;
-  /** D-HIST-10 — when true, the "Full form" switch and full-only sections are available. */
-  fullFormEnabled?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -138,7 +135,7 @@ function ConditionCheckbox({
   );
 }
 
-function emptyForm(): Omit<HistoryEditorData, 'stock_editor_url'> {
+function emptyForm(): HistoryEditorData {
   return {
     text: {
       family_mother: '',
@@ -177,14 +174,12 @@ export function BackgroundEditorDrawer({
   pid,
   ajaxUrl,
   csrfToken,
-  fullFormEnabled = false,
   onClose,
   onSaved,
 }: BackgroundEditorDrawerProps) {
   const [form, setForm] = useState(emptyForm);
   const [mode, setMode] = useState<Mode>('quick');
   const [showSensitive, setShowSensitive] = useState(false);
-  const [stockEditorUrl, setStockEditorUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -197,7 +192,6 @@ export function BackgroundEditorDrawer({
     setForm(emptyForm());
     setMode('quick');
     setShowSensitive(false);
-    setStockEditorUrl('');
     setError(null);
 
     let cancelled = false;
@@ -217,7 +211,6 @@ export function BackgroundEditorDrawer({
         if (d.family_conditions?.mental_illness || d.family_conditions?.suicide) {
           setShowSensitive(true);
         }
-        setStockEditorUrl(d.stock_editor_url ?? '');
       })
       .catch((e) => {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load background.');
@@ -433,23 +426,14 @@ export function BackgroundEditorDrawer({
         </div>
         <div className="flex items-center justify-between gap-2 border-t border-[var(--oe-nc-border)] p-4">
           <div className="flex items-center gap-3">
-            {fullFormEnabled ? (
-              isFull ? (
-                // Full native editor is the complete replacement — no stock fallback link.
-                <Button type="button" variant="link" size="sm" className="h-auto p-0" onClick={() => setMode('quick')}>
-                  ← Quick edit
-                </Button>
-              ) : (
-                <Button type="button" variant="link" size="sm" className="h-auto p-0" onClick={() => setMode('full')}>
-                  Full form →
-                </Button>
-              )
+            {isFull ? (
+              <Button type="button" variant="link" size="sm" className="h-auto p-0" onClick={() => setMode('quick')}>
+                ← Quick edit
+              </Button>
             ) : (
-              stockEditorUrl && (
-                <Button variant="link" size="sm" className="h-auto p-0" asChild>
-                  <a href={stockEditorUrl} target="_top">Full history form</a>
-                </Button>
-              )
+              <Button type="button" variant="link" size="sm" className="h-auto p-0" onClick={() => setMode('full')}>
+                Full form →
+              </Button>
             )}
           </div>
           <div className="flex gap-2">
