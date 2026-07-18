@@ -1,6 +1,6 @@
 # New Clinic — Backup System Design
 
-**Version:** v0.7.0 · **Date:** 2026-07-18 · **Status:** Engine + job-worker/cron scheduling (heartbeat alone is NOT enough for desk-only clinics — BACKUP-H1) + verify (kind-filtered — BACKUP-H2) + honest self-reported labeling (BACKUP-H3) + facility-0 backup scope (BACKUP-M4) + concurrency lock (BACKUP-M3) + cloud sync-folder off-site + recovery-key custody (bundles the database key material too — BACKUP-C1) + separate incremental site-files backup (§3b) + a proven decrypt/restore procedure (BACKUP-C2) — built and live-smoked (GAP-C C6 follow-up; backup-system audit)
+**Version:** v0.8.0 · **Date:** 2026-07-18 · **Status:** Engine + job-worker/cron scheduling (heartbeat alone is NOT enough for desk-only clinics — BACKUP-H1) + verify (kind-filtered, full-stream — BACKUP-H2/M1) + honest self-reported labeling (BACKUP-H3) + facility-0 backup scope (BACKUP-M4/M4b) + concurrency lock (BACKUP-M3) + cloud sync-folder off-site + recovery-key custody (bundles the database key material too — BACKUP-C1) + separate incremental site-files backup (§3b) + a proven decrypt/restore procedure (BACKUP-C2) + configurable capacity cap with a proven large-DB round-trip (BACKUP-CAP) + retry backoff (BACKUP-H1b) + last-known-good mirror guarantee (BACKUP-M7) — built and live-smoked (GAP-C C6 follow-up; backup-system audit, wave 3)
 
 Governs the module's **in-app backup engine** and how it tracks real backups. Subordinate to
 `NEW_CLINIC_SEC6_DATA_AT_REST_RUNBOOK.md` §3 (the security policy) — where they disagree, SEC6 wins.
@@ -75,6 +75,17 @@ each file, writes an **individually-encrypted** copy to a mirror tree in the tar
   **key** dir `logs_and_misc/methods/`. The key must never be co-located with the data it decrypts
   (SEC6 / §5d); a files backup that swept the key into the same folder as the archives would hand
   whoever steals the drive both halves.
+- **Never overwrites its last-known-good copy (BACKUP-M7).** Documents in this system are meant to be
+  **append-only** — once uploaded, a document never changes (§3 above). So a source file that DOES
+  change in place after its first mirror is inherently anomalous (accidental overwrite, corruption,
+  tampering/ransomware), and mirroring purely by "source is newer than mirror" would happily
+  re-encrypt that changed state OVER the one good encrypted copy on record, destroying it. The mirror
+  now **never overwrites an existing `.enc` file**: when the source looks newer, the old encrypted
+  copy is left completely untouched and the new state is written to a separate sibling file
+  (`<name>.enc.<UTC timestamp>`) instead, and the run is flagged (`preserved: N`) in its message so
+  this is never a silent event. This guarantees a single bad run can never destroy the last-known-good
+  backup of a file — the simplest option that gives that guarantee, chosen over a full size/hash
+  manifest (which the incremental design deliberately avoids — "the mirror itself is the manifest").
 - **Tracking:** each files run records its own row in `admin_hub_backup_run` with `kind = 'files'`
   (the DB runs are `kind = 'db'`), a `file_path` of the mirror dir, `size_bytes` = bytes copied this
   run, and a human message (e.g. "Site files: 12 new/changed, 40 unchanged, 88.2 MB").
@@ -91,6 +102,17 @@ each file, writes an **individually-encrypted** copy to a mirror tree in the tar
   at a fixed sentinel (`facility_id = 0`), independent of session/request state. Reads fall back to
   whatever facility a pre-M4 install's rows/config happened to be under, so existing history isn't
   orphaned by the change.
+  **BACKUP-M4b correction:** M4 only fixed the READ side. The Admin Hub settings save path
+  (`ClinicAdminService::saveSettings()`) still wrote these same 5 keys (plus the new
+  `backup_max_encrypt_mb`, §5e) at whatever facility the save REQUEST resolved to, then — for a
+  facility-scoped save — called `clearGlobalOverrides()` on every changed key, which **deletes** the
+  facility-0 row. A single-facility pilot never noticed (the reader-facility fallback in
+  `ClinicConfigService::get()` papers over it), but a multi-facility clinic saving Admin Hub settings
+  from a non-first facility would silently blow away its own backup schedule/target/retention/cap —
+  the worker has no per-facility context to fall back to. These 6 keys
+  (`GLOBAL_ONLY_SETTINGS` in `ClinicAdminService`) are now forced to facility 0 on both read
+  (change-detection) and write, and are never passed to `clearGlobalOverrides()`, regardless of which
+  facility the save request resolved to.
 - **Target directory:** `backup_target_dir` config (facility-0 sentinel — see above). Default: a module-owned
   `sites/<site>/documents/nc_backups/` created 0700. The admin **should** point this at a
   **removable/external drive** (e.g. `E:\clinic-backups` on Windows) so a machine failure doesn't take
@@ -117,6 +139,15 @@ each file, writes an **individually-encrypted** copy to a mirror tree in the tar
 "Recent backups" table shows path + size, so the history reflects what actually happened — not a
 self-reported "complete" click.
 
+**BACKUP-M1 — disk-full / partial writes must never record as `ok` (2026-07-18).** A short or failed
+write (classically: the target disk fills up mid-write) previously went silent at three points:
+`gzwrite()`'s return was never checked, the final archive `file_put_contents()` result was compared
+only against `false` (not the actual byte count written), and `verifyBackup()` (§5b) only ever read
+the first ~8 KB of the decompressed stream. All three are fixed: every `gzwrite()` call is checked
+against the chunk length it was given; the archive write compares bytes-actually-written to
+`strlen($ciphertext)` and deletes a partial file rather than leaving it behind; and verify now streams
+the WHOLE archive (§5b). A truncated/short archive can no longer complete a run as `ok`, nor pass verify.
+
 `initiateBackup()` now **performs** the backup synchronously (it was a stub) and returns the real
 result. The old two-step "start → mark complete" is collapsed for native runs; the "Mark complete"
 button remains only for the legacy stock-backup path — **and BACKUP-H3 made that path visibly
@@ -130,15 +161,29 @@ real, checkable backup anywhere in the UI.
 ## 5b. Verify (a backup you can't restore is a hope, not a guarantee)
 
 `verifyBackup(runId)` (super-admin; "Verify latest backup" button in the System-health board)
-decrypts the archive and reads the first bytes back through gzip to confirm it's a real SQL dump
-(memory-safe — head only). It answers "can this actually be decrypted and restored?" without a full
-restore. It does **not** replace a periodic real restore drill, but catches the common silent
-failures (wrong key, corrupt/empty archive). **Live-smoked 2026-07-11:** a real 96 MB `.enc`
-decrypted and read as a DB dump. **BACKUP-H2 fix:** both the explicit-`run_id` and "latest" lookup
-branches now filter `kind = 'db'` — without it, when the latest **ok** run for a facility happened
-to be a `files` run, `file_path` pointed at the `nc-files-<site>/` **mirror directory**, and the
-verify falsely reported "the backup file is missing from disk" even though the most recent DB
-archive was perfectly fine.
+decrypts the archive and reads it back through gzip to confirm it's a real, COMPLETE SQL dump. It
+answers "can this actually be decrypted and restored?" without a full restore. It does **not** replace
+a periodic real restore drill, but catches the common silent failures (wrong key, corrupt/empty/truncated
+archive). **Live-smoked 2026-07-11:** a real 96 MB `.enc` decrypted and read as a DB dump. **Live-smoked
+again 2026-07-18 (BACKUP-CAP):** a real 197 MB `.enc` (from a 1.7 GB dev database) decrypted and
+verified successfully. **BACKUP-H2 fix:** both the explicit-`run_id` and "latest" lookup branches now
+filter `kind = 'db'` — without it, when the latest **ok** run for a facility happened to be a `files`
+run, `file_path` pointed at the `nc-files-<site>/` **mirror directory**, and the verify falsely
+reported "the backup file is missing from disk" even though the most recent DB archive was perfectly
+fine.
+
+**BACKUP-M1 fix (2026-07-18) — verify now streams the WHOLE archive, not just its head.** The original
+verify only read the first ~8 KB of the decompressed stream — enough to see `CREATE TABLE`/`INSERT INTO`
+markers, but gzip decompresses sequentially from the start, so a backup truncated mid-dump (disk full,
+killed process) still verified GREEN as long as its readable head happened to be intact, which it
+almost always is. Verify now streams the archive to EOF in constant-size chunks (still memory-safe —
+a 1 MB buffer regardless of archive size) and checks the archive's own gzip trailer: RFC 1952's last 4
+bytes of a gzip stream are the ORIGINAL uncompressed size, mod 2^32. Confirmed empirically during this
+fix that a truncated gzip stream does **not** reliably raise a PHP error or fail `feof()` — cutting a
+real archive off mid-stream just makes decompression stop early and report end-of-file immediately,
+with no exception to catch. Comparing what was actually decompressed against the archive's own trailer
+is the only reliable signal; a truncated file's trailer is just leftover compressed bytes and will not
+match.
 
 ## 5c. Honesty: local target is not disaster-safe
 
@@ -178,6 +223,62 @@ unrecoverable. **A backup you can't decrypt is worse than no backup — it's fal
 - **The rule we surface in the UI:** store the key copy **separately from the backups** — never the
   same folder or same cloud account (whoever gets both gets all PHI). This is exactly SEC6's key
   escrow (MSA §7.2): one copy is enough to restore, both copies lost = unrecoverable.
+
+## 5e. Capacity — the in-memory encryption cap (BACKUP-CAP)
+
+The DB archive is encrypted **in memory**, not streamed (§3's "the DB archive fits the in-app
+in-memory encryption budget"). That budget is a real ceiling, not a formality: `CryptoGen::coreEncrypt()`
+holds the compressed dump, its binary AES ciphertext, and the final base64-encoded string all
+transiently resident at once — roughly **4x** the compressed archive size at peak (documented
+assumption, not measured to the byte). `verifyBackup()` has the same shape.
+
+- **The cap is now config-overridable**, not a hardcoded constant: `backup_max_encrypt_mb`
+  (`AdminBackupService::maxEncryptBytes()`), admin-facing in Admin Hub → System, default **250 MB**,
+  floor 50 MB, ceiling 2000 MB. Before this fix a fixed 100 MB `MAX_ENCRYPT_BYTES` constant rejected
+  every real backup on a clinic whose compressed dump had simply grown past it — a real, silent,
+  eventually-fatal failure mode for a clinic that had been backing up successfully for months.
+- **The default's stated assumption:** a 2 GB RAM box (this product's documented floor — an on-prem
+  mini-PC or small VPS, CLAUDE.md) can safely lend the backup job about 1 GB of memory without
+  starving Apache/MySQL running alongside it, PROVIDED the backup runs off-peak via the
+  scheduled/cron path (§7). 1024 MB ÷ 4x ≈ 250 MB compressed, which is the default. A bigger box can
+  raise `backup_max_encrypt_mb`; `AdminBackupService` derives the `memory_limit` it requests for the
+  encrypt/verify step from the configured cap (same 4x multiplier + headroom), so a raised cap doesn't
+  silently OOM.
+- **Cheap pre-check before the expensive dump (BACKUP-H1b).** `performBackup()` now checks the
+  database's raw table storage (`information_schema.tables`, a fast metadata query) against the cap
+  BEFORE running `mysqldump`/gzip — a persistently over-cap database used to re-run the full
+  dump-and-compress on every scheduled attempt (every 1-2 minutes via the job worker) just to fail the
+  size check at the very end. **Calibration note, found live during this fix:** raw table storage is a
+  much WORSE (larger) proxy for compressed size than it first looks — it includes secondary-index
+  bytes that never appear in the SQL dump text at all. Measured against this project's own dev
+  database: 1693.9 MB table storage → a 1184.0 MB `mysqldump` text → **140.5 MB** gzip (a 12.06x
+  storage-to-gz ratio). An early build of this pre-check used a 3x margin and **false-skipped that
+  exact, perfectly fittable backup** before ever attempting the real dump — fixed by raising the
+  margin to 8x (still real headroom below the measured 12x, for less-compressible data) and pinned
+  with a regression test. The pre-check is a heuristic early-out only; the authoritative check
+  (unchanged) is still the real compressed size, right before encryption.
+- **Actionable failure, not a bare throw.** An over-cap failure — from either the pre-check or the
+  real post-gzip check — writes a plain-English `message` onto the failed run row (surfaced verbatim
+  by the System-health "Backup" chip's detail text): current size, the configured limit, "raise
+  `backup_max_encrypt_mb` in Admin Hub → System → Backup if this server has enough RAM," and a pointer
+  to **BACKUP-STREAM** (below) for a database too large for any in-memory approach.
+- **BACKUP-STREAM (tracked, not built).** True streaming encryption — encrypt the dump in bounded
+  chunks as it's produced, no in-memory cap at all — is the real long-term fix for arbitrarily large
+  databases, and is the RECOMMENDED next step once a clinic's DB genuinely outgrows what a 2 GB-class
+  box can hold in memory even with the cap raised. It is deliberately **not** built here: it would
+  change the on-disk `.enc` format (today's format is "one CryptoGen-encrypted blob"; a streamed
+  format needs a chunked/self-describing envelope), which would break wave-1's proven
+  `backup-decrypt.php` tool and its documented restore drill. That format change is a dedicated,
+  separately-reviewed piece of work, not a fold-in.
+- **Proven on a real, large database (2026-07-18).** With the cap at its 250 MB default, a REAL backup
+  of this project's dev database (1.7 GB raw storage) was run through `AdminBackupService` end to end:
+  produced a 197 MB `.enc` archive (`admin_hub_backup_run` id **266**), `verifyBackup()` passed
+  (full-stream, §5b), and the archive was independently decrypted with wave-1's `backup-decrypt.php`
+  against a freshly-exported recovery-key bundle — no shortcuts, no shared state with the live
+  `CryptoGen` instance — recovering the exact 147,820,717-byte compressed dump, which gunzipped to a
+  valid ~1.19 GB SQL file (336 `CREATE TABLE`, 1343 `INSERT INTO` statements). Confirms the raised cap,
+  the pre-check calibration, the M1 full-stream verify, and the L5 dump flags all together on a
+  realistically-sized database, not just the small fixtures the unit tests use.
 
 ## 6. Restore (deliberately manual)
 
@@ -237,12 +338,43 @@ matching the stock stance and SEC6 key custody; Admin Hub's RB-19 runbook card p
 - **ACL split:** the UI `runBackup()` requires super-admin; the cron/worker `runScheduledBackup()`
   does not (its trust boundary is server-side execution) — both funnel into the same ACL-free
   `performBackup()`.
+- **Retry backoff on repeated failure (BACKUP-H1b, 2026-07-18).** `dueForBackup()` used to only look
+  at the last **successful** run's age — a persistently-failing schedule (an over-cap database on the
+  old fixed 100 MB cap, a full disk, a bad target directory) had NO successful run to compare against,
+  so it read as "due" on every single due-check. With the job worker polling every 1-2 minutes, that
+  meant a full `mysqldump`+gzip re-run, and a fresh `failed` row, roughly every minute forever — up to
+  ~1440 wasted failed rows a day on a box that could never succeed until an admin intervened.
+  `dueForBackup()` now also looks at the most recent attempt of EITHER status: if it failed and is
+  younger than a backoff window (`min(frequency_days × 24h, 4h)`, floored at 1h), the schedule reports
+  **not due** even though "due by age since last success" would otherwise say yes. A manual "Run now"
+  click is unaffected — backoff only governs the unattended scheduled path.
 
 ## 8. Retention
 
 On each successful **database** run, prune encrypted DB archives in the target dir older than
-`admin_hub_backup_retention_days` (existing config, default 30). Only files matching the
-`nc-backup-*.enc` naming are ever deleted — never arbitrary files in the target dir.
+`admin_hub_backup_retention_days`. Only files matching the `nc-backup-*.enc` naming are ever deleted —
+never arbitrary files in the target dir.
+
+**`admin_hub_backup_retention_days` = 0 means NEVER delete (BACKUP-M6, 2026-07-18).** The setting's
+admin-facing minimum used to be 1, which made "never prune" unreachable from the UI even though
+`pruneOldArchives()` already treated `<= 0` as "skip pruning entirely" — the backend honestly
+supported it, the UI just didn't let an admin choose it. The field's hint used to say "How long the
+System lens keeps backup run history," which was misleading in a more serious way: this setting
+**deletes real files from disk**, not just a history display — the hint now says exactly that
+("Delete backup files older than N days. 0 = never delete."). **Boundary rule, verified with a test:**
+"older than N days" means strictly older — a backup exactly N days old (to the second) survives; only
+one that has crossed the boundary is pruned. That boundary was already correct in the pruning code;
+this wave added the regression test.
+
+**Run-row pruning (BACKUP-M6b, 2026-07-18) — the retention setting now also bounds
+`admin_hub_backup_run` itself**, not just the archive files. Left alone, run rows accumulated forever
+(a persistently-failing schedule, even after the H1b backoff above slows its RATE, still adds rows
+indefinitely over months/years), and "retention" only ever describing the files was half the truth.
+Reuses the SAME `admin_hub_backup_retention_days` window. Two things are NEVER pruned regardless of
+age: any row with `verified_at` set — the permanent "this clinic has proven it can restore" milestone
+(§5, H3(i)) that the setup checklist depends on, which a blind age-based prune could otherwise
+silently erase — and the single most-recent row of each kind (`db`/`files`), so "last status" always
+has something current to show.
 
 **The site-files mirror is never auto-pruned.** Documents are permanent records, not rolling
 snapshots — deleting a scanned ID's backup because it is 30 days old would be data loss, not
@@ -265,15 +397,50 @@ system, not a leak: the mirror is as protected as any backup.)
 | `backup_target_dir` | `''` (→ `documents/nc_backups`) | Where encrypted archives are written. |
 | `backup_include_site_files` | `0` | Run the **separate** incremental site-files mirror backup (§3b) alongside the DB backup. |
 | `backup_frequency_days` | `0` | Automatic-backup cadence (0 = off); drives the due-check + cron script. |
-| `admin_hub_backup_retention_days` | `30` | Prune `.enc` archives older than this (existing). |
+| `admin_hub_backup_retention_days` | `30` | Delete `.enc` archives AND run-history rows older than this. **`0` = never delete** (§8). |
+| `backup_max_encrypt_mb` | `250` | In-memory encryption cap, MB, compressed (§5e). Min 50, max 2000. |
+
+All 6 of the keys above are **global-only** (`ClinicAdminService::GLOBAL_ONLY_SETTINGS`) — always read
+and written at the facility-0 sentinel regardless of which facility an Admin Hub settings save
+resolves to (§4, BACKUP-M4b).
 
 ## 10. Verification
 
-Unit-testable: the disabled/ACL/frequency guards, `dueForBackup` off-state. The `mysqldump` exec is
-covered by a desktop live smoke — **run and passed 2026-07-11** via `scripts/backup-scheduled.php`
-on the pilot box: 497 MB DB → 68 MB gz → **91.5 MB `.enc`** written to `documents/nc_backups/`, run
-row `ok` with real path + `size_bytes`, archive confirmed **encrypted** (CryptoGen `007…` header, not
-gzip/SQL), **plaintext temp wiped**, and an immediate re-run correctly **skipped (not due)**.
+Unit-testable: the disabled/ACL/frequency guards, `dueForBackup` off-state and retry-backoff state,
+the size pre-check's threshold decision (pinned against the real measured false-skip below), the
+retention 0=never and boundary behavior, the mirror last-known-good guarantee, and the full-stream
+verify's pass/fail on a good vs. a truncated fixture.
+
+The `mysqldump` exec is covered by desktop live smokes:
+
+- **2026-07-11** via `scripts/backup-scheduled.php`: 497 MB DB → 68 MB gz → **91.5 MB `.enc`** written
+  to `documents/nc_backups/`, run row `ok` with real path + `size_bytes`, archive confirmed
+  **encrypted** (CryptoGen `007…` header, not gzip/SQL), **plaintext temp wiped**, and an immediate
+  re-run correctly **skipped (not due)**.
+- **2026-07-18 (BACKUP-CAP, wave 3) — the capacity fix, proven end to end on this project's own dev
+  database (1.7 GB raw storage, well past the OLD 100 MB cap):**
+  1. Enabled `enable_native_backup` via `ClinicConfigService::set()` (never raw SQL, so the SCALE-3.3
+     config cache invalidates correctly).
+  2. Ran `AdminBackupService::runBackup(0, 1)` — the real "Run backup now" path. Result: run id **266**,
+     status `ok`, a **197,094,383-byte** `.enc` archive written to `documents/nc_backups/`, confirmed
+     present on disk at that exact size.
+  3. `verifyBackup(266)` — **passed** ("Decrypted and readable as a database dump"), exercising the new
+     full-stream check (§5b) against a real, non-trivial archive, not a small fixture.
+  4. `exportRecoveryKey()` — produced a fresh 2-file, 0-warning bundle.
+  5. **Independent round-trip**, mimicking a real disaster restore: unzipped the fresh bundle to a
+     scratch folder, then ran wave-1's `scripts/backup-decrypt.php --in <archive> --bundle <bundle>
+     --out <file>` from a cold process — no shared state with the live app. Recovered exactly
+     147,820,717 bytes; `gzip -t` confirmed integrity; gunzipped to a valid ~1.19 GB SQL file
+     containing 336 `CREATE TABLE` and 1343 `INSERT INTO` statements.
+  6. Flag turned back OFF (`enable_native_backup=0`, `backup_frequency_days=0`) afterward; run id 266
+     and its archive were left in place as the historical record of a real, successfully-verified
+     backup (this is also what permanently satisfies the setup checklist's "Backup tested" milestone,
+     §5, H3(i), on this install going forward).
+  - **A calibration bug was CAUGHT, not just avoided, by insisting on a real run**: the size
+    pre-check (BACKUP-H1b, §5e) originally used a 3x raw-storage-to-cap margin and **false-skipped**
+    this exact backup before the fix — it never even attempted the dump. The real measured ratio
+    (1693.9 MB storage → 140.5 MB gz, 12.06x) is what set the corrected 8x margin. This is exactly the
+    kind of bug a synthetic/small fixture would never surface.
 
 **Site-files mirror (§3b) — live-smoked 2026-07-12** against a synthetic documents tree on the pilot
 box (real `CryptoGen`): the two documents were mirrored as individually-encrypted `.enc` files (real
@@ -289,6 +456,7 @@ system `Temp` path — fixed).
 
 | Version | Date | Change |
 |---|---|---|
+| v0.8.0 | 2026-07-18 | **BACKUP-CAP/M1/M6/M6b/M7/L2/L3/L5 fixes + BACKUP-H1b/M4b (backup-system audit, wave 3).** CAP: the fixed 100 MB in-memory encryption cap is now a config-overridable `backup_max_encrypt_mb` (default 250 MB, derived from a stated 2 GB RAM / ~4x-peak-memory assumption — §5e), with an actionable over-cap error and a cheap raw-storage pre-check (BACKUP-H1b) before the expensive dump — proven end-to-end against this project's own 1.7 GB dev database (197 MB `.enc`, verified, independently round-tripped through wave-1's `backup-decrypt.php`; run id 266). A real run caught and fixed a genuine calibration bug in the pre-check itself (3x margin false-skipped a fittable backup; corrected to 8x off measured data). M1: disk-full/partial writes (short `gzwrite()`, short archive `file_put_contents()`) are now caught instead of silently recorded `ok`, and `verifyBackup()` streams the WHOLE archive against its own gzip trailer instead of only the first ~8 KB (§5b) — a truncated archive can no longer verify green. M6: `admin_hub_backup_retention_days` now honestly means "delete backup files (and history rows)," its UI minimum allows the already-supported `0` = never, and the boundary behavior is pinned by a test (§8). M6b: run-history rows are now pruned on the same window, protecting the permanent "verified" milestone and each kind's latest row (§8). M7: the site-files mirror never overwrites an existing `.enc` copy — a source file changed in place lands in a timestamped sibling file instead, guaranteeing the last-known-good backup survives a single bad run (§3b). L2: the "stale backup" chip threshold now derives from `backup_frequency_days` (+ a small grace) instead of a fixed 7 days, so a daily-backup clinic isn't shown a false-green chip on a 6-day-old backup; the chip also now confirms the artifact is still on disk before showing green. L3: the "Verify latest backup" button is gated on `can_run_backup`, matching the other super-only controls on this board. L5: `mysqldump` gained `--hex-blob`, `--events`, `--quote-names`, `--no-tablespaces`, and `--default-character-set=utf8mb4` for restore fidelity across blob-heavy tables and MariaDB↔MySQL moves. H1b: `dueForBackup()` now backs off from a recent failed attempt so a persistently-failing schedule retries on a sane cadence (hours) instead of every 1-2 minute worker poll (§7). M4b: the M4 facility-0 fix only covered reads — `ClinicAdminService::saveSettings()` still wrote (and could `clearGlobalOverrides()`-delete) backup config at whatever facility a save request resolved to; the 6 backup keys are now forced to facility 0 on both read and write, exempted from `clearGlobalOverrides()` (§4). BACKUP-STREAM (true streaming encryption, no size cap) is recorded as a tracked future fix, not built — it would change the `.enc` format (§5e). |
 | v0.7.0 | 2026-07-18 | **BACKUP-H1/H2/H3 + M2-M5 fixes (backup-system audit, wave 2).** H1: the v0.2.0 "no cron needed" claim was wrong for New Clinic's own desks (they escape the tab shell the heartbeat depends on) — `scripts/run-jobs.php` now ALSO runs the due-check (§7), and System health surfaces "Last scheduled attempt" (ok or failed, not just last success) so a silently-broken schedule is visible. H2: `verifyBackup()` now filters `kind = 'db'` in both lookup branches — a files run's directory could masquerade as a "missing" db archive (§5b). H3: the legacy "Mark backup complete" path is now labeled "Self-reported (no verified artifact)" everywhere, and the setup checklist's "Backup tested" item requires a real artifact AND a passed verify, not just any 'ok' chip (§5). M2: `set_time_limit(0)` inside the actual backup work (not just callers), `supersedeRunningBackups()` now covers both `db` and `files` kinds. M3: a `new_clinic_maintenance_lock`-based lock prevents two backup runs of the same kind overlapping (§7). M4: backup config and run rows moved off the per-request "resolved facility" onto a fixed facility-0 sentinel — a database backup was never meaningfully per-facility (§4). M5: the Admin Hub no longer force-navigates away from the page on a native backup that already finished synchronously. |
 | v0.6.0 | 2026-07-18 | **BACKUP-C1/C2 fixes (backup-system audit).** C1: the recovery-key bundle was missing the database key material the drive-key files depend on (versions 5+) — `exportRecoveryKey()` now bundles `db-keys.json` alongside `methods/`, and the README rewritten with a real numbered restore procedure (§5d). C2: shipped `scripts/backup-decrypt.php` (standalone, bundle-only, no live DB/methods dependency) and `Documentation/NewClinic/NEW_CLINIC_BACKUP_RESTORE_RUNBOOK.md` with a genuinely executed restore drill (§6) — replacing the previous 2-line restore placeholder and the stock-`backup.php` RB-19 pointer. |
 | v0.5.0 | 2026-07-12 | **Site files backed up as a SEPARATE entity (§3, §3b).** Rejected the original "combine DB + documents into one archive" plan: the two have different cadence, size, fault, and retention characteristics. The DB stays a full frequent encrypted archive; the documents tree becomes a **separate incremental per-file-encrypted mirror** (`nc-files-<site>/`), copying only new/changed files, encrypting each file individually (so the whole-tree size never has to fit the in-memory budget), excluding the module's own backups + `temp/` + the encryption **key** dir, and **never auto-pruned** (documents are permanent records). Own `kind='files'` run rows; own "Recent file backups" history. `backup_include_site_files` now switches this on (was declared but unbuilt). |
