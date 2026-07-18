@@ -1,7 +1,7 @@
 # New Clinic — Outage Runbook (per-deployment)
 
-**Version:** 1.0.0
-**Date:** 2026-07-13
+**Version:** 1.1.0
+**Date:** 2026-07-18
 **Audience:** the clinic manager / lead nurse on the floor, and our pilot lead who trains them.
 This is the "what do we do when something goes down" card. Print it and tape it near the front
 desk. Fill in the blanks marked `[…]` for this specific clinic during setup.
@@ -17,7 +17,7 @@ desk. Fill in the blanks marked `[…]` for this specific clinic during setup.
 |---|---|---|
 | Where the system runs | A small server (mini-PC) **inside the clinic**, on a UPS | A rented server **on the internet** |
 | Desks connect over | The clinic's **local network** (LAN/WiFi) | The **internet** |
-| Internet goes down → | **Clinic keeps working.** Only SMS, off-site backup, and the owner's remote reports pause. | **System is down.** Go straight to the paper fallback (§4). |
+| Internet goes down → | **Clinic keeps working.** Only SMS, any cloud-synced off-site backup copy, and the owner's remote reports pause. | **System is down.** Go straight to the paper fallback (§4). |
 | The real enemy is | **Power** (§2) and **server hardware** (§4) | **Internet** (§5) and power |
 
 **This clinic is:** `[ on-premise / VPS-primary ]` ← circle one at setup.
@@ -66,7 +66,15 @@ Nothing on the clinic floor changes. Say to staff: *"Internet's down, keep worki
   on the local network, not the internet).
 - What quietly pauses and **fixes itself when the internet returns**:
   - **SMS reminders/receipts** — queued, sent on reconnect.
-  - **Off-site backup** — the nightly encrypted copy to our server catches up automatically.
+  - **Off-site backup copy, if this clinic has one set up** — backups are always encrypted and
+    written to disk **locally** first, whether the internet is up or not. Getting a copy **off the
+    building** (the part that actually protects you if the server itself is lost — fire, theft,
+    hardware death) depends on what your IT partner configured at setup: usually a cloud-sync
+    folder (Google Drive/OneDrive/Dropbox desktop app) or a USB drive someone rotates off-site by
+    hand. **There is no automatic copy to a vendor server that "catches up" for you** — a
+    cloud-sync folder resumes uploading on its own once the internet is back (like any file in
+    that folder would); a USB drive needs a person to actually take it off-site. Ask your pilot
+    lead which one this clinic uses. `[ off-site method for this clinic: __ ]`.
   - **Owner's remote reports** — the read-only copy the owner sees from home is frozen until the
     link is back; the clinic's own numbers are live and correct the whole time.
 - **Do NOT** restart the server or "try to fix the internet" from the server — you'll only risk
@@ -110,9 +118,12 @@ Whoever brings the server back (after power/hardware/internet is restored) confi
    it should say `"ok": true`. (Technical helpers: `worker_last_seen` should update within ~10
    minutes — if it stays `null`, the background job worker didn't restart; see the scale-out
    runbook §1.3.)
-3. **The backup caught up** (after an internet outage): confirm the off-site copy resumed — the
-   Admin Hub → System → Performance/Backups area shows a recent successful run. A backup that
-   silently stopped is the dangerous kind.
+3. **The backup is current:** Admin Hub → System → Performance/Backups shows a recent successful
+   run. If this clinic uses a cloud-sync folder for off-site copies, also glance at that folder's
+   own sync status (its icon/tray app) to confirm it resumed uploading after the outage — the
+   New Clinic system itself only knows the local encrypted file was written; it does not track
+   whether your cloud-sync app finished uploading it. A backup that silently stopped is the
+   dangerous kind.
 4. **Back-enter the paper records** (§4) the same day, reconcile the cash log.
 
 ## 7. Who does what (fill in at setup)
@@ -141,4 +152,5 @@ and it's a good one.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.1.0 | 2026-07-18 | **BACKUP-DOCS truth pass (wave 4).** §1/§3/§6 no longer claim "a nightly encrypted copy to our server catches up automatically" — no such automatic off-site vendor-server pipeline exists in code. Corrected to the real mechanism: backups are always encrypted locally first; getting a copy off the building depends on what was configured at setup — a cloud-sync folder (resumes on its own once the internet is back) or a USB drive (needs a person to rotate it off-site by hand). Automatic off-site replication to a vendor server is now tracked as a named future task, **BACKUP-OFFSITE**, not claimed as built (see `NEW_CLINIC_BACKUP_SYSTEM_DESIGN.md` §5f). |
 | 1.0.0 | 2026-07-13 | Initial per-deployment Outage Runbook (market plan §3.0 W1 pilot-pack deliverable). Written after the scaling review's "offline" finding was re-grounded in the decided on-prem hosting posture — the real gap was this written drill, not an offline app. |

@@ -1,6 +1,6 @@
 # New Clinic — Scale-Out Runbook (1 → N servers)
 
-**Version:** 1.4.0 (SCALE-5.2 consolidated + SCALE-6.2 connection ceiling + 6.3 retention + 6.4 alerting + BACKUP-C2 restore-drill fix)
+**Version:** 1.5.0 (SCALE-5.2 consolidated + SCALE-6.2 connection ceiling + 6.3 retention + 6.4 alerting + BACKUP-C2 restore-drill fix + BACKUP-DOCS verify-depth correction)
 **Date:** 2026-07-18
 **Audience:** the ops person taking a single-box New Clinic install to multiple web servers,
 or an operator responding to a live incident on any box. Each stage below says what breaks at
@@ -336,10 +336,14 @@ this table undercounted at "33" and was missing 4 real tables — fixed here):
 | **Moderate** (history/derived, annoying to lose) | `new_patient_completion`, `new_visit_queue_counter`, `new_visit_notify_log`, `new_reconciliation_run`, `queue_bridge_exception_snapshot`, `report_hub_export_run`, `new_clinic_export_job`, `clinical_doc_form_open`, `admin_hub_backup_run`, `admin_hub_setup_progress`, `new_cohort_saved_filter`, `new_clinic_flowboard_lane_prefs`, `new_clinic_flowboard_lane_map`, `new_office_note_meta`, `new_referral_meta`, `new_outreach_campaign` | audit/history/prefs; system keeps working without them. `new_referral_meta` tracks a referral's status/destination on top of the underlying core `transactions` record, which is untouched by this table's loss; `new_office_note_meta` is pin-state only (the notes themselves are core `pnotes`); `new_outreach_campaign` is SMS/comms campaign history |
 | **Disposable** (infrastructure, self-rebuilding) | `new_clinic_maintenance_lock`, `new_clinic_rate_limit`, `new_clinic_cache`, `new_clinic_perf_daily` | locks/counters/cache/perf stats — exclude from restores freely |
 
-**Restore drill** (do this quarterly, and before any risky migration). **Note (BACKUP-C2, 2026-07-18):**
-Admin Hub's "Verify latest backup" button only head-verifies (decrypts and checks the first bytes look
-like a SQL dump, on the SAME box, with live keys) — that is a fast sanity check, **not** a restore
-drill. A real drill actually decrypts with the off-box recovery-key bundle and loads the result into a
+**Restore drill** (do this quarterly, and before any risky migration). **Note (BACKUP-C2, 2026-07-18;
+verify depth corrected BACKUP-M1, same date):** Admin Hub's "Verify latest backup" button decrypts and
+streams the WHOLE archive to confirm it is a complete, uncorrupted SQL dump (not just the first few
+KB — see `AdminBackupService::streamGzipToEof()`), but it still runs **on the SAME box, with the
+LIVE keys already on disk** — it is a fast, real integrity check, **not** a restore drill: it proves
+the archive itself is intact, not that you could recover on a DIFFERENT machine after losing this
+one, which is what the recovery-key bundle (§5d of the design doc) and a scratch-DB load actually
+prove. A real drill actually decrypts with the off-box recovery-key bundle and loads the result into a
 database:
 
 1. Decrypt the encrypted dump using the recovery-key bundle (never the live DB/methods dir) with
@@ -391,6 +395,7 @@ re-architecture, and is explicitly not V1.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.5.0 | 2026-07-18 | BACKUP-DOCS (backup-system audit, wave 4): §6's restore-drill note still described "Verify latest backup" as only checking the first few KB — stale since the BACKUP-M1 fix (wave 3) made it stream the whole archive against the gzip trailer. Corrected the description while keeping the core point intact: it is a real integrity check, but still same-box/live-keys, not proof you could recover on a different machine. |
 | 1.4.0 | 2026-07-18 | BACKUP-C2 fix (backup-system audit): §6's restore drill step 1 previously pointed at Admin Hub's "Verify latest backup" as if it were a restore drill — it only head-verifies (decrypts + checks first bytes, same box, live keys). Rewrote the step to actually decrypt with the off-box recovery-key bundle (`scripts/backup-decrypt.php`) and load into a scratch DB, and pointed at the new `NEW_CLINIC_BACKUP_RESTORE_RUNBOOK.md` for the exact procedure + a real proven drill. |
 | 0.1.0 | 2026-07-13 | Initial runbook: sessions, local-state audit, cache, worker, replica-readiness (SCALE-3.4 + SCALE-3.5) |
 | 0.1.1 | 2026-07-13 | §7 (old numbering): request budgets (SCALE-4.2) + perf visibility panel (SCALE-4.5) |
