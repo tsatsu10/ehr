@@ -10,6 +10,7 @@ import { parseCsv } from './parseCsv';
 import { autoMatch } from './columnMatch';
 import { findInFileDuplicates } from './fileDuplicates';
 import { buildReportCsv, buildTemplateCsv, downloadCsv } from './csvBuilders';
+import { emptyAcceptedKeys, hasAcceptedKeys, mergeAcceptedKeys } from './priorKeys';
 import {
   IMPORT_FIELD_LABELS, type ChunkResponse, type ColumnMapping, type ImportField, type RowResult,
 } from './types';
@@ -146,7 +147,18 @@ export function PatientImportPanel({ ajaxUrl, csrfToken, initialCsvText }: Props
 
   const inFileDups = useMemo(() => findInFileDuplicates(mappedRows), [mappedRows]);
   const sendableRows = useMemo(() => mappedRows.filter((_, i) => !inFileDups.has(i)), [mappedRows, inFileDups]);
-  const requiredMapped = mapping.includes('fname') && mapping.includes('lname');
+  const duplicateMappedFields = useMemo(() => {
+    const seen = new Set<ImportField>();
+    const dupes = new Set<ImportField>();
+    mapping.forEach((field) => {
+      if (!field) return;
+      if (seen.has(field)) dupes.add(field);
+      seen.add(field);
+    });
+    return dupes;
+  }, [mapping]);
+  const hasDuplicateMapping = duplicateMappedFields.size > 0;
+  const requiredMapped = mapping.includes('fname') && mapping.includes('lname') && !hasDuplicateMapping;
 
   const runChunks = useCallback(async (dryRun: boolean) => {
     setStep(dryRun ? 'checking' : 'importing');
@@ -154,16 +166,38 @@ export function PatientImportPanel({ ajaxUrl, csrfToken, initialCsvText }: Props
     const collected: RowResult[] = [...inFileDups.entries()].map(([i, reason]) => ({
       row_number: i + 2, status: 'duplicate', reason, name: `${mappedRows[i]?.fname ?? ''} ${mappedRows[i]?.lname ?? ''}`.trim(), pid: null,
     }));
+    // M2: accumulate each chunk's accepted identity keys across THIS run
+    // (reset every call) and echo the running total back on later chunk
+    // requests, so a repeat that lands in chunk 2 is predicted as a
+    // duplicate even though the server never saw it during chunk 1.
+    let priorKeys = emptyAcceptedKeys();
     try {
       for (let start = 0; start < sendableRows.length; start += CHUNK_SIZE) {
         const chunk = sendableRows.slice(start, start + CHUNK_SIZE)
           .map((r) => ({ ...r, row_number: Number(r.row_number) }));
         const data = await oeFetch<ChunkResponse>('admin.patient_import.chunk', {
           ajaxUrl, csrfToken,
-          json: { dry_run: dryRun ? 1 : 0, rows: chunk },
+          json: {
+            dry_run: dryRun ? 1 : 0,
+            rows: chunk,
+            ...(hasAcceptedKeys(priorKeys) ? { prior_keys: priorKeys } : {}),
+          },
         });
         collected.push(...data.results);
+        priorKeys = mergeAcceptedKeys(priorKeys, data.accepted_keys);
         setProgress(Math.min(1, (start + chunk.length) / Math.max(1, sendableRows.length)));
+
+        // M1: the breaker tripped server-side. Stop sending further chunks,
+        // keep the real (partial) results we already collected, and surface
+        // the server's explanation — same step transitions as the catch path
+        // below, but with truthful results instead of a thrown error.
+        if (data.stopped) {
+          collected.sort((a, b) => a.row_number - b.row_number);
+          setResults(collected);
+          setFileError(data.stopped_reason ?? 'Import stopped — nothing else was imported.');
+          setStep(dryRun ? 'match' : 'done');
+          return;
+        }
       }
       collected.sort((a, b) => a.row_number - b.row_number);
       setResults(collected);
@@ -285,7 +319,7 @@ export function PatientImportPanel({ ajaxUrl, csrfToken, initialCsvText }: Props
                           value={selectValue}
                           onValueChange={(value) => handleMappingChange(col, value)}
                         >
-                          <SelectTrigger aria-label={`Import ${header} as`} className="h-10 w-56">
+                          <SelectTrigger aria-label={`Import ${header} as`} className="h-11 w-56">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -305,7 +339,14 @@ export function PatientImportPanel({ ajaxUrl, csrfToken, initialCsvText }: Props
             </table>
           </div>
 
-          {!requiredMapped && (
+          {hasDuplicateMapping && (
+            <div className={deskCalloutClass('warn', 'mt-3')}>
+              Two columns are set to the same field — only the last one is used. Change one of
+              them before continuing.
+            </div>
+          )}
+
+          {!hasDuplicateMapping && !requiredMapped && (
             <div className={deskCalloutClass('warn', 'mt-3')}>
               Match a column to First name and Last name to continue.
             </div>
@@ -436,7 +477,7 @@ export function PatientImportPanel({ ajaxUrl, csrfToken, initialCsvText }: Props
           <ConfirmModal
             open={confirmOpen}
             onClose={() => setConfirmOpen(false)}
-            title={`Import ${willImportCount} patients now?`}
+            title={`Import ${pluralize(willImportCount, 'patient')} now?`}
             confirmLabel="Import"
             confirmVariant="primary"
             onConfirm={() => {

@@ -929,11 +929,37 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                     if (!$this->host->svc(ClinicConfigService::class)->isEnabled('enable_patient_import', 0, $importFacilityId)) {
                         $this->host->respond(false, 'Patient import is not enabled', [], 403);
                     }
+                    // prior_keys carries identity keys accepted by earlier chunks of the
+                    // same run (M2) so cross-chunk repeats are predicted as duplicates
+                    // too — validated defensively since it comes straight from the
+                    // client body: only known buckets, only string members, capped at
+                    // 5000 keys total so a hostile/oversized body can't blow up memory.
+                    $priorKeys = ['name_dob' => [], 'name_phone' => [], 'national_id' => []];
+                    $rawPriorKeys = $body['prior_keys'] ?? null;
+                    if (is_array($rawPriorKeys)) {
+                        $totalPriorKeys = 0;
+                        foreach (array_keys($priorKeys) as $bucket) {
+                            $rawBucket = $rawPriorKeys[$bucket] ?? null;
+                            if (!is_array($rawBucket)) {
+                                continue;
+                            }
+                            foreach ($rawBucket as $key) {
+                                if ($totalPriorKeys >= 5000) {
+                                    break 2;
+                                }
+                                if (is_string($key) && $key !== '') {
+                                    $priorKeys[$bucket][] = $key;
+                                    $totalPriorKeys++;
+                                }
+                            }
+                        }
+                    }
                     $importPayload = $this->host->svc(PatientImportService::class)->processChunk(
                         is_array($body['rows'] ?? null) ? $body['rows'] : [],
                         !empty($body['dry_run']),
                         $userId,
-                        $importFacilityId
+                        $importFacilityId,
+                        $priorKeys
                     );
                     $this->host->respond(true, 'ok', $importPayload);
                     break;

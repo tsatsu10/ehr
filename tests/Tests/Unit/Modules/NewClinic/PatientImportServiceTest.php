@@ -372,8 +372,13 @@ class PatientImportServiceTest extends TestCase
      * Circuit breaker (Task C): 10 consecutive insert failures stop the whole
      * chunk rather than silently grinding through hundreds of doomed rows (e.g. a
      * full DB outage mid-import). The counter must reset on any success.
+     *
+     * M1 audit amendment: a breaker trip no longer throws — it returns the
+     * normal payload (partial results included) with stopped=true, so the
+     * caller can show the user exactly what happened instead of losing the
+     * chunk's real results to an exception.
      */
-    public function testCircuitBreakerStopsAfterTenConsecutiveFailures(): void
+    public function testCircuitBreakerStopsAfterTenConsecutiveFailuresAndReturnsPartialResults(): void
     {
         $config = new class extends ClinicConfigService {
             public function get(string $key, ?string $default = null, int $facilityId = 0): ?string
@@ -403,17 +408,29 @@ class PatientImportServiceTest extends TestCase
             $rows[] = ['row_number' => $i + 2, 'fname' => 'Patient', 'lname' => 'Number' . $i, 'sex' => 'F', 'dob' => '01/01/2000'];
         }
 
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Import stopped after repeated save failures — fix the reported rows and re-run');
-        $svc->processChunk($rows, false, 1, 0);
+        $out = $svc->processChunk($rows, false, 1, 0);
+
+        $this->assertTrue($out['stopped']);
+        $this->assertSame(
+            'Import stopped after repeated save failures — fix the reported rows and re-run',
+            $out['stopped_reason']
+        );
+        // Exactly 10 rows were attempted (and turned into 'error' results)
+        // before the breaker tripped — rows 11-15 never ran.
+        $this->assertCount(10, $out['results']);
+        foreach ($out['results'] as $result) {
+            $this->assertSame('error', $result['status']);
+        }
+        $this->assertSame(['processed' => 10, 'ok' => 0, 'duplicates' => 0, 'errors' => 10], $out['summary']);
     }
 
     /**
      * A breaker trip must still emit exactly one audit event for the counts
      * accumulated so far — otherwise a chunk that trips after a partial run of
      * real successes leaves no audit trail for what was actually committed.
+     * The prior successes must also still be present in the returned results.
      */
-    public function testCircuitBreakerTripStillLogsAuditWithAccumulatedCounts(): void
+    public function testCircuitBreakerTripStillLogsAuditWithAccumulatedCountsAndKeepsPriorSuccesses(): void
     {
         $config = new class extends ClinicConfigService {
             public function get(string $key, ?string $default = null, int $facilityId = 0): ?string
@@ -454,23 +471,33 @@ class PatientImportServiceTest extends TestCase
             $rows[] = ['row_number' => $i + 4, 'fname' => 'Patient', 'lname' => 'Fail' . $i, 'sex' => 'F', 'dob' => '01/01/2000'];
         }
 
-        try {
-            $svc->processChunk($rows, false, 1, 0);
-            $this->fail('Expected a RuntimeException after 10 consecutive failures');
-        } catch (\RuntimeException $e) {
-            $this->assertSame('Import stopped after repeated save failures — fix the reported rows and re-run', $e->getMessage());
-        }
+        $out = $svc->processChunk($rows, false, 1, 0);
 
-        // Exactly one audit call — the breaker throw must not also hit the
-        // normal post-loop audit call (the exception exits processChunk first).
+        $this->assertTrue($out['stopped']);
+
+        // Exactly one audit call — the breaker trip must not also hit the
+        // normal post-loop audit call.
         $this->assertCount(1, $svc->auditCalls);
         $this->assertSame(
             ['processed' => 12, 'ok' => 2, 'duplicates' => 0, 'errors' => 10],
             $svc->auditCalls[0]
         );
+
+        // The two prior successes are still present in the returned results,
+        // not discarded by the trip.
+        $this->assertCount(12, $out['results']);
+        $this->assertSame('imported', $out['results'][0]['status']);
+        $this->assertSame('imported', $out['results'][1]['status']);
+        $this->assertSame('error', $out['results'][11]['status']);
     }
 
-    public function testCircuitBreakerProcessesExactlyTenErrorRowsBeforeStopping(): void
+    /**
+     * M2: dry-run duplicate prediction across chunks. A row whose identity key
+     * was accepted by an EARLIER chunk of the same run (passed back in as
+     * prior_keys) must be predicted as a duplicate in THIS chunk too, even
+     * though it never touched the DB (dry run) and isn't in the in-chunk index.
+     */
+    public function testDryRunPriorKeysPredictCrossChunkDuplicate(): void
     {
         $config = new class extends ClinicConfigService {
             public function get(string $key, ?string $default = null, int $facilityId = 0): ?string
@@ -480,7 +507,81 @@ class PatientImportServiceTest extends TestCase
         };
 
         $svc = new class (config: $config) extends PatientImportService {
-            public int $insertAttempts = 0;
+            protected function buildDuplicateIndex(): array
+            {
+                // Keep this test DB-free: no real patient_data query.
+                return ['name_dob' => [], 'name_phone' => [], 'national_id' => []];
+            }
+        };
+
+        $priorKeys = ['name_dob' => ['ama|mensah|1988-03-12'], 'name_phone' => [], 'national_id' => []];
+        $rows = [
+            ['row_number' => 2, 'fname' => 'Ama', 'lname' => 'Mensah', 'sex' => 'F', 'dob' => '12/03/1988'],
+        ];
+
+        $out = $svc->processChunk($rows, true, 1, 0, $priorKeys);
+
+        $this->assertSame('duplicate', $out['results'][0]['status']);
+    }
+
+    /**
+     * L9(a): two normalized-identical rows arriving in the SAME chunk — the
+     * second must be caught as a duplicate of the first (the in-chunk index
+     * update after each accepted row), not silently double-imported.
+     */
+    public function testSecondIdenticalRowInSameChunkIsDuplicate(): void
+    {
+        $config = new class extends ClinicConfigService {
+            public function get(string $key, ?string $default = null, int $facilityId = 0): ?string
+            {
+                return $default;
+            }
+        };
+
+        $svc = new class (config: $config) extends PatientImportService {
+            protected function buildDuplicateIndex(): array
+            {
+                return ['name_dob' => [], 'name_phone' => [], 'national_id' => []];
+            }
+
+            protected function insertPatient(array $d, int $facilityId): int
+            {
+                return 999;
+            }
+
+            protected function logChunkAudit(int $actorUserId, array $summary): void
+            {
+            }
+        };
+
+        $rows = [
+            ['row_number' => 2, 'fname' => 'Ama', 'lname' => 'Mensah', 'sex' => 'F', 'dob' => '01/01/2000'],
+            ['row_number' => 3, 'fname' => 'ama', 'lname' => 'MENSAH', 'sex' => 'F', 'dob' => '01/01/2000'],
+        ];
+
+        $out = $svc->processChunk($rows, false, 1, 0);
+
+        $this->assertSame('imported', $out['results'][0]['status']);
+        $this->assertSame('duplicate', $out['results'][1]['status']);
+        $this->assertSame(['processed' => 2, 'ok' => 1, 'duplicates' => 1, 'errors' => 0], $out['summary']);
+    }
+
+    /**
+     * L9(b): a dry-run chunk must never write anything — no insert, no audit —
+     * while still reporting 'ok' for rows that would import.
+     */
+    public function testDryRunChunkNeverInsertsOrAudits(): void
+    {
+        $config = new class extends ClinicConfigService {
+            public function get(string $key, ?string $default = null, int $facilityId = 0): ?string
+            {
+                return $default;
+            }
+        };
+
+        $svc = new class (config: $config) extends PatientImportService {
+            public int $insertCalls = 0;
+            public int $auditCalls = 0;
 
             protected function buildDuplicateIndex(): array
             {
@@ -489,29 +590,29 @@ class PatientImportServiceTest extends TestCase
 
             protected function insertPatient(array $d, int $facilityId): int
             {
-                $this->insertAttempts++;
-                throw new \RuntimeException('simulated outage');
+                $this->insertCalls++;
+
+                return 999;
             }
 
             protected function logChunkAudit(int $actorUserId, array $summary): void
             {
+                $this->auditCalls++;
             }
         };
 
-        $rows = [];
-        for ($i = 0; $i < 15; $i++) {
-            $rows[] = ['row_number' => $i + 2, 'fname' => 'Patient', 'lname' => 'Number' . $i, 'sex' => 'F', 'dob' => '01/01/2000'];
-        }
+        $rows = [
+            ['row_number' => 2, 'fname' => 'Ama', 'lname' => 'Mensah', 'sex' => 'F', 'dob' => '01/01/2000'],
+            ['row_number' => 3, 'fname' => 'Kojo', 'lname' => 'Boateng', 'sex' => 'M', 'dob' => '02/02/2001'],
+        ];
 
-        try {
-            $svc->processChunk($rows, false, 1, 0);
-            $this->fail('Expected a RuntimeException after 10 consecutive failures');
-        } catch (\RuntimeException $e) {
-            $this->assertSame('Import stopped after repeated save failures — fix the reported rows and re-run', $e->getMessage());
-        }
+        $out = $svc->processChunk($rows, true, 1, 0);
 
-        // Exactly 10 rows were attempted (and thus turned into 'error' results
-        // inside the loop) before the breaker tripped — rows 11-15 never ran.
-        $this->assertSame(10, $svc->insertAttempts);
+        $this->assertSame(0, $svc->insertCalls);
+        $this->assertSame(0, $svc->auditCalls);
+        $this->assertFalse($out['stopped']);
+        $this->assertSame('ok', $out['results'][0]['status']);
+        $this->assertSame('ok', $out['results'][1]['status']);
+        $this->assertSame(['processed' => 2, 'ok' => 2, 'duplicates' => 0, 'errors' => 0], $out['summary']);
     }
 }

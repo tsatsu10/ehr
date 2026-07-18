@@ -35,7 +35,6 @@ class PatientImportService
     public function __construct(
         private readonly PhoneNormalizer $phoneNormalizer = new PhoneNormalizer(),
         private readonly ClinicConfigService $config = new ClinicConfigService(),
-        private readonly VisitScopeService $visitScope = new VisitScopeService(),
     ) {
     }
 
@@ -233,20 +232,43 @@ class PatientImportService
      * Process one chunk of mapped rows. Dry run and commit share this path;
      * $dryRun disables the writes only. The duplicate index is rebuilt from the
      * DB per request (stateless), so rows committed by earlier chunks are seen.
+     * $priorKeys seeds that index with identity keys accepted by earlier chunks
+     * of the SAME run (dry run or commit) — the caller collects them from each
+     * chunk's 'accepted_keys' response and echoes them back — so a repeat that
+     * lands in a later chunk is predicted as a duplicate too, not just repeats
+     * within one 200-row chunk.
      *
      * @param array<int, array<string, mixed>> $rows each with 'row_number' plus IMPORT_FIELDS
-     * @return array{results: array<int, array<string, mixed>>, summary: array<string, int>}
+     * @param array{name_dob?: list<string>, name_phone?: list<string>, national_id?: list<string>} $priorKeys
+     * @return array{
+     *     results: array<int, array<string, mixed>>,
+     *     summary: array<string, int>,
+     *     stopped: bool,
+     *     stopped_reason?: string,
+     *     accepted_keys: array{name_dob: list<string>, name_phone: list<string>, national_id: list<string>}
+     * }
      */
-    public function processChunk(array $rows, bool $dryRun, int $actorUserId, int $facilityId): array
+    public function processChunk(array $rows, bool $dryRun, int $actorUserId, int $facilityId, array $priorKeys = []): array
     {
         if (count($rows) > self::MAX_CHUNK_ROWS) {
             throw new \InvalidArgumentException('Too many rows in one request (max ' . self::MAX_CHUNK_ROWS . ')');
         }
 
         $index = $this->buildDuplicateIndex();
+        foreach (['name_dob', 'name_phone', 'national_id'] as $bucket) {
+            foreach ($priorKeys[$bucket] ?? [] as $key) {
+                if (is_string($key) && $key !== '') {
+                    $index[$bucket][$key] = true;
+                }
+            }
+        }
+
         $results = [];
         $summary = ['processed' => 0, 'ok' => 0, 'duplicates' => 0, 'errors' => 0];
+        $acceptedKeys = ['name_dob' => [], 'name_phone' => [], 'national_id' => []];
         $consecutiveFailures = 0;
+        $stopped = false;
+        $stoppedReason = '';
 
         foreach ($rows as $row) {
             $rowNumber = (int) ($row['row_number'] ?? 0);
@@ -286,10 +308,13 @@ class PatientImportService
                         // Rows already committed earlier in this chunk must still get an
                         // audit event — without this, a breaker trip silently drops the
                         // audit trail for whatever succeeded before the outage started.
+                        // The chunk stops here but still returns its real, partial results
+                        // to the caller — it no longer throws, so whatever succeeded (or
+                        // failed) up to this point is never lost from the UI.
+                        $stopped = true;
+                        $stoppedReason = 'Import stopped after repeated save failures — fix the reported rows and re-run';
                         $this->logChunkAudit($actorUserId, $summary);
-                        throw new \RuntimeException(
-                            'Import stopped after repeated save failures — fix the reported rows and re-run'
-                        );
+                        break;
                     }
                     continue;
                 }
@@ -300,6 +325,7 @@ class PatientImportService
             foreach ($this->indexKeysFor($data) as $bucket => $key) {
                 if ($key !== '') {
                     $index[$bucket][$key] = true;
+                    $acceptedKeys[$bucket][] = $key;
                 }
             }
 
@@ -313,11 +339,16 @@ class PatientImportService
             ];
         }
 
-        if (!$dryRun) {
+        if (!$dryRun && !$stopped) {
             $this->logChunkAudit($actorUserId, $summary);
         }
 
-        return ['results' => $results, 'summary' => $summary];
+        $payload = ['results' => $results, 'summary' => $summary, 'stopped' => $stopped, 'accepted_keys' => $acceptedKeys];
+        if ($stopped) {
+            $payload['stopped_reason'] = $stoppedReason;
+        }
+
+        return $payload;
     }
 
     /**
@@ -339,8 +370,9 @@ class PatientImportService
     }
 
     /**
-     * One bounded query over patient_data → in-memory match keys. Admin-only,
-     * user-triggered, never on a poll timer (SCALE R-rules).
+     * One full-table scan (deliberate, documented exception: admin-only,
+     * user-triggered, never on a poll timer) over patient_data → in-memory
+     * match keys.
      *
      * @return array{name_dob: array<string, true>, name_phone: array<string, true>, national_id: array<string, true>}
      */

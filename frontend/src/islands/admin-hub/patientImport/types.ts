@@ -36,7 +36,18 @@ export interface RowResult {
   pid: number | null;
 }
 
+/** Identity keys of rows accepted (ok/imported) in one chunk, bucketed like the server's duplicate index. */
+export interface AcceptedKeyBuckets {
+  name_dob: string[];
+  name_phone: string[];
+  national_id: string[];
+}
+
 export interface ChunkResponse {
   results: RowResult[];
   summary: { processed: number; ok: number; duplicates: number; errors: number };
+  stopped: boolean;
+  /** Present only when stopped is true (the breaker tripped). */
+  stopped_reason?: string;
+  accepted_keys: AcceptedKeyBuckets;
 }
