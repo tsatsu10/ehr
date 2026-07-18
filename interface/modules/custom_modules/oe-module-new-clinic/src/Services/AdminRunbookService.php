@@ -173,8 +173,12 @@ class AdminRunbookService
                 'Any',
                 'Restore from backup',
                 'System',
-                'Disaster recovery — restore DB + sites folder on staging first.',
-                $webroot . '/interface/main/backup.php'
+                'Disaster recovery — do NOT use the stock backup screen (it does not know about '
+                . 'this module\'s encrypted archives). Follow '
+                . 'Documentation/NewClinic/NEW_CLINIC_BACKUP_RESTORE_RUNBOOK.md: decrypt with '
+                . 'scripts/backup-decrypt.php + your recovery-key bundle, restore into a SCRATCH '
+                . 'database first, verify, then cut over.',
+                $adminHub . '?tab=system'
             ),
             $this->card(
                 'RB-20',

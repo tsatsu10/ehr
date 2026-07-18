@@ -128,7 +128,7 @@ describe('SystemHealthBoard', () => {
       />
     );
 
-    expect(screen.getByText(/Recovery key last saved 2026-07-11 09:00:00/i)).toBeInTheDocument();
+    expect(screen.getByText(/Recovery key last exported 2026-07-11 09:00:00/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Save recovery key again/i })).toBeInTheDocument();
   });
 });

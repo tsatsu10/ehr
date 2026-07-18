@@ -348,8 +348,9 @@ export function SystemHealthBoard({
           ) : (
             <div className={deskCalloutClass('success', 'mt-2 text-sm')} role="status">
               <p className="mb-1">
-                ✓ Recovery key last saved {recoveryKey.exported_at}. Keep that copy safe and separate
-                from your backups — you need it to restore.
+                ✓ Recovery key last exported {recoveryKey.exported_at}. This confirms the download was
+                generated — please make sure it actually reached a safe, separate place (not just the
+                browser&apos;s Downloads folder). You need that copy to restore.
               </p>
               <Button
                 type="button"

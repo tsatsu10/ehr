@@ -1,7 +1,7 @@
 # New Clinic — Scale-Out Runbook (1 → N servers)
 
-**Version:** 1.3.0 (SCALE-5.2 consolidated + SCALE-6.2 connection ceiling + 6.3 retention + 6.4 alerting)
-**Date:** 2026-07-13
+**Version:** 1.4.0 (SCALE-5.2 consolidated + SCALE-6.2 connection ceiling + 6.3 retention + 6.4 alerting + BACKUP-C2 restore-drill fix)
+**Date:** 2026-07-18
 **Audience:** the ops person taking a single-box New Clinic install to multiple web servers,
 or an operator responding to a live incident on any box. Each stage below says what breaks at
 that stage, what the module already handles for you, and what YOU must flip — in order.
@@ -336,17 +336,25 @@ this table undercounted at "33" and was missing 4 real tables — fixed here):
 | **Moderate** (history/derived, annoying to lose) | `new_patient_completion`, `new_visit_queue_counter`, `new_visit_notify_log`, `new_reconciliation_run`, `queue_bridge_exception_snapshot`, `report_hub_export_run`, `new_clinic_export_job`, `clinical_doc_form_open`, `admin_hub_backup_run`, `admin_hub_setup_progress`, `new_cohort_saved_filter`, `new_clinic_flowboard_lane_prefs`, `new_clinic_flowboard_lane_map`, `new_office_note_meta`, `new_referral_meta`, `new_outreach_campaign` | audit/history/prefs; system keeps working without them. `new_referral_meta` tracks a referral's status/destination on top of the underlying core `transactions` record, which is untouched by this table's loss; `new_office_note_meta` is pin-state only (the notes themselves are core `pnotes`); `new_outreach_campaign` is SMS/comms campaign history |
 | **Disposable** (infrastructure, self-rebuilding) | `new_clinic_maintenance_lock`, `new_clinic_rate_limit`, `new_clinic_cache`, `new_clinic_perf_daily` | locks/counters/cache/perf stats — exclude from restores freely |
 
-**Restore drill** (do this quarterly, and before any risky migration):
+**Restore drill** (do this quarterly, and before any risky migration). **Note (BACKUP-C2, 2026-07-18):**
+Admin Hub's "Verify latest backup" button only head-verifies (decrypts and checks the first bytes look
+like a SQL dump, on the SAME box, with live keys) — that is a fast sanity check, **not** a restore
+drill. A real drill actually decrypts with the off-box recovery-key bundle and loads the result into a
+database:
 
-1. Restore the encrypted dump to a **scratch** DB (never over prod): Admin Hub → Backups →
-   verify decrypts; or decrypt + `mysql scratch < dump.sql`.
+1. Decrypt the encrypted dump using the recovery-key bundle (never the live DB/methods dir) with
+   `scripts/backup-decrypt.php` — see `Documentation/NewClinic/NEW_CLINIC_BACKUP_RESTORE_RUNBOOK.md`
+   for the exact command. Restore the result into a **scratch** DB (never over prod):
+   `mysql scratch < restored.sql`.
 2. Point a scratch site config at it and run `php .../scripts/verify-module.php --bootstrap` —
    must PASS.
 3. Load the visit board and one desk against the scratch DB; confirm today's-ish visits render.
 4. Confirm the backup **excludes** the transient export dirs and includes the encryption-key
    custody step (see the SEC-6 runbook — a backup you can't decrypt is not a backup).
 
-A backup you've never test-restored is a hope, not a guarantee.
+A backup you've never test-restored is a hope, not a guarantee. The restore runbook records a real
+run of this drill (2026-07-18, this machine → scratch DB, row counts matched) — a genuine
+**cross-machine** drill is still recommended before relying on this for an actual disaster.
 
 **History-table retention (SCALE-6.3).** The append-only history tables are pruned by the job
 worker per config keys in `new_clinic_config` (facility 0), `<key> = 0` means never auto-purge:
@@ -383,6 +391,7 @@ re-architecture, and is explicitly not V1.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.4.0 | 2026-07-18 | BACKUP-C2 fix (backup-system audit): §6's restore drill step 1 previously pointed at Admin Hub's "Verify latest backup" as if it were a restore drill — it only head-verifies (decrypts + checks first bytes, same box, live keys). Rewrote the step to actually decrypt with the off-box recovery-key bundle (`scripts/backup-decrypt.php`) and load into a scratch DB, and pointed at the new `NEW_CLINIC_BACKUP_RESTORE_RUNBOOK.md` for the exact procedure + a real proven drill. |
 | 0.1.0 | 2026-07-13 | Initial runbook: sessions, local-state audit, cache, worker, replica-readiness (SCALE-3.4 + SCALE-3.5) |
 | 0.1.1 | 2026-07-13 | §7 (old numbering): request budgets (SCALE-4.2) + perf visibility panel (SCALE-4.5) |
 | 1.0.0 | 2026-07-13 | SCALE-5.2 consolidation: restructured into an explicit Stage 0 → Stage 1 (1→2 servers, 7 ordered steps with a verification per step) → Stage 2 (read replica) → incident-response section → backup/restore → "beyond N servers" pointer to SCALE-5.1's SSE design doc and SCALE-5.3. Added the `load-test.php` step (was documented as a tool but never wired into the runbook's own checklist) and a suggested incident-response sequence tying the health/levers/budgets/perf-panel pieces together. No technical content changed from 0.1.1 — this is the "merge all fragments" pass the plan called for. **Cold-read test (fresh subagent, no prior context):** correctly identified step 3 and the incident sequence unassisted; flagged 4 minor polish items (health-endpoint description duplicated between §1.5/§5, Stage 2 not visually distinguished as non-actionable, `load-test.php`'s cookie step unexplained inline, a dangling "old numbering" note) — all four fixed in this same version. Rated 4/5 followability before the fixes; the remaining gap is inherent ops-domain knowledge (session backends, LB config) this doc reasonably assumes rather than teaches. |
