@@ -725,6 +725,19 @@ class AdminBackupServiceTest extends TestCase
 
             $decryptedOriginal = (new CryptoGen())->decryptStandard((string) file_get_contents($destPath));
             $this->assertSame('ORIGINAL CONTENT', $decryptedOriginal);
+
+            // BACKUP-M7b: a THIRD run, with the source unchanged since run 2, must
+            // write NO further sibling — before this fix, run 2's sibling write
+            // never updated $destPath's own mtime, so every subsequent run kept
+            // comparing the source against the ORIGINAL (never-touched) mirror
+            // mtime and looked perpetually stale, re-encrypting the unchanged
+            // source and writing another full-size sibling forever.
+            $stats3 = $method->invoke($svc, $docsRoot, $mirrorDir, 0);
+            $this->assertSame(0, $stats3['copied'], 'an unchanged source since the last run must copy nothing');
+            $this->assertSame(0, $stats3['preserved'], 'an unchanged source since the last run must preserve nothing');
+            $this->assertSame(1, $stats3['skipped']);
+            $siblingsAfterRun3 = glob($destPath . '.*') ?: [];
+            $this->assertCount(1, $siblingsAfterRun3, 'no additional sibling must be written on an unchanged source');
         } finally {
             foreach (glob($mirrorDir . DIRECTORY_SEPARATOR . '*') ?: [] as $f) {
                 @unlink($f);

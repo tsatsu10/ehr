@@ -257,7 +257,17 @@ class ClinicAdminService
 
         foreach (array_merge(self::EDITABLE_SETTINGS, self::READONLY_SETTINGS) as $key => $meta) {
             $default = $meta['default'];
-            $raw = $this->config->get($key, $default, $facilityId) ?? $default;
+            // BACKUP-M4c: GLOBAL_ONLY_SETTINGS (the 6 backup keys) must be READ at
+            // the facility-0 sentinel too, not just written there (M4b covered
+            // write). ClinicConfigService::get() checks the REQUESTED facility
+            // FIRST, before ever falling back to 0 — so a stale pre-M4 row still
+            // sitting at a non-zero facility (confirmed present on this box: see
+            // the BACKUP-M4c install.sql cleanup) would silently win over the real
+            // facility-0 value whenever a settings request happened to resolve to
+            // that facility. A whole-DB backup setting must never depend on which
+            // facility a request resolves to.
+            $readFacilityId = in_array($key, self::GLOBAL_ONLY_SETTINGS, true) ? 0 : $facilityId;
+            $raw = $this->config->get($key, $default, $readFacilityId) ?? $default;
             if ($meta['type'] === 'bool') {
                 $settings[$key] = (int) $raw === 1;
             } elseif (

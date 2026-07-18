@@ -1938,3 +1938,22 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 #IfMissingColumn new_patient_meta old_clinic_number
 ALTER TABLE `new_patient_meta` ADD COLUMN `old_clinic_number` VARCHAR(40) NULL;
 #EndIf
+
+-- BACKUP-M4c: a database backup is whole-DB, never per-facility (M4/M4b —
+-- AdminBackupService/ClinicAdminService). Pre-M4b installs could still have
+-- rows for these 6 keys sitting at a non-zero facility (whatever facility a
+-- settings save happened to resolve to before the M4b write fix) — and
+-- ClinicConfigService::get() checks the REQUESTED facility BEFORE ever
+-- falling back to 0, so a stale non-zero row silently wins over the real
+-- facility-0 value whenever a settings request resolves to that facility.
+-- Idempotent: matches 0 rows (no-op) once run. Unconditional (not
+-- #IfRow2D-guarded) so it also cleans up any such row created by a future
+-- regression, not just the ones present the first time this runs.
+DELETE FROM `new_clinic_config` WHERE `facility_id` != 0 AND `config_key` IN (
+    'enable_native_backup',
+    'backup_target_dir',
+    'backup_frequency_days',
+    'backup_include_site_files',
+    'admin_hub_backup_retention_days',
+    'backup_max_encrypt_mb'
+);

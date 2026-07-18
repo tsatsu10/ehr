@@ -751,6 +751,11 @@ class AdminBackupService
      * file (`<name>.enc.<UTC timestamp>`) instead — the last-known-good copy is
      * guaranteed to survive a single bad run.
      *
+     * BACKUP-M7b: the preserved original's mtime is stamped forward (metadata
+     * only, content untouched) after each sibling write so an unchanged source
+     * on a later run is correctly recognized as caught up — see the inline
+     * comment at the `@touch()` call below for the sibling-growth bug this closes.
+     *
      * @return array{copied: int, skipped: int, too_large: int, bytes: int, preserved: int}
      */
     private function mirrorDocuments(string $docsRoot, string $mirrorDir, int $facilityId): array
@@ -827,6 +832,19 @@ class AdminBackupService
                 continue;
             }
             @chmod($writePath, 0600);
+            // BACKUP-M7b — the sibling write above never touches $destPath's
+            // CONTENT (the last-known-good copy stays byte-for-byte intact, per
+            // the M7 guarantee), but its mtime metadata is stamped forward to the
+            // source's mtime so a later run with an UNCHANGED source correctly
+            // sees the mirror as caught up. Without this, every subsequent
+            // incremental run kept comparing the source against the ORIGINAL
+            // (never-touched) mirror mtime, so it looked perpetually stale — every
+            // future run re-encrypted the unchanged source and wrote yet another
+            // full-size sibling, forever, even though nothing had changed since
+            // the last preserve.
+            if ($destExists) {
+                @touch($destPath, (int) @filemtime($src));
+            }
             $copied++;
             $bytes += \strlen($cipher);
         }

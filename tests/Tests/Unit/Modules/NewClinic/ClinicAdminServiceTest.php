@@ -567,7 +567,57 @@ class ClinicAdminServiceTest extends TestCase
             $this->assertSame('14', $fresh->get('admin_hub_backup_retention_days', '30', 0));
         } finally {
             $config->set('admin_hub_backup_retention_days', (string) $prevGlobal, 0);
-            $service->saveSettings('facility', ['enable_triage' => '1'], 1, $facilityId);
+            $service->saveSettings('facility', ['enable_triage' => $prevTriage], 1, $facilityId);
+        }
+    }
+
+    /**
+     * BACKUP-M4c: getSettingsPayload() must read the 6 GLOBAL_ONLY_SETTINGS
+     * (backup keys) at the facility-0 sentinel even when the request resolves to
+     * a different, specific facility that happens to have its own stale row for
+     * that key — ClinicConfigService::get() checks the REQUESTED facility FIRST,
+     * before ever falling back to 0, so without this fix a stale non-zero-
+     * facility row (confirmed to exist on this box from before the M4 fix)
+     * would silently win over the real facility-0 value.
+     */
+    public function testGetSettingsPayloadReadsBackupKeysAtFacilityZeroDespiteAStaleFacilityRow(): void
+    {
+        $facRow = QueryUtils::querySingleRow('SELECT id FROM facility ORDER BY id LIMIT 1');
+        $facilityId = is_array($facRow) ? (int) ($facRow['id'] ?? 0) : 0;
+        if ($facilityId <= 0) {
+            $this->markTestSkipped('No facility row available to exercise non-global scoping');
+        }
+
+        $config = new ClinicConfigService();
+        $prevGlobal = $config->get('admin_hub_backup_retention_days', '30', 0);
+        $staleRow = QueryUtils::querySingleRow(
+            'SELECT config_value FROM new_clinic_config WHERE facility_id = ? AND config_key = ?',
+            [$facilityId, 'admin_hub_backup_retention_days']
+        );
+        $service = new ClinicAdminService();
+        try {
+            // The real, global value.
+            $config->set('admin_hub_backup_retention_days', '14', 0);
+            // A stale row under the non-zero facility — must never win.
+            $config->set('admin_hub_backup_retention_days', '999', $facilityId);
+
+            $payload = $service->getSettingsPayload('facility', $facilityId);
+
+            $this->assertSame(
+                14,
+                $payload['settings']['admin_hub_backup_retention_days'],
+                'a backup key must read the facility-0 value even when a stale row exists at the resolved facility'
+            );
+        } finally {
+            $config->set('admin_hub_backup_retention_days', (string) $prevGlobal, 0);
+            if (is_array($staleRow) && array_key_exists('config_value', $staleRow)) {
+                $config->set('admin_hub_backup_retention_days', (string) $staleRow['config_value'], $facilityId);
+            } else {
+                sqlStatement(
+                    'DELETE FROM new_clinic_config WHERE facility_id = ? AND config_key = ?',
+                    [$facilityId, 'admin_hub_backup_retention_days']
+                );
+            }
         }
     }
 }
