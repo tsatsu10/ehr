@@ -1,6 +1,6 @@
 # New Clinic — Backup System Design
 
-**Version:** v0.5.0 · **Date:** 2026-07-12 · **Status:** Engine + no-cron heartbeat scheduling + verify + honesty warnings + cloud sync-folder off-site + recovery-key custody + **separate incremental site-files backup (§3b)** — built and live-smoked (GAP-C C6 follow-up)
+**Version:** v0.6.0 · **Date:** 2026-07-18 · **Status:** Engine + no-cron heartbeat scheduling + verify + honesty warnings + cloud sync-folder off-site + recovery-key custody (**now bundles the database key material too — BACKUP-C1**) + **separate incremental site-files backup (§3b)** + **a proven decrypt/restore procedure (BACKUP-C2)** — built and live-smoked (GAP-C C6 follow-up; backup-system audit)
 
 Governs the module's **in-app backup engine** and how it tracks real backups. Subordinate to
 `NEW_CLINIC_SEC6_DATA_AT_REST_RUNBOOK.md` §3 (the security policy) — where they disagree, SEC6 wins.
@@ -145,6 +145,16 @@ unrecoverable. **A backup you can't decrypt is worse than no backup — it's fal
   `READ_ME_FIRST.txt` (what it is, keep it SEPARATE from the backups, how to restore) into a ZIP the
   admin downloads. The secret never persists server-side (zip built in the temp dir, wiped, streamed
   as base64 to the browser); only the fact + timestamp of export are recorded.
+- **BACKUP-C1 fix (2026-07-18) — the bundle was incomplete.** The methods/ files alone turned out NOT
+  to be enough to decrypt anything on a replacement machine. `CryptoGen::collectDriveKey()` shows that
+  for key version >= 5 (this install is "seven"), the drive-key file on disk is ITSELF encrypted, using
+  the database key set of the identical label — and that database key set lives only in the `keys` SQL
+  table, inside the very encrypted backup the bundle exists to open. `exportRecoveryKey()` now also
+  bundles a `db-keys.json` containing the `keys`-table rows the drive files depend on
+  (`requiredDatabaseKeyNames()`/`fetchDatabaseKeyRows()`), read via the same *NoLog query path CryptoGen
+  itself uses so the raw key material is never written to the audit `log` table. A bundle exported
+  before this date cannot decrypt a backup on a machine that doesn't already have the original
+  database and should be treated as obsolete — export a fresh one.
 - **The rule we surface in the UI:** store the key copy **separately from the backups** — never the
   same folder or same cloud account (whoever gets both gets all PHI). This is exactly SEC6's key
   escrow (MSA §7.2): one copy is enough to restore, both copies lost = unrecoverable.
@@ -152,10 +162,21 @@ unrecoverable. **A backup you can't decrypt is worse than no backup — it's fal
 ## 6. Restore (deliberately manual)
 
 Restore is **destructive** and needs the escrowed key, so it stays a documented ops procedure, not a
-UI action:
-1. Decrypt the `.enc` with the drive key (CryptoGen / the documented CLI).
-2. Restore the SQL dump with `mysql` and unpack documents.
-No "Restore" button ships — matching the stock stance and SEC6 key custody.
+UI action. **BACKUP-C2 (2026-07-18)** replaced the previous 2-line placeholder here with a real,
+proven procedure:
+
+1. Decrypt the `.enc` file using ONLY the recovery-key bundle (§5d) — no live database or live
+   `methods/` folder required — via
+   `interface/modules/custom_modules/oe-module-new-clinic/scripts/backup-decrypt.php` (a thin subclass
+   of the real `CryptoGen` fed the bundle's key material explicitly; does not reimplement any crypto).
+2. Restore the resulting SQL dump into a **scratch** database with `mysql`, verify it (row counts,
+   `verify-module.php --bootstrap`, a visit-board load), and only then cut a real site over to it.
+   Mirrored documents decrypt the same way, one `.enc` file at a time.
+
+The full, numbered, plain-English procedure — including troubleshooting and a genuinely executed
+restore drill with real byte counts — lives in
+`Documentation/NewClinic/NEW_CLINIC_BACKUP_RESTORE_RUNBOOK.md`. No "Restore" button ships in the UI —
+matching the stock stance and SEC6 key custody; Admin Hub's RB-19 runbook card points here.
 
 ## 7. Frequency / scheduling
 
@@ -227,6 +248,7 @@ system `Temp` path — fixed).
 
 | Version | Date | Change |
 |---|---|---|
+| v0.6.0 | 2026-07-18 | **BACKUP-C1/C2 fixes (backup-system audit).** C1: the recovery-key bundle was missing the database key material the drive-key files depend on (versions 5+) — `exportRecoveryKey()` now bundles `db-keys.json` alongside `methods/`, and the README rewritten with a real numbered restore procedure (§5d). C2: shipped `scripts/backup-decrypt.php` (standalone, bundle-only, no live DB/methods dependency) and `Documentation/NewClinic/NEW_CLINIC_BACKUP_RESTORE_RUNBOOK.md` with a genuinely executed restore drill (§6) — replacing the previous 2-line restore placeholder and the stock-`backup.php` RB-19 pointer. |
 | v0.5.0 | 2026-07-12 | **Site files backed up as a SEPARATE entity (§3, §3b).** Rejected the original "combine DB + documents into one archive" plan: the two have different cadence, size, fault, and retention characteristics. The DB stays a full frequent encrypted archive; the documents tree becomes a **separate incremental per-file-encrypted mirror** (`nc-files-<site>/`), copying only new/changed files, encrypting each file individually (so the whole-tree size never has to fit the in-memory budget), excluding the module's own backups + `temp/` + the encryption **key** dir, and **never auto-pruned** (documents are permanent records). Own `kind='files'` run rows; own "Recent file backups" history. `backup_include_site_files` now switches this on (was declared but unbuilt). |
 | v0.1.0 | 2026-07-11 | Initial design. Reconciled an in-app encrypted backup engine with SEC6 §3 (encrypt-before-persist, no plaintext on removable media, credentials via 0600 defaults-file, super-admin + `enable_native_backup` gate, restore stays manual, VPS replica remains the off-site tier). Engine slice 1 (DB dump + encrypt + track real path/size + retention) built alongside. |
 | v0.1.1 | 2026-07-11 | Added **frequency/scheduling**: `backup_frequency_days` + `dueForBackup()` + a CLI cron entrypoint (`scripts/backup-scheduled.php`) an OS scheduler calls; `runScheduledBackup()` (no interactive ACL) and UI `runBackup()` (super-admin) share an ACL-free `performBackup()`. Schedule status surfaced in the System-health board. **Live end-to-end smoke passed** (see §11). |

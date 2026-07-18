@@ -22,6 +22,7 @@ namespace OpenEMR\Modules\NewClinic\Services;
 
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Crypto\CryptoGen;
+use OpenEMR\Common\Crypto\KeyVersion;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Logging\EventAuditLogger;
 
@@ -558,6 +559,15 @@ class AdminBackupService
      * is built in the temp dir and wiped); it streams to the admin's browser and we
      * record only the fact + timestamp of the export.
      *
+     * BACKUP-C1: the drive-key files alone are NOT enough to decrypt a backup on a
+     * replacement machine. CryptoGen.php collectDriveKey() (~:523-537) shows that for
+     * KeyVersion >= 5 (KeyVersion.php usesLegacyStorage(), ~:71-74 — this site is on
+     * "seven") the file on disk is ITSELF encrypted with the DATABASE key set, which
+     * only lives in the `keys` SQL table — inside the encrypted dump this very bundle
+     * exists to open. So the bundle must also carry the `keys` rows the drive files
+     * depend on, or it is undecryptable noise on a fresh install. See
+     * requiredDatabaseKeyNames()/fetchDatabaseKeyRows() below.
+     *
      * @return array{filename: string, content_base64: string, file_count: int}
      */
     public function exportRecoveryKey(int $actorUserId): array
@@ -574,6 +584,20 @@ class AdminBackupService
             throw new \RuntimeException('No encryption key files were found to export', 404);
         }
 
+        // BACKUP-C1 — collect the `keys`-table rows the drive files above depend on
+        // to ever be decrypted again. Missing one makes the whole bundle useless, so
+        // this fails loudly (before anything is written) rather than shipping a
+        // bundle that looks complete but silently can't restore.
+        $dbKeyNames = $this->requiredDatabaseKeyNames($files);
+        $dbKeyRows = $this->fetchDatabaseKeyRows($dbKeyNames);
+        if (count($dbKeyRows) !== count($dbKeyNames)) {
+            $missing = implode(', ', array_diff($dbKeyNames, array_column($dbKeyRows, 'name')));
+            throw new \RuntimeException(
+                'The recovery-key bundle is incomplete — the `keys` table is missing row(s) required '
+                . 'to decrypt the drive key file(s): ' . $missing . '. This should not happen; check the database.'
+            );
+        }
+
         $tmpZip = tempnam(sys_get_temp_dir(), 'nckey');
         if ($tmpZip === false) {
             throw new \RuntimeException('Could not allocate a temporary file for the key bundle');
@@ -585,6 +609,9 @@ class AdminBackupService
             throw new \RuntimeException('Could not build the recovery-key bundle');
         }
         $zip->addFromString('READ_ME_FIRST.txt', $this->keyReadme());
+        // BACKUP-C1 — the database-key rows the drive files need to be readable again.
+        // JSON, not a raw SQL dump: small, dependency-free to parse in the decrypt CLI.
+        $zip->addFromString('db-keys.json', (string) json_encode($dbKeyRows, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
         // Crown jewels: a silently-dropped key file yields a bundle that looks fine
         // but cannot restore. addFile defers the read to close(), so verify BOTH the
         // add and the final write succeeded for every key file.
@@ -615,7 +642,7 @@ class AdminBackupService
             $_SESSION['authUser'] ?? 'system',
             $_SESSION['authProvider'] ?? 'default',
             1,
-            'recovery_key_exported files=' . count($files) . ' uid=' . $actorUserId
+            'recovery_key_exported files=' . count($files) . ' db_keys=' . count($dbKeyRows) . ' uid=' . $actorUserId
         );
 
         return [
@@ -623,6 +650,63 @@ class AdminBackupService
             'content_base64' => base64_encode($content),
             'file_count' => count($files),
         ];
+    }
+
+    /**
+     * Work out which `keys`-table rows the drive-key files depend on to ever be
+     * decrypted again (BACKUP-C1).
+     *
+     * KeyVersion.php usesLegacyStorage() (~:71-74): versions 1-4 store the drive key
+     * as plain base64 on disk — self-sufficient, no database dependency. Versions 5+
+     * store it ENCRYPTED, using the database key of the exact same label (CryptoGen.php
+     * createDriveKey() ~:548-572 calls encryptStandard() with KeySource::DATABASE and
+     * the current KeyVersion, which — see collectCryptoKey() ~:448-466 — derives the
+     * label as `$keyVersion->toString() . $sub`; that is identical to how the drive
+     * filename itself was built, which is why the drive filename ("sevena") and the
+     * `keys` row name it depends on ("sevena") are always the same string).
+     *
+     * @param list<string> $files absolute paths of the drive-key files
+     * @return list<string> `keys.name` values the bundle must carry
+     */
+    private function requiredDatabaseKeyNames(array $files): array
+    {
+        $names = [];
+        foreach ($files as $path) {
+            $base = basename($path);
+            foreach (KeyVersion::cases() as $keyVersion) {
+                if (str_starts_with($base, $keyVersion->toString()) && !$keyVersion->usesLegacyStorage()) {
+                    $names[] = $base;
+                    break;
+                }
+            }
+        }
+
+        return array_values(array_unique($names));
+    }
+
+    /**
+     * Read the `keys`-table rows required by requiredDatabaseKeyNames(). Uses the
+     * *NoLog query path — same as CryptoGen.php's own collectDatabaseKey() — so raw
+     * key material is never written into the audit `log` table.
+     *
+     * @param list<string> $names
+     * @return list<array{name: string, value: string}>
+     */
+    private function fetchDatabaseKeyRows(array $names): array
+    {
+        if ($names === []) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($names), '?'));
+        $rows = QueryUtils::fetchRecordsNoLog(
+            "SELECT `name`, `value` FROM `keys` WHERE `name` IN ($placeholders)",
+            $names
+        );
+
+        return array_map(
+            static fn (array $r): array => ['name' => (string) $r['name'], 'value' => (string) $r['value']],
+            $rows
+        );
     }
 
     /** Site drive-key directory (CryptoGen reads keys from here). */
@@ -657,23 +741,76 @@ class AdminBackupService
 
     private function keyReadme(): string
     {
-        return "OpenEMR — New Clinic BACKUP RECOVERY KEY\n"
+        return "STORE THIS BUNDLE OFFLINE, SEPARATE FROM YOUR BACKUP FILES.\n"
+            . "============================================================\n\n"
+            . "OpenEMR — New Clinic BACKUP RECOVERY KEY\n"
             . "========================================\n\n"
-            . "The files in the 'methods' folder of this bundle are the encryption keys\n"
-            . "that decrypt your clinic's backups. WITHOUT THEM, your backups cannot be\n"
-            . "restored — they are just unreadable encrypted files.\n\n"
+            . "This bundle is the ONLY thing on earth that can turn your encrypted backup\n"
+            . "files (the '.sql.gz.enc' / '.enc' files) back into readable patient data.\n"
+            . "Without it, your backups are permanently unreadable — there is no password\n"
+            . "reset, no support ticket, no \"forgot key\" option. Losing this bundle AND\n"
+            . "your original machine at the same time means your backups are gone for good.\n\n"
+            . "This bundle contains TWO different kinds of key material — you need BOTH:\n"
+            . "  - 'methods/' folder: the drive keys (also on your original machine's disk).\n"
+            . "  - 'db-keys.json': matching database key values. On versions 5 and up (this\n"
+            . "    site is on version seven), the drive-key files are themselves LOCKED with\n"
+            . "    a second key that lives only in the database — inside the very backup you\n"
+            . "    are trying to open. This file breaks that chicken-and-egg problem so you\n"
+            . "    do not need your original database to restore.\n\n"
             . "KEEP THIS BUNDLE SAFE, AND KEEP IT SEPARATE FROM YOUR BACKUPS.\n"
             . "Anyone who has BOTH this key bundle AND a backup file can read every\n"
             . "patient's data. Do NOT store this in the same folder (or same cloud\n"
             . "account) as your backups. Good places: a password manager, or a printed/\n"
             . "USB copy in a locked drawer off the clinic premises.\n\n"
-            . "TO RESTORE ON A NEW MACHINE:\n"
-            . "1. Install OpenEMR + this module.\n"
-            . "2. BEFORE decrypting any backup, copy the files inside this bundle's\n"
-            . "   'methods' folder into:\n"
-            . "       sites/<your-site>/documents/logs_and_misc/methods/\n"
-            . "   (overwrite the freshly-generated ones).\n"
-            . "3. Then decrypt and restore your backup as documented.\n\n"
+            . "============================================================\n"
+            . "HOW TO RESTORE ON A NEW / REPLACEMENT MACHINE\n"
+            . "============================================================\n"
+            . "Read this calmly, step by step. You do not need your old computer, your\n"
+            . "old database, or any password you may have forgotten — this bundle plus\n"
+            . "one encrypted backup file is everything you need.\n\n"
+            . "What you need before you start:\n"
+            . "  - This recovery-key bundle (the ZIP this file came from, or its unzipped folder).\n"
+            . "  - One encrypted backup file (looks like 'nc-backup-...sql.gz.enc', or for a\n"
+            . "    single restored document, a file ending in '.enc' from a 'nc-files-...' folder).\n"
+            . "  - A computer with PHP 8.2+ and this OpenEMR + New Clinic module code checked out\n"
+            . "    (it does NOT need to be set up or connected to any database yet).\n\n"
+            . "Steps:\n"
+            . "  1. Unzip this recovery-key bundle somewhere on the new machine, e.g.\n"
+            . "     C:\\recovery-key\\ (or /home/you/recovery-key/ on Linux/Mac). You should see\n"
+            . "     a 'methods' folder, a 'db-keys.json' file, and this README.\n"
+            . "  2. Copy your encrypted backup file to the same machine, e.g.\n"
+            . "     C:\\my-backup\\nc-backup-clinic-20260718-120000.sql.gz.enc\n"
+            . "  3. Open a terminal (Command Prompt / PowerShell on Windows, Terminal on Mac/Linux)\n"
+            . "     and go to the OpenEMR module's 'scripts' folder, e.g.:\n"
+            . "       cd C:\\xampp\\htdocs\\openemr\\interface\\modules\\custom_modules\\oe-module-new-clinic\\scripts\n"
+            . "  4. Run the decrypt tool, pointing it at your backup file, the unzipped\n"
+            . "     recovery-key folder, and where you want the readable file to go:\n"
+            . "       php backup-decrypt.php --in \"C:\\my-backup\\nc-backup-clinic-...sql.gz.enc\" ^\n"
+            . "         --bundle \"C:\\recovery-key\" --out \"C:\\my-backup\\restored.sql.gz\"\n"
+            . "     (On Mac/Linux use php backup-decrypt.php --in ... --bundle ... --out ..., same flags.)\n"
+            . "  5. If it says \"Decrypted OK\", you now have a plain '.sql.gz' file. Unzip it\n"
+            . "     (gunzip / 7-Zip / \"Extract\") to get a plain '.sql' file — this is your\n"
+            . "     full database, in plain readable text. Treat this file as carefully as\n"
+            . "     the patient records themselves — delete it securely once you are done.\n"
+            . "  6. Create a fresh, empty database on the new machine and load the .sql file\n"
+            . "     into it with your database tool, e.g.:\n"
+            . "       mysql -u root -p your_new_database_name < restored.sql\n"
+            . "  7. Point a fresh OpenEMR installation's site config at that database, and copy\n"
+            . "     the 'methods' folder from THIS bundle into the new site's\n"
+            . "     sites/<your-site>/documents/logs_and_misc/methods/ folder (overwrite the\n"
+            . "     freshly-generated ones) so future backups/restores keep working.\n"
+            . "  8. Log in and spot-check: open a recent patient, a recent visit, and a recent\n"
+            . "     payment. If those look right, the restore worked.\n\n"
+            . "To restore ONE mirrored document (not the whole database), run the same\n"
+            . "command with --in pointing at that one '.enc' file — the tool detects it is a\n"
+            . "single file (not a database dump) and writes the decrypted document instead of\n"
+            . "a '.sql.gz'.\n\n"
+            . "If the tool prints an error, read it — it is written in plain English and says\n"
+            . "what went wrong (wrong bundle, wrong backup file, missing key row, etc.). It\n"
+            . "never guesses; it fails loudly rather than producing a corrupted restore.\n\n"
+            . "The full, versioned procedure (with troubleshooting) lives in\n"
+            . "Documentation/NewClinic/NEW_CLINIC_BACKUP_RESTORE_RUNBOOK.md in the OpenEMR\n"
+            . "source — if you have that repository, read it too.\n\n"
             . "Exported " . date('Y-m-d H:i:s') . " from site '" . $this->siteTag() . "'.\n";
     }
 

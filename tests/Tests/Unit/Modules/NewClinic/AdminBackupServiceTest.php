@@ -142,4 +142,45 @@ class AdminBackupServiceTest extends TestCase
             $this->assertTrue($status['export_warning']);
         }
     }
+
+    /**
+     * BACKUP-C1: modern-version (>=5) drive-key files are themselves encrypted with
+     * the database key of the SAME label — the recovery bundle must carry that
+     * `keys`-table row or it can never be decrypted on a fresh machine. Legacy
+     * (<=4) files are plain base64 on disk and need no database dependency.
+     * Pure logic — synthetic filenames, no real methods/ dir touched.
+     */
+    public function testRequiredDatabaseKeyNamesIdentifiesOnlyModernVersions(): void
+    {
+        $method = new \ReflectionMethod(AdminBackupService::class, 'requiredDatabaseKeyNames');
+        $method->setAccessible(true);
+        $svc = new AdminBackupService();
+
+        $files = [
+            '/fake/methods/sevena',
+            '/fake/methods/sevenb',
+            '/fake/methods/fivea', // still modern (>=5) — needs a db row too
+            '/fake/methods/four',  // legacy (<=4) — self-sufficient, no db row
+            '/fake/methods/one',   // legacy — self-sufficient
+        ];
+
+        $result = $method->invoke($svc, $files);
+
+        $this->assertEqualsCanonicalizing(['sevena', 'sevenb', 'fivea'], $result);
+    }
+
+    public function testRequiredDatabaseKeyNamesEmptyForNoFiles(): void
+    {
+        $method = new \ReflectionMethod(AdminBackupService::class, 'requiredDatabaseKeyNames');
+        $method->setAccessible(true);
+        $this->assertSame([], $method->invoke(new AdminBackupService(), []));
+    }
+
+    public function testFetchDatabaseKeyRowsEmptyForNoNames(): void
+    {
+        // Empty input short-circuits before any query — safe to call without a DB fixture.
+        $method = new \ReflectionMethod(AdminBackupService::class, 'fetchDatabaseKeyRows');
+        $method->setAccessible(true);
+        $this->assertSame([], $method->invoke(new AdminBackupService(), []));
+    }
 }
