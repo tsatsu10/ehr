@@ -92,6 +92,7 @@ export function SystemTab({
         markingKey={setupMarkingKey}
         completing={setupCompleting}
         reopening={setupReopening}
+        scopeLabel={scopeLabel}
         onMarkItem={onMarkSetupItem}
         onUnmarkItem={onUnmarkSetupItem}
         onMarkComplete={onMarkSetupComplete}

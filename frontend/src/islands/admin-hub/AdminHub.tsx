@@ -180,13 +180,19 @@ export function AdminHub({
   );
 
   useEffect(() => {
+    // Don't kick gated tabs before the first settings payload arrives —
+    // settings start {} so the flags read false during load, which used to
+    // bounce a ?tab=system deep link back to Queue & roles every time.
+    if (loading) {
+      return;
+    }
     if (!adminHubEnabled && (activeTab === 'system' || activeTab === 'forms')) {
       setActiveTab('queue');
     }
     if (!patientImportEnabled && activeTab === 'import') {
       setActiveTab('queue');
     }
-  }, [adminHubEnabled, patientImportEnabled, activeTab]);
+  }, [loading, adminHubEnabled, patientImportEnabled, activeTab]);
 
   const clinicName = clinicFacilityLabel || 'your clinic';
   const scopeHint = scope === 'global'
@@ -804,12 +810,13 @@ export function AdminHub({
   }, [applyPayload, facilityId, fetchOptions, scope]);
 
   // Jump target for the header Setup chip + the "finish setting up" banner.
+  // Goes through handleTabChange so the ?tab= URL stays truthful.
   const goToSetupChecklist = useCallback(() => {
-    setActiveTab('system');
+    handleTabChange('system');
     window.setTimeout(() => {
       document.getElementById('nc-admin-setup-checklist')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 60);
-  }, []);
+  }, [handleTabChange]);
 
   const exportConfig = useCallback(async () => {
     setConfigExporting(true);
@@ -1262,7 +1269,7 @@ export function AdminHub({
             onMarkSetupComplete={() => { void markSetupComplete(); }}
             onReopenSetup={() => { void reopenSetup(); }}
             setupReopening={setupReopening}
-            onNavigateTab={setActiveTab}
+            onNavigateTab={handleTabChange}
             onAddVisitType={() => openVisitTypeModal(null)}
             onEditVisitType={(row) => openVisitTypeModal(row)}
             onArchiveVisitType={(row) => setPendingConfirm({ type: 'archive_visit_type', row })}

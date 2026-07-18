@@ -43,6 +43,12 @@
   );
 }
 
+/* The chip/banner jump scrolls to this card — leave room for the sticky
+   tab bar so the card title is not hidden underneath it. */
+#nc-admin-setup-checklist {
+  scroll-margin-top: 6.5rem;
+}
+
 .nc-admin-progress {
   height: 0.5rem;
   overflow: hidden;

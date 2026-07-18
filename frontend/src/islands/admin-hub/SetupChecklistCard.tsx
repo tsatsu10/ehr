@@ -10,6 +10,8 @@ interface SetupChecklistCardProps {
   markingKey: string | null;
   completing: boolean;
   reopening: boolean;
+  /** Which clinic (or the global default) this score belongs to. */
+  scopeLabel?: string;
   onMarkItem: (key: string) => void;
   onUnmarkItem: (key: string) => void;
   onMarkComplete: () => void;
@@ -31,6 +33,7 @@ export function SetupChecklistCard({
   markingKey,
   completing,
   reopening,
+  scopeLabel,
   onMarkItem,
   onUnmarkItem,
   onMarkComplete,
@@ -67,6 +70,11 @@ export function SetupChecklistCard({
           </Button>
         )}
       >
+        {scopeLabel && (
+          <p className="mb-2 text-xs text-[var(--oe-nc-text-muted)]">
+            {t('Scoring: {scope}', { scope: scopeLabel })}
+          </p>
+        )}
         {remaining.length ? (
           <ul className="m-0 list-none p-0">
             {remaining.map((item) => (
@@ -110,6 +118,11 @@ export function SetupChecklistCard({
         ) : undefined
       }
     >
+      {scopeLabel && (
+        <p className="mb-2 text-xs text-[var(--oe-nc-text-muted)]">
+          {t('Scoring: {scope}', { scope: scopeLabel })}
+        </p>
+      )}
       <div
         className="nc-admin-progress mb-2"
         role="progressbar"
