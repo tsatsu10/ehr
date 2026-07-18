@@ -1,0 +1,2 @@
+function e(e){let t=String(e);return/^[=+\-@\t\r]/.test(t)&&(t=`'${t}`),/[",\n\r]/.test(t)?`"${t.replace(/"/g,`""`)}"`:t}function t(e,t){let n=new Blob([`﻿`,t],{type:`text/csv;charset=utf-8`}),r=URL.createObjectURL(n),i=document.createElement(`a`);i.href=r,i.download=e,i.click(),URL.revokeObjectURL(r)}export{t as n,e as t};
+//# sourceMappingURL=csv-Dch24X0I.js.map
