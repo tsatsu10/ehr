@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 0.1.7 |
+| **Document version** | 0.1.8 |
 | **Status** | Draft for review — **Module M6 + M15** integrated in PRD v1.20.32; PAGE_DESIGNS §7.27–§7.28; USER_WORKFLOWS §14.8; PRD §17.4.8 / §19.4 / §21.1v; **D-ADMIN-1–5 closed** |
 | **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.32), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.37), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.37), [FRONTEND_2026_MODERNIZATION_PLAN.md](../FRONTEND_2026_MODERNIZATION_PLAN.md) |
 | **Audience** | Product, design, clinic owners, IT implementers, trainers, QA |
@@ -932,6 +932,7 @@ M15 can ship **after** M6 P0 without blocking pilot golden path — stock admin 
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.1.8 | 2026-07-18 | **Correction — password back-dating reverted (audit find):** v0.1.7's item (3) assumed core prompts an expired-within-grace user to change their password; that prompt (`pwd_expires_alert.php`) is wired only into the legacy frames landing (`main_screen.php`) — the modern tabs shell shows **nothing**, making back-dating a silent grace-window countdown to login rejection. Temp passwords are stamped NOW again; the handover instruction is the change-password channel. Do not re-attempt back-dating unless the tabs shell gains the prompt |
 | 0.1.7 | 2026-07-18 | **Setup checklist polish batch:** (1) **cashier is a core role** — the staff item and provisioning now include `new_cashier` (D-STAFF-1 solo bench still passes: one login holding all groups); (2) under global scope the card shows a "setup is tracked per clinic" note and the finish-setup banner hides (facility 0 can never truthfully complete); (3) provisioned temp passwords back-date only when the clinic enforces expiry WITH a grace window (expired-within-grace = change nag at first sign-in; backdating without grace would hard-lock the account — core `checkPasswordNotExpired` rejects login outright); (4) worksheet + drill rows link to the runbooks board; new **RB-21 go-live worksheet** runbook (catalog now RB-01–RB-21) |
 | 0.1.6 | 2026-07-18 | **Starter staff provisioning (M15-F11 follow-on):** "Create starter sign-ins" on the checklist's staff row — creates only the missing core roles (reception, doctor) via the proven seeder recipe (users + users_secure + auth group + gacl), never on facility 0, one-time temp passwords shown once behind a confirm; new audited `admin.setup.provision_staff` action (`new_admin`); dry-run mode for tests |
 | 0.1.5 | 2026-07-18 | **M15-F11 setup checklist completion batch** (SETUP-1..6, see `new/NEW_CLINIC_SETUP_CHECKLIST_COMPLETION_PLAN.md`): cron item now follows the health cron chip (was a defaults-on flag false positive); ACL + staff-accounts items auto-detect (`modules.acl_version`, gacl group membership) with manual override kept; new `admin.setup.unmark_item` + `admin.setup.reopen` actions (audited, `new_admin`); card stays after completion showing residual items + Reopen; plain-English labels/hints via `xl()` with take-me-there tab links (`link_tab`), weight tags, threshold explainer; Setup chip clickable + every-tab "finish setting up" banner; a11y (announced row state, per-item button names) |

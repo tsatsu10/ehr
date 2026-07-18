@@ -182,24 +182,16 @@ class AdminStaffProvisionService
     }
 
     /**
-     * When the clinic enforces password expiry (days > 0) AND has a grace
-     * window, back-date the temp password so it is already expired-but-within-
-     * grace: core then nags the user to change it at first sign-in without
-     * locking them out. With expiry off (or no grace window) we must use NOW —
-     * an expired password beyond grace makes checkPasswordNotExpired() reject
-     * the login outright, which would brick the account we just handed over.
+     * Temp passwords are stamped NOW — never back-dated. Back-dating into the
+     * expired-within-grace window looked like a "change it at first sign-in"
+     * nag, but the prompt (pwd_expires_alert.php) is only wired into the
+     * LEGACY frames landing (main_screen.php); the modern tabs shell every
+     * login actually uses shows nothing. Back-dating would therefore be a
+     * silent countdown to checkPasswordNotExpired() rejecting the login after
+     * the grace window, with no warning the user ever sees. The handover
+     * instruction ("sign in and change your password from My profile") is the
+     * only channel that reliably reaches the user.
      */
-    private function initialPasswordTimestamp(): string
-    {
-        $days = (int) ($GLOBALS['password_expiration_days'] ?? 0);
-        $grace = (int) ($GLOBALS['password_grace_time'] ?? 0);
-        if ($days > 0 && $grace > 0) {
-            return date('Y-m-d H:i:s', strtotime("-{$days} days"));
-        }
-
-        return date('Y-m-d H:i:s');
-    }
-
     private function generatePassword(): string
     {
         $chars = self::PASSWORD_CHARS;
@@ -231,8 +223,8 @@ class AdminStaffProvisionService
             throw new \RuntimeException('Unable to hash password');
         }
         QueryUtils::sqlStatementThrowException(
-            'INSERT INTO users_secure (id, username, password, last_update_password) VALUES (?, ?, ?, ?)',
-            [$userId, $username, $hash, $this->initialPasswordTimestamp()]
+            'INSERT INTO users_secure (id, username, password, last_update_password) VALUES (?, ?, ?, NOW())',
+            [$userId, $username, $hash]
         );
 
         // OpenEMR login requires a row in `groups` (auth group), separate from phpGACL.
