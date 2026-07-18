@@ -822,13 +822,29 @@ class ClinicAdminService
             $this->config->clearGlobalOverrides($changedScoped);
         }
 
-        if (!empty($changed)) {
+        // BACKUP-cleanup (B3): GLOBAL_ONLY_SETTINGS keys are always WRITTEN at
+        // facility 0 (see $writeFacilityId above), regardless of $facilityId —
+        // the audit trail must say so too. A single combined event logging
+        // facility_id=<resolved> for every changed key (including these) was
+        // misleading: reading the audit log for a facility-scoped save would
+        // wrongly suggest the backup keys were written under that facility.
+        $changedGlobalOnly = array_values(array_diff($changed, $changedScoped));
+        if (!empty($changedScoped)) {
             EventAuditLogger::getInstance()->newEvent(
                 'new_clinic',
                 'config',
                 $actorUserId,
                 1,
-                'facility_id=' . $facilityId . ' keys=' . implode(',', $changed)
+                'facility_id=' . $facilityId . ' keys=' . implode(',', $changedScoped)
+            );
+        }
+        if (!empty($changedGlobalOnly)) {
+            EventAuditLogger::getInstance()->newEvent(
+                'new_clinic',
+                'config',
+                $actorUserId,
+                1,
+                'facility_id=0 keys=' . implode(',', $changedGlobalOnly)
             );
         }
 

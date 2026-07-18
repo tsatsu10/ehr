@@ -267,29 +267,41 @@ class AdminHealthServiceTest extends TestCase
     }
 
     /**
-     * BACKUP-H3(i): the setup checklist's "Backup tested" gate (consumed via
-     * `backup_verified_native_run`) must require a REAL artifact AND a passed
-     * verify — a self-reported 'ok' run must not satisfy it, even though the
-     * legacy chip logic used to call that "ok".
+     * BACKUP-H3(i)/BACKUP-cleanup (B5): the setup checklist's "Backup tested"
+     * gate (consumed via `backup_verified_native_run`) must require a REAL
+     * artifact AND a passed verify — a self-reported run must not satisfy it,
+     * even though the legacy chip logic used to call that "ok".
      *
      * `backup_verified_native_run` is deliberately an "ever" check across this
      * DB's whole history (H3(i) — a permanent, one-time-earned milestone once a
-     * real verify() has ever passed), so it may already be TRUE here from
-     * earlier, genuinely-verified runs (including a real large-DB capacity-proof
-     * run performed on this box). This test proves the narrower thing that still
-     * holds regardless of that history: adding ONE MORE self-reported (no
-     * artifact) run must never, by itself, be what turns the flag on — before
-     * and after must match.
+     * real verify() has ever passed), and on this box it is now PERMANENTLY
+     * true (run id 266's genuine large-DB verify) — so a before/after diff on
+     * the overall flag has no teeth here; it would pass even if the underlying
+     * predicate were broken, as long as it stayed broken. Assert the actual
+     * GATE PREDICATE directly instead (the same condition backupEverVerified()
+     * runs: kind='db' AND status='ok' AND file_path IS NOT NULL AND
+     * verified_at IS NOT NULL), scoped to exactly the one self-reported row
+     * this test inserts — a shape with NO file_path and NO verified_at (the
+     * legacy "Mark backup complete" stub — 'running' is its actual insert
+     * status; H3(iii)'s completeBackup() flips it to 'ok' without ever setting
+     * either column) can never satisfy it, proven by direct query rather than
+     * by an indirect, history-poisoned before/after comparison.
      */
     public function testBackupVerifiedNativeRunFalseForSelfReportedOnly(): void
     {
-        $before = (new AdminHealthService())->getHealthStatus(0)['backup_verified_native_run'];
+        $runId = $this->insertRun('db', 'running', null, 7); // self-reported: no file_path, no verified_at
 
-        $this->insertRun('db', 'ok', null, 7); // self-reported, no artifact
+        $gateRow = QueryUtils::querySingleRow(
+            "SELECT id FROM admin_hub_backup_run
+             WHERE id = ? AND kind = 'db' AND status = 'ok'
+             AND file_path IS NOT NULL AND verified_at IS NOT NULL",
+            [$runId]
+        );
 
-        $after = (new AdminHealthService())->getHealthStatus(0)['backup_verified_native_run'];
-
-        $this->assertSame($before, $after, 'a self-reported run must never by itself flip backup_verified_native_run');
+        $this->assertFalse(
+            $gateRow,
+            'a self-reported run (no artifact, no verify) must never satisfy the ever-verified gate predicate'
+        );
     }
 
     public function testBackupVerifiedNativeRunTrueOnceArtifactAndVerifyBothExist(): void

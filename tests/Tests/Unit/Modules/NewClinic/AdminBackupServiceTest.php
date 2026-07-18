@@ -785,4 +785,90 @@ class AdminBackupServiceTest extends TestCase
             $config->set('backup_frequency_days', (string) $prevFreq, 0);
         }
     }
+
+    /**
+     * BACKUP-cleanup (B2): supersedeStaleRunningRows() is called only AFTER the
+     * M3 lock is won, so any OTHER 'running' row of the same kind it finds is
+     * provably a crash remnant (a mid-dump kill never got to mark itself
+     * failed) — never a real still-running backup. It must fail that row and
+     * must never touch the excluded (just-inserted) run id.
+     */
+    public function testSupersedeStaleRunningRowsFailsOtherRowsButNeverTheExcludedOne(): void
+    {
+        $svc = new AdminBackupService();
+        $staleId = $this->insertRun('db', 'running', null);
+        $excludedId = $this->insertRun('db', 'running', null);
+
+        $method = new \ReflectionMethod(AdminBackupService::class, 'supersedeStaleRunningRows');
+        $method->setAccessible(true);
+        $method->invoke($svc, 'db', $excludedId);
+
+        $stale = QueryUtils::querySingleRow('SELECT status FROM admin_hub_backup_run WHERE id = ?', [$staleId]);
+        $this->assertSame('failed', $stale['status'] ?? null, 'a stale running row of the same kind must be superseded');
+
+        $excluded = QueryUtils::querySingleRow('SELECT status FROM admin_hub_backup_run WHERE id = ?', [$excludedId]);
+        $this->assertSame('running', $excluded['status'] ?? null, 'the just-inserted excluded row must never be touched');
+    }
+
+    /** BACKUP-cleanup (B2): a 'files' running row must never be touched by a 'db' supersede pass, or vice versa. */
+    public function testSupersedeStaleRunningRowsIsScopedToItsOwnKind(): void
+    {
+        $svc = new AdminBackupService();
+        $filesRunning = $this->insertRun('files', 'running', null);
+
+        $method = new \ReflectionMethod(AdminBackupService::class, 'supersedeStaleRunningRows');
+        $method->setAccessible(true);
+        $method->invoke($svc, 'db', 0);
+
+        $row = QueryUtils::querySingleRow('SELECT status FROM admin_hub_backup_run WHERE id = ?', [$filesRunning]);
+        $this->assertSame('running', $row['status'] ?? null, 'a different-kind running row must be left alone');
+    }
+
+    /**
+     * BACKUP-cleanup (B2): pruneOldRunRows() used to exempt EVERY 'running' row
+     * from deletion regardless of age — a crash-orphaned row from a legacy
+     * facility pruneOldRunRows() never scans (it only prunes the exact
+     * $facilityId passed in) could sit forever. A 'running' row far older than
+     * either lock TTL is provably dead and must now be eligible for the same
+     * age-bounded prune as any other row (still subject to the existing
+     * verified_at / latest-per-kind protections).
+     */
+    public function testPruneOldRunRowsPrunesAStaleRunningRowPastTheLockTtl(): void
+    {
+        $config = new ClinicConfigService();
+        $prev = $config->get('admin_hub_backup_retention_days', '30', 0);
+        try {
+            $config->set('admin_hub_backup_retention_days', '5', 0);
+
+            // A fresh 'ok' row keeps this the latest-per-kind so the stale running
+            // row below is not protected by the "latest of its kind" exemption.
+            $freshId = $this->insertRun('db', 'ok', '/tmp/nc-fresh-ok.enc', 10);
+
+            $staleRunningId = $this->insertRun('db', 'running', null);
+            QueryUtils::sqlStatementThrowException(
+                "UPDATE admin_hub_backup_run SET started_at = DATE_SUB(NOW(), INTERVAL 400 DAY) WHERE id = ?",
+                [$staleRunningId]
+            );
+
+            $actualLatest = QueryUtils::querySingleRow(
+                "SELECT id FROM admin_hub_backup_run WHERE facility_id = 0 AND kind = 'db' ORDER BY id DESC LIMIT 1"
+            );
+            if ((int) ($actualLatest['id'] ?? 0) !== $freshId) {
+                $this->markTestSkipped('another backup run landed concurrently during this test');
+            }
+
+            $svc = new AdminBackupService(config: $config);
+            $method = new \ReflectionMethod(AdminBackupService::class, 'pruneOldRunRows');
+            $method->setAccessible(true);
+            $method->invoke($svc, 0);
+
+            $this->assertFalse(
+                QueryUtils::querySingleRow('SELECT id FROM admin_hub_backup_run WHERE id = ?', [$staleRunningId]),
+                'a running row far older than either lock TTL must be pruned, not exempted forever'
+            );
+            $this->assertNotFalse(QueryUtils::querySingleRow('SELECT id FROM admin_hub_backup_run WHERE id = ?', [$freshId]));
+        } finally {
+            $config->set('admin_hub_backup_retention_days', (string) $prev, 0);
+        }
+    }
 }

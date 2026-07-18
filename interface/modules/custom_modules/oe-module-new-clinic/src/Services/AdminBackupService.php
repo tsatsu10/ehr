@@ -311,6 +311,36 @@ class AdminBackupService
     }
 
     /**
+     * BACKUP-cleanup (B2): mark any OTHER 'running' row of the given kind as
+     * failed. Callers only invoke this AFTER successfully claiming the M3
+     * concurrency lock for that same kind — which proves no genuinely in-flight
+     * run of this kind can exist right now, so any 'running' row that isn't the
+     * one we just inserted (excluded via $excludeRunId) is provably a crash
+     * remnant (server killed mid-dump/mid-copy, power loss, etc.), never a real
+     * still-running backup. Mirrors AdminHealthService::supersedeRunningBackups()
+     * (the interactive "Run now" path), which this worker/cron path lacked —
+     * that gap is what left run id 4 stuck on 'running' forever on this box.
+     * Best-effort: never let cleanup failure block the actual backup.
+     */
+    private function supersedeStaleRunningRows(string $kind, int $excludeRunId): void
+    {
+        try {
+            [$primaryFacilityId, $legacyFacilityId] = $this->backupFacilityIdsForRead();
+            $message = 'Superseded: a previous run of this kind never finished '
+                . '(stale running row cleaned up automatically before this run started)';
+            sqlStatement(
+                "UPDATE admin_hub_backup_run
+                 SET status = 'failed', finished_at = NOW(), message = ?
+                 WHERE facility_id IN (?, ?) AND kind = ? AND status = 'running' AND id != ?",
+                [$message, $primaryFacilityId, $legacyFacilityId, $kind, $excludeRunId]
+            );
+        } catch (\Throwable) {
+            // best-effort — table/column shape issues on an un-upgraded install
+            // must never block the real backup this call is a preamble to.
+        }
+    }
+
+    /**
      * Perform a real encrypted backup, recording its own run row through the
      * running → ok/failed lifecycle.
      *
@@ -406,10 +436,16 @@ class AdminBackupService
      * not get re-attempted every time the 1-2 minute job worker polls
      * (`runScheduledBackup()`) — each attempt before this fix re-ran the full
      * mysqldump + gzip, ~1440 wasted failed rows/day on a box that can never
-     * succeed until an admin intervenes. Capped by the configured frequency
-     * itself (a sub-daily frequency shouldn't wait longer than its own cadence to
-     * retry) and floored at 1h so a single flaky failure doesn't wait a whole
-     * backoff window on a frequent schedule.
+     * succeed until an admin intervenes.
+     *
+     * BACKUP-cleanup (B6): `backup_frequency_days` is whole DAYS (min 1 once a
+     * schedule is on at all — see the `$freq <= 0` early-return below), so a
+     * "cap the backoff at the configured frequency" rule can never actually bite
+     * — 1 day is already 24h, six times this constant. dueForBackup() below
+     * used to compute `max(1, min($freq * 24, self::RETRY_BACKOFF_HOURS))`,
+     * which was permanently equivalent to this constant alone; simplified to a
+     * direct use of it. If `backup_frequency_days` ever gains sub-day
+     * granularity, that min()-with-frequency behavior would need to come back.
      */
     private const RETRY_BACKOFF_HOURS = 4;
 
@@ -448,7 +484,7 @@ class AdminBackupService
              ORDER BY id DESC LIMIT 1",
             [$facilityIds[0], $facilityIds[1], $kind]
         );
-        $backoffHours = max(1, min($freq * 24, self::RETRY_BACKOFF_HOURS));
+        $backoffHours = self::RETRY_BACKOFF_HOURS;
         $inBackoff = is_array($lastAttempt)
             && (string) ($lastAttempt['status'] ?? '') === 'failed'
             && $this->hoursSinceTimestamp((string) ($lastAttempt['finished_at'] ?? '')) < $backoffHours;
@@ -519,6 +555,16 @@ class AdminBackupService
             );
             throw new \RuntimeException($message, 409);
         }
+
+        // BACKUP-cleanup (B2) — we just PROVED (by winning the lock above) that
+        // no other process can genuinely be running a 'db' backup right now, so
+        // any OTHER row still marked 'running' at this point is provably stale
+        // (a prior run that was killed mid-dump, e.g. a server crash or `kill -9`,
+        // never got the chance to mark itself failed). The UI "Run now" path
+        // (AdminHealthService::initiateBackup) already superseded stale rows this
+        // way, but the worker/cron path here (runScheduledBackup -> performBackup)
+        // never did — a mid-dump kill on that path left an immortal 'running' row.
+        $this->supersedeStaleRunningRows('db', $runId);
 
         $tmpDir = null;
         try {
@@ -667,6 +713,10 @@ class AdminBackupService
             );
             throw new \RuntimeException($message, 409);
         }
+
+        // BACKUP-cleanup (B2) — same reasoning as performBackup(): winning the
+        // 'files' lock above proves any other 'running' files row is stale.
+        $this->supersedeStaleRunningRows('files', $runId);
 
         try {
             $targetDir = $this->resolveTargetDir($facilityId);
@@ -1623,6 +1673,19 @@ class AdminBackupService
      *    H3(i)); deleting the only one would silently reset the setup checklist.
      *  - the single most-recent row of EACH kind ('db'/'files'), so "last status"
      *    always has something current to show even on a 0-day-old install.
+     *
+     * BACKUP-cleanup (B2): a `running` row used to be exempt from pruning no
+     * matter how old — meaning a crash-orphaned row (see supersedeStaleRunningRows())
+     * that somehow never got superseded (e.g. it belongs to a legacy facility
+     * pruneOldRunRows() never scans, since it only runs for the current
+     * facilityId) would sit forever. A `running` row is only EVER genuinely
+     * in-flight for as long as the M3 concurrency lock can be held — past that,
+     * it is provably dead — so `running` rows are now included in the same
+     * age-bounded delete once they are older than the longer of the two lock
+     * TTLs. In practice the existing `started_at < N days` bound already implies
+     * this (the retention window's minimum active setting, 1 day, is far past
+     * either TTL), but the explicit TTL bound below makes that guarantee correct
+     * by construction rather than by coincidence of today's config ranges.
      */
     private function pruneOldRunRows(int $facilityId): int
     {
@@ -1630,6 +1693,7 @@ class AdminBackupService
         if ($days <= 0) {
             return 0;
         }
+        $maxLockTtlSeconds = max(self::LOCK_TTL_DB_SECONDS, self::LOCK_TTL_FILES_SECONDS);
         try {
             $latestRows = QueryUtils::fetchRecords(
                 'SELECT MAX(id) AS id FROM admin_hub_backup_run WHERE facility_id = ? GROUP BY kind',
@@ -1644,17 +1708,21 @@ class AdminBackupService
 
             $countRow = QueryUtils::querySingleRow(
                 "SELECT COUNT(*) AS cnt FROM admin_hub_backup_run
-                 WHERE facility_id = ? AND status != 'running' AND verified_at IS NULL
-                 AND started_at < DATE_SUB(NOW(), INTERVAL ? DAY) AND id NOT IN ($placeholders)",
-                array_merge([$facilityId, $days], $keepIds)
+                 WHERE facility_id = ? AND verified_at IS NULL
+                 AND started_at < DATE_SUB(NOW(), INTERVAL ? DAY)
+                 AND (status != 'running' OR started_at < DATE_SUB(NOW(), INTERVAL ? SECOND))
+                 AND id NOT IN ($placeholders)",
+                array_merge([$facilityId, $days, $maxLockTtlSeconds], $keepIds)
             );
             $count = is_array($countRow) ? (int) ($countRow['cnt'] ?? 0) : 0;
             if ($count > 0) {
                 sqlStatement(
                     "DELETE FROM admin_hub_backup_run
-                     WHERE facility_id = ? AND status != 'running' AND verified_at IS NULL
-                     AND started_at < DATE_SUB(NOW(), INTERVAL ? DAY) AND id NOT IN ($placeholders)",
-                    array_merge([$facilityId, $days], $keepIds)
+                     WHERE facility_id = ? AND verified_at IS NULL
+                     AND started_at < DATE_SUB(NOW(), INTERVAL ? DAY)
+                     AND (status != 'running' OR started_at < DATE_SUB(NOW(), INTERVAL ? SECOND))
+                     AND id NOT IN ($placeholders)",
+                    array_merge([$facilityId, $days, $maxLockTtlSeconds], $keepIds)
                 );
             }
 

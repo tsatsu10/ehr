@@ -553,13 +553,21 @@ class ClinicAdminServiceTest extends TestCase
 
         $config = new ClinicConfigService();
         $prevGlobal = $config->get('admin_hub_backup_retention_days', '30', 0);
+        // BACKUP-cleanup (B4): this test toggles enable_triage at $facilityId to
+        // force a change (saveSettings() only clears/audits KEYS THAT ACTUALLY
+        // CHANGED). The prior version hardcoded '0' then unconditionally restored
+        // '1' in `finally` — on this shared dev DB that silently overwrote
+        // whatever the real prior value was (test hygiene bug the wave-3 review
+        // caught). Capture the real prior value first and restore exactly that.
+        $prevTriage = $config->get('enable_triage', '1', $facilityId);
+        $toggledTriage = $prevTriage === '1' ? '0' : '1';
         $service = new ClinicAdminService();
         try {
             // Seed a real facility-0 backup config value first.
             $config->set('admin_hub_backup_retention_days', '14', 0);
 
             // Now save an UNRELATED, genuinely facility-scoped key at the specific facility.
-            $service->saveSettings('facility', ['enable_triage' => '0'], 1, $facilityId);
+            $service->saveSettings('facility', ['enable_triage' => $toggledTriage], 1, $facilityId);
 
             // The facility-0 backup retention value must be untouched. Fresh
             // instance — see the staleness note in the sibling test above.
