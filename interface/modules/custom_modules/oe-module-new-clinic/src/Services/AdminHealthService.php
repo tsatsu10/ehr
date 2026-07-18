@@ -55,11 +55,12 @@ class AdminHealthService
             $facilityId = 0;
         }
         $resolvedFacilityId = $this->visitScope->resolveDeskFacilityId($facilityId > 0 ? $facilityId : null);
+        $backupFacilityId = $this->backupService()->facilityId();
         $webroot = (string) ($GLOBALS['webroot'] ?? '');
-        $latestBackup = $this->latestBackupRun($resolvedFacilityId);
+        $latestBackup = $this->latestBackupRun();
 
         $chips = [
-            $this->backupChip($resolvedFacilityId, $latestBackup),
+            $this->backupChip($latestBackup),
             $this->reconciliationChip($resolvedFacilityId),
             $this->diskChip(),
             $this->phpChip(),
@@ -67,8 +68,11 @@ class AdminHealthService
             $this->cronChip($resolvedFacilityId),
         ];
 
-        $nativeBackupOn = $this->config->getInt('enable_native_backup', 0, $resolvedFacilityId) === 1;
-        $backupTargetDir = trim((string) ($this->config->get('backup_target_dir', '', $resolvedFacilityId) ?? ''));
+        // M4 — backup config lives at the fixed facility-0 sentinel (a database
+        // backup is whole-DB, not scoped to any one clinic facility); everything
+        // else on this page stays genuinely facility-scoped.
+        $nativeBackupOn = $this->backupService()->isNativeEnabled($backupFacilityId);
+        $backupTargetDir = trim((string) ($this->config->get('backup_target_dir', '', $backupFacilityId) ?? ''));
         $backupTargetCloud = $backupTargetDir !== '' ? $this->cloudTarget()->classify($backupTargetDir) : null;
 
         return [
@@ -82,7 +86,7 @@ class AdminHealthService
                 'backup_retention_days' => $this->config->getInt(
                     'admin_hub_backup_retention_days',
                     30,
-                    $resolvedFacilityId
+                    $backupFacilityId
                 ),
             ],
             'can_run_backup' => $this->canRunBackup(),
@@ -91,19 +95,32 @@ class AdminHealthService
                 : 'Backup requires OpenEMR administrator (super) access — ask your IT partner or use Advanced → Backup.',
             'backup_running' => is_array($latestBackup) && (string) ($latestBackup['status'] ?? '') === 'running',
             'backup_run_id' => is_array($latestBackup) ? (int) ($latestBackup['id'] ?? 0) : null,
-            'backup_history' => $this->backupHistory($resolvedFacilityId),
-            'backup_schedule' => $this->backupService()->dueForBackup($resolvedFacilityId),
+            'backup_history' => $this->backupHistory('db'),
+            'backup_schedule' => $this->backupService()->dueForBackup($backupFacilityId),
             'backup_native_enabled' => $nativeBackupOn,
+            // H3(i) — has ANY db backup ever completed with a real artifact AND
+            // then passed a decrypt-and-read-back verify? This (not the health
+            // chip, which can be "ok" off a self-reported stub) is what the setup
+            // checklist's "Backup tested" item requires — "tested" means tested.
+            'backup_verified_native_run' => $this->backupEverVerified(),
+            // H1(c) — the last SCHEDULED attempt (worker/cron/heartbeat, actor_id
+            // IS NULL), regardless of ok/failed, so silence in the unattended
+            // schedule is visible even when a recent MANUAL "Run now" click makes
+            // the ordinary backup chip look fresh.
+            'backup_last_scheduled_attempt' => $this->lastScheduledAttempt('db'),
             // Site-files backup (design §3b) — a SEPARATE incremental per-file mirror
             // of the documents tree. Own enable flag, own history, own schedule.
             'files_backup_enabled' => $nativeBackupOn
-                && $this->backupService()->isFilesBackupEnabled($resolvedFacilityId),
+                && $this->backupService()->isFilesBackupEnabled($backupFacilityId),
             'files_backup_history' => $nativeBackupOn
-                ? $this->backupHistory($resolvedFacilityId, 'files')
+                ? $this->backupHistory('files')
                 : [],
             'files_backup_schedule' => $nativeBackupOn
-                ? $this->backupService()->dueForBackup($resolvedFacilityId, 'files')
+                ? $this->backupService()->dueForBackup($backupFacilityId, 'files')
                 : ['scheduled' => false, 'due' => false, 'frequency_days' => 0],
+            'files_backup_last_scheduled_attempt' => $nativeBackupOn
+                ? $this->lastScheduledAttempt('files')
+                : null,
             // Which cloud (if any) the target folder syncs to — off-site via the
             // provider's own desktop app, no OAuth, archive already encrypted.
             'backup_target_cloud' => $backupTargetCloud,
@@ -111,7 +128,7 @@ class AdminHealthService
             // target / inside the app, and not a cloud folder) don't survive disk
             // loss/theft.
             'backup_target_local' => $nativeBackupOn && $backupTargetCloud === null
-                && $this->backupTargetIsLocal($resolvedFacilityId),
+                && $this->backupTargetIsLocal(),
             // Cloud sync folders detected on this box, to suggest as a target.
             'backup_cloud_folders' => $nativeBackupOn ? $this->cloudTarget()->detectFolders() : [],
             // Recovery-key custody: the drive key decrypts every backup and lives on
@@ -140,35 +157,41 @@ class AdminHealthService
             );
         }
 
-        $facilityId = $this->visitScope->resolveDeskFacilityId($facilityId > 0 ? $facilityId : null);
+        // M4 — backup config/run rows live at the fixed facility-0 sentinel, not
+        // whatever this request happened to resolve to.
+        $backupFacilityId = $this->backupService()->facilityId();
 
         // C6 follow-up — when the native engine is on, actually perform an encrypted
         // backup (self-contained run row) instead of the log-only stub below.
-        if ($this->backupService()->isNativeEnabled($facilityId)) {
-            $this->supersedeRunningBackups($facilityId, 'Superseded by new native backup run');
-            return $this->backupService()->runBackup($facilityId, $actorUserId);
+        if ($this->backupService()->isNativeEnabled($backupFacilityId)) {
+            $this->supersedeRunningBackups('db', 'Superseded by new native backup run');
+
+            return $this->backupService()->runBackup($backupFacilityId, $actorUserId);
         }
 
-        $this->supersedeRunningBackups($facilityId, 'Superseded by new manual backup run');
+        $this->supersedeRunningBackups('db', 'Superseded by new self-reported backup run');
 
         $startedAt = date('Y-m-d H:i:s');
         $webroot = (string) ($GLOBALS['webroot'] ?? '');
 
+        // H3(iii) — this is the legacy, log-only path (native backup is off): it
+        // never touches disk, so the message says exactly that up front — never
+        // let this look like a real backup run in the history table.
         $runId = (int) QueryUtils::sqlInsert(
             "INSERT INTO admin_hub_backup_run
              (facility_id, kind, started_at, status, actor_id, message)
              VALUES (?, 'db', ?, 'running', ?, ?)",
             [
-                $facilityId,
+                $backupFacilityId,
                 $startedAt,
                 $actorUserId,
-                'Manual backup initiated from Admin Hub',
+                'Self-reported backup started (no automated artifact) — complete the download in the stock backup screen',
             ]
         );
 
         $this->auditBackupRun('admin_hub.backup_run', [
             'run_id' => $runId,
-            'facility_id' => $facilityId,
+            'facility_id' => $backupFacilityId,
             'actor_user_id' => $actorUserId,
             'phase' => 'started',
         ]);
@@ -195,9 +218,12 @@ class AdminHealthService
                 403
             );
         }
-        $facilityId = $this->visitScope->resolveDeskFacilityId($facilityId > 0 ? $facilityId : null);
 
-        return $this->backupService()->runFilesBackup($facilityId, $actorUserId);
+        // M2 — clean up a stuck `running` FILES row (crash/kill mid-copy) before
+        // starting a fresh one; scoped to kind='files' only (see supersedeRunningBackups()).
+        $this->supersedeRunningBackups('files', 'Superseded by new site-files backup run');
+
+        return $this->backupService()->runFilesBackup($this->backupService()->facilityId(), $actorUserId);
     }
 
     /**
@@ -212,29 +238,33 @@ class AdminHealthService
             );
         }
 
-        $facilityId = $this->visitScope->resolveDeskFacilityId($facilityId > 0 ? $facilityId : null);
-        $row = $this->resolveBackupRunRow($facilityId, $runId);
+        $backupFacilityId = $this->backupService()->facilityId();
+        $row = $this->resolveBackupRunRow($runId);
         if ($row === null) {
             throw new \RuntimeException('No in-progress backup run to complete', 404);
         }
 
         $runId = (int) ($row['id'] ?? 0);
+        $rowFacilityId = (int) ($row['facility_id'] ?? $backupFacilityId);
         $finishedAt = date('Y-m-d H:i:s');
+        // H3(iii) — the message itself says "self-reported / not verified" so this
+        // is never indistinguishable from a real, artifact-backed backup — in the
+        // chip, in the history table, and to anyone reading the audit trail.
         QueryUtils::sqlStatementThrowException(
             "UPDATE admin_hub_backup_run
              SET status = 'ok', finished_at = ?, message = ?
              WHERE id = ? AND facility_id = ? AND status = 'running'",
             [
                 $finishedAt,
-                'Manual backup completed from Admin Hub',
+                'Self-reported: marked complete by hand — no automated artifact, not verified',
                 $runId,
-                $facilityId,
+                $rowFacilityId,
             ]
         );
 
         $this->auditBackupRun('admin_hub.backup_run', [
             'run_id' => $runId,
-            'facility_id' => $facilityId,
+            'facility_id' => $rowFacilityId,
             'actor_user_id' => $actorUserId,
             'phase' => 'completed',
             'finished_at' => $finishedAt,
@@ -285,7 +315,7 @@ class AdminHealthService
      * @param array<string, mixed>|null $latest
      * @return array<string, mixed>
      */
-    private function backupChip(int $facilityId, ?array $latest): array
+    private function backupChip(?array $latest): array
     {
         $status = 'unknown';
         $summary = 'No backup recorded';
@@ -296,6 +326,10 @@ class AdminHealthService
             $runStatus = (string) ($latest['status'] ?? '');
             $finishedAt = (string) ($latest['finished_at'] ?? '');
             $startedAt = (string) ($latest['started_at'] ?? '');
+            // H3(ii) — the legacy "Mark backup complete" path never writes a
+            // file_path (it's a self-report, not an artifact). Discriminate on
+            // that existing signal rather than adding a new "is this real" flag.
+            $hasArtifact = !empty($latest['file_path']);
 
             if ($runStatus === 'failed') {
                 $status = 'error';
@@ -306,6 +340,14 @@ class AdminHealthService
                 $status = 'warning';
                 $summary = 'Backup in progress';
                 $detail = 'Started ' . $startedAt . ' — complete the stock backup download, then mark complete.';
+                $impact = 'warn';
+            } elseif ($runStatus === 'ok' && $finishedAt !== '' && !$hasArtifact) {
+                // H3(ii)/(iii) — never an unqualified green light: this run was
+                // marked complete by hand with nothing to show for it.
+                $status = 'warning';
+                $summary = 'Self-reported (no verified artifact) · ' . $this->humanAgeLabel($finishedAt);
+                $detail = 'Marked complete by hand — no automated backup file exists to verify. '
+                    . 'Turn on native backup for a real, checkable artifact.';
                 $impact = 'warn';
             } elseif ($runStatus === 'ok' && $finishedAt !== '') {
                 $ageDays = $this->daysSince($finishedAt);
@@ -559,15 +601,16 @@ class AdminHealthService
     /**
      * @return array<string, mixed>|null
      */
-    private function latestBackupRun(int $facilityId): ?array
+    private function latestBackupRun(): ?array
     {
+        [$facilityId, $legacyFacilityId] = $this->backupService()->backupFacilityIdsForRead();
         try {
             $row = QueryUtils::querySingleRow(
                 "SELECT * FROM admin_hub_backup_run
-                 WHERE facility_id = ? AND kind = 'db'
+                 WHERE facility_id IN (?, ?) AND kind = 'db'
                  ORDER BY id DESC
                  LIMIT 1",
-                [$facilityId]
+                [$facilityId, $legacyFacilityId]
             );
         } catch (\Throwable) {
             return null;
@@ -581,17 +624,18 @@ class AdminHealthService
      *
      * @return array<int, array<string, mixed>>
      */
-    private function backupHistory(int $facilityId, string $kind = 'db'): array
+    private function backupHistory(string $kind = 'db'): array
     {
         $kind = $kind === 'files' ? 'files' : 'db';
+        [$facilityId, $legacyFacilityId] = $this->backupService()->backupFacilityIdsForRead();
         try {
             $rows = QueryUtils::fetchRecords(
-                "SELECT id, started_at, finished_at, status, size_bytes, file_path, message
+                "SELECT id, started_at, finished_at, status, size_bytes, file_path, message, verified_at
                  FROM admin_hub_backup_run
-                 WHERE facility_id = ? AND kind = ?
+                 WHERE facility_id IN (?, ?) AND kind = ?
                  ORDER BY id DESC
                  LIMIT 10",
-                [$facilityId, $kind]
+                [$facilityId, $legacyFacilityId, $kind]
             ) ?: [];
         } catch (\Throwable) {
             return [];
@@ -609,13 +653,18 @@ class AdminHealthService
                 // Show only the file name in the UI, not the full server path.
                 'file_name' => $row['file_path'] !== null ? basename((string) $row['file_path']) : '',
                 'message' => (string) ($row['message'] ?? ''),
+                // H3(ii) — an 'ok' run with no file_path is the legacy self-report,
+                // never a real artifact; the history table must say so, not just
+                // fall back to showing the message text.
+                'self_reported' => (string) ($row['status'] ?? '') === 'ok' && empty($row['file_path']),
+                'verified' => !empty($row['verified_at'] ?? null),
             ];
         }, $rows);
     }
 
-    private function backupTargetIsLocal(int $facilityId): bool
+    private function backupTargetIsLocal(): bool
     {
-        $target = trim((string) ($this->config->get('backup_target_dir', '', $facilityId) ?? ''));
+        $target = trim((string) ($this->config->get('backup_target_dir', '', $this->backupService()->facilityId()) ?? ''));
         if ($target === '') {
             return true; // defaults to documents/nc_backups on this box
         }
@@ -623,6 +672,62 @@ class AdminHealthService
         $target = rtrim(str_replace('\\', '/', $target), '/');
 
         return $fileroot !== '' && str_starts_with($target, $fileroot);
+    }
+
+    /**
+     * H3(i) — has ANY db backup ever completed with a real, on-disk artifact AND
+     * then had a decrypt-and-read-back verify pass? This is deliberately an
+     * "ever", not "latest": once a clinic has proven it can produce and restore
+     * a real backup, that one-time setup-checklist gate stays satisfied even if
+     * the most recent run since then happens to be a self-reported stub or a
+     * transient failure — the ongoing health SIGNAL for that is the backup chip,
+     * which does decay with staleness/failure; the checklist item is a completed
+     * training/setup milestone, not a live health check.
+     */
+    private function backupEverVerified(): bool
+    {
+        [$facilityId, $legacyFacilityId] = $this->backupService()->backupFacilityIdsForRead();
+        try {
+            $row = QueryUtils::querySingleRow(
+                "SELECT id FROM admin_hub_backup_run
+                 WHERE facility_id IN (?, ?) AND kind = 'db' AND status = 'ok'
+                 AND file_path IS NOT NULL AND verified_at IS NOT NULL
+                 ORDER BY id DESC LIMIT 1",
+                [$facilityId, $legacyFacilityId]
+            );
+        } catch (\Throwable) {
+            // verified_at may not exist yet on an un-upgraded install.
+            return false;
+        }
+
+        return is_array($row) && !empty($row['id']);
+    }
+
+    /**
+     * H1(c) — the last SCHEDULED (worker/cron/heartbeat) attempt, ok or failed,
+     * as opposed to the latest run of ANY kind (which a recent manual "Run now"
+     * click can make look healthy even if the unattended schedule never fires).
+     * Scheduled runs are the ones with no interactive actor (actor_id IS NULL —
+     * runScheduledBackup()/runScheduledFilesBackup() always pass actorUserId=0).
+     *
+     * @return array<string, mixed>|null
+     */
+    private function lastScheduledAttempt(string $kind = 'db'): ?array
+    {
+        $kind = $kind === 'files' ? 'files' : 'db';
+        [$facilityId, $legacyFacilityId] = $this->backupService()->backupFacilityIdsForRead();
+        try {
+            $row = QueryUtils::querySingleRow(
+                "SELECT status, started_at, finished_at, message FROM admin_hub_backup_run
+                 WHERE facility_id IN (?, ?) AND kind = ? AND actor_id IS NULL
+                 ORDER BY id DESC LIMIT 1",
+                [$facilityId, $legacyFacilityId, $kind]
+            );
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return is_array($row) && ($row['started_at'] ?? null) !== null ? $row : null;
     }
 
     private function humanSize(int $bytes): string
@@ -643,30 +748,44 @@ class AdminHealthService
     /**
      * @return array<string, mixed>|null
      */
-    private function resolveBackupRunRow(int $facilityId, ?int $runId): ?array
+    private function resolveBackupRunRow(?int $runId): ?array
     {
         if ($runId !== null && $runId > 0) {
+            [$facilityId, $legacyFacilityId] = $this->backupService()->backupFacilityIdsForRead();
             $row = QueryUtils::querySingleRow(
                 "SELECT * FROM admin_hub_backup_run
-                 WHERE id = ? AND facility_id = ? AND kind = 'db' AND status = 'running'
+                 WHERE id = ? AND facility_id IN (?, ?) AND kind = 'db' AND status = 'running'
                  LIMIT 1",
-                [$runId, $facilityId]
+                [$runId, $facilityId, $legacyFacilityId]
             );
 
             return is_array($row) && !empty($row['id']) ? $row : null;
         }
 
-        return $this->latestBackupRun($facilityId);
+        return $this->latestBackupRun();
     }
 
-    private function supersedeRunningBackups(int $facilityId, string $message): void
+    /**
+     * M2 — the pre-M2 version hardcoded `kind = 'db'`, and only the DB-backup
+     * start path ever called it. A `files` run that died mid-copy (crash,
+     * kill -9, box power loss) could therefore NEVER be superseded by anything —
+     * it just showed "running" forever. Now callable per kind, and BOTH
+     * initiateBackup() and initiateFilesBackup() call it (each with its own
+     * kind) before starting a fresh run of that kind — never the other kind's,
+     * so a genuinely in-flight files backup is untouched by a new DB run
+     * starting (and vice versa; the M3 lock is what actually serializes
+     * concurrent same-kind runs).
+     */
+    private function supersedeRunningBackups(string $kind, string $message): void
     {
+        $kind = $kind === 'files' ? 'files' : 'db';
+        [$facilityId, $legacyFacilityId] = $this->backupService()->backupFacilityIdsForRead();
         try {
             QueryUtils::sqlStatementThrowException(
                 "UPDATE admin_hub_backup_run
                  SET status = 'failed', finished_at = NOW(), message = ?
-                 WHERE facility_id = ? AND kind = 'db' AND status = 'running'",
-                [$message, $facilityId]
+                 WHERE facility_id IN (?, ?) AND kind = ? AND status = 'running'",
+                [$message, $facilityId, $legacyFacilityId, $kind]
             );
         } catch (\Throwable) {
             // Table may not exist until SQL upgrade on older installs.

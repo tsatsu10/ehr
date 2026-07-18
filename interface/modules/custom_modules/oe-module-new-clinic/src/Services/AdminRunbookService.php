@@ -199,6 +199,24 @@ class AdminRunbookService
                 . 'tick "Go-live worksheet recorded" on the setup checklist above.',
                 null
             ),
+            $this->card(
+                'RB-22',
+                'Go-live',
+                'Schedule automatic backups',
+                'System',
+                'A logged-in browser tab is NOT enough on a desk-only clinic (New Clinic desks '
+                . 'skip the legacy tab shell the heartbeat needs). After setting "Automatic backup '
+                . 'frequency" in System health, schedule the job worker to actually run it — '
+                . 'preferred, runs backups plus the module\'s other background jobs: '
+                . 'Windows Task Scheduler (daily) → Program "C:\\xampp\\php\\php.exe", Arguments '
+                . '"C:\\xampp\\htdocs\\openemr\\interface\\modules\\custom_modules\\oe-module-new-clinic\\'
+                . 'scripts\\run-jobs.php --max-seconds=55"; Linux cron → '
+                . '"* * * * * php /path/to/oe-module-new-clinic/scripts/run-jobs.php --max-seconds=55". '
+                . 'Backup-only alternative: scripts/backup-scheduled.php on the same schedulers. '
+                . 'Confirm it is really firing: System health shows "Last scheduled attempt" under '
+                . 'Backup & logs — if that never appears, the task is not actually running.',
+                $adminHub . '?tab=system'
+            ),
         ];
 
         return [

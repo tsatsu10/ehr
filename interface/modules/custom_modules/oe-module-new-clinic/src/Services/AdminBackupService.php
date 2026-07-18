@@ -34,6 +34,24 @@ class AdminBackupService
     /** In-memory encryption cap (slice 1). Larger DBs use the VPS replica / stock backup. */
     private const MAX_ENCRYPT_BYTES = 100 * 1024 * 1024;
 
+    /**
+     * BACKUP-H1/M4: a database backup is whole-DB, not scoped to any one clinic
+     * facility — the old per-request "resolved desk facility" was a meaningless,
+     * unstable key for backup config/run rows (a multi-facility clinic or a
+     * worker with no session context could resolve differently call to call,
+     * making "last successful backup" and "is one due" answers wobble). Backup
+     * config and run rows now live at this fixed sentinel facility.
+     */
+    private const BACKUP_FACILITY_ID = 0;
+
+    /** Concurrency guard (M3) lock keys in `new_clinic_maintenance_lock`. */
+    private const LOCK_KEY_DB = 'backup:db';
+    private const LOCK_KEY_FILES = 'backup:files';
+
+    /** Generous ceilings — a slow disk/USB target must not starve the other kind's lock. */
+    private const LOCK_TTL_DB_SECONDS = 3600;
+    private const LOCK_TTL_FILES_SECONDS = 14400;
+
     public function __construct(
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly VisitScopeService $visitScope = new VisitScopeService(),
@@ -42,7 +60,117 @@ class AdminBackupService
 
     public function isNativeEnabled(int $facilityId): bool
     {
-        return $this->config->getInt('enable_native_backup', 0, $facilityId) === 1;
+        return $this->config->getInt('enable_native_backup', 0, self::BACKUP_FACILITY_ID) === 1;
+    }
+
+    /**
+     * M4 back-compat: installs that ran before backups were pinned to facility 0
+     * may have run rows (and config overrides) filed under whatever facility a
+     * given request happened to resolve to at the time. Recompute that same old
+     * value so reads can still find them, without making NEW writes depend on
+     * request/session state (worker runs have none — repo gotcha).
+     */
+    private function legacyBackupFacilityId(): int
+    {
+        try {
+            return $this->visitScope->resolveDeskFacilityId();
+        } catch (\Throwable) {
+            return self::BACKUP_FACILITY_ID;
+        }
+    }
+
+    /** The fixed sentinel facility backup config/run rows are written to (M4). */
+    public function facilityId(): int
+    {
+        return self::BACKUP_FACILITY_ID;
+    }
+
+    /**
+     * Facility ids to search when reading `admin_hub_backup_run` history/schedule
+     * state: the current global sentinel plus (for back-compat) whatever facility
+     * pre-M4 code would have resolved to on this install.
+     *
+     * @return array{0: int, 1: int}
+     */
+    public function backupFacilityIdsForRead(): array
+    {
+        return [self::BACKUP_FACILITY_ID, $this->legacyBackupFacilityId()];
+    }
+
+    /**
+     * Try to claim a short-lived exclusive lock so two backup runs (e.g. the
+     * logged-in heartbeat and the OS-scheduled worker firing at the same minute)
+     * never dump/encrypt concurrently onto the same target directory (M3).
+     *
+     * Same compare-and-swap pattern as VisitScopeService::claimMaintenanceLock()
+     * (SCALE-1.3): take over an expired lock or insert a fresh one, both stamped
+     * with a random owner token, then read back the owner — we won iff it is
+     * still ours. Fails OPEN (returns a synthetic token) if the lock table isn't
+     * installed yet, so a backup on an un-upgraded install still runs.
+     *
+     * @return string|null the owner token to release with, or null if another run holds it
+     */
+    private function claimBackupLock(string $lockKey, int $ttlSeconds): ?string
+    {
+        try {
+            $live = QueryUtils::querySingleRow(
+                'SELECT (locked_until > NOW()) AS live FROM new_clinic_maintenance_lock WHERE lock_key = ?',
+                [$lockKey]
+            );
+            if (is_array($live) && (int) ($live['live'] ?? 0) === 1) {
+                return null;
+            }
+
+            $token = bin2hex(random_bytes(16));
+            sqlStatement(
+                'UPDATE new_clinic_maintenance_lock
+                 SET locked_until = DATE_ADD(NOW(), INTERVAL ? SECOND), owner_token = ?
+                 WHERE lock_key = ? AND locked_until < NOW()',
+                [$ttlSeconds, $token, $lockKey]
+            );
+            sqlStatement(
+                'INSERT IGNORE INTO new_clinic_maintenance_lock (lock_key, locked_until, owner_token)
+                 VALUES (?, DATE_ADD(NOW(), INTERVAL ? SECOND), ?)',
+                [$lockKey, $ttlSeconds, $token]
+            );
+            $row = QueryUtils::querySingleRow(
+                'SELECT owner_token FROM new_clinic_maintenance_lock WHERE lock_key = ?',
+                [$lockKey]
+            );
+
+            return (is_array($row) && (string) ($row['owner_token'] ?? '') === $token) ? $token : null;
+        } catch (\Throwable) {
+            // Lock table missing (pre-upgrade install) — degrade to always-run
+            // rather than silently never-run. releaseBackupLock() no-ops for this.
+            return 'unavailable';
+        }
+    }
+
+    /**
+     * Release a lock claimed by claimBackupLock(), only if we still hold it.
+     *
+     * Backdates `locked_until` by a second rather than setting it to exactly
+     * NOW(): `DATETIME`/`NOW()` are 1-second resolution, and the re-claim CAS
+     * (`WHERE locked_until < NOW()`) needs a STRICTLY earlier timestamp — a
+     * release-then-immediate-reclaim landing in the same wall-clock second
+     * would otherwise tie (`locked_until = NOW()`, neither `<` nor free) and
+     * the reclaim would wrongly lose to a lock nothing still holds.
+     */
+    private function releaseBackupLock(string $lockKey, ?string $token): void
+    {
+        if ($token === null || $token === 'unavailable') {
+            return;
+        }
+        try {
+            sqlStatement(
+                "UPDATE new_clinic_maintenance_lock
+                 SET locked_until = DATE_SUB(NOW(), INTERVAL 1 SECOND)
+                 WHERE lock_key = ? AND owner_token = ?",
+                [$lockKey, $token]
+            );
+        } catch (\Throwable) {
+            // best-effort
+        }
     }
 
     /**
@@ -56,24 +184,26 @@ class AdminBackupService
         if (!AclMain::aclCheckCore('admin', 'super')) {
             throw new \RuntimeException('Backup requires OpenEMR administrator (super) access', 403);
         }
-        $facilityId = $this->visitScope->resolveDeskFacilityId($facilityId > 0 ? $facilityId : null);
         if (!$this->isNativeEnabled($facilityId)) {
             throw new \RuntimeException('Native backup is not enabled for this clinic', 403);
         }
 
-        return $this->performBackup($facilityId, $actorUserId);
+        return $this->performBackup(self::BACKUP_FACILITY_ID, $actorUserId);
     }
 
     /**
-     * Cron entry point (scripts/backup-scheduled.php). No interactive ACL — the
-     * trust boundary is server-side execution. Runs only when native backup is on
-     * AND a backup is due per `backup_frequency_days`.
+     * Cron/worker entry point (scripts/backup-scheduled.php, scripts/run-jobs.php,
+     * and the tab-shell heartbeat via scripts/backup-service.php — BACKUP-H1: all
+     * three call this SAME method, no copy-pasted due-check/run logic). No
+     * interactive ACL — the trust boundary is server-side execution. Runs only
+     * when native backup is on AND a backup is due per `backup_frequency_days`.
+     * Facility is ignored on purpose (M4) — a database backup is whole-DB, and a
+     * worker has no session to resolve one from anyway (repo gotcha).
      *
      * @return array<string, mixed>
      */
     public function runScheduledBackup(int $facilityId): array
     {
-        $facilityId = $this->visitScope->resolveDeskFacilityId($facilityId > 0 ? $facilityId : null);
         if (!$this->isNativeEnabled($facilityId)) {
             return ['status' => 'skipped', 'reason' => 'native_backup_disabled'];
         }
@@ -82,13 +212,13 @@ class AdminBackupService
             return ['status' => 'skipped', 'reason' => 'not_due', 'schedule' => $due];
         }
 
-        return $this->performBackup($facilityId, 0);
+        return $this->performBackup(self::BACKUP_FACILITY_ID, 0);
     }
 
     /** Is the separate site-files backup switched on (design §3b)? */
     public function isFilesBackupEnabled(int $facilityId): bool
     {
-        return $this->config->getInt('backup_include_site_files', 0, $facilityId) === 1;
+        return $this->config->getInt('backup_include_site_files', 0, self::BACKUP_FACILITY_ID) === 1;
     }
 
     /**
@@ -102,7 +232,6 @@ class AdminBackupService
         if (!AclMain::aclCheckCore('admin', 'super')) {
             throw new \RuntimeException('Backup requires OpenEMR administrator (super) access', 403);
         }
-        $facilityId = $this->visitScope->resolveDeskFacilityId($facilityId > 0 ? $facilityId : null);
         if (!$this->isNativeEnabled($facilityId)) {
             throw new \RuntimeException('Native backup is not enabled for this clinic', 403);
         }
@@ -110,19 +239,19 @@ class AdminBackupService
             throw new \RuntimeException('Site-files backup is not enabled for this clinic', 403);
         }
 
-        return $this->performFilesBackup($facilityId, $actorUserId);
+        return $this->performFilesBackup(self::BACKUP_FACILITY_ID, $actorUserId);
     }
 
     /**
-     * Cron/heartbeat entry for the site-files backup. Independent "separate entity"
-     * cadence: due-checked against the last successful *files* run (kind='files'),
-     * so the DB and the files each run on their own schedule.
+     * Cron/worker/heartbeat entry for the site-files backup (same three-caller,
+     * one-method shape as runScheduledBackup() — BACKUP-H1). Independent
+     * "separate entity" cadence: due-checked against the last successful *files*
+     * run (kind='files'), so the DB and the files each run on their own schedule.
      *
      * @return array<string, mixed>
      */
     public function runScheduledFilesBackup(int $facilityId): array
     {
-        $facilityId = $this->visitScope->resolveDeskFacilityId($facilityId > 0 ? $facilityId : null);
         if (!$this->isNativeEnabled($facilityId) || !$this->isFilesBackupEnabled($facilityId)) {
             return ['status' => 'skipped', 'reason' => 'files_backup_disabled'];
         }
@@ -131,7 +260,7 @@ class AdminBackupService
             return ['status' => 'skipped', 'reason' => 'not_due', 'schedule' => $due];
         }
 
-        return $this->performFilesBackup($facilityId, 0);
+        return $this->performFilesBackup(self::BACKUP_FACILITY_ID, 0);
     }
 
     /**
@@ -143,16 +272,19 @@ class AdminBackupService
     public function dueForBackup(int $facilityId, string $kind = 'db'): array
     {
         $kind = $kind === 'files' ? 'files' : 'db';
-        $facilityId = $this->visitScope->resolveDeskFacilityId($facilityId > 0 ? $facilityId : null);
-        $freq = $this->config->getInt('backup_frequency_days', 0, $facilityId);
+        // M4: config lives at facility 0; ClinicConfigService::get() already falls
+        // back facility→global(0)→reader-facility, so a pre-M4 install that saved
+        // this under the old resolved facility is still found without extra code.
+        $freq = $this->config->getInt('backup_frequency_days', 0, self::BACKUP_FACILITY_ID);
         if ($freq <= 0) {
             return ['scheduled' => false, 'due' => false, 'frequency_days' => 0];
         }
+        $facilityIds = $this->backupFacilityIdsForRead();
         $row = QueryUtils::querySingleRow(
             "SELECT finished_at FROM admin_hub_backup_run
-             WHERE facility_id = ? AND kind = ? AND status = 'ok' AND finished_at IS NOT NULL
+             WHERE facility_id IN (?, ?) AND kind = ? AND status = 'ok' AND finished_at IS NOT NULL
              ORDER BY id DESC LIMIT 1",
-            [$facilityId, $kind]
+            [$facilityIds[0], $facilityIds[1], $kind]
         );
         $last = is_array($row) ? (string) ($row['finished_at'] ?? '') : '';
         if ($last === '') {
@@ -181,12 +313,30 @@ class AdminBackupService
             throw new \RuntimeException('Server backup is unavailable (shell execution disabled)', 500);
         }
 
+        // M2 — a real clinic DB dump/gzip/encrypt can run well past a web
+        // request's default execution limit; never let PHP kill it mid-archive
+        // (a partial .enc file is worse than no file — it looks like a backup).
+        @set_time_limit(0);
+
         $startedAt = date('Y-m-d H:i:s');
         $runId = (int) QueryUtils::sqlInsert(
             "INSERT INTO admin_hub_backup_run (facility_id, kind, started_at, status, actor_id, message)
              VALUES (?, 'db', ?, 'running', ?, ?)",
             [$facilityId, $startedAt, $actorUserId > 0 ? $actorUserId : null, 'Native encrypted backup started']
         );
+
+        // M3 — a manual "Run now" click and the OS-scheduled worker (or the
+        // heartbeat) can land in the same minute; without a lock both would
+        // mysqldump/encrypt onto the same target directory at once.
+        $lockToken = $this->claimBackupLock(self::LOCK_KEY_DB, self::LOCK_TTL_DB_SECONDS);
+        if ($lockToken === null) {
+            $message = 'Backup failed: another database backup is already running';
+            QueryUtils::sqlStatementThrowException(
+                "UPDATE admin_hub_backup_run SET status = 'failed', finished_at = ?, message = ? WHERE id = ?",
+                [date('Y-m-d H:i:s'), $message, $runId]
+            );
+            throw new \RuntimeException($message, 409);
+        }
 
         $tmpDir = null;
         try {
@@ -271,6 +421,8 @@ class AdminBackupService
                 [date('Y-m-d H:i:s'), mb_substr($message, 0, 480), $runId]
             );
             throw new \RuntimeException($message, $e->getCode() >= 400 && $e->getCode() < 600 ? (int) $e->getCode() : 500);
+        } finally {
+            $this->releaseBackupLock(self::LOCK_KEY_DB, $lockToken);
         }
     }
 
@@ -284,12 +436,28 @@ class AdminBackupService
      */
     private function performFilesBackup(int $facilityId, int $actorUserId): array
     {
+        // M2 — a first-run mirror of a large documents tree can take a long
+        // time; never let PHP's execution limit cut it off mid-copy.
+        @set_time_limit(0);
+
         $startedAt = date('Y-m-d H:i:s');
         $runId = (int) QueryUtils::sqlInsert(
             "INSERT INTO admin_hub_backup_run (facility_id, kind, started_at, status, actor_id, message)
              VALUES (?, 'files', ?, 'running', ?, ?)",
             [$facilityId, $startedAt, $actorUserId > 0 ? $actorUserId : null, 'Site-files backup started']
         );
+
+        // M3 — same concurrency guard as the DB backup, its own lock key so a
+        // DB run and a files run (different kinds) never block each other.
+        $lockToken = $this->claimBackupLock(self::LOCK_KEY_FILES, self::LOCK_TTL_FILES_SECONDS);
+        if ($lockToken === null) {
+            $message = 'Site-files backup failed: another site-files backup is already running';
+            QueryUtils::sqlStatementThrowException(
+                "UPDATE admin_hub_backup_run SET status = 'failed', finished_at = ?, message = ? WHERE id = ?",
+                [date('Y-m-d H:i:s'), $message, $runId]
+            );
+            throw new \RuntimeException($message, 409);
+        }
 
         try {
             $targetDir = $this->resolveTargetDir($facilityId);
@@ -341,6 +509,8 @@ class AdminBackupService
                 [date('Y-m-d H:i:s'), mb_substr($message, 0, 480), $runId]
             );
             throw new \RuntimeException($message, $e->getCode() >= 400 && $e->getCode() < 600 ? (int) $e->getCode() : 500);
+        } finally {
+            $this->releaseBackupLock(self::LOCK_KEY_FILES, $lockToken);
         }
     }
 
@@ -462,18 +632,23 @@ class AdminBackupService
         if (!AclMain::aclCheckCore('admin', 'super')) {
             throw new \RuntimeException('Backup verification requires OpenEMR administrator (super) access', 403);
         }
-        $facilityId = $this->visitScope->resolveDeskFacilityId();
+        [$facilityId, $legacyFacilityId] = $this->backupFacilityIdsForRead();
 
+        // H2: BOTH branches must filter kind='db' — without it, when the latest
+        // OK run for this facility happens to be a FILES run, file_path points at
+        // the nc-files-<site>/ MIRROR DIRECTORY (not a single archive), and the
+        // is_file() check below correctly (but confusingly) reports "missing".
         $row = $runId > 0
             ? QueryUtils::querySingleRow(
-                'SELECT id, file_path FROM admin_hub_backup_run WHERE id = ? AND facility_id = ?',
-                [$runId, $facilityId]
+                "SELECT id, file_path FROM admin_hub_backup_run
+                 WHERE id = ? AND facility_id IN (?, ?) AND kind = 'db'",
+                [$runId, $facilityId, $legacyFacilityId]
             )
             : QueryUtils::querySingleRow(
                 "SELECT id, file_path FROM admin_hub_backup_run
-                 WHERE facility_id = ? AND status = 'ok' AND file_path IS NOT NULL
+                 WHERE facility_id IN (?, ?) AND kind = 'db' AND status = 'ok' AND file_path IS NOT NULL
                  ORDER BY id DESC LIMIT 1",
-                [$facilityId]
+                [$facilityId, $legacyFacilityId]
             );
         if (!is_array($row)) {
             return ['verified' => false, 'note' => 'No completed backup to verify yet.', 'run_id' => 0];
@@ -518,9 +693,25 @@ class AdminBackupService
             || str_contains($head, 'MySQL dump')
             || str_contains($head, '-- Server version');
 
-        return $looksLikeSql
-            ? ['verified' => true, 'note' => 'Decrypted and readable as a database dump.', 'run_id' => $resolvedRunId]
-            : ['verified' => false, 'note' => 'Decrypted, but the contents do not look like a database dump.', 'run_id' => $resolvedRunId];
+        if ($looksLikeSql) {
+            // H3(i) — the setup checklist's "Backup tested" item and the honest
+            // "self-reported" chip labeling both key off THIS timestamp: a run is
+            // only ever shown as a trustworthy green backup once it has actually
+            // been decrypted and read back as a real SQL dump, not merely marked ok.
+            try {
+                QueryUtils::sqlStatementThrowException(
+                    "UPDATE admin_hub_backup_run SET verified_at = ? WHERE id = ?",
+                    [date('Y-m-d H:i:s'), $resolvedRunId]
+                );
+            } catch (\Throwable) {
+                // Column may not exist yet on an un-upgraded install — verify
+                // result itself is still accurate, just won't be remembered.
+            }
+
+            return ['verified' => true, 'note' => 'Decrypted and readable as a database dump.', 'run_id' => $resolvedRunId];
+        }
+
+        return ['verified' => false, 'note' => 'Decrypted, but the contents do not look like a database dump.', 'run_id' => $resolvedRunId];
     }
 
     /**

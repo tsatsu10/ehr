@@ -16,16 +16,17 @@ use PHPUnit\Framework\TestCase;
 
 class AdminRunbookServiceTest extends TestCase
 {
-    public function testCatalogHasTwentyRunbooks(): void
+    public function testCatalogHasTwentyTwoRunbooks(): void
     {
         $service = new AdminRunbookService();
         $catalog = $service->getCatalog();
 
         $this->assertArrayHasKey('cards', $catalog);
-        $this->assertCount(20, $catalog['cards']);
+        // RB-01..RB-22 (RB-22 = BACKUP-H1(c): "Schedule automatic backups").
+        $this->assertCount(22, $catalog['cards']);
         $ids = array_column($catalog['cards'], 'id');
         $this->assertSame('RB-01', $ids[0]);
-        $this->assertSame('RB-20', $ids[19]);
+        $this->assertSame('RB-22', $ids[21]);
     }
 
     public function testRunbookCardShape(): void

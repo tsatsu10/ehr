@@ -1,6 +1,6 @@
 # New Clinic — Backup System Design
 
-**Version:** v0.6.0 · **Date:** 2026-07-18 · **Status:** Engine + no-cron heartbeat scheduling + verify + honesty warnings + cloud sync-folder off-site + recovery-key custody (**now bundles the database key material too — BACKUP-C1**) + **separate incremental site-files backup (§3b)** + **a proven decrypt/restore procedure (BACKUP-C2)** — built and live-smoked (GAP-C C6 follow-up; backup-system audit)
+**Version:** v0.7.0 · **Date:** 2026-07-18 · **Status:** Engine + job-worker/cron scheduling (heartbeat alone is NOT enough for desk-only clinics — BACKUP-H1) + verify (kind-filtered — BACKUP-H2) + honest self-reported labeling (BACKUP-H3) + facility-0 backup scope (BACKUP-M4) + concurrency lock (BACKUP-M3) + cloud sync-folder off-site + recovery-key custody (bundles the database key material too — BACKUP-C1) + separate incremental site-files backup (§3b) + a proven decrypt/restore procedure (BACKUP-C2) — built and live-smoked (GAP-C C6 follow-up; backup-system audit)
 
 Governs the module's **in-app backup engine** and how it tracks real backups. Subordinate to
 `NEW_CLINIC_SEC6_DATA_AT_REST_RUNBOOK.md` §3 (the security policy) — where they disagree, SEC6 wins.
@@ -81,7 +81,17 @@ each file, writes an **individually-encrypted** copy to a mirror tree in the tar
 
 ## 4. Where the data goes
 
-- **Target directory:** `backup_target_dir` config (per facility). Default: a module-owned
+- **Facility scope (BACKUP-M4 correction):** `mysqldump` backs up the WHOLE database — it was never
+  meaningfully "per facility". Pre-M4 code resolved backup config/run rows against whatever facility
+  a given request happened to land on (`VisitScopeService::resolveDeskFacilityId()`), which could
+  differ request to request in a multi-facility clinic and has **no session at all** to resolve in a
+  CLI worker — exactly the context BACKUP-H1's job-worker path runs in. Backup config
+  (`backup_frequency_days`, `backup_target_dir`, `admin_hub_backup_retention_days`,
+  `backup_include_site_files`, `enable_native_backup`) and every `admin_hub_backup_run` row now live
+  at a fixed sentinel (`facility_id = 0`), independent of session/request state. Reads fall back to
+  whatever facility a pre-M4 install's rows/config happened to be under, so existing history isn't
+  orphaned by the change.
+- **Target directory:** `backup_target_dir` config (facility-0 sentinel — see above). Default: a module-owned
   `sites/<site>/documents/nc_backups/` created 0700. The admin **should** point this at a
   **removable/external drive** (e.g. `E:\clinic-backups` on Windows) so a machine failure doesn't take
   the backups with it — the UI says so.
@@ -109,7 +119,13 @@ self-reported "complete" click.
 
 `initiateBackup()` now **performs** the backup synchronously (it was a stub) and returns the real
 result. The old two-step "start → mark complete" is collapsed for native runs; the "Mark complete"
-button remains only for the legacy stock-backup path.
+button remains only for the legacy stock-backup path — **and BACKUP-H3 made that path visibly
+honest**: it is now labeled "Self-reported (no verified artifact)" in the health chip, the run's
+own `message` says the same in plain English, and the setup checklist's "Backup tested" item does
+**not** accept it — that item only completes off a native run that both produced a real file AND
+passed `verifyBackup()` at least once (`admin_hub_backup_run.verified_at`, set the moment a verify
+succeeds). A hand-ticked "complete" with nothing on disk to check can no longer look identical to a
+real, checkable backup anywhere in the UI.
 
 ## 5b. Verify (a backup you can't restore is a hope, not a guarantee)
 
@@ -118,7 +134,11 @@ decrypts the archive and reads the first bytes back through gzip to confirm it's
 (memory-safe — head only). It answers "can this actually be decrypted and restored?" without a full
 restore. It does **not** replace a periodic real restore drill, but catches the common silent
 failures (wrong key, corrupt/empty archive). **Live-smoked 2026-07-11:** a real 96 MB `.enc`
-decrypted and read as a DB dump.
+decrypted and read as a DB dump. **BACKUP-H2 fix:** both the explicit-`run_id` and "latest" lookup
+branches now filter `kind = 'db'` — without it, when the latest **ok** run for a facility happened
+to be a `files` run, `file_path` pointed at the `nc-files-<site>/` **mirror directory**, and the
+verify falsely reported "the backup file is missing from disk" even though the most recent DB
+archive was perfectly fine.
 
 ## 5c. Honesty: local target is not disaster-safe
 
@@ -183,19 +203,40 @@ matching the stock stance and SEC6 key custody; Admin Hub's RB-19 runbook card p
 - **`backup_frequency_days`** (0 = off). A backup is "due" once this many days pass since the last
   **successful** run. `dueForBackup()` computes this; the System-health board shows
   "every N days · due now / last backup X days ago", and it feeds a soon-to-warn chip.
-- **How it actually runs — no OS scheduler required (default).** A row in OpenEMR's
-  `background_services` table (`nc_scheduled_backup`, interval 60 min) points at
-  `nc_scheduled_backup_service()` (`scripts/backup-service.php`). OpenEMR's UI **heartbeat**
-  (`execute_background_services.php`, pinged while staff are logged in) runs it on its interval, with
-  the framework's `running` lock + crash-safe reset. So scheduled backups happen **as long as someone
-  has OpenEMR open** — no cron, no Task Scheduler, nothing to configure. The function no-ops unless
-  native backup is on AND a backup is due.
-- **Optional OS scheduler** (for lights-out boxes where nobody's logged in overnight):
-  `scripts/backup-scheduled.php` (CLI, `$ignoreAuth`) does the same via cron / Windows Task Scheduler
-  (command examples in its header). Both paths call the identical `runScheduledBackup()`; both are
-  idempotent (run when due, else no-op).
-- **ACL split:** the UI `runBackup()` requires super-admin; the cron `runScheduledBackup()` does not
-  (its trust boundary is server-side execution) — both funnel into the same ACL-free `performBackup()`.
+- **A scheduled task or cron entry is REQUIRED — this is not optional (BACKUP-H1 correction).**
+  The v0.2.0 claim below ("no cron, no Task Scheduler, nothing to configure") was **wrong for New
+  Clinic's own desks**: the logged-in-UI heartbeat this relied on
+  (`execute_background_services.php`, driven by `background_services` → `nc_scheduled_backup` →
+  `scripts/backup-service.php`) only fires from inside OpenEMR's **legacy tab shell** — every New
+  Clinic desk deliberately **escapes that shell** via `top-redirect.php` (PRD §strangler-fig). On a
+  clinic that only ever opens New Clinic desks (the normal case for a pilot), that heartbeat may
+  fire rarely or never, so a backup schedule configured here can silently never run. Set up ONE of:
+  - **Preferred — the job worker (`scripts/run-jobs.php`).** Already needs scheduling for export
+    jobs (SCALE-2.1); BACKUP-H1(a) added the SAME due-check/run call here
+    (`AdminBackupService::runScheduledBackup()`/`runScheduledFilesBackup()` — identical method the
+    heartbeat and `backup-scheduled.php` call, no duplicated logic), so one scheduled task now
+    covers both. Windows Task Scheduler (every 1–2 min): Program `C:\xampp\php\php.exe`, Arguments
+    `C:\xampp\htdocs\openemr\interface\modules\custom_modules\oe-module-new-clinic\scripts\run-jobs.php --max-seconds=55`.
+    Linux cron: `* * * * * php /path/to/oe-module-new-clinic/scripts/run-jobs.php --max-seconds=55`.
+  - **Backup-only alternative — `scripts/backup-scheduled.php`** (CLI, `$ignoreAuth`), daily via cron
+    / Windows Task Scheduler (command examples in its header), if you don't want the export-job
+    worker running too.
+  - The tab-shell heartbeat still runs due backups **in addition**, as a free bonus whenever
+    someone does have a legacy tab open — it is just never sufficient on its own for a desk-only
+    clinic. Admin Hub's RB-22 runbook card ("Schedule automatic backups") has the exact commands;
+    the setup checklist's "Nightly background jobs running" item points here too.
+  - **How to tell it's actually working:** System health → Backup & logs shows "Last scheduled
+    attempt" (ok OR failed) sourced from `actor_id IS NULL` runs — distinct from the ordinary
+    backup chip, which a recent MANUAL "Run now" click can make look healthy even when the
+    unattended schedule has never fired once. If that line never appears, the task isn't running.
+- **Concurrency (M3):** all three entry points funnel into the same `performBackup()`/
+  `performFilesBackup()`, which now take a short-lived lock (`new_clinic_maintenance_lock`,
+  `backup:db` / `backup:files` keys) so the heartbeat and a scheduled worker landing in the same
+  minute never dump/encrypt onto the same target directory concurrently — the loser fails fast with
+  a clear "already running" error instead of corrupting the target.
+- **ACL split:** the UI `runBackup()` requires super-admin; the cron/worker `runScheduledBackup()`
+  does not (its trust boundary is server-side execution) — both funnel into the same ACL-free
+  `performBackup()`.
 
 ## 8. Retention
 
@@ -248,6 +289,7 @@ system `Temp` path — fixed).
 
 | Version | Date | Change |
 |---|---|---|
+| v0.7.0 | 2026-07-18 | **BACKUP-H1/H2/H3 + M2-M5 fixes (backup-system audit, wave 2).** H1: the v0.2.0 "no cron needed" claim was wrong for New Clinic's own desks (they escape the tab shell the heartbeat depends on) — `scripts/run-jobs.php` now ALSO runs the due-check (§7), and System health surfaces "Last scheduled attempt" (ok or failed, not just last success) so a silently-broken schedule is visible. H2: `verifyBackup()` now filters `kind = 'db'` in both lookup branches — a files run's directory could masquerade as a "missing" db archive (§5b). H3: the legacy "Mark backup complete" path is now labeled "Self-reported (no verified artifact)" everywhere, and the setup checklist's "Backup tested" item requires a real artifact AND a passed verify, not just any 'ok' chip (§5). M2: `set_time_limit(0)` inside the actual backup work (not just callers), `supersedeRunningBackups()` now covers both `db` and `files` kinds. M3: a `new_clinic_maintenance_lock`-based lock prevents two backup runs of the same kind overlapping (§7). M4: backup config and run rows moved off the per-request "resolved facility" onto a fixed facility-0 sentinel — a database backup was never meaningfully per-facility (§4). M5: the Admin Hub no longer force-navigates away from the page on a native backup that already finished synchronously. |
 | v0.6.0 | 2026-07-18 | **BACKUP-C1/C2 fixes (backup-system audit).** C1: the recovery-key bundle was missing the database key material the drive-key files depend on (versions 5+) — `exportRecoveryKey()` now bundles `db-keys.json` alongside `methods/`, and the README rewritten with a real numbered restore procedure (§5d). C2: shipped `scripts/backup-decrypt.php` (standalone, bundle-only, no live DB/methods dependency) and `Documentation/NewClinic/NEW_CLINIC_BACKUP_RESTORE_RUNBOOK.md` with a genuinely executed restore drill (§6) — replacing the previous 2-line restore placeholder and the stock-`backup.php` RB-19 pointer. |
 | v0.5.0 | 2026-07-12 | **Site files backed up as a SEPARATE entity (§3, §3b).** Rejected the original "combine DB + documents into one archive" plan: the two have different cadence, size, fault, and retention characteristics. The DB stays a full frequent encrypted archive; the documents tree becomes a **separate incremental per-file-encrypted mirror** (`nc-files-<site>/`), copying only new/changed files, encrypting each file individually (so the whole-tree size never has to fit the in-memory budget), excluding the module's own backups + `temp/` + the encryption **key** dir, and **never auto-pruned** (documents are permanent records). Own `kind='files'` run rows; own "Recent file backups" history. `backup_include_site_files` now switches this on (was declared but unbuilt). |
 | v0.1.0 | 2026-07-11 | Initial design. Reconciled an in-app encrypted backup engine with SEC6 §3 (encrypt-before-persist, no plaintext on removable media, credentials via 0600 defaults-file, super-admin + `enable_native_backup` gate, restore stays manual, VPS replica remains the off-site tier). Engine slice 1 (DB dump + encrypt + track real path/size + retention) built alongside. |

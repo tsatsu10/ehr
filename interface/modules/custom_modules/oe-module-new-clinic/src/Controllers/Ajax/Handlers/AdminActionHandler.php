@@ -765,6 +765,15 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                         $scope = 'facility';
                     }
                     $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    // BACKUP-H1(b)/M2 — a real encrypted backup can take a while
+                    // (mysqldump + gzip + encrypt); don't hold the exclusive PHP
+                    // session-file lock for the whole request, or every other tab/
+                    // request from this same user serializes behind it (SCALE-1.1).
+                    // Reads of $_SESSION after close are still fine — only writes
+                    // are dropped, and nothing below writes to the session.
+                    if (session_status() === PHP_SESSION_ACTIVE) {
+                        session_write_close();
+                    }
                     try {
                         $payload = $this->host->svc(ClinicAdminService::class)->initiateBackupRun(
                             $scope,
@@ -788,6 +797,12 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                         $scope = 'facility';
                     }
                     $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    // BACKUP-H1(b)/M2 — a first-run site-files mirror of a large
+                    // documents tree can take a while; same session-lock release as
+                    // admin.backup.run above.
+                    if (session_status() === PHP_SESSION_ACTIVE) {
+                        session_write_close();
+                    }
                     try {
                         $payload = $this->host->svc(ClinicAdminService::class)->initiateFilesBackupRun(
                             $scope,
@@ -812,6 +827,11 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                     }
                     $runId = (int) ($body['run_id'] ?? 0);
                     $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    // M2 — same session-lock release; this write only touches
+                    // admin_hub_backup_run, never $_SESSION.
+                    if (session_status() === PHP_SESSION_ACTIVE) {
+                        session_write_close();
+                    }
                     try {
                         $payload = $this->host->svc(ClinicAdminService::class)->completeBackupRun(
                             $scope,

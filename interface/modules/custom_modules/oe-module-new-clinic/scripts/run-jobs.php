@@ -8,12 +8,26 @@
  * Claims are atomic (a unique token per claim), so several workers never double-run
  * the same job; a job is retried up to 3 times, then marked failed.
  *
+ * BACKUP-H1(a): this is now ALSO the primary way scheduled backups actually run.
+ * The tab-shell heartbeat (background_services → scripts/backup-service.php) only
+ * fires while someone has a legacy OpenEMR tab open — New Clinic desks escape that
+ * shell via top-redirect.php, so a desk-only clinic may rarely or never trigger it.
+ * Scheduling THIS worker (below) is the robust, checklisted path; it calls the
+ * exact same AdminBackupService::runScheduledBackup()/runScheduledFilesBackup()
+ * that backup-service.php and scripts/backup-scheduled.php call — one due-check/
+ * run implementation, three entry points, never copy-pasted. On the (rare — daily
+ * cadence at most) run where a backup is actually due, this invocation will run
+ * long; that's fine, a concurrent overlapping run-jobs.php invocation just skips
+ * the backup (M3 lock busy) and still processes export jobs normally.
+ *
  * RUN IT — pick one:
  *   - Cron (Linux):        * * * * * php .../scripts/run-jobs.php --max-seconds=55
  *   - Task Scheduler (Win): run every 1–2 min, action:
  *       C:\xampp\php\php.exe C:\xampp\htdocs\openemr\interface\modules\custom_modules\oe-module-new-clinic\scripts\run-jobs.php --max-seconds=55
- * The worker exits after --max-jobs jobs or --max-seconds seconds (whichever first),
- * so back-to-back cron runs are safe and it never runs unbounded.
+ * The worker exits after --max-jobs jobs or --max-seconds seconds (whichever first)
+ * for the EXPORT-JOB loop; the backup due-check below is a fixed extra step each
+ * run (no-ops instantly unless a backup is actually due), so back-to-back cron
+ * runs stay safe.
  *
  * FLAGS:
  *   --max-jobs=N      max jobs to process this run (default 20)
@@ -61,6 +75,7 @@ use OpenEMR\Modules\NewClinic\Services\RateLimitService;
 use OpenEMR\Modules\NewClinic\Services\CacheService;
 use OpenEMR\Modules\NewClinic\Services\PerfCounterService;
 use OpenEMR\Modules\NewClinic\Services\HistoryRetentionService;
+use OpenEMR\Modules\NewClinic\Services\AdminBackupService;
 
 @set_time_limit(0);
 
@@ -68,6 +83,31 @@ try {
     // Report exports (SCALE-2.1) and generic export jobs (SCALE-2.2) share the budget.
     $reports = (new ReportHubExportService())->runWorker($maxJobs, $maxSeconds);
     $exports = (new ExportJobService())->runWorker($maxJobs, $maxSeconds);
+
+    // BACKUP-H1(a) — run due scheduled backups from THIS worker, not only the
+    // logged-in-user tab-shell heartbeat (background_services → backup-service.php).
+    // New Clinic desks escape that heartbeat entirely (top-redirect.php leaves the
+    // core tab shell), so on a desk-only clinic the heartbeat may fire rarely or
+    // never — a worker cron/Task Scheduler entry is the reliable path. Calls the
+    // SAME due-check + performBackup() that backup-service.php's heartbeat and
+    // scripts/backup-scheduled.php call (AdminBackupService::runScheduledBackup() /
+    // runScheduledFilesBackup()) — no duplicated scheduling logic between the three
+    // entry points. No session here (CLI worker — repo gotcha): the service resolves
+    // facility scope from the database, never $_SESSION (see AdminBackupService M4).
+    // Separate try/catch per kind — a DB backup failure (e.g. too large for
+    // in-app encryption) must not mask the files backup's own true status (or
+    // vice versa); each is an independent schedule (design §3).
+    $backupSvc = new AdminBackupService();
+    try {
+        $scheduledBackup = $backupSvc->runScheduledBackup(0);
+    } catch (\Throwable $e) {
+        $scheduledBackup = ['status' => 'error', 'error' => $e->getMessage()];
+    }
+    try {
+        $scheduledFilesBackup = $backupSvc->runScheduledFilesBackup(0);
+    } catch (\Throwable $e) {
+        $scheduledFilesBackup = ['status' => 'error', 'error' => $e->getMessage()];
+    }
 
     // SCALE-2.3: purge expired PHI-bearing export files every pass, so retention
     // holds even when no new exports are being written.
@@ -126,9 +166,17 @@ try {
         'history_purged' => $historyPurged,
         // SCALE-3.3: expired DB cache rows are dead weight; drop them each pass.
         'purged_cache_rows' => (new CacheService())->purgeExpired(),
+        // BACKUP-H1(a) — status shape is one of: skipped (native backup off, or
+        // not due yet), ok (a backup actually ran this pass), failed, or error
+        // (an exception escaped the service — still doesn't kill the rest of the
+        // worker's jobs above).
+        'scheduled_backup' => $scheduledBackup,
+        'scheduled_files_backup' => $scheduledFilesBackup,
     ];
     fwrite(STDOUT, json_encode($out) . "\n");
-    $failed = (int) ($reports['failed'] ?? 0) + (int) ($exports['failed'] ?? 0);
+    $failed = (int) ($reports['failed'] ?? 0) + (int) ($exports['failed'] ?? 0)
+        + (in_array($scheduledBackup['status'] ?? '', ['failed', 'error'], true) ? 1 : 0)
+        + (in_array($scheduledFilesBackup['status'] ?? '', ['failed', 'error'], true) ? 1 : 0);
     exit($failed > 0 ? 1 : 0);
 } catch (\Throwable $e) {
     fwrite(STDERR, 'run-jobs error: ' . $e->getMessage() . "\n");

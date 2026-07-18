@@ -11,12 +11,61 @@ namespace OpenEMR\Tests\Unit\Modules\NewClinic;
 
 require_once __DIR__ . '/ModuleAutoload.php';
 
+use OpenEMR\Common\Database\QueryUtils;
+use OpenEMR\Modules\NewClinic\Services\AdminBackupService;
 use OpenEMR\Modules\NewClinic\Services\AdminHealthService;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use PHPUnit\Framework\TestCase;
 
 class AdminHealthServiceTest extends TestCase
 {
+    /** @var list<int> */
+    private array $insertedRunIds = [];
+
+    protected function tearDown(): void
+    {
+        foreach ($this->insertedRunIds as $id) {
+            try {
+                QueryUtils::sqlStatementThrowException('DELETE FROM admin_hub_backup_run WHERE id = ?', [$id]);
+            } catch (\Throwable) {
+                // best-effort
+            }
+        }
+        $this->insertedRunIds = [];
+    }
+
+    /**
+     * @return int the inserted run's id
+     */
+    private function insertRun(
+        string $kind,
+        string $status,
+        ?string $filePath,
+        ?int $actorId,
+        ?string $verifiedAt = null,
+        int $facilityId = 0
+    ): int {
+        $id = (int) QueryUtils::sqlInsert(
+            "INSERT INTO admin_hub_backup_run
+             (facility_id, kind, started_at, finished_at, status, file_path, size_bytes, actor_id, message, verified_at)
+             VALUES (?, ?, NOW(), NOW(), ?, ?, ?, ?, ?, ?)",
+            [$facilityId, $kind, $status, $filePath, $filePath !== null ? 1024 : null, $actorId, 'test fixture row', $verifiedAt]
+        );
+        $this->insertedRunIds[] = $id;
+
+        return $id;
+    }
+
+    private function backupChip(array $health): array
+    {
+        foreach ($health['chips'] as $chip) {
+            if (($chip['key'] ?? '') === 'backup') {
+                return $chip;
+            }
+        }
+        $this->fail('backup chip missing from health payload');
+    }
+
     public function testHealthStatusShape(): void
     {
         $service = new AdminHealthService();
@@ -97,5 +146,99 @@ class AdminHealthServiceTest extends TestCase
 
         $this->expectException(\RuntimeException::class);
         $service->completeBackup(0, 1);
+    }
+
+    /**
+     * BACKUP-H3(ii)/(iii): an 'ok' run with NO file_path (the legacy "Mark
+     * backup complete" stub) must never render as an unqualified green light —
+     * the chip must say "self-reported" and its overall_impact must stay 'warn'
+     * (never silently 'none', which is what made the shipped default lie).
+     */
+    public function testBackupChipLabelsSelfReportedRunsNotGreen(): void
+    {
+        $this->insertRun('db', 'ok', null, 7); // no file_path — the stub
+
+        $health = (new AdminHealthService())->getHealthStatus(0);
+        $chip = $this->backupChip($health);
+
+        $this->assertStringContainsString('Self-reported', $chip['summary']);
+        $this->assertSame('warn', $chip['overall_impact']);
+        $this->assertNotSame('ok', $chip['status']);
+    }
+
+    /** A real, artifact-backed 'ok' run is still an honest green chip. */
+    public function testBackupChipIsGreenForARealFreshArtifact(): void
+    {
+        $this->insertRun('db', 'ok', '/tmp/nc-backup-fixture.sql.gz.enc', 7);
+
+        $health = (new AdminHealthService())->getHealthStatus(0);
+        $chip = $this->backupChip($health);
+
+        $this->assertSame('ok', $chip['status']);
+        $this->assertSame('none', $chip['overall_impact']);
+        $this->assertStringNotContainsString('Self-reported', $chip['summary']);
+    }
+
+    /**
+     * BACKUP-H3(i): the setup checklist's "Backup tested" gate (consumed via
+     * `backup_verified_native_run`) must require a REAL artifact AND a passed
+     * verify — a self-reported 'ok' run must not satisfy it, even though the
+     * legacy chip logic used to call that "ok".
+     */
+    public function testBackupVerifiedNativeRunFalseForSelfReportedOnly(): void
+    {
+        $this->insertRun('db', 'ok', null, 7); // self-reported, no artifact
+
+        $health = (new AdminHealthService())->getHealthStatus(0);
+
+        $this->assertFalse($health['backup_verified_native_run']);
+    }
+
+    public function testBackupVerifiedNativeRunTrueOnceArtifactAndVerifyBothExist(): void
+    {
+        $this->insertRun('db', 'ok', '/tmp/nc-backup-fixture-2.sql.gz.enc', 0, date('Y-m-d H:i:s'));
+
+        $health = (new AdminHealthService())->getHealthStatus(0);
+
+        $this->assertTrue($health['backup_verified_native_run']);
+    }
+
+    /**
+     * BACKUP-H1(c): "last scheduled attempt" must reflect the last run with NO
+     * interactive actor (actor_id IS NULL — how runScheduledBackup()/
+     * runScheduledFilesBackup() always insert), not just the latest run of any
+     * kind — a recent MANUAL "Run now" click must not paper over a schedule
+     * that has silently never fired.
+     */
+    public function testLastScheduledAttemptIgnoresANewerManualRun(): void
+    {
+        $this->insertRun('db', 'failed', null, null); // scheduled attempt, actor_id NULL
+        $this->insertRun('db', 'ok', '/tmp/nc-backup-fixture-3.sql.gz.enc', 7); // NEWER, manual (actor_id set)
+
+        $health = (new AdminHealthService())->getHealthStatus(0);
+
+        $this->assertNotNull($health['backup_last_scheduled_attempt']);
+        $this->assertSame('failed', $health['backup_last_scheduled_attempt']['status']);
+    }
+
+    public function testLastScheduledAttemptNullWhenNoScheduledRunExistsYet(): void
+    {
+        $this->insertRun('db', 'ok', '/tmp/nc-backup-fixture-4.sql.gz.enc', 7); // manual only
+
+        $health = (new AdminHealthService())->getHealthStatus(0);
+
+        $this->assertNull($health['backup_last_scheduled_attempt']);
+    }
+
+    /** BACKUP-M4: backup config/run rows are read at the facility-0 sentinel. */
+    public function testHealthReadsBackupRunsAtFacilityZero(): void
+    {
+        $this->assertSame(0, (new AdminBackupService())->facilityId());
+
+        $runId = $this->insertRun('db', 'ok', '/tmp/nc-backup-fixture-5.sql.gz.enc', 7, null, 0);
+
+        $health = (new AdminHealthService())->getHealthStatus(0);
+
+        $this->assertSame($runId, $health['backup_run_id']);
     }
 }
