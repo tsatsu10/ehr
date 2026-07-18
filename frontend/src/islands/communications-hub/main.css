@@ -9,3 +9,4 @@
  * communications-hub.css as non-layered BEM (it outranks layered utilities).
  */
 @import '../../core/tokens.css';
+@import '../../components/ui/ui-primitives.css';

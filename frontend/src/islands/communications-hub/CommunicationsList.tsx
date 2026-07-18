@@ -13,6 +13,8 @@ interface CommunicationsListProps {
   loading: boolean;
   error: string | null;
   onSelect: (id: number, type: 'message' | 'reminder') => void;
+  /** Primary action offered from the empty state (New message / Create reminder). */
+  onEmptyAction?: () => void;
 }
 
 function isMessageRow(_row: CommListRow, lens: CommLens): _row is MessageListRow {
@@ -26,12 +28,25 @@ export function CommunicationsList({
   loading,
   error,
   onSelect,
+  onEmptyAction,
 }: CommunicationsListProps) {
   // Only show the loading state when there is nothing to display — background
   // refreshes (the reminders poll, search retypes, manual refresh) keep the
-  // current rows on screen instead of flashing "Loading…" and losing scroll.
+  // current rows on screen instead of flashing skeletons and losing scroll.
   if (loading && !rows.length) {
-    return <div className="nc-comm-list-state">{t('Loading…')}</div>;
+    return (
+      <div className="nc-comm-list-state" role="status" aria-label={t('Loading…')}>
+        {[0, 1, 2].map((i) => (
+          <div className="nc-comm-skeleton-row" key={i} aria-hidden="true">
+            <span className="nc-comm-skeleton nc-comm-skeleton--avatar" />
+            <span className="nc-comm-skeleton-lines">
+              <span className="nc-comm-skeleton nc-comm-skeleton--line" />
+              <span className="nc-comm-skeleton nc-comm-skeleton--line nc-comm-skeleton--short" />
+            </span>
+          </div>
+        ))}
+      </div>
+    );
   }
   if (error && !loading) {
     return <div className="nc-comm-list-state nc-comm-list-state--error">{error}</div>;
@@ -47,6 +62,11 @@ export function CommunicationsList({
             ? t('Messages sent to you appear here.')
             : t('Reminders due in the next 30 days appear here.')}
         </span>
+        {onEmptyAction && (
+          <button type="button" className="nc-comm-empty-action" onClick={onEmptyAction}>
+            {lens === 'messages' ? t('New message') : t('Create reminder')}
+          </button>
+        )}
       </div>
     );
   }

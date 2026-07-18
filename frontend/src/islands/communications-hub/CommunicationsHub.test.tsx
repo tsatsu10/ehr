@@ -289,6 +289,35 @@ describe('CommunicationsHub', () => {
     }
   });
 
+  it('offers Create reminder from the empty reminders list', async () => {
+    mockFetch.mockImplementation((action: string) => {
+      if (action === 'communications.hub_counts') {
+        return Promise.resolve({ messages_active: 0, reminders_in_window: 0 });
+      }
+      if (action === 'communications.reminder_create_options') {
+        return Promise.resolve({
+          recipients: [{ id: 1, label: 'Myself', is_self: true }],
+          date_presets: [],
+          priorities: [{ id: 3, label: 'Low' }],
+          max_message_length: 160,
+          default_priority: 3,
+        });
+      }
+      return Promise.resolve({ rows: [], total: 0 });
+    });
+
+    render(<CommunicationsHub {...props} initialLens="reminders" />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText('No reminders')).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Create reminder' }));
+    });
+    expect(screen.getByRole('heading', { name: 'Create reminder' })).toBeInTheDocument();
+  });
+
   it('keeps current rows visible during a background refresh (no Loading flash)', async () => {
     render(<CommunicationsHub {...props} />);
 

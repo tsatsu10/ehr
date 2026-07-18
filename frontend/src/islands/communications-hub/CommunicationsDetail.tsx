@@ -48,6 +48,8 @@ interface CommunicationsDetailProps {
   error: string | null;
   message: MessageDetail | null;
   reminder: ReminderListRow | null;
+  /** Replaces the default idle prompt (e.g. a selected reminder that is gone). */
+  emptyText?: string;
   webroot: string;
   ajaxUrl?: string;
   csrfToken?: string;
@@ -69,6 +71,7 @@ export function CommunicationsDetail({
   error,
   message,
   reminder,
+  emptyText,
   webroot,
   ajaxUrl = '',
   csrfToken = '',
@@ -118,7 +121,7 @@ export function CommunicationsDetail({
   }
   return (
     <div className="nc-comm-empty text-[var(--oe-nc-text-muted)]">
-      <p className="mb-0">{t('Select an item to read details.')}</p>
+      <p className="mb-0">{emptyText ?? t('Select an item to read details.')}</p>
     </div>
   );
 }

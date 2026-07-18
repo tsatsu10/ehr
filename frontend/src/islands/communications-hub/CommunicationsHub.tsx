@@ -178,10 +178,9 @@ export function CommunicationsHub({
       setDetailError(null);
       setMessageDetail(null);
       const match = rows.find((r) => r.id === id) as ReminderListRow | undefined;
+      // No match is a normal outcome (completed elsewhere, aged out of the
+      // 30-day window) — the detail pane shows a neutral notice, not an error.
       setReminderDetail(match ?? null);
-      if (!match) {
-        setDetailError(t('Reminder not found or already completed.'));
-      }
       return;
     }
     void loadMessageDetail(id);
@@ -631,6 +630,7 @@ export function CommunicationsHub({
               loading={listLoading}
               error={listError}
               onSelect={handleSelect}
+              onEmptyAction={lens === 'messages' ? openCompose : openReminderCreate}
             />
           </div>
           <CommunicationsPagination
@@ -688,6 +688,11 @@ export function CommunicationsHub({
                 error={detailError}
                 message={messageDetail}
                 reminder={reminderDetail}
+                emptyText={
+                  selectedType === 'reminder' && selectedId !== null && !reminderDetail
+                    ? t('This reminder is no longer in your list — it may have been completed or passed out of the 30-day window.')
+                    : undefined
+                }
                 webroot={webroot}
                 ajaxUrl={ajaxUrl}
                 csrfToken={csrfToken}
