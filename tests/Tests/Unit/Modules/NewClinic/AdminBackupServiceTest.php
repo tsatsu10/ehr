@@ -517,12 +517,18 @@ class AdminBackupServiceTest extends TestCase
     }
 
     /**
-     * BACKUP-H1b regression: the pre-check must NOT false-skip a database whose
+     * BACKUP-CAP2 regression: the pre-check must NOT false-skip a database whose
      * raw table storage looks big but would still compress under the cap. This
-     * pins the exact scenario measured live against this dev box during the fix:
-     * 1693.9 MB storage -> 140.5 MB real gzip (12.06x) — an earlier build of the
-     * pre-check used multiplier 3 (threshold 750 MB for a 250 MB cap) and wrongly
-     * skipped this real, fittable backup before ever attempting the dump.
+     * pins the exact scenario measured live against this dev box during the
+     * original fix: 1693.9 MB storage -> 140.5 MB real gzip (12.06x) — an
+     * earlier build of the pre-check used multiplier 3 (threshold 750 MB for a
+     * 250 MB cap) and wrongly skipped this real, fittable backup before ever
+     * attempting the dump. A LATER review caught that the fix at the time (8x)
+     * was itself still too tight — it only cleared the measured 12.06x by a
+     * shrinking margin as the DB grows, not a comfortable one — so this also
+     * pins the exact 12x/25x boundary the wave-4 review asked for directly:
+     * 12x (just past the measured ratio) must never skip; 25x (genuinely
+     * hopeless, well past any plausible compression) must always skip.
      */
     public function testSizePreCheckDoesNotFalseSkipARealMeasuredRatio(): void
     {
@@ -538,9 +544,14 @@ class AdminBackupServiceTest extends TestCase
             'a database that measurably compresses to under the cap must not be pre-check-skipped'
         );
 
+        // Explicit 12x/25x boundary (BACKUP-CAP2 review): 12x raw-to-cap (just
+        // past the measured 12.06x storage-to-gz ratio) must NOT skip — that is
+        // squarely the "would have fit" zone this guard exists to protect.
+        $this->assertFalse($method->invoke($svc, (int) ($capBytes * 12), $capBytes));
+
         // A genuinely hopeless database (raw storage far beyond any plausible
         // compression ratio recovering it) must still be skipped early.
-        $this->assertTrue($method->invoke($svc, $capBytes * 20, $capBytes));
+        $this->assertTrue($method->invoke($svc, $capBytes * 25, $capBytes));
 
         // No estimate available (information_schema lookup failed) never skips.
         $this->assertFalse($method->invoke($svc, null, $capBytes));

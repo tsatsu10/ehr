@@ -77,18 +77,34 @@ class AdminBackupService
      * index_length, what `estimatedRawDatabaseBytes()` reads) already exceeds the
      * cap by this many times, skip the expensive dump/gzip (see performBackup()).
      *
-     * MEASURED, not guessed, against the real dev DB during this fix (2026-07-18):
-     * 1693.9 MB table storage -> a 1184.0 MB mysqldump text -> 140.5 MB gzip -6 —
-     * a 12.06x storage-to-gz ratio. table storage is a WORSE (larger) proxy for
-     * dump size than dump-text-to-gz alone, because storage includes secondary
-     * index bytes that never appear in the SQL dump text at all — an early build
-     * of this pre-check used multiplier 3, which is far too tight: it wrongly
-     * skipped (false-skip) that exact backup even though the real compressed
-     * result fit comfortably under a 250 MB cap. 8x leaves real margin below the
-     * measured 12.06x for less-compressible data (already-compressed BLOBs, etc.)
-     * while still catching genuinely hopeless multi-GB-over-cap databases early.
+     * DIRECTION THAT MATTERS (BACKUP-CAP2, 2026-07-18): this is a false-skip
+     * guard, not a "catch it early" tuning knob — the multiplier must sit ABOVE
+     * the max plausible storage-to-compressed ratio, because skipping a backup
+     * that would actually have fit is strictly worse than the cost of one wasted
+     * dump/gzip in a backoff window (H1b already bounds that cost to once every
+     * RETRY_BACKOFF_HOURS on a persistently-too-big DB). Get the direction wrong
+     * — pick a number too CLOSE to the real ratio — and the guard quietly starts
+     * skipping backups that would have succeeded, with no error, just silence.
+     *
+     * MEASURED, not guessed, against the real dev DB during the original fix
+     * (2026-07-18): 1693.9 MB table storage -> a 1184.0 MB mysqldump text ->
+     * 140.5 MB gzip -6 — a 12.06x storage-to-gz ratio. table storage is a WORSE
+     * (larger) proxy for dump size than dump-text-to-gz alone, because storage
+     * includes secondary index bytes that never appear in the SQL dump text at
+     * all. An early build of this pre-check used multiplier 3, which false-
+     * skipped that exact backup. A follow-up build raised it to 8 — that
+     * survives the measured 12.06x itself, but the review that caught it did the
+     * math forward, not backward: a DB that grows only ~18% past this exact
+     * snapshot (8/6.776, since the cap-relative ratio here is ~6.78x, not the
+     * full 12.06x) would already be back in false-skip territory — nowhere near
+     * enough headroom for a value that is supposed to be a hard ceiling, not a
+     * this-quarter's-database ceiling. 20x sits well clear of the measured
+     * 12.06x with real room for a database to grow AND for less-compressible
+     * data (already-compressed BLOBs, etc.) before the guard can ever wrongly
+     * skip a backup that would have fit — while still catching genuinely
+     * hopeless multi-GB-over-cap databases early, which is the whole point.
      */
-    private const PRECHECK_RAW_SIZE_MULTIPLIER = 8;
+    private const PRECHECK_RAW_SIZE_MULTIPLIER = 20;
 
     /**
      * BACKUP-H1/M4: a database backup is whole-DB, not scoped to any one clinic
@@ -182,6 +198,28 @@ class AdminBackupService
             . 'Otherwise use the VPS replica or the stock backup screen for this database. '
             . '(True streaming encryption with no size cap is a tracked future fix, BACKUP-STREAM — '
             . 'not yet built because it would change the .enc file format.)';
+    }
+
+    /**
+     * B1: a dedicated pre-check message — never call overCapMessage() (which is
+     * written for the AUTHORITATIVE post-gzip check) with a raw-storage estimate.
+     * Doing so mislabeled raw table storage as "Compressed backup (X)", which
+     * reads as the real compressed size when it is only an early, cheap estimate
+     * (BACKUP-H1b) that skipped the dump before a real compressed size ever
+     * existed. This message is explicit about both things: what number this is
+     * (an estimate, not the real size) and why the run was skipped before ever
+     * attempting the dump.
+     */
+    private function overCapPreCheckMessage(int $estimatedRawBytes, int $capBytes): string
+    {
+        return 'Estimated raw database storage (' . $this->humanSize($estimatedRawBytes) . ') is far larger '
+            . 'than the in-app encryption limit (' . $this->humanSize($capBytes) . ') — skipped the dump/'
+            . 'compress step before it started (this is a cheap pre-check estimate, not the actual compressed '
+            . 'size — raw storage compresses down significantly, but not enough here to plausibly fit). '
+            . 'If this server has enough free RAM, raise "Backup max size to encrypt (MB)" in Admin Hub -> '
+            . 'System -> Backup and try again. Otherwise use the VPS replica or the stock backup screen for '
+            . 'this database. (True streaming encryption with no size cap is a tracked future fix, '
+            . 'BACKUP-STREAM — not yet built because it would change the .enc file format.)';
     }
 
     /**
@@ -492,11 +530,10 @@ class AdminBackupService
             // authoritative check stays below, on the real compressed size.
             $estimatedRaw = $this->estimatedRawDatabaseBytes();
             if ($this->shouldSkipViaSizePreCheck($estimatedRaw, $capBytes)) {
-                throw new \RuntimeException(
-                    'Database raw storage (' . $this->humanSize($estimatedRaw) . ') is far larger than the '
-                    . 'encryption limit (' . $this->humanSize($capBytes) . ') — skipped the dump/compress step '
-                    . '(pre-check). ' . $this->overCapMessage($estimatedRaw, $capBytes)
-                );
+                // B1 — dedicated pre-check message; never reuse overCapMessage()
+                // here, it is written for the real post-gzip size and would
+                // mislabel this raw-storage estimate as "Compressed backup (X)".
+                throw new \RuntimeException($this->overCapPreCheckMessage((int) $estimatedRaw, $capBytes));
             }
 
             [$dumpPath, $tmpDir] = $this->dumpDatabase();
