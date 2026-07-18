@@ -568,7 +568,7 @@ class AdminBackupService
      * depend on, or it is undecryptable noise on a fresh install. See
      * requiredDatabaseKeyNames()/fetchDatabaseKeyRows() below.
      *
-     * @return array{filename: string, content_base64: string, file_count: int}
+     * @return array{filename: string, content_base64: string, file_count: int, warnings: list<string>}
      */
     public function exportRecoveryKey(int $actorUserId): array
     {
@@ -585,18 +585,27 @@ class AdminBackupService
         }
 
         // BACKUP-C1 — collect the `keys`-table rows the drive files above depend on
-        // to ever be decrypted again. Missing one makes the whole bundle useless, so
-        // this fails loudly (before anything is written) rather than shipping a
-        // bundle that looks complete but silently can't restore.
+        // to ever be decrypted again. BACKUP-C2: an install can have MULTIPLE key
+        // versions on disk at once (e.g. after an upgrade rotated keys but old drive
+        // files are still referenced by old backups), and any one version's row(s)
+        // can legitimately be missing (rotated out, manually cleaned up, etc.) without
+        // the OTHER versions' key material being any less real or useful. So this only
+        // fails loudly when the bundle would carry literally NO usable database key
+        // material for ANY version that needs one — that bundle really would be inert
+        // noise. A partial gap just downgrades to a warning: export whatever crown
+        // jewels ARE present rather than letting one missing row sink the whole export.
         $dbKeyNames = $this->requiredDatabaseKeyNames($files);
         $dbKeyRows = $this->fetchDatabaseKeyRows($dbKeyNames);
-        if (count($dbKeyRows) !== count($dbKeyNames)) {
-            $missing = implode(', ', array_diff($dbKeyNames, array_column($dbKeyRows, 'name')));
+        $gaps = $this->summarizeKeyMaterialGaps($dbKeyNames, $dbKeyRows);
+        if ($gaps['fatal']) {
             throw new \RuntimeException(
-                'The recovery-key bundle is incomplete — the `keys` table is missing row(s) required '
-                . 'to decrypt the drive key file(s): ' . $missing . '. This should not happen; check the database.'
+                'The recovery-key bundle would carry NO usable database key material for any drive key file '
+                . 'that needs it (checked the `keys` table for: ' . implode(', ', $dbKeyNames) . ') — the bundle '
+                . 'would be completely useless for restoring on a machine without the original database. '
+                . 'Check the `keys` table / database connection.'
             );
         }
+        $keyWarnings = $gaps['warnings'];
 
         $tmpZip = tempnam(sys_get_temp_dir(), 'nckey');
         if ($tmpZip === false) {
@@ -612,6 +621,16 @@ class AdminBackupService
         // BACKUP-C1 — the database-key rows the drive files need to be readable again.
         // JSON, not a raw SQL dump: small, dependency-free to parse in the decrypt CLI.
         $zip->addFromString('db-keys.json', (string) json_encode($dbKeyRows, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        // BACKUP-C2 — a partial-material bundle still gets exported (see above), but
+        // whoever eventually unzips this in an emergency needs to know up front, not
+        // discover it only when a decrypt fails. Only written when there's something
+        // to say.
+        if ($keyWarnings !== []) {
+            $zip->addFromString('WARNINGS.txt', "This recovery-key bundle is INCOMPLETE:\n\n"
+                . implode("\n\n", $keyWarnings) . "\n\nEverything else in this bundle is still valid — the "
+                . "gap above only affects the specific drive key file(s) named. Re-export a fresh bundle once "
+                . "the underlying `keys` table issue is fixed.\n");
+        }
         // Crown jewels: a silently-dropped key file yields a bundle that looks fine
         // but cannot restore. addFile defers the read to close(), so verify BOTH the
         // add and the final write succeeded for every key file.
@@ -642,46 +661,108 @@ class AdminBackupService
             $_SESSION['authUser'] ?? 'system',
             $_SESSION['authProvider'] ?? 'default',
             1,
-            'recovery_key_exported files=' . count($files) . ' db_keys=' . count($dbKeyRows) . ' uid=' . $actorUserId
+            'recovery_key_exported files=' . count($files) . ' db_keys=' . count($dbKeyRows)
+                . ' warnings=' . count($keyWarnings) . ' uid=' . $actorUserId
         );
 
         return [
             'filename' => 'openemr-recovery-key-' . $this->siteTag() . '-' . date('Ymd-His') . '.zip',
             'content_base64' => base64_encode($content),
             'file_count' => count($files),
+            'warnings' => $keyWarnings,
         ];
     }
 
     /**
      * Work out which `keys`-table rows the drive-key files depend on to ever be
-     * decrypted again (BACKUP-C1).
+     * decrypted again (BACKUP-C1; docblock corrected under BACKUP-C2).
      *
      * KeyVersion.php usesLegacyStorage() (~:71-74): versions 1-4 store the drive key
      * as plain base64 on disk — self-sufficient, no database dependency. Versions 5+
-     * store it ENCRYPTED, using the database key of the exact same label (CryptoGen.php
-     * createDriveKey() ~:548-572 calls encryptStandard() with KeySource::DATABASE and
-     * the current KeyVersion, which — see collectCryptoKey() ~:448-466 — derives the
-     * label as `$keyVersion->toString() . $sub`; that is identical to how the drive
-     * filename itself was built, which is why the drive filename ("sevena") and the
-     * `keys` row name it depends on ("sevena") are always the same string).
+     * store it ENCRYPTED, using encryptStandard()/decryptStandard() with
+     * KeySource::DATABASE (CryptoGen.php createDriveKey() ~:548-572, collectDriveKey()
+     * ~:523-537). Those, in turn, ALWAYS need a PAIR of database keys for a given
+     * version, not just one: coreEncrypt()/coreDecrypt() (~:167-168, ~:239-240) each
+     * call collectCryptoKey($keyVersion, "a", ...) for the AES key AND
+     * collectCryptoKey($keyVersion, "b", ...) for the HMAC key — see collectCryptoKey()
+     * ~:448-466, which derives the row name as `$keyVersion->toString() . $sub`. So
+     * decrypting the drive-key file "sevena" needs BOTH the "sevena" AND "sevenb"
+     * `keys` rows together — not just the row matching its own filename. (The reason
+     * the original code here "just worked" is that a normal methods/ folder always
+     * has BOTH the "a" and "b" drive files for a version side by side, so looping over
+     * files and echoing each one's own basename happened to recover the full pair by
+     * accident — that coincidence is what "the union works" meant before this fix. It
+     * silently breaks the moment only one half of a pair is present on disk, which is
+     * exactly the kind of partial state BACKUP-C2 makes this method resilient to.)
      *
      * @param list<string> $files absolute paths of the drive-key files
-     * @return list<string> `keys.name` values the bundle must carry
+     * @return list<string> `keys.name` values the bundle must carry (both halves of
+     *                      the pair for every non-legacy version referenced)
      */
     private function requiredDatabaseKeyNames(array $files): array
     {
         $names = [];
+        foreach ($this->presentNonLegacyKeyVersions($files) as $keyVersion) {
+            $names[] = $keyVersion->toString() . 'a';
+            $names[] = $keyVersion->toString() . 'b';
+        }
+
+        return array_values(array_unique($names));
+    }
+
+    /**
+     * Non-legacy (>=5) KeyVersions referenced by any of the given drive-key file
+     * basenames, de-duplicated. Pulled out of requiredDatabaseKeyNames() so
+     * exportRecoveryKey() can reason about "which versions are in play" without
+     * caring about the 'a'/'b' pairing detail.
+     *
+     * @param list<string> $files absolute paths of the drive-key files
+     * @return list<KeyVersion>
+     */
+    private function presentNonLegacyKeyVersions(array $files): array
+    {
+        $versions = [];
         foreach ($files as $path) {
             $base = basename($path);
             foreach (KeyVersion::cases() as $keyVersion) {
-                if (str_starts_with($base, $keyVersion->toString()) && !$keyVersion->usesLegacyStorage()) {
-                    $names[] = $base;
+                if (!$keyVersion->usesLegacyStorage() && str_starts_with($base, $keyVersion->toString())) {
+                    $versions[$keyVersion->value] = $keyVersion;
                     break;
                 }
             }
         }
 
-        return array_values(array_unique($names));
+        return array_values($versions);
+    }
+
+    /**
+     * BACKUP-C2: decide whether a gap between the required `keys` row names and the
+     * rows actually found is fatal (the bundle would be completely useless) or just
+     * a warning (the bundle is still worth exporting, minus the specific version(s)
+     * affected). Pure/DB-free on purpose so this decision is unit-testable without a
+     * `keys` table fixture — the caller does the actual SELECT.
+     *
+     * @param list<string> $requiredNames every `keys.name` the drive files need
+     * @param list<array{name: string, value: string}> $foundRows rows actually read back from the `keys` table
+     * @return array{fatal: bool, warnings: list<string>}
+     */
+    private function summarizeKeyMaterialGaps(array $requiredNames, array $foundRows): array
+    {
+        $missing = array_values(array_diff($requiredNames, array_column($foundRows, 'name')));
+        // Nothing required at all (all drive files are legacy/self-sufficient) is not
+        // a gap. Requiring something but finding literally none of it IS fatal — that
+        // bundle can never decrypt a single one of its own drive-key files. Anything
+        // in between (found some, missing some) is a warning, not a failure — see
+        // exportRecoveryKey()'s BACKUP-C2 comment for why.
+        $fatal = $requiredNames !== [] && $foundRows === [];
+        $warnings = [];
+        if (!$fatal && $missing !== []) {
+            $warnings[] = 'The `keys` table is missing row(s) for: ' . implode(', ', $missing)
+                . '. The drive key file(s) that depend on those rows will NOT be decryptable from this bundle '
+                . 'on a machine without the original database — everything else in this bundle is still good.';
+        }
+
+        return ['fatal' => $fatal, 'warnings' => $warnings];
     }
 
     /**
@@ -772,8 +853,10 @@ class AdminBackupService
             . "  - This recovery-key bundle (the ZIP this file came from, or its unzipped folder).\n"
             . "  - One encrypted backup file (looks like 'nc-backup-...sql.gz.enc', or for a\n"
             . "    single restored document, a file ending in '.enc' from a 'nc-files-...' folder).\n"
-            . "  - A computer with PHP 8.2+ and this OpenEMR + New Clinic module code checked out\n"
-            . "    (it does NOT need to be set up or connected to any database yet).\n\n"
+            . "  - A computer with PHP 8.2+ and a FULL copy of this OpenEMR + New Clinic source tree\n"
+            . "    (not just the module folder — the decrypt tool loads code from other parts of the\n"
+            . "    repo too), laid out the same way as a normal checkout. It does NOT need to be set\n"
+            . "    up or connected to any database yet.\n\n"
             . "Steps:\n"
             . "  1. Unzip this recovery-key bundle somewhere on the new machine, e.g.\n"
             . "     C:\\recovery-key\\ (or /home/you/recovery-key/ on Linux/Mac). You should see\n"
@@ -788,6 +871,8 @@ class AdminBackupService
             . "       php backup-decrypt.php --in \"C:\\my-backup\\nc-backup-clinic-...sql.gz.enc\" ^\n"
             . "         --bundle \"C:\\recovery-key\" --out \"C:\\my-backup\\restored.sql.gz\"\n"
             . "     (On Mac/Linux use php backup-decrypt.php --in ... --bundle ... --out ..., same flags.)\n"
+            . "     You do not need to add any memory-limit flag, even for a very large backup — the\n"
+            . "     tool removes its own memory limit before it starts.\n"
             . "  5. If it says \"Decrypted OK\", you now have a plain '.sql.gz' file. Unzip it\n"
             . "     (gunzip / 7-Zip / \"Extract\") to get a plain '.sql' file — this is your\n"
             . "     full database, in plain readable text. Treat this file as carefully as\n"
@@ -801,10 +886,11 @@ class AdminBackupService
             . "     freshly-generated ones) so future backups/restores keep working.\n"
             . "  8. Log in and spot-check: open a recent patient, a recent visit, and a recent\n"
             . "     payment. If those look right, the restore worked.\n\n"
-            . "To restore ONE mirrored document (not the whole database), run the same\n"
-            . "command with --in pointing at that one '.enc' file — the tool detects it is a\n"
-            . "single file (not a database dump) and writes the decrypted document instead of\n"
-            . "a '.sql.gz'.\n\n"
+            . "To restore ONE mirrored document (not the whole database), run the same command with\n"
+            . "--in pointing at that one '.enc' file instead. The tool always just writes the raw\n"
+            . "decrypted bytes to --out, whatever they are — for a database backup that is a\n"
+            . "'.sql.gz' you gunzip yourself (step 5); for a mirrored document it is that document's\n"
+            . "original bytes, ready to use as-is (rename it back to its real filename/extension).\n\n"
             . "If the tool prints an error, read it — it is written in plain English and says\n"
             . "what went wrong (wrong bundle, wrong backup file, missing key row, etc.). It\n"
             . "never guesses; it fails loudly rather than producing a corrupted restore.\n\n"

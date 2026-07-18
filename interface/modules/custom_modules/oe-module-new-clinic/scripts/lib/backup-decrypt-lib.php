@@ -140,14 +140,24 @@ function backupDecryptLoadBundleFromZip(string $zipPath): array
             continue;
         }
         if ($name === 'db-keys.json') {
-            $dbJson = $zip->getFromIndex($i);
+            $content = $zip->getFromIndex($i);
+            if ($content === false) {
+                $zip->close();
+                throw new \RuntimeException("Could not read 'db-keys.json' from the bundle zip: $zipPath (the zip may be corrupted)");
+            }
+            $dbJson = $content;
         } elseif (str_starts_with($name, 'methods/') && $name !== 'methods/') {
-            $drive[basename($name)] = $zip->getFromIndex($i);
+            $content = $zip->getFromIndex($i);
+            if ($content === false) {
+                $zip->close();
+                throw new \RuntimeException("Could not read '$name' from the bundle zip: $zipPath (the zip may be corrupted)");
+            }
+            $drive[basename($name)] = $content;
         }
     }
     $zip->close();
 
-    return backupDecryptFinishBundle($drive, $dbJson === false ? null : $dbJson, $zipPath);
+    return backupDecryptFinishBundle($drive, $dbJson, $zipPath);
 }
 
 /** @return array{drive: array<string,string>, db: array<string,string>} */

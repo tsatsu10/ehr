@@ -58,6 +58,15 @@ if (php_sapi_name() !== 'cli') {
     die("CLI only\n");
 }
 
+// Real backups run tens to hundreds of MB, and this tool decrypts + holds the whole
+// plaintext in memory (base64_decode, decryptStandard, then a full file_put_contents).
+// Without this, a panicked admin following the documented command verbatim on a large
+// backup gets a raw "Allowed memory size exhausted" PHP fatal instead of one of this
+// tool's friendly error messages/exit codes. This is a dedicated, single-purpose CLI
+// script (never a web request), so disabling the memory limit for its own process is
+// safe — no need to ask the admin to remember a `-d memory_limit=...` flag.
+ini_set('memory_limit', '-1');
+
 // Deliberately NOT interface/globals.php — no DB connection, no site bootstrap, no
 // session. Only the class autoloader, so this genuinely runs on a bare machine.
 // scripts/ -> oe-module-new-clinic -> custom_modules -> modules -> interface -> repo root.

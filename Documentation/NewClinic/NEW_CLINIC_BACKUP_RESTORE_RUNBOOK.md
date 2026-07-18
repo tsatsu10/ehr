@@ -1,6 +1,6 @@
 # New Clinic — Backup Restore Runbook
 
-**Version:** 1.0.0 · **Date:** 2026-07-18 · **Status:** Real, numbered restore procedure — proven end-to-end
+**Version:** 1.1.0 · **Date:** 2026-07-18 · **Status:** Real, numbered restore procedure — proven end-to-end
 on this machine (see §6). Written to close **BACKUP-C2** from the backup-system audit: before this
 document, "restore from backup" pointed at stock `interface/main/backup.php`, no decrypt tool existed,
 and a restore had never actually been performed.
@@ -33,8 +33,12 @@ procedure that has actually been run, on a real backup, start to finish (§6).
      already have the original database (see §7's "what changed" note).
    - `READ_ME_FIRST.txt` — a plain-English copy of the restore steps below, written for whoever finds
      the bundle in an emergency and has not read this file.
-3. **A machine with PHP 8.2+ and this repository checked out** (or at least the
-   `oe-module-new-clinic` folder + `vendor/`). It does **not** need a working database connection, a
+3. **A machine with PHP 8.2+ and a FULL copy of this repository**, checked out with the same folder
+   layout as a real install. The module folder plus `vendor/` alone is **not** enough: `backup-decrypt.php`
+   resolves `vendor/autoload.php` as `dirname(__DIR__, 5)` from `scripts/` (five levels up — `scripts` →
+   `oe-module-new-clinic` → `custom_modules` → `modules` → `interface` → repo root), and `CryptoGen` itself
+   autoloads from `/src` (`OpenEMR\Common\Crypto\...`), not just `vendor/`. A partial copy will fatal on a
+   missing class or a wrong `dirname()` depth. It does **not** need a working database connection, a
    configured site, or the original methods/ folder — that is the entire point of the bundle.
 
 If you only have the backup file and NOT the recovery-key bundle, stop — you cannot decrypt it. Go find
@@ -48,13 +52,15 @@ by design (§2 of the design doc — key custody is the clinic's).
    database and verify it before touching production.
 2. Decrypt:
    ```
-   php interface/modules/custom_modules/oe-module-new-clinic/scripts/backup-decrypt.php \
-     --in  /path/to/nc-backup-<site>-<timestamp>.sql.gz.enc \
-     --bundle /path/to/recovery-key.zip \
-     --out /path/to/restored.sql.gz
+   php interface/modules/custom_modules/oe-module-new-clinic/scripts/backup-decrypt.php ^
+     --in  C:\path\to\nc-backup-<site>-<timestamp>.sql.gz.enc ^
+     --bundle C:\path\to\recovery-key.zip ^
+     --out C:\path\to\restored.sql.gz
    ```
    `--bundle` accepts either the ZIP as downloaded, or a folder you have already unzipped it into —
-   whichever is easier. On success this prints `Decrypted OK: <n> bytes written to ...` and exits 0. On
+   whichever is easier. You do not need to add a `-d memory_limit=...` flag, even for a very large
+   backup — the tool disables its own memory limit before it starts, so it cannot OOM regardless of
+   backup size. On success this prints `Decrypted OK: <n> bytes written to ...` and exits 0. On
    failure it prints a plain-English reason and a non-zero exit code (1 = bad input/usage, 2 = the
    bundle itself is unreadable or incomplete, 3 = decryption failed — wrong bundle for this file, or the
    file is corrupted). It never writes a partial/corrupt `--out` file on failure.
@@ -169,4 +175,5 @@ XAMPP dev box, using the module's actual code (no shortcuts, no mocked crypto):
 
 | Version | Date | Change |
 |---|---|---|
+| 1.1.0 | 2026-07-18 | Crypto-review fixups (BACKUP-C2 usability pass): `backup-decrypt.php` now disables its own PHP memory limit, so §3 step 2 no longer needs (and never did document) a `-d memory_limit=...` flag on large backups — noted explicitly; §2 item 3 corrected — a restore machine needs the FULL repository, not just the module folder + `vendor/`, because the tool also autoloads from `/src`; §3 step 2's command switched from bash `\` line-continuation to Windows `^` to match this doc's Windows-first convention (and `READ_ME_FIRST.txt`). |
 | 1.0.0 | 2026-07-18 | Initial version. Written for BACKUP-C2 (backup-system audit): replaces the stock-`backup.php` pointer in RB-19 with this real, numbered procedure; documents `scripts/backup-decrypt.php`; records the first real restore drill (patient_data 463=463, new_visit 445=445; one mirrored document byte-identical by SHA-256). |
