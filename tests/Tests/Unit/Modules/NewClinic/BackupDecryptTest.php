@@ -207,4 +207,42 @@ class BackupDecryptTest extends TestCase
         $this->expectExceptionMessage('Bundle not found');
         \backupDecryptLoadBundle(sys_get_temp_dir() . '/does_not_exist_' . bin2hex(random_bytes(6)));
     }
+
+    /**
+     * BACKUP-C2 zip-guard fix: backupDecryptLoadBundleFromZip() now checks
+     * getFromIndex() for `false` (which ZipArchive can legitimately return on a
+     * read error) instead of ever storing a bool where file content is expected.
+     * This is the success-path round trip through a REAL zip (not just
+     * backupDecryptFinishBundle() with hand-built arrays, which the tests above
+     * already cover) — it proves the added guard didn't break normal loading.
+     */
+    public function testLoadBundleFromZipReadsMethodsAndJson(): void
+    {
+        if (!class_exists(\ZipArchive::class)) {
+            $this->markTestSkipped('php-zip not available');
+        }
+        $this->tmpDir = sys_get_temp_dir() . '/nc_backup_decrypt_zip_test_' . bin2hex(random_bytes(6));
+        mkdir($this->tmpDir, 0700, true);
+        $zipPath = $this->tmpDir . '/bundle.zip';
+
+        $zip = new \ZipArchive();
+        $zip->open($zipPath, \ZipArchive::CREATE);
+        $zip->addFromString('methods/sevena', 'fake-drive-file-a');
+        $zip->addFromString('methods/sevenb', 'fake-drive-file-b');
+        $zip->addFromString('db-keys.json', json_encode([
+            ['name' => 'sevena', 'value' => 'AAAA'],
+            ['name' => 'sevenb', 'value' => 'BBBB'],
+        ]));
+        $zip->close();
+
+        $result = \backupDecryptLoadBundleFromZip($zipPath);
+
+        $this->assertSame(
+            ['sevena' => 'fake-drive-file-a', 'sevenb' => 'fake-drive-file-b'],
+            $result['drive']
+        );
+        $this->assertSame(['sevena' => 'AAAA', 'sevenb' => 'BBBB'], $result['db']);
+
+        @unlink($zipPath);
+    }
 }

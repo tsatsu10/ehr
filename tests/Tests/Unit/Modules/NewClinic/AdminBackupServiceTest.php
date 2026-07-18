@@ -144,13 +144,18 @@ class AdminBackupServiceTest extends TestCase
     }
 
     /**
-     * BACKUP-C1: modern-version (>=5) drive-key files are themselves encrypted with
-     * the database key of the SAME label — the recovery bundle must carry that
-     * `keys`-table row or it can never be decrypted on a fresh machine. Legacy
-     * (<=4) files are plain base64 on disk and need no database dependency.
+     * BACKUP-C1/C2: modern-version (>=5) drive-key files are themselves encrypted
+     * with a PAIR of database keys of the SAME label — an "a" (AES) row and a "b"
+     * (HMAC) row (coreEncrypt()/coreDecrypt() always fetch both). Decrypting the
+     * drive file "sevena" therefore needs BOTH the "sevena" AND "sevenb" `keys`
+     * rows, not just the row matching its own filename — so a bundle must carry
+     * both halves of the pair for every modern version referenced, even if only
+     * one half's drive file happens to be present on disk (synthetic "fivea"
+     * below, with no "fiveb" file, still requires BOTH db rows). Legacy (<=4)
+     * files are plain base64 on disk and need no database dependency at all.
      * Pure logic — synthetic filenames, no real methods/ dir touched.
      */
-    public function testRequiredDatabaseKeyNamesIdentifiesOnlyModernVersions(): void
+    public function testRequiredDatabaseKeyNamesIdentifiesBothHalvesOfEachModernPair(): void
     {
         $method = new \ReflectionMethod(AdminBackupService::class, 'requiredDatabaseKeyNames');
         $method->setAccessible(true);
@@ -159,14 +164,14 @@ class AdminBackupServiceTest extends TestCase
         $files = [
             '/fake/methods/sevena',
             '/fake/methods/sevenb',
-            '/fake/methods/fivea', // still modern (>=5) — needs a db row too
+            '/fake/methods/fivea', // still modern (>=5) — needs BOTH fivea and fiveb db rows
             '/fake/methods/four',  // legacy (<=4) — self-sufficient, no db row
             '/fake/methods/one',   // legacy — self-sufficient
         ];
 
         $result = $method->invoke($svc, $files);
 
-        $this->assertEqualsCanonicalizing(['sevena', 'sevenb', 'fivea'], $result);
+        $this->assertEqualsCanonicalizing(['sevena', 'sevenb', 'fivea', 'fiveb'], $result);
     }
 
     public function testRequiredDatabaseKeyNamesEmptyForNoFiles(): void
@@ -182,5 +187,69 @@ class AdminBackupServiceTest extends TestCase
         $method = new \ReflectionMethod(AdminBackupService::class, 'fetchDatabaseKeyRows');
         $method->setAccessible(true);
         $this->assertSame([], $method->invoke(new AdminBackupService(), []));
+    }
+
+    /**
+     * BACKUP-C2: the fatal-vs-warning decision for missing `keys` rows, in isolation
+     * from any real database. No required names at all (e.g. every drive file is
+     * legacy) is fine — nothing to warn about, nothing fatal.
+     */
+    public function testSummarizeKeyMaterialGapsNoneRequiredIsClean(): void
+    {
+        $method = new \ReflectionMethod(AdminBackupService::class, 'summarizeKeyMaterialGaps');
+        $method->setAccessible(true);
+
+        $result = $method->invoke(new AdminBackupService(), [], []);
+
+        $this->assertFalse($result['fatal']);
+        $this->assertSame([], $result['warnings']);
+    }
+
+    /**
+     * BACKUP-C2 resilience: SOME required rows are missing, but at least one was
+     * found — this must NOT be fatal (an upgraded install can still export the
+     * crown jewels it does have), just a warning naming exactly what's missing.
+     */
+    public function testSummarizeKeyMaterialGapsPartialIsWarningNotFatal(): void
+    {
+        $method = new \ReflectionMethod(AdminBackupService::class, 'summarizeKeyMaterialGaps');
+        $method->setAccessible(true);
+
+        $result = $method->invoke(
+            new AdminBackupService(),
+            ['sevena', 'sevenb', 'fivea', 'fiveb'],
+            [['name' => 'sevena', 'value' => 'x'], ['name' => 'sevenb', 'value' => 'y']]
+        );
+
+        $this->assertFalse($result['fatal']);
+        $this->assertCount(1, $result['warnings']);
+        $this->assertStringContainsString('fivea', $result['warnings'][0]);
+        $this->assertStringContainsString('fiveb', $result['warnings'][0]);
+    }
+
+    /**
+     * BACKUP-C2: rows were required but NONE were found at all — this bundle would
+     * be completely useless, so it must be fatal (fail loud), not a silent warning.
+     */
+    public function testSummarizeKeyMaterialGapsNoneFoundIsFatal(): void
+    {
+        $method = new \ReflectionMethod(AdminBackupService::class, 'summarizeKeyMaterialGaps');
+        $method->setAccessible(true);
+
+        $result = $method->invoke(new AdminBackupService(), ['sevena', 'sevenb'], []);
+
+        $this->assertTrue($result['fatal']);
+    }
+
+    public function testPresentNonLegacyKeyVersionsDedupesAndSkipsLegacy(): void
+    {
+        $method = new \ReflectionMethod(AdminBackupService::class, 'presentNonLegacyKeyVersions');
+        $method->setAccessible(true);
+
+        $files = ['/fake/methods/sevena', '/fake/methods/sevenb', '/fake/methods/four'];
+        $result = $method->invoke(new AdminBackupService(), $files);
+
+        $this->assertCount(1, $result);
+        $this->assertSame('seven', $result[0]->toString());
     }
 }
