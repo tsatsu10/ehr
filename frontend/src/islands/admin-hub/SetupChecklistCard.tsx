@@ -7,6 +7,7 @@ import { t } from '@core/i18n';
 import type { AdminTabId, SetupProgressItem, SetupProgressPayload, StaffProvisionResult } from './adminTypes';
 import { ADMIN_TABS } from './adminTypes';
 import { AdminSection } from './adminUi';
+import { printHandoverSheet } from './printHandoverSheet';
 
 interface SetupChecklistCardProps {
   progress: SetupProgressPayload;
@@ -107,9 +108,20 @@ export function SetupChecklistCard({
       ) : (
         <p className="mb-2">{t('Every role already has a sign-in — nothing was created.')}</p>
       )}
-      <Button type="button" variant="outline" size="sm" onClick={onDismissProvisionResult}>
-        {provisionResult.created.length ? t('I have written these down') : t('OK')}
-      </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        {provisionResult.created.length > 0 && (
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => printHandoverSheet(provisionResult.created, scopeLabel)}
+          >
+            {t('Print handover sheet')}
+          </Button>
+        )}
+        <Button type="button" variant="outline" size="sm" onClick={onDismissProvisionResult}>
+          {provisionResult.created.length ? t('I have written these down') : t('OK')}
+        </Button>
+      </div>
     </div>
   );
 

@@ -92,7 +92,10 @@ function collectFiles(dir) {
 // stripped first — CSS property/value text inside brackets is not a class name,
 // and counting it forced workarounds like box-shadow hairlines.
 function countInText(text, cls) {
-  const re = new RegExp(`(?<![\\w-])${cls.replace(/[-]/g, '\\-')}(?![\\w-])`, 'g');
+  // Lookahead also excludes ':' — a className token is never followed by a
+  // colon, but CSS in template literals is ('border: 1px …'), and that is
+  // property text, not a class.
+  const re = new RegExp(`(?<![\\w-])${cls.replace(/[-]/g, '\\-')}(?![\\w:-])`, 'g');
   let count = 0;
   // Only look inside single/double/backtick string literals to avoid identifiers.
   const strings = text.match(/(['"`])(?:\\.|(?!\1)[\s\S])*?\1/g) ?? [];

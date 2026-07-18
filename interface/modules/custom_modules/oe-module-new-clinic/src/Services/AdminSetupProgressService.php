@@ -248,7 +248,7 @@ class AdminSetupProgressService
                 'completed' => isset($manual['cron_configured']) || $cronOk,
                 'manual' => true,
                 'ticked' => isset($manual['cron_configured']),
-                'hint' => xl('Ask the person who set up the server to schedule the OpenEMR background service. This ticks itself after the first overnight run.'),
+                'hint' => xl('Ask the person who set up the server to schedule the OpenEMR background service. This ticks itself after the first overnight run — pressing Run reconcile now does not count, because a manual run does not prove the schedule works.'),
                 'link_tab' => null,
             ],
             [

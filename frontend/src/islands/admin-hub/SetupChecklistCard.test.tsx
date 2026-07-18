@@ -186,6 +186,13 @@ describe('SetupChecklistCard', () => {
     expect(screen.getByText('reception')).toBeInTheDocument();
     expect(screen.getByText('Abcd2345efgh')).toBeInTheDocument();
 
+    // Print handover: appends the hidden print iframe with the credentials.
+    fireEvent.click(screen.getByRole('button', { name: /Print handover sheet/i }));
+    const frame = document.querySelector('iframe');
+    expect(frame).not.toBeNull();
+    expect(frame!.srcdoc).toContain('Abcd2345efgh');
+    frame!.remove();
+
     fireEvent.click(screen.getByRole('button', { name: /I have written these down/i }));
     expect(h.onDismissProvisionResult).toHaveBeenCalled();
   });
