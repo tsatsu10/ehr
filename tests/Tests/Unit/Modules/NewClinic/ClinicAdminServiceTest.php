@@ -13,7 +13,9 @@ namespace OpenEMR\Tests\Unit\Modules\NewClinic;
 
 require_once __DIR__ . '/ModuleAutoload.php';
 
+use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Modules\NewClinic\Services\ClinicAdminService;
+use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use PHPUnit\Framework\TestCase;
 
 class ClinicAdminServiceTest extends TestCase
@@ -479,5 +481,93 @@ class ClinicAdminServiceTest extends TestCase
         $service->saveSettings('global', [
             'queue_slip_instruction_text' => 'Please wait to be called',
         ], 1);
+    }
+
+    /**
+     * BACKUP-M4b: a database backup is whole-DB, never per-facility (M4 —
+     * AdminBackupService). Backup config must always land at the facility-0
+     * sentinel, even when the save request resolves to a specific non-zero
+     * facility — otherwise a multi-facility clinic saving Admin Hub settings
+     * from a non-first facility would write its backup schedule under that
+     * facility's row, and then have clearGlobalOverrides() DELETE the real
+     * facility-0 config underneath it, silently breaking the schedule for
+     * every facility (the worker has no per-facility context to fall back to).
+     */
+    public function testBackupKeysAlwaysWriteAtFacilityZeroRegardlessOfScope(): void
+    {
+        $facRow = QueryUtils::querySingleRow('SELECT id FROM facility ORDER BY id LIMIT 1');
+        $facilityId = is_array($facRow) ? (int) ($facRow['id'] ?? 0) : 0;
+        if ($facilityId <= 0) {
+            $this->markTestSkipped('No facility row available to exercise non-global scoping');
+        }
+
+        $config = new ClinicConfigService();
+        $prevGlobal = $config->get('backup_frequency_days', '0', 0);
+        $service = new ClinicAdminService();
+        try {
+            $service->saveSettings('facility', ['backup_frequency_days' => 5], 1, $facilityId);
+
+            // Read back via a FRESH ClinicConfigService instance — $config's own
+            // per-instance config map (SCALE-1.4) was already populated by the
+            // $prevGlobal read above and is never told about writes made through
+            // $service's own internal ClinicConfigService instance (only the
+            // shared cross-request cache + DB are updated); reusing $config here
+            // would read its stale pre-save snapshot, not prove anything about
+            // the actual write.
+            $fresh = new ClinicConfigService();
+            $this->assertSame('5', $fresh->get('backup_frequency_days', '0', 0));
+
+            // ...and the key must NOT have been written under the request-resolved
+            // facility at all (config_value NULL when no row exists there).
+            $row = QueryUtils::querySingleRow(
+                'SELECT config_value FROM new_clinic_config WHERE facility_id = ? AND config_key = ?',
+                [$facilityId, 'backup_frequency_days']
+            );
+            $this->assertTrue(
+                !is_array($row) || $row['config_value'] === null,
+                'backup_frequency_days must never be written at a non-zero facility'
+            );
+        } finally {
+            $config->set('backup_frequency_days', (string) $prevGlobal, 0);
+            sqlStatement(
+                'DELETE FROM new_clinic_config WHERE facility_id = ? AND config_key = ?',
+                [$facilityId, 'backup_frequency_days']
+            );
+        }
+    }
+
+    /**
+     * BACKUP-M4b regression: before the fix, saving a NON-backup key at a
+     * specific facility called clearGlobalOverrides() on every changed key in
+     * the same request, which would have also deleted the facility-0 backup
+     * row if backup keys weren't exempted. Prove a normal facility-scoped save
+     * alongside a backup key leaves the facility-0 backup config intact.
+     */
+    public function testFacilityScopedSaveNeverClearsGlobalBackupConfig(): void
+    {
+        $facRow = QueryUtils::querySingleRow('SELECT id FROM facility ORDER BY id LIMIT 1');
+        $facilityId = is_array($facRow) ? (int) ($facRow['id'] ?? 0) : 0;
+        if ($facilityId <= 0) {
+            $this->markTestSkipped('No facility row available to exercise non-global scoping');
+        }
+
+        $config = new ClinicConfigService();
+        $prevGlobal = $config->get('admin_hub_backup_retention_days', '30', 0);
+        $service = new ClinicAdminService();
+        try {
+            // Seed a real facility-0 backup config value first.
+            $config->set('admin_hub_backup_retention_days', '14', 0);
+
+            // Now save an UNRELATED, genuinely facility-scoped key at the specific facility.
+            $service->saveSettings('facility', ['enable_triage' => '0'], 1, $facilityId);
+
+            // The facility-0 backup retention value must be untouched. Fresh
+            // instance — see the staleness note in the sibling test above.
+            $fresh = new ClinicConfigService();
+            $this->assertSame('14', $fresh->get('admin_hub_backup_retention_days', '30', 0));
+        } finally {
+            $config->set('admin_hub_backup_retention_days', (string) $prevGlobal, 0);
+            $service->saveSettings('facility', ['enable_triage' => '1'], 1, $facilityId);
+        }
     }
 }

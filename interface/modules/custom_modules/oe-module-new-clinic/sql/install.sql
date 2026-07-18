@@ -1606,6 +1606,13 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'backup_include_site_files', '0');
 #EndIf
 
+-- BACKUP-CAP: configurable in-memory encryption cap (see AdminBackupService::
+-- DEFAULT_MAX_ENCRYPT_MB for the RAM-budget reasoning behind the 250 MB default).
+#IfNotRow2D new_clinic_config facility_id 0 config_key backup_max_encrypt_mb
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'backup_max_encrypt_mb', '250');
+#EndIf
+
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_duplicate_review
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_duplicate_review', '0');

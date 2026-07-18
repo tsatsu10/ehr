@@ -152,7 +152,11 @@ class ClinicAdminService
         'encounter_note_lbf_export_formdir' => ['type' => 'string', 'default' => ''],
         'enable_react_clinical_doc_hub' => ['type' => 'bool', 'default' => '1'],
         'enable_admin_hub' => ['type' => 'bool', 'default' => '0'],
-        'admin_hub_backup_retention_days' => ['type' => 'int', 'default' => '30', 'min' => 1, 'max' => 365],
+        // BACKUP-M6: min 0 (not 1) — 0 is a legitimate "never auto-delete backups"
+        // setting (AdminBackupService::pruneOldArchives()/pruneOldRunRows() both
+        // already treat <=0 as "never prune"); min=1 made that value unreachable
+        // from the UI even though the backend already supported it honestly.
+        'admin_hub_backup_retention_days' => ['type' => 'int', 'default' => '30', 'min' => 0, 'max' => 365],
         'enable_native_backup' => ['type' => 'bool', 'default' => '0'],
         'enable_duplicate_review' => ['type' => 'bool', 'default' => '0'],
         'enable_native_issue_editor' => ['type' => 'bool', 'default' => '0'],
@@ -166,6 +170,10 @@ class ClinicAdminService
         'backup_target_dir' => ['type' => 'string', 'default' => '', 'maxLength' => 512],
         'backup_frequency_days' => ['type' => 'int', 'default' => '0', 'min' => 0, 'max' => 365],
         'backup_include_site_files' => ['type' => 'bool', 'default' => '0'],
+        // BACKUP-CAP: configurable in-memory encryption cap (MB) — see
+        // AdminBackupService::DEFAULT_MAX_ENCRYPT_MB for the RAM-budget reasoning
+        // behind the default and min.
+        'backup_max_encrypt_mb' => ['type' => 'int', 'default' => '250', 'min' => 50, 'max' => 2000],
         'admin_hub_setup_complete' => ['type' => 'bool', 'default' => '0'],
         'enable_documents_native' => ['type' => 'bool', 'default' => '0'],
         'enable_patient_chat' => ['type' => 'bool', 'default' => '0'],
@@ -175,6 +183,31 @@ class ClinicAdminService
         'currency_symbol' => ['type' => 'currency_symbol', 'default' => 'GH₵'],
         'currency_decimals' => ['type' => 'int', 'default' => '2', 'min' => 0, 'max' => 4],
         'currency_symbol_position' => ['type' => 'currency_position', 'default' => 'before'],
+    ];
+
+    /**
+     * BACKUP-M4b: a database backup is whole-DB, never per-facility (M4 — see
+     * AdminBackupService). Backup config must therefore ALWAYS live at the
+     * facility-0 sentinel, regardless of what facility scope a settings save
+     * request happened to resolve to. Before this fix, saveSettings() wrote every
+     * key — including these — at the request-resolved facility, then (for a
+     * facility-scoped save) called `clearGlobalOverrides()` on every changed key,
+     * which DELETES the facility-0 row. A single-facility pilot never noticed
+     * (the reader-facility fallback in ClinicConfigService::get() papers over
+     * it), but a multi-facility clinic saving Admin Hub settings from a non-first
+     * facility would silently blow away its own backup schedule/target/retention
+     * — the exact facility-scoped-flag failure mode this repo has been burned by
+     * before (see CLAUDE.md "Facility-scoped flag reads"). These keys are forced
+     * to facility 0 on both read (for change-detection) and write, and are never
+     * passed to clearGlobalOverrides().
+     */
+    private const GLOBAL_ONLY_SETTINGS = [
+        'enable_native_backup',
+        'backup_target_dir',
+        'backup_frequency_days',
+        'backup_include_site_files',
+        'admin_hub_backup_retention_days',
+        'backup_max_encrypt_mb',
     ];
 
     /** @var array<string, array{type: string, default: string, min?: int, max?: int}> */
@@ -628,11 +661,18 @@ class ClinicAdminService
         $facilityId = $this->resolveSettingsFacilityId($scope, $requestedFacilityId);
         $input = self::applySettingDependencies($input);
         $changed = [];
+        // BACKUP-M4b — only keys actually written at the request-resolved facility
+        // are eligible for clearGlobalOverrides() below; GLOBAL_ONLY_SETTINGS are
+        // written at facility 0 and must never have their facility-0 row cleared.
+        $changedScoped = [];
 
         foreach (self::EDITABLE_SETTINGS as $key => $meta) {
             if (!array_key_exists($key, $input)) {
                 continue;
             }
+
+            $isGlobalOnly = in_array($key, self::GLOBAL_ONLY_SETTINGS, true);
+            $writeFacilityId = $isGlobalOnly ? 0 : $facilityId;
 
             $value = $this->normalizeValue($key, $meta, $input[$key]);
             if ($key === 'enable_lab_ops' && $value === '1') {
@@ -757,16 +797,19 @@ class ClinicAdminService
                     throw new \InvalidArgumentException('Duplicate warn threshold cannot exceed the block threshold');
                 }
             }
-            $previous = $this->config->get($key, $meta['default'], $facilityId);
-            $this->config->set($key, $value, $facilityId);
+            $previous = $this->config->get($key, $meta['default'], $writeFacilityId);
+            $this->config->set($key, $value, $writeFacilityId);
 
             if ((string) $previous !== $value) {
                 $changed[] = $key;
+                if (!$isGlobalOnly) {
+                    $changedScoped[] = $key;
+                }
             }
         }
 
-        if ($facilityId > 0 && !empty($changed)) {
-            $this->config->clearGlobalOverrides($changed);
+        if ($facilityId > 0 && !empty($changedScoped)) {
+            $this->config->clearGlobalOverrides($changedScoped);
         }
 
         if (!empty($changed)) {

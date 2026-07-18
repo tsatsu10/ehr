@@ -48,6 +48,12 @@ describe('adminFieldDefs', () => {
     expect(visibleQueueFieldKeys()).toContain('enable_letters_labels');
   });
 
+  /** BACKUP-CAP (wave 3): the configurable in-memory encryption cap, three-place wired. */
+  it('exposes the backup max-size-to-encrypt setting (three-place wiring)', () => {
+    expect(ADMIN_SETTING_KEYS).toContain('backup_max_encrypt_mb');
+    expect(visibleQueueFieldKeys()).toContain('backup_max_encrypt_mb');
+  });
+
   /**
    * Second batch (2026-07-11 full codebase sweep): keys consumed by real services
    * (duplicate detection, phone validation, lab auto-billing, MoH pack, registration
