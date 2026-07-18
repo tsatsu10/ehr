@@ -56,6 +56,44 @@ class EncounterSessionService
         );
     }
 
+    /**
+     * G12 session bind for encounters with no queue visit (historical / stock-created).
+     * Off the queue FSM, so no per-state desk ACL applies — restricted to consult-capable
+     * roles (doctor) and admins; facility scope is asserted on the patient.
+     */
+    public function bindForEncounter(int $encounterId, int $actorUserId): EncounterSessionDto
+    {
+        $enc = \OpenEMR\Common\Database\QueryUtils::querySingleRow(
+            'SELECT encounter, pid FROM form_encounter WHERE encounter = ? LIMIT 1',
+            [$encounterId]
+        );
+        $pid = (int) ($enc['pid'] ?? 0);
+        if (!is_array($enc) || $pid <= 0) {
+            throw new \RuntimeException('Encounter not found', 404);
+        }
+
+        (new FacilityScopeService())->assertPatientAccessible($pid);
+
+        if (
+            !AclMain::aclCheckCore('new_clinic', 'new_admin')
+            && !AclMain::aclCheckCore('admin', 'super')
+            && !AclMain::aclCheckCore('new_clinic', 'new_doctor')
+        ) {
+            throw new \RuntimeException('Forbidden', 403);
+        }
+
+        $_SESSION['pid'] = $pid;
+        $_SESSION['encounter'] = $encounterId;
+        $_SESSION['new_clinic_visit_id'] = 0;
+
+        return new EncounterSessionDto(
+            visitId: 0,
+            pid: $pid,
+            encounter: $encounterId,
+            state: '',
+        );
+    }
+
     public function bindForVisitWithDeskAcl(int $visitId, int $actorUserId): EncounterSessionDto
     {
         $visit = $this->queue()->getVisitForActor($visitId);

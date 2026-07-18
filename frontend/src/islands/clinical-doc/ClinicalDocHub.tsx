@@ -26,12 +26,16 @@ import {
 } from './useClinicalDocPageHeading';
 import './main.css';
 
-function readVisitIdFromUrl(): number | null {
+function readIdFromUrl(param: 'visit_id' | 'encounter_id'): number | null {
   const params = new URLSearchParams(window.location.search);
-  const raw = params.get('visit_id');
+  const raw = params.get(param);
   if (!raw) return null;
   const id = Number.parseInt(raw, 10);
   return Number.isFinite(id) && id > 0 ? id : null;
+}
+
+function readVisitIdFromUrl(): number | null {
+  return readIdFromUrl('visit_id');
 }
 
 export function ClinicalDocHub(props: ClinicalDocProps) {
@@ -42,13 +46,20 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
     if (fromProps && fromProps > 0) return fromProps;
     return readVisitIdFromUrl();
   });
+  // Encounter-only mode: a stock/historical encounter with no queue visit row.
+  const [encounterId] = useState<number | null>(() => {
+    const fromProps = props.initialEncounterId ?? null;
+    if (fromProps && fromProps > 0) return fromProps;
+    return readIdFromUrl('encounter_id');
+  });
+  const [encounterOnly, setEncounterOnly] = useState(false);
+  const [encounterDate, setEncounterDate] = useState('');
   const [cards, setCards] = useState<ClinicalDocCard[]>([]);
   const [signOverview, setSignOverview] = useState<ClinicalDocSignOverview | null>(null);
   const [addableForms, setAddableForms] = useState<ClinicalDocCard[]>([]);
   const [labPanelOrderEnabled, setLabPanelOrderEnabled] = useState(false);
   const [doctorVisit, setDoctorVisit] = useState<DoctorVisit | null>(null);
   const [contextLabel, setContextLabel] = useState('');
-  const [advancedUrl, setAdvancedUrl] = useState<string | null>(null);
   const [encounterSigned, setEncounterSigned] = useState(false);
   const [patientName, setPatientName] = useState('');
   const [pubpid, setPubpid] = useState('');
@@ -97,20 +108,19 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
   }, []);
 
   const loadSummary = useCallback(async () => {
-    if (!visitId) {
+    if (!visitId && !encounterId) {
       setCards([]);
       setSignOverview(null);
       setAddableForms([]);
       setDoctorVisit(null);
       setContextLabel('');
-      setAdvancedUrl(null);
       return;
     }
     setLoading(true);
     setError(null);
     setNoEncounter(false);
     try {
-      const data = await fetchVisitSummary(props.ajaxUrl, props.csrfToken, visitId, tab);
+      const data = await fetchVisitSummary(props.ajaxUrl, props.csrfToken, visitId ?? 0, tab, encounterId ?? 0);
       setCards(data.cards ?? []);
       setSignOverview(data.sign_overview ?? null);
       setAddableForms(data.addable_forms ?? []);
@@ -118,7 +128,12 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
       setEncounterSigned(!!data.sign_status?.encounter_signed);
       setPatientName(data.patient?.display_name ?? '');
       setPubpid(data.patient?.pubpid ?? '');
-      setAdvancedUrl(data.advanced_encounter_url ?? null);
+      setEncounterOnly(!!data.visit?.encounter_only);
+      setEncounterDate(data.visit?.encounter_date ?? '');
+      // The encounter turned out to have a queue visit — upgrade to full visit mode.
+      if (!visitId && data.visit?.id) {
+        setVisitId(data.visit.id);
+      }
       setDoctorVisit({
         id: data.visit.id,
         pid: data.visit.pid,
@@ -127,7 +142,9 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
         state: 'with_doctor',
       });
       setContextLabel(
-        `Queue #${data.visit?.queue_number ?? '—'} · Encounter ${data.visit?.encounter ?? '—'}`,
+        data.visit?.encounter_only
+          ? `Past encounter ${data.visit?.encounter ?? '—'}`
+          : `Queue #${data.visit?.queue_number ?? '—'} · Encounter ${data.visit?.encounter ?? '—'}`,
       );
     } catch (err) {
       setCards([]);
@@ -142,7 +159,7 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
     } finally {
       setLoading(false);
     }
-  }, [props.ajaxUrl, props.csrfToken, tab, visitId]);
+  }, [props.ajaxUrl, props.csrfToken, tab, visitId, encounterId]);
 
   const refresh = useCallback(() => {
     setLastUpdated(new Date());
@@ -157,15 +174,20 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
     if (visitId) {
       const url = new URL(window.location.href);
       url.searchParams.set('visit_id', String(visitId));
+      url.searchParams.delete('encounter_id');
+      url.searchParams.set('tab', tab);
+      window.history.replaceState({}, '', url.toString());
+    } else if (encounterId) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('encounter_id', String(encounterId));
       url.searchParams.set('tab', tab);
       window.history.replaceState({}, '', url.toString());
     }
-  }, [tab, visitId]);
+  }, [tab, visitId, encounterId]);
 
   useClinicalDocPageHeading({
     tab,
     contextLabel,
-    advancedUrl,
     lastUpdated,
     onTabChange: setTab,
     onRefresh: refresh,
@@ -183,16 +205,25 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
 
   return (
     <div className="nc-clinicaldoc" id="nc-clinical-doc-root">
-      {visitId && patientName ? (
+      {(visitId || encounterId) && patientName ? (
         <PatientContextBanner
           identity={{
             display_name: patientName,
             pubpid,
           }}
-          aside={encounterSigned ? (
-            <Badge variant="success">Encounter signed</Badge>
-          ) : (
-            <Badge variant="warning">Unsigned documentation</Badge>
+          aside={(
+            <span className="flex items-center gap-2">
+              {encounterOnly ? (
+                <Badge variant="neutral">
+                  {encounterDate ? `Past encounter · ${encounterDate.split('-').reverse().join('/')}` : 'Past encounter'}
+                </Badge>
+              ) : null}
+              {encounterSigned ? (
+                <Badge variant="success">Encounter signed</Badge>
+              ) : (
+                <Badge variant="warning">Unsigned documentation</Badge>
+              )}
+            </span>
           )}
           className="mb-3"
         />
@@ -217,16 +248,17 @@ export function ClinicalDocHub(props: ClinicalDocProps) {
           loading={loading}
           error={error}
           visitId={visitId}
+          encounterId={encounterId}
           ajaxUrl={props.ajaxUrl}
           csrfToken={props.csrfToken}
           doctorDeskUrl={props.doctorDeskUrl}
           onOpenError={setOpenError}
-          onOpenLabPanel={() => setLabPanelOpen(true)}
-          onOpenInstructions={() => setInstructionsOpen(true)}
-          onOpenScreening={(instrument) => setScreeningInstrument(instrument)}
-          onOpenVitals={() => setVitalsOpen(true)}
-          onOpenCertificate={() => setCertificateOpen(true)}
-          onOpenEyeExam={() => setEyeExamOpen(true)}
+          onOpenLabPanel={visitId ? () => setLabPanelOpen(true) : undefined}
+          onOpenInstructions={visitId ? () => setInstructionsOpen(true) : undefined}
+          onOpenScreening={visitId ? (instrument) => setScreeningInstrument(instrument) : undefined}
+          onOpenVitals={visitId ? () => setVitalsOpen(true) : undefined}
+          onOpenCertificate={visitId ? () => setCertificateOpen(true) : undefined}
+          onOpenEyeExam={visitId ? () => setEyeExamOpen(true) : undefined}
         />
       )}
       <ClinicalInstructionsDrawer

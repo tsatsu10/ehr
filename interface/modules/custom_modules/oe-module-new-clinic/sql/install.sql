@@ -706,11 +706,6 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_scheduling_full_analytics', '0');
 #EndIf
 
-#IfNotRow2D new_clinic_config facility_id 0 config_key enable_history_editor_wrap
-INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
-(0, 'enable_history_editor_wrap', '0');
-#EndIf
-
 #IfNotRow2D new_completion_field_weight field_key background_history_documented
 INSERT INTO `new_completion_field_weight` (`field_key`, `level`, `weight`, `is_active`) VALUES
 ('background_history_documented', 3, 5, 0);
@@ -1346,6 +1341,10 @@ ALTER TABLE `admin_hub_backup_run` ADD COLUMN `size_bytes` BIGINT NULL AFTER `fi
 ALTER TABLE `admin_hub_backup_run` ADD COLUMN `kind` ENUM('db','files') NOT NULL DEFAULT 'db' AFTER `facility_id`;
 #EndIf
 
+#IfMissingColumn admin_hub_backup_run verified_at
+ALTER TABLE `admin_hub_backup_run` ADD COLUMN `verified_at` DATETIME NULL AFTER `message`;
+#EndIf
+
 #IfNotTable new_clinic_maintenance_lock
 CREATE TABLE IF NOT EXISTS `new_clinic_maintenance_lock` (
     `lock_key` VARCHAR(64) NOT NULL,
@@ -1434,28 +1433,28 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'admin_hub_setup_complete', '0');
 #EndIf
 
-#IfNotRow2D new_clinic_config facility_id 0 config_key enable_clinical_doc_hub
+#IfNotRow2D new_clinic_config facility_id 0 config_key clinical_doc_bundle
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
-(0, 'enable_clinical_doc_hub', '0'),
 (0, 'clinical_doc_bundle', 'ghana_opd_v1'),
 (0, 'clinical_doc_show_screening', '0'),
 (0, 'clinical_doc_show_specialty', '0'),
 (0, 'clinical_doc_show_us_quality', '0'),
 (0, 'clinical_doc_specialty_pack', '[]'),
 (0, 'consult_note_formdir', 'soap'),
-(0, 'encounter_note_engine', 'legacy'),
 (0, 'encounter_note_variant_map', '{}'),
 (0, 'encounter_note_require_icd', '0'),
 (0, 'encounter_note_supervisor_required', '0'),
 (0, 'enable_react_clinical_doc_hub', '1');
 #EndIf
 
-#IfNotRow2D registry directory nc_encounter_consult
+DELETE r1 FROM `registry` r1 INNER JOIN `registry` r2 ON r1.directory = r2.directory AND r1.id > r2.id WHERE r1.directory IN ('nc_encounter_consult', 'nc_screening', 'nc_certificate', 'nc_eye_exam');
+
+#IfNotRow registry directory nc_encounter_consult
 INSERT INTO `registry` (`name`, `state`, `directory`, `sql_run`, `unpackaged`, `date`, `priority`, `category`, `nickname`, `patient_encounter`, `therapy_group_encounter`, `aco_spec`)
 VALUES ('Consultation note', 1, 'nc_encounter_consult', 0, 1, NOW(), 0, 'Clinical', '', 1, 0, 'encounters|notes');
 #EndIf
 
-#IfNotRow2D registry directory nc_screening
+#IfNotRow registry directory nc_screening
 INSERT INTO `registry` (`name`, `state`, `directory`, `sql_run`, `unpackaged`, `date`, `priority`, `category`, `nickname`, `patient_encounter`, `therapy_group_encounter`, `aco_spec`)
 VALUES ('Screening', 1, 'nc_screening', 0, 1, NOW(), 0, 'Clinical', '', 1, 0, 'encounters|notes');
 #EndIf
@@ -1484,11 +1483,6 @@ CREATE TABLE IF NOT EXISTS `nc_encounter_note` (
 
 #IfNotIndex nc_encounter_note idx_forms_row_id
 ALTER TABLE `nc_encounter_note` ADD KEY `idx_forms_row_id` (`forms_row_id`);
-#EndIf
-
-#IfNotRow2D new_clinic_config facility_id 0 config_key encounter_note_engine
-INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
-(0, 'encounter_note_engine', 'legacy');
 #EndIf
 
 #IfNotRow2D new_clinic_config facility_id 0 config_key encounter_note_supervisor_required
@@ -1620,16 +1614,6 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_issue_editor
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_native_issue_editor', '0');
-#EndIf
-
-#IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_history_editor
-INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
-(0, 'enable_native_history_editor', '0');
-#EndIf
-
-#IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_history_full_form
-INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
-(0, 'enable_native_history_full_form', '0');
 #EndIf
 
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_native_immunization_editor
@@ -1766,7 +1750,7 @@ CREATE TABLE `form_nc_certificate` (
 ) ENGINE=InnoDB;
 #EndIf
 
-#IfNotRow2D registry directory nc_certificate
+#IfNotRow registry directory nc_certificate
 INSERT INTO `registry` (`name`, `state`, `directory`, `sql_run`, `unpackaged`, `date`, `priority`, `category`, `nickname`, `patient_encounter`, `therapy_group_encounter`, `aco_spec`)
 VALUES ('Medical certificate', 1, 'nc_certificate', 0, 1, NOW(), 0, 'Clinical', '', 1, 0, 'encounters|notes');
 #EndIf
@@ -1823,7 +1807,7 @@ CREATE TABLE `form_nc_eye_exam` (
 ) ENGINE=InnoDB;
 #EndIf
 
-#IfNotRow2D registry directory nc_eye_exam
+#IfNotRow registry directory nc_eye_exam
 INSERT INTO `registry` (`name`, `state`, `directory`, `sql_run`, `unpackaged`, `date`, `priority`, `category`, `nickname`, `patient_encounter`, `therapy_group_encounter`, `aco_spec`)
 VALUES ('Eye exam', 1, 'nc_eye_exam', 0, 1, NOW(), 0, 'Clinical', '', 1, 0, 'encounters|notes');
 #EndIf

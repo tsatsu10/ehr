@@ -21,12 +21,6 @@ $visitScope = new VisitScopeService();
 $sessionFacility = !empty($_SESSION['facilityId']) ? (int) $_SESSION['facilityId'] : null;
 $facilityId = $visitScope->resolveDeskFacilityId($sessionFacility);
 
-if (!$config->isEnabled('enable_clinical_doc_hub', 0, $facilityId)) {
-    $webroot = $GLOBALS['webroot'] ?? '';
-    header('Location: ' . $webroot . '/interface/patient_file/encounter/encounter_top.php', true, 302);
-    exit;
-}
-
 $access = new ClinicalDocAccessService();
 try {
     $access->assertHubAccess();
@@ -41,6 +35,7 @@ $moduleUrl = $webroot . '/interface/modules/custom_modules/oe-module-new-clinic/
 $reactHub = $config->get('enable_react_clinical_doc_hub', '1') === '1';
 $tabParam = (string) ($_GET['tab'] ?? 'visit');
 $visitId = (int) ($_GET['visit_id'] ?? 0);
+$encounterIdParam = (int) ($_GET['encounter_id'] ?? 0);
 $allowedTabs = $access->allowedLenses($facilityId);
 if (!in_array($tabParam, $allowedTabs, true)) {
     $tabParam = $allowedTabs[0] ?? 'visit';
@@ -56,6 +51,7 @@ if (!in_array($tabParam, $allowedTabs, true)) {
         'doctor_desk_url' => $moduleUrl . '/doctor.php',
         'initial_tab' => $tabParam,
         'initial_visit_id' => $visitId > 0 ? $visitId : null,
+        'initial_encounter_id' => $encounterIdParam > 0 ? $encounterIdParam : null,
         'can_visit' => $access->canViewVisit(),
         'can_consult' => $access->canViewConsult(),
         'can_screening' => $access->canViewScreening() && $access->showScreeningLens($facilityId),

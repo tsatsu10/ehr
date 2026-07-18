@@ -227,13 +227,9 @@ class MainMenuRestrictService
             return false;
         }
 
-        if (!$this->currentUserHasClinicDeskAcl()) {
-            return false;
-        }
-
-        $facilityId = $facilityId ?? $this->visitScope->resolveDefaultFacilityId();
-
-        return $this->config->isEnabled('enable_clinical_doc_hub', 0, $facilityId);
+        // M17 hub is a permanent surface since 2026-07-18 (flag retired) — the
+        // stock Visit Forms menus are hidden for clinic desk roles unconditionally.
+        return $this->currentUserHasClinicDeskAcl();
     }
 
     /**

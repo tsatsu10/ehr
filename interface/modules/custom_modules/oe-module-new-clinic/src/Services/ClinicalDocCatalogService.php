@@ -140,6 +140,8 @@ class ClinicalDocCatalogService
     private ?array $registryByDirectory = null;
     /** @var array<string, true>|null  set of active LBF grp_form_id (grp_group_id='', grp_activity=1). */
     private ?array $activeLbfFormIds = null;
+    /** @var array<string, string>|null  lower(formdir) => display name (registry + active LBF). */
+    private ?array $bridgeableRegistryFormsCache = null;
 
     private ?ClinicalDocAccessService $access = null;
     private ?ClinicConfigService $config = null;
@@ -367,7 +369,7 @@ class ClinicalDocCatalogService
     public function isAllowedFormdir(string $formdir, ?int $facilityId = null): bool
     {
         $formdir = strtolower(trim($formdir));
-        if ($formdir === '' || in_array($formdir, self::BILLING_EXCLUDED, true)) {
+        if ($formdir === '' || $this->isBillingExcludedFormdir($formdir)) {
             return false;
         }
 
@@ -509,11 +511,108 @@ class ClinicalDocCatalogService
         $this->resolveRegistryDirectoryCache = [];
         $this->registryByDirectory = null;
         $this->activeLbfFormIds = null;
+        $this->bridgeableRegistryFormsCache = null;
     }
 
     public function isFormInstalledAndActive(string $formdir): bool
     {
         return $this->isRegistryFormActive($this->resolveRegistryDirectory($formdir));
+    }
+
+    /**
+     * Case-insensitive BILLING_EXCLUDED check — registry directories are mixed-case
+     * (`newGroupEncounter`) while callers pass lowercased formdirs.
+     */
+    private function isBillingExcludedFormdir(string $formdir): bool
+    {
+        foreach (self::BILLING_EXCLUDED as $excluded) {
+            if (strcasecmp($excluded, $formdir) === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Forms whose editors are visit-keyed native surfaces with no stock page —
+     * they open from the day's queue only, never in encounter-only mode.
+     */
+    public function isQueueOnlyFormdir(string $formdir, ?int $facilityId = null): bool
+    {
+        $formdir = strtolower(trim($formdir));
+
+        return in_array($formdir, ['rx', EncounterNoteEnginePolicy::NATIVE_FORMDIR, 'nc_certificate', 'nc_eye_exam'], true)
+            || $this->isNativeScreeningFormdir($formdir, $facilityId);
+    }
+
+    /**
+     * All installed, active, bridgeable registry forms — stock-encounter parity for
+     * the hub's Add form list and the "other forms on this encounter" cards:
+     * lower(directory) => display name. Billing/encounter-admin forms and the
+     * module's own nc_* forms (managed by the catalog) are excluded.
+     *
+     * @return array<string, string>
+     */
+    public function listBridgeableRegistryForms(): array
+    {
+        if ($this->bridgeableRegistryFormsCache !== null) {
+            return $this->bridgeableRegistryFormsCache;
+        }
+
+        $rows = QueryUtils::fetchRecords(
+            'SELECT directory, name FROM registry WHERE state = 1 ORDER BY name, directory'
+        ) ?: [];
+
+        $out = [];
+        foreach ($rows as $row) {
+            $dir = strtolower(trim((string) ($row['directory'] ?? '')));
+            if (
+                $dir === ''
+                || isset($out[$dir])
+                || str_starts_with($dir, 'nc_')
+                || $this->isBillingExcludedFormdir($dir)
+            ) {
+                continue;
+            }
+            $name = trim((string) ($row['name'] ?? ''));
+            $out[$dir] = $name !== '' ? $name : $dir;
+        }
+
+        // Active LBF forms (clinic-authored layouts) — the stock Add menu offers these
+        // too, and they open through the same bridge. DEM/HIS core layouts are excluded
+        // by the LBF prefix.
+        $lbfRows = QueryUtils::fetchRecords(
+            "SELECT grp_form_id, grp_title FROM layout_group_properties
+             WHERE grp_group_id = '' AND grp_activity = 1 AND LOWER(grp_form_id) LIKE 'lbf%'
+             ORDER BY grp_title, grp_form_id"
+        ) ?: [];
+        foreach ($lbfRows as $row) {
+            $dir = strtolower(trim((string) ($row['grp_form_id'] ?? '')));
+            if ($dir === '' || isset($out[$dir])) {
+                continue;
+            }
+            $name = trim((string) ($row['grp_title'] ?? ''));
+            $out[$dir] = $name !== '' ? $name : $dir;
+        }
+
+        return $this->bridgeableRegistryFormsCache = $out;
+    }
+
+    /**
+     * Bridge/encounter-mode rule: any installed, active registry form except the
+     * billing/encounter-admin set may render through the clinical-form-bridge —
+     * parity with the stock encounter screen, which offers the full registry.
+     * Per-form ACL (AclMain::aclCheckForm) is still enforced by the bridge.
+     */
+    public function isBridgeableFormdir(string $formdir): bool
+    {
+        $formdir = strtolower(trim($this->resolveRegistryDirectory($formdir)));
+        if ($formdir === '' || $this->isBillingExcludedFormdir($formdir)) {
+            return false;
+        }
+
+        return $this->isRegistryFormActive($formdir);
     }
 
     /**
@@ -778,7 +877,7 @@ class ClinicalDocCatalogService
 
     private function isRegistryFormActive(string $formdir): bool
     {
-        if (in_array($formdir, self::BILLING_EXCLUDED, true)) {
+        if ($this->isBillingExcludedFormdir($formdir)) {
             return false;
         }
 

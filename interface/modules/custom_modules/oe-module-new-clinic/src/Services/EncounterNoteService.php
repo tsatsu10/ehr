@@ -509,7 +509,9 @@ class EncounterNoteService
     }
 
     /**
-     * Open-encounter deep link: native consult island when engine is native, else stock encounter_top.
+     * Open-encounter deep link: native consult island for queue visits; hub
+     * encounter-only mode for encounters with no queue visit. The stock
+     * encounter_top screen is no longer a destination (2026-07-18 flip).
      *
      * @param array<string, mixed> $visit
      * @param array<string, mixed> $query
@@ -517,16 +519,13 @@ class EncounterNoteService
     public function buildOpenUrlForVisit(array $visit, array $query = []): string
     {
         $visitId = (int) ($visit['id'] ?? 0);
-        $pid = (int) ($visit['pid'] ?? 0);
         $encounterId = (int) ($visit['encounter'] ?? 0);
-        $facilityId = (int) ($visit['facility_id'] ?? 0);
-        $webroot = $GLOBALS['webroot'] ?? '';
 
-        if ($visitId > 0 && $this->isNativeEngineEnabled($facilityId)) {
+        if ($visitId > 0) {
             return $this->buildPageUrl($visitId, $query);
         }
 
-        return EncounterSignService::buildEncounterUrl($webroot, $pid, $encounterId);
+        return ClinicalDocHubLinkService::buildHubEncounterUrl($encounterId);
     }
 
     /**

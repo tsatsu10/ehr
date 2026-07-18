@@ -49,30 +49,19 @@ class EncounterNoteEnginePolicy
         return $this->visitScope;
     }
 
+    /**
+     * The native engine is the permanent engine since 2026-07-18 — the
+     * `encounter_note_engine` setting was retired (PRD §5.6 amendment). Kept as
+     * a method because a dozen call sites read the policy.
+     */
     public function isNativeEngineEnabled(?int $facilityId = null): bool
     {
-        if ($facilityId === null || $facilityId <= 0) {
-            $facilityId = $this->getVisitScope()->resolveDeskFacilityId();
-        }
-
-        $engine = strtolower(trim((string) ($this->getConfig()->get(
-            'encounter_note_engine',
-            self::ENGINE_LEGACY,
-            $facilityId
-        ) ?? self::ENGINE_LEGACY)));
-
-        return $engine === self::ENGINE_NATIVE;
+        return true;
     }
 
     public function effectiveConsultFormdir(?int $facilityId = null): string
     {
-        if ($this->isNativeEngineEnabled($facilityId)) {
-            return self::NATIVE_FORMDIR;
-        }
-
-        $formdir = strtolower(trim((string) ($this->getConfig()->get('consult_note_formdir', 'soap', $facilityId) ?? 'soap')));
-
-        return $formdir !== '' ? $formdir : 'soap';
+        return self::NATIVE_FORMDIR;
     }
 
     public function isNativeFormdir(string $formdir): bool
@@ -80,12 +69,13 @@ class EncounterNoteEnginePolicy
         return strcasecmp(trim($formdir), self::NATIVE_FORMDIR) === 0;
     }
 
+    /**
+     * The native note page also owns the legacy consult formdir
+     * (`consult_note_formdir`, default soap) so pre-flip consult notes keep
+     * opening natively instead of falling to the bridge.
+     */
     public function shouldOpenNativeForm(string $formdir, ?int $facilityId = null): bool
     {
-        if (!$this->isNativeEngineEnabled($facilityId)) {
-            return false;
-        }
-
         $formdir = strtolower(trim($formdir));
 
         return $formdir === self::NATIVE_FORMDIR

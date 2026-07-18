@@ -18,13 +18,12 @@ require_once __DIR__ . '/lib/pilot-common-seed.php';
 
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
-use OpenEMR\Modules\NewClinic\Services\EncounterNoteService;
 
 $config = new ClinicConfigService();
 $facilityIds = pilotFacilityIds();
 
 foreach ($facilityIds as $facilityId) {
-    $config->set('encounter_note_engine', EncounterNoteService::ENGINE_NATIVE, $facilityId);
+    // Native engine is permanent since 2026-07-18 — no engine setting to flip.
     $config->set('encounter_note_supervisor_required', '1', $facilityId);
     $config->set('encounter_note_lbf_export_on_save', '1', $facilityId);
 

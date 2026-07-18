@@ -109,7 +109,7 @@ class EncounterSignService
             $this->getUnsignedReason($encounterId),
             is_array($visit)
                 ? $this->buildOpenUrlForVisit($visit)
-                : self::buildEncounterUrl($GLOBALS['webroot'] ?? '', $pid, $encounterId)
+                : ClinicalDocHubLinkService::buildHubEncounterUrl($encounterId)
         );
     }
 
@@ -359,13 +359,6 @@ class EncounterSignService
         }
 
         return $signed;
-    }
-
-    public static function buildEncounterUrl(string $webroot, int $pid, int $encounterId): string
-    {
-        return $webroot . '/interface/patient_file/encounter/encounter_top.php?set_pid='
-            . urlencode((string) $pid)
-            . '&set_encounter=' . urlencode((string) $encounterId);
     }
 
     /**

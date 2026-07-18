@@ -133,9 +133,8 @@ export function QueueRolesTab({
     sectionKey(QUEUE_FIELD_SECTIONS[0], 0),
   ]);
 
-  const hubEnabled = settings.enable_clinical_doc_hub === true
-    || settings.enable_clinical_doc_hub === '1'
-    || settings.enable_clinical_doc_hub === 1;
+  // The M17 hub is always on since 2026-07-18 (flag retired) — LBF pack panels always show.
+  const hubEnabled = true;
   const referralHospitalBundle = settings.clinical_doc_bundle === 'referral_hospital_v1';
   const schedulingEnabled = settings.enable_scheduled_integration === true
     || settings.enable_scheduled_integration === '1'
@@ -356,9 +355,8 @@ export function QueueRolesTab({
                     <p className="text-[var(--oe-nc-text-muted)] text-sm mb-2">
                       Extended structured consult for multi-specialty and referral centers. Imports layout
                       <code className="mx-1">{referralHospitalLbfPack.form_id ?? 'LBFreferral_opd_consult'}</code>
-                      into OpenEMR Layout-Based Forms. Use with
-                      <code className="mx-1">encounter_note_engine=legacy</code>
-                      {' '}or as a bridge until the native React form is enabled.
+                      into OpenEMR Layout-Based Forms. Opens through the form bridge alongside
+                      the native React consult form.
                     </p>
                     <p className="text-sm mb-2" id="nc-admin-referral-hospital-lbf-status">
                       <Badge variant={referralHospitalLbfPack.installed ? 'success' : 'neutral'} className="mr-2">

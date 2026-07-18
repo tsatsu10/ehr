@@ -5,7 +5,6 @@ import type { ClinicalDocLens } from './clinicalDocTypes';
 interface Options {
   tab: ClinicalDocLens;
   contextLabel: string;
-  advancedUrl: string | null;
   lastUpdated: Date | null;
   onTabChange: (tab: ClinicalDocLens) => void;
   onRefresh: () => void;
@@ -40,7 +39,6 @@ export function firstAllowedLens(
 export function useClinicalDocPageHeading({
   tab,
   contextLabel,
-  advancedUrl,
   lastUpdated,
   onTabChange,
   onRefresh,
@@ -54,13 +52,6 @@ export function useClinicalDocPageHeading({
       el.textContent = contextLabel;
     }
   }, [contextLabel]);
-
-  useEffect(() => {
-    const advanced = document.getElementById('nc-clinicaldoc-advanced');
-    if (advanced && advancedUrl) {
-      advanced.setAttribute('href', advancedUrl);
-    }
-  }, [advancedUrl]);
 
   useEffect(() => {
     const toolbar = document.getElementById('nc-clinicaldoc-toolbar');

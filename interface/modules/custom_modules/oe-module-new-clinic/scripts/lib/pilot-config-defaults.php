@@ -18,7 +18,6 @@
 function pilotSliceConfigDefaults(): array
 {
     return [
-        'enable_history_editor_wrap' => '0',
         'enable_legacy_patient_context_overlay' => '0',
         'enable_faster_queue_interrupts' => '0',
         'faster_queue_interrupt_poll_seconds' => '10',
@@ -44,7 +43,6 @@ function pilotSliceConfigDefaults(): array
         'enable_insurance' => '0',
         'enable_queue_bridge' => '0',
         'enable_admin_hub' => '0',
-        'enable_clinical_doc_hub' => '0',
         'enable_report_hub' => '0',
     ];
 }

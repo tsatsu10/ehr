@@ -32,14 +32,15 @@ class ClinicalDocVisitSummaryService
     /**
      * @return array<string, mixed>
      */
-    public function getVisitSummary(int $visitId, int $actorUserId, ?string $lens = null): array
+    public function getVisitSummary(int $visitId, int $actorUserId, ?string $lens = null, int $encounterIdParam = 0): array
     {
         $this->access->assertHubAccess();
         if ($lens !== null && $lens !== '') {
             $this->access->assertLensAccess($lens);
         }
 
-        $visit = $this->queueService->getVisitForActor($visitId);
+        $visit = $this->resolveVisitContext($visitId, $encounterIdParam);
+        $visitId = $visitId > 0 ? $visitId : (int) ($visit['id'] ?? 0);
         $encounterId = (int) ($visit['encounter'] ?? 0);
         if ($encounterId <= 0) {
             throw new \RuntimeException('No encounter on visit', 409);
@@ -67,6 +68,9 @@ class ClinicalDocVisitSummaryService
             ),
             $facilityId
         );
+        if ($lens === null || $lens === 'visit') {
+            $cards = $this->appendUncataloguedInstanceCards($cards, $instances);
+        }
 
         $encounterSigned = $this->signService->isVisitDocumentationSigned($visit, $facilityId);
         $webroot = $GLOBALS['webroot'] ?? '';
@@ -81,6 +85,10 @@ class ClinicalDocVisitSummaryService
                 'pid' => $pid,
                 'assigned_provider_id' => (int) ($visit['assigned_provider_id'] ?? 0),
                 'service_profile' => (string) ($visit['service_profile'] ?? 'full_opd'),
+                // Encounter-only mode: a stock/historical encounter with no queue row —
+                // queue affordances (FSM actions, native note authoring) switch off.
+                'encounter_only' => $visitId <= 0,
+                'encounter_date' => (string) ($visit['encounter_date'] ?? ''),
             ],
             'patient' => [
                 'display_name' => $this->displayName($patient),
@@ -101,25 +109,120 @@ class ClinicalDocVisitSummaryService
             'show_us_quality' => (bool) ($catalog['show_us_quality'] ?? false),
             'lab_panel_order_enabled' => $this->labPanelOrder->isFeatureEnabled($facilityId),
             'doctor_desk_url' => $modulePublic . 'doctor.php',
-            'advanced_encounter_url' => EncounterSignService::buildEncounterUrl($webroot, $pid, $encounterId),
         ];
 
         if ($lens === 'visit') {
-            $payload['sign_overview'] = $this->buildSignOverview($visit, $cards, $facilityId, $encounterSigned);
+            $payload['sign_overview'] = $visitId > 0
+                ? $this->buildSignOverview($visit, $cards, $facilityId, $encounterSigned)
+                : $this->buildSignOverviewFromCards($cards, $encounterSigned);
             // Reuse the form instances already loaded above instead of re-querying.
             $payload['addable_forms'] = $this->buildAddableForms($encounterId, $pid, $facilityId, $instances);
+            if ($visitId <= 0) {
+                // Encounter-only mode: don't offer queue-only native editors the
+                // server would refuse (they open from the day's visit queue).
+                $payload['addable_forms'] = array_values(array_filter(
+                    $payload['addable_forms'],
+                    fn (array $card): bool => !$this->catalog->isQueueOnlyFormdir(
+                        (string) ($card['formdir'] ?? ''),
+                        $facilityId
+                    )
+                ));
+            }
         }
 
         return $payload;
     }
 
     /**
+     * Resolve the documentation context. Live path: a `new_visit` id. Encounter path
+     * (stock or historical encounters with no queue row): reuse the visit when one
+     * exists for that encounter, else synthesize a visit-shaped array from
+     * `form_encounter` after a facility-scope access check — id stays 0 so
+     * queue-only affordances switch off downstream.
+     *
      * @return array<string, mixed>
      */
-    public function getSignStatus(int $visitId): array
+    private function resolveVisitContext(int $visitId, int $encounterIdParam): array
+    {
+        if ($visitId > 0) {
+            return $this->queueService->getVisitForActor($visitId);
+        }
+
+        if ($encounterIdParam <= 0) {
+            throw new \InvalidArgumentException('visit_id or encounter_id is required', 400);
+        }
+
+        $row = QueryUtils::querySingleRow(
+            'SELECT id FROM new_visit WHERE encounter = ? ORDER BY id DESC LIMIT 1',
+            [$encounterIdParam]
+        );
+        if (!empty($row['id'])) {
+            return $this->queueService->getVisitForActor((int) $row['id']);
+        }
+
+        $enc = QueryUtils::querySingleRow(
+            'SELECT encounter, pid, facility_id, provider_id, date FROM form_encounter WHERE encounter = ? LIMIT 1',
+            [$encounterIdParam]
+        );
+        if (!is_array($enc) || (int) ($enc['pid'] ?? 0) <= 0) {
+            throw new \RuntimeException('Encounter not found', 404);
+        }
+
+        (new FacilityScopeService())->assertPatientAccessible((int) $enc['pid']);
+
+        return [
+            'id' => 0,
+            'pid' => (int) $enc['pid'],
+            'encounter' => $encounterIdParam,
+            'facility_id' => (int) ($enc['facility_id'] ?? 0),
+            'state' => '',
+            'queue_number' => 0,
+            'assigned_provider_id' => (int) ($enc['provider_id'] ?? 0),
+            'service_profile' => 'full_opd',
+            'encounter_date' => substr((string) ($enc['date'] ?? ''), 0, 10),
+        ];
+    }
+
+    /**
+     * Encounter-only sign overview — card counts without the queue-keyed
+     * documentation-status service (which needs a live visit row).
+     *
+     * @param list<array<string, mixed>> $cards
+     * @return array<string, mixed>
+     */
+    private function buildSignOverviewFromCards(array $cards, bool $encounterSigned): array
+    {
+        $started = 0;
+        $signed = 0;
+        $unsigned = 0;
+        foreach ($cards as $card) {
+            if (empty($card['started'])) {
+                continue;
+            }
+            $started++;
+            if (!empty($card['signed'])) {
+                $signed++;
+            } else {
+                $unsigned++;
+            }
+        }
+
+        return [
+            'encounter_signed' => $encounterSigned,
+            'started_count' => $started,
+            'signed_count' => $signed,
+            'unsigned_count' => $unsigned,
+            'required_forms' => [],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function getSignStatus(int $visitId, int $encounterIdParam = 0): array
     {
         $this->access->assertHubAccess();
-        $visit = $this->queueService->getVisitForActor($visitId);
+        $visit = $this->resolveVisitContext($visitId, $encounterIdParam);
         $encounterId = (int) ($visit['encounter'] ?? 0);
         if ($encounterId <= 0) {
             throw new \RuntimeException('No encounter on visit', 409);
@@ -127,7 +230,7 @@ class ClinicalDocVisitSummaryService
 
         return [
             'encounter_signed' => $this->signService->isVisitDocumentationSigned($visit),
-            'visit_id' => $visitId,
+            'visit_id' => $visitId > 0 ? $visitId : (int) ($visit['id'] ?? 0),
             'encounter' => $encounterId,
         ];
     }
@@ -254,6 +357,11 @@ class ClinicalDocVisitSummaryService
      */
     private function enrichCardsWithNotePreview(array $cards, int $visitId, int $facilityId): array
     {
+        // Native note authoring is visit-keyed — no preview in encounter-only mode.
+        if ($visitId <= 0) {
+            return $cards;
+        }
+
         $preview = null;
         $enriched = [];
         foreach ($cards as $card) {
@@ -391,7 +499,51 @@ class ClinicalDocVisitSummaryService
     }
 
     /**
-     * M17-F02 — bundle-limited forms not yet started on this encounter.
+     * Stock-encounter parity: forms already on the encounter that the curated
+     * catalog doesn't cover (long-tail registry / LBF forms, historical stock
+     * entries) still show as cards on the Visit lens under "More note types".
+     *
+     * @param list<array<string, mixed>> $cards
+     * @param array<string, array<string, mixed>> $instances
+     * @return list<array<string, mixed>>
+     */
+    private function appendUncataloguedInstanceCards(array $cards, array $instances): array
+    {
+        $covered = [];
+        foreach ($cards as $card) {
+            $covered[strtolower((string) ($card['formdir'] ?? ''))] = true;
+        }
+
+        $names = $this->catalog->listBridgeableRegistryForms();
+        foreach ($instances as $formdir => $instance) {
+            $formdir = strtolower((string) $formdir);
+            if (isset($covered[$formdir]) || !$this->catalog->isBridgeableFormdir($formdir)) {
+                continue;
+            }
+            $cards[] = [
+                'id' => 'other_' . $formdir,
+                'lens' => 'visit',
+                'formdir' => $formdir,
+                'title' => $names[$formdir] ?? $formdir,
+                'description' => 'Form on this encounter — opens the standard editor.',
+                'kind' => 'stock',
+                'more' => true,
+                'started' => true,
+                'form_id' => $instance['form_id'] ?? null,
+                'forms_row_id' => $instance['forms_row_id'] ?? null,
+                'last_saved_at' => $instance['last_saved_at'] ?? null,
+                'last_saved_by' => $instance['last_saved_by'] ?? null,
+                'signed' => (bool) ($instance['signed'] ?? false),
+            ];
+        }
+
+        return $cards;
+    }
+
+    /**
+     * M17-F02 — forms not yet started on this encounter: the curated bundle first,
+     * then every other installed registry form (stock-encounter parity — the stock
+     * Add menu offers the full registry; the long tail opens via the bridge).
      *
      * @param array<string, array<string, mixed>>|null $instances Reuse pre-loaded instances when available.
      * @return list<array<string, mixed>>
@@ -402,8 +554,41 @@ class ClinicalDocVisitSummaryService
         $instances ??= $this->loadFormInstances($encounterId, $pid);
         $allCards = $this->mergeCardsWithInstances($fullCatalog['cards'], $instances);
 
+        $covered = [];
+        foreach ($allCards as $card) {
+            $covered[strtolower((string) ($card['formdir'] ?? ''))] = true;
+        }
+        foreach ($this->catalog->listBridgeableRegistryForms() as $formdir => $name) {
+            if (isset($covered[$formdir])) {
+                continue;
+            }
+            $allCards[] = [
+                'id' => 'reg_' . $formdir,
+                'lens' => 'visit',
+                'formdir' => $formdir,
+                'title' => $name,
+                'description' => 'Installed form — opens the standard editor.',
+                'kind' => 'stock',
+                'started' => isset($instances[$formdir]),
+                'form_id' => $instances[$formdir]['form_id'] ?? null,
+            ];
+        }
+
+        // Catalog cards repeat across lenses (e.g. procedure_order on Orders and the
+        // bundle lens) — offer each formdir once.
+        $seen = [];
+        $deduped = [];
+        foreach ($allCards as $card) {
+            $formdir = strtolower((string) ($card['formdir'] ?? ''));
+            if ($formdir !== '' && isset($seen[$formdir])) {
+                continue;
+            }
+            $seen[$formdir] = true;
+            $deduped[] = $card;
+        }
+
         return array_values(array_filter(
-            $allCards,
+            $deduped,
             static fn (array $card): bool => empty($card['started'])
         ));
     }

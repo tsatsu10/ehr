@@ -1083,7 +1083,8 @@ class NewClinicMandatoryContractTest extends TestCase
             . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/pilot-enable-v11-doc.php';
         $this->assertFileExists($pilotScript, 'Pilot V1.1-DOC enable script must exist');
         $pilotBody = file_get_contents($pilotScript);
-        $this->assertStringContainsString('enable_clinical_doc_hub', $pilotBody);
+        $this->assertStringContainsString('enable_react_clinical_doc_hub', $pilotBody);
+        $this->assertStringNotContainsString("'enable_clinical_doc_hub' =>", $pilotBody);
 
         $goldenPathPrep = dirname(__DIR__, 5)
             . '/interface/modules/custom_modules/oe-module-new-clinic/scripts/lib/golden-path-e2e-prep.php';
@@ -1105,7 +1106,9 @@ class NewClinicMandatoryContractTest extends TestCase
         $hubPhp = dirname(__DIR__, 5)
             . '/interface/modules/custom_modules/oe-module-new-clinic/public/clinical-doc/index.php';
         $this->assertFileExists($hubPhp, 'Clinical doc hub entry must exist');
-        $this->assertStringContainsString('enable_clinical_doc_hub', file_get_contents($hubPhp));
+        // 2026-07-18 flip: the hub is permanent — no flag gate, no stock fall-through.
+        $this->assertStringNotContainsString('enable_clinical_doc_hub', file_get_contents($hubPhp));
+        $this->assertStringNotContainsString('encounter_top.php', file_get_contents($hubPhp));
 
         $hubPath = dirname(__DIR__, 5) . '/frontend/src/islands/clinical-doc/ClinicalDocHub.tsx';
         $this->assertFileExists($hubPath, 'ClinicalDocHub React component must exist');

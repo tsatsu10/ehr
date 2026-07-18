@@ -22,13 +22,20 @@ use PHPUnit\Framework\TestCase;
 
 class EncounterSignServiceTest extends TestCase
 {
-    public function testBuildEncounterUrl(): void
+    public function testOpenUrlForVisitlessEncounterTargetsHubNotStock(): void
     {
-        $url = EncounterSignService::buildEncounterUrl('/openemr', 12, 99);
+        // 2026-07-18 flip: the stock encounter_top screen is no longer a destination —
+        // encounters without a queue visit open in the hub's encounter-only mode.
+        $GLOBALS['webroot'] = '/openemr';
+        $url = (new EncounterSignService())->buildOpenUrlForVisit([
+            'id' => 0,
+            'pid' => 12,
+            'encounter' => 99,
+        ]);
 
-        $this->assertStringContainsString('/interface/patient_file/encounter/encounter_top.php', $url);
-        $this->assertStringContainsString('set_pid=12', $url);
-        $this->assertStringContainsString('set_encounter=99', $url);
+        $this->assertStringContainsString('clinical-doc/index.php', $url);
+        $this->assertStringContainsString('encounter_id=99', $url);
+        $this->assertStringNotContainsString('encounter_top.php', $url);
     }
 
     public function testUnsignedReportStatesIncludeHandoffStates(): void

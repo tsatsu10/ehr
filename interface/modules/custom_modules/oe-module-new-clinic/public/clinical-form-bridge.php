@@ -25,25 +25,20 @@ use OpenEMR\Core\Header;
 use OpenEMR\Modules\NewClinic\Services\EncounterIdentityStripService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocAccessService;
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocCatalogService;
-use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\FacilityScopeService;
 use OpenEMR\Modules\NewClinic\Services\ProcedureOrderDeepLinkService;
 use OpenEMR\Modules\NewClinic\Services\VisitScopeService;
 
-$config = new ClinicConfigService();
 $visitScope = new VisitScopeService();
 $sessionFacility = !empty($_SESSION['facilityId']) ? (int) $_SESSION['facilityId'] : null;
 $facilityId = $visitScope->resolveDeskFacilityId($sessionFacility);
 $catalog = new ClinicalDocCatalogService();
 
 /** @var array<int, string> */
-$allowedForms = ['procedure_order'];
-if ($config->isEnabled('enable_clinical_doc_hub', 0, $facilityId)) {
-    $allowedForms = array_values(array_unique(array_merge(
-        $allowedForms,
-        $catalog->allowedFormdirs($facilityId)
-    )));
-}
+$allowedForms = array_values(array_unique(array_merge(
+    ['procedure_order'],
+    $catalog->allowedFormdirs($facilityId)
+)));
 
 $pid = (int) ($_GET['pid'] ?? 0);
 $encounter = (int) ($_GET['encounter'] ?? 0);
@@ -51,8 +46,13 @@ $formId = (int) ($_GET['form_id'] ?? 0);
 $formname = $catalog->resolveRegistryDirectory(trim((string) ($_GET['formname'] ?? '')));
 $returnUrl = (new ProcedureOrderDeepLinkService())->sanitizeReturnUrl((string) ($_GET['return'] ?? ''));
 $allowedLower = array_map(static fn (string $name): string => strtolower($name), $allowedForms);
+// Beyond the curated hub bundle, any installed active registry form may render here
+// (stock-encounter parity for historical/long-tail forms); billing forms stay excluded
+// and per-form ACL is enforced below.
+$formAllowed = in_array(strtolower($formname), $allowedLower, true)
+    || $catalog->isBridgeableFormdir($formname);
 
-if ($pid <= 0 || $encounter <= 0 || $formname === '' || !in_array(strtolower($formname), $allowedLower, true)) {
+if ($pid <= 0 || $encounter <= 0 || $formname === '' || !$formAllowed) {
     http_response_code(400);
     echo (new TwigContainer(null, $GLOBALS['kernel']))->getTwig()->render('core/unauthorized.html.twig', [
         'pageTitle' => xl('Clinical form'),
@@ -117,8 +117,7 @@ if ($stripService->shouldRenderForCurrentRequest()) {
     $identityStripHtml = $stripService->renderHtml();
 }
 
-$hideUsAmc = $config->isEnabled('enable_clinical_doc_hub', 0, $facilityId)
-    && !(new ClinicalDocAccessService())->showUsQualityWidgets($facilityId);
+$hideUsAmc = !(new ClinicalDocAccessService())->showUsQualityWidgets($facilityId);
 
 header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate');

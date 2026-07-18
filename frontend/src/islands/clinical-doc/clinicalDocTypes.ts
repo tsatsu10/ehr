@@ -71,6 +71,9 @@ export interface ClinicalDocVisitSummary {
     encounter: number;
     pid: number;
     service_profile?: string;
+    /** Stock/historical encounter with no queue visit row — queue affordances off. */
+    encounter_only?: boolean;
+    encounter_date?: string;
   };
   patient: {
     display_name: string;
@@ -86,7 +89,6 @@ export interface ClinicalDocVisitSummary {
   lenses: ClinicalDocLens[];
   cards: ClinicalDocCard[];
   show_us_quality?: boolean;
-  advanced_encounter_url?: string;
 }
 
 export interface ClinicalDocProps {
@@ -96,6 +98,7 @@ export interface ClinicalDocProps {
   facilityId?: number;
   initialTab: ClinicalDocLens;
   initialVisitId?: number | null;
+  initialEncounterId?: number | null;
   canVisit: boolean;
   canConsult: boolean;
   canScreening: boolean;

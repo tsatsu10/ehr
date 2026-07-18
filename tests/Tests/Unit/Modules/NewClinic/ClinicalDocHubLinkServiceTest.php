@@ -12,7 +12,6 @@ namespace OpenEMR\Tests\Unit\Modules\NewClinic;
 require_once __DIR__ . '/ModuleAutoload.php';
 
 use OpenEMR\Modules\NewClinic\Services\ClinicalDocHubLinkService;
-use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use PHPUnit\Framework\TestCase;
 
 class ClinicalDocHubLinkServiceTest extends TestCase
@@ -27,30 +26,22 @@ class ClinicalDocHubLinkServiceTest extends TestCase
         $this->assertStringContainsString('tab=visit', $url);
     }
 
-    public function testIsHubEnabledReadsFacilityConfig(): void
+    public function testIsHubEnabledIsPermanentlyOn(): void
     {
-        $config = new class extends ClinicConfigService {
-            /** @var array<int, array<string, string>> */
-            private array $values = [];
+        // 2026-07-18 flip (PRD §5.6 amendment): the hub flag was retired — always on.
+        $service = new ClinicalDocHubLinkService();
 
-            public function set(string $key, string $value, int $facilityId = 0): void
-            {
-                $this->values[$facilityId][$key] = $value;
-            }
+        $this->assertTrue($service->isHubEnabled(7));
+        $this->assertTrue($service->isHubEnabled(null));
+    }
 
-            public function getInt(string $key, int $default = 0, int $facilityId = 0): int
-            {
-                return (int) ($this->values[$facilityId][$key] ?? $default);
-            }
-        };
-        $facilityId = 7;
-        $config->set('enable_clinical_doc_hub', '0', $facilityId);
+    public function testBuildHubEncounterUrlIncludesEncounterAndTab(): void
+    {
+        $GLOBALS['webroot'] = '/openemr';
+        $url = ClinicalDocHubLinkService::buildHubEncounterUrl(1458);
 
-        $service = new ClinicalDocHubLinkService(config: $config);
-
-        $this->assertFalse($service->isHubEnabled($facilityId));
-
-        $config->set('enable_clinical_doc_hub', '1', $facilityId);
-        $this->assertTrue($service->isHubEnabled($facilityId));
+        $this->assertStringContainsString('clinical-doc/index.php', $url);
+        $this->assertStringContainsString('encounter_id=1458', $url);
+        $this->assertStringContainsString('tab=visit', $url);
     }
 }

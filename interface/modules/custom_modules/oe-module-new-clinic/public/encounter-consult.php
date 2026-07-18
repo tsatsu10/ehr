@@ -21,12 +21,6 @@ $sessionFacility = !empty($_SESSION['facilityId']) ? (int) $_SESSION['facilityId
 $facilityId = $visitScope->resolveDeskFacilityId($sessionFacility);
 
 $encounterNote = new EncounterNoteService();
-if (!$encounterNote->isNativeEngineEnabled($facilityId)) {
-    $webroot = $GLOBALS['webroot'] ?? '';
-    header('Location: ' . $webroot . '/interface/patient_file/encounter/encounter_top.php', true, 302);
-    exit;
-}
-
 $access = new ClinicalDocAccessService();
 try {
     $access->assertConsultNoteAccess();

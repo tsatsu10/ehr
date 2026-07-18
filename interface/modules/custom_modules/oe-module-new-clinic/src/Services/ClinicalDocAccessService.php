@@ -103,13 +103,10 @@ class ClinicalDocAccessService
         return $this->visitScope;
     }
 
+    /** Permanent surface since 2026-07-18 — `enable_clinical_doc_hub` retired (PRD §5.6 amendment). */
     public function isHubEnabled(?int $facilityId = null): bool
     {
-        if ($facilityId === null || $facilityId <= 0) {
-            $facilityId = $this->getVisitScope()->resolveDeskFacilityId();
-        }
-
-        return $this->getConfig()->getInt('enable_clinical_doc_hub', 0, $facilityId) === 1;
+        return true;
     }
 
     public function assertHubEnabled(?int $facilityId = null): void

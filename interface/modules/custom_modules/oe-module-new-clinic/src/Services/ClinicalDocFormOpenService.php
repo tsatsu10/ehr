@@ -40,10 +40,24 @@ class ClinicalDocFormOpenService
         $this->access->assertWriteAccess();
 
         $visitId = (int) ($body['visit_id'] ?? 0);
+        $encounterIdParam = (int) ($body['encounter_id'] ?? 0);
         $formdir = strtolower(trim((string) ($body['formdir'] ?? '')));
         $action = strtolower(trim((string) ($body['action'] ?? 'new')));
         $formId = (int) ($body['form_id'] ?? 0);
         $lens = trim((string) ($body['lens'] ?? 'visit'));
+
+        // Encounter path (stock/historical encounters): reuse the queue visit when one
+        // exists for the encounter; else take the bridge-only encounter route.
+        if ($visitId <= 0 && $encounterIdParam > 0) {
+            $resolved = QueryUtils::querySingleRow(
+                'SELECT id FROM new_visit WHERE encounter = ? ORDER BY id DESC LIMIT 1',
+                [$encounterIdParam]
+            );
+            $visitId = (int) ($resolved['id'] ?? 0);
+            if ($visitId <= 0) {
+                return $this->openFormForEncounter($body, $actorUserId, $encounterIdParam);
+            }
+        }
 
         if ($visitId <= 0 || $formdir === '') {
             throw new \InvalidArgumentException('visit_id and formdir are required');
@@ -63,13 +77,21 @@ class ClinicalDocFormOpenService
 
         $canonicalFormdir = $this->catalog->resolveRegistryDirectory($formdir);
         $sourceLens = $this->catalog->resolveSourceLensForFormdir($canonicalFormdir, $facilityId);
+        if ($sourceLens === null && $this->catalog->isBridgeableFormdir($canonicalFormdir)) {
+            // Long-tail registry/LBF form outside the curated bundle — stock-encounter
+            // parity: it opens from the Visit lens through the clinical-form-bridge.
+            $sourceLens = 'visit';
+        }
         if ($sourceLens === null) {
             throw new \InvalidArgumentException('Form is not in the clinical documentation catalog');
         }
 
         $this->access->assertLensAccess($sourceLens);
 
-        if (!$this->catalog->isAllowedFormdir($canonicalFormdir, $facilityId)) {
+        if (
+            !$this->catalog->isAllowedFormdir($canonicalFormdir, $facilityId)
+            && !$this->catalog->isBridgeableFormdir($canonicalFormdir)
+        ) {
             throw new \InvalidArgumentException('Form is not in the clinical documentation catalog');
         }
 
@@ -297,6 +319,75 @@ class ClinicalDocFormOpenService
 
         return [
             'redirect_url' => $redirectUrl,
+            'formdir' => strtolower($canonicalFormdir),
+            'action' => $action,
+        ];
+    }
+
+    /**
+     * Encounter-only open (no queue visit): the encounter is off the FSM, so the
+     * visit-keyed native editors and rx flow do not apply — every allowed form
+     * opens through the clinical-form-bridge, exactly like the stock encounter
+     * screen would render it, in module chrome.
+     *
+     * @param array<string, mixed> $body
+     * @return array{redirect_url: string, formdir: string, action: string}
+     */
+    private function openFormForEncounter(array $body, int $actorUserId, int $encounterId): array
+    {
+        $formdir = strtolower(trim((string) ($body['formdir'] ?? '')));
+        $action = strtolower(trim((string) ($body['action'] ?? 'new')));
+        $formId = (int) ($body['form_id'] ?? 0);
+
+        if ($formdir === '') {
+            throw new \InvalidArgumentException('formdir is required');
+        }
+        if (!in_array($action, ['new', 'edit'], true)) {
+            throw new \InvalidArgumentException('Invalid action');
+        }
+
+        $enc = QueryUtils::querySingleRow(
+            'SELECT encounter, pid, facility_id FROM form_encounter WHERE encounter = ? LIMIT 1',
+            [$encounterId]
+        );
+        $pid = (int) ($enc['pid'] ?? 0);
+        if (!is_array($enc) || $pid <= 0) {
+            throw new \RuntimeException('Encounter not found', 404);
+        }
+        $facilityId = (int) ($enc['facility_id'] ?? 0);
+        (new FacilityScopeService())->assertPatientAccessible($pid);
+
+        $canonicalFormdir = $this->catalog->resolveRegistryDirectory($formdir);
+        if ($this->catalog->isQueueOnlyFormdir($canonicalFormdir, $facilityId)) {
+            throw new \InvalidArgumentException('This form opens from the day\'s visit queue');
+        }
+        if (!$this->catalog->isBridgeableFormdir($canonicalFormdir)) {
+            throw new \InvalidArgumentException('Form is not installed or cannot be opened here');
+        }
+
+        if ($action === 'edit' && $formId > 0) {
+            $this->assertFormInstanceOnEncounter($formId, $encounterId, $pid, $canonicalFormdir);
+        }
+
+        // G12 wrong-patient prevention — bind session pid/encounter before the bridge opens.
+        $this->encounterSession->bindForEncounter($encounterId, $actorUserId);
+
+        $modulePublic = ($GLOBALS['webroot'] ?? '') . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
+        $returnUrl = $modulePublic . 'clinical-doc/index.php?encounter_id=' . urlencode((string) $encounterId) . '&tab=visit';
+        $query = [
+            'pid' => (string) $pid,
+            'encounter' => (string) $encounterId,
+            'formname' => $canonicalFormdir,
+            'return' => $returnUrl,
+        ];
+        if ($action === 'edit' && $formId > 0) {
+            $query['form_id'] = (string) $formId;
+        }
+
+        $this->recordFormOpen($facilityId, 0, $encounterId, strtolower($canonicalFormdir), $formId > 0 ? $formId : null, $actorUserId, 'open');
+
+        return [
+            'redirect_url' => $modulePublic . 'clinical-form-bridge.php?' . http_build_query($query),
             'formdir' => strtolower($canonicalFormdir),
             'action' => $action,
         ];

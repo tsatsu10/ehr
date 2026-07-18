@@ -120,7 +120,6 @@ function goldenPathEnsureBillOpsAdminUser(): void
 function goldenPathEnsureClinicalDocConfig(ClinicConfigService $config, ?array $facilityIds = null): void
 {
     $keys = [
-        'enable_clinical_doc_hub' => '1',
         'clinical_doc_show_screening' => '1',
         'enable_react_clinical_doc_hub' => '1',
         'clinical_doc_bundle' => 'ghana_opd_v1',

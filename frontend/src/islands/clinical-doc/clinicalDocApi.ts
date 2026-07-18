@@ -24,7 +24,7 @@ export async function openClinicalDocForm(
   csrfToken: string,
   visitId: number,
   card: ClinicalDocCard,
-  options?: { lens?: ClinicalDocLens; returnTo?: 'doctor' | 'hub'; focus?: 'sign' },
+  options?: { lens?: ClinicalDocLens; returnTo?: 'doctor' | 'hub'; focus?: 'sign'; encounterId?: number },
 ): Promise<void> {
   const lens = options?.lens ?? card.source_lens ?? card.lens ?? 'visit';
   const data = await oeFetch<{ redirect_url: string }>('clinical_doc.open_form', {
@@ -32,7 +32,10 @@ export async function openClinicalDocForm(
     csrfToken,
     method: 'POST',
     json: {
-      visit_id: visitId,
+      // Encounter-only mode (stock/historical encounter, no queue visit): key by encounter.
+      ...(visitId > 0
+        ? { visit_id: visitId }
+        : { encounter_id: options?.encounterId ?? 0 }),
       formdir: card.formdir,
       lens,
       action: card.started && card.form_id ? 'edit' : 'new',

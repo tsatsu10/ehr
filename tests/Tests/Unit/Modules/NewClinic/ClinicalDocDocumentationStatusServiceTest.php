@@ -87,7 +87,12 @@ class ClinicalDocDocumentationStatusServiceTest extends TestCase
             $this->assertTrue($status['hub_enabled']);
             $this->assertFalse($status['encounter_signed']);
             $this->assertNotEmpty($status['unsigned_required']);
-            $this->assertSame('soap', strtolower((string) $status['unsigned_required'][0]['formdir']));
+            // 2026-07-18 flip: the native consult note is the required consult form
+            // regardless of any stale `encounter_note_engine` config row.
+            $this->assertSame(
+                EncounterNoteService::NATIVE_FORMDIR,
+                strtolower((string) $status['unsigned_required'][0]['formdir'])
+            );
             $this->assertStringContainsString('clinical-doc/index.php', (string) $status['documentation_hub_url']);
         } finally {
             $config->set('enable_clinical_doc_hub', (string) $prevHub, 0);

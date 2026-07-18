@@ -40,7 +40,6 @@ function pilotRolloutEnsureProductFlags(ClinicConfigService $config, ?array $fac
         'enable_queue_bridge' => '1',
         'enable_legacy_patient_context_overlay' => '1',
         'enable_admin_hub' => '1',
-        'enable_clinical_doc_hub' => '1',
         'enable_multi_doctor_filters' => '1',
         'enable_doctor_roster' => '1',
         'enable_advisory_routing' => '1',

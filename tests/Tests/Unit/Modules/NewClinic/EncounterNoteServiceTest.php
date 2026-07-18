@@ -58,8 +58,11 @@ class EncounterNoteServiceTest extends TestCase
         $this->assertContains('follow_up', $sections);
     }
 
-    public function testBuildNotePreviewReturnsDisabledPayloadWhenNativeEngineOff(): void
+    public function testEngineIsAlwaysNativeAndUnknownVisitPreviewIsEmpty(): void
     {
+        // 2026-07-18 flip: the engine setting was retired — the policy is always
+        // native even when a stale legacy config row exists; only an unknown visit
+        // produces the empty/disabled preview shape.
         $config = $this->createMock(ClinicConfigService::class);
         $config->method('get')->willReturnCallback(
             static function (string $key, $default = null): string {
@@ -71,8 +74,10 @@ class EncounterNoteServiceTest extends TestCase
         );
 
         $service = new EncounterNoteService(config: $config);
-        $preview = $service->buildNotePreview(99, 0);
 
+        $this->assertTrue($service->isNativeEngineEnabled(0));
+
+        $preview = $service->buildNotePreview(999999999, 0);
         $this->assertFalse($preview['native_enabled']);
         $this->assertSame(0, $preview['problem_count']);
     }

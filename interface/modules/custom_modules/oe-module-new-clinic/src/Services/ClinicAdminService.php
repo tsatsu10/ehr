@@ -139,14 +139,12 @@ class ClinicAdminService
         'queue_bridge_eod_block' => ['type' => 'bool', 'default' => '0'],
         'enable_react_queue_bridge' => ['type' => 'bool', 'default' => '1'],
         'enable_react_scheduling' => ['type' => 'bool', 'default' => '1'],
-        'enable_clinical_doc_hub' => ['type' => 'bool', 'default' => '0'],
         'clinical_doc_show_screening' => ['type' => 'bool', 'default' => '0'],
         'clinical_doc_show_specialty' => ['type' => 'bool', 'default' => '0'],
         'clinical_doc_show_us_quality' => ['type' => 'bool', 'default' => '0'],
         'clinical_doc_bundle' => ['type' => 'string', 'default' => 'ghana_opd_v1'],
         'clinical_doc_specialty_pack' => ['type' => 'string', 'default' => '[]'],
         'consult_note_formdir' => ['type' => 'string', 'default' => 'soap'],
-        'encounter_note_engine' => ['type' => 'string', 'default' => 'legacy'],
         'encounter_note_variant_map' => ['type' => 'string', 'default' => '{}'],
         'encounter_note_require_icd' => ['type' => 'bool', 'default' => '0'],
         'encounter_note_supervisor_required' => ['type' => 'bool', 'default' => '0'],
@@ -704,12 +702,6 @@ class ClinicAdminService
                     throw new \InvalidArgumentException('consult_note_formdir must match an active registry or LBF form');
                 }
             }
-            if ($key === 'encounter_note_engine') {
-                $engine = strtolower(trim($value));
-                if (!in_array($engine, ['legacy', 'native'], true)) {
-                    throw new \InvalidArgumentException('encounter_note_engine must be legacy or native');
-                }
-            }
             if ($key === 'encounter_note_variant_map') {
                 $decoded = json_decode(trim($value), true);
                 if (!is_array($decoded)) {
@@ -982,18 +974,6 @@ class ClinicAdminService
 
         if (self::rawBoolish($input['enable_admin_hub'] ?? false)) {
             $input['enable_react_admin_hub'] = '1';
-        }
-
-        if (
-            self::rawBoolish($input['clinical_doc_show_us_quality'] ?? false)
-            || self::rawBoolish($input['clinical_doc_show_screening'] ?? false)
-            || self::rawBoolish($input['clinical_doc_show_specialty'] ?? false)
-        ) {
-            $input['enable_clinical_doc_hub'] = '1';
-        }
-
-        if (self::rawBoolish($input['enable_clinical_doc_hub'] ?? false)) {
-            $input['enable_react_clinical_doc_hub'] = '1';
         }
 
         if (self::rawBoolish($input['enable_advisory_routing'] ?? false)) {

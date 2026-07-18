@@ -57,8 +57,10 @@ class EncounterNoteEnginePolicyTest extends TestCase
         $this->assertFalse($policy->shouldOpenNativeForm('vitals', 0));
     }
 
-    public function testLegacyEngineKeepsConfiguredConsultFormdir(): void
+    public function testEngineIsPermanentlyNativeSinceFlagRetirement(): void
     {
+        // 2026-07-18 flip (PRD §5.6 amendment): the legacy engine option was removed
+        // from code — the policy ignores any stale `encounter_note_engine` config row.
         $config = $this->createMock(ClinicConfigService::class);
         $config->method('get')->willReturnCallback(
             static function (string $key, $default = null): string {
@@ -72,9 +74,10 @@ class EncounterNoteEnginePolicyTest extends TestCase
 
         $policy = new EncounterNoteEnginePolicy(config: $config);
 
-        $this->assertFalse($policy->isNativeEngineEnabled(0));
-        $this->assertSame('ghana_opd_consult', $policy->effectiveConsultFormdir(0));
-        $this->assertFalse($policy->shouldOpenNativeForm('soap', 0));
+        $this->assertTrue($policy->isNativeEngineEnabled(0));
+        $this->assertSame(EncounterNoteEnginePolicy::NATIVE_FORMDIR, $policy->effectiveConsultFormdir(0));
+        // The configured legacy consult formdir still opens natively (pre-flip notes).
+        $this->assertTrue($policy->shouldOpenNativeForm('ghana_opd_consult', 0));
     }
 
     public function testNativeFormdirConstantMatchesEncounterNoteService(): void

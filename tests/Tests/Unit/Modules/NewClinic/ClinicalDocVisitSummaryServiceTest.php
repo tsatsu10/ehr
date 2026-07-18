@@ -70,6 +70,18 @@ class ClinicalDocVisitSummaryServiceTest extends TestCase
         $service->getSignStatus(7);
     }
 
+    public function testGetVisitSummaryRequiresVisitOrEncounterId(): void
+    {
+        $service = new ClinicalDocVisitSummaryService(
+            access: $this->hubEnabledDoctorAccess(),
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('visit_id or encounter_id is required');
+
+        $service->getVisitSummary(0, 1, null, 0);
+    }
+
     public function testGetSignStatusReturnsEncounterSignedFlag(): void
     {
         $queue = new class extends VisitQueueService {

@@ -728,9 +728,8 @@ class PatientActivityFeedService
         $encounterId = (int) ($visit['encounter'] ?? 0);
         $state = (string) ($visit['state'] ?? '');
         $facilityId = (int) ($visit['facility_id'] ?? 0);
-        // Route to the native consult page when the native engine is on for this
-        // facility (falls back to the stock encounter screen otherwise) — the raw
-        // buildEncounterUrl() always pointed at the stock page.
+        // Native consult page for queue visits; hub encounter mode otherwise —
+        // the stock encounter screen is no longer a destination (2026-07-18 flip).
         $encounterUrl = $this->signService->buildOpenUrlForVisit($visit);
         $items = [];
 
@@ -1171,7 +1170,7 @@ class PatientActivityFeedService
             'secondary_action' => $encounterId > 0 ? [
                 'label' => 'Open encounter',
                 'kind' => 'core',
-                // Native consult page when the native engine is on (stock fallback inside).
+                // Native consult page for queue visits; hub encounter mode otherwise.
                 'target' => $this->signService->buildOpenUrlForVisit([
                     'id' => $visitId,
                     'pid' => $pid,
@@ -1223,7 +1222,7 @@ class PatientActivityFeedService
             'secondary_action' => $encounterId > 0 ? [
                 'label' => 'View documentation',
                 'kind' => 'core',
-                // Native consult page when the native engine is on (stock fallback inside).
+                // Native consult page for queue visits; hub encounter mode otherwise.
                 'target' => $this->signService->buildOpenUrlForVisit([
                     'id' => $visitId,
                     'pid' => $pid,

@@ -16,6 +16,8 @@ import { openClinicalDocForm } from './clinicalDocApi';
 interface AddFormPickerProps {
   addableForms: ClinicalDocCard[];
   visitId: number;
+  /** Encounter-only mode key (visitId 0): stock/historical encounter. */
+  encounterId?: number;
   ajaxUrl: string;
   csrfToken: string;
   lens: ClinicalDocLens;
@@ -32,6 +34,7 @@ const NATIVE_SCREENING = ['phq9', 'gad7'];
 export function AddFormPicker({
   addableForms,
   visitId,
+  encounterId = 0,
   ajaxUrl,
   csrfToken,
   lens,
@@ -116,6 +119,7 @@ export function AddFormPicker({
                         void openClinicalDocForm(ajaxUrl, csrfToken, visitId, card, {
                           lens: card.source_lens ?? card.lens ?? lens,
                           returnTo: 'hub',
+                          encounterId,
                         }).catch((err: unknown) => {
                           onOpenError(err instanceof Error ? err.message : 'Could not open form');
                         });

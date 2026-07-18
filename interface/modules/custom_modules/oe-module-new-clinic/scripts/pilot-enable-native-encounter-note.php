@@ -16,15 +16,9 @@ $ignoreAuth = true;
 require_once dirname(__DIR__, 4) . '/globals.php';
 require_once __DIR__ . '/lib/pilot-common-seed.php';
 
-use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
-use OpenEMR\Modules\NewClinic\Services\EncounterNoteService;
-
-$config = new ClinicConfigService();
 $facilityIds = pilotFacilityIds();
 
-foreach ($facilityIds as $facilityId) {
-    $config->set('encounter_note_engine', EncounterNoteService::ENGINE_NATIVE, $facilityId);
-    echo "Set encounter_note_engine=native for facility {$facilityId}.\n";
-}
-
-echo 'Native encounter note enabled for facilities: ' . implode(', ', $facilityIds) . ".\n";
+// The native engine is permanent since 2026-07-18 (`encounter_note_engine` retired,
+// PRD §5.6 amendment) — nothing to set; kept because e2e specs invoke this script.
+echo 'Native encounter note is always on (engine setting retired 2026-07-18) for facilities: '
+    . implode(', ', $facilityIds) . ".\n";

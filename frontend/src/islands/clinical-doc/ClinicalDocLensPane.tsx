@@ -25,6 +25,8 @@ interface ClinicalDocLensPaneProps {
   loading: boolean;
   error: string | null;
   visitId: number | null;
+  /** Encounter-only mode: stock/historical encounter with no queue visit row. */
+  encounterId?: number | null;
   ajaxUrl: string;
   csrfToken: string;
   doctorDeskUrl: string;
@@ -45,8 +47,9 @@ async function openForm(
   visitId: number,
   card: ClinicalDocCard,
   lens: ClinicalDocLens,
+  encounterId = 0,
 ): Promise<void> {
-  await openClinicalDocForm(ajaxUrl, csrfToken, visitId, card, { lens, returnTo: 'hub' });
+  await openClinicalDocForm(ajaxUrl, csrfToken, visitId, card, { lens, returnTo: 'hub', encounterId });
 }
 
 /** Backend sends 'YYYY-MM-DD HH:mm' (ClinicalDocVisitSummaryService::formatFormDate) -> regional 'DD/MM/YYYY HH:mm'. */
@@ -101,6 +104,7 @@ export function ClinicalDocLensPane({
   loading,
   error,
   visitId,
+  encounterId = null,
   ajaxUrl,
   csrfToken,
   doctorDeskUrl,
@@ -112,7 +116,7 @@ export function ClinicalDocLensPane({
   onOpenCertificate,
   onOpenEyeExam,
 }: ClinicalDocLensPaneProps) {
-  if (!visitId) {
+  if (!visitId && !encounterId) {
     return (
       <div className="nc-clinicaldoc-empty">
         <p className="mb-2 text-[var(--oe-nc-text-muted)]">Open documentation from Doctor Desk with an active visit, or add <code>?visit_id=</code> to the URL.</p>
@@ -184,7 +188,7 @@ export function ClinicalDocLensPane({
         onOpenEyeExam?.();
         return;
       }
-      void openForm(ajaxUrl, csrfToken, visitId, card, lens).catch((err: unknown) => {
+      void openForm(ajaxUrl, csrfToken, visitId ?? 0, card, lens, encounterId ?? 0).catch((err: unknown) => {
         onOpenError(err instanceof Error ? err.message : 'Could not open form');
       });
     };
@@ -258,10 +262,11 @@ export function ClinicalDocLensPane({
                 type="button"
                 size="sm"
                 onClick={() => {
-                  void openClinicalDocForm(ajaxUrl, csrfToken, visitId, card, {
+                  void openClinicalDocForm(ajaxUrl, csrfToken, visitId ?? 0, card, {
                     lens,
                     returnTo: 'hub',
                     focus: 'sign',
+                    encounterId: encounterId ?? 0,
                   }).catch((err: unknown) => {
                     onOpenError(err instanceof Error ? err.message : 'Could not open form');
                   });
@@ -292,7 +297,8 @@ export function ClinicalDocLensPane({
       {lens === 'visit' && addableForms.length > 0 ? (
         <AddFormPicker
           addableForms={addableForms}
-          visitId={visitId}
+          visitId={visitId ?? 0}
+          encounterId={encounterId ?? 0}
           ajaxUrl={ajaxUrl}
           csrfToken={csrfToken}
           lens={lens}
@@ -338,10 +344,13 @@ export async function fetchVisitSummary(
   csrfToken: string,
   visitId: number,
   lens: ClinicalDocLens,
+  encounterId = 0,
 ): Promise<ClinicalDocVisitSummary> {
   return oeFetch<ClinicalDocVisitSummary>('clinical_doc.visit_summary', {
     ajaxUrl,
     csrfToken,
-    params: { visit_id: visitId, lens },
+    params: visitId > 0
+      ? { visit_id: visitId, lens }
+      : { encounter_id: encounterId, lens },
   });
 }

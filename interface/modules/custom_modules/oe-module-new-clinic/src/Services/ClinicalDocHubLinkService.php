@@ -32,13 +32,23 @@ class ClinicalDocHubLinkService
             . urlencode($tab);
     }
 
+    /** Encounter-only hub link — stock/historical encounters with no queue visit row. */
+    public static function buildHubEncounterUrl(int $encounterId, string $tab = 'visit'): string
+    {
+        $modulePublic = ($GLOBALS['webroot'] ?? '')
+            . '/interface/modules/custom_modules/oe-module-new-clinic/public/';
+
+        return $modulePublic
+            . 'clinical-doc/index.php?encounter_id='
+            . urlencode((string) $encounterId)
+            . '&tab='
+            . urlencode($tab);
+    }
+
+    /** Permanent surface since 2026-07-18 — `enable_clinical_doc_hub` retired (PRD §5.6 amendment). */
     public function isHubEnabled(?int $facilityId = null): bool
     {
-        if ($facilityId === null || $facilityId < 0) {
-            $facilityId = 0;
-        }
-
-        return $this->config->getInt('enable_clinical_doc_hub', 0, $facilityId) === 1;
+        return true;
     }
 
     public function resolveVisitIdForEncounter(int $pid, int $encounterId): ?int
@@ -67,26 +77,12 @@ class ClinicalDocHubLinkService
             return null;
         }
 
-        $webroot = $GLOBALS['webroot'] ?? '';
         $visitId = $this->resolveVisitIdForEncounter($pid, $encounterId);
         if ($visitId !== null) {
-            $visit = [
-                'id' => $visitId,
-                'pid' => $pid,
-                'encounter' => $encounterId,
-                'facility_id' => $facilityId ?? 0,
-            ];
-            $openUrl = (new EncounterSignService())->buildOpenUrlForVisit($visit, [
-                'return_to' => 'hub',
-                'tab' => 'consult',
-            ]);
-            if ($this->isHubEnabled($facilityId)) {
-                return self::buildHubUrl($visitId);
-            }
-
-            return $openUrl;
+            return self::buildHubUrl($visitId);
         }
 
-        return EncounterSignService::buildEncounterUrl($webroot, $pid, $encounterId);
+        // No queue visit for this encounter — the hub's encounter-only mode covers it.
+        return self::buildHubEncounterUrl($encounterId);
     }
 }

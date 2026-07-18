@@ -26,8 +26,8 @@ $defaultFacilityId = (new VisitScopeService())->resolveDefaultFacilityId();
 
 pilotEnsureNewClinicAclObjects();
 
+// The hub is always on since 2026-07-18 — only lens/kill-switch keys remain.
 $keys = [
-    'enable_clinical_doc_hub' => '1',
     'clinical_doc_show_screening' => '1',
     'enable_react_clinical_doc_hub' => '1',
 ];
@@ -42,7 +42,6 @@ foreach ($facilityIds as $facilityId) {
 $access = new ClinicalDocAccessService();
 
 echo "Set V1.1-DOC flags for facilities: " . implode(', ', $facilityIds) . ".\n";
-echo "  enable_clinical_doc_hub\n";
 echo "  clinical_doc_show_screening\n";
 echo "  enable_react_clinical_doc_hub\n";
 echo '  clinical_doc_ready=' . ($access->isHubEnabled($defaultFacilityId) ? 'yes' : 'no') . "\n";

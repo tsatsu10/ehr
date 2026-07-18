@@ -75,13 +75,17 @@ final class ClinicalDocActionHandler implements AjaxActionHandlerInterface
             case 'clinical_doc.visit_summary':
                 $this->host->svc(ClinicalDocAccessService::class)->assertHubAccess();
                 $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                $encounterId = (int) ($_REQUEST['encounter_id'] ?? 0);
                 $lens = isset($_REQUEST['lens']) ? (string) $_REQUEST['lens'] : null;
                 if ($lens === '') {
                     $lens = null;
                 }
                 try {
-                    $summary = $this->host->svc(ClinicalDocVisitSummaryService::class)->getVisitSummary($visitId, $userId, $lens);
+                    $summary = $this->host->svc(ClinicalDocVisitSummaryService::class)
+                        ->getVisitSummary($visitId, $userId, $lens, $encounterId);
                     $this->host->respond(true, 'ok', $summary);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
                 } catch (\RuntimeException $e) {
                     $code = (int) ($e->getCode() ?: 400);
                     $this->host->respond(false, $e->getMessage(), ['code' => $code === 409 ? 'no_encounter_on_visit' : 'error'], $code);
@@ -99,9 +103,12 @@ final class ClinicalDocActionHandler implements AjaxActionHandlerInterface
             case 'clinical_doc.sign_status':
                 $this->host->svc(ClinicalDocAccessService::class)->assertHubAccess();
                 $visitId = (int) ($_REQUEST['visit_id'] ?? 0);
+                $encounterId = (int) ($_REQUEST['encounter_id'] ?? 0);
                 try {
-                    $status = $this->host->svc(ClinicalDocVisitSummaryService::class)->getSignStatus($visitId);
+                    $status = $this->host->svc(ClinicalDocVisitSummaryService::class)->getSignStatus($visitId, $encounterId);
                     $this->host->respond(true, 'ok', $status);
+                } catch (\InvalidArgumentException $e) {
+                    $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
                 } catch (\RuntimeException $e) {
                     $code = (int) ($e->getCode() ?: 400);
                     $this->host->respond(false, $e->getMessage(), ['code' => $code === 409 ? 'no_encounter_on_visit' : 'error'], $code);
