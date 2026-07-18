@@ -1,9 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { ConfirmModal } from '@components/ConfirmModal';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
-import { PatientContextBanner } from '@components/PatientContextBanner';
 import { PatientSearchDropdown } from '@components/PatientSearchDropdown';
-import { identityFromLabels, initialsFromName } from '@components/patientBannerUtils';
+import { initialsFromName } from '@components/patientBannerUtils';
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
 import { Textarea } from '@components/ui/textarea';
@@ -87,10 +86,10 @@ export function CommunicationsDetail({
   replySending = false,
 }: CommunicationsDetailProps) {
   if (loading) {
-    return <div className="text-[var(--oe-nc-text-muted)]"><em>{t('Loading…')}</em></div>;
+    return <div className="nc-comm-detail-state text-[var(--oe-nc-text-muted)]"><em>{t('Loading…')}</em></div>;
   }
   if (error) {
-    return <div className="text-[var(--oe-nc-danger,#dc2626)]">{error}</div>;
+    return <div className="nc-comm-detail-state text-[var(--oe-nc-danger,#dc2626)]">{error}</div>;
   }
   if (message) {
     return (
@@ -198,11 +197,49 @@ function MessageDetailView({
       </button>
     ) : null);
 
-  const patientIdentity = identityFromLabels(detail.patient_name, { pid: detail.pid ?? undefined });
-  const showPatientBanner = patientIdentity != null && !detail.can_assign_patient;
-
   return (
     <>
+      {/* One compact pinned header bar (artifact chat-thread-head): avatar ·
+          name + meta · circular actions. The boxed patient banner is gone —
+          identity lives in the bar itself. */}
+      <header className="nc-comm-detail-header nc-comm-reader-head">
+        <span
+          className="nc-comm-avatar nc-comm-avatar--lg"
+          style={{ background: avatarColor(detail.from_name || detail.patient_name || detail.type) }}
+          aria-hidden="true"
+        >
+          {initialsFromName(detail.patient_name || detail.type || t('Message'))}
+        </span>
+        <div className="nc-comm-reader-head-main">
+          <h2 className="nc-comm-reader-title">
+            {detail.patient_name || detail.type || t('Message')}
+            <span className="nc-comm-type-tag">{detail.type}</span>
+            {isDone && <span className="nc-comm-done-badge">{t('Done')}</span>}
+            {detail.patient_unassigned && !detail.can_assign_patient && (
+              <Badge variant="warning" className="ml-2">{t('No patient')}</Badge>
+            )}
+          </h2>
+          <div className="nc-comm-reader-meta">
+            {detail.from_name} · {detail.date_display || detail.date}
+          </div>
+        </div>
+        <div className="nc-comm-reader-actions">
+          {doneToggle}
+          {detail.chart_url && (
+            <IconAction label={t('Open chart')} href={detail.chart_url}>
+              <ExternalLink aria-hidden="true" />
+            </IconAction>
+          )}
+          <IconAction label={t('Print')} onClick={() => printMessageThread(detail)}>
+            <Printer aria-hidden="true" />
+          </IconAction>
+          {detail.can_delete && onDelete && (
+            <IconAction label={t('Delete')} destructive onClick={() => setDeleteConfirmOpen(true)}>
+              <Trash2 aria-hidden="true" />
+            </IconAction>
+          )}
+        </div>
+      </header>
       {detail.is_supervisory_read && detail.supervisory_banner && (
         <div className={deskCalloutClass('warn', 'nc-comm-detail-banner py-2 text-sm')}>
           {detail.supervisory_banner}
@@ -256,66 +293,6 @@ function MessageDetailView({
           )}
         </div>
       )}
-      {showPatientBanner && patientIdentity ? (
-        <PatientContextBanner
-          layout="compact"
-          identity={patientIdentity}
-          aside={(
-            <span className="nc-comm-reader-tags">
-              <span className="nc-comm-type-tag">{detail.type}</span>
-              {isDone && <span className="nc-comm-done-badge">{t('Done')}</span>}
-            </span>
-          )}
-        >
-          <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">
-            {detail.from_name} · {detail.date_display || detail.date}
-          </div>
-        </PatientContextBanner>
-      ) : null}
-      <header className="nc-comm-detail-header nc-comm-reader-head">
-        {!showPatientBanner && (
-          <span
-            className="nc-comm-avatar nc-comm-avatar--lg"
-            style={{ background: avatarColor(detail.from_name || detail.patient_name || detail.type) }}
-            aria-hidden="true"
-          >
-            {initialsFromName(detail.patient_name || detail.type || t('Message'))}
-          </span>
-        )}
-        <div className="nc-comm-reader-head-main">
-          {!showPatientBanner && (
-            <>
-              <h2 className="nc-comm-reader-title">
-                {detail.patient_name || detail.type || t('Message')}
-                <span className="nc-comm-type-tag">{detail.type}</span>
-                {isDone && <span className="nc-comm-done-badge">{t('Done')}</span>}
-                {detail.patient_unassigned && !detail.can_assign_patient && (
-                  <Badge variant="warning" className="ml-2">{t('No patient')}</Badge>
-                )}
-              </h2>
-              <div className="nc-comm-reader-meta">
-                {detail.from_name} · {detail.date_display || detail.date}
-              </div>
-            </>
-          )}
-        </div>
-        <div className="nc-comm-reader-actions">
-          {doneToggle}
-          {detail.chart_url && (
-            <IconAction label={t('Open chart')} href={detail.chart_url}>
-              <ExternalLink aria-hidden="true" />
-            </IconAction>
-          )}
-          <IconAction label={t('Print')} onClick={() => printMessageThread(detail)}>
-            <Printer aria-hidden="true" />
-          </IconAction>
-          {detail.can_delete && onDelete && (
-            <IconAction label={t('Delete')} destructive onClick={() => setDeleteConfirmOpen(true)}>
-              <Trash2 aria-hidden="true" />
-            </IconAction>
-          )}
-        </div>
-      </header>
       {detail.turns && detail.turns.length > 0 ? (
         <div className="nc-comm-chat" role="log" aria-label={t('Message thread')}>
           {detail.turns.map((turn, i) => {
@@ -412,7 +389,6 @@ function ReminderDetailView({
   const chartUrl = reminder.pid
     ? `${webroot}/interface/modules/custom_modules/oe-module-new-clinic/public/patient-chart.php?pid=${reminder.pid}`
     : null;
-  const patientIdentity = identityFromLabels(reminder.patient_name, { pid: reminder.pid });
 
   // "Mark completed" sits in the reader header — same placement and style as
   // the message reader's done toggle (it used to hide in the page footer).
@@ -429,53 +405,27 @@ function ReminderDetailView({
 
   return (
     <>
-      {patientIdentity ? (
-        <PatientContextBanner
-          layout="compact"
-          identity={patientIdentity}
-          aside={(
-            <span className={`nc-comm-urgency--${reminder.urgency}`}>
+      <header className="nc-comm-detail-header nc-comm-reader-head">
+        <span
+          className="nc-comm-avatar nc-comm-avatar--lg"
+          style={{ background: avatarColor(reminder.patient_name || reminder.from_name || t('Reminder')) }}
+          aria-hidden="true"
+        >
+          {initialsFromName(reminder.patient_name || t('Reminder'))}
+        </span>
+        <div className="nc-comm-reader-head-main">
+          <h2 className="nc-comm-reader-title">
+            {reminder.patient_name || t('Reminder')}
+            <span className={`nc-comm-urgency--${reminder.urgency} nc-comm-row-urgency`}>
               {reminder.urgency_label}
             </span>
-          )}
-        >
-          <div className="text-sm text-[var(--oe-nc-text-muted)] mt-1">
+          </h2>
+          <div className="nc-comm-reader-meta">
             {t('Due {date} · From {sender}', {
               date: reminder.due_display || reminder.due_date,
               sender: reminder.from_name,
             })}
           </div>
-        </PatientContextBanner>
-      ) : null}
-      <header className="nc-comm-detail-header nc-comm-reader-head">
-        {!patientIdentity && (
-          <span
-            className="nc-comm-avatar nc-comm-avatar--lg"
-            style={{ background: avatarColor(reminder.patient_name || reminder.from_name || t('Reminder')) }}
-            aria-hidden="true"
-          >
-            {initialsFromName(reminder.patient_name || t('Reminder'))}
-          </span>
-        )}
-        <div className="nc-comm-reader-head-main">
-          {!patientIdentity ? (
-            <>
-              <h2 className="nc-comm-reader-title">
-                {reminder.patient_name || t('Reminder')}
-                <span className={`nc-comm-urgency--${reminder.urgency} nc-comm-row-urgency`}>
-                  {reminder.urgency_label}
-                </span>
-              </h2>
-              <div className="nc-comm-reader-meta">
-                {t('Due {date} · From {sender}', {
-                  date: reminder.due_display || reminder.due_date,
-                  sender: reminder.from_name,
-                })}
-              </div>
-            </>
-          ) : (
-            <h2 className="nc-comm-reader-meta nc-comm-reader-kind">{t('Reminder')}</h2>
-          )}
         </div>
         <div className="nc-comm-reader-actions">
           {completeToggle}

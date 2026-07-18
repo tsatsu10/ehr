@@ -93,24 +93,26 @@ export function CommunicationsList({
               >
                 {initialsFromName(title)}
               </span>
+              {/* Compact two-line row (artifact chat-row): name + time on top,
+                  "sender: preview" below — the sender folds into the preview
+                  like a group-chat inbox instead of taking a third line. */}
               <span className="nc-comm-row-body">
                 <span className="nc-comm-row-top">
                   <span className="nc-comm-row-name">{title}</span>
-                  <span className="nc-comm-row-time">{row.date_display || row.date}</span>
-                </span>
-                <span className="nc-comm-row-sub">
-                  <span className="nc-comm-row-preview">
-                    {row.preview || row.type || t('Message')}
-                  </span>
-                  {row.is_unread && <span className="nc-comm-unread-dot" aria-label={t('Unread')} />}
-                </span>
-                <span className="nc-comm-row-tags">
-                  <span className="nc-comm-row-from">{row.from_name}</span>
                   {row.patient_unassigned && (
                     <Badge variant="warning" className="nc-comm-row-badge nc-comm-row-badge--warn">
                       {t('No patient')}
                     </Badge>
                   )}
+                  <span className="nc-comm-row-time">{row.date_display || row.date}</span>
+                </span>
+                <span className="nc-comm-row-sub">
+                  <span className="nc-comm-row-preview">
+                    {row.from_name
+                      ? `${row.from_name}: ${row.preview || row.type || t('Message')}`
+                      : (row.preview || row.type || t('Message'))}
+                  </span>
+                  {row.is_unread && <span className="nc-comm-unread-dot" aria-label={t('Unread')} />}
                 </span>
               </span>
             </button>
@@ -140,13 +142,10 @@ export function CommunicationsList({
                 <span className="nc-comm-row-time">{reminder.due_display || reminder.due_date}</span>
               </span>
               <span className="nc-comm-row-sub">
-                <span className="nc-comm-row-preview">{reminder.preview}</span>
-              </span>
-              <span className="nc-comm-row-tags">
                 <span className={`nc-comm-urgency--${reminder.urgency} nc-comm-row-urgency`}>
                   {reminder.urgency_label}
                 </span>
-                <span className="nc-comm-row-from">{reminder.from_name}</span>
+                <span className="nc-comm-row-preview">{reminder.preview}</span>
               </span>
             </span>
           </button>
