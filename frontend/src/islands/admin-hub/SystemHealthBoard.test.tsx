@@ -131,4 +131,50 @@ describe('SystemHealthBoard', () => {
     expect(screen.getByText(/Recovery key last exported 2026-07-11 09:00:00/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Save recovery key again/i })).toBeInTheDocument();
   });
+
+  /**
+   * L3: a `new_admin` without `can_run_backup` (e.g. lacking OpenEMR super-admin)
+   * must not see the "Verify latest backup" button at all — clicking it would
+   * only ever produce a guaranteed 403 error callout. Gated the same way the
+   * "Back up files now" button already is.
+   */
+  it('hides the verify-backup button when can_run_backup is false', () => {
+    render(
+      <SystemHealthBoard
+        ajaxUrl="/ajax.php"
+        csrfToken="tok"
+        health={{ ...health, backup_native_enabled: true, can_run_backup: false }}
+        reconciliationRunning={false}
+        backupRunning={false}
+        backupCompleting={false}
+        onRunReconciliation={vi.fn()}
+        onRunBackup={vi.fn()}
+        onCompleteBackup={vi.fn()}
+        onRefresh={vi.fn()}
+        refreshing={false}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: /Verify latest backup/i })).not.toBeInTheDocument();
+  });
+
+  it('shows the verify-backup button when native backup is on and can_run_backup is true', () => {
+    render(
+      <SystemHealthBoard
+        ajaxUrl="/ajax.php"
+        csrfToken="tok"
+        health={{ ...health, backup_native_enabled: true, can_run_backup: true }}
+        reconciliationRunning={false}
+        backupRunning={false}
+        backupCompleting={false}
+        onRunReconciliation={vi.fn()}
+        onRunBackup={vi.fn()}
+        onCompleteBackup={vi.fn()}
+        onRefresh={vi.fn()}
+        refreshing={false}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /Verify latest backup/i })).toBeInTheDocument();
+  });
 });

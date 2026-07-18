@@ -22,6 +22,9 @@ class AdminHealthServiceTest extends TestCase
     /** @var list<int> */
     private array $insertedRunIds = [];
 
+    /** @var list<string> */
+    private array $tempFiles = [];
+
     protected function tearDown(): void
     {
         foreach ($this->insertedRunIds as $id) {
@@ -32,6 +35,21 @@ class AdminHealthServiceTest extends TestCase
             }
         }
         $this->insertedRunIds = [];
+
+        foreach ($this->tempFiles as $path) {
+            @unlink($path);
+        }
+        $this->tempFiles = [];
+    }
+
+    /** A real on-disk fixture file backupArtifactStillOnDisk() can actually is_file() find. */
+    private function writeFakeArtifact(): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'nchealthtest') . '.sql.gz.enc';
+        file_put_contents($path, 'fixture bytes');
+        $this->tempFiles[] = $path;
+
+        return $path;
     }
 
     /**
@@ -166,10 +184,10 @@ class AdminHealthServiceTest extends TestCase
         $this->assertNotSame('ok', $chip['status']);
     }
 
-    /** A real, artifact-backed 'ok' run is still an honest green chip. */
+    /** A real, artifact-backed 'ok' run whose file is genuinely still on disk is an honest green chip. */
     public function testBackupChipIsGreenForARealFreshArtifact(): void
     {
-        $this->insertRun('db', 'ok', '/tmp/nc-backup-fixture.sql.gz.enc', 7);
+        $this->insertRun('db', 'ok', $this->writeFakeArtifact(), 7);
 
         $health = (new AdminHealthService())->getHealthStatus(0);
         $chip = $this->backupChip($health);
@@ -180,18 +198,98 @@ class AdminHealthServiceTest extends TestCase
     }
 
     /**
+     * The "green chip doesn't check the artifact still exists" gap: an 'ok' run
+     * row with a file_path is not proof the file is STILL there — a deleted
+     * archive, an unplugged USB drive, or a disconnected cloud-sync folder must
+     * degrade the chip honestly, not keep showing green off the database row alone.
+     */
+    public function testBackupChipDegradesWhenArtifactFileMissingFromDisk(): void
+    {
+        $this->insertRun('db', 'ok', '/definitely/does/not/exist/nc-backup-fixture.sql.gz.enc', 7);
+
+        $health = (new AdminHealthService())->getHealthStatus(0);
+        $chip = $this->backupChip($health);
+
+        $this->assertNotSame('ok', $chip['status']);
+        $this->assertSame('warn', $chip['overall_impact']);
+        $this->assertStringContainsString('missing from disk', $chip['summary']);
+    }
+
+    /**
+     * L2: a clinic on a DAILY backup schedule must be flagged stale well before
+     * the old fixed 7-day window — otherwise a 6-day-old backup (nearly a week of
+     * unbacked-up data) still reads as an unqualified green "ok".
+     */
+    public function testBackupChipStaleThresholdDerivesFromFrequency(): void
+    {
+        $config = new ClinicConfigService();
+        $prevFreq = $config->get('backup_frequency_days', '0', 0);
+        try {
+            $config->set('backup_frequency_days', '1', 0); // daily -> stale threshold = 1 + 1 grace = 2 days
+
+            $runId = $this->insertRun('db', 'ok', $this->writeFakeArtifact(), 7);
+            QueryUtils::sqlStatementThrowException(
+                "UPDATE admin_hub_backup_run SET finished_at = DATE_SUB(NOW(), INTERVAL 3 DAY) WHERE id = ?",
+                [$runId]
+            );
+
+            $health = (new AdminHealthService())->getHealthStatus(0);
+            $chip = $this->backupChip($health);
+
+            $this->assertSame('warning', $chip['status']);
+            $this->assertSame('warn', $chip['overall_impact']);
+        } finally {
+            $config->set('backup_frequency_days', (string) $prevFreq, 0);
+        }
+    }
+
+    /** L2: with no schedule configured (frequency 0/unset) the old 7-day default is the fallback. */
+    public function testBackupChipUsesSevenDayFallbackWhenNoFrequencyConfigured(): void
+    {
+        $config = new ClinicConfigService();
+        $prevFreq = $config->get('backup_frequency_days', '0', 0);
+        try {
+            $config->set('backup_frequency_days', '0', 0);
+
+            $runId = $this->insertRun('db', 'ok', $this->writeFakeArtifact(), 7);
+            QueryUtils::sqlStatementThrowException(
+                "UPDATE admin_hub_backup_run SET finished_at = DATE_SUB(NOW(), INTERVAL 6 DAY) WHERE id = ?",
+                [$runId]
+            );
+
+            $health = (new AdminHealthService())->getHealthStatus(0);
+            $chip = $this->backupChip($health);
+
+            $this->assertSame('ok', $chip['status']);
+        } finally {
+            $config->set('backup_frequency_days', (string) $prevFreq, 0);
+        }
+    }
+
+    /**
      * BACKUP-H3(i): the setup checklist's "Backup tested" gate (consumed via
      * `backup_verified_native_run`) must require a REAL artifact AND a passed
      * verify — a self-reported 'ok' run must not satisfy it, even though the
      * legacy chip logic used to call that "ok".
+     *
+     * `backup_verified_native_run` is deliberately an "ever" check across this
+     * DB's whole history (H3(i) — a permanent, one-time-earned milestone once a
+     * real verify() has ever passed), so it may already be TRUE here from
+     * earlier, genuinely-verified runs (including a real large-DB capacity-proof
+     * run performed on this box). This test proves the narrower thing that still
+     * holds regardless of that history: adding ONE MORE self-reported (no
+     * artifact) run must never, by itself, be what turns the flag on — before
+     * and after must match.
      */
     public function testBackupVerifiedNativeRunFalseForSelfReportedOnly(): void
     {
+        $before = (new AdminHealthService())->getHealthStatus(0)['backup_verified_native_run'];
+
         $this->insertRun('db', 'ok', null, 7); // self-reported, no artifact
 
-        $health = (new AdminHealthService())->getHealthStatus(0);
+        $after = (new AdminHealthService())->getHealthStatus(0)['backup_verified_native_run'];
 
-        $this->assertFalse($health['backup_verified_native_run']);
+        $this->assertSame($before, $after, 'a self-reported run must never by itself flip backup_verified_native_run');
     }
 
     public function testBackupVerifiedNativeRunTrueOnceArtifactAndVerifyBothExist(): void

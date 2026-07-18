@@ -399,7 +399,7 @@ export function SystemHealthBoard({
               Stock backup (Advanced)
             </a>
           </Button>
-          {health.backup_native_enabled && (
+          {health.backup_native_enabled && health.can_run_backup && (
             <Button
               type="button"
               variant="outline"

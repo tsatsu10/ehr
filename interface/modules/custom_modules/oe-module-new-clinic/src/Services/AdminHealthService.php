@@ -58,9 +58,12 @@ class AdminHealthService
         $backupFacilityId = $this->backupService()->facilityId();
         $webroot = (string) ($GLOBALS['webroot'] ?? '');
         $latestBackup = $this->latestBackupRun();
+        // L2 — the staleness threshold must track how often this clinic actually
+        // schedules backups; see backupStaleDays() for the fallback when unset.
+        $backupFrequencyDays = $this->config->getInt('backup_frequency_days', 0, $backupFacilityId);
 
         $chips = [
-            $this->backupChip($latestBackup),
+            $this->backupChip($latestBackup, $backupFrequencyDays),
             $this->reconciliationChip($resolvedFacilityId),
             $this->diskChip(),
             $this->phpChip(),
@@ -312,15 +315,37 @@ class AdminHealthService
     }
 
     /**
+     * L2 — the stale-backup threshold used to be a fixed 7 days regardless of how
+     * often the clinic actually schedules backups: a clinic running DAILY backups
+     * saw a green "ok" chip on a backup up to 6 days old, which is nearly a full
+     * week of unbacked-up data quietly reading as healthy. Derive the threshold
+     * from `backup_frequency_days` instead, with a small grace window (so a
+     * backup landing a few hours late from a daily schedule isn't instantly
+     * flagged), falling back to the old fixed default when no schedule is
+     * configured (frequency 0/unset) — there is nothing else to derive from.
+     */
+    private const BACKUP_STALE_GRACE_DAYS = 1;
+
+    private function backupStaleDays(int $frequencyDays): int
+    {
+        if ($frequencyDays <= 0) {
+            return self::BACKUP_STALE_DAYS;
+        }
+
+        return $frequencyDays + self::BACKUP_STALE_GRACE_DAYS;
+    }
+
+    /**
      * @param array<string, mixed>|null $latest
      * @return array<string, mixed>
      */
-    private function backupChip(?array $latest): array
+    private function backupChip(?array $latest, int $frequencyDays = 0): array
     {
         $status = 'unknown';
         $summary = 'No backup recorded';
         $detail = 'Run a manual backup or schedule mysqldump for your environment.';
         $impact = 'warn';
+        $staleDays = $this->backupStaleDays($frequencyDays);
 
         if (is_array($latest)) {
             $runStatus = (string) ($latest['status'] ?? '');
@@ -349,12 +374,23 @@ class AdminHealthService
                 $detail = 'Marked complete by hand — no automated backup file exists to verify. '
                     . 'Turn on native backup for a real, checkable artifact.';
                 $impact = 'warn';
+            } elseif ($runStatus === 'ok' && $finishedAt !== '' && !$this->backupArtifactStillOnDisk($latest)) {
+                // Cheap honesty check: an 'ok' run row with an artifact path is not
+                // proof the artifact is STILL there — a deleted file, an unplugged
+                // USB drive, or a disconnected cloud-sync folder must degrade this
+                // chip, not keep showing green off the database row alone.
+                $status = 'warning';
+                $summary = 'Backup file missing from disk · ' . $this->humanAgeLabel($finishedAt);
+                $detail = 'The last backup completed, but its file is no longer where it was written '
+                    . '(moved, deleted, or the drive/cloud folder is disconnected). Run a new backup and '
+                    . 'check the target directory.';
+                $impact = 'warn';
             } elseif ($runStatus === 'ok' && $finishedAt !== '') {
                 $ageDays = $this->daysSince($finishedAt);
-                $status = $ageDays > self::BACKUP_STALE_DAYS ? 'warning' : 'ok';
+                $status = $ageDays > $staleDays ? 'warning' : 'ok';
                 $summary = $this->humanAgeLabel($finishedAt);
                 $detail = $finishedAt;
-                $impact = $ageDays > self::BACKUP_STALE_DAYS ? 'warn' : 'none';
+                $impact = $ageDays > $staleDays ? 'warn' : 'none';
             } elseif ($startedAt !== '') {
                 $status = 'warning';
                 $summary = 'Initiated ' . $this->humanAgeLabel($startedAt);
@@ -660,6 +696,22 @@ class AdminHealthService
                 'verified' => !empty($row['verified_at'] ?? null),
             ];
         }, $rows);
+    }
+
+    /**
+     * Cheap "is the artifact this run row points at actually still there" check —
+     * a single is_file() stat call, not a DB write, safe to run on every health
+     * poll. Guards the backup chip against showing green purely off the run row
+     * when the file itself was moved, deleted, or its drive/cloud folder is
+     * disconnected (a USB drive unplugged, a OneDrive folder logged out, etc.).
+     *
+     * @param array<string, mixed> $latest
+     */
+    private function backupArtifactStillOnDisk(array $latest): bool
+    {
+        $path = (string) ($latest['file_path'] ?? '');
+
+        return $path !== '' && @is_file($path);
     }
 
     private function backupTargetIsLocal(): bool
