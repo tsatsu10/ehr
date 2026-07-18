@@ -132,6 +132,13 @@ async function triageSendPatient(page, lname) {
   await page.getByRole('button', { name: 'Send to doctor' }).click();
 }
 
+// Desktop renders one section at a time (focus mode) — only the active section's
+// fields are in the DOM, so navigate via the section nav before each fill.
+async function gotoConsultSection(page, sectionLabel) {
+  const nav = page.getByRole('navigation', { name: 'Consult note sections' });
+  await nav.getByRole('button', { name: sectionLabel }).click();
+}
+
 async function fillGeneralOpdConsultNote(page) {
   await expect(page.locator('#nc-encounter-consult-root')).toBeVisible({ timeout: 30000 });
 
@@ -144,22 +151,32 @@ async function fillGeneralOpdConsultNote(page) {
     await medsAck.check();
   }
 
+  await gotoConsultSection(page, /Chief complaint/);
   await page.locator('#encounter-cc').fill('Headache for two days');
+
+  await gotoConsultSection(page, /History of present illness/);
   await page.locator('#encounter-hpi').fill('Gradual onset without trauma or fever.');
 
+  await gotoConsultSection(page, /Review of systems/);
   const markAllNegative = page.getByRole('button', { name: 'Mark all reviewed negative' });
   if (await markAllNegative.isVisible().catch(() => false)) {
     await markAllNegative.click();
   }
 
+  await gotoConsultSection(page, /Physical examination/);
   await page.locator('#encounter-pe-general').fill('Alert, no focal neurological deficit.');
 
-  await page.getByRole('button', { name: 'Add problem' }).click();
-  await page.getByLabel('Problem label').fill('Tension headache');
-  await page.getByLabel('Assessment narrative').fill('Likely primary tension headache.');
-  await page.getByRole('button', { name: 'Add item' }).click();
-  await page.getByPlaceholder('Plan action / recommendation').fill('Rest, hydration, and analgesia as needed.');
+  await gotoConsultSection(page, /Assessment & plan/);
+  // The section seeds a default problem row — only add one when none exists.
+  if (await page.getByLabel('Problem label').count() === 0) {
+    await page.getByRole('button', { name: 'Add problem' }).click();
+  }
+  await page.getByLabel('Problem label').first().fill('Tension headache');
+  await page.getByLabel('Assessment narrative').first().fill('Likely primary tension headache.');
+  await page.getByRole('button', { name: 'Add item' }).first().click();
+  await page.getByPlaceholder('Plan action / recommendation').first().fill('Rest, hydration, and analgesia as needed.');
 
+  await gotoConsultSection(page, /Follow-up/);
   await page.locator('#encounter-follow-up-instructions').fill('Return in two weeks if symptoms persist.');
 }
 
@@ -169,6 +186,7 @@ test.describe('Native encounter consult form', () => {
     runModulePhp('scripts/e2e-prep-golden-path.php');
     runModulePhp('scripts/pilot-enable-v11-doc.php');
     runModulePhp('scripts/pilot-enable-native-encounter-note.php');
+    runModulePhp('scripts/e2e-set-encounter-note-config.php', 'release_doctor=1');
     const seedScript = path.join(MODULE_ROOT, 'acl/seed_pilot_users.php');
     const php = process.env.PHP_BIN || 'C:\\xampp\\php\\php.exe';
     execSync(`"${php}" "${seedScript}"`, { stdio: 'inherit' });
@@ -257,7 +275,7 @@ test.describe('Native encounter consult form', () => {
     });
 
     await test.step('Sign consult note', async () => {
-      await page.getByRole('button', { name: 'Sign' }).click();
+      await page.getByRole('button', { name: 'Sign note' }).click();
       await expect(page.getByRole('dialog')).toBeVisible();
       await page.locator('#encounter-sign-password').fill(creds.doctor.password);
 
@@ -265,7 +283,7 @@ test.describe('Native encounter consult form', () => {
         (resp) => resp.url().includes('encounter_note.sign') && resp.ok(),
         { timeout: 60000 },
       );
-      await page.getByRole('button', { name: 'Sign note' }).click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Sign note' }).click();
       const signResp = await signPromise;
       const signJson = await signResp.json();
       expect(signJson.success, JSON.stringify(signJson)).toBe(true);
@@ -279,7 +297,7 @@ test.describe('Native encounter consult form', () => {
         (resp) => resp.url().includes('clinical_doc.visit_summary') && resp.ok(),
         { timeout: 60000 },
       );
-      await page.getByRole('link', { name: 'Back to hub' }).click();
+      await page.getByRole('link', { name: 'Back', exact: true }).click();
       await summaryPromise;
 
       await expect(page).toHaveURL(/clinical-doc\/index\.php/);

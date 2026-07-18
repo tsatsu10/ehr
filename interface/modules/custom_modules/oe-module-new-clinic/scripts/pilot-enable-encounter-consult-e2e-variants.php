@@ -28,8 +28,11 @@ foreach ($facilityIds as $facilityId) {
     $config->set('encounter_note_lbf_export_on_save', '1', $facilityId);
 
     $variantMap = [];
+    // The walk-in visit-type list unions facility-scoped types with the global
+    // facility-0 defaults, so the map must cover both or the default type
+    // (e.g. "General OPD") silently resolves to the general variant.
     $visitTypes = QueryUtils::fetchRecords(
-        'SELECT label FROM new_visit_type WHERE facility_id = ? AND is_active = 1',
+        'SELECT DISTINCT label FROM new_visit_type WHERE is_active = 1 AND facility_id IN (0, ?)',
         [$facilityId]
     ) ?: [];
     foreach ($visitTypes as $visitType) {

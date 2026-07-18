@@ -139,6 +139,54 @@ async function acknowledgeContextStrip(page) {
   }
 }
 
+// Desktop renders one section at a time (focus mode) — only the active section's
+// fields are in the DOM, so navigate via the section nav before each fill.
+async function gotoConsultSection(page, sectionLabel) {
+  const nav = page.getByRole('navigation', { name: 'Consult note sections' });
+  await nav.getByRole('button', { name: sectionLabel }).click();
+}
+
+// Config rows persist between runs and between tests — pin the knobs each test
+// depends on (variant map, supervisor gate, LBF export) at the start of the test.
+function setEncounterNoteConfig(args) {
+  runModulePhp('scripts/e2e-set-encounter-note-config.php', args);
+}
+
+async function fillCoreConsultSections(page, texts) {
+  await gotoConsultSection(page, /Chief complaint/);
+  await page.locator('#encounter-cc').fill(texts.cc);
+
+  await gotoConsultSection(page, /History of present illness/);
+  await page.locator('#encounter-hpi').fill(texts.hpi);
+
+  await gotoConsultSection(page, /Physical examination/);
+  await page.locator('#encounter-pe-general').fill(texts.pe);
+
+  await gotoConsultSection(page, /Assessment & plan/);
+  // The section seeds a default problem row — only add one when none exists.
+  if (await page.getByLabel('Problem label').count() === 0) {
+    await page.getByRole('button', { name: 'Add problem' }).click();
+  }
+  await page.getByLabel('Problem label').first().fill(texts.problem);
+  await page.getByLabel('Assessment narrative').first().fill(texts.assessment);
+  if (texts.differential) {
+    await page.getByLabel('Differential diagnosis').first().fill(texts.differential);
+  }
+  await page.getByRole('button', { name: 'Add item' }).first().click();
+  await page.getByPlaceholder('Plan action / recommendation').first().fill(texts.plan);
+
+  await gotoConsultSection(page, /Follow-up/);
+  await page.locator('#encounter-follow-up-instructions').fill(texts.followUp);
+}
+
+async function markRosReviewedNegative(page) {
+  await gotoConsultSection(page, /Review of systems/);
+  const markAllNegative = page.getByRole('button', { name: 'Mark all reviewed negative' });
+  if (await markAllNegative.isVisible().catch(() => false)) {
+    await markAllNegative.click();
+  }
+}
+
 test.describe('Native encounter consult variants', () => {
   test.beforeAll(() => {
     runModulePhp('bin/upgrade_sql.php');
@@ -153,6 +201,7 @@ test.describe('Native encounter consult variants', () => {
 
   test('referral variant blocks validate until clinical question is filled', async ({ page }) => {
     test.setTimeout(360_000);
+    setEncounterNoteConfig('release_doctor=1 map=all supervisor=0 lbf=0');
     const creds = credentials();
     const patient = generatePatientName();
 
@@ -169,35 +218,31 @@ test.describe('Native encounter consult variants', () => {
     await openNativeConsultFromDoctorDesk(page, creds, patient.lname);
 
     await expect(page.getByText('Referral consult')).toBeVisible({ timeout: 15000 });
+    // Referral is the variant's first section, so it is the active one on load.
     await expect(page.locator('#encounter-clinical-question')).toBeVisible();
 
     await acknowledgeContextStrip(page);
-    await page.locator('#encounter-cc').fill('Referral headache consult');
-    await page.locator('#encounter-hpi').fill('Referred for specialist opinion.');
-    await page.locator('#encounter-pe-general').fill('Alert, cooperative.');
-    await page.getByRole('button', { name: 'Add problem' }).click();
-    await page.getByLabel('Problem label').fill('Headache');
-    await page.getByLabel('Assessment narrative').fill('Needs specialist input.');
-    await page.getByLabel('Differential diagnosis').fill('Migraine vs tension headache');
-    await page.getByRole('button', { name: 'Add item' }).click();
-    await page.getByPlaceholder('Plan action / recommendation').fill('Await consultant recommendation.');
-    await page.locator('#encounter-follow-up-instructions').fill('Follow up after consult letter.');
+    await fillCoreConsultSections(page, {
+      cc: 'Referral headache consult',
+      hpi: 'Referred for specialist opinion.',
+      pe: 'Alert, cooperative.',
+      problem: 'Headache',
+      assessment: 'Needs specialist input.',
+      differential: 'Migraine vs tension headache',
+      plan: 'Await consultant recommendation.',
+      followUp: 'Follow up after consult letter.',
+    });
+    await markRosReviewedNegative(page);
+    await gotoConsultSection(page, /Source of information/);
+    await page.locator('#encounter-source-narrative').fill('History provided by the patient.');
 
     await page.getByRole('button', { name: 'Validate' }).click();
     await expect(page.getByText(/need attention/i)).toBeVisible({ timeout: 15000 });
 
+    await gotoConsultSection(page, /Referral/);
     await page.locator('#encounter-clinical-question').fill('Does this patient need imaging before treatment?');
     await page.locator('#encounter-referring-clinician').fill('Dr Referrer');
     await page.locator('#encounter-referring-service').fill('Medicine');
-
-    const attestationNav = page.getByRole('button', { name: 'Attestation' });
-    if (await attestationNav.isVisible().catch(() => false)) {
-      await attestationNav.click();
-    }
-    const attestationCheckbox = page.locator('label:has-text("I attest that this consult note was reviewed") input[type="checkbox"]');
-    if (await attestationCheckbox.isVisible().catch(() => false)) {
-      await attestationCheckbox.check();
-    }
 
     const validatePromise = page.waitForResponse(
       (resp) => resp.url().includes('encounter_note.validate') && resp.ok(),
@@ -211,6 +256,9 @@ test.describe('Native encounter consult variants', () => {
 
   test('supervisor-required config blocks validate until attestation', async ({ page }) => {
     test.setTimeout(360_000);
+    // Supervisor gate only applies where the attestation section is visible —
+    // that is the referral variant, so route this visit there too.
+    setEncounterNoteConfig('release_doctor=1 map=all supervisor=1 lbf=0');
     const creds = credentials();
     const patient = generatePatientName();
 
@@ -227,22 +275,23 @@ test.describe('Native encounter consult variants', () => {
     await openNativeConsultFromDoctorDesk(page, creds, patient.lname);
     await acknowledgeContextStrip(page);
 
-    await page.locator('#encounter-cc').fill('Supervised consult');
-    await page.locator('#encounter-hpi').fill('Trainee consult note.');
-    await page.locator('#encounter-pe-general').fill('Normal exam.');
-    await page.getByRole('button', { name: 'Add problem' }).click();
-    await page.getByLabel('Problem label').fill('Training case');
-    await page.getByLabel('Assessment narrative').fill('Discussed with supervisor.');
-    await page.getByRole('button', { name: 'Add item' }).click();
-    await page.getByPlaceholder('Plan action / recommendation').fill('Continue observation.');
-    await page.locator('#encounter-follow-up-instructions').fill('Review in clinic.');
+    await fillCoreConsultSections(page, {
+      cc: 'Supervised consult',
+      hpi: 'Trainee consult note.',
+      pe: 'Normal exam.',
+      problem: 'Training case',
+      assessment: 'Discussed with supervisor.',
+      plan: 'Continue observation.',
+      followUp: 'Review in clinic.',
+    });
 
     await page.getByRole('button', { name: 'Validate' }).click();
-    await expect(page.getByText(/supervis/i)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/supervis/i).first()).toBeVisible({ timeout: 15000 });
   });
 
   test('save returns LBF export payload when export-on-save is enabled', async ({ page }) => {
     test.setTimeout(360_000);
+    setEncounterNoteConfig('release_doctor=1 map=none supervisor=0 lbf=1');
     const creds = credentials();
     const patient = generatePatientName();
 
@@ -258,15 +307,15 @@ test.describe('Native encounter consult variants', () => {
 
     await openNativeConsultFromDoctorDesk(page, creds, patient.lname);
     await acknowledgeContextStrip(page);
-    await page.locator('#encounter-cc').fill('Export on save test');
-    await page.locator('#encounter-hpi').fill('Testing optional LBF export.');
-    await page.locator('#encounter-pe-general').fill('Unremarkable.');
-    await page.getByRole('button', { name: 'Add problem' }).click();
-    await page.getByLabel('Problem label').fill('Export test');
-    await page.getByLabel('Assessment narrative').fill('Export mapping test.');
-    await page.getByRole('button', { name: 'Add item' }).click();
-    await page.getByPlaceholder('Plan action / recommendation').fill('Continue care.');
-    await page.locator('#encounter-follow-up-instructions').fill('Return PRN.');
+    await fillCoreConsultSections(page, {
+      cc: 'Export on save test',
+      hpi: 'Testing optional LBF export.',
+      pe: 'Unremarkable.',
+      problem: 'Export test',
+      assessment: 'Export mapping test.',
+      plan: 'Continue care.',
+      followUp: 'Return PRN.',
+    });
 
     const savePromise = page.waitForResponse(
       (resp) => resp.url().includes('encounter_note.save') && resp.ok(),
@@ -285,6 +334,7 @@ test.describe('Native encounter consult variants', () => {
 
   test('signature amendment note appears on signed banner', async ({ page }) => {
     test.setTimeout(360_000);
+    setEncounterNoteConfig('release_doctor=1 map=none supervisor=0 lbf=0');
     const creds = credentials();
     const patient = generatePatientName();
 
@@ -300,20 +350,22 @@ test.describe('Native encounter consult variants', () => {
 
     await openNativeConsultFromDoctorDesk(page, creds, patient.lname);
     await acknowledgeContextStrip(page);
-    await page.locator('#encounter-cc').fill('Amendment note test');
-    await page.locator('#encounter-hpi').fill('Sign with optional signature note.');
-    await page.locator('#encounter-pe-general').fill('Stable.');
-    await page.getByRole('button', { name: 'Add problem' }).click();
-    await page.getByLabel('Problem label').fill('Stable visit');
-    await page.getByLabel('Assessment narrative').fill('No acute issues.');
-    await page.getByRole('button', { name: 'Add item' }).click();
-    await page.getByPlaceholder('Plan action / recommendation').fill('Routine follow-up.');
-    await page.locator('#encounter-follow-up-instructions').fill('Return as needed.');
+    await fillCoreConsultSections(page, {
+      cc: 'Amendment note test',
+      hpi: 'Sign with optional signature note.',
+      pe: 'Stable.',
+      problem: 'Stable visit',
+      assessment: 'No acute issues.',
+      plan: 'Routine follow-up.',
+      followUp: 'Return as needed.',
+    });
+    await markRosReviewedNegative(page);
 
     await page.getByRole('button', { name: 'Validate' }).click();
     await expect(page.getByText(/Validation passed/i)).toBeVisible({ timeout: 30000 });
 
-    await page.getByRole('button', { name: 'Sign' }).click();
+    await page.getByRole('button', { name: 'Sign note' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
     await page.locator('#encounter-sign-amendment').fill('Signed after bedside review with patient.');
     await page.locator('#encounter-sign-password').fill(creds.doctor.password);
 
@@ -321,7 +373,7 @@ test.describe('Native encounter consult variants', () => {
       (resp) => resp.url().includes('encounter_note.sign') && resp.ok(),
       { timeout: 60000 },
     );
-    await page.getByRole('button', { name: 'Sign note' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Sign note' }).click();
     await signPromise;
 
     await expect(page.getByText('Signed after bedside review with patient.')).toBeVisible({ timeout: 15000 });
@@ -329,6 +381,7 @@ test.describe('Native encounter consult variants', () => {
 
   test('admin unlock enables edit after sign', async ({ page }) => {
     test.setTimeout(420_000);
+    setEncounterNoteConfig('release_doctor=1 map=none supervisor=0 lbf=0');
     const creds = credentials();
     const patient = generatePatientName();
 
@@ -344,21 +397,23 @@ test.describe('Native encounter consult variants', () => {
 
     await openNativeConsultFromDoctorDesk(page, creds, patient.lname);
     await acknowledgeContextStrip(page);
-    await page.locator('#encounter-cc').fill('Unlock workflow test');
-    await page.locator('#encounter-hpi').fill('Initial draft for unlock test.');
-    await page.locator('#encounter-pe-general').fill('Normal.');
-    await page.getByRole('button', { name: 'Add problem' }).click();
-    await page.getByLabel('Problem label').fill('Unlock test');
-    await page.getByLabel('Assessment narrative').fill('Initial assessment.');
-    await page.getByRole('button', { name: 'Add item' }).click();
-    await page.getByPlaceholder('Plan action / recommendation').fill('Initial plan.');
-    await page.locator('#encounter-follow-up-instructions').fill('Initial follow-up.');
+    await fillCoreConsultSections(page, {
+      cc: 'Unlock workflow test',
+      hpi: 'Initial draft for unlock test.',
+      pe: 'Normal.',
+      problem: 'Unlock test',
+      assessment: 'Initial assessment.',
+      plan: 'Initial plan.',
+      followUp: 'Initial follow-up.',
+    });
+    await markRosReviewedNegative(page);
 
     await page.getByRole('button', { name: 'Validate' }).click();
     await expect(page.getByText(/Validation passed/i)).toBeVisible({ timeout: 30000 });
-    await page.getByRole('button', { name: 'Sign' }).click();
-    await page.locator('#encounter-sign-password').fill(creds.doctor.password);
     await page.getByRole('button', { name: 'Sign note' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.locator('#encounter-sign-password').fill(creds.doctor.password);
+    await page.getByRole('dialog').getByRole('button', { name: 'Sign note' }).click();
     await expect(page.getByText('Signed consultation note')).toBeVisible({ timeout: 15000 });
 
     const consultUrl = page.url();
@@ -366,8 +421,8 @@ test.describe('Native encounter consult variants', () => {
     await login(page, ADMIN_USER, ADMIN_PASS);
     await page.goto(consultUrl);
 
-    await expect(page.getByRole('button', { name: 'Unlock for correction' })).toBeVisible({ timeout: 15000 });
-    await page.getByRole('button', { name: 'Unlock for correction' }).click();
+    await expect(page.getByRole('button', { name: 'Unlock', exact: true })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: 'Unlock', exact: true }).click();
     await page.locator('#encounter-unlock-reason').fill('Manager-approved correction after sign');
     await page.locator('#encounter-unlock-password').fill(ADMIN_PASS);
 
