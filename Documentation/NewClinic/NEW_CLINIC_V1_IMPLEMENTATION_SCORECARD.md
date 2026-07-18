@@ -4,8 +4,8 @@
 
 | Field | Value |
 |-------|-------|
-| **Last audited** | 2026-07-16 |
-| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `20260712frsweep1` |
+| **Last audited** | 2026-07-18 — targeted row refresh (COM, M15, M10, S1 + flag graduation); executive rollup not recomputed since 2026-07-09 |
+| **Code baseline** | `interface/modules/custom_modules/oe-module-new-clinic/` · asset `…-setupaudit68` |
 | **Maintainer** | Engineering lead updates after each sprint; Product owns pilot sign-off |
 | **How to update** | Change `%` and `Status` cells; bump **Last audited**; sync PRD §5.6 row if shell status changes |
 
@@ -18,7 +18,7 @@
 | **Post-pilot slice %** | Mean of §20.1 release slices |
 | **Overall product %** | `0.50 × pilot_path + 0.35 × post_pilot_slices + 0.10 × v12_advanced + 0.05 × ui_shadcn` |
 
-### Executive rollup (2026-07-09)
+### Executive rollup (2026-07-09 — not recomputed since; the 2026-07-18 row refresh raised COM 80→90 and M15 85→88, an under-1-point rollup effect)
 
 | Lens | % | Notes |
 |------|---|-------|
@@ -48,17 +48,17 @@
 | M7 | Daily Reports | Done | **92** | Yes | Eng | Done | M7-F18 ancillary section; scheduling tab bridge flag at some sites |
 | M8 | Lab Desk | Done | **90** | Yes | Eng | Done | Role-gated; M8-F07 skip-to-payment restored (AUDIT-1) |
 | M9 | Pharmacy Desk | Done | **90** | Yes | Eng | Done | Role-gated; M9-F06 skip-to-payment restored (AUDIT-1) |
-| M10 | Patient Registry | Done | **88** | Post-pilot | Eng | Partial | §22 acceptance eng-closed (spec v0.2.2); Product pilot sign-off + REG-4 browser UAT |
+| M10 | Patient Registry | Done | **88** | Post-pilot | Eng | Partial | §22 acceptance eng-closed (spec v0.2.2); **always-on** since 2026-07-18 flag graduation; Product pilot sign-off + REG-4 browser UAT |
 | M11 | Chart Depth | Done | **85** | Post-pilot | Eng | Partial | CDb referral wizard + status tracking shipped; external care (V1.2) not built |
 | M12 | Lab Operations Hub | Done | **78** | Post-pilot | Eng | Partial | LIS/DORN (V1.2-LIS) not built |
 | M13 | Pharmacy Operations Hub | Done | **80** | Post-pilot | Eng | Partial | V1.2 destruction reports polish |
 | M14 | Billing Back Office | Done | **72** | Post-pilot | Eng | Partial | F04 outstanding done; F05 legacy insurance vault retired 2026-07-16, replaced by native CBILL-3/4 |
-| M15 | Admin Operations Hub | Done | **85** | Post-pilot | Eng | Done | RB-01–RB-20; config import/export |
+| M15 | Admin Operations Hub | Done | **88** | Post-pilot | Eng | Done | RB-01–RB-20; config import/export; setup checklist truthful auto-detects + unmark/reopen (SETUP-1..6, spec v0.1.5); patient importer tab (MKT-MIG-1) |
 | M16 | Reporting Operations Hub | Done | **88** | Post-pilot | Eng | Partial | §19 acceptance eng-closed (spec v0.1.4, incl. `hub_advanced_open` audit); OPD attendance pilot review (Product) |
 | M17 | Clinical Documentation Hub | Done | **88** | Post-pilot | Eng | Done | Ghana HIS pack shipped (`HisPackImportService` + admin card); DR runbooks in spec |
 | M18 | Queue Bridge Hub | Done | **85** | Post-pilot | Eng | Done | SQ-01–SQ-08 E2E matrix thin |
-| COM | Communications Hub | Done | **80** | Post-pilot | Eng | Partial | Phase 1 approved; advanced comms TBD |
-| S1 | Scheduling & Flow | Done | **85** | Post-pilot | Eng | Partial | S-P12 lane prefs; some calendar edge cases |
+| COM | Communications Hub | Done | **90** | Post-pilot | Eng | Done | Phase 1 complete + premium chat UI (COMHUB-0..6, spec v1.0.5); **always-on** since 2026-07-18 flag graduation; advanced comms (patient SMS) remains TBD |
+| S1 | Scheduling & Flow | Done | **85** | Post-pilot | Eng | Partial | Shell **always-on** since 2026-07-18 flag graduation; S-P12 lane prefs; some calendar edge cases |
 | T1 | Theme & shell | Done | **90** | Yes | Eng | Done | Twig shell + React islands |
 | MRD | Patient chart (B7) | Done | **92** | Yes | Eng | Done | §17 eng-closed (spec v0.2.37 incl. `hide_dashboard_cards`); pilot-scale perf + trainer drills |
 | T2 | Globals profile | Partial | **40** | Yes | Eng | Stub | Installer preset doc; not full automation |

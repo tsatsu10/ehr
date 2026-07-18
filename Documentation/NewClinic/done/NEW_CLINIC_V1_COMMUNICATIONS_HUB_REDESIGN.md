@@ -2,8 +2,8 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 1.0.4 |
-| **Status** | **Approved for Phase 1 implementation** — design complete; audit gaps A1–A13 addressed; PRD **COM-F***, PAGE_DESIGNS §7.12, USER_WORKFLOWS §8.1c trace here |
+| **Document version** | 1.0.5 |
+| **Status** | **Built — Phase 1 complete** (premium chat UI, COMHUB-0..6); **always-on since the 2026-07-18 flag graduation** (the §24 flag description is historical); PRD **COM-F***, PAGE_DESIGNS §7.12, USER_WORKFLOWS §8.1c trace here |
 | **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.14), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.25), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.3), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.25) |
 | **Audience** | Product, design, frontend engineers, QA |
 | **Scope** | Staff **Messages** (`pnotes`) and **Dated Reminders** — unified split-pane hub |
@@ -1459,6 +1459,7 @@ Not blocking Phase 1 sign-off if manual Appendix D passes.
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.0.5 | 2026-07-18 | Project team | **Status truth pass:** header corrected from "Approved for Phase 1 implementation" to Built; hub is always-on since the 2026-07-18 flag graduation (comms/registry/office-notes/S1 batch) — §24's flag description is now historical |
 | 1.0.4 | 2026-07-17 | Project team | **COMHUB completion batch** (see `new/NEW_CLINIC_COMMUNICATIONS_HUB_COMPLETION_PLAN.md`): island now loads the shared token/Tailwind layer (root cause of unstyled compose/log panes); compose redesigned (recipient chips + filter, Status dropdown removed, inline validation); reminder reader gains header parity + Mark completed (page footer removed, Create reminder/View log moved to the toolbar per lens); reminder log redesigned (status pills, no ID column, pagination); single sort select; reminders search now filters; toast errors replace window.alert |
 | 1.0.3 | 2026-06-16 | PRD §6.5.3–§6.5.4 cross-refs |
 | 1.0.2 | 2026-06-16 | §5.4 PRD §6.5.2 chip wording; Appendix B |
