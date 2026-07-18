@@ -328,10 +328,13 @@ function MessageDetailView({
                   <div className="nc-comm-day-sep"><span>{day}</span></div>
                 )}
                 <div className={`nc-comm-bubble-row${turn.is_self ? ' is-self' : ''}`}>
-                  <div className="nc-comm-bubble">
-                    {!turn.is_self && <span className="nc-comm-bubble-author">{turn.author}</span>}
-                    <span className="nc-comm-bubble-text">{turn.text}</span>
-                    {turn.time_label && <span className="nc-comm-bubble-time">{timeOnly}</span>}
+                  <div className="nc-comm-bubble-col">
+                    <div className="nc-comm-bubble">
+                      {!turn.is_self && <span className="nc-comm-bubble-author">{turn.author}</span>}
+                      <span className="nc-comm-bubble-text">{turn.text}</span>
+                    </div>
+                    {/* Timestamp sits under the bubble, outside it (chat convention). */}
+                    {turn.time_label && <span className="nc-comm-msg-time">{timeOnly}</span>}
                   </div>
                 </div>
               </div>

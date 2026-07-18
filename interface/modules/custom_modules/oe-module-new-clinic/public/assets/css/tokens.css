@@ -24,6 +24,7 @@
     --oe-nc-border: rgba(0, 0, 0, 0.08);   /* Hairline */
     --oe-nc-border-strong: rgba(0, 0, 0, 0.16);
     --oe-nc-surface: #ffffff;
+    --oe-nc-surface-2: #f9f9fb;       /* Raised-surface step (chat bubbles, inset fields) */
     --oe-nc-danger: #e0362c;          /* Text-safe shift of pill red #ff453a */
     --oe-nc-warning: #c77700;         /* Text-safe shift of pill amber #ff9f0a */
 
