@@ -8,9 +8,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@components/ui/select';
+import { ChevronLeft } from 'lucide-react';
 import { oeFetch } from '@core/oeFetch';
 import { t } from '@core/i18n';
-import { SegmentedControl } from '@components/SegmentedControl';
 import { collectAdminSettings } from './adminFieldDefs';
 import { applyAdminSettingCoupling } from './adminSettingCoupling';
 import type {
@@ -46,7 +46,7 @@ import type {
   VisitTypeRow,
 } from './adminTypes';
 import { ADMIN_TABS } from './adminTypes';
-import { initialAdminTab, localDateString } from './adminUtils';
+import { buildAdminTabUrl, initialAdminTab, localDateString } from './adminUtils';
 import { DirectoryModal } from './modals/DirectoryModal';
 import { FacilityModal } from './modals/FacilityModal';
 import { FeeModal } from './modals/FeeModal';
@@ -54,6 +54,7 @@ import { BulkPriceModal } from './modals/BulkPriceModal';
 import { VisitTypeModal } from './modals/VisitTypeModal';
 import { AdminHubConfirmModal } from './AdminHubConfirmModal';
 import { AdminHubTabPanels } from './AdminHubTabPanels';
+import { AdminSidebar, type AdminSidebarBadge } from './AdminSidebar';
 import type { AdminConfirm } from './adminHubConfirm';
 import { useAdminPageHeading } from './useAdminPageHeading';
 import {
@@ -61,7 +62,6 @@ import {
   AdminMetricChip,
   AdminScopeBar,
   AdminShell,
-  AdminStickyTabs,
 } from './adminUi';
 
 function isAdminTabId(value: string): value is AdminTabId {
@@ -88,6 +88,12 @@ export function AdminHub({
     const tab = initialAdminTab();
     return isAdminTabId(tab) ? tab : 'queue';
   });
+  // Mobile drill-in (ADM-2): land on the section list unless the page opened
+  // on a deep-linked (?tab=) destination — a Setup-chip/runbook link on a
+  // phone should open straight into content, not the list.
+  const [mobileNavOpen, setMobileNavOpen] = useState(
+    () => new URL(window.location.href).searchParams.get('tab') == null
+  );
   const [facilityId, setFacilityId] = useState(0);
   const [scopeLabel, setScopeLabel] = useState('');
   const [clinicFacilityLabel, setClinicFacilityLabel] = useState('');
@@ -363,17 +369,8 @@ export function AdminHub({
 
   const handleTabChange = useCallback((tab: AdminTabId) => {
     setActiveTab(tab);
-    const url = new URL(window.location.href);
-    if (tab !== 'queue') {
-      url.searchParams.set('tab', tab);
-      if (tab !== 'people') {
-        url.searchParams.delete('sub');
-      }
-    } else {
-      url.searchParams.delete('tab');
-      url.searchParams.delete('sub');
-    }
-    window.history.replaceState({}, '', url.toString());
+    setMobileNavOpen(false);
+    window.history.replaceState({}, '', buildAdminTabUrl(tab));
   }, []);
 
   const loadBillingCodes = useCallback(async (codeType: string, selected?: string) => {
@@ -1160,6 +1157,17 @@ export function AdminHub({
         ? 'danger'
         : 'default';
 
+  // Quiet by default — a nav dot only earns its place when something needs
+  // attention (done/healthy state recedes, per the Apple-theme visual rules).
+  const sidebarBadges = useMemo((): Partial<Record<AdminTabId, AdminSidebarBadge>> | undefined => {
+    if (healthTone !== 'warning' && healthTone !== 'danger') {
+      return undefined;
+    }
+    return {
+      system: { tone: healthTone, label: healthTone === 'danger' ? 'Critical' : 'Warning' },
+    };
+  }, [healthTone]);
+
   return (
     <AdminShell id="nc-admin-desk">
       {successMessage && (
@@ -1229,16 +1237,24 @@ export function AdminHub({
         </button>
       )}
 
-      <AdminStickyTabs>
-        <SegmentedControl
-          segments={visibleTabs.map((tab) => ({ id: tab.id, label: tab.label }))}
-          value={activeTab}
-          onChange={(id) => handleTabChange(id as AdminTabId)}
-          ariaLabel="Admin configuration sections"
+      <div className="nc-admin-layout" data-mobile-nav={mobileNavOpen ? 'open' : 'closed'}>
+        <AdminSidebar
+          tabs={visibleTabs}
+          activeTab={activeTab}
+          onChange={handleTabChange}
+          badges={sidebarBadges}
         />
-      </AdminStickyTabs>
+        <div className="nc-admin-content">
+          <button
+            type="button"
+            className="nc-admin-mobile-back"
+            onClick={() => setMobileNavOpen(true)}
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden />
+            Sections
+          </button>
 
-      {loading ? (
+          {loading ? (
         <AdminLoadingState />
       ) : (
         <>
@@ -1333,8 +1349,10 @@ export function AdminHub({
             onDeleteDirectoryContact={(row) => setPendingConfirm({ type: 'delete_directory_contact', row })}
             onEditFacility={(row) => openFacilityModal(row)}
           />
-        </>
-      )}
+            </>
+          )}
+        </div>
+      </div>
 
       <VisitTypeModal
         open={visitTypeModalOpen}

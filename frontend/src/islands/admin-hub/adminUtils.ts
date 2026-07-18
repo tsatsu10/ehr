@@ -1,4 +1,5 @@
 import { formatMoney, type CurrencyFormat } from '@core/formatMoney';
+import type { AdminTabId } from './adminTypes';
 
 export function profileLabel(profile: string): string {
   if (profile === 'lab_direct') return 'Lab direct';
@@ -27,6 +28,21 @@ export function initialAdminTab(): string {
     return 'people';
   }
   return fromUrl ?? 'queue';
+}
+
+/** Shared by handleTabChange and the sidebar's real `<a href>`s so both stay in sync. */
+export function buildAdminTabUrl(tab: AdminTabId): string {
+  const url = new URL(window.location.href);
+  if (tab !== 'queue') {
+    url.searchParams.set('tab', tab);
+    if (tab !== 'people') {
+      url.searchParams.delete('sub');
+    }
+  } else {
+    url.searchParams.delete('tab');
+    url.searchParams.delete('sub');
+  }
+  return url.toString();
 }
 
 export function localDateString(date = new Date()): string {

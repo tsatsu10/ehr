@@ -72,14 +72,6 @@ export function AdminMetricChip({
   );
 }
 
-export function AdminStickyTabs({ children }: { children: ReactNode }) {
-  return (
-    <div className="nc-admin-tabs-sticky sticky top-0 z-10 -mx-1 px-1 py-2 backdrop-blur-sm">
-      {children}
-    </div>
-  );
-}
-
 export function AdminTabPanel({
   tabId,
   active,

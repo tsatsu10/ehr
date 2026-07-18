@@ -44,17 +44,20 @@ class PersonalizedDeskLabelServiceTest extends TestCase
 
     /**
      * ADM-7: xl() rewrites every straight/double quote in its argument to a
-     * backtick (translation.inc.php "safe apostrophe" pass). The possessive
-     * apostrophe must be composed outside the translated string or every
-     * desk title renders as "Admin Tsatsu`s desk".
+     * backtick (translation.inc.php "safe apostrophe" pass) — and the page
+     * heading in base.html.twig pipes this already-composed title through a
+     * SECOND xlt() pass, so even an apostrophe kept outside the first xl()
+     * call still gets mangled ("Admin Tsatsu`s desk"). A curly apostrophe
+     * (U+2019) is outside that regex's reach and survives both passes.
      */
-    public function testOwnedDeskLabelUsesARealApostropheNotABacktick(): void
+    public function testOwnedDeskLabelUsesACurlyApostropheNotABacktick(): void
     {
         $service = new PersonalizedDeskLabelService();
 
         $label = $service->ownedDeskLabel('Admin', 'Tsatsu');
 
-        $this->assertSame('Admin Tsatsu\'s desk', $label);
+        $this->assertSame("Admin Tsatsu\u{2019}s desk", $label);
         $this->assertStringNotContainsString('`', $label);
+        $this->assertStringNotContainsString("'", $label);
     }
 }

@@ -275,7 +275,7 @@ describe('AdminHub', () => {
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('tab', { name: 'System' }));
+      fireEvent.click(screen.getByRole('link', { name: 'System' }));
     });
 
     expect(await screen.findByText(/System health/i)).toBeInTheDocument();

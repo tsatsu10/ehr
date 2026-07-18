@@ -15,10 +15,6 @@
   animation: nc-admin-shell-enter 280ms ease both;
 }
 
-.nc-admin-tabs-sticky {
-  background: color-mix(in srgb, var(--oe-nc-bg, #fafaf9) 88%, transparent);
-}
-
 .nc-admin-tab-enter {
   animation: nc-admin-tab-enter 220ms ease both;
 }
@@ -120,6 +116,165 @@
   outline: none;
 }
 
+/* —— ADM-2: sidebar navigation shell (replaces the wrapped tab strip) —— */
+.nc-admin-layout {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  /* No align-items: start here — a sticky child needs its grid cell to span
+     the full row height (the content column's height) or it has no room to
+     stick within; align-self: start on .nc-admin-sidebar itself would break
+     it the same way. */
+  gap: 1.5rem;
+}
+
+.nc-admin-sidebar {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-right: 0.5rem;
+}
+
+/* The actual grid item — stretches to the row's full height (default grid
+   align-items: stretch) so .nc-admin-sidebar has room to stick within it. */
+.nc-admin-sidebar-rail {
+  min-width: 0;
+}
+
+.nc-admin-sidebar__group-label {
+  margin: 0 0 0.375rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--oe-nc-text-muted, #86868b);
+}
+
+.nc-admin-sidebar__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.nc-admin-sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border-radius: 0.625rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--oe-nc-text, #1d1d1f);
+  text-decoration: none;
+  transition:
+    background-color var(--oe-nc-transition, 150ms ease),
+    color var(--oe-nc-transition, 150ms ease);
+}
+
+.nc-admin-sidebar__item:hover {
+  background: color-mix(in srgb, var(--oe-nc-text, #1d1d1f) 5%, transparent);
+}
+
+.nc-admin-sidebar__item:focus-visible {
+  outline: 2px solid var(--oe-nc-primary, #0071e3);
+  outline-offset: 2px;
+}
+
+.nc-admin-sidebar__item--active,
+.nc-admin-sidebar__item--active:hover {
+  background: var(--oe-nc-primary, #0071e3);
+  color: #fff;
+}
+
+.nc-admin-sidebar__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.nc-admin-sidebar__item--active .nc-admin-sidebar__icon {
+  opacity: 1;
+}
+
+.nc-admin-sidebar__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nc-admin-sidebar__badge {
+  flex-shrink: 0;
+  border-radius: 9999px;
+  padding: 0.0625rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.nc-admin-sidebar__badge--warning {
+  background: color-mix(in srgb, var(--oe-nc-warning, #c77700) 16%, white);
+  color: var(--oe-nc-warning, #c77700);
+}
+
+.nc-admin-sidebar__badge--danger {
+  background: color-mix(in srgb, var(--oe-nc-danger, #e0362c) 16%, white);
+  color: var(--oe-nc-danger, #e0362c);
+}
+
+.nc-admin-sidebar__item--active .nc-admin-sidebar__badge--warning,
+.nc-admin-sidebar__item--active .nc-admin-sidebar__badge--danger {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.nc-admin-content {
+  min-width: 0;
+}
+
+.nc-admin-mobile-back {
+  display: none;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+  border: none;
+  background: transparent;
+  padding: 0.5rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--oe-nc-primary, #0071e3);
+  cursor: pointer;
+}
+
+@media (max-width: 1023px) {
+  .nc-admin-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .nc-admin-sidebar {
+    position: static;
+  }
+
+  .nc-admin-layout[data-mobile-nav='open'] .nc-admin-content {
+    display: none;
+  }
+
+  .nc-admin-layout[data-mobile-nav='closed'] .nc-admin-sidebar {
+    display: none;
+  }
+
+  .nc-admin-layout[data-mobile-nav='closed'] .nc-admin-mobile-back {
+    display: inline-flex;
+  }
+}
+
 @keyframes nc-admin-shell-enter {
   from {
     opacity: 0;
@@ -149,6 +304,7 @@
   .nc-admin-runbook-card,
   .nc-admin-health-chip,
   .nc-admin-jumpchip,
+  .nc-admin-sidebar__item,
   .nc-admin-progress__bar {
     animation: none !important;
     transition: none !important;

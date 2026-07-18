@@ -44,11 +44,14 @@ class PersonalizedDeskLabelService
             return $roleLabel;
         }
 
-        // The apostrophe must never go through xl() — it converts ' to a backtick
-        // (translation.inc.php's "safe apostrophe" pass), which mangled every
-        // personalized desk title ("Admin Tsatsu`s desk"). Keep the possessive
-        // outside the translated format string.
-        return sprintf(xl('%s %s%s desk'), $roleLabel, $ownerName, "'s");
+        // Two translation passes touch this string: xl() here, then Twig's
+        // |xlt filter again on the composed page title (base.html.twig — it
+        // doesn't know this value is already personalized, not a raw
+        // constant). Both passes rewrite a straight ASCII apostrophe to a
+        // backtick ("Admin Tsatsu`s desk"). A curly apostrophe (U+2019) is
+        // outside that regex's reach — and is the typographically correct
+        // character for a possessive anyway — so it survives both passes.
+        return sprintf(xl('%s %s%s desk'), $roleLabel, $ownerName, "\u{2019}s");
     }
 
     public function ownedDeskLabelForAco(string $aco, string $fname, string $username): string
