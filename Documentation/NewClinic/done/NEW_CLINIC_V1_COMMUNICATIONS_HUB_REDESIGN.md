@@ -2,8 +2,8 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 1.0.5 |
-| **Status** | **Built — Phase 1 complete** (premium chat UI, COMHUB-0..6); **always-on since the 2026-07-18 flag graduation** (the §24 flag description is historical); PRD **COM-F***, PAGE_DESIGNS §7.12, USER_WORKFLOWS §8.1c trace here |
+| **Document version** | 1.0.7 |
+| **Status** | **Built — Phase 1 complete** (premium chat UI, COMHUB-0..6); **always-on since the 2026-07-18 flag retirement** (PRD §5.6 amendment) — `communications_hub_enable` was removed from code, so **every** flag/rollback/legacy-fallback reference in §22–§27 is historical; PRD **COM-F***, PAGE_DESIGNS §7.12, USER_WORKFLOWS §8.1c trace here |
 | **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.14), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.25), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.3), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.25) |
 | **Audience** | Product, design, frontend engineers, QA |
 | **Scope** | Staff **Messages** (`pnotes`) and **Dated Reminders** — unified split-pane hub |
@@ -1182,7 +1182,7 @@ Full list: [Appendix C](#appendix-c--user-stories). Epic mapping:
 | COM-F04 | AJAX JSON endpoints per §11 (`messages_list`, `message_detail`, `message_action`, `reminders_list`, `reminder_action`, `hub_counts`) | P0 | §11 |
 | COM-F05 | Admin **All users** filter: supervisory read-only detail with banner; no reply/delete on third-party threads | P0 | §7.2, §11.3, §13 |
 | COM-F06 | Preserve legacy flows: PHI Direct overflow, fax `jobId` deep link, multi-recipient `addPnote` fan-out, `pid=0` assign patient | P0 | §7.8 |
-| COM-F07 | Feature flag `communications_hub_enable`; when off, legacy tabbed UI unchanged | P0 | §17, §24 |
+| COM-F07 | ~~Feature flag `communications_hub_enable`; when off, legacy tabbed UI unchanged~~ **Retired 2026-07-18** — always on, no fallback (PRD §5.6 amendment) | P0 | §17, §24 |
 | COM-F08 | Header envelope badge parity: `reminders_due_5d + messages_active` (lens Reminders tab may show higher 30d count — intentional) | P0 | §6.3, §12.3 |
 | COM-F09 | Hub shell hides Recalls and SMS Zone tabs; **Send SMS** via overflow → `SMS_bot`; `?go=Recalls` still works | P0 | §5.2, §18 |
 | COM-F10 | Help file updated; all user-visible strings via `xl()` / `xlt()` / `xla()` | P1 | §26 |
@@ -1459,6 +1459,8 @@ Not blocking Phase 1 sign-off if manual Appendix D passes.
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.0.7 | 2026-07-18 | Project team | **Quick replies + log export:** composer gains four quick-reply chips (tap fills the composer — sending stays explicit); reminder log gains client-side Export CSV (shared `@core/csv` helper: formula-injection guard + UTF-8 BOM for Excel) |
+| 1.0.6 | 2026-07-18 | Project team | **Flag retirement sync (PRD §5.6 amendment)** — header widened to mark every §22–§27 flag/rollback/legacy-fallback reference historical; COM-F07 and TS-1.8 struck through (flag removed from code, hub always on, no fallback) |
 | 1.0.5 | 2026-07-18 | Project team | **Status truth pass:** header corrected from "Approved for Phase 1 implementation" to Built; hub is always-on since the 2026-07-18 flag graduation (comms/registry/office-notes/S1 batch) — §24's flag description is now historical |
 | 1.0.4 | 2026-07-17 | Project team | **COMHUB completion batch** (see `new/NEW_CLINIC_COMMUNICATIONS_HUB_COMPLETION_PLAN.md`): island now loads the shared token/Tailwind layer (root cause of unstyled compose/log panes); compose redesigned (recipient chips + filter, Status dropdown removed, inline validation); reminder reader gains header parity + Mark completed (page footer removed, Create reminder/View log moved to the toolbar per lens); reminder log redesigned (status pills, no ID column, pagination); single sort select; reminders search now filters; toast errors replace window.alert |
 | 1.0.3 | 2026-06-16 | PRD §6.5.3–§6.5.4 cross-refs |
@@ -1564,7 +1566,7 @@ Minimum P0 smoke: **TS-1.1–1.3, TS-2.1–2.2, TS-3.1–3.5, TS-4.1–4.6, TS-6
 | TS-1.3 | `?form_active=1` | Active list via AJAX |
 | TS-1.5 | `?task=edit&noteid={id}` | Row selected; thread in detail |
 | TS-1.7 | `?lens=reminders` | Reminders lens active |
-| TS-1.8 | `communications_hub_enable=0` | Legacy tabbed UI |
+| TS-1.8 | ~~`communications_hub_enable=0` → legacy tabbed UI~~ **Obsolete** — flag retired 2026-07-18 |
 | TS-1.9 | Flag on | Hub; no Recalls tab |
 | TS-1.10 | `?go=Recalls` | Legacy recall board |
 

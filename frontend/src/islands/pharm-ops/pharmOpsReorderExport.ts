@@ -1,19 +1,7 @@
+import { csvEscape, downloadCsv } from '@core/csv';
 import type { PharmReorderRow } from './pharmOpsTypes';
 
-function csvEscape(value: string | number): string {
-  let text = String(value);
-  // Neutralize spreadsheet formula injection: a leading =, +, -, @ or control
-  // char makes Excel/Sheets evaluate the cell as a formula. Only string fields
-  // (drug names) pass through here — numeric columns are written raw — so
-  // prefixing a quote never corrupts a real number.
-  if (/^[=+\-@\t\r]/.test(text)) {
-    text = `'${text}`;
-  }
-  if (/[",\n]/.test(text)) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-  return text;
-}
+export { downloadCsv };
 
 /**
  * Purchase-order CSV for the reorder list (INV-5/INV-7): one row per drug that needs restocking,
@@ -86,12 +74,3 @@ export function reorderToCsv(
   return lines.join('\n');
 }
 
-export function downloadCsv(filename: string, content: string): void {
-  const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-}

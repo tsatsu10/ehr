@@ -191,4 +191,25 @@ describe('CommunicationsDetail', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Mark completed' }));
     expect(onCompleteReminder).toHaveBeenCalledWith(9);
   });
+
+  it('quick-reply chip fills the composer without sending', () => {
+    const onSendReply = vi.fn();
+
+    render(
+      <CommunicationsDetail
+        loading={false}
+        error={null}
+        message={baseMessage}
+        reminder={null}
+        webroot="/openemr"
+        onSendReply={onSendReply}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'On my way' }));
+
+    expect(screen.getByLabelText('Reply')).toHaveValue('On my way');
+    // Filling must not send — posting to the record stays explicit.
+    expect(onSendReply).not.toHaveBeenCalled();
+  });
 });

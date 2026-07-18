@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ConfirmModal } from '@components/ConfirmModal';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { PatientSearchDropdown } from '@components/PatientSearchDropdown';
@@ -154,6 +154,7 @@ function MessageDetailView({
   const [assignName, setAssignName] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [replyText, setReplyText] = useState('');
+  const replyInputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setAssignPid(null);
@@ -329,32 +330,54 @@ function MessageDetailView({
 
       {detail.can_reply && onSendReply && (
         <div className="nc-comm-composer-dock">
-          <Textarea
-            className="nc-comm-composer-input"
-            rows={1}
-            value={replyText}
-            placeholder={t('Type a reply…')}
-            aria-label={t('Reply')}
-            disabled={replySending}
-            onChange={(e) => setReplyText(e.target.value)}
-            onKeyDown={(e) => {
-              // Enter sends; Shift+Enter makes a new line (chat convention).
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                void submitReply();
-              }
-            }}
-          />
-          <button
-            type="button"
-            className="nc-comm-composer-send"
-            aria-label={t('Send')}
-            title={t('Send')}
-            disabled={!canSendReply}
-            onClick={() => { void submitReply(); }}
-          >
-            <SendHorizontal aria-hidden="true" />
-          </button>
+          {/* Quick replies (artifact chat-quick-replies): tapping fills the
+              composer — sending stays an explicit action so a mis-tap never
+              posts to the record. */}
+          <div className="nc-comm-quick-replies" role="group" aria-label={t('Quick replies')}>
+            {[t('On my way'), t('Noted, thanks'), t('Done'), t('Please come to my desk')].map((text) => (
+              <button
+                key={text}
+                type="button"
+                className="nc-comm-quick-reply"
+                disabled={replySending}
+                onClick={() => {
+                  setReplyText(text);
+                  replyInputRef.current?.focus();
+                }}
+              >
+                {text}
+              </button>
+            ))}
+          </div>
+          <div className="nc-comm-composer-row">
+            <Textarea
+              ref={replyInputRef}
+              className="nc-comm-composer-input"
+              rows={1}
+              value={replyText}
+              placeholder={t('Type a reply…')}
+              aria-label={t('Reply')}
+              disabled={replySending}
+              onChange={(e) => setReplyText(e.target.value)}
+              onKeyDown={(e) => {
+                // Enter sends; Shift+Enter makes a new line (chat convention).
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  void submitReply();
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="nc-comm-composer-send"
+              aria-label={t('Send')}
+              title={t('Send')}
+              disabled={!canSendReply}
+              onClick={() => { void submitReply(); }}
+            >
+              <SendHorizontal aria-hidden="true" />
+            </button>
+          </div>
         </div>
       )}
       <ConfirmModal

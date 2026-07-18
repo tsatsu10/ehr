@@ -545,13 +545,14 @@
     color: var(--oe-nc-text-muted, #86868b);
 }
 
-/* Docked composer — pinned bar with a hairline top (artifact chat-composer). */
+/* Docked composer — pinned bar with a hairline top (artifact chat-composer).
+   Column: quick-reply chips row, then the input row. */
 .nc-comm-composer-dock {
     position: sticky;
     bottom: 0;
     display: flex;
-    align-items: flex-end;
-    gap: 0.6rem;
+    flex-direction: column;
+    gap: 0.5rem;
     /* Full-bleed bar — the scroll container has no padding of its own. */
     margin: auto 0 0;
     padding: 0.8rem 1.25rem;
@@ -559,6 +560,51 @@
     border-top: 1px solid var(--oe-nc-border, rgba(0, 0, 0, 0.08));
     border-radius: 0 0 1.375rem 1.375rem;
     flex-shrink: 0;
+}
+
+.nc-comm-composer-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.6rem;
+}
+
+/* Quick replies (artifact chat-quick-reply): tap to fill the composer. */
+.nc-comm-quick-replies {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.nc-comm-quick-reply {
+    padding: 0.32rem 0.75rem;
+    border: 1px solid var(--oe-nc-border-strong, rgba(0, 0, 0, 0.14));
+    border-radius: 999px;
+    background: var(--oe-nc-surface, #fff);
+    color: var(--oe-nc-text-muted, #6e6e73);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.nc-comm-quick-reply:hover:not(:disabled) {
+    background: var(--oe-nc-surface-2, #f9f9fb);
+    color: var(--oe-nc-text, #1d1d1f);
+}
+
+.nc-comm-quick-reply:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.nc-comm-quick-reply:focus-visible {
+    outline: none;
+    box-shadow: var(--oe-nc-focus-ring, 0 0 0 3px rgba(0, 113, 227, 0.35));
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nc-comm-quick-reply { transition: none; }
 }
 
 .nc-comm-composer-input {

@@ -13,6 +13,7 @@ import {
   TableRow,
 } from '@components/ui/table';
 import { oeFetch } from '@core/oeFetch';
+import { csvEscape, downloadCsv } from '@core/csv';
 import { t } from '@core/i18n';
 import type {
   ReminderLogFilters,
@@ -135,6 +136,24 @@ export function ReminderLogPane({ ajaxUrl, csrfToken, onClose }: ReminderLogPane
 
   const pageRows = rows.slice((page - 1) * LOG_PAGE_SIZE, page * LOG_PAGE_SIZE);
 
+  // Exports every row matching the current filter (not just the visible
+  // page); the server already caps the result at its bounded limit.
+  const exportCsv = () => {
+    const lines = [
+      [t('Sent'), t('From'), t('To'), t('Patient'), t('Message'), t('Due'), t('Completed')].join(','),
+      ...rows.map((row) => [
+        csvEscape(row.sent_at_label ?? row.sent_at ?? ''),
+        csvEscape(row.from_name),
+        csvEscape(row.to_name),
+        csvEscape(row.patient_name),
+        csvEscape(row.message),
+        csvEscape(row.due_date_label ?? row.due_date ?? ''),
+        csvEscape(formatProcessedCell(row)),
+      ].join(',')),
+    ];
+    downloadCsv(`reminder-log-${new Date().toISOString().slice(0, 10)}.csv`, lines.join('\n'));
+  };
+
   return (
     <div className="nc-comm-reminder-log">
       <header className="nc-comm-detail-header nc-comm-log-head">
@@ -142,9 +161,16 @@ export function ReminderLogPane({ ajaxUrl, csrfToken, onClose }: ReminderLogPane
           <h2 className="nc-comm-reader-title">{t('Reminder log')}</h2>
           <p className="nc-comm-reader-meta">{t('Every reminder sent, with who completed it and when.')}</p>
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={onClose}>
-          {t('Close')}
-        </Button>
+        <div className="flex items-center gap-2">
+          {rows.length > 0 && !loading && !error && (
+            <Button type="button" variant="outline" size="sm" onClick={exportCsv}>
+              {t('Export CSV')}
+            </Button>
+          )}
+          <Button type="button" variant="outline" size="sm" onClick={onClose}>
+            {t('Close')}
+          </Button>
+        </div>
       </header>
 
       <div className="nc-comm-filter-bar">
