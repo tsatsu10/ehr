@@ -11,6 +11,9 @@ describe('csvEscape', () => {
   it('quotes commas, quotes and newlines', () => {
     expect(csvEscape('Doe, Jane')).toBe('"Doe, Jane"');
     expect(csvEscape('say "hi"')).toBe('"say ""hi"""');
+    expect(csvEscape('line\nbreak')).toBe('"line\nbreak"');
+    // A lone carriage return must be quoted too, not just \n.
+    expect(csvEscape('cr\ronly')).toBe('"cr\ronly"');
   });
 });
 

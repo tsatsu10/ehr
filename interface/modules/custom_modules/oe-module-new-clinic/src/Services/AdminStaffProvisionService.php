@@ -149,6 +149,11 @@ class AdminStaffProvisionService
         return $resolved;
     }
 
+    /**
+     * Check-then-insert without a lock: users.username carries no unique
+     * index, so two admins provisioning in the same instant could collide.
+     * Accepted — this runs once per clinic from a single-admin setup flow.
+     */
     private function availableUsername(string $base): string
     {
         for ($i = 0; $i < 50; $i++) {

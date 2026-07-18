@@ -11,7 +11,7 @@ export function csvEscape(value: string | number): string {
   if (/^[=+\-@\t\r]/.test(text)) {
     text = `'${text}`;
   }
-  if (/[",\n]/.test(text)) {
+  if (/[",\n\r]/.test(text)) {
     return `"${text.replace(/"/g, '""')}"`;
   }
   return text;

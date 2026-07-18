@@ -341,7 +341,8 @@ function MessageDetailView({
                 className="nc-comm-quick-reply"
                 disabled={replySending}
                 onClick={() => {
-                  setReplyText(text);
+                  // Never wipe a typed draft — append to it instead.
+                  setReplyText((prev) => (prev.trim() ? `${prev.replace(/\s+$/, '')} ${text}` : text));
                   replyInputRef.current?.focus();
                 }}
               >

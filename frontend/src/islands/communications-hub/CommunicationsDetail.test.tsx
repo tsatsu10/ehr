@@ -212,4 +212,22 @@ describe('CommunicationsDetail', () => {
     // Filling must not send — posting to the record stays explicit.
     expect(onSendReply).not.toHaveBeenCalled();
   });
+
+  it('quick-reply chip appends to a typed draft instead of wiping it', () => {
+    render(
+      <CommunicationsDetail
+        loading={false}
+        error={null}
+        message={baseMessage}
+        reminder={null}
+        webroot="/openemr"
+        onSendReply={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Reply'), { target: { value: 'Seen — ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'On my way' }));
+
+    expect(screen.getByLabelText('Reply')).toHaveValue('Seen — On my way');
+  });
 });
