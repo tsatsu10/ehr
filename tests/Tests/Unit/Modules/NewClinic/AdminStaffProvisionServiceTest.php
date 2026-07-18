@@ -34,7 +34,7 @@ class AdminStaffProvisionServiceTest extends TestCase
 
         // Every core role is either already present or would be created.
         $this->assertSame(
-            2,
+            3,
             count($result['created']) + count($result['already_present'])
         );
     }
@@ -48,9 +48,9 @@ class AdminStaffProvisionServiceTest extends TestCase
         $result = $service->provisionMissing(0, 1, true);
 
         $createdRoles = array_column($result['created'], 'role');
-        foreach (['new_reception', 'new_doctor'] as $role) {
+        foreach (['new_reception', 'new_doctor', 'new_cashier'] as $role) {
             $inCreated = in_array($role, $createdRoles, true);
-            $labels = ['new_reception' => 'Reception', 'new_doctor' => 'Doctor'];
+            $labels = ['new_reception' => 'Reception', 'new_doctor' => 'Doctor', 'new_cashier' => 'Cashier'];
             $inPresent = in_array($labels[$role], $result['already_present'], true);
             $this->assertTrue(
                 $inCreated xor $inPresent,

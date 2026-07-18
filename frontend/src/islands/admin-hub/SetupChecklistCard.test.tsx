@@ -189,4 +189,58 @@ describe('SetupChecklistCard', () => {
     fireEvent.click(screen.getByRole('button', { name: /I have written these down/i }));
     expect(h.onDismissProvisionResult).toHaveBeenCalled();
   });
+
+  it('under global scope shows the per-clinic note instead of a checklist', () => {
+    render(
+      <SetupChecklistCard
+        progress={baseProgress}
+        markingKey={null}
+        completing={false}
+        reopening={false}
+        globalScope
+        {...idleProvision}
+        {...handlers()}
+      />,
+    );
+
+    expect(screen.getByText(/Setup is tracked per clinic/i)).toBeInTheDocument();
+    expect(screen.queryByText('Prices set for at least 3 services')).not.toBeInTheDocument();
+  });
+
+  it('offers a see-runbooks anchor link for guide-based items', () => {
+    const anchorTarget = document.createElement('div');
+    anchorTarget.id = 'nc-admin-runbooks';
+    const scrollSpy = vi.fn();
+    anchorTarget.scrollIntoView = scrollSpy;
+    document.body.appendChild(anchorTarget);
+
+    render(
+      <SetupChecklistCard
+        progress={{
+          ...baseProgress,
+          items: [{
+            key: 'g12_drill',
+            label: 'Wrong-patient safety drill done',
+            weight: 5,
+            completed: false,
+            manual: true,
+            ticked: false,
+            hint: 'Walk the team through it.',
+            link_tab: null,
+            link_anchor: 'nc-admin-runbooks',
+          }],
+        }}
+        markingKey={null}
+        completing={false}
+        reopening={false}
+        {...idleProvision}
+        {...handlers()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /See runbooks below/i }));
+    expect(scrollSpy).toHaveBeenCalled();
+
+    anchorTarget.remove();
+  });
 });

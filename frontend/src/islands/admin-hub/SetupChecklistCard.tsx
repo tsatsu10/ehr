@@ -15,6 +15,8 @@ interface SetupChecklistCardProps {
   reopening: boolean;
   /** Which clinic (or the global default) this score belongs to. */
   scopeLabel?: string;
+  /** True when the scope picker is on "All facilities" — setup is per clinic. */
+  globalScope?: boolean;
   onMarkItem: (key: string) => void;
   onUnmarkItem: (key: string) => void;
   onMarkComplete: () => void;
@@ -43,6 +45,7 @@ export function SetupChecklistCard({
   completing,
   reopening,
   scopeLabel,
+  globalScope = false,
   onMarkItem,
   onUnmarkItem,
   onMarkComplete,
@@ -56,6 +59,24 @@ export function SetupChecklistCard({
   const [provisionConfirmOpen, setProvisionConfirmOpen] = useState(false);
   const threshold = progress.score_threshold ?? 70;
   const remaining = progress.items.filter((item) => !item.completed);
+
+  // Setup is a per-clinic exercise — under "All facilities" the card would be
+  // scoring facility 0, which can never truthfully complete (cash profile,
+  // fees and visit types are all per clinic).
+  if (globalScope) {
+    return (
+      <AdminSection
+        id="nc-admin-setup-checklist"
+        title={t('Setup checklist')}
+        description={t('Setup is tracked per clinic.')}
+        icon={<ListChecks className="h-4 w-4" aria-hidden />}
+      >
+        <p className="mb-0 text-sm text-[var(--oe-nc-text-muted)]">
+          {t('Switch the picker above to your clinic to see and complete its setup checklist.')}
+        </p>
+      </AdminSection>
+    );
+  }
 
   const provisionResultPanel = provisionResult && (
     <div className={deskCalloutClass('warn', 'mb-3 text-sm')} role="alert">
@@ -105,7 +126,7 @@ export function SetupChecklistCard({
       }}
     >
       <p className="mb-0">
-        {t('This creates a sign-in for each core role that has none yet (reception, doctor), with a temporary password shown once. You stay the admin.')}
+        {t('This creates a sign-in for each core role that has none yet (reception, doctor, cashier), with a temporary password shown once. You stay the admin.')}
       </p>
     </ConfirmModal>
   );
@@ -306,6 +327,22 @@ function SetupChecklistRow({
                   onClick={() => onNavigateTab(linkTab)}
                 >
                   {t('Open {tab} →', { tab: tabLabel(linkTab) })}
+                </Button>
+              </>
+            )}
+            {!linkTab && item.link_anchor && (
+              <>
+                {' '}
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 align-baseline"
+                  onClick={() => {
+                    document.getElementById(item.link_anchor!)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                >
+                  {t('See runbooks below →')}
                 </Button>
               </>
             )}

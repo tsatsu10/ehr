@@ -223,7 +223,7 @@ class AdminSetupProgressService
             ],
             [
                 'key' => 'staff_accounts',
-                'label' => xl('Staff sign-ins created (admin, reception, doctor)'),
+                'label' => xl('Staff sign-ins created (admin, reception, doctor, cashier)'),
                 'weight' => 15,
                 'completed' => isset($manual['staff_accounts']) || $this->staffAccountsReady(),
                 'manual' => true,
@@ -276,8 +276,9 @@ class AdminSetupProgressService
                 'completed' => isset($manual['worksheet_recorded']),
                 'manual' => true,
                 'ticked' => isset($manual['worksheet_recorded']),
-                'hint' => xl('Fill in the go-live worksheet from the setup guide with your trainer.'),
+                'hint' => xl('Record the go-live answers with your trainer — the runbook below walks through it.'),
                 'link_tab' => null,
+                'link_anchor' => 'nc-admin-runbooks',
             ],
             [
                 'key' => 'g12_drill',
@@ -286,8 +287,9 @@ class AdminSetupProgressService
                 'completed' => isset($manual['g12_drill']),
                 'manual' => true,
                 'ticked' => isset($manual['g12_drill']),
-                'hint' => xl('Walk the team through the wrong-patient check during the first week.'),
+                'hint' => xl('Walk the team through the wrong-patient check during the first week — the drill runbook below has the steps.'),
                 'link_tab' => null,
+                'link_anchor' => 'nc-admin-runbooks',
             ],
         ];
     }
@@ -320,9 +322,10 @@ class AdminSetupProgressService
     }
 
     /**
-     * True when each core role group (admin, reception, doctor) has at least
-     * one active member. One person holding all three (solo operator,
-     * D-STAFF-1) satisfies this.
+     * True when each core role group (admin, reception, doctor, cashier) has
+     * at least one active member. Cashier is core because this is a cash
+     * clinic — nobody can take payment without it. One person holding several
+     * groups (solo operator, D-STAFF-1) satisfies this.
      */
     private function staffAccountsReady(): bool
     {
@@ -333,7 +336,7 @@ class AdminSetupProgressService
                  INNER JOIN gacl_groups_aro_map m ON m.group_id = g.id
                  INNER JOIN gacl_aro a ON a.id = m.aro_id AND a.section_value = 'users'
                  INNER JOIN users u ON u.username = a.value AND u.active = 1
-                 WHERE g.value IN ('new_admin', 'new_reception', 'new_doctor')
+                 WHERE g.value IN ('new_admin', 'new_reception', 'new_doctor', 'new_cashier')
                  GROUP BY g.value",
                 []
             ) ?: [];
@@ -348,7 +351,12 @@ class AdminSetupProgressService
             }
         }
 
-        return isset($present['new_admin'], $present['new_reception'], $present['new_doctor']);
+        return isset(
+            $present['new_admin'],
+            $present['new_reception'],
+            $present['new_doctor'],
+            $present['new_cashier']
+        );
     }
 
     /**

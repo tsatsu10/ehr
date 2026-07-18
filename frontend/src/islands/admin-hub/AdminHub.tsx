@@ -1195,7 +1195,7 @@ export function AdminHub({
 
       {/* One-line nudge shown on every tab until first-run setup is done —
           the checklist itself lives on the System tab where nobody new looks. */}
-      {adminHubEnabled && setupProgress && !setupProgress.setup_complete && (
+      {adminHubEnabled && scope !== 'global' && setupProgress && !setupProgress.setup_complete && (
         <button
           type="button"
           className="mb-3 flex w-full items-center justify-between rounded-xl [box-shadow:inset_0_0_0_1px_color-mix(in_srgb,var(--oe-nc-primary,#0071e3)_35%,transparent)] bg-[color-mix(in_srgb,var(--oe-nc-primary,#0071e3)_6%,var(--oe-nc-surface,#fff))] px-4 py-2 [text-align:left] text-sm font-semibold text-[var(--oe-nc-text)] transition-colors hover:bg-[color-mix(in_srgb,var(--oe-nc-primary,#0071e3)_12%,var(--oe-nc-surface,#fff))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--oe-nc-primary,#0071e3)]"
@@ -1297,6 +1297,7 @@ export function AdminHub({
             staffProvisioning={staffProvisioning}
             staffProvisionResult={staffProvisionResult}
             onDismissStaffProvisionResult={() => setStaffProvisionResult(null)}
+            setupGlobalScope={scope === 'global'}
             onAddVisitType={() => openVisitTypeModal(null)}
             onEditVisitType={(row) => openVisitTypeModal(row)}
             onArchiveVisitType={(row) => setPendingConfirm({ type: 'archive_visit_type', row })}

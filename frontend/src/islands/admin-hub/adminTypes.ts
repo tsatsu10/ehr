@@ -336,6 +336,8 @@ export interface SetupProgressItem {
   hint: string;
   /** Admin tab this item's work happens on (a "take me there" link target). */
   link_tab?: AdminTabId | string | null;
+  /** Same-tab anchor id to scroll to (e.g. the runbooks board). */
+  link_anchor?: string | null;
 }
 
 export interface SetupProgressPayload {

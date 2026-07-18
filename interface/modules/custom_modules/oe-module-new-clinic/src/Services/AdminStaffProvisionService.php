@@ -43,6 +43,17 @@ class AdminStaffProvisionService
             'authorized' => 1,
             'acl_groups' => ['Clinicians', 'New Clinic Doctor'],
         ],
+        // Cash clinic: nobody can take payment without a cashier sign-in.
+        // Lead is included so the starter cashier can close the till (same
+        // grant the pilot seeder gives its cashier).
+        'new_cashier' => [
+            'label' => 'Cashier',
+            'username_base' => 'cashier',
+            'fname' => 'Clinic',
+            'lname' => 'Cashier',
+            'authorized' => 0,
+            'acl_groups' => ['Clinicians', 'New Clinic Cashier', 'New Clinic Cashier Lead'],
+        ],
     ];
 
     /**
@@ -115,7 +126,7 @@ class AdminStaffProvisionService
              INNER JOIN gacl_groups_aro_map m ON m.group_id = g.id
              INNER JOIN gacl_aro a ON a.id = m.aro_id AND a.section_value = 'users'
              INNER JOIN users u ON u.username = a.value AND u.active = 1
-             WHERE g.value IN ('new_reception', 'new_doctor')
+             WHERE g.value IN ('new_reception', 'new_doctor', 'new_cashier')
              GROUP BY g.value",
             []
         ) ?: [];
@@ -170,6 +181,25 @@ class AdminStaffProvisionService
         throw new \RuntimeException('Could not find a free username for ' . $base);
     }
 
+    /**
+     * When the clinic enforces password expiry (days > 0) AND has a grace
+     * window, back-date the temp password so it is already expired-but-within-
+     * grace: core then nags the user to change it at first sign-in without
+     * locking them out. With expiry off (or no grace window) we must use NOW —
+     * an expired password beyond grace makes checkPasswordNotExpired() reject
+     * the login outright, which would brick the account we just handed over.
+     */
+    private function initialPasswordTimestamp(): string
+    {
+        $days = (int) ($GLOBALS['password_expiration_days'] ?? 0);
+        $grace = (int) ($GLOBALS['password_grace_time'] ?? 0);
+        if ($days > 0 && $grace > 0) {
+            return date('Y-m-d H:i:s', strtotime("-{$days} days"));
+        }
+
+        return date('Y-m-d H:i:s');
+    }
+
     private function generatePassword(): string
     {
         $chars = self::PASSWORD_CHARS;
@@ -201,8 +231,8 @@ class AdminStaffProvisionService
             throw new \RuntimeException('Unable to hash password');
         }
         QueryUtils::sqlStatementThrowException(
-            'INSERT INTO users_secure (id, username, password, last_update_password) VALUES (?, ?, ?, NOW())',
-            [$userId, $username, $hash]
+            'INSERT INTO users_secure (id, username, password, last_update_password) VALUES (?, ?, ?, ?)',
+            [$userId, $username, $hash, $this->initialPasswordTimestamp()]
         );
 
         // OpenEMR login requires a row in `groups` (auth group), separate from phpGACL.

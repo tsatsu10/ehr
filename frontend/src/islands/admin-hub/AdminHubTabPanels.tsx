@@ -109,6 +109,7 @@ export interface AdminHubTabPanelsProps {
   staffProvisioning: boolean;
   staffProvisionResult: StaffProvisionResult | null;
   onDismissStaffProvisionResult: () => void;
+  setupGlobalScope: boolean;
   onAddVisitType: () => void;
   onEditVisitType: (row: VisitTypeRow) => void;
   onArchiveVisitType: (row: VisitTypeRow) => void;
@@ -200,6 +201,7 @@ export function AdminHubTabPanels({
   staffProvisioning,
   staffProvisionResult,
   onDismissStaffProvisionResult,
+  setupGlobalScope,
   onAddVisitType,
   onEditVisitType,
   onArchiveVisitType,
@@ -340,6 +342,7 @@ export function AdminHubTabPanels({
             staffProvisioning={staffProvisioning}
             staffProvisionResult={staffProvisionResult}
             onDismissStaffProvisionResult={onDismissStaffProvisionResult}
+            setupGlobalScope={setupGlobalScope}
           />
         ) : (
           <AdminEmptyState

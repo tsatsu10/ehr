@@ -52,6 +52,7 @@ interface SystemTabProps {
   staffProvisioning: boolean;
   staffProvisionResult: StaffProvisionResult | null;
   onDismissStaffProvisionResult: () => void;
+  setupGlobalScope: boolean;
 }
 
 export function SystemTab({
@@ -82,6 +83,7 @@ export function SystemTab({
   staffProvisioning,
   staffProvisionResult,
   onDismissStaffProvisionResult,
+  setupGlobalScope,
   onRunReconciliation,
   onRunBackup,
   onCompleteBackup,
@@ -111,6 +113,7 @@ export function SystemTab({
         provisioning={staffProvisioning}
         provisionResult={staffProvisionResult}
         onDismissProvisionResult={onDismissStaffProvisionResult}
+        globalScope={setupGlobalScope}
       />
       <SystemHealthBoard
         ajaxUrl={ajaxUrl}

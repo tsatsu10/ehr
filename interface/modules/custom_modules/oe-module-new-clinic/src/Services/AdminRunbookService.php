@@ -1,7 +1,7 @@
 <?php
 
 /**
- * M15-F10 — Day-2 admin runbooks (RB-01–RB-20)
+ * M15-F10 — Day-2 admin runbooks (RB-01–RB-21)
  *
  * @package   OpenEMR
  * @link      https://www.open-emr.org
@@ -187,6 +187,17 @@ class AdminRunbookService
                 'Module Manager',
                 'After module update, run SQL upgrade from Module Manager.',
                 $webroot . '/interface/modules/zend_modules/public/Installer'
+            ),
+            $this->card(
+                'RB-21',
+                'Go-live',
+                'Record the go-live worksheet',
+                'Training',
+                'With your trainer, walk the opening-week questions: who covers each desk, '
+                . 'daily cash float and till-close routine, what to do when the internet or '
+                . 'power drops, and who to call for support. Write the answers down, then '
+                . 'tick "Go-live worksheet recorded" on the setup checklist above.',
+                null
             ),
         ];
 
