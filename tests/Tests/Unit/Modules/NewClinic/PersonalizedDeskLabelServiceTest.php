@@ -41,4 +41,20 @@ class PersonalizedDeskLabelServiceTest extends TestCase
         $this->assertSame('', $service->ownedDeskLabelForNavId('not-a-nav', 'Ama', 'amensah'));
         $this->assertStringContainsString('Nurse', $service->ownedDeskLabelForNavId('clinictg', 'Ama', 'amensah'));
     }
+
+    /**
+     * ADM-7: xl() rewrites every straight/double quote in its argument to a
+     * backtick (translation.inc.php "safe apostrophe" pass). The possessive
+     * apostrophe must be composed outside the translated string or every
+     * desk title renders as "Admin Tsatsu`s desk".
+     */
+    public function testOwnedDeskLabelUsesARealApostropheNotABacktick(): void
+    {
+        $service = new PersonalizedDeskLabelService();
+
+        $label = $service->ownedDeskLabel('Admin', 'Tsatsu');
+
+        $this->assertSame('Admin Tsatsu\'s desk', $label);
+        $this->assertStringNotContainsString('`', $label);
+    }
 }

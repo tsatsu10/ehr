@@ -44,7 +44,11 @@ class PersonalizedDeskLabelService
             return $roleLabel;
         }
 
-        return sprintf(xl('%s %s\'s desk'), $roleLabel, $ownerName);
+        // The apostrophe must never go through xl() — it converts ' to a backtick
+        // (translation.inc.php's "safe apostrophe" pass), which mangled every
+        // personalized desk title ("Admin Tsatsu`s desk"). Keep the possessive
+        // outside the translated format string.
+        return sprintf(xl('%s %s%s desk'), $roleLabel, $ownerName, "'s");
     }
 
     public function ownedDeskLabelForAco(string $aco, string $fname, string $username): string

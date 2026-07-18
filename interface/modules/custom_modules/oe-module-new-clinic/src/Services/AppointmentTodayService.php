@@ -127,7 +127,9 @@ class AppointmentTodayService
             'start_time_label' => $this->formatStartTime($appointment['pc_startTime'] ?? null),
             'default_visit_type_id' => $defaultVisitTypeId,
             'tooltip' => $isRecurring
-                ? xl('Recurring booking — today\'s visit starts normally; the series is not marked arrived automatically.')
+                // No apostrophe in the xl() string — it gets backtick-mangled (see
+                // PersonalizedDeskLabelService for the same bug elsewhere).
+                ? xl('Recurring booking — the visit today starts normally; the series is not marked arrived automatically.')
                 : null,
         ];
     }
