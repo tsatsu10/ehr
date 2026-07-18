@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "test": "vitest run",
+    "test:serial": "vitest run --no-file-parallelism",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "i18n:extract": "node scripts/extract-i18n.mjs",

@@ -88,13 +88,16 @@ function collectFiles(dir) {
 // Count class occurrences only inside string literals (className, clsx, cn, cva).
 // A className token is delimited by whitespace or a quote; we match the class as a
 // whole token so `border` does not match `border-t-2` / `nc-border`.
+// Tailwind arbitrary segments (`[border:1px_solid_...]`, `bg-[var(--x)]`) are
+// stripped first — CSS property/value text inside brackets is not a class name,
+// and counting it forced workarounds like box-shadow hairlines.
 function countInText(text, cls) {
   const re = new RegExp(`(?<![\\w-])${cls.replace(/[-]/g, '\\-')}(?![\\w-])`, 'g');
   let count = 0;
   // Only look inside single/double/backtick string literals to avoid identifiers.
   const strings = text.match(/(['"`])(?:\\.|(?!\1)[\s\S])*?\1/g) ?? [];
   for (const s of strings) {
-    const m = s.match(re);
+    const m = s.replace(/\[[^\]]*\]/g, ' ').match(re);
     if (m) count += m.length;
   }
   return count;
