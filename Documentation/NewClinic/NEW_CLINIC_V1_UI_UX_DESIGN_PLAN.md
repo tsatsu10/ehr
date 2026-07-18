@@ -125,7 +125,7 @@ Norman: *the user's model should match the design model.* Five nouns describe ev
 | Status | Meaning |
 |--------|---------|
 | **Shipped** | React island wired; usable when module + role ACL allow |
-| **Shipped (flag)** | Island built; requires product flag (e.g. `communications_hub_enable`) |
+| **Shipped (flag)** | Island built; requires product flag (e.g. `enable_report_hub`) |
 | **Polish** | Shipped; quality bar gap noted in [§10.2](#102-quality-bar-for-new-components) |
 | **Not started** | No module UI — stock OpenEMR or spec only |
 
@@ -655,13 +655,12 @@ Visit Board `?profile=wall` only — not Flow Board (D22).
 
 ## 8. Feature-flag UI rule
 
-When `oe-module-new-clinic` is disabled **or** a sub-flag is OFF, the UI **must** render **100% legacy** OpenEMR (PRD §5.6, PAGE_DESIGNS §2.5).
+When `oe-module-new-clinic` is disabled **or** a sub-flag is OFF, the UI **must** render **100% legacy** OpenEMR (PRD §5.6, PAGE_DESIGNS §2.5). *Exception: the surfaces made permanent by the 2026-07-18 flag retirement (comms hub, registry, office notes, S1 scheduling, native history editor — PRD §5.6 amendment) have no flag and no legacy fallback.*
 
 | Flag OFF | User sees |
 |----------|-----------|
 | Module off | Stock Knockout shell + stock menus |
-| `communications_hub_enable` | Legacy Message Center |
-| `enable_patient_registry` | Legacy Finder (`fin0`) for all roles |
+| ~~`communications_hub_enable`~~ / ~~`enable_patient_registry`~~ | **Retired 2026-07-18** — always on |
 | `enable_*_hub` (M12–M18) | Stock menus + desk deep links |
 | `enable_chart_depth_*` | Stock Ledger / Report / Transactions |
 

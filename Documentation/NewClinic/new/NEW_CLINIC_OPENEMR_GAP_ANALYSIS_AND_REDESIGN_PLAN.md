@@ -177,9 +177,10 @@ v0.1.2 draft below it in history — two of that draft's own predictions turned 
 no new `acl_setup.php` grant at all. Both corrected here against the real code, not assumed.*
 
 - **Host:** `public/office-notes.php` (T1 shell, `PageController::renderForEncounterNotesAcl`) +
-  card on desks' hub navigation (`ShellService` + `Bootstrap` nav, gated by `enable_office_notes`);
-  smart-vs-legacy redirect to stock `office_comments_full.php` when the flag is OFF. *report-hub
-  lens embed deferred (not required for G1 closure).*
+  card on desks' hub navigation (`ShellService` + `Bootstrap` nav). **Always on since 2026-07-18**
+  — `enable_office_notes` retired (PRD §5.6 amendment); the smart-vs-legacy redirect to stock
+  `office_comments_full.php` is removed. *report-hub lens embed deferred (not required for G1
+  closure).*
 - **UI:** single-column feed of `WidgetCard` notes with author/date, active/archived
   `SegmentedControl` (Active/Archived/All), inline compose + inline edit, **pin toggle** (pinned
   notes float to the top with a Pinned badge + accent), `RowActionsMenu` (Edit / Archive-Restore /
@@ -198,7 +199,7 @@ no new `acl_setup.php` grant at all. Both corrected here against the real code, 
   `encounters => ['notes', 'relaxed']` and `patients => [..., 'docs', 'notes', ...]` at write
   level, and `ClinicRolesService` already adds every New Clinic role to `Clinicians` — so both A1
   and A2's ACL checks are satisfied for free by existing staff provisioning. **Toggle:**
-  `enable_office_notes` (default OFF, `install.sql`).
+  retired 2026-07-18 — Office Notes is always on (PRD §5.6 amendment).
 - **Verification:** frontend `npm run check` (lint + typecheck + 401 vitest) + `npm run build`
   green; backend static `verify-module.php` PASS (syntax, 0 ctor cycles, controller imports, ajax
   crosscheck). Reviewed via `nc-code-review` before merge to main.
@@ -912,7 +913,7 @@ Net-new shared components required: **one** (SVG trend chart — shared by B2 tr
 
 ## 8. Governance & verification
 
-- **Toggles:** every new surface defaults OFF (`enable_office_notes`, `enable_documents_native`, `enable_outreach`, `enable_native_proc_order`, …) and appears in the M6 Clinic tab.
+- **Toggles:** every new surface defaults OFF (`enable_documents_native`, `enable_outreach`, `enable_native_proc_order`, …) and appears in the M6 Clinic tab. Flags may later graduate — surfaces made permanent (flag deleted, fallback removed) are listed in the PRD §5.6 amendment (2026-07-18: office notes, comms hub, registry, S1 scheduling, native history editor).
 - **ACL:** map each action to the existing core ACL pair listed per item; no new gacl sections in this plan.
 - **Legacy parity rule:** the stock screen stays reachable (gateway card or T1 wrapper) until the replacement passes its §21-style checklist; only then demote it to Advanced.
 - **Verification per batch:** `New Clinic Verify` CI green; `composer verify:new-clinic` on desktop for any `ajax.php`/service change; Vitest for every new hook/util; one asset-version bump.

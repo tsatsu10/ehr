@@ -130,7 +130,7 @@ export default defineConfig({
 ### Step 3 — Wire the Twig page (product flag if optional hub)
 
 Optional hubs (chart depth, bill ops, comms) use **product** flags such as
-`enable_chart_depth` or `communications_hub_enable`. Desk pages mount React
+`enable_chart_depth` or `enable_report_hub`. Desk pages mount React
 unconditionally (defaults ON); legacy jQuery desk JS was removed in w50react.
 
 For a new optional surface, add to `sql/install.sql`:

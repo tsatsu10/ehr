@@ -50,7 +50,7 @@ This document is the **authoritative spec for M1a search only**. Registration fo
 |------|----------|------|
 | **Front Desk search (this doc)** | “Which patient is this?” | Reception (primary), Nurse, Cashier, Admin |
 | **Patient Registry (M10)** | “Who matches these cohort filters?” | Clinical leads, registry staff |
-| **Legacy Finder** | Browse all patients in a DataTables grid | Hidden from daily menus **for reception roles only** when Registry ships (`enable_patient_registry` = 1); **clinical roles retain** the Finder until B7 MRD is habitual; break-glass URL remains (M10-F07, **D-COHORT-5** / **D-CTX-10**) |
+| **Legacy Finder** | Browse all patients in a DataTables grid | Hidden from daily menus **for reception roles only** (unconditional since the 2026-07-18 registry flag retirement); **clinical roles retain** the Finder until B7 MRD is habitual; break-glass URL remains (M10-F07, **D-COHORT-5** / **D-CTX-10**) |
 
 ---
 

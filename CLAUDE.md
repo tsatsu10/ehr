@@ -18,7 +18,11 @@ upstream OpenEMR and is mostly left alone.
   plan (SCALE-* tasks).
 - **Governing invariant (PRD §5.6):** every post-pilot surface sits behind an `enable_*` flag in
   `new_clinic_config`, **default OFF**. Flag OFF = 100% legacy behavior, no half-new chrome. The
-  legacy stock screen stays reachable until the replacement passes parity sign-off.
+  legacy stock screen stays reachable until the replacement passes parity sign-off. **Flags can
+  graduate:** per the 2026-07-18 §5.6 amendment, nine settings were deleted after parity (comms hub,
+  registry, office notes, S1 scheduling redesign, native history editor/full-form, history wrap,
+  clinical-doc hub, encounter-note engine) — those surfaces are permanent, no fallback; the M17 hub
+  opens any encounter and the native consult engine is the only engine.
 - **Deliberate non-goals (do not build without a PRD amendment):** patient portal, telehealth,
   US claims/EDI/eligibility, eRx vendor UIs, FHIR/SMART clients, DICOM, fax. See gap-analysis Tier 3.
 

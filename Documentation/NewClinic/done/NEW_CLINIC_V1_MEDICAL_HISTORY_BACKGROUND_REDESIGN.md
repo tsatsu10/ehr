@@ -2,8 +2,8 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 0.2.0 |
-| **Status** | Draft for review — **partial V1** (read modern · edit stock); **GAP-D D-HIST-9** optional native editor (curated field set) behind `enable_native_history_editor`; **V1.1-HIST-WRAP** editor shell |
+| **Document version** | 0.2.1 |
+| **Status** | **Built + always-on** — the **D-HIST-9** native editor and **D-HIST-10** full form are the permanent edit path since **2026-07-18** (flags `enable_native_history_editor`/`_full_form` retired, PRD §5.6 amendment); the **V1.1-HIST-WRAP** editor shell (§8.2–8.3) was **deleted** along with the stock edit path — §8's stock/wrap sections are historical |
 | **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.41), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.31), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.45), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.44), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.9), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md](./NEW_CLINIC_V1_PATIENT_DASHBOARD_B7_PRIMARY_REDESIGN.md) (v0.1.1) |
 | **Audience** | Product, design, clinical leads, trainers, implementers, QA |
 | **Scope** | **Longitudinal background** — family, social, PMH narrative, screening dates — in MRD **Clinical → Background**; stock History & Lifestyle **editor** retained V1; Ghana OPD field pack |
@@ -235,7 +235,7 @@ Aligned with PRD §6.1h, MRD §8.9, D49, and primary-care UX literature.
 | **B7 / T1-F16** | Background section host + anchor in Clinical tab | Core MRD |
 | **B7 / T1-F20** | Read summary panel from `history_data` + SDOH service | Same PR as Background |
 | **V1 pilot** | Edit → stock editor; T1-F18 on legacy History URLs | §5.6.1 |
-| **V1.1-HIST-WRAP** | T1 top bar + **Back to chart** on editor; hide horizontal nav emphasis | Post-pilot — **T1-F20b**; gate `enable_history_editor_wrap` |
+| **V1.1-HIST-WRAP** | ~~T1 top bar + Back to chart on editor~~ **Deleted 2026-07-18** — superseded by the permanent native editor (D-HIST-9/10) | — |
 | **V1.1-OPS L3b** | Optional completion weight for family **or** social documented | Config OFF default |
 | **V2** | Patient-facing pre-visit background questionnaire (portal / QR) | Out of scope V1 |
 
@@ -313,11 +313,11 @@ May inline in first Clinical tab fetch V1 — separate endpoint preferred for re
 | **Session** | `pid` only — no encounter bind |
 | **Chrome** | Stock header + nav; **T1-F18** legacy strip when overlay ON |
 
-### 8.2 V1.1-HIST-WRAP — T1 shell on editor (**T1-F20b**)
+### 8.2 V1.1-HIST-WRAP — T1 shell on editor (**T1-F20b**) — *historical; deleted 2026-07-18*
 
 | Property | Value |
 |----------|-------|
-| **When** | Module installed + `enable_history_editor_wrap` = 1 |
+| **When** | ~~Module installed + `enable_history_editor_wrap` = 1~~ **Feature deleted** — native editor is the permanent path |
 | **Shell** | T1 top bar (clinic name, role) — **no** stock horizontal nav |
 | **Strip** | T1-F18 legacy strip **or** compact MRD breadcrumb: *Chart › Clinical › Edit background* |
 | **Primary action** | **Save** (stock) + **Back to chart** (module) |
@@ -493,9 +493,9 @@ When staff use **legacy chart pages** (old horizontal menu, Finder, Classic menu
 | **D-HIST-5** | T1-F18 legacy strip applies to stock history read/edit URLs on allowlist |
 | **D-HIST-6** | Ghana OPD field pack via **M6 layout import** — not hardcoded PHP |
 | **D-HIST-7** | L3b background completion **optional** — default OFF (PRD §6.1h) |
-| **D-HIST-8** | V1.1 **T1-F20b** optional via `enable_history_editor_wrap` — default OFF until parity tested |
-| **D-HIST-10** | **Full native History form** planned to replace stock `history_full.php` entirely (`enable_native_history_full_form`, default OFF) — a superset of the D-HIST-9 quick editor. Plan: [NEW_CLINIC_V1_FULL_HISTORY_FORM_REDESIGN.md](../NEW_CLINIC_V1_FULL_HISTORY_FORM_REDESIGN.md). The "Full history form" link stays the stock fallback until that passes parity. |
-| **D-HIST-9** | **Optional native Background editor** (`enable_native_history_editor`, default OFF) — **supersedes D-HIST-1 for the edit path when enabled**. A *curated* West-Africa-first field set (family narrative + structured relatives incl. sickle cell, social/lifestyle incl. herbal medicine + occupation, PMH narrative, screening dates) edited in a native drawer. Writes the canonical `history_data` row directly (still D-HIST-2 — no parallel table); only whitelisted columns touched, stock-only HIS fields preserved. **This is NOT a layout-engine fork** (NG5 stands): the field set is deliberately fixed, not a dynamic HIS reproduction. Stock editor stays the fallback one click away until parity sign-off. |
+| **D-HIST-8** | ~~V1.1 T1-F20b wrap~~ **Deleted 2026-07-18** — the native editor became permanent, so the wrap (and the stock edit path it dressed) was removed (PRD §5.6 amendment) |
+| **D-HIST-10** | **Full native History form** — **shipped and permanent since 2026-07-18**: replaced stock `history_full.php` entirely (flag retired); a superset of the D-HIST-9 quick editor. Plan: [NEW_CLINIC_V1_FULL_HISTORY_FORM_REDESIGN.md](../NEW_CLINIC_V1_FULL_HISTORY_FORM_REDESIGN.md). No stock fallback link remains. |
+| **D-HIST-9** | **Native Background editor** (**permanent since 2026-07-18** — flag retired) — **supersedes D-HIST-1 for the edit path**. A *curated* West-Africa-first field set (family narrative + structured relatives incl. sickle cell, social/lifestyle incl. herbal medicine + occupation, PMH narrative, screening dates) edited in a native drawer. Writes the canonical `history_data` row directly (still D-HIST-2 — no parallel table); only whitelisted columns touched, stock-only HIS fields preserved. **This is NOT a layout-engine fork** (NG5 stands): the field set is deliberately fixed, not a dynamic HIS reproduction. Stock editor stays the fallback one click away until parity sign-off. |
 
 ### 12.1 Native editor field → column map (D-HIST-9, normative)
 
@@ -517,7 +517,9 @@ layout (which only claims `usertext11` "Risk Factors"). Kept in sync with
 
 Tobacco and alcohol are free-text with guidance placeholders (non-lossy round-trip with any
 stock-entered value); structured branching radios deferred. ACL: `patients` / `med` write,
-mirroring the stock editor.
+mirroring the stock editor. *(Note: the D-HIST-9 sentence "Stock editor stays the fallback one
+click away until parity sign-off" is historical — parity was signed off and the stock edit path
+retired 2026-07-18.)*
 
 ---
 
@@ -525,6 +527,7 @@ mirroring the stock editor.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.2.1 | 2026-07-18 | **Flag retirement (PRD §5.6 amendment)** — D-HIST-9/10 native editor is the permanent edit path (`enable_native_history_editor`/`_full_form` retired); T1-F20b wrap **deleted** (`enable_history_editor_wrap` removed); §6.2 phase row, §8.2 wrap section, D-HIST-8/9/10 decisions marked historical/permanent |
 | 0.2.0 | 2026-07-14 | **D-HIST-9** — optional native Background editor (curated field set, `enable_native_history_editor`, default OFF) supersedes D-HIST-1 for the edit path; reserved-column map (§12.1); read summary extended for sickle cell / herbal medicine / occupation |
 | 0.1.1 | 2026-06-24 | **Audit closure** — PRD T1-F20/T1-F20b, M6-F28, D-HIST-1–8 registered; AJAX aligned to `mrd.clinical_section`; cross-refs PAGE_DESIGNS §4.14 edit return path |
 | 0.1.0 | 2026-06-24 | Initial spec — OpenEMR pain points, UI/UX, EHR patterns, Ghana context, T1-F20 Background read, V1.1 editor wrap, legacy overlay plain-English glossary |

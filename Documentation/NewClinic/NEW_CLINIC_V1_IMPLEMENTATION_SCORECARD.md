@@ -55,7 +55,7 @@
 | M14 | Billing Back Office | Done | **72** | Post-pilot | Eng | Partial | F04 outstanding done; F05 legacy insurance vault retired 2026-07-16, replaced by native CBILL-3/4 |
 | M15 | Admin Operations Hub | Done | **88** | Post-pilot | Eng | Done | RB-01–RB-20; config import/export; setup checklist truthful auto-detects + unmark/reopen (SETUP-1..6, spec v0.1.5); patient importer tab (MKT-MIG-1) |
 | M16 | Reporting Operations Hub | Done | **88** | Post-pilot | Eng | Partial | §19 acceptance eng-closed (spec v0.1.4, incl. `hub_advanced_open` audit); OPD attendance pilot review (Product) |
-| M17 | Clinical Documentation Hub | Done | **88** | Post-pilot | Eng | Done | Ghana HIS pack shipped (`HisPackImportService` + admin card); DR runbooks in spec |
+| M17 | Clinical Documentation Hub | Done | **90** | Post-pilot | Eng | Done | **Always-on since 2026-07-18 flip** (hub flag + legacy engine retired; opens any encounter, full form registry); Ghana HIS pack shipped (`HisPackImportService` + admin card); DR runbooks in spec |
 | M18 | Queue Bridge Hub | Done | **85** | Post-pilot | Eng | Done | SQ-01–SQ-08 E2E matrix thin |
 | COM | Communications Hub | Done | **90** | Post-pilot | Eng | Done | Phase 1 complete + premium chat UI (COMHUB-0..6, spec v1.0.5); **always-on** since 2026-07-18 flag graduation; advanced comms (patient SMS) remains TBD |
 | S1 | Scheduling & Flow | Done | **85** | Post-pilot | Eng | Partial | Shell **always-on** since 2026-07-18 flag graduation; S-P12 lane prefs; some calendar edge cases |
@@ -85,9 +85,9 @@
 | **V1.1-PHARM** | `enable_pharm_ops` | **80** | Eng | Done | dispense, receive, OTC, controlled register |
 | **V1.1-ADMIN** | `enable_admin_hub` | **85** | Eng | Done | runbooks, health, export |
 | **V1.1-REP** | `enable_report_hub` | **86** | Eng | Done | native reports + RR runbooks + async export + `hub_advanced_open` audit; OPD attendance pilot review open (Product) |
-| **V1.1-DOC** | `enable_clinical_doc_hub` | **85** | Eng | Done | catalog, form bridge, visit summary |
+| **V1.1-DOC** | always on (flag retired 2026-07-18) | **90** | Eng | Done | catalog, form bridge, visit summary; encounter-only mode + full-registry Add form |
 | **V1.1-BRIDGE** | `enable_queue_bridge` | **85** | Eng | Done | hub, EX chips, Front Desk guard |
-| **V1.1-REG** | `enable_patient_registry` | **86** | Eng | Partial | cohort search + saved filters + PR-4 filters; `registry-signoff` PASS; Product pilot sign-off open |
+| **V1.1-REG** | always on (flag retired 2026-07-18) | **86** | Eng | Partial | cohort search + saved filters + PR-4 filters; `registry-signoff` PASS; Product pilot sign-off open |
 | **V1.2-BILL** | `enable_bill_ops` | **72** | Eng | Partial | correct, payments, close, outstanding |
 | **V1.2-CTX** | `enable_legacy_patient_context_overlay` | **90** | Eng | Done | strip inject + shared-device warning |
 | **V1.2-PHARM** | OPS policy | **50** | Eng | Partial | destroy reports; expiry alerts |
@@ -243,6 +243,36 @@ Use PRD §8 tables as source of truth. Below: **representative** IDs for spot au
 ---
 
 ## Audit log
+
+**2026-07-18 — Encounter-engine flip: M17 hub permanent, native engine only (PRD §5.6 amendment rows 8–9)**
+
+The three-batch "upgrade native to stock level" plan completed same-day. Batch 1: the hub opens
+**any** encounter — `?encounter_id=` synthesizes an encounter-only context for visits without a
+queue row (G12 `bindForEncounter` session bind; native visit-keyed editors politely refused);
+also fixed a `#IfNotRow2D`-arity bug that had re-registered the consult form on every upgrade
+(7 duplicate registry rows, deduped). Batch 2: the Add-form list and visit summary cover the
+**full form registry** (long-tail stock/LBF forms via the clinical-form-bridge; billing forms
+excluded; per-form ACL kept). Batch 3: `enable_clinical_doc_hub` and `encounter_note_engine`
+**deleted from code** — the native consult engine is the only engine, both 302 fall-throughs to
+stock `encounter_top.php` removed, every open-encounter router (sign service, activity feed,
+hub links) targets the hub, the stock encounter URL builder deleted. Live smokes: encounter-only
+summary/sign/open + bridge renders + long-tail reviewofs edit round trip — all PASS. PRD →
+v1.20.56; clinical-doc spec → v0.1.3.
+
+**2026-07-18 — Flag retirement: five surfaces made permanent (PRD §5.6 amendment)**
+
+Seven flags deleted from code after parity sign-off; the surfaces are now always on with no
+legacy fallback and no Clinic Setup toggle: Communications Hub (`communications_hub_enable`),
+Patient Registry (`enable_patient_registry` — reception Finder hide now role-based only),
+Office Notes (`enable_office_notes`), S1 Scheduling & Flow (`enable_scheduling_redesign` —
+sole remaining gate is `enable_scheduled_integration`), and the native Background/History
+editor (`enable_native_history_editor` + `enable_native_history_full_form` — stock
+`history_full.php` no longer linked). The T1-F20b history-editor wrap
+(`enable_history_editor_wrap`) was **deleted outright** — service, injector, gate, template,
+CSS, scripts, tests, and e2e spec. Verified: `composer verify:new-clinic` PASS, 1204 PHPUnit +
+874 Vitest green, live HTTP smokes incl. a history save round-trip. PRD → v1.20.55; companion
+specs bumped (scheduling 0.2.7, registry 0.2.3, page designs 0.6.53, medical history 0.2.1,
+full history form 0.5.0).
 
 **2026-07-12 — GAP-D / D3 native procedure-order form shipped (W2 top slice) — full native form behind `enable_native_proc_order` (OFF); browser sign-off pending**
 

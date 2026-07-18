@@ -417,7 +417,7 @@ Cohort extracts for clinical leads — **without** the 1,000-line `clinical_repo
 | **Prescriptions written** | `prescriptions_report` | Rx volume by drug — audits prescribing patterns |
 | **Referrals sent** | `referrals_report` + `new_referral_meta` when M11 ON | Outbound referrals by destination |
 | **New patients registered** | `patient_list_creation` | Registrations by user, date — overlaps M7 data quality; link |
-| **Patient cohort export** | `patient_list` (aggregate) | **M16 only** — periodic facility-wide list; for interactive filters + CSV use **M10 Patient Registry** (**D-COHORT-10**); hub card may deep-link to M10 with preset when `enable_patient_registry` = 1 |
+| **Patient cohort export** | `patient_list` (aggregate) | **M16 only** — periodic facility-wide list; for interactive filters + CSV use **M10 Patient Registry** (**D-COHORT-10**); hub card may deep-link to M10 with preset (Registry always on since 2026-07-18) |
 
 ### 10.3 Simplified filter bar (replaces stock first screen)
 

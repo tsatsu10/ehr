@@ -83,7 +83,7 @@ Stock horizontal nav (`standard.json`) vs MRD v0.2:
 | Stock menu item | MRD home (v0.2) | Chart Depth gap |
 |-----------------|-----------------|-----------------|
 | Dashboard | MRD itself | — |
-| History | Clinical → **Background** (§8.9) | **T1-F20** read summary + **Edit history** → stock editor (`history_full.php`) V1; **T1-F20b** T1 shell when `enable_history_editor_wrap` = 1 — [MEDICAL_HISTORY_BACKGROUND](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) |
+| History | Clinical → **Background** (§8.9) | **T1-F20** read summary + **Edit history** → **native drawer** (D-HIST-9/10, permanent since 2026-07-18; stock editor + T1-F20b wrap retired) — [MEDICAL_HISTORY_BACKGROUND](./NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) |
 | Assessments / SDOH | Clinical → **Background** (SDOH chips when enabled, MRD §8.9) + **This visit** for encounter questionnaires | SDOH in PAGE_DESIGNS §4.14 Background row; stock **Assessments (SDOH)** horizontal nav hidden when B7 + T1-F06 (MRD §8.2) |
 | Report | Visits **View documentation** + **Export visit summary** (CDc) + ⋯ Classic | **M11-F05/F06** export builder — [PATIENT_CLINICAL_EXPORT](./NEW_CLINIC_V1_PATIENT_CLINICAL_EXPORT_REDESIGN.md); pilot **M11-F11** wrapper |
 | Documents | Profile → **Documents & ID** | Core document list OK; needs T1 chrome + mobile scan flow |

@@ -15,7 +15,7 @@ php interface/modules/custom_modules/oe-module-new-clinic/acl/seed_pilot_users.p
 cd frontend && npm run build
 ```
 
-Requires M4 P0 doctor desk + `consult_shortcut_preflight`. Enables `enable_clinical_doc_hub` + screening lens.
+Requires M4 P0 doctor desk + `consult_shortcut_preflight`. The hub is always on since 2026-07-18; the script enables the screening lens.
 
 E2E smoke (PRD DOC-1/3 subset):
 

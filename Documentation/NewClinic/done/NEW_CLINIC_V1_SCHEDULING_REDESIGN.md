@@ -2,8 +2,8 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 0.2.6 |
-| **Status** | **In scope for V1** (package S1 — PRD D17, §20 dual-track) |
+| **Document version** | 0.2.7 |
+| **Status** | **Built + always-on** (package S1 — PRD D17, §20 dual-track); `enable_scheduling_redesign` **retired 2026-07-18** (PRD §5.6 amendment) — the sole remaining gate is `enable_scheduled_integration`; §12's redesign-flag rows are historical |
 | **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.14), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.25), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.25), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.22), [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) (v1.0.3) |
 | **Audience** | Product, design, clinical leads, implementers, QA |
 | **Scope** | Core OpenEMR Calendar (PostCalendar), Patient Flow Board, and Recalls |
@@ -473,11 +473,11 @@ Low-risk, incremental, coexisting with legacy screens behind a toggle (G9). Alig
 | Flag | Owner / default | Role |
 |------|-----------------|------|
 | `enable_scheduled_integration` | M6-F14, **default `ON`** (PRD §6.7.1, §12.4) | **Render gate** — whether scheduling exists for this clinic at all. When OFF (walk-in-only profile), the S1 menu entry and Front Desk chips are hidden. **All S1 surfaces must evaluate `enable_scheduled_integration === ON && disable_calendar !== ON` before rendering.** Not the redesign switch. |
-| `enable_scheduling_redesign` | Module config, **default `OFF` until parity verified** | **Rollout/parity gate** — selects the redesigned S1 suite vs the legacy Calendar / Flow Board / Recall Board. Independent of the render gate; legacy screens remain reachable until parity is signed off, then hidden per §19-style config (PRD §5.4 "behind toggle until parity"). |
+| `enable_scheduling_redesign` | **Retired 2026-07-18** (PRD §5.6 amendment) | ~~Rollout/parity gate~~ Parity was signed off and the flag removed from code — the redesigned S1 suite is the only scheduling surface; the stock Calendar / Flow Board / Recall Board are no longer linked. |
 
 | Phase | Scope | Risk |
 |-------|-------|------|
-| **P1 — Shared foundation** | Scheduling shell, shared filter bar, status-pill / patient-chip / booking-sheet components, refresh utility. Behind `enable_scheduling_redesign`; legacy screens remain. | Low |
+| **P1 — Shared foundation** | Scheduling shell, shared filter bar, status-pill / patient-chip / booking-sheet components, refresh utility. *(Historical: was behind `enable_scheduling_redesign`; always on since 2026-07-18.)* | Low |
 | **P2 — Flow Board** | Kanban + modernized list, inline status advance, steady time-in-status, delta refresh, lightweight check-in (no `calendar_arrived()`). | Medium |
 | **P3 — Calendar** | Resource views + agenda, drag/drop + resize, slide-over booking, ARIA/keyboard. Backend contract unchanged. | Medium-High |
 | **P4 — Recalls** | Recall Worklist, statuses/outcomes, multi-recall + loop link, **demographic-write removal (H1)**, MedEx decoupling. | Medium |
@@ -487,7 +487,7 @@ Low-risk, incremental, coexisting with legacy screens behind a toggle (G9). Alig
 
 - **No core fork required:** ship as a module overlay providing the new pages; new persistence (recall status/outcomes, lane mapping, per-user prefs, loop link) lives in module tables. Legacy `medex_recalls` stays the messaging source of truth; new fields extend it additively.
 - **Honor §6.7 hard rules:** recall save never writes `patient_data`/consent (H1); arrivals never via `calendar_arrived()` (H2); no duplication of the `new_visit` queue (H3); never rely on core auto-encounter / `todaysEncounterCheck()` after the module created the encounter — field-only status write via `updateAppointmentStatus()` (H4 / D19); recurring appointments are chip-only for tracker writes (`pc_recurrtype != 0`).
-- **Toggle + parity:** `enable_scheduling_redesign` enables the redesigned suite per facility; legacy Calendar/Flow Board/Recall Board remain available until parity is verified, then can be hidden per §19-style config. This is **separate** from the `enable_scheduled_integration` render gate (see §12 table).
+- **Toggle + parity (closed 2026-07-18):** parity was verified and `enable_scheduling_redesign` retired — the redesigned suite is always on and the legacy screens are no longer linked. `enable_scheduled_integration` remains the only render gate (see §12 table).
 
 ---
 
@@ -501,7 +501,7 @@ Low-risk, incremental, coexisting with legacy screens behind a toggle (G9). Alig
 | SCH-4 | Lane model: fixed 5 stages vs fully admin-defined ordered lanes? | Product/Clinical | Admin-defined with a sensible 5-stage default |
 | SCH-5 | Should drag-to-reschedule notify the patient automatically (when MedEx on)? | Clinical | Explicit confirm, never silent |
 | SCH-6 | Migration of the one-per-patient recall constraint on busy installs? | Eng | Additive; backfill to single `open` recall |
-| SCH-7 | Do we retire the legacy PostCalendar templates after parity, or keep as fallback? | Eng/Product | Keep behind toggle for one release, then retire |
+| SCH-7 | ~~Do we retire the legacy PostCalendar templates after parity, or keep as fallback?~~ **Closed 2026-07-18** — parity signed off; redesign flag retired; stock scheduling screens no longer linked (still URL-reachable as break-glass) | Eng/Product | Done |
 
 ---
 
@@ -509,6 +509,7 @@ Low-risk, incremental, coexisting with legacy screens behind a toggle (G9). Alig
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.2.7 | 2026-07-18 | **Flag retirement (PRD §5.6 amendment)** — `enable_scheduling_redesign` removed from code; S1 suite always on; stock Calendar/Flow Board/Recall Board no longer linked; §12 flag table + P1 row + toggle note updated; SCH-7 closed |
 | 0.2.6 | 2026-06-24 | **Consistency audit fixes** — added hard rule **H4** to §1, G8, and §12 (anti-double-encounter / D19, was only H1–H3); §12 now names the two distinct flags — `enable_scheduled_integration` (render gate, default ON) vs `enable_scheduling_redesign` (parity/rollout gate, default OFF) — previously "a feature toggle"/"a global" unnamed |
 | 0.2.5 | 2026-06-22 | **M18 audit** — §7.2 Mode 2 check-in clarifier; §9.5 integrated M18 + Mode 1/2 boundary; companion SCHEDULING_QUEUE_BOUNDARY v0.1.2 |
 | 0.2.4 | 2026-06-22 | §9.5 cross-ref [Scheduling ↔ visit queue boundary](./NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) (M18) |

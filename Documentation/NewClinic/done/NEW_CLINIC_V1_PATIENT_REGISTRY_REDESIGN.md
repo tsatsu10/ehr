@@ -2,8 +2,8 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 0.2.2 |
-| **Status** | Audit closure — **Module M10** / **V1.1-REG**; normative product spec + build contracts; wireframes in [PAGE_DESIGNS §7.32](../NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) |
+| **Document version** | 0.2.3 |
+| **Status** | **Built + always-on** — **Module M10** / **V1.1-REG**; `enable_patient_registry` **retired 2026-07-18** (PRD §5.6 amendment) — no legacy fallback, reception Finder hide is role-based only; wireframes in [PAGE_DESIGNS §7.32](../NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) |
 | **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.49), [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (v1.0.7), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.49), [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2) |
 | **Audience** | Product, design, clinical leads, program managers, frontend engineers, QA |
 | **Scope** | Replace legacy **Patient Finder** (`dynamic_finder.php`) with a **Patient Registry** cohort-search experience — structured filters, auditable exports, Ghana-realistic defaults |
@@ -86,7 +86,7 @@ Pick patient in form     →  find_patient_popup (legacy — unchanged V1)
 | Menu path | **Clinic → Patient Registry** |
 | Page URL | `/interface/modules/custom_modules/oe-module-new-clinic/public/patient-registry.php` |
 | Page title | `Patient Registry` |
-| Legacy Finder menu (`fin0`) | Hidden for **reception roles** when `enable_patient_registry=1`; clinical roles retain Finder (**D-COHORT-5**, **D-CTX-10**) |
+| Legacy Finder menu (`fin0`) | Hidden for **reception roles** (unconditional since the 2026-07-18 flag retirement); clinical roles retain Finder (**D-COHORT-5**, **D-CTX-10**) |
 | Wireframes | [PAGE_DESIGNS §7.32](../NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) |
 
 ---
@@ -642,14 +642,14 @@ Save, update, or delete named filter in `new_cohort_saved_filter`. Clinic scope 
 
 Normative menu table: PRD **§19.8**. Summary:
 
-| Item | When `enable_patient_registry=1` |
+| Item | Behavior (always in effect since the 2026-07-18 flag retirement) |
 |------|----------------------------------|
 | **Clinic → Patient Registry** | `MenuEvent::MENU_UPDATE` for clinical + admin roles |
 | **Finder (`fin0`)** | `MENU_RESTRICT` for **reception roles only** — clinical Finder retained (**D-CTX-10**) |
 | **`#anySearchBox`** | Reception: redirect to Front Desk `?q=` when `registry_redirect_global_search=1` (M6) |
 | **Legacy URL** | `dynamic_finder.php` direct URL break-glass for all roles |
 
-Config: `$GLOBALS['enable_patient_registry']` (M6-F19, default **0**); `registry_redirect_global_search` (§12.4).
+Config: `registry_redirect_global_search` (§12.4) only — `enable_patient_registry` was retired 2026-07-18 (PRD §5.6 amendment).
 
 ---
 
@@ -738,7 +738,7 @@ flowchart LR
 | **PR-2** | M7 reporting track | Clinical filters, age at diagnosis, presets, CSV |
 | **PR-3** | Post-pilot | Lab confirmation, saved filters |
 
-**V1.1-REG** slice: `enable_patient_registry` default **0** until PR-1 ships.
+**V1.1-REG** slice: shipped; the flag was retired 2026-07-18 — the Registry is always on (PRD §5.6 amendment).
 
 ---
 
@@ -753,7 +753,7 @@ Maps to PRD **§21.1ae** tests **REG-1–REG-8** (`@new-clinic-v11-registry`; PR
 - [x] Demographics filters + pagination correct (REG-3) — `PatientRegistryPr2Test` + signoff smoke
 - [x] Facility scope defaults to current facility (REG-3) — signoff smoke
 - [x] Open chart from row (REG-4) — `registryRowActions.test.ts` (link targets); browser MANUAL rows in `registry-signoff-smoke.php` for pilot UAT
-- [x] Finder menu hidden for **reception** when flag ON; clinical Finder remains (REG-5) — signoff `REG-5-reception` / `REG-5-clinical` PASS
+- [x] Finder menu hidden for **reception** (unconditional since 2026-07-18); clinical Finder remains (REG-5) — signoff `REG-5-reception` / `REG-5-clinical` PASS
 - [x] Audit on each search (REG-6) — `RegistryAuditServiceTest`
 
 ### PR-2
@@ -795,6 +795,7 @@ Maps to PRD **§21.1ae** tests **REG-1–REG-8** (`@new-clinic-v11-registry`; PR
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.2.3 | 2026-07-18 | **Flag retirement (PRD §5.6 amendment)** — `enable_patient_registry` removed from code; Registry always on, no stock-Finder fallback redirect; §16 cutover table + config note + PR phasing + REG-5 wording updated |
 | 0.2.2 | 2026-07-09 | **Implementation audit closure** — §22 PR-1/PR-2/PR-3 acceptance ticked with evidence (`composer registry-signoff` PASS, `PatientRegistryPr2/Pr3/Pr4Test`, `CohortSavedFilterServiceTest`, `RegistryAuditServiceTest`); REG-4 browser MANUAL rows remain in signoff smoke for pilot UAT |
 | 0.2.1 | 2026-06-24 | **Audit closure** — D-COHORT-5 reception-only `fin0` hide; preset phasing PR-1/PR-2; `cohort.saved_filter`; audit events + `new_registry_search_log`; §19.8 cross-ref; REG-8; PRD v1.20.49 |
 | 0.2.0 | 2026-06-24 | **Comprehensive redesign** — OpenEMR pain points, UI/UX, EHR patterns, Ghana context; PAGE_DESIGNS §7.32; `cohort.*` AJAX; D-COHORT-1–10; REG-1–7 acceptance; PRD v1.20.48 |

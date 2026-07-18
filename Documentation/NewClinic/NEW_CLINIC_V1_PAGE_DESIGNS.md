@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| Document version | 0.6.52 |
+| Document version | 0.6.53 |
 | Status | Draft for review — aligned to PRD v1.20.50; **M1b Registration form** approved; companion specs COM + M1a **approved Phase 1**; Chart Depth §7.13–§7.16; Lab Ops §7.17–§7.20; Pharm Ops §7.21–§7.24; Bill Ops §7.25–§7.26; Admin Hub §7.27–§7.28; Report Hub §7.29; Clinical Doc Hub §7.30; Queue Bridge Hub §7.31; **Patient Registry** §7.32; **T1-F18 legacy strip** §4.11.8; M7 §7.10.18–7.10.20; **V1.1-PRINT-RX** §7.4.7 / §7.6.14 |
 | Companion to | [NEW_CLINIC_V1_PRD.md](./done/NEW_CLINIC_V1_PRD.md) (v1.20.49), [NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.49), [NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md) (v1.0.0), [NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md](./done/NEW_CLINIC_V1_LEGACY_CHART_CONTEXT_REDESIGN.md) (v0.1.2), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./done/MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.36), [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (v0.1.1), [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) (v0.2.6), [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) (v1.0.3), [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) (v0.2.1), [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) (v0.1.2), [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) (v1.0.9), [NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) (v1.0.0), [NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_CHART_DEPTH_REDESIGN.md) (v0.1.15), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.9), [NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_PHARMACY_OPERATIONS_REDESIGN.md) (v0.1.9), [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.4), [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) (v0.1.3) |
 | Audience | Product, design, frontend engineers, QA |
@@ -822,7 +822,7 @@ Past/today visit row secondary action:
 | **Edit target (V1)** | Stock **History editor** — `patient_file/history/history_full.php` (read-only view is `history.php`; not used for MRD edit) |
 | **Query param** | `return=clinical-background` on editor URL when launched from MRD |
 | **After save** | Module injects **Back to chart** in editor header (Symfony event) → `demographics.php?tab=clinical#clinical-background` same tab |
-| **V1.1 wrap** | When `enable_history_editor_wrap` = 1 (**T1-F20b**): T1 top bar + **Back to chart**; stock horizontal nav de-emphasized — [MEDICAL_HISTORY §8](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md#8-history-editor-path--stock-v1-wrapped-v11) |
+| **V1.1 wrap** | ~~T1-F20b editor wrap~~ **Deleted 2026-07-18** — the native Background editor (D-HIST-9/10) is the permanent edit path; the wrap and stock edit path are retired (PRD §5.6 amendment) — [MEDICAL_HISTORY §8](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md#8-history-editor-path--stock-v1-wrapped-v11) |
 
 #### AJAX (optional lazy sections)
 
@@ -3292,7 +3292,7 @@ Bulk import via CSV (V1.1).
 
 | Field | Default | Notes |
 |---|---|---|
-| `enable_patient_registry` | OFF | M6-F19 — **V1.1-REG**; exposes **Clinic → Patient Registry**; hides `fin0` for **reception only** (PRD §19.8) |
+| `enable_patient_registry` | **retired 2026-07-18** | M6-F19 — **V1.1-REG** always on; **Clinic → Patient Registry** always exposed; `fin0` hidden for **reception only** unconditionally (PRD §19.8, §5.6 amendment) |
 | `registry_redirect_global_search` | OFF | When ON + registry ON: reception `#anySearchBox` → Front Desk `?q=` |
 
 ### 7.9.12 Tab — Cron / jobs
@@ -3630,7 +3630,7 @@ Staff **Messages** (`pnotes`) and **Dated Reminders** in one split-pane hub. Ful
 | Route | `/interface/main/messages/messages.php` (default `?form_active=1`) |
 | ACL | `patients` → `notes` |
 | Menu | Top menu **Messages** (label unchanged); page title **Communications** |
-| Feature flag | `communications_hub_enable` — when off, legacy tabbed UI |
+| Feature flag | ~~`communications_hub_enable`~~ **retired 2026-07-18** — hub always on, no legacy fallback (PRD §5.6 amendment) |
 | Help | `Documentation/help_files/message_center_help.php` (updated Phase 1) |
 
 ### 7.12.3 Layout
@@ -3688,7 +3688,7 @@ Staff **Messages** (`pnotes`) and **Dated Reminders** in one split-pane hub. Ful
 - [ ] Split-pane Reminders with text urgency labels (COM-F02).
 - [ ] Lens counts match `hub_counts.php` (COM-F03).
 - [ ] Admin All users → read-only detail + banner (COM-F05).
-- [ ] `communications_hub_enable=0` → legacy tabs (COM-F07).
+- [x] ~~`communications_hub_enable=0` → legacy tabs (COM-F07)~~ **Obsolete** — flag retired 2026-07-18; hub always on (PRD §5.6 amendment).
 - [ ] Envelope badge = `reminders_due_5d + messages_active` (COM-F08).
 - [ ] No Recalls/SMS tabs when flag on; `?go=Recalls` still works (COM-F09).
 - [ ] CSRF on POST; 403 for unauthorized detail (COM-F11).
@@ -4990,7 +4990,7 @@ Full product spec: [PATIENT_REGISTRY_REDESIGN](./done/NEW_CLINIC_V1_PATIENT_REGI
 
 ### 7.32.1 Purpose
 
-Structured **“who matches these rules?”** search for clinical leads, nurses, and admins — demographics, conditions, visit state, exports. Replaces legacy **Finder** (`dynamic_finder.php`, `fin0`) for cohort use cases when `enable_patient_registry` = 1.
+Structured **“who matches these rules?”** search for clinical leads, nurses, and admins — demographics, conditions, visit state, exports. Replaces legacy **Finder** (`dynamic_finder.php`, `fin0`) for cohort use cases — always on since the 2026-07-18 flag retirement (PRD §5.6 amendment).
 
 ### 7.32.2 URL, ACL, app entry
 
@@ -4998,7 +4998,7 @@ Structured **“who matches these rules?”** search for clinical leads, nurses,
 |----------|-------|
 | URL | `public/patient-registry.php` |
 | Menu | **Clinic → Patient Registry** |
-| Flag | `enable_patient_registry` (M6-F19, default **0**) |
+| Flag | none — `enable_patient_registry` retired 2026-07-18; always on (PRD §5.6 amendment) |
 | Page ACL | `new_registry` or `new_admin` |
 | Core read | `patients` + `demo` |
 | Clinical filters | `med` or `new_registry_clinical` |
@@ -5156,7 +5156,7 @@ Structured **“who matches these rules?”** search for clinical leads, nurses,
 
 ### 7.32.10 Finder cutover
 
-Normative table: PRD **§19.8**. Summary when `enable_patient_registry` = 1:
+Normative table: PRD **§19.8**. Summary (always in effect since 2026-07-18):
 
 | Item | Behavior |
 |------|----------|
@@ -5390,6 +5390,7 @@ This is the consolidated QA checklist mapping every page to PRD F-IDs.
 |---------|------|---------|
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.6.53 | 2026-07-18 | **Flag retirement sync (PRD §5.6 amendment)** — comms hub, patient registry, and the history-editor wrap references updated: `communications_hub_enable` / `enable_patient_registry` retired (surfaces always on), T1-F20b wrap deleted (native D-HIST-9/10 editor permanent); §7.12 flag row, §7.32 header/flag/cutover, COM acceptance row, Background V1.1-wrap row |
 | 0.6.52 | 2026-07-14 | **Native Prescription History (M9)** — §7.6.6a `rx_list`/"Open core Rx" rows note the native `rx-history.php` (paginated, view + print only) behind `enable_native_rx_history` (default OFF), replacing stock `controller.php?prescription&list` when on; still pid-scoped, no bind |
 | 0.6.50 | 2026-06-24 | **UI/UX plan integration** — §1 companion table adds [UI_UX_DESIGN_PLAN](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md); header companion versions synced post-audit (MRD v0.2.36, S1 v0.2.6, M18 v0.1.3, LAB/PHARM v0.1.9, ADMIN v0.1.4, M1a v1.0.8, REFERRALS v0.1.2) |
 | 0.6.49 | 2026-06-24 | **M10 audit closure** — §7.32 reception-only `fin0` cutover; `cohort.saved_filter`; SEC06 limits; §7.9.11a module toggles; PRD v1.20.49 / PATIENT_REGISTRY v0.2.1 |

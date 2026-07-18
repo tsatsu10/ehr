@@ -2,8 +2,8 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 0.1.2 |
-| **Status** | Draft for review — **Doctor Desk shortcuts** spec’d in PRD M4 + PAGE_DESIGNS §4.13 / §7.4.7; **M17 Clinical Documentation Hub** integrated in PRD v1.20.35; **NG5** = no full form engine rewrite; **§22 audit pass** applied; **trilogy integrated** |
+| **Document version** | 0.1.3 |
+| **Status** | **Built + always-on** — the M17 hub is a permanent surface since **2026-07-18** (`enable_clinical_doc_hub` retired, `encounter_note_engine` removed — **native consult engine is the only engine**; PRD §5.6 amendment). The hub opens **any** encounter (encounter-only mode) and offers the **full** form registry via the clinical-form-bridge; **every flag/rollback/legacy-fallback reference in this document is historical**. **NG5** (no form-engine rewrite) still stands — the bridge is the permanent seam |
 | **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.35), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.40), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.40), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.29), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.8) |
 | **Audience** | Product, design, clinical leads, doctors, nurses, implementers, QA |
 | **Scope** | Everything about **documenting the visit** — stock OpenEMR encounter forms (~35 packaged + unlimited LBF), dynamic **Visit Forms** menu, Doctor Desk deep-links, MRD **This visit**, E-Sign gates, and clinic-specific bundles for Ghana/West Africa OPD |
@@ -544,7 +544,7 @@ When `enable_clinical_doc_hub` = 1:
 
 | Key | Default | Notes |
 |-----|---------|-------|
-| `enable_clinical_doc_hub` | `0` | Master gate — V1.1-DOC |
+| `enable_clinical_doc_hub` | **retired 2026-07-18** | Hub always on (PRD §5.6 amendment) |
 | `clinical_doc_bundle` | `ghana_opd_v1` | Appendix B |
 | `clinical_doc_show_screening` | `0` | PHQ-9/GAD-7 lens |
 | `clinical_doc_show_specialty` | `0` | eye_mag, etc. |
@@ -736,7 +736,7 @@ clinical_doc_form_open (
 | 5 | Train staff: **Open encounter** → hub; Advanced = escape hatch | USER_WORKFLOWS §14.10 |
 | 6 | Manager confirms RR-02 unsigned chase still uses M7 | G10 unchanged |
 
-**Rollback:** set `enable_clinical_doc_hub` = 0 — Visit Forms menu + `encounter_top` unchanged.
+**Rollback:** none — the flag was retired 2026-07-18; the hub is a permanent surface (PRD §5.6 amendment).
 
 ### 23.3 DR-08 — Signed note correction (canonical)
 
@@ -753,6 +753,7 @@ clinical_doc_form_open (
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.1.3 | 2026-07-18 | **Flip (PRD §5.6 amendment)** — hub permanent (`enable_clinical_doc_hub` retired) and native consult engine the only engine (`encounter_note_engine` removed); encounter-only mode for visits without a queue row; Add form offers the full registry via the bridge; both stock 302 fall-throughs deleted; header marks all flag/rollback references historical |
 | 0.1.2 | 2026-06-22 | **Trilogy integration** — PRD v1.20.35 / PAGE_DESIGNS §7.30 / USER_WORKFLOWS §14.10 / MRD §8.9; §22.3 R-DOC-01–10 closed |
 | 0.1.1 | 2026-06-22 | **Consistency audit pass** — §22; D-FORM-6–10; M17-F01–F10; preflight/ACL/M15 fixes; §20.3 DOC tests; §23 DR runbooks |
 | 0.1.0 | 2026-06-22 | Initial draft — stock forms inventory, pain points, M17 Clinical Documentation Hub IA, Ghana/West Africa bundles, competitive patterns |

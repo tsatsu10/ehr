@@ -2,9 +2,9 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 0.4.0 |
-| **Status** | **D-HIST-10a/10b/10c COMPLETE** — full native History editor (quick⇆full) live behind `enable_native_history_full_form`; **parity signed off 2026-07-15**, stock full form no longer offered when the flag is on; 10d (admin-editable lists) deferred |
-| **Feature ID** | **D-HIST-10** · flag `enable_native_history_full_form` (default OFF) |
+| **Document version** | 0.5.0 |
+| **Status** | **D-HIST-10a/10b/10c COMPLETE + PERMANENT** — full native History editor (quick⇆full) is the only edit path since **2026-07-18** (flags `enable_native_history_editor`/`_full_form` retired, PRD §5.6 amendment; parity signed off 2026-07-15); stock `history_full.php` no longer linked; the T1-F20b wrap was deleted; 10d (admin-editable lists) deferred |
+| **Feature ID** | **D-HIST-10** · flag retired 2026-07-18 (always on) |
 | **Companion to** | [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) (v0.2.0 — the read summary + the curated quick editor D-HIST-9, already built), [NEW_CLINIC_V1_PRD.md](./done/NEW_CLINIC_V1_PRD.md), [NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md) |
 | **Primary market** | Private outpatient clinics — Ghana & West Africa |
 | **Implementation** | Design/plan only — no code in this document |
@@ -191,14 +191,13 @@ Sources: [WHO-PEN readiness, Ghana](https://www.ncbi.nlm.nih.gov/pmc/articles/PM
 
 ## 5. Feature flag, rollout & parity sign-off
 
-- **Flag:** `enable_native_history_full_form` in `new_clinic_config`, **default OFF** (PRD §5.6).
-  Independent of `enable_native_history_editor` so the quick editor and full editor roll out
-  separately.
-- **Flag OFF:** the "Full history form" link opens the stock `history_full.php` exactly as today
-  (the D-HIST-9 quick editor's fallback is unchanged).
-- **Flag ON:** the drawer's "Full form" switch opens the full native editor. **The stock full form is
-  no longer offered** — parity passed, so there is no "Advanced (stock form)" escape hatch in the
-  full editor (per product decision 2026-07-15).
+- **Flag: retired 2026-07-18** (PRD §5.6 amendment). Both `enable_native_history_full_form` and
+  `enable_native_history_editor` were removed from code after parity — the native quick⇆full
+  drawer is the permanent, only edit path; the stock `history_full.php` link and the T1-F20b
+  wrap are gone. *(The two bullets below describe the pre-retirement rollout, kept for history.)*
+- ~~Flag OFF: the "Full history form" link opens the stock `history_full.php`~~ (historical).
+- **The stock full form is no longer offered** — parity passed; there is no "Advanced (stock
+  form)" escape hatch (product decision 2026-07-15, made unconditional 2026-07-18).
 - **Parity sign-off — PASSED 2026-07-15** (verified end-to-end via headless browser + live DB):
   - [x] Every native field writes the correct `history_data` column — verified round-trip
     (sickle→`usertext12`, sleep→`sleep_patterns`, BP→`userdate11`, suicide→`relatives_suicide`,
@@ -217,9 +216,9 @@ Sources: [WHO-PEN readiness, Ghana](https://www.ncbi.nlm.nih.gov/pmc/articles/PM
 
 | Phase | Deliverable |
 |-------|-------------|
-| **D-HIST-10a** | ✅ **Built** — `PatientHistoryEditorService` extended: partial-update save, WHO-PEN risk factors (`usertext15`/`16`), sleep, suicide; `isFullFormEnabled()` |
-| **D-HIST-10b** | ✅ **Built** — full native editor UI (accordion superset + risk factors + sensitive-conditions reveal) with a "Quick edit ⇆ Full form" switch; flag `enable_native_history_full_form`, wired in Admin Hub |
-| **D-HIST-10c** | ✅ **Done** — parity signed off (§5, verified via headless browser + live DB); stock "Advanced" link **removed** — the native full form is the sole full editor when the flag is on |
+| **D-HIST-10a** | ✅ **Built** — `PatientHistoryEditorService` extended: partial-update save, WHO-PEN risk factors (`usertext15`/`16`), sleep, suicide |
+| **D-HIST-10b** | ✅ **Built** — full native editor UI (accordion superset + risk factors + sensitive-conditions reveal) with a "Quick edit ⇆ Full form" switch — **always on since 2026-07-18** (flag retired; Admin Hub toggle removed) |
+| **D-HIST-10c** | ✅ **Done** — parity signed off (§5, verified via headless browser + live DB); stock "Advanced" link **removed**; **2026-07-18:** flags retired, wrap deleted — native full form is the sole full editor unconditionally |
 | **D-HIST-10d (optional, deferred)** | Region **Risk factors** and screening lists as admin-editable config, not hardcoded |
 
 ---
@@ -229,7 +228,7 @@ Sources: [WHO-PEN readiness, Ghana](https://www.ncbi.nlm.nih.gov/pmc/articles/PM
 1. **Risk factors list** — ✅ Ship a **fixed WHO-PEN-aligned starter list** (§3.5) from online research; make it admin-editable later in **D-HIST-10d**. Free-text "Other" keeps it non-lossy.
 2. **Suicide / mental-illness family history** — ✅ **Include behind an "Add more" reveal** — kept for clinical value, not front-and-centre, non-judgemental wording.
 3. **Spouse / Offspring family narrative** — ✅ **Drop** from the UI to keep the form short; existing column data preserved, just not shown.
-4. **One flag or two** — ✅ **Two flags** — `enable_native_history_editor` (quick, built) and `enable_native_history_full_form` (full, this plan) roll out independently.
+4. **One flag or two** — ✅ **Two flags** for rollout — both retired 2026-07-18 once the rollout completed (PRD §5.6 amendment).
 
 No open questions remain; the plan is ready to hand to a build session.
 
@@ -239,6 +238,7 @@ No open questions remain; the plan is ready to hand to a build session.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.5.0 | 2026-07-18 | **Flags retired (PRD §5.6 amendment)** — `enable_native_history_editor` + `enable_native_history_full_form` removed from code; native quick⇆full drawer is the permanent, only edit path; stock `history_full.php` no longer linked; T1-F20b wrap deleted; §5 rollout bullets marked historical; decision 4 closed |
 | 0.4.0 | 2026-07-15 | **D-HIST-10c parity signed off** — verified end-to-end (native writes → correct columns; stock-only fields untouched by native save; stock→native read; ACL; 360px). Stock "Advanced (stock form)" link **removed** — native full form is the sole full editor when the flag is on |
 | 0.3.0 | 2026-07-15 | **D-HIST-10a/10b built** — full native editor (quick⇆full switch, WHO-PEN risk factors in `usertext15`/`16`, sleep, sensitive-conditions reveal, partial-update save) behind `enable_native_history_full_form`; Admin Hub toggle; corrected risk-factor storage columns (not stock `usertext11`) |
 | 0.2.0 | 2026-07-15 | Open questions resolved: WHO-PEN risk-factor starter list (§3.5, online research); suicide/mental-illness family history behind "Add more"; spouse/offspring dropped; two independent flags. Backend + phasing updated to match |
