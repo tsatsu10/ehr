@@ -101,6 +101,7 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
         'admin.setup.unmark_item',
         'admin.setup.complete',
         'admin.setup.reopen',
+        'admin.setup.provision_staff',
         'admin.config.export',
         'admin.config.import',
         'admin.patient_import.chunk',
@@ -891,6 +892,28 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                         $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
                     );
                     $this->host->respond(true, 'Setup reopened', $payload);
+                    break;
+                case 'admin.setup.provision_staff':
+                    if ($method !== 'POST') {
+                        $this->host->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->host->readJsonBody();
+                    $this->host->verifyCsrf($body);
+                    $scope = strtolower(trim((string) ($body['scope'] ?? 'facility')));
+                    if ($scope !== 'global') {
+                        $scope = 'facility';
+                    }
+                    $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    try {
+                        $payload = $this->host->svc(ClinicAdminService::class)->provisionSetupStaff(
+                            $scope,
+                            $userId,
+                            $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
+                        );
+                        $this->host->respond(true, 'Starter sign-ins created', $payload);
+                    } catch (\InvalidArgumentException $e) {
+                        $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
+                    }
                     break;
                 case 'admin.config.export':
                     $scope = strtolower(trim((string) ($_REQUEST['scope'] ?? 'facility')));

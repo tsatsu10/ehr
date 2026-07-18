@@ -347,6 +347,19 @@ export interface SetupProgressPayload {
   can_mark_complete: boolean;
 }
 
+export interface StaffProvisionCreated {
+  role: string;
+  role_label: string;
+  username: string;
+  /** Shown ONCE — never persisted or refetchable. */
+  temp_password?: string;
+}
+
+export interface StaffProvisionResult {
+  created: StaffProvisionCreated[];
+  already_present: string[];
+}
+
 export interface ConfigExportMeta {
   can_export: boolean;
   blocked_reason?: string | null;
@@ -423,6 +436,7 @@ export interface AdminConfigPayload {
   system_health?: SystemHealthPayload;
   runbooks?: RunbooksPayload;
   setup_progress?: SetupProgressPayload;
+  staff_provision_result?: StaffProvisionResult;
   config_export?: ConfigExportMeta;
   config_export_snapshot?: Record<string, unknown>;
   config_import_result?: ConfigImportResult;

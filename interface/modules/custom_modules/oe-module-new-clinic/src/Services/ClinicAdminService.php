@@ -87,7 +87,6 @@ class ClinicAdminService
         'require_esign_before_complete_consult' => ['type' => 'bool', 'default' => '0'],
         'enforce_completion_on_revisit' => ['type' => 'bool', 'default' => '1'],
         'enable_shared_device_session_warning' => ['type' => 'bool', 'default' => '0'],
-        'enable_history_editor_wrap' => ['type' => 'bool', 'default' => '0'],
         'enable_faster_queue_interrupts' => ['type' => 'bool', 'default' => '0'],
         'faster_queue_interrupt_poll_seconds' => ['type' => 'int', 'default' => '10', 'min' => 10, 'max' => 30],
         'enable_similar_surname_queue_warning' => ['type' => 'bool', 'default' => '0'],
@@ -159,8 +158,6 @@ class ClinicAdminService
         'enable_native_backup' => ['type' => 'bool', 'default' => '0'],
         'enable_duplicate_review' => ['type' => 'bool', 'default' => '0'],
         'enable_native_issue_editor' => ['type' => 'bool', 'default' => '0'],
-        'enable_native_history_editor' => ['type' => 'bool', 'default' => '0'],
-        'enable_native_history_full_form' => ['type' => 'bool', 'default' => '0'],
         'enable_native_immunization_editor' => ['type' => 'bool', 'default' => '0'],
         'enable_native_referral_editor' => ['type' => 'bool', 'default' => '0'],
         'enable_native_certificate' => ['type' => 'bool', 'default' => '0'],
@@ -204,6 +201,7 @@ class ClinicAdminService
         private readonly AdminHealthService $healthService = new AdminHealthService(),
         private readonly AdminRunbookService $runbooks = new AdminRunbookService(),
         private readonly AdminSetupProgressService $setupProgress = new AdminSetupProgressService(),
+        private readonly AdminStaffProvisionService $staffProvision = new AdminStaffProvisionService(),
         private readonly AdminConfigExportService $configExport = new AdminConfigExportService(),
         private readonly AdminConfigImportService $configImport = new AdminConfigImportService(),
         private readonly CompletionFieldWeightAdminService $completionFieldWeights = new CompletionFieldWeightAdminService(),
@@ -510,6 +508,24 @@ class ClinicAdminService
         return array_merge(
             $this->getSettingsPayload($scope, $requestedFacilityId),
             ['setup_progress' => $progress]
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function provisionSetupStaff(
+        string $scope,
+        int $actorUserId,
+        ?int $requestedFacilityId = null
+    ): array {
+        $facilityId = $this->resolveSettingsFacilityId($scope, $requestedFacilityId);
+        $this->assertAdminHubEnabled($facilityId);
+        $result = $this->staffProvision->provisionMissing($facilityId, $actorUserId);
+
+        return array_merge(
+            $this->getSettingsPayload($scope, $requestedFacilityId),
+            ['staff_provision_result' => $result]
         );
     }
 

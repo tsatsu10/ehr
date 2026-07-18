@@ -2,6 +2,7 @@ import type {
   AdminTabId,
   RunbooksPayload,
   SetupProgressPayload,
+  StaffProvisionResult,
   SystemHealthPayload,
 } from '../adminTypes';
 import { RunbooksBoard } from '../RunbooksBoard';
@@ -47,6 +48,10 @@ interface SystemTabProps {
   onMarkSetupComplete: () => void;
   onReopenSetup: () => void;
   onNavigateTab: (tab: AdminTabId) => void;
+  onProvisionStaff: () => void;
+  staffProvisioning: boolean;
+  staffProvisionResult: StaffProvisionResult | null;
+  onDismissStaffProvisionResult: () => void;
 }
 
 export function SystemTab({
@@ -73,6 +78,10 @@ export function SystemTab({
   onMarkSetupComplete,
   onReopenSetup,
   onNavigateTab,
+  onProvisionStaff,
+  staffProvisioning,
+  staffProvisionResult,
+  onDismissStaffProvisionResult,
   onRunReconciliation,
   onRunBackup,
   onCompleteBackup,
@@ -98,6 +107,10 @@ export function SystemTab({
         onMarkComplete={onMarkSetupComplete}
         onReopen={onReopenSetup}
         onNavigateTab={onNavigateTab}
+        onProvisionStaff={onProvisionStaff}
+        provisioning={staffProvisioning}
+        provisionResult={staffProvisionResult}
+        onDismissProvisionResult={onDismissStaffProvisionResult}
       />
       <SystemHealthBoard
         ajaxUrl={ajaxUrl}

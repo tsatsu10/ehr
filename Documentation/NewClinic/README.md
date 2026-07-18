@@ -6,9 +6,9 @@ Private outpatient clinic layer for OpenEMR. **Primary market:** West Africa. **
 
 Read in this order for a full picture:
 
-1. **[NEW_CLINIC_V1_PRD.md](./done/NEW_CLINIC_V1_PRD.md)** — What we build (requirements, modules M0–M18, ACL, data model) — **v1.20.53**
+1. **[NEW_CLINIC_V1_PRD.md](./done/NEW_CLINIC_V1_PRD.md)** — What we build (requirements, modules M0–M18, ACL, data model) — **v1.20.55** (§5.6 amendment: 2026-07-18 flag retirement — seven flags removed, surfaces permanent)
 2. **[NEW_CLINIC_V1_USER_WORKFLOWS.md](./NEW_CLINIC_V1_USER_WORKFLOWS.md)** — How staff work day-to-day (v1.9.50)
-3. **[NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md)** — What each screen looks like (wireframes, AJAX) (v0.6.52)
+3. **[NEW_CLINIC_V1_PAGE_DESIGNS.md](./NEW_CLINIC_V1_PAGE_DESIGNS.md)** — What each screen looks like (wireframes, AJAX) (v0.6.53)
 
 **UI/UX entry point:** **[NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md](./NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md)** (v2.0.0) — start at **§0 TL;DR** for 60-second orientation. Full rewrite: trunk-test IA, single component reference with contract template, interaction-state taxonomy, scoring rubric, and phased **shadcn/ui migration plan (§9)**. PAGE_DESIGNS remains normative for per-page build detail.
 
@@ -28,18 +28,18 @@ Read in this order for a full picture:
 | [NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md](./done/NEW_CLINIC_V1_BILLING_AR_BACKOFFICE_REDESIGN.md) | M14 Billing Back Office | Draft v0.1.3 |
 | [NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_SEARCH_REDESIGN.md) | M1a | **Implementation-closed v1.0.10** (archived in done/) |
 | [NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md](./done/NEW_CLINIC_V1_FRONT_DESK_REGISTRATION_REDESIGN.md) | M1b / M1c | Approved v1.0.0 — 4-section desk form; supersedes L1-only Quick Add |
-| [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) | COM | **Built v1.0.5** — Phase 1 complete + premium chat UI (COMHUB completion plan); **always-on** since 2026-07-18 flag graduation |
-| [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) | S1 | Draft v0.2.6 |
-| [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) | M10 Patient Registry / cohort search | **Implementation-closed v0.2.2** (archived in done/) · [PAGE_DESIGNS §7.32](./NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) · **V1.1-REG** |
-| [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) | M6 + M15 Admin Hub | Draft v0.1.5 — M15-F11 setup checklist completed (SETUP-1..6) |
+| [NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md](./done/NEW_CLINIC_V1_COMMUNICATIONS_HUB_REDESIGN.md) | COM | **Built v1.0.7** — Phase 1 complete + premium chat UI (COMHUB completion plan) + quick replies + log CSV export; **always-on** since 2026-07-18 flag retirement (PRD §5.6 amendment) |
+| [NEW_CLINIC_V1_SCHEDULING_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_REDESIGN.md) | S1 | **Built + always-on v0.2.7** (redesign flag retired 2026-07-18; gate is `enable_scheduled_integration`) |
+| [NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REGISTRY_REDESIGN.md) | M10 Patient Registry / cohort search | **Always-on v0.2.3** (flag retired 2026-07-18) · [PAGE_DESIGNS §7.32](./NEW_CLINIC_V1_PAGE_DESIGNS.md#732-patient-registryphp--patient-registry) · **V1.1-REG** |
+| [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) | M6 + M15 Admin Hub | Draft v0.1.6 — M15-F11 setup checklist completed (SETUP-1..6) + starter staff provisioning |
 | [NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md](./done/NEW_CLINIC_V1_REPORTING_OPERATIONS_REDESIGN.md) | M7 + M16 Reporting Hub | **Implementation-closed v0.1.4** (archived in done/) |
 | [NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md](./done/NEW_CLINIC_V1_CLINICAL_DOCUMENTATION_REDESIGN.md) | M4 + M17 Clinical Documentation Hub | Draft v0.1.2 |
 | [NEW_CLINIC_V1_ENCOUNTER_FORM_HIGH_LEVEL_FACILITY_REDESIGN.md](./new/NEW_CLINIC_V1_ENCOUNTER_FORM_HIGH_LEVEL_FACILITY_REDESIGN.md) | **Encounter consult form** — high-level / referral-hospital tier (native React target) | Draft v0.1.7 |
 | [NEW_CLINIC_V1_SCREENING_QUESTIONNAIRES_REDESIGN.md](./new/NEW_CLINIC_V1_SCREENING_QUESTIONNAIRES_REDESIGN.md) | **Screening questionnaires** — native PHQ-9 / GAD-7 scored screeners on the M17 Screening lens (BUILT, **native default no flag**; stock FHIR/LForms "Questionnaires" card removed from the lens) | Built v0.2.0 |
 | [NEW_CLINIC_V1_CERTIFICATE_EYE_EXAM_REDESIGN.md](./new/NEW_CLINIC_V1_CERTIFICATE_EYE_EXAM_REDESIGN.md) | **Medical certificate + Eye exam** — numbered, auditable excuse-duty certificate with letterhead print + verify-by-number (replaces the thin fraud-prone stock note form), and a WHO-primary-care-level eye exam (R/L chips, 6/x acuity, refer bridge, optional spectacle Rx — replaces the ~16-table stock `eye_mag`); flags `enable_native_certificate` / `enable_native_eye_exam` | Draft v0.1.0 |
 | [NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md](./done/NEW_CLINIC_V1_SCHEDULING_QUEUE_BOUNDARY_REDESIGN.md) | M18 Queue Bridge Hub (scheduling ↔ visit queue) | Draft v0.1.3 |
-| [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) | Clinical → Background / History & Lifestyle (T1-F20 read · D-HIST-9 native quick editor built) | Draft v0.2.0 |
-| [NEW_CLINIC_V1_FULL_HISTORY_FORM_REDESIGN.md](./NEW_CLINIC_V1_FULL_HISTORY_FORM_REDESIGN.md) | Full History form — native replacement of stock `history_full.php` (D-HIST-10 **built + parity signed off**; stock form retired when flag on) | v0.4.0 |
+| [NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md](./done/NEW_CLINIC_V1_MEDICAL_HISTORY_BACKGROUND_REDESIGN.md) | Clinical → Background / History & Lifestyle (T1-F20 read · D-HIST-9 native editor **permanent since 2026-07-18**; T1-F20b wrap deleted) | v0.2.1 |
+| [NEW_CLINIC_V1_FULL_HISTORY_FORM_REDESIGN.md](./NEW_CLINIC_V1_FULL_HISTORY_FORM_REDESIGN.md) | Full History form — native replacement of stock `history_full.php` (D-HIST-10 **permanent since 2026-07-18** — flags retired, stock form no longer linked) | v0.5.0 |
 | [NEW_CLINIC_V1_IMMUNIZATION_REDESIGN.md](./NEW_CLINIC_V1_IMMUNIZATION_REDESIGN.md) | Immunizations — native editor (Ghana EPI vaccine set) replacing stock `immunizations.php` edit (D-IMM-1, **built**) | v0.1.0 |
 | [NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_PAYMENT_HISTORY_REDESIGN.md) | Patient payment history / Ledger (M11-F11 wrapper · V1.1-CDa) | Audit closure v0.1.1 |
 | [NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md](./done/NEW_CLINIC_V1_PATIENT_REFERRALS_LETTERS_REDESIGN.md) | Patient referrals & letters / Transactions (M11-F11 wrapper · V1.1-CDb) | **Implementation-closed v0.1.3** (archived in done/) |

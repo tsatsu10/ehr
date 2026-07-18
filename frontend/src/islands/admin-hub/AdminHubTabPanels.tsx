@@ -16,6 +16,7 @@ import type {
   ReferralHospitalLbfPackStatus,
   RunbooksPayload,
   SetupProgressPayload,
+  StaffProvisionResult,
   SystemHealthPayload,
   FeeScheduleRow,
   VisitTypeRow,
@@ -104,6 +105,10 @@ export interface AdminHubTabPanelsProps {
   onMarkSetupComplete: () => void;
   onReopenSetup: () => void;
   onNavigateTab: (tab: AdminTabId) => void;
+  onProvisionStaff: () => void;
+  staffProvisioning: boolean;
+  staffProvisionResult: StaffProvisionResult | null;
+  onDismissStaffProvisionResult: () => void;
   onAddVisitType: () => void;
   onEditVisitType: (row: VisitTypeRow) => void;
   onArchiveVisitType: (row: VisitTypeRow) => void;
@@ -191,6 +196,10 @@ export function AdminHubTabPanels({
   onMarkSetupComplete,
   onReopenSetup,
   onNavigateTab,
+  onProvisionStaff,
+  staffProvisioning,
+  staffProvisionResult,
+  onDismissStaffProvisionResult,
   onAddVisitType,
   onEditVisitType,
   onArchiveVisitType,
@@ -327,6 +336,10 @@ export function AdminHubTabPanels({
             onMarkSetupComplete={onMarkSetupComplete}
             onReopenSetup={onReopenSetup}
             onNavigateTab={onNavigateTab}
+            onProvisionStaff={onProvisionStaff}
+            staffProvisioning={staffProvisioning}
+            staffProvisionResult={staffProvisionResult}
+            onDismissStaffProvisionResult={onDismissStaffProvisionResult}
           />
         ) : (
           <AdminEmptyState

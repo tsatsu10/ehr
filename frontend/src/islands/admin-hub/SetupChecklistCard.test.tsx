@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+﻿import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { SetupChecklistCard } from './SetupChecklistCard';
 import type { SetupProgressPayload } from './adminTypes';
@@ -47,7 +47,11 @@ const handlers = () => ({
   onMarkComplete: vi.fn(),
   onReopen: vi.fn(),
   onNavigateTab: vi.fn(),
+  onProvisionStaff: vi.fn(),
+  onDismissProvisionResult: vi.fn(),
 });
+
+const idleProvision = { provisioning: false, provisionResult: null };
 
 describe('SetupChecklistCard', () => {
   it('explains the completion threshold before it is reached', () => {
@@ -57,6 +61,7 @@ describe('SetupChecklistCard', () => {
         markingKey={null}
         completing={false}
         reopening={false}
+        {...idleProvision}
         {...handlers()}
       />,
     );
@@ -73,6 +78,7 @@ describe('SetupChecklistCard', () => {
         markingKey={null}
         completing={false}
         reopening={false}
+        {...idleProvision}
         {...h}
       />,
     );
@@ -89,6 +95,7 @@ describe('SetupChecklistCard', () => {
         markingKey={null}
         completing={false}
         reopening={false}
+        {...idleProvision}
         {...h}
       />,
     );
@@ -108,6 +115,7 @@ describe('SetupChecklistCard', () => {
         markingKey={null}
         completing={false}
         reopening={false}
+        {...idleProvision}
         {...h}
       />,
     );
@@ -119,5 +127,66 @@ describe('SetupChecklistCard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Reopen setup/i }));
     expect(h.onReopen).toHaveBeenCalled();
+  });
+
+  it('creates starter sign-ins via confirm from the staff row', () => {
+    const h = handlers();
+    const withStaff = {
+      ...baseProgress,
+      items: [
+        ...baseProgress.items,
+        {
+          key: 'staff_accounts',
+          label: 'Staff sign-ins created (admin, reception, doctor)',
+          weight: 15,
+          completed: false,
+          manual: true,
+          ticked: false,
+          hint: 'Open People & access.',
+          link_tab: 'people',
+        },
+      ],
+    };
+    render(
+      <SetupChecklistCard
+        progress={withStaff}
+        markingKey={null}
+        completing={false}
+        reopening={false}
+        {...idleProvision}
+        {...h}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create starter sign-ins' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create sign-ins' }));
+    expect(h.onProvisionStaff).toHaveBeenCalled();
+  });
+
+  it('shows the one-time credentials until dismissed', () => {
+    const h = handlers();
+    render(
+      <SetupChecklistCard
+        progress={baseProgress}
+        markingKey={null}
+        completing={false}
+        reopening={false}
+        provisioning={false}
+        provisionResult={{
+          created: [
+            { role: 'new_reception', role_label: 'Reception', username: 'reception', temp_password: 'Abcd2345efgh' },
+          ],
+          already_present: ['Doctor'],
+        }}
+        {...h}
+      />,
+    );
+
+    expect(screen.getByText(/shown only once/i)).toBeInTheDocument();
+    expect(screen.getByText('reception')).toBeInTheDocument();
+    expect(screen.getByText('Abcd2345efgh')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /I have written these down/i }));
+    expect(h.onDismissProvisionResult).toHaveBeenCalled();
   });
 });

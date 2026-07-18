@@ -29,6 +29,7 @@ import type {
   FormsCatalogPayload,
   RunbooksPayload,
   SetupProgressPayload,
+  StaffProvisionResult,
   ConfigExportMeta,
   ConfigImportResult,
   CompletionFieldWeightPayload,
@@ -124,6 +125,8 @@ export function AdminHub({
   const [setupMarkingKey, setSetupMarkingKey] = useState<string | null>(null);
   const [setupCompleting, setSetupCompleting] = useState(false);
   const [setupReopening, setSetupReopening] = useState(false);
+  const [staffProvisioning, setStaffProvisioning] = useState(false);
+  const [staffProvisionResult, setStaffProvisionResult] = useState<StaffProvisionResult | null>(null);
   const [backupRunning, setBackupRunning] = useState(false);
   const [backupCompleting, setBackupCompleting] = useState(false);
   const [healthRefreshing, setHealthRefreshing] = useState(false);
@@ -809,6 +812,26 @@ export function AdminHub({
     }
   }, [applyPayload, facilityId, fetchOptions, scope]);
 
+  const provisionSetupStaff = useCallback(async () => {
+    setStaffProvisioning(true);
+    setErrorMessage(null);
+    try {
+      const data = await oeFetch<AdminConfigPayload>('admin_hub.setup_provision_staff', {
+        ...fetchOptions,
+        json: {
+          scope,
+          facility_id: facilityId,
+        },
+      });
+      applyPayload(data);
+      setStaffProvisionResult(data.staff_provision_result ?? null);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Could not create starter sign-ins');
+    } finally {
+      setStaffProvisioning(false);
+    }
+  }, [applyPayload, facilityId, fetchOptions, scope]);
+
   // Jump target for the header Setup chip + the "finish setting up" banner.
   // Goes through handleTabChange so the ?tab= URL stays truthful.
   const goToSetupChecklist = useCallback(() => {
@@ -1270,6 +1293,10 @@ export function AdminHub({
             onReopenSetup={() => { void reopenSetup(); }}
             setupReopening={setupReopening}
             onNavigateTab={handleTabChange}
+            onProvisionStaff={() => { void provisionSetupStaff(); }}
+            staffProvisioning={staffProvisioning}
+            staffProvisionResult={staffProvisionResult}
+            onDismissStaffProvisionResult={() => setStaffProvisionResult(null)}
             onAddVisitType={() => openVisitTypeModal(null)}
             onEditVisitType={(row) => openVisitTypeModal(row)}
             onArchiveVisitType={(row) => setPendingConfirm({ type: 'archive_visit_type', row })}

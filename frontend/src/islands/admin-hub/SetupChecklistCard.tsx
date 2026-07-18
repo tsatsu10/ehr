@@ -1,7 +1,10 @@
+import { useState, type ReactNode } from 'react';
 import { CheckCircle2, Circle, ListChecks } from 'lucide-react';
 import { Button } from '@components/ui/button';
+import { ConfirmModal } from '@components/ConfirmModal';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { t } from '@core/i18n';
-import type { AdminTabId, SetupProgressItem, SetupProgressPayload } from './adminTypes';
+import type { AdminTabId, SetupProgressItem, SetupProgressPayload, StaffProvisionResult } from './adminTypes';
 import { ADMIN_TABS } from './adminTypes';
 import { AdminSection } from './adminUi';
 
@@ -18,6 +21,12 @@ interface SetupChecklistCardProps {
   onReopen: () => void;
   /** "Take me there" navigation for items whose work lives on another tab. */
   onNavigateTab: (tab: AdminTabId) => void;
+  /** Creates sign-ins for the missing core roles (reception, doctor). */
+  onProvisionStaff: () => void;
+  provisioning: boolean;
+  /** One-time result with temp passwords — shown until dismissed, never refetchable. */
+  provisionResult: StaffProvisionResult | null;
+  onDismissProvisionResult: () => void;
 }
 
 function isAdminTab(value: string | null | undefined): value is AdminTabId {
@@ -39,9 +48,67 @@ export function SetupChecklistCard({
   onMarkComplete,
   onReopen,
   onNavigateTab,
+  onProvisionStaff,
+  provisioning,
+  provisionResult,
+  onDismissProvisionResult,
 }: SetupChecklistCardProps) {
+  const [provisionConfirmOpen, setProvisionConfirmOpen] = useState(false);
   const threshold = progress.score_threshold ?? 70;
   const remaining = progress.items.filter((item) => !item.completed);
+
+  const provisionResultPanel = provisionResult && (
+    <div className={deskCalloutClass('warn', 'mb-3 text-sm')} role="alert">
+      {provisionResult.created.length ? (
+        <>
+          <p className="mb-2 font-semibold">
+            {t('Write these down now — the temporary passwords are shown only once.')}
+          </p>
+          <ul className="mb-2 list-none p-0">
+            {provisionResult.created.map((row) => (
+              <li key={row.role} className="mb-1">
+                <strong>{row.role_label}</strong>
+                {' — '}
+                {t('sign-in')} <code className="font-mono">{row.username}</code>
+                {row.temp_password && (
+                  <>
+                    {' · '}
+                    {t('password')} <code className="font-mono">{row.temp_password}</code>
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="mb-2 text-[var(--oe-nc-text-muted)]">
+            {t('Ask each person to sign in and change their password from My profile.')}
+          </p>
+        </>
+      ) : (
+        <p className="mb-2">{t('Every role already has a sign-in — nothing was created.')}</p>
+      )}
+      <Button type="button" variant="outline" size="sm" onClick={onDismissProvisionResult}>
+        {provisionResult.created.length ? t('I have written these down') : t('OK')}
+      </Button>
+    </div>
+  );
+
+  const provisionConfirm = (
+    <ConfirmModal
+      open={provisionConfirmOpen}
+      onClose={() => setProvisionConfirmOpen(false)}
+      title={t('Create starter sign-ins?')}
+      modalId="nc-admin-provision-staff-modal"
+      confirmLabel={t('Create sign-ins')}
+      onConfirm={() => {
+        setProvisionConfirmOpen(false);
+        onProvisionStaff();
+      }}
+    >
+      <p className="mb-0">
+        {t('This creates a sign-in for each core role that has none yet (reception, doctor), with a temporary password shown once. You stay the admin.')}
+      </p>
+    </ConfirmModal>
+  );
 
   if (progress.setup_complete) {
     return (
@@ -75,6 +142,7 @@ export function SetupChecklistCard({
             {t('Scoring: {scope}', { scope: scopeLabel })}
           </p>
         )}
+        {provisionResultPanel}
         {remaining.length ? (
           <ul className="m-0 list-none p-0">
             {remaining.map((item) => (
@@ -85,6 +153,19 @@ export function SetupChecklistCard({
                 onMark={() => onMarkItem(item.key)}
                 onUnmark={() => onUnmarkItem(item.key)}
                 onNavigateTab={onNavigateTab}
+                extraAction={item.key === 'staff_accounts' ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="ml-2 shrink-0"
+                    disabled={provisioning}
+                    aria-busy={provisioning}
+                    onClick={() => setProvisionConfirmOpen(true)}
+                  >
+                    {provisioning ? t('Creating…') : t('Create starter sign-ins')}
+                  </Button>
+                ) : undefined}
               />
             ))}
           </ul>
@@ -93,6 +174,7 @@ export function SetupChecklistCard({
             {t('This clinic is ready for day-to-day operations.')}
           </p>
         )}
+        {provisionConfirm}
       </AdminSection>
     );
   }
@@ -143,6 +225,8 @@ export function SetupChecklistCard({
         </p>
       )}
 
+      {provisionResultPanel}
+
       <ul className="m-0 list-none p-0">
         {progress.items.map((item) => (
           <SetupChecklistRow
@@ -152,9 +236,23 @@ export function SetupChecklistCard({
             onMark={() => onMarkItem(item.key)}
             onUnmark={() => onUnmarkItem(item.key)}
             onNavigateTab={onNavigateTab}
+            extraAction={item.key === 'staff_accounts' && !item.completed ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="ml-2 shrink-0"
+                disabled={provisioning}
+                aria-busy={provisioning}
+                onClick={() => setProvisionConfirmOpen(true)}
+              >
+                {provisioning ? t('Creating…') : t('Create starter sign-ins')}
+              </Button>
+            ) : undefined}
           />
         ))}
       </ul>
+      {provisionConfirm}
     </AdminSection>
   );
 }
@@ -165,12 +263,14 @@ function SetupChecklistRow({
   onMark,
   onUnmark,
   onNavigateTab,
+  extraAction,
 }: {
   item: SetupProgressItem;
   marking: boolean;
   onMark: () => void;
   onUnmark: () => void;
   onNavigateTab: (tab: AdminTabId) => void;
+  extraAction?: ReactNode;
 }) {
   // The card only renders on the System tab, so a "take me there" link to
   // the System tab itself would be noise — the hint already says "below".
@@ -212,6 +312,7 @@ function SetupChecklistRow({
           </div>
         )}
       </div>
+      {extraAction}
       {item.manual && !item.completed && (
         <Button
           type="button"
