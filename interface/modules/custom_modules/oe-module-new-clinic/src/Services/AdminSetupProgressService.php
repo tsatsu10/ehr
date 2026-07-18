@@ -186,7 +186,11 @@ class AdminSetupProgressService
         ));
         $reconcileRun = $this->reconciliation->getLatestRun($facilityId);
         $health ??= $this->health->getHealthStatus($facilityId);
-        $backupOk = $this->healthChipOk($health, 'backup');
+        // H3(i) — "tested" must mean tested: the health chip alone can be "ok" off
+        // a self-reported "Mark backup complete" click with no artifact at all
+        // (H3). The checklist gate instead requires a real native backup that has
+        // actually been decrypted and read back as a database dump at least once.
+        $backupOk = (bool) ($health['backup_verified_native_run'] ?? false);
         // A real signal, not a config-flag guess: the health cron chip is only
         // "ok" when a scheduled reconciliation run actually completed recently.
         // (The old check keyed off two flags that BOTH default to on, so every
@@ -248,7 +252,7 @@ class AdminSetupProgressService
                 'completed' => isset($manual['cron_configured']) || $cronOk,
                 'manual' => true,
                 'ticked' => isset($manual['cron_configured']),
-                'hint' => xl('Ask the person who set up the server to schedule the OpenEMR background service. This ticks itself after the first overnight run — pressing Run reconcile now does not count, because a manual run does not prove the schedule works.'),
+                'hint' => xl('Ask the person who set up the server to schedule the OpenEMR background service AND the New Clinic job worker (scripts/run-jobs.php) — see the "Schedule automatic backups" runbook below for the exact command. This ticks itself after the first overnight run — pressing Run reconcile now does not count, because a manual run does not prove the schedule works.'),
                 'link_tab' => null,
             ],
             [
@@ -262,11 +266,11 @@ class AdminSetupProgressService
             ],
             [
                 'key' => 'backup_test',
-                'label' => xl('Backup tested'),
+                'label' => xl('Backup tested (verified restorable)'),
                 'weight' => 10,
                 'completed' => $backupOk,
                 'manual' => false,
-                'hint' => xl('Press Run backup in System health below.'),
+                'hint' => xl('Turn on native encrypted backup, press Run backup, then press Verify latest backup in System health below. Marking a backup complete by hand does not count — this needs a real file that has actually been checked.'),
                 'link_tab' => 'system',
             ],
             [

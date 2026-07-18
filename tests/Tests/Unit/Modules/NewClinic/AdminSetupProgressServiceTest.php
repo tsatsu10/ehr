@@ -27,6 +27,24 @@ class AdminSetupProgressServiceTest extends TestCase
                 ['key' => 'cron', 'status' => $cronStatus],
                 ['key' => 'backup', 'status' => 'warning'],
             ],
+            'backup_verified_native_run' => false,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed> Synthetic health payload with a chosen
+     *         backup_verified_native_run signal (BACKUP-H3(i)).
+     */
+    private function healthWithBackupVerified(bool $verified): array
+    {
+        return [
+            'chips' => [
+                ['key' => 'cron', 'status' => 'ok'],
+                // Legacy signal a stale check would have used — 'ok' on its own
+                // must NOT be enough to complete the checklist item anymore.
+                ['key' => 'backup', 'status' => 'ok'],
+            ],
+            'backup_verified_native_run' => $verified,
         ];
     }
 
@@ -123,5 +141,23 @@ class AdminSetupProgressServiceTest extends TestCase
 
         $this->expectException(\InvalidArgumentException::class);
         $service->markSetupComplete(self::TEST_FACILITY, 1);
+    }
+
+    /**
+     * BACKUP-H3(i): "tested" must mean tested. Before this fix, the backup_test
+     * item completed off the health chip alone, which could be "ok" from a
+     * self-reported "Mark backup complete" click with nothing on disk (H3). Now
+     * it requires the dedicated backup_verified_native_run signal — a REAL
+     * artifact that has actually passed a decrypt-and-read-back verify.
+     */
+    public function testBackupTestRequiresVerifiedNativeRunNotJustAnOkChip(): void
+    {
+        $service = new AdminSetupProgressService();
+
+        $notTested = $service->getProgress(self::TEST_FACILITY, $this->healthWithBackupVerified(false));
+        $this->assertFalse($this->item($notTested, 'backup_test')['completed']);
+
+        $tested = $service->getProgress(self::TEST_FACILITY, $this->healthWithBackupVerified(true));
+        $this->assertTrue($this->item($tested, 'backup_test')['completed']);
     }
 }

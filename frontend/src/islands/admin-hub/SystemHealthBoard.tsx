@@ -295,6 +295,22 @@ export function SystemHealthBoard({
         ) : (
           <p className="text-sm text-[var(--oe-nc-text-muted)]">Automatic backups: off</p>
         )}
+        {health.backup_schedule?.scheduled && (
+          health.backup_last_scheduled_attempt ? (
+            <p className="text-sm text-[var(--oe-nc-text-muted)]">
+              Last scheduled attempt: {health.backup_last_scheduled_attempt.started_at || '—'} (
+              {health.backup_last_scheduled_attempt.status || 'unknown'})
+            </p>
+          ) : (
+            <div className={deskCalloutClass('warn', 'mt-2 text-sm')}>
+              Automatic backups are turned on, but no scheduled run has ever actually fired — a
+              logged-in tab alone is not enough on a desk-only clinic. Schedule{' '}
+              <span className="font-mono text-xs">scripts/run-jobs.php</span> (or{' '}
+              <span className="font-mono text-xs">scripts/backup-scheduled.php</span>) via Windows
+              Task Scheduler or cron — see the &quot;Schedule automatic backups&quot; runbook.
+            </div>
+          )
+        )}
         {health.backup_target_cloud && (
           <div className={deskCalloutClass('success', 'mt-2 text-sm')} role="status">
             ✓ Backups sync to {health.backup_target_cloud} — they leave this machine automatically
@@ -437,7 +453,14 @@ export function SystemHealthBoard({
                   <TableRow key={run.id}>
                     <TableCell className="text-sm text-[var(--oe-nc-text-muted)] text-nowrap">{run.started_at || '—'}</TableCell>
                     <TableCell className="text-sm text-[var(--oe-nc-text-muted)] text-nowrap">{run.finished_at || '—'}</TableCell>
-                    <TableCell><Badge variant={backupStatusVariant(run.status)}>{run.status || '—'}</Badge></TableCell>
+                    <TableCell>
+                      <Badge variant={run.self_reported ? 'warning' : backupStatusVariant(run.status)}>
+                        {run.self_reported ? 'Self-reported' : (run.status || '—')}
+                      </Badge>
+                      {run.verified && (
+                        <Badge variant="success" className="ml-1">Verified</Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="text-sm text-nowrap">{run.size_label || '—'}</TableCell>
                     <TableCell className="text-sm">
                       {run.file_name ? <span className="font-mono text-xs">{run.file_name}</span> : (run.message || '—')}

@@ -254,6 +254,20 @@ export interface BackupHistoryRow {
   size_label?: string;
   file_name?: string;
   message: string;
+  /** H3(ii) — an 'ok' run with no real artifact (legacy "Mark backup complete"). */
+  self_reported?: boolean;
+  /** Has this run been decrypted and read back as a real database dump? */
+  verified?: boolean;
+}
+
+/** H1(c) — last SCHEDULED (worker/cron/heartbeat) attempt, ok or failed, so an
+ *  unattended schedule that silently stopped firing is visible even when a
+ *  recent manual "Run now" click makes the ordinary chip look fresh. */
+export interface BackupScheduledAttempt {
+  status: string;
+  started_at: string;
+  finished_at: string | null;
+  message: string;
 }
 
 export interface SystemHealthPayload {
@@ -294,6 +308,10 @@ export interface SystemHealthPayload {
   backup_target_cloud?: string | null;
   /** Cloud sync folders detected on this box, to suggest as a target. */
   backup_cloud_folders?: { provider: string; path: string }[];
+  /** H3(i) — has ANY db backup ever completed with a real artifact AND passed verify? */
+  backup_verified_native_run?: boolean;
+  backup_last_scheduled_attempt?: BackupScheduledAttempt | null;
+  files_backup_last_scheduled_attempt?: BackupScheduledAttempt | null;
   /** Recovery-key custody — the drive key that decrypts every backup. Null when native backup is off. */
   recovery_key?: {
     present: boolean;
@@ -443,11 +461,22 @@ export interface AdminConfigPayload {
   config_export_snapshot?: Record<string, unknown>;
   config_import_result?: ConfigImportResult;
   completion_field_weights?: CompletionFieldWeightPayload;
+  /**
+   * M5 — shape differs by path: the LEGACY (native backup off) path returns
+   * `status: 'running'` + `backup_url` (finish it in the stock backup screen);
+   * the NATIVE path finishes synchronously and returns `status: 'ok'` +
+   * `file_path`/`size_bytes` — a real artifact, nothing left to do in another
+   * screen. Callers must branch on which fields are present, not assume the
+   * legacy shape.
+   */
   backup_run_result?: {
     run_id: number;
-    started_at: string;
     status: string;
-    backup_url: string;
+    started_at?: string;
+    backup_url?: string;
+    file_path?: string;
+    size_bytes?: number;
+    pruned?: number;
   };
 }
 

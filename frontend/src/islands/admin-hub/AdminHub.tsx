@@ -68,6 +68,15 @@ function isAdminTabId(value: string): value is AdminTabId {
   return ADMIN_TABS.some((tab) => tab.id === value);
 }
 
+/** M5 — human-readable size for a just-finished native backup's result. */
+function formatBackupSize(bytes: number | undefined): string {
+  if (bytes == null || Number.isNaN(bytes)) return 'unknown size';
+  if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(1)} GB`;
+  if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${bytes} B`;
+}
+
 export function AdminHub({
   ajaxUrl,
   csrfToken,
@@ -696,11 +705,23 @@ export function AdminHub({
         },
       });
       applyPayload(data);
-      const backupUrl = data.backup_run_result?.backup_url;
-      if (backupUrl) {
-        window.open(backupUrl, '_top');
+      const result = data.backup_run_result;
+      // M5 — the two backend paths return different shapes: native backup
+      // finishes SYNCHRONOUSLY with a real file (status 'ok' + file_path), so
+      // there is nothing left to do in another screen and no reason to navigate
+      // away from the hub; the legacy (native backup off) path only logs a
+      // "running" row and hands back a URL to finish the download in the stock
+      // screen. Branch on which shape came back — never assume the legacy one.
+      if (result?.status === 'ok' && result.file_path) {
+        setSuccessMessage(
+          `Backup completed — encrypted file saved (${formatBackupSize(result.size_bytes)}).`
+        );
+      } else if (result?.backup_url) {
+        window.open(result.backup_url, '_top');
+        setSuccessMessage('Backup started — complete the download in the stock backup screen.');
+      } else {
+        setSuccessMessage('Backup started.');
       }
-      setSuccessMessage('Backup started — complete the download in the stock backup screen.');
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : 'Backup failed');
     } finally {
