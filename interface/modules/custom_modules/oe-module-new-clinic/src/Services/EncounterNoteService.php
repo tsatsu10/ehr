@@ -1774,6 +1774,9 @@ class EncounterNoteService
             $requireProviderMatch
             && $state === 'with_doctor'
             && (int) ($visit['assigned_provider_id'] ?? 0) !== $actorUserId
+            // Managers with unlock rights (DR-08) may open/correct another
+            // provider's note — same exemption the unlock endpoint applies.
+            && !$this->canUnlockForClinicalCorrection()
         ) {
             throw new \InvalidArgumentException('Visit is assigned to another provider');
         }
