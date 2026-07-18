@@ -730,11 +730,12 @@ function sqlBeginTrans(): void
 
 
 /**
- * Commit a transaction
+ * Commit a transaction; pass false to roll it back instead
+ * (mirrors ADODB CommitTrans($ok) — callers passing false expect a rollback).
  */
 function sqlCommitTrans($ok = true): void
 {
-    $GLOBALS['adodb']['db']->CommitTrans();
+    $GLOBALS['adodb']['db']->CommitTrans($ok);
 }
 
 

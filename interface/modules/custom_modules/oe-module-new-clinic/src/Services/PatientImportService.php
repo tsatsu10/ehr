@@ -429,16 +429,8 @@ class PatientImportService
         // Task C: patient insert -> phone_normalized -> meta insert -> dup score
         // refresh are wrapped in one DB transaction so a row that fails partway
         // through never leaves a half-created patient (a patient row with no
-        // matching new_patient_meta row) behind. This mirrors the
-        // sqlBeginTrans()/sqlCommitTrans()/catch idiom used elsewhere in this
-        // module (e.g. CashierService::postPayment()) — EXCEPT the catch path
-        // calls sqlRollbackTrans() directly rather than the module's usual
-        // `sqlCommitTrans(false)`: library/sql.inc.php's sqlCommitTrans()
-        // wrapper does not forward its $ok argument to ADODB (it always calls
-        // `CommitTrans()` with no args), so `sqlCommitTrans(false)` silently
-        // COMMITS instead of rolling back everywhere else it's used in this
-        // module. sqlRollbackTrans() calls ADODB's RollbackTrans() directly and
-        // is unaffected by that bug.
+        // matching new_patient_meta row) behind. The catch path rolls back via
+        // sqlRollbackTrans() — the unambiguous spelling of the intent.
         require_once dirname(__DIR__, 6) . '/library/sql.inc.php';
 
         sqlBeginTrans();
