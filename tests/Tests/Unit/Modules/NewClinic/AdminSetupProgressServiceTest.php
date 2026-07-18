@@ -16,18 +16,89 @@ use PHPUnit\Framework\TestCase;
 
 class AdminSetupProgressServiceTest extends TestCase
 {
+    /** Isolated facility id so dev-DB manual ticks can't leak into assertions. */
+    private const TEST_FACILITY = 98765431;
+
+    /** @return array<string, mixed> Synthetic health payload with a chosen cron chip. */
+    private function healthWithCron(string $cronStatus): array
+    {
+        return [
+            'chips' => [
+                ['key' => 'cron', 'status' => $cronStatus],
+                ['key' => 'backup', 'status' => 'warning'],
+            ],
+        ];
+    }
+
+    /** @param array<string, mixed> $progress @return array<string, mixed> */
+    private function item(array $progress, string $key): array
+    {
+        foreach ($progress['items'] as $item) {
+            if (($item['key'] ?? '') === $key) {
+                return $item;
+            }
+        }
+
+        $this->fail("Checklist item {$key} missing");
+    }
+
     public function testProgressShape(): void
     {
         $service = new AdminSetupProgressService();
-        $progress = $service->getProgress(0);
+        $progress = $service->getProgress(0, $this->healthWithCron('warning'));
 
         $this->assertArrayHasKey('setup_complete', $progress);
         $this->assertArrayHasKey('score_percent', $progress);
+        $this->assertArrayHasKey('score_threshold', $progress);
         $this->assertArrayHasKey('items', $progress);
         $this->assertArrayHasKey('can_mark_complete', $progress);
         $this->assertCount(10, $progress['items']);
         $this->assertArrayHasKey('key', $progress['items'][0]);
         $this->assertArrayHasKey('weight', $progress['items'][0]);
+        $this->assertArrayHasKey('link_tab', $progress['items'][0]);
+
+        $weights = array_sum(array_map(static fn (array $i): int => (int) $i['weight'], $progress['items']));
+        $this->assertSame(100, $weights);
+    }
+
+    public function testCronItemFollowsHealthChipNotConfigDefaults(): void
+    {
+        $service = new AdminSetupProgressService();
+        // Clear any manual tick so only the auto signal decides.
+        $service->unmarkItem('cron_configured', self::TEST_FACILITY, 1);
+
+        // Flags default ON — the old check called that "configured". The real
+        // signal is the health cron chip (an actual completed scheduled run).
+        $stale = $service->getProgress(self::TEST_FACILITY, $this->healthWithCron('warning'));
+        $this->assertFalse($this->item($stale, 'cron_configured')['completed']);
+
+        $fresh = $service->getProgress(self::TEST_FACILITY, $this->healthWithCron('ok'));
+        $this->assertTrue($this->item($fresh, 'cron_configured')['completed']);
+    }
+
+    public function testManualMarkUnmarkRoundtrip(): void
+    {
+        $service = new AdminSetupProgressService();
+        $service->unmarkItem('g12_drill', self::TEST_FACILITY, 1);
+
+        $before = $service->getProgress(self::TEST_FACILITY, $this->healthWithCron('warning'));
+        $this->assertFalse($this->item($before, 'g12_drill')['completed']);
+
+        $marked = $service->markItemComplete('g12_drill', self::TEST_FACILITY, 1);
+        $item = $this->item($marked, 'g12_drill');
+        $this->assertTrue($item['completed']);
+        $this->assertTrue($item['ticked']);
+
+        $unmarked = $service->unmarkItem('g12_drill', self::TEST_FACILITY, 1);
+        $this->assertFalse($this->item($unmarked, 'g12_drill')['completed']);
+    }
+
+    public function testReopenSetupClearsCompleteFlag(): void
+    {
+        $service = new AdminSetupProgressService();
+        $progress = $service->reopenSetup(self::TEST_FACILITY, 1);
+
+        $this->assertFalse($progress['setup_complete']);
     }
 
     public function testMarkItemRejectsAutoItem(): void
@@ -35,7 +106,15 @@ class AdminSetupProgressServiceTest extends TestCase
         $service = new AdminSetupProgressService();
 
         $this->expectException(\InvalidArgumentException::class);
-        $service->markItemComplete('cash_profile', 0, 1);
+        $service->markItemComplete('cash_profile', self::TEST_FACILITY, 1);
+    }
+
+    public function testUnmarkItemRejectsAutoItem(): void
+    {
+        $service = new AdminSetupProgressService();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $service->unmarkItem('backup_test', self::TEST_FACILITY, 1);
     }
 
     public function testMarkSetupCompleteRejectsLowScore(): void
@@ -43,6 +122,6 @@ class AdminSetupProgressServiceTest extends TestCase
         $service = new AdminSetupProgressService();
 
         $this->expectException(\InvalidArgumentException::class);
-        $service->markSetupComplete(0, 1);
+        $service->markSetupComplete(self::TEST_FACILITY, 1);
     }
 }

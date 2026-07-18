@@ -79,9 +79,7 @@ class ClinicAdminService
         'enable_chart_depth_export' => ['type' => 'bool', 'default' => '0'],
         'enable_letters_labels' => ['type' => 'bool', 'default' => '0'],
         'enable_vitals_trends' => ['type' => 'bool', 'default' => '0'],
-        'communications_hub_enable' => ['type' => 'bool', 'default' => '0'],
         'enable_outreach' => ['type' => 'bool', 'default' => '0'],
-        'enable_patient_registry' => ['type' => 'bool', 'default' => '0'],
         'enable_scheduled_integration' => ['type' => 'bool', 'default' => '1'],
         'registry_redirect_global_search' => ['type' => 'bool', 'default' => '0'],
         'completion_required_for_billing' => ['type' => 'int', 'default' => '70', 'min' => 0, 'max' => 100],
@@ -141,7 +139,6 @@ class ClinicAdminService
         'queue_bridge_show_recurring_info' => ['type' => 'bool', 'default' => '1'],
         'queue_bridge_eod_block' => ['type' => 'bool', 'default' => '0'],
         'enable_react_queue_bridge' => ['type' => 'bool', 'default' => '1'],
-        'enable_scheduling_redesign' => ['type' => 'bool', 'default' => '1'],
         'enable_react_scheduling' => ['type' => 'bool', 'default' => '1'],
         'enable_clinical_doc_hub' => ['type' => 'bool', 'default' => '0'],
         'clinical_doc_show_screening' => ['type' => 'bool', 'default' => '0'],
@@ -175,7 +172,6 @@ class ClinicAdminService
         'backup_frequency_days' => ['type' => 'int', 'default' => '0', 'min' => 0, 'max' => 365],
         'backup_include_site_files' => ['type' => 'bool', 'default' => '0'],
         'admin_hub_setup_complete' => ['type' => 'bool', 'default' => '0'],
-        'enable_office_notes' => ['type' => 'bool', 'default' => '0'],
         'enable_documents_native' => ['type' => 'bool', 'default' => '0'],
         'enable_patient_chat' => ['type' => 'bool', 'default' => '0'],
         'enable_patient_import' => ['type' => 'bool', 'default' => '0'],
@@ -473,6 +469,43 @@ class ClinicAdminService
         $facilityId = $this->resolveSettingsFacilityId($scope, $requestedFacilityId);
         $this->assertAdminHubEnabled($facilityId);
         $progress = $this->setupProgress->markItemComplete($checklistKey, $facilityId, $actorUserId);
+
+        return array_merge(
+            $this->getSettingsPayload($scope, $requestedFacilityId),
+            ['setup_progress' => $progress]
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function unmarkSetupItem(
+        string $scope,
+        string $checklistKey,
+        int $actorUserId,
+        ?int $requestedFacilityId = null
+    ): array {
+        $facilityId = $this->resolveSettingsFacilityId($scope, $requestedFacilityId);
+        $this->assertAdminHubEnabled($facilityId);
+        $progress = $this->setupProgress->unmarkItem($checklistKey, $facilityId, $actorUserId);
+
+        return array_merge(
+            $this->getSettingsPayload($scope, $requestedFacilityId),
+            ['setup_progress' => $progress]
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function reopenSetup(
+        string $scope,
+        int $actorUserId,
+        ?int $requestedFacilityId = null
+    ): array {
+        $facilityId = $this->resolveSettingsFacilityId($scope, $requestedFacilityId);
+        $this->assertAdminHubEnabled($facilityId);
+        $progress = $this->setupProgress->reopenSetup($facilityId, $actorUserId);
 
         return array_merge(
             $this->getSettingsPayload($scope, $requestedFacilityId),
@@ -928,10 +961,6 @@ class ClinicAdminService
         }
 
         if (self::rawBoolish($input['enable_queue_bridge'] ?? false)) {
-            $input['enable_scheduled_integration'] = '1';
-        }
-
-        if (self::rawBoolish($input['enable_scheduling_redesign'] ?? false)) {
             $input['enable_scheduled_integration'] = '1';
         }
 

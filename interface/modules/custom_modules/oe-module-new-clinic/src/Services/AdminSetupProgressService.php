@@ -13,9 +13,16 @@ namespace OpenEMR\Modules\NewClinic\Services;
 
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Logging\EventAuditLogger;
+use OpenEMR\Modules\NewClinic\AclVersion;
 
 class AdminSetupProgressService
 {
+    /** Minimum weighted score before "Mark setup complete" is allowed. */
+    public const COMPLETE_THRESHOLD = 70;
+
+    /** Log the missing-progress-table warning at most once per request. */
+    private static bool $manualTableWarned = false;
+
     public function __construct(
         private readonly ClinicConfigService $config = new ClinicConfigService(),
         private readonly CashClinicProfileService $cashProfile = new CashClinicProfileService(),
@@ -26,9 +33,6 @@ class AdminSetupProgressService
     ) {
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     /**
      * @param array<string, mixed>|null $health Pre-computed health status to reuse.
      *        getHealthStatus() runs a COUNT over the multi-million-row `log` table
@@ -56,8 +60,9 @@ class AdminSetupProgressService
         return [
             'setup_complete' => $setupComplete,
             'score_percent' => min(100, $score),
+            'score_threshold' => self::COMPLETE_THRESHOLD,
             'items' => $items,
-            'can_mark_complete' => $score >= 70 && !$setupComplete,
+            'can_mark_complete' => $score >= self::COMPLETE_THRESHOLD && !$setupComplete,
         ];
     }
 
@@ -72,7 +77,7 @@ class AdminSetupProgressService
         }
 
         if (!in_array($checklistKey, $this->manualKeys(), true)) {
-            throw new \InvalidArgumentException('This checklist item cannot be marked manually');
+            throw new \InvalidArgumentException(xl('This step checks itself automatically and cannot be ticked by hand.'));
         }
 
         QueryUtils::sqlStatementThrowException(
@@ -82,18 +87,41 @@ class AdminSetupProgressService
             [$facilityId, $checklistKey, $actorUserId]
         );
 
-        EventAuditLogger::getInstance()->newEvent(
-            'new_clinic_config',
-            'admin_hub.setup_progress',
-            $_SESSION['authUser'] ?? 'system',
-            $_SESSION['authProvider'] ?? 'default',
-            json_encode([
-                'facility_id' => $facilityId,
-                'checklist_key' => $checklistKey,
-                'actor_user_id' => $actorUserId,
-            ]),
-            0
+        $this->audit('admin_hub.setup_progress', [
+            'facility_id' => $facilityId,
+            'checklist_key' => $checklistKey,
+            'actor_user_id' => $actorUserId,
+        ]);
+
+        return $this->getProgress($facilityId);
+    }
+
+    /**
+     * Undo a mistaken manual tick.
+     *
+     * @return array<string, mixed>
+     */
+    public function unmarkItem(string $checklistKey, int $facilityId, int $actorUserId): array
+    {
+        $checklistKey = strtolower(trim($checklistKey));
+        if ($checklistKey === '') {
+            throw new \InvalidArgumentException('checklist_key required');
+        }
+
+        if (!in_array($checklistKey, $this->manualKeys(), true)) {
+            throw new \InvalidArgumentException(xl('This step checks itself automatically and cannot be unticked by hand.'));
+        }
+
+        QueryUtils::sqlStatementThrowException(
+            'DELETE FROM admin_hub_setup_progress WHERE facility_id = ? AND checklist_key = ?',
+            [$facilityId, $checklistKey]
         );
+
+        $this->audit('admin_hub.setup_unmark', [
+            'facility_id' => $facilityId,
+            'checklist_key' => $checklistKey,
+            'actor_user_id' => $actorUserId,
+        ]);
 
         return $this->getProgress($facilityId);
     }
@@ -104,32 +132,39 @@ class AdminSetupProgressService
     public function markSetupComplete(int $facilityId, int $actorUserId): array
     {
         $progress = $this->getProgress($facilityId);
-        if ((int) ($progress['score_percent'] ?? 0) < 70) {
-            throw new \InvalidArgumentException('Complete at least 70% of setup checklist before marking done');
+        if ((int) ($progress['score_percent'] ?? 0) < self::COMPLETE_THRESHOLD) {
+            throw new \InvalidArgumentException(xl('Finish at least 70% of the checklist before marking setup complete.'));
         }
 
         $this->config->set('admin_hub_setup_complete', '1', $facilityId);
 
-        EventAuditLogger::getInstance()->newEvent(
-            'new_clinic_config',
-            'admin_hub.setup_complete',
-            $_SESSION['authUser'] ?? 'system',
-            $_SESSION['authProvider'] ?? 'default',
-            json_encode([
-                'facility_id' => $facilityId,
-                'actor_user_id' => $actorUserId,
-                'score_percent' => $progress['score_percent'] ?? 0,
-            ]),
-            0
-        );
+        $this->audit('admin_hub.setup_complete', [
+            'facility_id' => $facilityId,
+            'actor_user_id' => $actorUserId,
+            'score_percent' => $progress['score_percent'] ?? 0,
+        ]);
 
         return $this->getProgress($facilityId);
     }
 
     /**
-     * @param array<string, string> $manual
-     * @return list<array<string, mixed>>
+     * Flip a completed setup back to in-progress (nothing else changes —
+     * every tick and auto-check keeps its state).
+     *
+     * @return array<string, mixed>
      */
+    public function reopenSetup(int $facilityId, int $actorUserId): array
+    {
+        $this->config->set('admin_hub_setup_complete', '0', $facilityId);
+
+        $this->audit('admin_hub.setup_reopen', [
+            'facility_id' => $facilityId,
+            'actor_user_id' => $actorUserId,
+        ]);
+
+        return $this->getProgress($facilityId);
+    }
+
     /**
      * @param array<string, mixed> $manual
      * @param array<string, mixed>|null $health Reuse a pre-computed health status when available.
@@ -151,102 +186,169 @@ class AdminSetupProgressService
         ));
         $reconcileRun = $this->reconciliation->getLatestRun($facilityId);
         $health ??= $this->health->getHealthStatus($facilityId);
-        $backupOk = false;
-        foreach ($health['chips'] ?? [] as $chip) {
-            if (($chip['key'] ?? '') === 'backup' && ($chip['status'] ?? '') === 'ok') {
-                $backupOk = true;
-                break;
-            }
-        }
+        $backupOk = $this->healthChipOk($health, 'backup');
+        // A real signal, not a config-flag guess: the health cron chip is only
+        // "ok" when a scheduled reconciliation run actually completed recently.
+        // (The old check keyed off two flags that BOTH default to on, so every
+        // fresh install showed cron "configured" with no crontab at all.)
+        $cronOk = $this->healthChipOk($health, 'cron');
 
-        $defs = [
+        return [
             [
                 'key' => 'cash_profile',
-                'label' => 'Cash clinic profile applied',
+                'label' => xl('Cash clinic profile applied'),
                 'weight' => 10,
                 'completed' => $cashApplied,
                 'manual' => false,
-                'hint' => 'Clinic tab → Apply cash clinic profile',
+                'hint' => xl('Open the Clinic tab and press the Apply cash clinic profile button.'),
+                'link_tab' => 'clinic',
             ],
             [
                 'key' => 'fee_lines',
-                'label' => 'At least 3 active fee lines',
+                'label' => xl('Prices set for at least 3 services'),
                 'weight' => 10,
                 'completed' => $feeCount >= 3,
                 'manual' => false,
-                'hint' => 'Fees tab → add starter schedule',
+                'hint' => xl('Open the Fees tab and add prices for your consultation and common services.'),
+                'link_tab' => 'fees',
             ],
             [
                 'key' => 'visit_types',
-                'label' => 'Visit type linked to calendar',
+                'label' => xl('At least one visit type ready for booking'),
                 'weight' => 10,
                 'completed' => $visitTypeCount >= 1,
                 'manual' => false,
-                'hint' => 'Visit types tab → map pc_catid',
+                'hint' => xl('Open the Visit types tab and check a visit type is linked to the calendar.'),
+                'link_tab' => 'types',
             ],
             [
                 'key' => 'staff_accounts',
-                'label' => 'Staff accounts (owner + reception + doctor)',
+                'label' => xl('Staff sign-ins created (admin, reception, doctor)'),
                 'weight' => 15,
-                'completed' => isset($manual['staff_accounts']),
+                'completed' => isset($manual['staff_accounts']) || $this->staffAccountsReady(),
                 'manual' => true,
-                'hint' => 'People → create three role templates',
+                'ticked' => isset($manual['staff_accounts']),
+                'hint' => xl('Open People & access and create a sign-in for each role. One person can hold more than one role.'),
+                'link_tab' => 'people',
             ],
             [
                 'key' => 'acl_installed',
-                'label' => 'New Clinic ACL installed',
+                'label' => xl('Access permissions installed'),
                 'weight' => 10,
-                'completed' => isset($manual['acl_installed']),
+                'completed' => isset($manual['acl_installed']) || $this->aclInstalled(),
                 'manual' => true,
-                'hint' => 'Module Manager §17.4 step 4',
+                'ticked' => isset($manual['acl_installed']),
+                'hint' => xl('Run the access-control install step from the module install guide, or ask the person who set up the server.'),
+                'link_tab' => null,
             ],
             [
                 'key' => 'cron_configured',
-                'label' => 'Cron / nightly jobs configured',
+                'label' => xl('Nightly background jobs running'),
                 'weight' => 10,
-                'completed' => isset($manual['cron_configured'])
-                    || (
-                        $this->config->getInt('enable_scheduled_integration', 1, $facilityId) === 1
-                        && $this->config->getInt('reconciliation_enabled', 1, $facilityId) === 1
-                    ),
+                'completed' => isset($manual['cron_configured']) || $cronOk,
                 'manual' => true,
-                'hint' => 'Clinic tab → reconciliation schedule + host crontab',
+                'ticked' => isset($manual['cron_configured']),
+                'hint' => xl('Ask the person who set up the server to schedule the OpenEMR background service. This ticks itself after the first overnight run.'),
+                'link_tab' => null,
             ],
             [
                 'key' => 'reconciliation_test',
-                'label' => 'Reconciliation test run',
+                'label' => xl('End-of-day cash check tested'),
                 'weight' => 10,
                 'completed' => is_array($reconcileRun) && !empty($reconcileRun['run_date']),
                 'manual' => false,
-                'hint' => 'System tab → Run reconcile now',
+                'hint' => xl('Press Run reconcile now in System health below.'),
+                'link_tab' => 'system',
             ],
             [
                 'key' => 'backup_test',
-                'label' => 'Backup test run',
+                'label' => xl('Backup tested'),
                 'weight' => 10,
                 'completed' => $backupOk,
                 'manual' => false,
-                'hint' => 'System tab → Run backup',
+                'hint' => xl('Press Run backup in System health below.'),
+                'link_tab' => 'system',
             ],
             [
                 'key' => 'worksheet_recorded',
-                'label' => 'Pilot worksheet Q4–Q9 recorded',
+                'label' => xl('Go-live worksheet recorded'),
                 'weight' => 10,
                 'completed' => isset($manual['worksheet_recorded']),
                 'manual' => true,
-                'hint' => 'PRD §24.4 worksheet',
+                'ticked' => isset($manual['worksheet_recorded']),
+                'hint' => xl('Fill in the go-live worksheet from the setup guide with your trainer.'),
+                'link_tab' => null,
             ],
             [
                 'key' => 'g12_drill',
-                'label' => 'G12 safety drill signed (week 1)',
+                'label' => xl('Wrong-patient safety drill done'),
                 'weight' => 5,
                 'completed' => isset($manual['g12_drill']),
                 'manual' => true,
-                'hint' => 'Training log §17.2',
+                'ticked' => isset($manual['g12_drill']),
+                'hint' => xl('Walk the team through the wrong-patient check during the first week.'),
+                'link_tab' => null,
             ],
         ];
+    }
 
-        return $defs;
+    /** True when the given health chip reports "ok". */
+    private function healthChipOk(array $health, string $chipKey): bool
+    {
+        foreach ($health['chips'] ?? [] as $chip) {
+            if (($chip['key'] ?? '') === $chipKey) {
+                return ($chip['status'] ?? '') === 'ok';
+            }
+        }
+
+        return false;
+    }
+
+    /** True when the module's ACL schema is installed at the current version. */
+    private function aclInstalled(): bool
+    {
+        try {
+            $row = QueryUtils::querySingleRow(
+                "SELECT acl_version FROM modules WHERE mod_directory = 'oe-module-new-clinic' LIMIT 1",
+                []
+            );
+        } catch (\Throwable) {
+            return false;
+        }
+
+        return AclVersion::isSatisfiedBy(is_array($row) ? (string) ($row['acl_version'] ?? '') : '');
+    }
+
+    /**
+     * True when each core role group (admin, reception, doctor) has at least
+     * one active member. One person holding all three (solo operator,
+     * D-STAFF-1) satisfies this.
+     */
+    private function staffAccountsReady(): bool
+    {
+        try {
+            $rows = QueryUtils::fetchRecords(
+                "SELECT g.value AS group_key, COUNT(DISTINCT u.id) AS n
+                 FROM gacl_aro_groups g
+                 INNER JOIN gacl_groups_aro_map m ON m.group_id = g.id
+                 INNER JOIN gacl_aro a ON a.id = m.aro_id AND a.section_value = 'users'
+                 INNER JOIN users u ON u.username = a.value AND u.active = 1
+                 WHERE g.value IN ('new_admin', 'new_reception', 'new_doctor')
+                 GROUP BY g.value",
+                []
+            ) ?: [];
+        } catch (\Throwable) {
+            return false;
+        }
+
+        $present = [];
+        foreach ($rows as $row) {
+            if ((int) ($row['n'] ?? 0) > 0) {
+                $present[(string) $row['group_key']] = true;
+            }
+        }
+
+        return isset($present['new_admin'], $present['new_reception'], $present['new_doctor']);
     }
 
     /**
@@ -273,7 +375,15 @@ class AdminSetupProgressService
                 'SELECT checklist_key, completed_at FROM admin_hub_setup_progress WHERE facility_id = ?',
                 [$facilityId]
             ) ?: [];
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            // A missing/broken progress table must not be invisible — the old
+            // blanket catch made every manual item look permanently un-done
+            // with no signal anywhere.
+            if (!self::$manualTableWarned) {
+                self::$manualTableWarned = true;
+                error_log('New Clinic setup checklist: could not read admin_hub_setup_progress — ' . $e->getMessage());
+            }
+
             return [];
         }
 
@@ -286,5 +396,18 @@ class AdminSetupProgressService
         }
 
         return $map;
+    }
+
+    /** @param array<string, mixed> $detail */
+    private function audit(string $action, array $detail): void
+    {
+        EventAuditLogger::getInstance()->newEvent(
+            'new_clinic_config',
+            $action,
+            $_SESSION['authUser'] ?? 'system',
+            $_SESSION['authProvider'] ?? 'default',
+            json_encode($detail),
+            0
+        );
     }
 }

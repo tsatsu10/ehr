@@ -1,4 +1,5 @@
 import type {
+  AdminTabId,
   RunbooksPayload,
   SetupProgressPayload,
   SystemHealthPayload,
@@ -35,13 +36,17 @@ interface SystemTabProps {
   backupCompleting: boolean;
   setupMarkingKey: string | null;
   setupCompleting: boolean;
+  setupReopening: boolean;
   onRunReconciliation: () => void;
   onRunBackup: () => void;
   onCompleteBackup: () => void;
   onRefreshHealth: () => void;
   healthRefreshing: boolean;
   onMarkSetupItem: (key: string) => void;
+  onUnmarkSetupItem: (key: string) => void;
   onMarkSetupComplete: () => void;
+  onReopenSetup: () => void;
+  onNavigateTab: (tab: AdminTabId) => void;
 }
 
 export function SystemTab({
@@ -62,8 +67,12 @@ export function SystemTab({
   onConfigImportClearPreview,
   setupMarkingKey,
   setupCompleting,
+  setupReopening,
   onMarkSetupItem,
+  onUnmarkSetupItem,
   onMarkSetupComplete,
+  onReopenSetup,
+  onNavigateTab,
   onRunReconciliation,
   onRunBackup,
   onCompleteBackup,
@@ -75,15 +84,20 @@ export function SystemTab({
 }: SystemTabProps) {
   return (
     <AdminStack>
-      {!setupProgress.setup_complete && (
-        <SetupChecklistCard
-          progress={setupProgress}
-          markingKey={setupMarkingKey}
-          completing={setupCompleting}
-          onMarkItem={onMarkSetupItem}
-          onMarkComplete={onMarkSetupComplete}
-        />
-      )}
+      {/* Always rendered — after completion the card shows its success state
+          with any residual items + Reopen (the old outer hide made the card's
+          success branch dead code). */}
+      <SetupChecklistCard
+        progress={setupProgress}
+        markingKey={setupMarkingKey}
+        completing={setupCompleting}
+        reopening={setupReopening}
+        onMarkItem={onMarkSetupItem}
+        onUnmarkItem={onUnmarkSetupItem}
+        onMarkComplete={onMarkSetupComplete}
+        onReopen={onReopenSetup}
+        onNavigateTab={onNavigateTab}
+      />
       <SystemHealthBoard
         ajaxUrl={ajaxUrl}
         csrfToken={csrfToken}

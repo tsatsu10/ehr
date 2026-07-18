@@ -44,15 +44,21 @@ export function AdminMetricChip({
   label,
   value,
   tone = 'default',
+  onClick,
 }: {
   label: string;
   value: ReactNode;
   tone?: 'default' | 'success' | 'warning' | 'danger';
+  /** When given, the chip renders as a button (e.g. Setup % → jump to checklist). */
+  onClick?: () => void;
 }) {
+  const Tag = onClick ? 'button' : 'div';
   return (
-    <div
+    <Tag
+      {...(onClick ? { type: 'button' as const, onClick } : {})}
       className={cn(
         'nc-admin-metric-chip rounded-lg border border-[var(--oe-nc-border)] bg-[var(--oe-nc-bg-tint,#f8fafc)] px-3 py-1.5 text-sm',
+        onClick && 'cursor-pointer [text-align:left] transition-colors hover:bg-[var(--oe-nc-bg-muted,#ececef)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--oe-nc-primary,#0071e3)]',
         tone === 'success' && 'border-[color-mix(in_srgb,var(--color-oe-cta,#047857)_30%,var(--oe-nc-border))]',
         tone === 'warning' && 'border-[color-mix(in_srgb,var(--color-oe-warning,#d97706)_30%,var(--oe-nc-border))]',
         tone === 'danger' && 'border-[color-mix(in_srgb,var(--color-oe-danger,#b91c1c)_30%,var(--oe-nc-border))]',
@@ -62,7 +68,7 @@ export function AdminMetricChip({
         {label}
       </span>
       <span className="ml-2 font-semibold text-[var(--oe-nc-text)]">{value}</span>
-    </div>
+    </Tag>
   );
 }
 

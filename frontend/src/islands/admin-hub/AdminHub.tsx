@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from '@components/ui/select';
 import { oeFetch } from '@core/oeFetch';
+import { t } from '@core/i18n';
 import { SegmentedControl } from '@components/SegmentedControl';
 import { collectAdminSettings } from './adminFieldDefs';
 import { applyAdminSettingCoupling } from './adminSettingCoupling';
@@ -122,6 +123,7 @@ export function AdminHub({
   const [configImporting, setConfigImporting] = useState(false);
   const [setupMarkingKey, setSetupMarkingKey] = useState<string | null>(null);
   const [setupCompleting, setSetupCompleting] = useState(false);
+  const [setupReopening, setSetupReopening] = useState(false);
   const [backupRunning, setBackupRunning] = useState(false);
   const [backupCompleting, setBackupCompleting] = useState(false);
   const [healthRefreshing, setHealthRefreshing] = useState(false);
@@ -760,6 +762,55 @@ export function AdminHub({
     }
   }, [applyPayload, facilityId, fetchOptions, scope]);
 
+  const unmarkSetupItem = useCallback(async (checklistKey: string) => {
+    setSetupMarkingKey(checklistKey);
+    setErrorMessage(null);
+    try {
+      const data = await oeFetch<AdminConfigPayload>('admin_hub.setup_unmark', {
+        ...fetchOptions,
+        json: {
+          scope,
+          facility_id: facilityId,
+          checklist_key: checklistKey,
+        },
+      });
+      applyPayload(data);
+      setSuccessMessage('Setup checklist updated.');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Could not update setup checklist');
+    } finally {
+      setSetupMarkingKey(null);
+    }
+  }, [applyPayload, facilityId, fetchOptions, scope]);
+
+  const reopenSetup = useCallback(async () => {
+    setSetupReopening(true);
+    setErrorMessage(null);
+    try {
+      const data = await oeFetch<AdminConfigPayload>('admin_hub.setup_reopen', {
+        ...fetchOptions,
+        json: {
+          scope,
+          facility_id: facilityId,
+        },
+      });
+      applyPayload(data);
+      setSuccessMessage('Setup reopened.');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Could not reopen setup');
+    } finally {
+      setSetupReopening(false);
+    }
+  }, [applyPayload, facilityId, fetchOptions, scope]);
+
+  // Jump target for the header Setup chip + the "finish setting up" banner.
+  const goToSetupChecklist = useCallback(() => {
+    setActiveTab('system');
+    window.setTimeout(() => {
+      document.getElementById('nc-admin-setup-checklist')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+  }, []);
+
   const exportConfig = useCallback(async () => {
     setConfigExporting(true);
     setErrorMessage(null);
@@ -1097,6 +1148,7 @@ export function AdminHub({
                   label="Setup"
                   value={`${setupProgress.score_percent}%`}
                   tone={setupProgress.setup_complete ? 'success' : 'default'}
+                  onClick={goToSetupChecklist}
                 />
               )}
               {systemHealth && (
@@ -1110,6 +1162,21 @@ export function AdminHub({
           ) : undefined
         }
       />
+
+      {/* One-line nudge shown on every tab until first-run setup is done —
+          the checklist itself lives on the System tab where nobody new looks. */}
+      {adminHubEnabled && setupProgress && !setupProgress.setup_complete && (
+        <button
+          type="button"
+          className="mb-3 flex w-full items-center justify-between rounded-xl [box-shadow:inset_0_0_0_1px_color-mix(in_srgb,var(--oe-nc-primary,#0071e3)_35%,transparent)] bg-[color-mix(in_srgb,var(--oe-nc-primary,#0071e3)_6%,var(--oe-nc-surface,#fff))] px-4 py-2 [text-align:left] text-sm font-semibold text-[var(--oe-nc-text)] transition-colors hover:bg-[color-mix(in_srgb,var(--oe-nc-primary,#0071e3)_12%,var(--oe-nc-surface,#fff))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--oe-nc-primary,#0071e3)]"
+          onClick={goToSetupChecklist}
+        >
+          <span>
+            {t('Finish setting up this clinic — {pct}% done', { pct: String(setupProgress.score_percent) })}
+          </span>
+          <span aria-hidden>→</span>
+        </button>
+      )}
 
       <AdminStickyTabs>
         <SegmentedControl
@@ -1191,7 +1258,11 @@ export function AdminHub({
             onCompleteBackup={() => { void completeBackup(); }}
             onRefreshHealth={() => { void refreshSystemHealth(); }}
             onMarkSetupItem={(key) => { void markSetupItem(key); }}
+            onUnmarkSetupItem={(key) => { void unmarkSetupItem(key); }}
             onMarkSetupComplete={() => { void markSetupComplete(); }}
+            onReopenSetup={() => { void reopenSetup(); }}
+            setupReopening={setupReopening}
+            onNavigateTab={setActiveTab}
             onAddVisitType={() => openVisitTypeModal(null)}
             onEditVisitType={(row) => openVisitTypeModal(row)}
             onArchiveVisitType={(row) => setPendingConfirm({ type: 'archive_visit_type', row })}

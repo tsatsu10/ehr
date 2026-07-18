@@ -331,12 +331,18 @@ export interface SetupProgressItem {
   weight: number;
   completed: boolean;
   manual: boolean;
+  /** True when a manual tick exists (vs auto-detected) — controls Undo. */
+  ticked?: boolean;
   hint: string;
+  /** Admin tab this item's work happens on (a "take me there" link target). */
+  link_tab?: AdminTabId | string | null;
 }
 
 export interface SetupProgressPayload {
   setup_complete: boolean;
   score_percent: number;
+  /** Minimum score before "Mark setup complete" unlocks (server-owned, 70). */
+  score_threshold?: number;
   items: SetupProgressItem[];
   can_mark_complete: boolean;
 }

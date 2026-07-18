@@ -72,6 +72,7 @@ export interface AdminHubTabPanelsProps {
   backupCompleting: boolean;
   setupMarkingKey: string | null;
   setupCompleting: boolean;
+  setupReopening: boolean;
   healthRefreshing: boolean;
   visitTypes: VisitTypeRow[];
   feeSchedule: FeeScheduleRow[];
@@ -99,7 +100,10 @@ export interface AdminHubTabPanelsProps {
   onCompleteBackup: () => void;
   onRefreshHealth: () => void;
   onMarkSetupItem: (key: string) => void;
+  onUnmarkSetupItem: (key: string) => void;
   onMarkSetupComplete: () => void;
+  onReopenSetup: () => void;
+  onNavigateTab: (tab: AdminTabId) => void;
   onAddVisitType: () => void;
   onEditVisitType: (row: VisitTypeRow) => void;
   onArchiveVisitType: (row: VisitTypeRow) => void;
@@ -155,6 +159,7 @@ export function AdminHubTabPanels({
   backupCompleting,
   setupMarkingKey,
   setupCompleting,
+  setupReopening,
   healthRefreshing,
   visitTypes,
   feeSchedule,
@@ -182,7 +187,10 @@ export function AdminHubTabPanels({
   onCompleteBackup,
   onRefreshHealth,
   onMarkSetupItem,
+  onUnmarkSetupItem,
   onMarkSetupComplete,
+  onReopenSetup,
+  onNavigateTab,
   onAddVisitType,
   onEditVisitType,
   onArchiveVisitType,
@@ -308,13 +316,17 @@ export function AdminHubTabPanels({
             backupCompleting={backupCompleting}
             setupMarkingKey={setupMarkingKey}
             setupCompleting={setupCompleting}
+            setupReopening={setupReopening}
             onRunReconciliation={onRunReconciliation}
             onRunBackup={onRunBackup}
             onCompleteBackup={onCompleteBackup}
             onRefreshHealth={onRefreshHealth}
             healthRefreshing={healthRefreshing}
             onMarkSetupItem={onMarkSetupItem}
+            onUnmarkSetupItem={onUnmarkSetupItem}
             onMarkSetupComplete={onMarkSetupComplete}
+            onReopenSetup={onReopenSetup}
+            onNavigateTab={onNavigateTab}
           />
         ) : (
           <AdminEmptyState

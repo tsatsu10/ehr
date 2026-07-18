@@ -98,7 +98,9 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
         'admin.backup.run_files',
         'admin.backup.complete',
         'admin.setup.mark_item',
+        'admin.setup.unmark_item',
         'admin.setup.complete',
+        'admin.setup.reopen',
         'admin.config.export',
         'admin.config.import',
         'admin.patient_import.chunk',
@@ -823,6 +825,7 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                     }
                     break;
                 case 'admin.setup.mark_item':
+                case 'admin.setup.unmark_item':
                     if ($method !== 'POST') {
                         $this->host->respond(false, 'POST required', [], 405);
                     }
@@ -835,13 +838,16 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                     $checklistKey = trim((string) ($body['checklist_key'] ?? ''));
                     $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
                     try {
-                        $payload = $this->host->svc(ClinicAdminService::class)->markSetupItem(
-                            $scope,
-                            $checklistKey,
-                            $userId,
-                            $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
+                        $svc = $this->host->svc(ClinicAdminService::class);
+                        $facilityArg = $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null;
+                        $payload = $action === 'admin.setup.unmark_item'
+                            ? $svc->unmarkSetupItem($scope, $checklistKey, $userId, $facilityArg)
+                            : $svc->markSetupItem($scope, $checklistKey, $userId, $facilityArg);
+                        $this->host->respond(
+                            true,
+                            $action === 'admin.setup.unmark_item' ? 'Setup item unmarked' : 'Setup item marked',
+                            $payload
                         );
-                        $this->host->respond(true, 'Setup item marked', $payload);
                     } catch (\InvalidArgumentException $e) {
                         $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
                     }
@@ -867,6 +873,24 @@ final class AdminActionHandler implements AjaxActionHandlerInterface
                     } catch (\InvalidArgumentException $e) {
                         $this->host->respond(false, $e->getMessage(), ['code' => 'invalid_request'], 400);
                     }
+                    break;
+                case 'admin.setup.reopen':
+                    if ($method !== 'POST') {
+                        $this->host->respond(false, 'POST required', [], 405);
+                    }
+                    $body = $this->host->readJsonBody();
+                    $this->host->verifyCsrf($body);
+                    $scope = strtolower(trim((string) ($body['scope'] ?? 'facility')));
+                    if ($scope !== 'global') {
+                        $scope = 'facility';
+                    }
+                    $requestedFacilityId = (int) ($body['facility_id'] ?? ($_SESSION['facilityId'] ?? 0));
+                    $payload = $this->host->svc(ClinicAdminService::class)->reopenSetup(
+                        $scope,
+                        $userId,
+                        $scope === 'facility' && $requestedFacilityId > 0 ? $requestedFacilityId : null
+                    );
+                    $this->host->respond(true, 'Setup reopened', $payload);
                     break;
                 case 'admin.config.export':
                     $scope = strtolower(trim((string) ($_REQUEST['scope'] ?? 'facility')));
