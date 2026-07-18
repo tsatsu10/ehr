@@ -14,4 +14,22 @@ describe('csv builders', () => {
     ]);
     expect(csv).toContain('"Bad, very bad"');
   });
+
+  it('neutralizes a name that looks like a spreadsheet formula', () => {
+    const csv = buildReportCsv([
+      { row_number: 5, status: 'ok', reason: '', name: '=SUM(A1)', pid: null },
+    ]);
+    expect(csv).toContain("'=SUM(A1)");
+  });
+
+  it('neutralizes +, -, and @ leading cells too', () => {
+    const csv = buildReportCsv([
+      { row_number: 6, status: 'ok', reason: '', name: '+1234', pid: null },
+      { row_number: 7, status: 'ok', reason: '', name: '-1234', pid: null },
+      { row_number: 8, status: 'ok', reason: '', name: '@cmd', pid: null },
+    ]);
+    expect(csv).toContain("'+1234");
+    expect(csv).toContain("'-1234");
+    expect(csv).toContain("'@cmd");
+  });
 });

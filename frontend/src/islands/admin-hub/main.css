@@ -246,7 +246,7 @@
 
 .nc-import-stat-tile--success {
   border-color: color-mix(in srgb, var(--oe-nc-cta, #047857) 40%, var(--oe-nc-border, #cbd5e1));
-  background: color-mix(in srgb, var(--oe-nc-cta, #047857) 8%, white);
+  background: color-mix(in srgb, var(--oe-nc-cta, #047857) 8%, var(--oe-nc-surface, #fff));
 }
 
 .nc-import-stat-tile--success .nc-import-stat-tile__value {
@@ -255,7 +255,7 @@
 
 .nc-import-stat-tile--warn {
   border-color: color-mix(in srgb, var(--oe-nc-warning, #c77700) 40%, var(--oe-nc-border, #cbd5e1));
-  background: color-mix(in srgb, var(--oe-nc-warning, #c77700) 8%, white);
+  background: color-mix(in srgb, var(--oe-nc-warning, #c77700) 8%, var(--oe-nc-surface, #fff));
 }
 
 .nc-import-stat-tile--warn .nc-import-stat-tile__value {
@@ -264,7 +264,7 @@
 
 .nc-import-stat-tile--danger {
   border-color: color-mix(in srgb, var(--oe-nc-danger, #e0362c) 40%, var(--oe-nc-border, #cbd5e1));
-  background: color-mix(in srgb, var(--oe-nc-danger, #e0362c) 8%, white);
+  background: color-mix(in srgb, var(--oe-nc-danger, #e0362c) 8%, var(--oe-nc-surface, #fff));
 }
 
 .nc-import-stat-tile--danger .nc-import-stat-tile__value {

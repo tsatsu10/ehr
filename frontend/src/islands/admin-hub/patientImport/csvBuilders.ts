@@ -11,7 +11,12 @@ export function buildTemplateCsv(): string {
 }
 
 function csvCell(value: string): string {
-  return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+  // Neutralize CSV formula injection: a cell opening with =, +, -, or @ can be
+  // interpreted as a formula by Excel/Sheets when the report is opened there.
+  // A leading apostrophe forces text interpretation without changing what the
+  // user sees in a spreadsheet cell.
+  const safe = /^[=+\-@]/.test(value) ? `'${value}` : value;
+  return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
 export function buildReportCsv(results: RowResult[]): string {

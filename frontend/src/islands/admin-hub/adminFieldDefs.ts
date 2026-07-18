@@ -928,7 +928,6 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
         type: 'bool',
         label: 'Enable patient import (CSV)',
         hint: 'Shows the Import patients tab. Upload a CSV of existing patients, check a dry-run report, then import demographics. Duplicates are skipped, never merged.',
-        indent: 1,
       },
     ],
   },
