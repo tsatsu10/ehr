@@ -31,8 +31,64 @@ class AdminBackupService
     public const ARCHIVE_PREFIX = 'nc-backup-';
     public const ARCHIVE_SUFFIX = '.enc';
 
-    /** In-memory encryption cap (slice 1). Larger DBs use the VPS replica / stock backup. */
-    private const MAX_ENCRYPT_BYTES = 100 * 1024 * 1024;
+    /**
+     * BACKUP-CAP: in-memory encryption cap, RAM-budget derived (not arbitrary).
+     *
+     * The pragmatic fix here keeps the on-disk `.enc` format unchanged (so wave-1's
+     * proven `backup-decrypt.php` tool and restore drill keep working) rather than
+     * building true streaming encryption — that is tracked separately as
+     * BACKUP-STREAM because it WOULD change the format.
+     *
+     * Stated assumption (this drives the number): a 2 GB RAM box — this product's
+     * documented floor (on-prem mini-PC / small VPS, CLAUDE.md) — can safely lend
+     * the backup job about 1 GB without starving Apache/MySQL running alongside it,
+     * PROVIDED the backup runs off-peak via the scheduled/cron path (design doc §7).
+     * The costly step — `CryptoGen::coreEncrypt()` (compressed dump → binary AES
+     * ciphertext → base64-encoded final string, ~1.37x) plus the compressed dump
+     * itself, all transiently resident together — peaks at roughly **4x** the
+     * compressed archive size (documented, not measured to the byte). 1024 MB / 4
+     * ≈ 250 MB compressed, which is the default below. `verifyBackup()` has the
+     * same shape (ciphertext + decrypted copy coexisting briefly) and uses the same
+     * cap and the same memory-limit formula.
+     *
+     * Config-overridable per DEFAULT_MAX_ENCRYPT_MB below (`backup_max_encrypt_mb`,
+     * admin-facing in Admin Hub → System) so a bigger box can raise it.
+     */
+    private const DEFAULT_MAX_ENCRYPT_MB = 250;
+
+    /** Floor for the configurable cap — below this the in-memory approach isn't worth it. */
+    private const MIN_MAX_ENCRYPT_MB = 50;
+
+    /** Multiplier from cap bytes to the memory_limit we ask PHP for (see class doc above). */
+    private const ENCRYPT_MEMORY_LIMIT_MULTIPLIER = 4;
+
+    /** Fixed headroom (MB) added on top of the multiplied cap for PHP/runtime overhead. */
+    private const ENCRYPT_MEMORY_LIMIT_HEADROOM_MB = 128;
+
+    /**
+     * secureDelete()'s best-effort zero-overwrite is a belt-and-braces step, not the
+     * encryption cap policy — bounded by its own fixed ceiling so it never depends on
+     * an admin-raised `backup_max_encrypt_mb` (and the extra config read that would need).
+     */
+    private const SECURE_DELETE_MAX_OVERWRITE_BYTES = 512 * 1024 * 1024;
+
+    /**
+     * BACKUP-H1b pre-check multiplier: if raw InnoDB table STORAGE (data_length +
+     * index_length, what `estimatedRawDatabaseBytes()` reads) already exceeds the
+     * cap by this many times, skip the expensive dump/gzip (see performBackup()).
+     *
+     * MEASURED, not guessed, against the real dev DB during this fix (2026-07-18):
+     * 1693.9 MB table storage -> a 1184.0 MB mysqldump text -> 140.5 MB gzip -6 —
+     * a 12.06x storage-to-gz ratio. table storage is a WORSE (larger) proxy for
+     * dump size than dump-text-to-gz alone, because storage includes secondary
+     * index bytes that never appear in the SQL dump text at all — an early build
+     * of this pre-check used multiplier 3, which is far too tight: it wrongly
+     * skipped (false-skip) that exact backup even though the real compressed
+     * result fit comfortably under a 250 MB cap. 8x leaves real margin below the
+     * measured 12.06x for less-compressible data (already-compressed BLOBs, etc.)
+     * while still catching genuinely hopeless multi-GB-over-cap databases early.
+     */
+    private const PRECHECK_RAW_SIZE_MULTIPLIER = 8;
 
     /**
      * BACKUP-H1/M4: a database backup is whole-DB, not scoped to any one clinic
@@ -83,6 +139,49 @@ class AdminBackupService
     public function facilityId(): int
     {
         return self::BACKUP_FACILITY_ID;
+    }
+
+    /**
+     * BACKUP-CAP: the configurable in-memory encryption cap, in bytes. Reads
+     * `backup_max_encrypt_mb` at the backup sentinel facility (same place every
+     * other backup config setting lives — M4); a blank/invalid/too-low value falls
+     * back to the documented default rather than accidentally disabling the guard.
+     */
+    public function maxEncryptBytes(int $facilityId): int
+    {
+        $mb = $this->config->getInt('backup_max_encrypt_mb', self::DEFAULT_MAX_ENCRYPT_MB, $facilityId);
+        if ($mb < self::MIN_MAX_ENCRYPT_MB) {
+            $mb = self::DEFAULT_MAX_ENCRYPT_MB;
+        }
+
+        return $mb * 1024 * 1024;
+    }
+
+    /**
+     * The memory_limit (MB) to request before the in-memory encrypt/verify step,
+     * derived from the configured cap so a raised cap doesn't silently OOM (see
+     * the class-level BACKUP-CAP doc for the multiplier's reasoning).
+     */
+    private function encryptMemoryLimitMb(int $capBytes): int
+    {
+        return (int) ceil($capBytes / (1024 * 1024) * self::ENCRYPT_MEMORY_LIMIT_MULTIPLIER)
+            + self::ENCRYPT_MEMORY_LIMIT_HEADROOM_MB;
+    }
+
+    /**
+     * Plain-English, actionable message for a compressed dump over the cap — points
+     * at the config key to raise (if the box has the RAM) and at BACKUP-STREAM (the
+     * tracked true-streaming fix) rather than a bare "too large" throw. Surfaced
+     * verbatim in the failed run row's `message` and, from there, the health chip.
+     */
+    private function overCapMessage(int $gzSize, int $capBytes): string
+    {
+        return 'Compressed backup (' . $this->humanSize($gzSize) . ') is larger than the in-app encryption '
+            . 'limit (' . $this->humanSize($capBytes) . '). If this server has enough free RAM, raise '
+            . '"Backup max size to encrypt (MB)" in Admin Hub -> System -> Backup and try again. '
+            . 'Otherwise use the VPS replica or the stock backup screen for this database. '
+            . '(True streaming encryption with no size cap is a tracked future fix, BACKUP-STREAM — '
+            . 'not yet built because it would change the .enc file format.)';
     }
 
     /**
@@ -264,8 +363,25 @@ class AdminBackupService
     }
 
     /**
+     * BACKUP-H1b: hours to wait before retrying after a FAILED attempt, so a
+     * persistently-failing schedule (over-cap DB, full disk, bad target dir) does
+     * not get re-attempted every time the 1-2 minute job worker polls
+     * (`runScheduledBackup()`) — each attempt before this fix re-ran the full
+     * mysqldump + gzip, ~1440 wasted failed rows/day on a box that can never
+     * succeed until an admin intervenes. Capped by the configured frequency
+     * itself (a sub-daily frequency shouldn't wait longer than its own cadence to
+     * retry) and floored at 1h so a single flaky failure doesn't wait a whole
+     * backoff window on a frequent schedule.
+     */
+    private const RETRY_BACKOFF_HOURS = 4;
+
+    /**
      * Is a scheduled backup due? Compares the last successful run to
-     * `backup_frequency_days` (0 = automatic backups off).
+     * `backup_frequency_days` (0 = automatic backups off). BACKUP-H1b: also backs
+     * off from a recent FAILED attempt (of either kind of "last" — no prior
+     * success at all, or a due-by-age success whose most recent attempt since
+     * then failed) so the scheduled path retries on a sane cadence, not every
+     * worker poll.
      *
      * @return array<string, mixed>
      */
@@ -287,18 +403,46 @@ class AdminBackupService
             [$facilityIds[0], $facilityIds[1], $kind]
         );
         $last = is_array($row) ? (string) ($row['finished_at'] ?? '') : '';
+
+        $lastAttempt = QueryUtils::querySingleRow(
+            "SELECT status, finished_at FROM admin_hub_backup_run
+             WHERE facility_id IN (?, ?) AND kind = ? AND status IN ('ok', 'failed') AND finished_at IS NOT NULL
+             ORDER BY id DESC LIMIT 1",
+            [$facilityIds[0], $facilityIds[1], $kind]
+        );
+        $backoffHours = max(1, min($freq * 24, self::RETRY_BACKOFF_HOURS));
+        $inBackoff = is_array($lastAttempt)
+            && (string) ($lastAttempt['status'] ?? '') === 'failed'
+            && $this->hoursSinceTimestamp((string) ($lastAttempt['finished_at'] ?? '')) < $backoffHours;
+
         if ($last === '') {
-            return ['scheduled' => true, 'due' => true, 'frequency_days' => $freq, 'last_ok' => null, 'age_days' => null];
+            return [
+                'scheduled' => true,
+                'due' => !$inBackoff,
+                'frequency_days' => $freq,
+                'last_ok' => null,
+                'age_days' => null,
+            ];
         }
         $ageDays = (int) floor((time() - (int) strtotime($last)) / 86400);
 
         return [
             'scheduled' => true,
-            'due' => $ageDays >= $freq,
+            'due' => $ageDays >= $freq && !$inBackoff,
             'frequency_days' => $freq,
             'last_ok' => $last,
             'age_days' => $ageDays,
         ];
+    }
+
+    private function hoursSinceTimestamp(string $timestamp): int
+    {
+        $ts = strtotime($timestamp);
+        if ($ts === false) {
+            return 999;
+        }
+
+        return (int) floor((time() - $ts) / 3600);
     }
 
     /**
@@ -341,6 +485,20 @@ class AdminBackupService
         $tmpDir = null;
         try {
             $targetDir = $this->resolveTargetDir($facilityId);
+            $capBytes = $this->maxEncryptBytes($facilityId);
+
+            // BACKUP-H1b / CAPACITY pre-check — a cheap information_schema lookup
+            // BEFORE the expensive mysqldump+gzip. Heuristic early-out only; the
+            // authoritative check stays below, on the real compressed size.
+            $estimatedRaw = $this->estimatedRawDatabaseBytes();
+            if ($this->shouldSkipViaSizePreCheck($estimatedRaw, $capBytes)) {
+                throw new \RuntimeException(
+                    'Database raw storage (' . $this->humanSize($estimatedRaw) . ') is far larger than the '
+                    . 'encryption limit (' . $this->humanSize($capBytes) . ') — skipped the dump/compress step '
+                    . '(pre-check). ' . $this->overCapMessage($estimatedRaw, $capBytes)
+                );
+            }
+
             [$dumpPath, $tmpDir] = $this->dumpDatabase();
 
             if ((int) @filesize($dumpPath) <= 0) {
@@ -357,13 +515,14 @@ class AdminBackupService
             if ($gzSize <= 0) {
                 throw new \RuntimeException('Backup compression failed');
             }
-            if ($gzSize > self::MAX_ENCRYPT_BYTES) {
+            if ($gzSize > $capBytes) {
                 $this->secureDelete($gzPath);
-                throw new \RuntimeException(
-                    'Compressed backup is too large for in-app encryption ('
-                    . $this->humanSize($gzSize) . '). Use the VPS replica or stock backup.'
-                );
+                throw new \RuntimeException($this->overCapMessage($gzSize, $capBytes));
             }
+
+            // BACKUP-CAP — headroom for the in-memory encrypt step (see the class
+            // doc on DEFAULT_MAX_ENCRYPT_MB for the multiplier's reasoning).
+            @ini_set('memory_limit', $this->encryptMemoryLimitMb($capBytes) . 'M');
 
             // SEC6 §3 — encrypt BEFORE anything persists, then wipe the plaintext .gz.
             $ciphertext = (new CryptoGen())->encryptStandard((string) file_get_contents($gzPath));
@@ -374,8 +533,18 @@ class AdminBackupService
 
             $archiveName = self::ARCHIVE_PREFIX . $this->siteTag() . '-' . gmdate('Ymd-His') . '.sql.gz' . self::ARCHIVE_SUFFIX;
             $archivePath = rtrim($targetDir, '/\\') . DIRECTORY_SEPARATOR . $archiveName;
-            if (file_put_contents($archivePath, $ciphertext) === false) {
-                throw new \RuntimeException('Could not write the backup archive to the target directory');
+            // M1 — a short/failed write (disk full mid-write) must be caught, not
+            // silently recorded as a real "ok" archive with fewer bytes than it
+            // claims. Compare the ACTUAL bytes written to the ciphertext length.
+            $written = file_put_contents($archivePath, $ciphertext);
+            if ($written === false || $written !== strlen($ciphertext)) {
+                @unlink($archivePath); // never leave a partial archive masquerading as real
+                throw new \RuntimeException(
+                    'Could not write the backup archive to the target directory in full'
+                    . ($written !== false ? ' (wrote ' . $this->humanSize((int) $written) . ' of '
+                        . $this->humanSize(strlen($ciphertext)) . ')' : '')
+                    . ' — the disk may be full.'
+                );
             }
             @chmod($archivePath, 0600);
             $size = strlen($ciphertext);
@@ -394,6 +563,7 @@ class AdminBackupService
             );
 
             $pruned = $this->pruneOldArchives($targetDir, $facilityId);
+            $prunedRows = $this->pruneOldRunRows($facilityId);
             $this->cleanupTempDir($tmpDir);
 
             EventAuditLogger::getInstance()->newEvent(
@@ -401,7 +571,8 @@ class AdminBackupService
                 $_SESSION['authUser'] ?? 'system',
                 $_SESSION['authProvider'] ?? 'default',
                 1,
-                'native_backup ok run_id=' . $runId . ' size=' . $size . ' pruned=' . $pruned . ' uid=' . $actorUserId
+                'native_backup ok run_id=' . $runId . ' size=' . $size . ' pruned=' . $pruned
+                    . ' pruned_rows=' . $prunedRows . ' uid=' . $actorUserId
             );
 
             return [
@@ -410,6 +581,7 @@ class AdminBackupService
                 'size_bytes' => $size,
                 'file_path' => $archivePath,
                 'pruned' => $pruned,
+                'pruned_rows' => $prunedRows,
             ];
         } catch (\Throwable $e) {
             if ($tmpDir !== null) {
@@ -470,11 +642,20 @@ class AdminBackupService
                 throw new \RuntimeException('Site documents directory not found: ' . $docsRoot);
             }
 
-            $stats = $this->mirrorDocuments($docsRoot, $mirrorDir);
+            $stats = $this->mirrorDocuments($docsRoot, $mirrorDir, $facilityId);
 
             $message = 'Site files: ' . $stats['copied'] . ' new/changed, ' . $stats['skipped']
                 . ' unchanged, ' . $this->humanSize($stats['bytes']) . ' this run'
-                . ($stats['too_large'] > 0 ? ' (' . $stats['too_large'] . ' too large — skipped)' : '');
+                . ($stats['too_large'] > 0 ? ' (' . $stats['too_large'] . ' too large — skipped)' : '')
+                // M7 — a source file that changed in place AFTER its first mirror
+                // (documents are meant to be append-only, so this is anomalous —
+                // possibly corruption or tampering) never overwrites the one good
+                // encrypted copy; the old copy is kept and the new state is written
+                // alongside it instead. Flagged here so it's never a silent event.
+                . ($stats['preserved'] > 0
+                    ? ' (' . $stats['preserved'] . ' source file(s) changed after their first backup — '
+                        . 'the earlier good copy was kept, not overwritten; see file names ending in a UTC timestamp)'
+                    : '');
 
             QueryUtils::sqlStatementThrowException(
                 "UPDATE admin_hub_backup_run
@@ -522,14 +703,27 @@ class AdminBackupService
      * co-locate the key with the data it decrypts). A single oversized file is
      * reported (`too_large`), never silently dropped.
      *
-     * @return array{copied: int, skipped: int, too_large: int, bytes: int}
+     * BACKUP-M7: documents are meant to be append-only in this system (design doc
+     * §3 — "once uploaded, never changes"). So a source file whose content changes
+     * IN PLACE after it was already mirrored once is inherently anomalous
+     * (accidental overwrite, corruption, tampering/ransomware) — and mirroring by
+     * mtime alone would happily re-encrypt that corrupted state OVER the one good
+     * encrypted copy on record, destroying it. Never overwrite an existing `.enc`
+     * mirror file: when the source looks newer, the OLD encrypted copy is left
+     * completely untouched and the new state is written to a SEPARATE, sibling
+     * file (`<name>.enc.<UTC timestamp>`) instead — the last-known-good copy is
+     * guaranteed to survive a single bad run.
+     *
+     * @return array{copied: int, skipped: int, too_large: int, bytes: int, preserved: int}
      */
-    private function mirrorDocuments(string $docsRoot, string $mirrorDir): array
+    private function mirrorDocuments(string $docsRoot, string $mirrorDir, int $facilityId): array
     {
         $copied = 0;
         $skipped = 0;
         $tooLarge = 0;
         $bytes = 0;
+        $preserved = 0;
+        $capBytes = $this->maxEncryptBytes($facilityId);
         $crypto = new CryptoGen();
         $rootNorm = rtrim(str_replace('\\', '/', $docsRoot), '/');
 
@@ -555,14 +749,15 @@ class AdminBackupService
             }
             $destPath = rtrim($mirrorDir, '/\\') . DIRECTORY_SEPARATOR
                 . str_replace('/', DIRECTORY_SEPARATOR, $rel) . self::ARCHIVE_SUFFIX;
+            $destExists = is_file($destPath);
 
             // Incremental: mirror already at/newer than source → nothing to do.
-            if (is_file($destPath) && (int) @filemtime($destPath) >= (int) @filemtime($src)) {
+            if ($destExists && (int) @filemtime($destPath) >= (int) @filemtime($src)) {
                 $skipped++;
                 continue;
             }
             $size = (int) @filesize($src);
-            if ($size > self::MAX_ENCRYPT_BYTES) {
+            if ($size > $capBytes) {
                 $tooLarge++;
                 continue;
             }
@@ -578,21 +773,34 @@ class AdminBackupService
                 $skipped++;
                 continue;
             }
-            $destDir = \dirname($destPath);
+            // M7 — a pre-existing mirror file is the last-known-good copy; never
+            // overwrite it. Write the new state alongside it instead.
+            $writePath = $destPath;
+            if ($destExists) {
+                $writePath = $destPath . '.' . gmdate('Ymd-His');
+                $preserved++;
+            }
+            $destDir = \dirname($writePath);
             if (!is_dir($destDir) && !@mkdir($destDir, 0700, true) && !is_dir($destDir)) {
                 $skipped++;
                 continue;
             }
-            if (@file_put_contents($destPath, $cipher) === false) {
+            if (@file_put_contents($writePath, $cipher) === false) {
                 $skipped++;
                 continue;
             }
-            @chmod($destPath, 0600);
+            @chmod($writePath, 0600);
             $copied++;
             $bytes += \strlen($cipher);
         }
 
-        return ['copied' => $copied, 'skipped' => $skipped, 'too_large' => $tooLarge, 'bytes' => $bytes];
+        return [
+            'copied' => $copied,
+            'skipped' => $skipped,
+            'too_large' => $tooLarge,
+            'bytes' => $bytes,
+            'preserved' => $preserved,
+        ];
     }
 
     /**
@@ -658,7 +866,8 @@ class AdminBackupService
         if ($path === '' || !is_file($path)) {
             return ['verified' => false, 'note' => 'The backup file is missing from disk.', 'run_id' => $resolvedRunId];
         }
-        if ((int) @filesize($path) > self::MAX_ENCRYPT_BYTES) {
+        $capBytes = $this->maxEncryptBytes($facilityId);
+        if ((int) @filesize($path) > $capBytes) {
             return [
                 'verified' => false,
                 'note' => 'Too large to verify in-app — verify manually by decrypting.',
@@ -666,7 +875,7 @@ class AdminBackupService
             ];
         }
 
-        @ini_set('memory_limit', '512M');
+        @ini_set('memory_limit', $this->encryptMemoryLimitMb($capBytes) . 'M');
         $plaintextGz = (new CryptoGen())->decryptStandard((string) file_get_contents($path));
         if ($plaintextGz === false || $plaintextGz === '') {
             return [
@@ -676,17 +885,27 @@ class AdminBackupService
             ];
         }
 
-        // Read only the decompressed head (memory-safe) and check for SQL markers.
+        // M1 — write the decrypted gzip to a temp file (memory-safe hand-off, same
+        // as before) then STREAM it to EOF in constant-size chunks. The old code
+        // only read the first 8 KB of the decompressed stream, so a backup
+        // truncated mid-dump (disk full, killed process) still verified GREEN as
+        // long as its first 8 KB happened to be intact — which they almost always
+        // are, because gzip decompresses sequentially from the start. Reading to
+        // EOF is the only way to actually notice a truncated/corrupt tail.
         $tmp = tempnam(sys_get_temp_dir(), 'ncvg');
         file_put_contents($tmp, $plaintextGz);
         unset($plaintextGz);
-        $head = '';
-        $gh = gzopen($tmp, 'rb');
-        if ($gh !== false) {
-            $head = (string) gzread($gh, 8192);
-            gzclose($gh);
-        }
+        $stream = $this->streamGzipToEof($tmp);
         @unlink($tmp);
+
+        if (!$stream['ok']) {
+            return [
+                'verified' => false,
+                'note' => 'Decrypted, but the compressed archive is truncated or corrupt: ' . $stream['error'],
+                'run_id' => $resolvedRunId,
+            ];
+        }
+        $head = $stream['head'];
 
         $looksLikeSql = str_contains($head, 'CREATE TABLE')
             || str_contains($head, 'INSERT INTO')
@@ -712,6 +931,123 @@ class AdminBackupService
         }
 
         return ['verified' => false, 'note' => 'Decrypted, but the contents do not look like a database dump.', 'run_id' => $resolvedRunId];
+    }
+
+    /** Wall-clock bound on streamGzipToEof() so a pathological/huge archive can't hang a verify request forever. */
+    private const STREAM_VERIFY_MAX_SECONDS = 120;
+
+    /**
+     * M1 — stream a gzip file to EOF in constant-size chunks (memory-safe
+     * regardless of the decompressed size) so a truncated/corrupt tail is
+     * actually noticed, not just the readable head. Returns the first chunk read
+     * (for the SQL-marker sniff) plus whether the read completed cleanly.
+     *
+     * IMPORTANT (verified empirically, not assumed): a truncated gzip stream does
+     * NOT reliably raise a PHP warning or make gzread() return `false`. Cutting a
+     * real gzip file off mid-stream and reading it through gzread() in a loop
+     * measurably shows PHP's zlib wrapper just STOPS producing bytes early and
+     * reports `feof()` as true immediately — no error, no short final chunk to
+     * catch. So neither "gzread() returned false" nor "empty chunk while not at
+     * feof" (both still checked below, belt-and-braces) reliably catches this —
+     * the only trustworthy signal is RFC 1952's own gzip trailer: the last 4
+     * bytes of the (still-compressed) archive are the ORIGINAL uncompressed
+     * size, mod 2^32. After streaming to whatever EOF we're given, compare the
+     * bytes we actually decompressed against what the archive's own trailer
+     * claims — a truncated archive's trailer is just leftover compressed bytes
+     * (not a real trailer), so it will not match.
+     *
+     * @return array{ok: bool, head: string, error: string|null}
+     */
+    private function streamGzipToEof(string $path): array
+    {
+        // RFC 1952 minimum: 10-byte header + an (empty) deflate block + 8-byte trailer.
+        if ((int) @filesize($path) < 18) {
+            return ['ok' => false, 'head' => '', 'error' => 'archive is too small to be a valid gzip stream'];
+        }
+
+        $gh = gzopen($path, 'rb');
+        if ($gh === false) {
+            return ['ok' => false, 'head' => '', 'error' => 'could not open the decompressed archive for reading'];
+        }
+
+        $head = '';
+        $totalBytes = 0;
+        $readError = null;
+        set_error_handler(function (int $errno, string $errstr) use (&$readError): bool {
+            $readError = $errstr;
+
+            return true; // swallow — we surface this ourselves below
+        });
+
+        $startedAt = time();
+        try {
+            while (!feof($gh)) {
+                $chunk = gzread($gh, 1 << 20); // 1 MB
+                if ($readError !== null) {
+                    break;
+                }
+                if ($chunk === false) {
+                    $readError = 'gzread failed';
+                    break;
+                }
+                if ($head === '') {
+                    $head = $chunk;
+                }
+                $totalBytes += strlen($chunk);
+                if ($chunk === '') {
+                    break; // nothing more to read, however feof() itself reported it
+                }
+                if ((time() - $startedAt) > self::STREAM_VERIFY_MAX_SECONDS) {
+                    $readError = 'verify timed out reading the archive';
+                    break;
+                }
+            }
+        } finally {
+            restore_error_handler();
+            gzclose($gh);
+        }
+
+        if ($readError !== null) {
+            return ['ok' => false, 'head' => $head, 'error' => $readError];
+        }
+
+        $expectedIsize = $this->readGzipIsize($path);
+        if ($expectedIsize === null) {
+            return ['ok' => false, 'head' => $head, 'error' => 'could not read the gzip trailer'];
+        }
+        if (($totalBytes % 4294967296) !== $expectedIsize) {
+            return [
+                'ok' => false,
+                'head' => $head,
+                'error' => 'decompressed ' . $totalBytes . ' byte(s) but the archive\'s own gzip trailer expects '
+                    . $expectedIsize . ' byte(s) — the archive is incomplete or corrupt',
+            ];
+        }
+
+        return ['ok' => true, 'head' => $head, 'error' => null];
+    }
+
+    /**
+     * RFC 1952 §2.3.1: a gzip stream's last 4 bytes are ISIZE — the size of the
+     * ORIGINAL (uncompressed) input, modulo 2^32, little-endian. Read directly
+     * off the raw (compressed) file, independent of the gzread() streaming
+     * above — this is the authoritative truncation check.
+     */
+    private function readGzipIsize(string $path): ?int
+    {
+        $f = @fopen($path, 'rb');
+        if ($f === false) {
+            return null;
+        }
+        $seeked = @fseek($f, -4, SEEK_END) === 0;
+        $bytes = $seeked ? fread($f, 4) : false;
+        fclose($f);
+        if ($bytes === false || strlen($bytes) !== 4) {
+            return null;
+        }
+        $unpacked = unpack('V', $bytes);
+
+        return is_array($unpacked) && isset($unpacked[1]) ? (int) $unpacked[1] : null;
     }
 
     /**
@@ -1124,9 +1460,19 @@ class AdminBackupService
         $errPath = $tmpBase . DIRECTORY_SEPARATOR . 'err.log';
         $bin = $this->resolveMysqldump();
 
+        // L5 — restore fidelity flags, matching stock OpenEMR's own backup
+        // (interface/main/backup.php) where sensible: --hex-blob (binary/blob
+        // columns dump as hex literals instead of raw bytes — safe across any
+        // client charset, avoids mangled scans/attachments on restore),
+        // --events (scheduled DB events aren't covered by --routines/--triggers),
+        // --quote-names + --no-tablespaces + --default-character-set=utf8mb4
+        // (portable across a MariaDB<->MySQL move and avoids needing PROCESS
+        // privilege for tablespace info). --routines/--triggers/--single-transaction
+        // already present.
         $cmd = escapeshellarg($bin)
             . ' --defaults-extra-file=' . escapeshellarg($cnfPath)
-            . ' --single-transaction --routines --triggers --skip-comments '
+            . ' --single-transaction --routines --triggers --events --hex-blob'
+            . ' --quote-names --no-tablespaces --default-character-set=utf8mb4 --skip-comments '
             . escapeshellarg($dbase)
             . ' > ' . escapeshellarg($dumpPath)
             . ' 2> ' . escapeshellarg($errPath);
@@ -1208,6 +1554,97 @@ class AdminBackupService
         return $pruned;
     }
 
+    /**
+     * BACKUP-M6b: `admin_hub_backup_run` rows are never pruned by anything else —
+     * only the `.enc` files are (pruneOldArchives above). Left alone, a clinic
+     * with years of daily runs (or a schedule that fails repeatedly) grows this
+     * table forever. Reuses the SAME `admin_hub_backup_retention_days` window so
+     * the retention setting is honest about controlling BOTH run history and
+     * archive files, not just files.
+     *
+     * Two things are NEVER pruned regardless of age:
+     *  - any row with `verified_at` set — that is the permanent "this clinic has
+     *    proven it can restore" milestone (AdminHealthService::backupEverVerified(),
+     *    H3(i)); deleting the only one would silently reset the setup checklist.
+     *  - the single most-recent row of EACH kind ('db'/'files'), so "last status"
+     *    always has something current to show even on a 0-day-old install.
+     */
+    private function pruneOldRunRows(int $facilityId): int
+    {
+        $days = $this->config->getInt('admin_hub_backup_retention_days', 30, $facilityId);
+        if ($days <= 0) {
+            return 0;
+        }
+        try {
+            $latestRows = QueryUtils::fetchRecords(
+                'SELECT MAX(id) AS id FROM admin_hub_backup_run WHERE facility_id = ? GROUP BY kind',
+                [$facilityId]
+            ) ?: [];
+            $keepIds = array_values(array_filter(array_map(
+                static fn (array $r): int => (int) ($r['id'] ?? 0),
+                $latestRows
+            )));
+            $keepIds[] = 0; // keeps the IN() clause well-formed even with no prior rows
+            $placeholders = implode(',', array_fill(0, count($keepIds), '?'));
+
+            $countRow = QueryUtils::querySingleRow(
+                "SELECT COUNT(*) AS cnt FROM admin_hub_backup_run
+                 WHERE facility_id = ? AND status != 'running' AND verified_at IS NULL
+                 AND started_at < DATE_SUB(NOW(), INTERVAL ? DAY) AND id NOT IN ($placeholders)",
+                array_merge([$facilityId, $days], $keepIds)
+            );
+            $count = is_array($countRow) ? (int) ($countRow['cnt'] ?? 0) : 0;
+            if ($count > 0) {
+                sqlStatement(
+                    "DELETE FROM admin_hub_backup_run
+                     WHERE facility_id = ? AND status != 'running' AND verified_at IS NULL
+                     AND started_at < DATE_SUB(NOW(), INTERVAL ? DAY) AND id NOT IN ($placeholders)",
+                    array_merge([$facilityId, $days], $keepIds)
+                );
+            }
+
+            return $count;
+        } catch (\Throwable) {
+            // verified_at column may not exist yet on an un-upgraded install — skip
+            // pruning rather than risk deleting rows we can't correctly protect.
+            return 0;
+        }
+    }
+
+    /**
+     * BACKUP-H1b cheap pre-check: raw InnoDB storage bytes for the whole database,
+     * via `information_schema` (fast — metadata, not a table scan). Returns null on
+     * any failure so the pre-check degrades to "run the real dump" rather than ever
+     * blocking a backup on an estimate it couldn't compute.
+     */
+    private function estimatedRawDatabaseBytes(): ?int
+    {
+        try {
+            $row = QueryUtils::querySingleRow(
+                'SELECT SUM(data_length + index_length) AS bytes FROM information_schema.tables WHERE table_schema = DATABASE()'
+            );
+            if (!is_array($row) || $row['bytes'] === null) {
+                return null;
+            }
+
+            return (int) $row['bytes'];
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Pure decision extracted from performBackup() so the multiplier's tuning is
+     * unit-testable without a real database — see PRECHECK_RAW_SIZE_MULTIPLIER's
+     * doc for the measured false-skip this guards against. Null estimate (the
+     * information_schema lookup failed) never skips — degrade to "run the real
+     * dump" rather than block a backup on an estimate we couldn't compute.
+     */
+    private function shouldSkipViaSizePreCheck(?int $estimatedRawBytes, int $capBytes): bool
+    {
+        return $estimatedRawBytes !== null && $estimatedRawBytes > $capBytes * self::PRECHECK_RAW_SIZE_MULTIPLIER;
+    }
+
     private function siteTag(): string
     {
         $tag = preg_replace('/[^a-z0-9]+/i', '', (string) ($GLOBALS['OE_SITE'] ?? 'default'));
@@ -1229,15 +1666,35 @@ class AdminBackupService
             fclose($in);
             throw new \RuntimeException('Could not open the compressed backup for writing');
         }
+        // M1 — a failed/short gzwrite() (classically: disk full mid-write) was
+        // previously silent; the caller just saw a "successful" but truncated .gz
+        // that later verified green off its head. Check every write.
         while (!feof($in)) {
             $chunk = fread($in, 1 << 20); // 1 MB
             if ($chunk === false) {
-                break;
+                fclose($in);
+                gzclose($out);
+                throw new \RuntimeException('Could not read the database dump for compression (read error)');
             }
-            gzwrite($out, $chunk);
+            if ($chunk === '') {
+                continue;
+            }
+            $written = gzwrite($out, $chunk);
+            if ($written === false || $written < strlen($chunk)) {
+                fclose($in);
+                gzclose($out);
+                throw new \RuntimeException(
+                    'Backup compression failed: a write to the compressed archive was short or failed '
+                    . '— the disk may be full.'
+                );
+            }
         }
         fclose($in);
-        gzclose($out);
+        if (!gzclose($out)) {
+            throw new \RuntimeException(
+                'Backup compression failed: could not finalize the compressed archive — the disk may be full.'
+            );
+        }
     }
 
     private function secureDelete(string $path): void
@@ -1247,7 +1704,7 @@ class AdminBackupService
         }
         // Best-effort overwrite before unlink so plaintext isn't trivially recoverable.
         $size = (int) @filesize($path);
-        if ($size > 0 && $size < self::MAX_ENCRYPT_BYTES) {
+        if ($size > 0 && $size < self::SECURE_DELETE_MAX_OVERWRITE_BYTES) {
             @file_put_contents($path, str_repeat("\0", $size));
         }
         @unlink($path);

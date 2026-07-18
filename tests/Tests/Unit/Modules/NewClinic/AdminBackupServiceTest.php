@@ -19,6 +19,7 @@ require_once __DIR__ . '/ModuleAutoload.php';
 use OpenEMR\Common\Crypto\CryptoGen;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Modules\NewClinic\Services\AdminBackupService;
+use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use PHPUnit\Framework\TestCase;
 
 class AdminBackupServiceTest extends TestCase
@@ -109,6 +110,28 @@ class AdminBackupServiceTest extends TestCase
         $gz = (string) gzencode($plainSql, 6);
         $cipher = (new CryptoGen())->encryptStandard($gz);
         $path = tempnam(sys_get_temp_dir(), 'ncbktest') . '.sql.gz.enc';
+        file_put_contents($path, $cipher);
+        $this->tempFiles[] = $path;
+
+        return $path;
+    }
+
+    /**
+     * M1: a real CryptoGen-encrypted archive whose UNDERLYING gzip stream is cut
+     * off mid-payload — the encryption layer itself is not corrupted at all (the
+     * whole truncated blob encrypts/decrypts cleanly), which is exactly what a
+     * disk-full-mid-write backup produces: a perfectly good ciphertext wrapping
+     * an incomplete .gz. Decompressed payload is made large enough (multiple KB)
+     * that the old head-only (8 KB) verify would have missed the truncation.
+     */
+    private function writeTruncatedEncryptedArchive(): string
+    {
+        $plainSql = "-- MySQL dump\nCREATE TABLE foo (id INT);\n"
+            . str_repeat("INSERT INTO foo VALUES (1);\n", 5000);
+        $gz = (string) gzencode($plainSql, 6);
+        $truncated = substr($gz, 0, (int) floor(strlen($gz) * 0.6));
+        $cipher = (new CryptoGen())->encryptStandard($truncated);
+        $path = tempnam(sys_get_temp_dir(), 'ncbktrunc') . '.sql.gz.enc';
         file_put_contents($path, $cipher);
         $this->tempFiles[] = $path;
 
@@ -439,5 +462,303 @@ class AdminBackupServiceTest extends TestCase
         $this->assertIsString($third);
         $this->assertNotSame('unavailable', $third);
         $release->invoke($svc, $lockKey, $third);
+    }
+
+    /**
+     * M1: the old head-only (8 KB) verify would falsely pass a truncated backup
+     * as long as the readable head happened to be intact — which it almost
+     * always is, because gzip decompresses sequentially from the start. Streaming
+     * to EOF and checking the archive's own gzip trailer (RFC 1952 ISIZE) is the
+     * only way to actually notice a truncated/corrupt tail.
+     */
+    public function testVerifyBackupFailsOnATruncatedArchive(): void
+    {
+        $this->asSuperAdmin();
+        $path = $this->writeTruncatedEncryptedArchive();
+        $runId = $this->insertRun('db', 'ok', $path, strlen((string) file_get_contents($path)));
+
+        $result = (new AdminBackupService())->verifyBackup($runId);
+
+        $this->assertFalse($result['verified']);
+        $this->assertStringContainsString('incomplete', $result['note']);
+    }
+
+    /** M1: a genuinely complete archive must still pass the new full-stream verify. */
+    public function testVerifyBackupPassesOnAFullGoodArchive(): void
+    {
+        $this->asSuperAdmin();
+        $path = $this->writeFakeEncryptedArchive();
+        $runId = $this->insertRun('db', 'ok', $path, strlen((string) file_get_contents($path)));
+
+        $result = (new AdminBackupService())->verifyBackup($runId);
+
+        $this->assertTrue($result['verified'], $result['note']);
+    }
+
+    /**
+     * BACKUP-CAP: the configurable in-memory encryption cap reads
+     * `backup_max_encrypt_mb`, and a value below the documented floor guard
+     * falls back to the default rather than silently disabling the guard.
+     */
+    public function testMaxEncryptBytesUsesConfiguredValueWithFloorGuard(): void
+    {
+        $config = new ClinicConfigService();
+        $prev = $config->get('backup_max_encrypt_mb', '250', 0);
+        try {
+            $config->set('backup_max_encrypt_mb', '500', 0);
+            $svc = new AdminBackupService(config: $config);
+            $this->assertSame(500 * 1024 * 1024, $svc->maxEncryptBytes(0));
+
+            $config->set('backup_max_encrypt_mb', '1', 0);
+            $this->assertSame(250 * 1024 * 1024, $svc->maxEncryptBytes(0));
+        } finally {
+            $config->set('backup_max_encrypt_mb', (string) $prev, 0);
+        }
+    }
+
+    /**
+     * BACKUP-H1b regression: the pre-check must NOT false-skip a database whose
+     * raw table storage looks big but would still compress under the cap. This
+     * pins the exact scenario measured live against this dev box during the fix:
+     * 1693.9 MB storage -> 140.5 MB real gzip (12.06x) — an earlier build of the
+     * pre-check used multiplier 3 (threshold 750 MB for a 250 MB cap) and wrongly
+     * skipped this real, fittable backup before ever attempting the dump.
+     */
+    public function testSizePreCheckDoesNotFalseSkipARealMeasuredRatio(): void
+    {
+        $svc = new AdminBackupService();
+        $method = new \ReflectionMethod(AdminBackupService::class, 'shouldSkipViaSizePreCheck');
+        $method->setAccessible(true);
+
+        $capBytes = 250 * 1024 * 1024;
+        $measuredRawStorageBytes = (int) (1693.9 * 1024 * 1024);
+
+        $this->assertFalse(
+            $method->invoke($svc, $measuredRawStorageBytes, $capBytes),
+            'a database that measurably compresses to under the cap must not be pre-check-skipped'
+        );
+
+        // A genuinely hopeless database (raw storage far beyond any plausible
+        // compression ratio recovering it) must still be skipped early.
+        $this->assertTrue($method->invoke($svc, $capBytes * 20, $capBytes));
+
+        // No estimate available (information_schema lookup failed) never skips.
+        $this->assertFalse($method->invoke($svc, null, $capBytes));
+    }
+
+    /** BACKUP-M6: retention 0 means "never delete" — must not prune anything, however old. */
+    public function testPruneOldArchivesNeverPrunesWhenRetentionIsZero(): void
+    {
+        $config = new ClinicConfigService();
+        $prev = $config->get('admin_hub_backup_retention_days', '30', 0);
+        $dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ncbkprune_' . bin2hex(random_bytes(4));
+        mkdir($dir);
+        $file = $dir . DIRECTORY_SEPARATOR . AdminBackupService::ARCHIVE_PREFIX . 'x' . AdminBackupService::ARCHIVE_SUFFIX;
+        try {
+            $config->set('admin_hub_backup_retention_days', '0', 0);
+            file_put_contents($file, 'x');
+            touch($file, time() - (400 * 86400)); // 400 days old — would be pruned by any real window
+
+            $svc = new AdminBackupService(config: $config);
+            $method = new \ReflectionMethod(AdminBackupService::class, 'pruneOldArchives');
+            $method->setAccessible(true);
+            $pruned = $method->invoke($svc, $dir, 0);
+
+            $this->assertSame(0, $pruned);
+            $this->assertFileExists($file);
+        } finally {
+            $config->set('admin_hub_backup_retention_days', (string) $prev, 0);
+            @unlink($file);
+            @rmdir($dir);
+        }
+    }
+
+    /**
+     * BACKUP-M6: "older than N days" must not delete a backup exactly N days old
+     * (the off-by-one the audit asked to verify) — only strictly-older ones.
+     */
+    public function testPruneOldArchivesKeepsAFileExactlyAtTheRetentionBoundary(): void
+    {
+        $config = new ClinicConfigService();
+        $prev = $config->get('admin_hub_backup_retention_days', '30', 0);
+        $dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ncbkprune_' . bin2hex(random_bytes(4));
+        mkdir($dir);
+        $boundaryFile = $dir . DIRECTORY_SEPARATOR . AdminBackupService::ARCHIVE_PREFIX . 'boundary' . AdminBackupService::ARCHIVE_SUFFIX;
+        $olderFile = $dir . DIRECTORY_SEPARATOR . AdminBackupService::ARCHIVE_PREFIX . 'older' . AdminBackupService::ARCHIVE_SUFFIX;
+        try {
+            $config->set('admin_hub_backup_retention_days', '5', 0);
+            file_put_contents($boundaryFile, 'x');
+            file_put_contents($olderFile, 'x');
+            touch($boundaryFile, time() - (5 * 86400));       // exactly 5 days old
+            touch($olderFile, time() - (5 * 86400) - 60);     // just past 5 days
+
+            $svc = new AdminBackupService(config: $config);
+            $method = new \ReflectionMethod(AdminBackupService::class, 'pruneOldArchives');
+            $method->setAccessible(true);
+            $pruned = $method->invoke($svc, $dir, 0);
+
+            $this->assertSame(1, $pruned);
+            $this->assertFileExists($boundaryFile, 'a backup exactly at the retention boundary must survive');
+            $this->assertFileDoesNotExist($olderFile);
+        } finally {
+            $config->set('admin_hub_backup_retention_days', (string) $prev, 0);
+            @unlink($boundaryFile);
+            @unlink($olderFile);
+            @rmdir($dir);
+        }
+    }
+
+    /**
+     * BACKUP-M6b: run rows themselves are pruned on the same retention window,
+     * but two things must always survive regardless of age: any row with
+     * verified_at set (the permanent H3(i) "proven restorable" milestone) and
+     * the single most-recent row of each kind (so "last status" always has
+     * something current).
+     */
+    public function testPruneOldRunRowsPreservesVerifiedAndLatestPerKind(): void
+    {
+        $config = new ClinicConfigService();
+        $prev = $config->get('admin_hub_backup_retention_days', '30', 0);
+        try {
+            $config->set('admin_hub_backup_retention_days', '5', 0);
+
+            $verifiedId = $this->insertRun('db', 'ok', '/tmp/nc-verified.enc', 10, null, date('Y-m-d H:i:s'));
+            QueryUtils::sqlStatementThrowException(
+                "UPDATE admin_hub_backup_run SET started_at = DATE_SUB(NOW(), INTERVAL 400 DAY) WHERE id = ?",
+                [$verifiedId]
+            );
+
+            $junkId = $this->insertRun('db', 'failed', null);
+            QueryUtils::sqlStatementThrowException(
+                "UPDATE admin_hub_backup_run SET started_at = DATE_SUB(NOW(), INTERVAL 400 DAY) WHERE id = ?",
+                [$junkId]
+            );
+
+            $latestId = $this->insertRun('db', 'failed', null);
+            QueryUtils::sqlStatementThrowException(
+                "UPDATE admin_hub_backup_run SET started_at = DATE_SUB(NOW(), INTERVAL 400 DAY) WHERE id = ?",
+                [$latestId]
+            );
+            // Sanity precondition — a concurrent real run on a shared dev DB could
+            // otherwise land a higher id after ours; if so, skip rather than flake.
+            $actualLatest = QueryUtils::querySingleRow(
+                "SELECT id FROM admin_hub_backup_run WHERE facility_id = 0 AND kind = 'db' ORDER BY id DESC LIMIT 1"
+            );
+            if ((int) ($actualLatest['id'] ?? 0) !== $latestId) {
+                $this->markTestSkipped('another backup run landed concurrently during this test');
+            }
+
+            $svc = new AdminBackupService(config: $config);
+            $method = new \ReflectionMethod(AdminBackupService::class, 'pruneOldRunRows');
+            $method->setAccessible(true);
+            $pruned = $method->invoke($svc, 0);
+
+            $this->assertGreaterThanOrEqual(1, $pruned);
+            $this->assertNotFalse(QueryUtils::querySingleRow('SELECT id FROM admin_hub_backup_run WHERE id = ?', [$verifiedId]));
+            $this->assertNotFalse(QueryUtils::querySingleRow('SELECT id FROM admin_hub_backup_run WHERE id = ?', [$latestId]));
+            // QueryUtils::querySingleRow() returns false (not null) when no row matches.
+            $this->assertFalse(QueryUtils::querySingleRow('SELECT id FROM admin_hub_backup_run WHERE id = ?', [$junkId]));
+        } finally {
+            $config->set('admin_hub_backup_retention_days', (string) $prev, 0);
+        }
+    }
+
+    /**
+     * BACKUP-M7: a source file that changes IN PLACE after its first mirror
+     * (anomalous — documents are meant to be append-only) must never overwrite
+     * the one good encrypted copy on record. The old copy stays byte-for-byte
+     * untouched; the new state lands in a separate, timestamped sibling file.
+     */
+    public function testMirrorDocumentsNeverClobbersExistingEncryptedCopy(): void
+    {
+        $docsRoot = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ncbkdocs_' . bin2hex(random_bytes(4));
+        $mirrorDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ncbkmirror_' . bin2hex(random_bytes(4));
+        mkdir($docsRoot);
+        mkdir($mirrorDir);
+        $srcFile = $docsRoot . DIRECTORY_SEPARATOR . 'patient-scan.pdf';
+        file_put_contents($srcFile, 'ORIGINAL CONTENT');
+        touch($srcFile, time() - 3600);
+
+        $svc = new AdminBackupService();
+        $method = new \ReflectionMethod(AdminBackupService::class, 'mirrorDocuments');
+        $method->setAccessible(true);
+        $destPath = $mirrorDir . DIRECTORY_SEPARATOR . 'patient-scan.pdf' . AdminBackupService::ARCHIVE_SUFFIX;
+
+        try {
+            $stats1 = $method->invoke($svc, $docsRoot, $mirrorDir, 0);
+            $this->assertSame(1, $stats1['copied']);
+            $this->assertSame(0, $stats1['preserved']);
+            $this->assertFileExists($destPath);
+            $firstCipher = file_get_contents($destPath);
+
+            // Source changes IN PLACE (corruption/tampering scenario) and becomes
+            // newer than the mirror.
+            file_put_contents($srcFile, 'CORRUPTED OR CHANGED CONTENT');
+            touch($srcFile, time() + 10);
+
+            $stats2 = $method->invoke($svc, $docsRoot, $mirrorDir, 0);
+            $this->assertSame(1, $stats2['copied']);
+            $this->assertSame(1, $stats2['preserved']);
+
+            // The ORIGINAL good copy must be completely untouched.
+            $this->assertSame(
+                $firstCipher,
+                file_get_contents($destPath),
+                'the last-known-good mirror copy must never be overwritten'
+            );
+
+            $siblings = glob($destPath . '.*') ?: [];
+            $this->assertCount(1, $siblings, 'the new state must land in exactly one new sibling file');
+            $decryptedNew = (new CryptoGen())->decryptStandard((string) file_get_contents($siblings[0]));
+            $this->assertSame('CORRUPTED OR CHANGED CONTENT', $decryptedNew);
+
+            $decryptedOriginal = (new CryptoGen())->decryptStandard((string) file_get_contents($destPath));
+            $this->assertSame('ORIGINAL CONTENT', $decryptedOriginal);
+        } finally {
+            foreach (glob($mirrorDir . DIRECTORY_SEPARATOR . '*') ?: [] as $f) {
+                @unlink($f);
+            }
+            @rmdir($mirrorDir);
+            @unlink($srcFile);
+            @rmdir($docsRoot);
+        }
+    }
+
+    /**
+     * BACKUP-H1b: a persistently-failing scheduled backup must back off, not be
+     * re-attempted on every 1-2 minute worker poll. Isolated from any real
+     * backup history already in this DB by inserting a distant fake 'ok' run
+     * (highest id so far wins the "last successful" lookup) so the "due by age"
+     * condition is unconditionally satisfied on its own.
+     */
+    public function testDueForBackupBacksOffAfterARecentFailedAttempt(): void
+    {
+        $config = new ClinicConfigService();
+        $prevFreq = $config->get('backup_frequency_days', '0', 0);
+        try {
+            $config->set('backup_frequency_days', '1', 0); // daily schedule
+
+            $okId = $this->insertRun('db', 'ok', '/tmp/nc-old-ok.enc', 10);
+            QueryUtils::sqlStatementThrowException(
+                "UPDATE admin_hub_backup_run SET finished_at = DATE_SUB(NOW(), INTERVAL 30 DAY) WHERE id = ?",
+                [$okId]
+            );
+
+            $failedId = $this->insertRun('db', 'failed', null);
+
+            $svc = new AdminBackupService(config: $config);
+            $due = $svc->dueForBackup(0);
+            $this->assertFalse($due['due'], 'a fresh failure must back off, not retry on every worker poll');
+
+            // Backdate the failure well past the backoff window (4h) — due resumes.
+            QueryUtils::sqlStatementThrowException(
+                "UPDATE admin_hub_backup_run SET finished_at = DATE_SUB(NOW(), INTERVAL 6 HOUR) WHERE id = ?",
+                [$failedId]
+            );
+            $dueLater = $svc->dueForBackup(0);
+            $this->assertTrue($dueLater['due'], 'once the backoff window has passed, the scheduled retry must resume');
+        } finally {
+            $config->set('backup_frequency_days', (string) $prevFreq, 0);
+        }
     }
 }
