@@ -317,6 +317,7 @@ class ClinicalDocVisitSummaryService
         foreach ($cards as $card) {
             $formdir = (string) ($card['formdir'] ?? '');
             $instance = $instances[$formdir] ?? null;
+            $all = is_array($instance['instances'] ?? null) ? $instance['instances'] : [];
             $merged[] = array_merge($card, [
                 'started' => $instance !== null,
                 'form_id' => $instance['form_id'] ?? null,
@@ -324,6 +325,7 @@ class ClinicalDocVisitSummaryService
                 'last_saved_at' => $instance['last_saved_at'] ?? null,
                 'last_saved_by' => $instance['last_saved_by'] ?? null,
                 'signed' => (bool) ($instance['signed'] ?? false),
+                'instances' => count($all) > 1 ? $all : null,
             ]);
         }
 
@@ -396,17 +398,26 @@ class ClinicalDocVisitSummaryService
         $instances = [];
         foreach ($rows as $row) {
             $formdir = strtolower(trim((string) ($row['formdir'] ?? '')));
-            if ($formdir === '' || isset($instances[$formdir])) {
+            if ($formdir === '') {
                 continue;
             }
             $formsRowId = (int) ($row['id'] ?? 0);
-            $instances[$formdir] = [
+            $entry = [
                 'forms_row_id' => $formsRowId,
                 'form_id' => (int) ($row['form_id'] ?? 0),
                 'last_saved_at' => $this->formatFormDate($row['date'] ?? null),
                 'last_saved_by' => trim((string) ($row['user'] ?? '')),
                 'signed' => !empty($signedMap[$formsRowId]),
             ];
+            if (!isset($instances[$formdir])) {
+                // Rows are date DESC — the first entry per formdir is the latest and
+                // keeps driving the card; every entry lands in 'instances' so repeated
+                // forms (two vitals, two ROS…) stay reachable like on the stock screen.
+                $instances[$formdir] = $entry;
+                $instances[$formdir]['instances'] = [$entry];
+            } else {
+                $instances[$formdir]['instances'][] = $entry;
+            }
         }
 
         return $instances;
@@ -520,6 +531,7 @@ class ClinicalDocVisitSummaryService
             if (isset($covered[$formdir]) || !$this->catalog->isBridgeableFormdir($formdir)) {
                 continue;
             }
+            $all = is_array($instance['instances'] ?? null) ? $instance['instances'] : [];
             $cards[] = [
                 'id' => 'other_' . $formdir,
                 'lens' => 'visit',
@@ -534,6 +546,7 @@ class ClinicalDocVisitSummaryService
                 'last_saved_at' => $instance['last_saved_at'] ?? null,
                 'last_saved_by' => $instance['last_saved_by'] ?? null,
                 'signed' => (bool) ($instance['signed'] ?? false),
+                'instances' => count($all) > 1 ? $all : null,
             ];
         }
 

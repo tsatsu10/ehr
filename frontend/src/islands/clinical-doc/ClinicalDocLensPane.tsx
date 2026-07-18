@@ -167,6 +167,18 @@ export function ClinicalDocLensPane({
     const useNativeVitals = Boolean(onOpenVitals && card.formdir.toLowerCase() === 'vitals');
     const useNativeCertificate = Boolean(onOpenCertificate && card.formdir.toLowerCase() === 'nc_certificate');
     const useNativeEyeExam = Boolean(onOpenEyeExam && card.formdir.toLowerCase() === 'nc_eye_exam');
+    // Per-entry open only makes sense for bridge-rendered forms — native drawers
+    // and the consult note are single-instance surfaces keyed to the visit.
+    const showInstanceList = Boolean(
+      card.instances
+      && card.instances.length > 1
+      && !useNativeInstructions
+      && !useNativeVitals
+      && !useNativeCertificate
+      && !useNativeEyeExam
+      && !SCREENING_INSTRUMENTS.includes(card.formdir.toLowerCase())
+      && card.formdir.toLowerCase() !== 'nc_encounter_consult',
+    );
     const handleOpen = () => {
       if (useNativeInstructions) {
         onOpenInstructions?.();
@@ -287,6 +299,45 @@ export function ClinicalDocLensPane({
           </Button>
         )}
       </div>
+      {showInstanceList && card.instances ? (
+        <details className="nc-clinicaldoc-instances mt-2">
+          <summary className="text-sm text-[var(--oe-nc-text-muted)] cursor-pointer">
+            All entries on this encounter ({card.instances.length})
+          </summary>
+          <ul className="mt-1 mb-0 pl-0 list-none text-sm">
+            {card.instances.map((inst) => (
+              <li
+                key={inst.forms_row_id ?? inst.form_id ?? 0}
+                className="flex items-center justify-between gap-2 border-t border-[var(--oe-nc-border)]/60 py-1.5 first:border-t-0"
+              >
+                <span className="text-[var(--oe-nc-text-muted)]">
+                  {inst.last_saved_at ? formatSavedAt(inst.last_saved_at) : '—'}
+                  {inst.last_saved_by ? ` · ${inst.last_saved_by}` : ''}
+                  {inst.signed ? ' · Signed' : ''}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    void openClinicalDocForm(
+                      ajaxUrl,
+                      csrfToken,
+                      visitId ?? 0,
+                      { ...card, form_id: inst.form_id, started: true },
+                      { lens, returnTo: 'hub', encounterId: encounterId ?? 0 },
+                    ).catch((err: unknown) => {
+                      onOpenError(err instanceof Error ? err.message : 'Could not open form');
+                    });
+                  }}
+                >
+                  Open
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
     </article>
     );
   };

@@ -6,12 +6,21 @@ export type ClinicalDocLens =
   | 'orders'
   | 'specialty';
 
+export interface ClinicalDocFormInstance {
+  forms_row_id?: number | null;
+  form_id?: number | null;
+  last_saved_at?: string | null;
+  last_saved_by?: string | null;
+  signed?: boolean;
+}
+
 export interface ClinicalDocCard {
   id: string;
   lens: ClinicalDocLens;
   source_lens?: ClinicalDocLens;
   formdir: string;
-  kind: 'form' | 'rx';
+  /** 'stock' = long-tail registry/LBF form outside the curated bundle (opens via bridge). */
+  kind: 'form' | 'rx' | 'stock';
   title: string;
   description: string;
   primary?: boolean;
@@ -22,6 +31,8 @@ export interface ClinicalDocCard {
   last_saved_at?: string | null;
   last_saved_by?: string | null;
   signed?: boolean;
+  /** Present when the encounter carries more than one entry of this form (newest first). */
+  instances?: ClinicalDocFormInstance[] | null;
   pin?: number;
   note_preview?: EncounterNotePreview;
   score_total?: number;

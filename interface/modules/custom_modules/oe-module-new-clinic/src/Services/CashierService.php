@@ -113,7 +113,8 @@ class CashierService
         $advancedBilling = $this->billOpsAccess->advancedBillingLink(
             $visitId,
             (int) $visit['encounter'],
-            $facilityId > 0 ? $facilityId : null
+            $facilityId > 0 ? $facilityId : null,
+            (int) $visit['pid']
         );
 
         return [

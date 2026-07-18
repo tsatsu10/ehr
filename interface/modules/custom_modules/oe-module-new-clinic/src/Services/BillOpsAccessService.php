@@ -203,15 +203,21 @@ class BillOpsAccessService
      *
      * @return array{url: string, label: string, external: bool}
      */
-    public function advancedBillingLink(int $visitId, int $encounter, ?int $facilityId = null): array
+    public function advancedBillingLink(int $visitId, int $encounter, ?int $facilityId = null, int $pid = 0): array
     {
-        $webroot = $GLOBALS['webroot'] ?? '';
-        $feeSheet = $webroot . '/interface/patient_file/encounter/encounter_top.php?set_encounter='
-            . urlencode((string) $encounter);
-
         if (!$this->isHubEnabled($facilityId)) {
+            // 2026-07-18: stock encounter_top is no longer a destination — the fee
+            // sheet renders through the clinical-form-bridge in module chrome, with
+            // the same per-form ACL (registry aco_spec encounters|coding).
+            $modulePublic = $this->modulePublicUrl();
+
             return [
-                'url' => $feeSheet,
+                'url' => $modulePublic . '/clinical-form-bridge.php?' . http_build_query([
+                    'pid' => (string) $pid,
+                    'encounter' => (string) $encounter,
+                    'formname' => 'fee_sheet',
+                    'return' => $modulePublic . '/cashier.php',
+                ]),
                 'label' => 'Open fee sheet',
                 'external' => true,
             ];

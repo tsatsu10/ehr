@@ -35,8 +35,10 @@ $facilityId = $visitScope->resolveDeskFacilityId($sessionFacility);
 $catalog = new ClinicalDocCatalogService();
 
 /** @var array<int, string> */
+// fee_sheet is bridge-only (M5-F10 cashier Advanced billing) — it stays excluded
+// from the clinical hub catalog, and aclCheckForm below enforces encounters|coding.
 $allowedForms = array_values(array_unique(array_merge(
-    ['procedure_order'],
+    ['procedure_order', 'fee_sheet'],
     $catalog->allowedFormdirs($facilityId)
 )));
 
