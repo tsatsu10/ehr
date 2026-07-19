@@ -353,4 +353,83 @@ describe('AdminHub', () => {
     expect(await screen.findByText(/Setup checklist/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Setup' })).toHaveAttribute('aria-current', 'page');
   });
+
+  it('ADM-6: switching sections with unsaved changes asks for confirmation, and Cancel keeps the edit', async () => {
+    render(<AdminHub {...props} />);
+    await act(async () => { await Promise.resolve(); });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('link', { name: 'Queue & desks' }));
+    });
+    const triageCheckbox = await screen.findByLabelText(/Enable triage desk/i);
+    await act(async () => {
+      fireEvent.click(triageCheckbox);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('link', { name: 'Clinic' }));
+    });
+
+    // Still on Queue & desks — the switch is pending confirmation, not applied.
+    expect(screen.getByLabelText(/Enable triage desk/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Leave this section/i)).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    });
+
+    expect(screen.getByLabelText(/Enable triage desk/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Leave this section/i)).not.toBeInTheDocument();
+  });
+
+  it('ADM-6: confirming the section-switch prompt discards the edit and navigates', async () => {
+    render(<AdminHub {...props} />);
+    await act(async () => { await Promise.resolve(); });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('link', { name: 'Queue & desks' }));
+    });
+    const triageCheckbox = await screen.findByLabelText(/Enable triage desk/i);
+    await act(async () => {
+      fireEvent.click(triageCheckbox);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('link', { name: 'Clinic' }));
+    });
+    await screen.findByText(/Leave this section/i);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Leave without saving' }));
+    });
+
+    expect(screen.queryByLabelText(/Enable triage desk/i)).not.toBeInTheDocument();
+    expect(await screen.findByText('Clinic details unavailable')).toBeInTheDocument();
+
+    // The save button reflects the discarded (no-longer-dirty) state.
+    const saveBtn = document.getElementById('nc-admin-save') as HTMLButtonElement;
+    expect(saveBtn.disabled).toBe(true);
+  });
+
+  it('ADM-6: warns before leaving the page while there are unsaved changes', async () => {
+    render(<AdminHub {...props} />);
+    await act(async () => { await Promise.resolve(); });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('link', { name: 'Queue & desks' }));
+    });
+    const triageCheckbox = await screen.findByLabelText(/Enable triage desk/i);
+
+    const cleanEvent = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;
+    window.dispatchEvent(cleanEvent);
+    expect(cleanEvent.defaultPrevented).toBe(false);
+
+    await act(async () => {
+      fireEvent.click(triageCheckbox);
+    });
+
+    const dirtyEvent = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;
+    window.dispatchEvent(dirtyEvent);
+    expect(dirtyEvent.defaultPrevented).toBe(true);
+  });
 });

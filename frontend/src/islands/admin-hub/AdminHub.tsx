@@ -359,6 +359,21 @@ export function AdminHub({
     onSave: () => { void handleSave(); },
   });
 
+  // ADM-6: the in-app guards (scope switch, tab switch) only cover
+  // navigation within the page — closing the tab or hitting refresh needed
+  // its own guard.
+  useEffect(() => {
+    if (!dirty) {
+      return;
+    }
+    const handler = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirty]);
+
   const handleScopeChange = useCallback((nextScope: AdminScope) => {
     if (dirty) {
       setPendingConfirm({ type: 'scope_switch', nextScope });
@@ -370,11 +385,25 @@ export function AdminHub({
     setErrorMessage(null);
   }, [dirty]);
 
-  const handleTabChange = useCallback((tab: AdminTabId) => {
+  // The actual switch — used directly where a confirm doesn't apply
+  // (programmatic redirects) and by handleTabChange once any dirty-guard
+  // has been cleared.
+  const applyTabChange = useCallback((tab: AdminTabId) => {
     setActiveTab(tab);
     setMobileNavOpen(false);
     window.history.replaceState({}, '', buildAdminTabUrl(tab));
   }, []);
+
+  // ADM-6: every real navigation (sidebar click, search jump, "go to X"
+  // links) funnels through this one function, so gating it here covers all
+  // of them — same pendingConfirm pattern as the scope switch.
+  const handleTabChange = useCallback((tab: AdminTabId) => {
+    if (dirty) {
+      setPendingConfirm({ type: 'tab_switch', nextTab: tab });
+      return;
+    }
+    applyTabChange(tab);
+  }, [dirty, applyTabChange]);
 
   // ADM-1: global sidebar search — jump to a specific setting or a whole
   // destination tab.
@@ -400,7 +429,10 @@ export function AdminHub({
     setupLandingAppliedRef.current = true;
     const hadExplicitTab = new URL(window.location.href).searchParams.get('tab') != null;
     if (!hadExplicitTab && activeTab === 'queue-desks' && !setupProgress.setup_complete) {
-      handleTabChange('setup');
+      // A programmatic landing decision, not a user navigation — dirty is
+      // always false this early anyway, but go through applyTabChange
+      // directly so it's correct by construction, not by accident.
+      applyTabChange('setup');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot landing redirect; must not re-fire on later activeTab/setupProgress changes
   }, [loading, adminHubEnabled]);
@@ -1443,6 +1475,11 @@ export function AdminHub({
             setDirty(false);
             setSuccessMessage(null);
             setErrorMessage(null);
+          } else if (confirm.type === 'tab_switch') {
+            setDirty(false);
+            setSuccessMessage(null);
+            setErrorMessage(null);
+            applyTabChange(confirm.nextTab);
           } else if (confirm.type === 'archive_visit_type') {
             void archiveVisitType(confirm.row);
           } else if (confirm.type === 'archive_fee') {

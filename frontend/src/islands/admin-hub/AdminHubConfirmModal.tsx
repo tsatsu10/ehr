@@ -18,6 +18,7 @@ export function AdminHubConfirmModal({
       onClose={onClose}
       title={
         pendingConfirm?.type === 'scope_switch' ? 'Switch settings scope?'
+          : pendingConfirm?.type === 'tab_switch' ? 'Leave this section?'
           : pendingConfirm?.type === 'archive_visit_type' ? 'Archive visit type?'
             : pendingConfirm?.type === 'archive_fee' ? 'Archive fee line?'
               : pendingConfirm?.type === 'grant_roles' ? 'Grant desk roles?'
@@ -29,6 +30,7 @@ export function AdminHubConfirmModal({
       cancelLabel="Cancel"
       confirmLabel={
         pendingConfirm?.type === 'scope_switch' ? 'Switch'
+          : pendingConfirm?.type === 'tab_switch' ? 'Leave without saving'
           : pendingConfirm?.type === 'grant_roles' ? 'Grant roles'
             : pendingConfirm?.type === 'cash_profile' ? 'Apply profile'
               : pendingConfirm?.type === 'catalog_enable' ? 'Enable anyway'
@@ -49,6 +51,9 @@ export function AdminHubConfirmModal({
     >
       {pendingConfirm?.type === 'scope_switch' && (
         <p className="mb-0">Discard unsaved changes and switch settings scope?</p>
+      )}
+      {pendingConfirm?.type === 'tab_switch' && (
+        <p className="mb-0">You have unsaved changes on this section. Leave without saving?</p>
       )}
       {pendingConfirm?.type === 'archive_visit_type' && (
         <p className="mb-0">Archive visit type &quot;{pendingConfirm.row.label}&quot;?</p>
