@@ -20,7 +20,7 @@
 }
 
 .nc-admin-section:hover {
-  box-shadow: var(--oe-nc-shadow-md, 0 4px 6px rgba(0, 0, 0, 0.08));
+  box-shadow: var(--shadow-lg);
 }
 
 .nc-admin-section--accent {
@@ -56,11 +56,8 @@
 .nc-admin-progress__bar {
   height: 100%;
   border-radius: 9999px;
-  background: linear-gradient(
-    90deg,
-    var(--oe-nc-primary, #0f766e),
-    color-mix(in srgb, var(--oe-nc-secondary, #0e7490) 80%, var(--oe-nc-primary))
-  );
+  /* ADM-4: flat accent fill, not a gradient — Console 26 doesn't gradient its fills. */
+  background: var(--oe-nc-primary, #0071e3);
   transition: width 280ms ease;
 }
 

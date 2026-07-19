@@ -213,7 +213,7 @@ export function SettingsSectionAccordion({
               key={key}
               value={key}
               id={`nc-admin-group-${idPrefix}-${key}`}
-              className="nc-admin-group-card mb-0 rounded-xl border-[var(--oe-nc-border)] shadow-[var(--oe-nc-shadow-sm,0_1px_2px_rgba(0,0,0,0.05))] transition-shadow duration-200 hover:shadow-[var(--oe-nc-shadow-md,0_4px_6px_rgba(0,0,0,0.08))]"
+              className="nc-admin-group-card mb-0 rounded-2xl border-[var(--oe-nc-border)] shadow-[var(--shadow-sm)] transition-shadow duration-200 hover:shadow-[var(--shadow-lg)]"
             >
               <AccordionTrigger className="bg-[var(--oe-nc-surface,#fff)] px-4 py-4 hover:bg-[var(--oe-nc-bg-tint,#f8fafc)]">
                 <span className="flex min-w-0 flex-1 items-center gap-3">

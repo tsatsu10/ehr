@@ -210,7 +210,7 @@ export function FeaturesTab({
               </p>
               <ul className="list-none m-0 p-0 mb-0">
                 {ancillaryLbfPacks.map((pack) => (
-                  <li key={pack.pack_key} className="flex flex-wrap items-center justify-between mb-2 pb-2 border-bottom">
+                  <li key={pack.pack_key} className="flex flex-wrap items-center justify-between mb-2 border-b border-[var(--oe-nc-border)]/60 pb-2">
                     <div>
                       <strong>{pack.title}</strong>
                       <code className="mx-1 text-sm">{pack.form_id}</code>

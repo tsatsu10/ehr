@@ -224,7 +224,7 @@ export function SetupChecklistCard({
           <Button
             type="button"
             size="sm"
-            variant="cta"
+            variant="default"
             disabled={completing}
             onClick={onMarkComplete}
           >
@@ -312,12 +312,13 @@ function SetupChecklistRow({
   return (
     <li className="flex items-start border-b border-[var(--oe-nc-border)]/70 py-2 last:border-b-0">
       {item.completed ? (
-        <CheckCircle2 className="mr-2 mt-0.5 h-4 w-4 shrink-0 text-[var(--color-oe-cta,#047857)]" aria-hidden />
+        // ADM-4: a softer check — finished rows recede so remaining work pops.
+        <CheckCircle2 className="mr-2 mt-0.5 h-4 w-4 shrink-0 text-[var(--color-oe-cta,#047857)] opacity-60" aria-hidden />
       ) : (
         <Circle className="mr-2 mt-0.5 h-4 w-4 shrink-0 text-[var(--oe-nc-text-muted)]" aria-hidden />
       )}
       <div className="min-w-0 flex-grow">
-        <div className="text-sm font-semibold">
+        <div className={item.completed ? 'text-sm font-normal text-[var(--oe-nc-text-muted)]' : 'text-sm font-semibold'}>
           {/* State is announced, not just drawn (the icons are aria-hidden). */}
           <span className="sr-only">{item.completed ? t('Done:') : t('To do:')} </span>
           {item.label}

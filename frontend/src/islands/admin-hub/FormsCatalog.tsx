@@ -119,7 +119,7 @@ export function FormsCatalog({ catalog, togglingId, onToggle }: FormsCatalogProp
                       <Button
                         type="button"
                         size="sm"
-                        variant={item.enabled ? 'cta' : 'outline'}
+                        variant={item.enabled ? 'default' : 'outline'}
                         disabled={!canToggle || togglingId === item.id}
                         title={
                           blockedOff

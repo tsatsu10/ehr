@@ -7,8 +7,10 @@ import type { GuidedAclTone } from '../../guidedAclTasks';
 import { subTabLabel } from '../../guidedAclTasks';
 import type { PeopleSubTabId } from '../../peopleTypes';
 
+// ADM-4: "primary" is the default task category — the one brand accent, not
+// green (matches the same fix in peopleUi.tsx's TONE_CARD/TONE_ICON).
 const TONE_STYLES: Record<GuidedAclTone, string> = {
-  primary: 'border-l-[var(--color-oe-cta,#047857)]',
+  primary: 'border-l-[var(--oe-nc-primary)]',
   advanced: 'border-l-[color-mix(in_srgb,var(--color-oe-warning,#d97706)_70%,transparent)]',
   help: 'border-l-[color-mix(in_srgb,var(--color-oe-info,#0891b2)_70%,transparent)]',
 };

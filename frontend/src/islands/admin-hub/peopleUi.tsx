@@ -10,10 +10,19 @@ import { PEOPLE_SUB_TABS } from './peopleTypes';
 import type { GuidedAclTone } from './guidedAclTasks';
 import { subTabLabel } from './guidedAclTasks';
 
+// ADM-4: "primary" is the default/most-common task category — the one brand
+// accent, not green (green is reserved for done/success state elsewhere).
 const TONE_CARD: Record<GuidedAclTone, string> = {
-  primary: 'hover:border-[color-mix(in_srgb,var(--color-oe-cta,#047857)_40%,var(--oe-nc-border))]',
+  primary: 'hover:border-[color-mix(in_srgb,var(--oe-nc-primary)_40%,var(--oe-nc-border))]',
   advanced: 'border-[color-mix(in_srgb,var(--color-oe-warning,#d97706)_35%,var(--oe-nc-border))] hover:border-[color-mix(in_srgb,var(--color-oe-warning,#d97706)_55%,var(--oe-nc-border))]',
   help: 'border-[color-mix(in_srgb,var(--color-oe-info,#0891b2)_30%,var(--oe-nc-border))] hover:border-[color-mix(in_srgb,var(--color-oe-info,#0891b2)_50%,var(--oe-nc-border))]',
+};
+
+// The icon swatch was hardcoded green for every tone — didn't track TONE_CARD at all.
+const TONE_ICON: Record<GuidedAclTone, string> = {
+  primary: 'text-[var(--oe-nc-primary)]',
+  advanced: 'text-[var(--color-oe-warning,#d97706)]',
+  help: 'text-[var(--color-oe-info,#0891b2)]',
 };
 
 export interface GuidedActionCard {
@@ -51,7 +60,7 @@ export function PeopleLayout({
               className={cn(
                 'nc-people-subtabs__btn rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
                 subTab === tab.id
-                  ? 'bg-[var(--color-oe-cta,#047857)] text-white'
+                  ? 'bg-[var(--oe-nc-primary)] text-white'
                   : 'text-[var(--oe-nc-text-muted)] hover:bg-[var(--oe-nc-bg-tint,#f8fafc)]',
               )}
               aria-current={subTab === tab.id ? 'page' : undefined}
@@ -107,7 +116,7 @@ export function PeopleActionHub({
             aria-label={`${action.title}. ${action.actionLabel}`}
           >
             <div className="flex items-start justify-between gap-2">
-              <span className="inline-flex rounded-lg bg-[var(--oe-nc-bg-tint,#f8fafc)] p-2 text-[var(--color-oe-cta,#047857)]">
+              <span className={cn('inline-flex rounded-lg bg-[var(--oe-nc-bg-tint,#f8fafc)] p-2', TONE_ICON[action.tone])}>
                 <Icon className="h-5 w-5" aria-hidden />
               </span>
               {leavesAccess && (

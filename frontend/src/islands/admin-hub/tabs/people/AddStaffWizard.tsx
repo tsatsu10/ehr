@@ -139,8 +139,9 @@ export function AddStaffWizard({
         </DialogHeader>
         <DialogBody>
           <nav className="mb-4 flex flex-wrap gap-2 text-xs font-medium uppercase tracking-wide text-[var(--oe-nc-text-muted)]" aria-label="Wizard progress">
+            {/* ADM-4: current-step marker is a nav-position cue, not a done/success state. */}
             {STEPS.map((label, index) => (
-              <span key={label} className={index === step ? 'text-[var(--color-oe-cta,#047857)]' : undefined}>
+              <span key={label} className={index === step ? 'text-[var(--oe-nc-primary)]' : undefined}>
                 {index + 1}. {label}
               </span>
             ))}

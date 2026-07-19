@@ -28,7 +28,7 @@ export function AdminScopeBar({
   metrics?: ReactNode;
 }) {
   return (
-    <div className="nc-admin-scope-bar flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--oe-nc-border)] bg-[var(--oe-nc-surface,#fff)] px-4 py-3 shadow-[var(--oe-nc-shadow-sm,0_1px_2px_rgba(0,0,0,0.05))]">
+    <div className="nc-admin-scope-bar flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--oe-nc-border)] bg-[var(--oe-nc-surface,#fff)] px-4 py-3 shadow-[var(--shadow-sm)]">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         {scopeControl}
         <span className="text-sm text-[var(--oe-nc-text-muted)]" id="nc-admin-scope-hint">
@@ -121,7 +121,8 @@ export function AdminSection({
     <section
       id={id}
       className={cn(
-        'nc-admin-section overflow-hidden rounded-xl border border-[var(--oe-nc-border)] bg-[var(--oe-nc-surface,#fff)] shadow-[var(--oe-nc-shadow-sm,0_1px_2px_rgba(0,0,0,0.05))] transition-[box-shadow,border-color] duration-200',
+        // ADM-4 card family: 1.375rem radius + two-layer soft shadow, matching the comms-hub chrome.
+        'nc-admin-section overflow-hidden rounded-2xl border border-[var(--oe-nc-border)] bg-[var(--oe-nc-surface,#fff)] shadow-[var(--shadow-md)] transition-[box-shadow,border-color] duration-200',
         variant === 'accent' && 'nc-admin-section--accent border-[color-mix(in_srgb,var(--oe-nc-primary)_24%,var(--oe-nc-border))]',
         variant === 'muted' && 'nc-admin-section--muted bg-[var(--oe-nc-bg-tint,#f8fafc)]',
         variant === 'alert' && 'nc-admin-section--alert border-[color-mix(in_srgb,var(--color-oe-warning,#d97706)_35%,var(--oe-nc-border))]',

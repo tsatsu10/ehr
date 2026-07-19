@@ -56,9 +56,10 @@ export function PeopleHelpPanel({ focusId, onOpenAclHelp }: PeopleHelpPanelProps
           <article
             key={topic.id}
             id={`people-help-${topic.id}`}
+            // ADM-4: a deep-link landing cue, not a done/success state.
             className={
               focusId === topic.id
-                ? 'rounded-lg border border-[var(--color-oe-cta,#047857)] bg-[var(--oe-nc-bg-tint,#f8fafc)] p-4'
+                ? 'rounded-lg border border-[var(--oe-nc-primary)] bg-[var(--oe-nc-bg-tint,#f8fafc)] p-4'
                 : 'rounded-lg border border-[var(--oe-nc-border)] p-4'
             }
           >
