@@ -113,7 +113,7 @@ test.describe('Pharmacy Operations Hub', () => {
     await drugField.click();
 
     const drugOption = page
-      .locator('#nc-pharmops-receive-drawer button.list-group-item-action')
+      .locator('#nc-pharmops-receive-drawer button.nc-list-group-item-action')
       .filter({ hasText: 'Paracetamol' })
       .first();
     await expect(drugOption).toBeVisible({ timeout: 10000 });

@@ -92,10 +92,11 @@ test.describe('Scheduling & Flow shell', () => {
     await page.goto(`${MODULE_BASE}/scheduling/index.php?lens=flow`);
     await boardResp;
 
-    // SegmentedControl renders role=tab (was role=button pre-redesign).
-    await page.getByRole('tab', { name: 'List' }).click();
+    // SegmentedControl renders role=tab (was role=button pre-redesign);
+    // exact:true so 'Board' does not also match the 'Flow Board' lens tab.
+    await page.getByRole('tab', { name: 'List', exact: true }).click();
     await expect(page.getByRole('columnheader', { name: 'Patient' })).toBeVisible();
-    await page.getByRole('tab', { name: 'Board' }).click();
+    await page.getByRole('tab', { name: 'Board', exact: true }).click();
     await expect(page.locator('.nc-flowboard-board')).toBeVisible();
   });
 
@@ -113,7 +114,9 @@ test.describe('Scheduling & Flow shell', () => {
     // SegmentedControl renders role=tab (was role=button pre-redesign).
     await page.getByRole('tab', { name: 'Week' }).click();
     await expect(page.locator('.nc-calendar-week')).toBeVisible();
-    await expect(page.locator('.nc-calendar-week thead tr').nth(1).locator('th')).not.toHaveCount(0);
+    // Single-provider week view has ONE header row (the provider row only
+    // appears for multi-provider) — assert day headers exist, not row count.
+    await expect(page.locator('.nc-calendar-week thead th')).not.toHaveCount(0);
   });
 
   test('admin daily reports scheduling tab loads KPIs', async ({ page }) => {

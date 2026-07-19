@@ -160,8 +160,21 @@ test.describe('New Clinic Lab + Close Day Golden Path', () => {
       await page.fill('#nc-vitals-weight', '70');
       await page.fill('#nc-vitals-respiration', '16');
 
-      await page.getByRole('button', { name: 'Save vitals' }).click();
+      // The triage desk auto-saves vitals - click Save if still enabled, then
+      // wait for the SAVED STATE (not the response, which can race the
+      // auto-save), and await the send mutation itself.
+      const saveButton = page.getByRole('button', { name: 'Save vitals' });
+      if (await saveButton.isEnabled().catch(() => false)) {
+        await saveButton.click().catch(() => {});
+      }
+      await expect(page.getByText(/Vitals saved/i).first()).toBeVisible({ timeout: 30000 });
+      const sendResp = page.waitForResponse(
+        (resp) => resp.url().includes('triage.send_doctor') && resp.ok(),
+        { timeout: 30000 },
+      );
       await page.getByRole('button', { name: 'Send to doctor' }).click();
+      await sendResp;
+
     });
 
     await test.step('Doctor consultation and lab routing', async () => {

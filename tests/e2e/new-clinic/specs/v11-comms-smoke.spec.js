@@ -129,7 +129,8 @@ test.describe('V1.1-COM smoke', () => {
       (resp) => resp.url().includes('communications.message_done') && resp.ok(),
       { timeout: 45000 },
     );
-    await page.locator('#nc-comm-mark-done').click();
+    // Chat redesign: Mark done lives in the reader header (old id retired).
+    await page.getByRole('button', { name: 'Mark done' }).click();
     const doneBody = await (await doneResp).json();
     expect(doneBody.success, JSON.stringify(doneBody)).toBe(true);
   });

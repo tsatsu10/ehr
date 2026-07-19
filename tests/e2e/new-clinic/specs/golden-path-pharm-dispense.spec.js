@@ -159,9 +159,19 @@ test.describe('New Clinic Pharm Ops Golden Path', () => {
       await page.fill('#nc-vitals-weight', '70');
       await page.fill('#nc-vitals-respiration', '16');
 
-      await page.getByRole('button', { name: 'Save vitals' }).click();
-      await expect(page.getByRole('button', { name: 'Send to doctor' })).toBeVisible({ timeout: 10000 });
+      // The triage desk auto-saves vitals — click Save if still enabled, then
+      // wait for the SAVED STATE and await the send mutation itself.
+      const saveButton = page.getByRole('button', { name: 'Save vitals' });
+      if (await saveButton.isEnabled().catch(() => false)) {
+        await saveButton.click().catch(() => {});
+      }
+      await expect(page.getByText(/Vitals saved/i).first()).toBeVisible({ timeout: 30000 });
+      const sendResp = page.waitForResponse(
+        (resp) => resp.url().includes('triage.send_doctor') && resp.ok(),
+        { timeout: 30000 },
+      );
       await page.getByRole('button', { name: 'Send to doctor' }).click();
+      await sendResp;
     });
 
     await test.step('Doctor quick prescribe and route to pharmacy', async () => {
@@ -186,7 +196,8 @@ test.describe('New Clinic Pharm Ops Golden Path', () => {
       await expect(page.locator('#nc-doctor-formulary-rx-modal')).toBeVisible({ timeout: 10000 });
       await catalogResp;
 
-      const paracetamolLabel = page.locator('label[for^="nc-formulary-rx-drug-"]').filter({ hasText: 'Paracetamol' });
+      // Formulary lists multiple Paracetamol formulations — take the first.
+      const paracetamolLabel = page.locator('label[for^="nc-formulary-rx-drug-"]').filter({ hasText: 'Paracetamol' }).first();
       await expect(paracetamolLabel).toBeVisible({ timeout: 20000 });
       const drugInputId = await paracetamolLabel.getAttribute('for');
       await page.locator(`#${drugInputId}`).check();
@@ -262,7 +273,8 @@ test.describe('New Clinic Pharm Ops Golden Path', () => {
         await expect(drawer).toContainText(/label opened|Print label/i);
       }
 
-      await drawer.locator('button.btn-primary.btn-sm', { hasText: 'Close' }).click();
+      // De-bootstrapped drawer: target the Close button by role, not btn-* classes.
+      await drawer.getByRole('button', { name: 'Close' }).first().click();
       await expect(drawer).toBeHidden({ timeout: 10000 });
 
       await page.waitForResponse(

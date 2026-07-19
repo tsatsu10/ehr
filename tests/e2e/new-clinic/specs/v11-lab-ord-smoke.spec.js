@@ -74,8 +74,21 @@ async function triageSendPatient(page, lname) {
   await page.fill('#nc-vitals-temperature', '36.7');
   await page.fill('#nc-vitals-weight', '68');
   await page.fill('#nc-vitals-respiration', '16');
-  await page.getByRole('button', { name: 'Save vitals' }).click();
+  // The triage desk auto-saves vitals - click Save if still enabled, then
+  // wait for the SAVED STATE (not the response, which can race the
+  // auto-save), and await the send mutation itself.
+  const saveButton = page.getByRole('button', { name: 'Save vitals' });
+  if (await saveButton.isEnabled().catch(() => false)) {
+    await saveButton.click().catch(() => {});
+  }
+  await expect(page.getByText(/Vitals saved/i).first()).toBeVisible({ timeout: 30000 });
+  const sendResp = page.waitForResponse(
+    (resp) => resp.url().includes('triage.send_doctor') && resp.ok(),
+    { timeout: 30000 },
+  );
   await page.getByRole('button', { name: 'Send to doctor' }).click();
+  await sendResp;
+
 }
 
 function credentials() {
@@ -172,7 +185,8 @@ test.describe('V1.1-LAB-ORD smoke', () => {
       await expect(page.locator('#nc-doctor-lab-panel-modal')).toBeVisible({ timeout: 15000 });
       await page.locator('#nc-lab-panel-starter').click();
 
-      const checked = page.locator('.nc-lab-panel-test:checked');
+      // Radix checkboxes are buttons with data-state, not <input>:checked.
+      const checked = page.locator('.nc-lab-panel-test[data-state="checked"]');
       await expect(checked.first()).toBeVisible({ timeout: 10000 });
       const selectedCount = await checked.count();
       expect(selectedCount).toBeGreaterThan(0);

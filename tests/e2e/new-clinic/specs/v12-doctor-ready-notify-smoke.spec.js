@@ -88,17 +88,19 @@ async function triageSendPatient(page, lname) {
   await page.fill('#nc-vitals-weight', '70');
   await page.fill('#nc-vitals-respiration', '16');
 
+  // The triage desk auto-saves vitals — drive to the SAVED STATE with retries
+  // (a transient toast can intercept a single click; the response can race
+  // the auto-save, so state — not the network — is the contract).
   const saveButton = page.getByRole('button', { name: 'Save vitals' });
-  await expect(saveButton).toBeEnabled({ timeout: 15000 });
-  const [saveResponse] = await Promise.all([
-    page.waitForResponse(
-      (resp) => resp.url().includes('triage.save_vitals') && resp.ok(),
-      { timeout: 60000 },
-    ),
-    saveButton.click(),
-  ]);
-  const saveBody = await saveResponse.json();
-  expect(saveBody.success, JSON.stringify(saveBody)).toBe(true);
+  const savedState = page.getByText(/Vitals saved/i).first();
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (await savedState.isVisible().catch(() => false)) break;
+    if (await saveButton.isEnabled().catch(() => false)) {
+      await saveButton.click({ timeout: 5000 }).catch(() => {});
+    }
+    await savedState.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
+  }
+  await expect(savedState).toBeVisible({ timeout: 15000 });
 
   const sendButton = page.getByRole('button', { name: 'Send to doctor' });
   await expect(sendButton).toBeVisible({ timeout: 20000 });

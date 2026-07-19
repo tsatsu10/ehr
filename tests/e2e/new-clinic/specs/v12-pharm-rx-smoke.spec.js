@@ -74,8 +74,21 @@ async function triageSendPatient(page, lname) {
   await page.fill('#nc-vitals-temperature', '36.8');
   await page.fill('#nc-vitals-weight', '65');
   await page.fill('#nc-vitals-respiration', '18');
-  await page.getByRole('button', { name: 'Save vitals' }).click();
+  // The triage desk auto-saves vitals - click Save if still enabled, then
+  // wait for the SAVED STATE (not the response, which can race the
+  // auto-save), and await the send mutation itself.
+  const saveButton = page.getByRole('button', { name: 'Save vitals' });
+  if (await saveButton.isEnabled().catch(() => false)) {
+    await saveButton.click().catch(() => {});
+  }
+  await expect(page.getByText(/Vitals saved/i).first()).toBeVisible({ timeout: 30000 });
+  const sendResp = page.waitForResponse(
+    (resp) => resp.url().includes('triage.send_doctor') && resp.ok(),
+    { timeout: 30000 },
+  );
   await page.getByRole('button', { name: 'Send to doctor' }).click();
+  await sendResp;
+
 }
 
 function credentials() {
@@ -176,9 +189,11 @@ test.describe('V1.2-PHARM-RX smoke', () => {
 
       await expect(page.locator('#nc-doctor-formulary-rx-modal')).toBeVisible({ timeout: 15000 });
 
+      // Formulary lists multiple Paracetamol formulations — take the first.
       const paracetamolLabel = page
         .locator('label[for^="nc-formulary-rx-drug-"]')
-        .filter({ hasText: 'Paracetamol' });
+        .filter({ hasText: 'Paracetamol' })
+        .first();
       await expect(paracetamolLabel).toBeVisible({ timeout: 15000 });
       const drugInputId = await paracetamolLabel.getAttribute('for');
       await page.locator(`#${drugInputId}`).check();

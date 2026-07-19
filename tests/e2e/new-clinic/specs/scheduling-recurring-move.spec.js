@@ -56,9 +56,8 @@ test.describe('Scheduling recurring move', () => {
     const sourceEvent = page.locator('.nc-calendar-day-event').filter({ hasText: fixturePatientName });
     await expect(sourceEvent).toBeVisible({ timeout: 20000 });
 
-    const targetRow = page.locator('tr').filter({
-      has: page.getByRole('rowheader', { name: '10:30' }),
-    });
+    // Half-hour rows render an empty time label now — target by data-slot.
+    const targetRow = page.locator('tr[data-slot="10:30"]');
     const targetCell = targetRow.locator('.nc-calendar-day-cell').first();
     await expect(targetCell).toBeVisible();
 
@@ -67,7 +66,17 @@ test.describe('Scheduling recurring move', () => {
       { timeout: 45000 },
     );
 
-    await sourceEvent.dragTo(targetCell);
+    // The grid uses HTML5 dnd with dataTransfer payloads — dispatch the drag
+    // sequence directly (Playwright's mouse-based dragTo is unreliable here).
+    const srcHandle = await sourceEvent.elementHandle();
+    const dstHandle = await targetCell.elementHandle();
+    await page.evaluate(([src, dst]) => {
+      const dt = new DataTransfer();
+      src.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
+      dst.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt }));
+      dst.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
+      src.dispatchEvent(new DragEvent('dragend', { bubbles: true, cancelable: true, dataTransfer: dt }));
+    }, [srcHandle, dstHandle]);
 
     const scopeDialog = page.getByRole('dialog', { name: /Edit recurring appointment/i });
     await expect(scopeDialog).toBeVisible({ timeout: 10000 });
