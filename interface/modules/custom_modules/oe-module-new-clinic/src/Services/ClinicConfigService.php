@@ -129,6 +129,45 @@ class ClinicConfigService
     }
 
     /**
+     * ADM-5 — whether `$key` has an explicit row at `$facilityId` (not falling
+     * back to global/default). Uses the same per-request/cross-request cache
+     * `get()` already warms for that facility, so this costs no extra query
+     * when called alongside a normal get() loop over the same facility.
+     */
+    public function hasFacilityOverride(string $key, int $facilityId): bool
+    {
+        if ($facilityId === 0) {
+            return false; // Global scope has nothing to "override".
+        }
+
+        return $this->cachedValue($facilityId, $key) !== null;
+    }
+
+    /** ADM-5 — the facility-0 (global default) value for `$key`, or null if unset there. */
+    public function getGlobalValue(string $key): ?string
+    {
+        return $this->cachedValue(0, $key);
+    }
+
+    /**
+     * ADM-5 — "Use global value": delete the facility-level row for `$key`
+     * (a true reset, not a copy of today's global value). No-op if no row
+     * exists there. Never touches facility 0 through this path.
+     */
+    public function deleteFacilityOverride(string $key, int $facilityId): void
+    {
+        if ($facilityId === 0) {
+            return;
+        }
+
+        sqlStatement(
+            "DELETE FROM new_clinic_config WHERE facility_id = ? AND config_key = ?",
+            [$facilityId, $key]
+        );
+        $this->invalidate([$facilityId]);
+    }
+
+    /**
      * Drop the cached config maps after a write so the next read reflects it.
      * Clears the in-process map, plus the cross-request cache keys for the
      * facilities passed (SCALE-3.3 watch-out: a write must delete the facility

@@ -2,10 +2,15 @@ import type { ReactNode } from 'react';
 import { LayoutGrid, Route, ShieldAlert, UserPlus } from 'lucide-react';
 import { QUEUE_DESK_SECTIONS } from '../adminFieldDefs';
 import { SettingsSectionAccordion } from '../SettingsSectionAccordion';
+import type { SettingOverrideInfo } from '../adminTypes';
 
 interface QueueDesksTabProps {
   settings: Record<string, unknown>;
   onFieldChange: (key: string, value: unknown) => void;
+  /** ADM-5: facility-scope override transparency — undefined under global scope. */
+  settingsOverrides?: Record<string, SettingOverrideInfo>;
+  resettingOverrideKey?: string | null;
+  onResetOverride?: (key: string, label: string) => void;
   /** ADM-1: a field key to open its section, scroll to, and flash — set by the global sidebar search. */
   highlightKey?: string | null;
   onHighlightHandled?: () => void;
@@ -18,7 +23,15 @@ const SECTION_ICONS: Record<string, ReactNode> = {
   'Safety & chart integration': <ShieldAlert className="h-4 w-4" aria-hidden />,
 };
 
-export function QueueDesksTab({ settings, onFieldChange, highlightKey, onHighlightHandled }: QueueDesksTabProps) {
+export function QueueDesksTab({
+  settings,
+  onFieldChange,
+  settingsOverrides,
+  resettingOverrideKey,
+  onResetOverride,
+  highlightKey,
+  onHighlightHandled,
+}: QueueDesksTabProps) {
   return (
     <SettingsSectionAccordion
       heading="Queue & desks"
@@ -30,6 +43,9 @@ export function QueueDesksTab({ settings, onFieldChange, highlightKey, onHighlig
       sectionIcons={SECTION_ICONS}
       settings={settings}
       onFieldChange={onFieldChange}
+      settingsOverrides={settingsOverrides}
+      resettingOverrideKey={resettingOverrideKey}
+      onResetOverride={onResetOverride}
       highlightKey={highlightKey}
       onHighlightHandled={onHighlightHandled}
     />

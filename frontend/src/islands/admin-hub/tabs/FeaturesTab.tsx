@@ -16,7 +16,12 @@ import {
   StickyNote,
 } from 'lucide-react';
 import { FEATURE_SECTIONS } from '../adminFieldDefs';
-import type { AncillaryLbfPackStatus, GhanaLbfPackStatus, ReferralHospitalLbfPackStatus } from '../adminTypes';
+import type {
+  AncillaryLbfPackStatus,
+  GhanaLbfPackStatus,
+  ReferralHospitalLbfPackStatus,
+  SettingOverrideInfo,
+} from '../adminTypes';
 import { AdminInsetPanel } from '../adminUi';
 import { SettingsSectionAccordion } from '../SettingsSectionAccordion';
 import { FlowBoardLaneMapPanel } from './FlowBoardLaneMapPanel';
@@ -34,6 +39,10 @@ interface FeaturesTabProps {
   ancillaryLbfPacks: AncillaryLbfPackStatus[];
   ancillaryLbfImporting: string | null;
   onFieldChange: (key: string, value: unknown) => void;
+  /** ADM-5: facility-scope override transparency — undefined under global scope. */
+  settingsOverrides?: Record<string, SettingOverrideInfo>;
+  resettingOverrideKey?: string | null;
+  onResetOverride?: (key: string, label: string) => void;
   onImportGhanaLbfPack: (setAsConsultNote: boolean) => void;
   onImportReferralHospitalLbfPack: (setAsConsultNote: boolean) => void;
   onImportAncillaryLbfPack: (packKey: string) => void;
@@ -63,6 +72,9 @@ export function FeaturesTab({
   csrfToken,
   facilityId,
   settings,
+  settingsOverrides,
+  resettingOverrideKey,
+  onResetOverride,
   ghanaLbfPack,
   ghanaLbfImporting,
   referralHospitalLbfPack,
@@ -92,6 +104,9 @@ export function FeaturesTab({
       sectionIcons={SECTION_ICONS}
       settings={settings}
       onFieldChange={onFieldChange}
+      settingsOverrides={settingsOverrides}
+      resettingOverrideKey={resettingOverrideKey}
+      onResetOverride={onResetOverride}
       highlightKey={highlightKey}
       onHighlightHandled={onHighlightHandled}
       renderSectionExtra={(title) => (

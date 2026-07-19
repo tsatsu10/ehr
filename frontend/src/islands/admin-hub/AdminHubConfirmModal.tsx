@@ -19,6 +19,7 @@ export function AdminHubConfirmModal({
       title={
         pendingConfirm?.type === 'scope_switch' ? 'Switch settings scope?'
           : pendingConfirm?.type === 'tab_switch' ? 'Leave this section?'
+          : pendingConfirm?.type === 'reset_override' ? 'Use global value?'
           : pendingConfirm?.type === 'archive_visit_type' ? 'Archive visit type?'
             : pendingConfirm?.type === 'archive_fee' ? 'Archive fee line?'
               : pendingConfirm?.type === 'grant_roles' ? 'Grant desk roles?'
@@ -31,6 +32,7 @@ export function AdminHubConfirmModal({
       confirmLabel={
         pendingConfirm?.type === 'scope_switch' ? 'Switch'
           : pendingConfirm?.type === 'tab_switch' ? 'Leave without saving'
+          : pendingConfirm?.type === 'reset_override' ? 'Use global value'
           : pendingConfirm?.type === 'grant_roles' ? 'Grant roles'
             : pendingConfirm?.type === 'cash_profile' ? 'Apply profile'
               : pendingConfirm?.type === 'catalog_enable' ? 'Enable anyway'
@@ -54,6 +56,13 @@ export function AdminHubConfirmModal({
       )}
       {pendingConfirm?.type === 'tab_switch' && (
         <p className="mb-0">You have unsaved changes on this section. Leave without saving?</p>
+      )}
+      {pendingConfirm?.type === 'reset_override' && (
+        <p className="mb-0">
+          Delete this clinic&apos;s override for &quot;{pendingConfirm.label}&quot; and go back to
+          the global default? This can&apos;t be undone from here — you&apos;d need to set the
+          value again for this clinic.
+        </p>
       )}
       {pendingConfirm?.type === 'archive_visit_type' && (
         <p className="mb-0">Archive visit type &quot;{pendingConfirm.row.label}&quot;?</p>

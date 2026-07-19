@@ -859,10 +859,24 @@ class ClinicAdminService
                     throw new \InvalidArgumentException('Duplicate warn threshold cannot exceed the block threshold');
                 }
             }
+            // ADM-5 audit finding: the Admin Hub form always round-trips every
+            // EDITABLE_SETTINGS key (collectAdminSettings() sends the full
+            // settings state, not a delta of what the user actually touched),
+            // so $input contains every key on literally every save. Writing
+            // unconditionally here meant the FIRST save at any facility gave
+            // every setting an explicit facility-level row — permanently
+            // defeating hasFacilityOverride()/ADM-5's "overridden for this
+            // clinic" transparency (confirmed live: this dev facility already
+            // had 167/180 keys "overridden" from routine saves during earlier
+            // ADM batches). Only write when the value actually differs from
+            // what this facility already resolves to; an unwritten row still
+            // resolves to the identical value via get()'s fallback chain, so
+            // this changes zero runtime behavior — only whether a distinct-row
+            // "override" now genuinely means the admin changed it here.
             $previous = $this->config->get($key, $meta['default'], $writeFacilityId);
-            $this->config->set($key, $value, $writeFacilityId);
 
             if ((string) $previous !== $value) {
+                $this->config->set($key, $value, $writeFacilityId);
                 $changed[] = $key;
                 if (!$isGlobalOnly) {
                     $changedScoped[] = $key;

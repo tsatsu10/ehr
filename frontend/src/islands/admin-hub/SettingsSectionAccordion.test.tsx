@@ -113,3 +113,40 @@ describe('SettingsSectionAccordion highlight (ADM-1)', () => {
     expect(screen.queryByLabelText('Second field')).not.toBeInTheDocument();
   });
 });
+
+describe('SettingsSectionAccordion override transparency (ADM-5)', () => {
+  it('shows no override affordance when settingsOverrides is absent (global scope)', () => {
+    render(<SettingsSectionAccordion {...baseProps} />);
+
+    expect(screen.queryByText('Overridden for this clinic')).not.toBeInTheDocument();
+  });
+
+  it('shows the override badge and reset link for an overridden field, and calls onResetOverride with its key and label', () => {
+    const onResetOverride = vi.fn();
+    render(
+      <SettingsSectionAccordion
+        {...baseProps}
+        settingsOverrides={{ first_field: { overridden: true, global_value: false } }}
+        onResetOverride={onResetOverride}
+      />
+    );
+
+    expect(screen.getByText('Overridden for this clinic')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Use global value' }));
+    expect(onResetOverride).toHaveBeenCalledWith('first_field', 'First field');
+  });
+
+  it('disables the reset link and shows a reverting label while that key is resetting', () => {
+    render(
+      <SettingsSectionAccordion
+        {...baseProps}
+        settingsOverrides={{ first_field: { overridden: true, global_value: false } }}
+        onResetOverride={() => {}}
+        resettingOverrideKey="first_field"
+      />
+    );
+
+    const button = screen.getByRole('button', { name: 'Reverting…' });
+    expect(button).toBeDisabled();
+  });
+});

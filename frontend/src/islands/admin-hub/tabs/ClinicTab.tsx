@@ -17,13 +17,17 @@ import {
   CLINIC_RECONCILIATION_FIELDS,
   CLINIC_REGIONAL_SECTION,
 } from '../adminFieldDefs';
-import type { CashProfileStatus, FacilityRow } from '../adminTypes';
+import type { CashProfileStatus, FacilityRow, SettingOverrideInfo } from '../adminTypes';
 import { formatPrice } from '../adminUtils';
 import { AdminEmptyState, AdminSection, AdminStack } from '../adminUi';
 import { scrollToAndFlashField } from '../scrollToField';
 
 interface ClinicTabProps {
   settings: Record<string, unknown>;
+  /** ADM-5: facility-scope override transparency — undefined under global scope. */
+  settingsOverrides?: Record<string, SettingOverrideInfo>;
+  resettingOverrideKey?: string | null;
+  onResetOverride?: (key: string, label: string) => void;
   cashProfile: CashProfileStatus;
   cashProfileApplying: boolean;
   reconciliationStatus: string;
@@ -63,6 +67,9 @@ function ClinicDetail({ label, value }: { label: string; value: ReactNode }) {
 
 export function ClinicTab({
   settings,
+  settingsOverrides,
+  resettingOverrideKey,
+  onResetOverride,
   cashProfile,
   cashProfileApplying,
   reconciliationStatus,
@@ -177,6 +184,9 @@ export function ClinicTab({
             def={def}
             value={settings[def.key]}
             onChange={onFieldChange}
+            overrideInfo={settingsOverrides?.[def.key]}
+            onResetOverride={onResetOverride}
+            resettingOverride={resettingOverrideKey === def.key}
           />
         ))}
       </AdminSection>
@@ -191,6 +201,9 @@ export function ClinicTab({
             def={def}
             value={settings[def.key]}
             onChange={onFieldChange}
+            overrideInfo={settingsOverrides?.[def.key]}
+            onResetOverride={onResetOverride}
+            resettingOverride={resettingOverrideKey === def.key}
           />
         ))}
       </AdminSection>
@@ -205,6 +218,9 @@ export function ClinicTab({
             def={def}
             value={settings[def.key]}
             onChange={onFieldChange}
+            overrideInfo={settingsOverrides?.[def.key]}
+            onResetOverride={onResetOverride}
+            resettingOverride={resettingOverrideKey === def.key}
           />
         ))}
         <p className="mb-2 text-sm text-[var(--oe-nc-text-muted)]" id="nc-admin-reconciliation-status">
@@ -233,6 +249,9 @@ export function ClinicTab({
             def={def}
             value={settings[def.key]}
             onChange={onFieldChange}
+            overrideInfo={settingsOverrides?.[def.key]}
+            onResetOverride={onResetOverride}
+            resettingOverride={resettingOverrideKey === def.key}
           />
         ))}
       </AdminSection>

@@ -429,6 +429,12 @@ export interface CompletionFieldWeightPayload {
   target_total: number;
 }
 
+/** ADM-5 — per-setting override transparency (facility scope only). */
+export interface SettingOverrideInfo {
+  overridden: boolean;
+  global_value: unknown;
+}
+
 export interface AdminConfigPayload {
   facility_id: number;
   scope: AdminScope;
@@ -436,6 +442,7 @@ export interface AdminConfigPayload {
   clinic_facility_id?: number;
   clinic_facility_label?: string;
   settings: Record<string, unknown>;
+  settings_overrides?: Record<string, SettingOverrideInfo>;
   visit_types?: VisitTypeRow[];
   fee_schedule?: FeeScheduleRow[];
   directory_contacts?: DirectoryContactRow[];

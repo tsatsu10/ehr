@@ -11,6 +11,7 @@ import { Input } from '@components/ui/input';
 import { Search, Settings2, X } from 'lucide-react';
 import { AdminConfigField } from './AdminConfigField';
 import type { AdminFieldDef, AdminFieldSection } from './adminFieldDefs';
+import type { SettingOverrideInfo } from './adminTypes';
 import { AdminEmptyState } from './adminUi';
 import { scrollToAndFlashField } from './scrollToField';
 
@@ -60,6 +61,10 @@ export interface SettingsSectionAccordionProps {
   sectionIcons: Record<string, ReactNode>;
   settings: Record<string, unknown>;
   onFieldChange: (key: string, value: unknown) => void;
+  /** ADM-5: facility-scope override transparency — undefined under global scope. */
+  settingsOverrides?: Record<string, SettingOverrideInfo>;
+  resettingOverrideKey?: string | null;
+  onResetOverride?: (key: string, label: string) => void;
   /** Slot for section-specific inline panels (e.g. LBF pack importers) rendered after the field list. */
   renderSectionExtra?: (sectionTitle: string | undefined) => ReactNode;
   /** ADM-1: a field key to open its section, scroll to, and flash — set by the global sidebar search. */
@@ -83,6 +88,9 @@ export function SettingsSectionAccordion({
   sectionIcons,
   settings,
   onFieldChange,
+  settingsOverrides,
+  resettingOverrideKey,
+  onResetOverride,
   renderSectionExtra,
   highlightKey,
   onHighlightHandled,
@@ -243,6 +251,9 @@ export function SettingsSectionAccordion({
                         def={block.root}
                         value={settings[block.root.key]}
                         onChange={onFieldChange}
+                        overrideInfo={settingsOverrides?.[block.root.key]}
+                        onResetOverride={onResetOverride}
+                        resettingOverride={resettingOverrideKey === block.root.key}
                       />
                       {block.children.length > 0 && (
                         <div className="nc-admin-subsection mb-2 mt-1 rounded-[0.5rem] bg-[var(--oe-nc-bg-tint,#f8fafc)] px-3 py-1">
@@ -252,6 +263,9 @@ export function SettingsSectionAccordion({
                               def={child}
                               value={settings[child.key]}
                               onChange={onFieldChange}
+                              overrideInfo={settingsOverrides?.[child.key]}
+                              onResetOverride={onResetOverride}
+                              resettingOverride={resettingOverrideKey === child.key}
                             />
                           ))}
                         </div>

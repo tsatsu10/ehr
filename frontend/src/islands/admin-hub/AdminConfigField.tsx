@@ -9,14 +9,26 @@ import {
 } from '@components/ui/select';
 import { Switch } from '@components/ui/switch';
 import type { AdminFieldDef } from './adminFieldDefs';
+import type { SettingOverrideInfo } from './adminTypes';
 
 interface AdminConfigFieldProps {
   def: AdminFieldDef;
   value: unknown;
   onChange: (key: string, value: unknown) => void;
+  /** ADM-5: facility-scope override transparency — undefined/omitted under global scope. */
+  overrideInfo?: SettingOverrideInfo;
+  onResetOverride?: (key: string, label: string) => void;
+  resettingOverride?: boolean;
 }
 
-export function AdminConfigField({ def, value, onChange }: AdminConfigFieldProps) {
+export function AdminConfigField({
+  def,
+  value,
+  onChange,
+  overrideInfo,
+  onResetOverride,
+  resettingOverride,
+}: AdminConfigFieldProps) {
   const id = `cfg-${def.key}`;
   const indentStyle = def.indent
     ? {
@@ -27,6 +39,23 @@ export function AdminConfigField({ def, value, onChange }: AdminConfigFieldProps
     : undefined;
   const hint = def.hint ? (
     <p className="text-xs text-[var(--oe-nc-text-muted)] m-0">{def.hint}</p>
+  ) : null;
+
+  const overrideBadge = overrideInfo?.overridden ? (
+    <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-[var(--oe-nc-text-muted)]">
+      <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--oe-nc-primary)]" aria-hidden />
+      <span>Overridden for this clinic</span>
+      {onResetOverride && (
+        <button
+          type="button"
+          className="font-medium text-[var(--oe-nc-primary)] hover:underline disabled:opacity-50 disabled:no-underline"
+          disabled={resettingOverride}
+          onClick={() => onResetOverride(def.key, def.label)}
+        >
+          {resettingOverride ? 'Reverting…' : 'Use global value'}
+        </button>
+      )}
+    </div>
   ) : null;
 
   // Stable per-field row id — the ADM-1 global search jump-and-highlight
@@ -41,6 +70,7 @@ export function AdminConfigField({ def, value, onChange }: AdminConfigFieldProps
             {def.label}
           </Label>
           {hint}
+          {overrideBadge}
         </div>
         <Switch
           id={id}
@@ -66,6 +96,7 @@ export function AdminConfigField({ def, value, onChange }: AdminConfigFieldProps
           onChange={(e) => onChange(def.key, Number.parseInt(e.target.value, 10) || 0)}
         />
         {hint}
+        {overrideBadge}
       </div>
     );
   }
@@ -89,6 +120,7 @@ export function AdminConfigField({ def, value, onChange }: AdminConfigFieldProps
           </SelectContent>
         </Select>
         {hint}
+        {overrideBadge}
       </div>
     );
   }
@@ -104,6 +136,7 @@ export function AdminConfigField({ def, value, onChange }: AdminConfigFieldProps
         onChange={(e) => onChange(def.key, e.target.value)}
       />
       {hint}
+      {overrideBadge}
     </div>
   );
 }

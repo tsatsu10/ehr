@@ -15,6 +15,7 @@ import type {
   GhanaLbfPackStatus,
   ReferralHospitalLbfPackStatus,
   RunbooksPayload,
+  SettingOverrideInfo,
   SetupProgressPayload,
   StaffProvisionResult,
   SystemHealthPayload,
@@ -46,6 +47,9 @@ export interface AdminHubTabPanelsProps {
   facilityId: number;
   clinicFacilityId: number;
   settings: Record<string, unknown>;
+  settingsOverrides?: Record<string, SettingOverrideInfo>;
+  resettingOverrideKey?: string | null;
+  onResetOverride?: (key: string, label: string) => void;
   ghanaLbfPack: GhanaLbfPackStatus;
   ghanaLbfImporting: boolean;
   referralHospitalLbfPack: ReferralHospitalLbfPackStatus;
@@ -140,6 +144,9 @@ export function AdminHubTabPanels({
   facilityId,
   clinicFacilityId,
   settings,
+  settingsOverrides,
+  resettingOverrideKey,
+  onResetOverride,
   ghanaLbfPack,
   ghanaLbfImporting,
   referralHospitalLbfPack,
@@ -257,6 +264,9 @@ export function AdminHubTabPanels({
       <AdminTabPanel tabId="queue-desks" active={activeTab === 'queue-desks'}>
         <QueueDesksTab
           settings={settings}
+          settingsOverrides={settingsOverrides}
+          resettingOverrideKey={resettingOverrideKey}
+          onResetOverride={onResetOverride}
           onFieldChange={onFieldChange}
           highlightKey={highlightKey}
           onHighlightHandled={onHighlightHandled}
@@ -269,6 +279,9 @@ export function AdminHubTabPanels({
           csrfToken={csrfToken}
           facilityId={facilityId}
           settings={settings}
+          settingsOverrides={settingsOverrides}
+          resettingOverrideKey={resettingOverrideKey}
+          onResetOverride={onResetOverride}
           ghanaLbfPack={ghanaLbfPack}
           ghanaLbfImporting={ghanaLbfImporting}
           referralHospitalLbfPack={referralHospitalLbfPack}
@@ -302,6 +315,9 @@ export function AdminHubTabPanels({
       <AdminTabPanel tabId="completion" active={activeTab === 'completion'}>
         <CompletionTab
           settings={settings}
+          settingsOverrides={settingsOverrides}
+          resettingOverrideKey={resettingOverrideKey}
+          onResetOverride={onResetOverride}
           completionFieldWeights={completionFieldWeights}
           weightsSaving={weightsSaving}
           weightsError={weightsError}
@@ -315,6 +331,9 @@ export function AdminHubTabPanels({
       <AdminTabPanel tabId="clinic" active={activeTab === 'clinic'}>
         <ClinicTab
           settings={settings}
+          settingsOverrides={settingsOverrides}
+          resettingOverrideKey={resettingOverrideKey}
+          onResetOverride={onResetOverride}
           cashProfile={cashProfile}
           cashProfileApplying={cashProfileApplying}
           reconciliationStatus={reconciliationStatus}

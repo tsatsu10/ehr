@@ -1,4 +1,4 @@
-import { render, screen, act, fireEvent } from '@testing-library/react';
+import { render, screen, act, fireEvent, within } from '@testing-library/react';
 import { vi } from 'vitest';
 import { AdminHub } from './AdminHub';
 
@@ -83,6 +83,9 @@ const configPayload = {
     currency_symbol: 'GH₵',
     currency_decimals: 2,
     currency_symbol_position: 'before',
+  },
+  settings_overrides: {
+    enable_triage: { overridden: true, global_value: false },
   },
   visit_types: [],
   fee_schedule: [],
@@ -289,6 +292,53 @@ describe('AdminHub', () => {
       })
     );
     expect(await screen.findByText('Settings saved.', {}, { timeout: 10000 })).toBeInTheDocument();
+  }, 15000);
+
+  it('resets a facility override to the global value via the confirm modal (ADM-5)', async () => {
+    mockFetch.mockImplementation((action: string) => {
+      if (action === 'admin.config') {
+        return Promise.resolve(configPayload);
+      }
+      if (action === 'reports.reconciliation') {
+        return Promise.resolve({ latest_run: null });
+      }
+      if (action === 'admin.setting.reset_override') {
+        return Promise.resolve({
+          ...configPayload,
+          settings: { ...configPayload.settings, enable_triage: false },
+          settings_overrides: {},
+        });
+      }
+      return Promise.resolve({});
+    });
+
+    render(<AdminHub {...props} />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('link', { name: 'Queue & desks' }));
+    });
+
+    expect(await screen.findByText('Overridden for this clinic')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Use global value' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Use global value?')).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Use global value' }));
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'admin.setting.reset_override',
+      expect.objectContaining({
+        json: { facility_id: 1, key: 'enable_triage' },
+      })
+    );
+    expect(await screen.findByText('Reverted to the global default.')).toBeInTheDocument();
+    expect(screen.queryByText('Overridden for this clinic')).not.toBeInTheDocument();
   }, 15000);
 
   it('shows system health tab with backup blocked help', async () => {

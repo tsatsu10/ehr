@@ -27,6 +27,88 @@ class ClinicAdminServiceTest extends TestCase
         $service->saveSettings('global', ['completion_required_for_billing' => 150], 1);
     }
 
+    /**
+     * ADM-5 audit finding: the real frontend (collectAdminSettings()) always
+     * round-trips every EDITABLE_SETTINGS key on every save, not just the ones
+     * the admin actually touched. Before the fix, saveSettings() wrote a
+     * facility-level row for every key on the FIRST save regardless of whether
+     * the value actually differed — permanently marking every setting
+     * "overridden for this clinic" and defeating ADM-5's whole point. A save
+     * whose values match what the facility already resolves to (inherited from
+     * global, in this case — no prior facility row at all) must leave no new
+     * facility row behind for the untouched keys.
+     */
+    public function testResavingUnchangedFullPayloadDoesNotCreateOverrideRows(): void
+    {
+        $facRow = QueryUtils::querySingleRow('SELECT id FROM facility ORDER BY id LIMIT 1');
+        $facilityId = is_array($facRow) ? (int) ($facRow['id'] ?? 0) : 0;
+        if ($facilityId <= 0) {
+            $this->markTestSkipped('No facility row available to exercise non-global scoping');
+        }
+
+        $key = 'print_queue_number_on_receipt';
+        sqlStatement('DELETE FROM new_clinic_config WHERE facility_id = ? AND config_key = ?', [$facilityId, $key]);
+
+        $config = new ClinicConfigService();
+        $globalValue = $config->get($key, '1', 0) ?? '1';
+        $service = new ClinicAdminService();
+
+        try {
+            // Full-payload save (as the real frontend sends) where this key's
+            // value is identical to what the facility already inherits from
+            // global — nothing the admin actually changed.
+            $service->saveSettings('facility', [$key => $globalValue === '1'], 1, $facilityId);
+
+            $fresh = new ClinicConfigService();
+            $this->assertFalse(
+                $fresh->hasFacilityOverride($key, $facilityId),
+                'saving an unchanged value must not create a facility override row'
+            );
+
+            $row = QueryUtils::querySingleRow(
+                'SELECT config_value FROM new_clinic_config WHERE facility_id = ? AND config_key = ?',
+                [$facilityId, $key]
+            );
+            $this->assertTrue(!is_array($row), 'no row should exist at all for an untouched key');
+        } finally {
+            sqlStatement('DELETE FROM new_clinic_config WHERE facility_id = ? AND config_key = ?', [$facilityId, $key]);
+        }
+    }
+
+    /**
+     * Sibling to the unchanged-payload test above: a key whose value genuinely
+     * differs from the facility's current resolved value must still get a
+     * real facility row — the fix must not turn every write into a no-op.
+     */
+    public function testSavingAGenuinelyChangedValueStillCreatesAnOverrideRow(): void
+    {
+        $facRow = QueryUtils::querySingleRow('SELECT id FROM facility ORDER BY id LIMIT 1');
+        $facilityId = is_array($facRow) ? (int) ($facRow['id'] ?? 0) : 0;
+        if ($facilityId <= 0) {
+            $this->markTestSkipped('No facility row available to exercise non-global scoping');
+        }
+
+        $key = 'print_queue_number_on_receipt';
+        sqlStatement('DELETE FROM new_clinic_config WHERE facility_id = ? AND config_key = ?', [$facilityId, $key]);
+
+        $config = new ClinicConfigService();
+        $globalValue = $config->get($key, '1', 0) ?? '1';
+        $flippedValue = $globalValue === '1' ? false : true;
+        $service = new ClinicAdminService();
+
+        try {
+            $service->saveSettings('facility', [$key => $flippedValue], 1, $facilityId);
+
+            $fresh = new ClinicConfigService();
+            $this->assertTrue(
+                $fresh->hasFacilityOverride($key, $facilityId),
+                'saving a genuinely different value must create a facility override row'
+            );
+        } finally {
+            sqlStatement('DELETE FROM new_clinic_config WHERE facility_id = ? AND config_key = ?', [$facilityId, $key]);
+        }
+    }
+
     public function testGlobalMigrationDefaultsIncludesSafetyAndLegacyStripKeys(): void
     {
         $defaults = ClinicAdminService::globalMigrationDefaults();

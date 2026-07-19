@@ -3,12 +3,16 @@ import { ClipboardCheck } from 'lucide-react';
 import { COMPLETION_FIELDS } from '../adminFieldDefs';
 import { AdminConfigField } from '../AdminConfigField';
 import { CompletionWeightsEditor } from '../CompletionWeightsEditor';
-import type { CompletionFieldWeightPayload, CompletionFieldWeightRow } from '../adminTypes';
+import type { CompletionFieldWeightPayload, CompletionFieldWeightRow, SettingOverrideInfo } from '../adminTypes';
 import { AdminSection, AdminStack } from '../adminUi';
 import { scrollToAndFlashField } from '../scrollToField';
 
 interface CompletionTabProps {
   settings: Record<string, unknown>;
+  /** ADM-5: facility-scope override transparency — undefined under global scope. */
+  settingsOverrides?: Record<string, SettingOverrideInfo>;
+  resettingOverrideKey?: string | null;
+  onResetOverride?: (key: string, label: string) => void;
   completionFieldWeights: CompletionFieldWeightPayload | null;
   weightsSaving: boolean;
   weightsError: string | null;
@@ -21,6 +25,9 @@ interface CompletionTabProps {
 
 export function CompletionTab({
   settings,
+  settingsOverrides,
+  resettingOverrideKey,
+  onResetOverride,
   completionFieldWeights,
   weightsSaving,
   weightsError,
@@ -51,6 +58,9 @@ export function CompletionTab({
             def={def}
             value={settings[def.key]}
             onChange={onFieldChange}
+            overrideInfo={settingsOverrides?.[def.key]}
+            onResetOverride={onResetOverride}
+            resettingOverride={resettingOverrideKey === def.key}
           />
         ))}
       </AdminSection>

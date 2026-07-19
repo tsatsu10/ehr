@@ -43,6 +43,7 @@ import type {
   FeeScheduleRow,
   FeeTemplate,
   ReconciliationRun,
+  SettingOverrideInfo,
   VisitTypeRow,
 } from './adminTypes';
 import { ADMIN_TABS } from './adminTypes';
@@ -101,6 +102,9 @@ export function AdminHub({
   const [scopeLabel, setScopeLabel] = useState('');
   const [clinicFacilityLabel, setClinicFacilityLabel] = useState('');
   const [settings, setSettings] = useState<Record<string, unknown>>({});
+  // ADM-5 — per-setting override transparency; empty under global scope.
+  const [settingsOverrides, setSettingsOverrides] = useState<Record<string, SettingOverrideInfo>>({});
+  const [resettingOverrideKey, setResettingOverrideKey] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -228,6 +232,7 @@ export function AdminHub({
     setScopeLabel(data.scope_label ?? '');
     setClinicFacilityLabel(data.clinic_facility_label ?? `Facility ${clinicFacilityId}`);
     setSettings(data.settings ?? {});
+    setSettingsOverrides(data.settings_overrides ?? {});
     setVisitTypes(data.visit_types ?? []);
     setDirectoryContacts(data.directory_contacts ?? []);
     setDirectoryTypes(data.directory_types ?? []);
@@ -301,6 +306,28 @@ export function AdminHub({
     setSuccessMessage(null);
     setErrorMessage(null);
   }, []);
+
+  const triggerResetOverride = useCallback((key: string, label: string) => {
+    setPendingConfirm({ type: 'reset_override', key, label });
+  }, []);
+
+  const resetSettingOverride = useCallback(async (key: string) => {
+    setResettingOverrideKey(key);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    try {
+      const data = await oeFetch<AdminConfigPayload>('admin.setting.reset_override', {
+        ...fetchOptions,
+        json: { facility_id: facilityId, key },
+      });
+      applyPayload(data);
+      setSuccessMessage('Reverted to the global default.');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Reset failed');
+    } finally {
+      setResettingOverrideKey(null);
+    }
+  }, [applyPayload, facilityId, fetchOptions]);
 
   const handleSave = useCallback(async () => {
     const saveBtn = document.getElementById('nc-admin-save') as HTMLButtonElement | null;
@@ -1334,6 +1361,9 @@ export function AdminHub({
             facilityId={facilityId}
             clinicFacilityId={clinicFacilityId}
             settings={settings}
+            settingsOverrides={settingsOverrides}
+            resettingOverrideKey={resettingOverrideKey}
+            onResetOverride={triggerResetOverride}
             ghanaLbfPack={ghanaLbfPack}
             ghanaLbfImporting={ghanaLbfImporting}
             referralHospitalLbfPack={referralHospitalLbfPack}
@@ -1492,6 +1522,8 @@ export function AdminHub({
             void applyCatalogEnable(confirm.item);
           } else if (confirm.type === 'delete_directory_contact') {
             void deleteDirectoryContact(confirm.row);
+          } else if (confirm.type === 'reset_override') {
+            void resetSettingOverride(confirm.key);
           }
           setPendingConfirm(null);
         }}
