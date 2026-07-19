@@ -36,6 +36,8 @@ class ReviewVisitSuggestionServiceTest extends TestCase
         $this->assertNull(ReviewVisitSuggestionService::daysSince('', $today));
         $this->assertNull(ReviewVisitSuggestionService::daysSince('0000-00-00', $today));
         $this->assertNull(ReviewVisitSuggestionService::daysSince('not-a-date', $today));
+        $this->assertNull(ReviewVisitSuggestionService::daysSince('99', $today));
+        $this->assertNull(ReviewVisitSuggestionService::daysSince('2026-13-45', $today));
     }
 
     public function testDaysSinceNullOnFutureDate(): void

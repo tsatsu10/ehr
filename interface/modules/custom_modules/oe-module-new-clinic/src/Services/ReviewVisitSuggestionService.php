@@ -44,10 +44,17 @@ class ReviewVisitSuggestionService
         }
 
         // One indexed lookup (new_idx_fe_pid_date) — same shape the search
-        // service already uses for its last_visit_date column.
+        // service already uses for its last_visit_date column. Facility-scoped
+        // per spec (REV-6 / A3): the pid equality still drives the (pid, date)
+        // index seek, facility_id is filtered on the (few) matching rows.
+        //
+        // Deliberately NOT reusing PatientContextService's own last_visit MAX
+        // (same query shape, computed a few lines earlier in the same request)
+        // because that one is cross-facility — passing it through here would
+        // silently reintroduce the cross-facility bug this fix closes.
         $row = QueryUtils::querySingleRow(
-            "SELECT MAX(fe.date) AS last_visit_date FROM form_encounter fe WHERE fe.pid = ?",
-            [$pid]
+            "SELECT MAX(fe.date) AS last_visit_date FROM form_encounter fe WHERE fe.pid = ? AND fe.facility_id = ?",
+            [$pid, $facilityId]
         );
         $lastVisitDate = is_array($row) ? (string) ($row['last_visit_date'] ?? '') : '';
 

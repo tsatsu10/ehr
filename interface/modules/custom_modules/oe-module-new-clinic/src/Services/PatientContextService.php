@@ -321,6 +321,9 @@ class PatientContextService
             );
             $payload['unpaid_visits_count'] = is_array($unpaidRow) ? (int) ($unpaidRow['cnt'] ?? 0) : 0;
 
+            // Not passing our own $lastVisit MAX(date) below into suggestFor() to save a
+            // query: that lookup is cross-facility, suggestFor()'s must be facility-scoped
+            // (REV-6 / A3) — reusing it would silently reintroduce the cross-facility bug.
             $payload['review_suggestion'] = $this->reviewSuggestion->suggestFor($pid, $facilityId);
         }
 

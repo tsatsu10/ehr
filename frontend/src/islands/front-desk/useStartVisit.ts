@@ -222,11 +222,11 @@ export function useStartVisit({
   const markDirty = useCallback(() => { onDirtyChange?.(true); }, [onDirtyChange]);
 
   const applyReviewSuggestion = useCallback(() => {
-    if (rawSuggestion) {
-      setVisitTypeId(String(rawSuggestion.review_visit_type_id));
+    if (reviewSuggestion) {
+      setVisitTypeId(String(reviewSuggestion.reviewVisitTypeId));
       markDirty();
     }
-  }, [markDirty, rawSuggestion]);
+  }, [markDirty, reviewSuggestion]);
 
   const handleReferralFile = useCallback(async (file: File) => {
     setReferralUploading(true);
