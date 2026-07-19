@@ -2,9 +2,9 @@
 
 | Field | Value |
 |-------|-------|
-| **Document version** | 1.2.0 |
+| **Document version** | 1.3.0 |
 | **Date** | 2026-07-19 |
-| **Status** | In progress — ADM-7, ADM-2, ADM-3 shipped (the navigation arc is done); ADM-1, 4, 5, 6, 8 remain |
+| **Status** | In progress — ADM-7, ADM-2, ADM-3, ADM-1 shipped; ADM-4, 5, 6, 8 remain |
 | **Companion to** | `done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md` (v0.1.9), `NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md`, the "New Clinic — Reimagined by Apple" artifact (Console 26 reference) |
 | **Scope** | The whole Admin Hub page (`admin.php`, `admin-hub` island): navigation model, information architecture, visual language, settings-page behaviors. Not the individual editors' internals (fee modal, visit-type modal, importer panel keep their logic). |
 | **Coordination** | ⚠️ A concurrent session is actively editing `AdminHub.tsx` / admin services. Execute this plan only in a quiet window, after a `git status` check on `frontend/src/islands/admin-hub/` + `src/Services/Admin*`. |
@@ -108,13 +108,26 @@ targets get the same mapping so the golden path survives.
 
 ## 3. The plan — one ADM task per commit
 
-### ADM-1 · Global settings search (the biggest honesty fix)
+### ADM-1 · Global settings search (the biggest honesty fix) — ✅ DONE (2026-07-19)
 - Build a client-side index at load: every field def (label, help text, group, section) +
   static section metadata for non-flag destinations (Fees, People, System cards…).
 - Search moves to the top of the sidebar; results are a flat list ("{setting} — in
   {Section} › {Group}"); choosing one navigates to the section, expands the group, scrolls,
   and flash-highlights the row.
 - The old per-tab filter behavior remains inside Features as a bonus, driven by the same query.
+- **Implementation**: `adminSearchIndex.ts` builds two indexes — `ADMIN_FIELD_SEARCH_INDEX`
+  (~140+ entries from Queue & desks / Features / Clinic / Completion's field defs) and
+  `ADMIN_DESTINATION_SEARCH_INDEX` (a static entry per non-field-def tab: Setup, People,
+  Visit types, Fees, Address Book, Import, Forms, System — each with a description + extra
+  keywords so e.g. "backup" finds System without "backup" appearing in its label). Both
+  filter against the caller's visible-tabs set, so a search never surfaces a destination the
+  clinic doesn't have enabled.
+- Jump-and-highlight needed a stable per-field DOM id (`AdminConfigField` now sets
+  `id="nc-admin-field-row-{key}"` on every field's wrapper) and a `highlightKey`/
+  `onHighlightHandled` prop pair threaded from `AdminHub` through `AdminHubTabPanels` into
+  the four field-def-driven tabs. `SettingsSectionAccordion` additionally opens the owning
+  accordion section before scrolling (Radix doesn't mount collapsed content, so the target
+  row isn't even in the DOM until its section is open).
 
 ### ADM-2 · Sidebar navigation shell — ✅ DONE (2026-07-18)
 - New `AdminSidebar` component (island-local): sticky, grouped, icon + label (Lucide),
