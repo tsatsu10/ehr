@@ -2,9 +2,9 @@
 
 | Field | Value |
 |-------|-------|
-| **Document version** | 1.6.0 |
+| **Document version** | 1.7.0 |
 | **Date** | 2026-07-19 |
-| **Status** | In progress — ADM-7, ADM-2, ADM-3, ADM-1, ADM-4, ADM-6, ADM-5 shipped; ADM-8 remains |
+| **Status** | ✅ Executed — all 8 ADM tasks shipped (ADM-7, ADM-2, ADM-3, ADM-1, ADM-4, ADM-6, ADM-5, ADM-8) |
 | **Companion to** | `done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md` (v0.1.9), `NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md`, the "New Clinic — Reimagined by Apple" artifact (Console 26 reference) |
 | **Scope** | The whole Admin Hub page (`admin.php`, `admin-hub` island): navigation model, information architecture, visual language, settings-page behaviors. Not the individual editors' internals (fee modal, visit-type modal, importer panel keep their logic). |
 | **Coordination** | ⚠️ A concurrent session is actively editing `AdminHub.tsx` / admin services. Execute this plan only in a quiet window, after a `git status` check on `frontend/src/islands/admin-hub/` + `src/Services/Admin*`. |
@@ -265,13 +265,24 @@ targets get the same mapping so the golden path survives.
 - Also swept `AppointmentTodayService`'s recurring-booking tooltip (same `\'`-in-`xl()` bug,
   different string).
 
-### ADM-8 · Verify + docs
+### ADM-8 · Verify + docs — ✅ DONE (2026-07-19)
 - Vitest: new AdminSidebar + search tests; AdminHub tests updated for the nav model;
   SetupChecklistCard untouched.
 - E2E: `setup-checklist.spec.js` selectors re-pointed via the redirect map (assert the map
   itself: old `?tab=system` lands correctly).
 - Full gates (composer verify for ADM-5's PHP, `npm run check`, build, asset bump,
   hard-refresh note) + browser QA at 1280/1024/390px + screenshots vs the artifact.
+- **Implementation notes**: the redirect-map assertion already lived in `adminUtils.test.ts`
+  (`?tab=system#nc-admin-setup-checklist` → `setup`, and a bare `?tab=system` staying on
+  System) from ADM-3 — no new coverage needed there; `setup-checklist.spec.js` +
+  `v11-admin-smoke.spec.js` both re-run green (5/5) against the final nav model. Full gates:
+  `composer verify:new-clinic` PASS, `npm run check` (lint/typecheck/i18n/bs:check/vitest)
+  green — 949 frontend tests, `bs:check` unchanged at 338 (baseline), full New Clinic PHPUnit
+  suite green (1268 tests). Browser QA at 1280/1024/390px confirmed the sidebar, setup
+  checklist, and ADM-5 override badges all render and reflow correctly, including a live
+  click-through of the "Use global value" reset at 1024px. Docs synced in the same batch:
+  `NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md` → v0.2.0 with a history row, README index
+  (config-redesign row + new companion-plan row), and a scorecard changelog entry.
 - Docs: ADMIN_CONFIGURATION_REDESIGN bumps to **v0.2.0** (nav model change) with history;
   README + scorecard rows synced; this plan marked executed.
 
