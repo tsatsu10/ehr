@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Version:** v1.0.0 · **Date:** 2026-07-19 · **Status:** Delivered — REV-1..5 all shipped, built, and live-smoked end to end
+**Version:** v1.0.0 · **Date:** 2026-07-19 · **Status:** Delivered — REV-1..5 all shipped, built, and live-smoked end to end (HTTP-level smoke; browser click-through still recommended at next convenient window)
 
 **Goal:** When a patient returns about the same complaint, the clinic can charge its own chosen "review" price for the consultation — with the front desk automatically prompted when a returning patient qualifies, and zero changes to the cashier's money path.
 
