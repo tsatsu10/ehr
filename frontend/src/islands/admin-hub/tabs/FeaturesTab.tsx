@@ -37,6 +37,9 @@ interface FeaturesTabProps {
   onImportGhanaLbfPack: (setAsConsultNote: boolean) => void;
   onImportReferralHospitalLbfPack: (setAsConsultNote: boolean) => void;
   onImportAncillaryLbfPack: (packKey: string) => void;
+  /** ADM-1: a field key to open its section, scroll to, and flash — set by the global sidebar search. */
+  highlightKey?: string | null;
+  onHighlightHandled?: () => void;
 }
 
 const SECTION_ICONS: Record<string, ReactNode> = {
@@ -70,6 +73,8 @@ export function FeaturesTab({
   onImportGhanaLbfPack,
   onImportReferralHospitalLbfPack,
   onImportAncillaryLbfPack,
+  highlightKey,
+  onHighlightHandled,
 }: FeaturesTabProps) {
   const referralHospitalBundle = settings.clinical_doc_bundle === 'referral_hospital_v1';
   const schedulingEnabled = settings.enable_scheduled_integration === true
@@ -87,6 +92,8 @@ export function FeaturesTab({
       sectionIcons={SECTION_ICONS}
       settings={settings}
       onFieldChange={onFieldChange}
+      highlightKey={highlightKey}
+      onHighlightHandled={onHighlightHandled}
       renderSectionExtra={(title) => (
         <>
           {title === 'Scheduling & Flow (S1)' && !schedulingEnabled && (

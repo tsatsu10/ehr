@@ -6,6 +6,9 @@ import { SettingsSectionAccordion } from '../SettingsSectionAccordion';
 interface QueueDesksTabProps {
   settings: Record<string, unknown>;
   onFieldChange: (key: string, value: unknown) => void;
+  /** ADM-1: a field key to open its section, scroll to, and flash — set by the global sidebar search. */
+  highlightKey?: string | null;
+  onHighlightHandled?: () => void;
 }
 
 const SECTION_ICONS: Record<string, ReactNode> = {
@@ -15,7 +18,7 @@ const SECTION_ICONS: Record<string, ReactNode> = {
   'Safety & chart integration': <ShieldAlert className="h-4 w-4" aria-hidden />,
 };
 
-export function QueueDesksTab({ settings, onFieldChange }: QueueDesksTabProps) {
+export function QueueDesksTab({ settings, onFieldChange, highlightKey, onHighlightHandled }: QueueDesksTabProps) {
   return (
     <SettingsSectionAccordion
       heading="Queue & desks"
@@ -27,6 +30,8 @@ export function QueueDesksTab({ settings, onFieldChange }: QueueDesksTabProps) {
       sectionIcons={SECTION_ICONS}
       settings={settings}
       onFieldChange={onFieldChange}
+      highlightKey={highlightKey}
+      onHighlightHandled={onHighlightHandled}
     />
   );
 }

@@ -88,6 +88,9 @@ export function AdminHub({
     const tab = initialAdminTab();
     return isAdminTabId(tab) ? tab : 'queue-desks';
   });
+  // ADM-1: a field key the global sidebar search jumped to — cleared once
+  // the destination tab has scrolled to and flash-highlighted it.
+  const [pendingHighlightKey, setPendingHighlightKey] = useState<string | null>(null);
   // Mobile drill-in (ADM-2): land on the section list unless the page opened
   // on a deep-linked (?tab=) destination — a Setup-chip/runbook link on a
   // phone should open straight into content, not the list.
@@ -372,6 +375,14 @@ export function AdminHub({
     setMobileNavOpen(false);
     window.history.replaceState({}, '', buildAdminTabUrl(tab));
   }, []);
+
+  // ADM-1: global sidebar search — jump to a specific setting or a whole
+  // destination tab.
+  const selectSearchField = useCallback((tab: AdminTabId, fieldKey: string) => {
+    handleTabChange(tab);
+    setPendingHighlightKey(fieldKey);
+  }, [handleTabChange]);
+  const clearPendingHighlight = useCallback(() => setPendingHighlightKey(null), []);
 
   // ADM-3 open question #1: while setup is incomplete, the page opens on
   // Setup — but only on a true default landing (no explicit ?tab= in the
@@ -1243,7 +1254,8 @@ export function AdminHub({
       />
 
       {/* One-line nudge shown on every tab until first-run setup is done —
-          the checklist itself lives on the System tab where nobody new looks. */}
+          a visible reminder outside the Setup tab itself for anyone who's
+          navigated away from it. */}
       {adminHubEnabled && scope !== 'global' && setupProgress && !setupProgress.setup_complete && (
         <button
           type="button"
@@ -1263,6 +1275,8 @@ export function AdminHub({
           activeTab={activeTab}
           onChange={handleTabChange}
           badges={sidebarBadges}
+          onSelectField={selectSearchField}
+          onSelectDestination={handleTabChange}
         />
         <div className="nc-admin-content">
           <button
@@ -1280,6 +1294,8 @@ export function AdminHub({
         <>
           <AdminHubTabPanels
             activeTab={activeTab}
+            highlightKey={pendingHighlightKey}
+            onHighlightHandled={clearPendingHighlight}
             ajaxUrl={ajaxUrl}
             csrfToken={csrfToken}
             webroot={webroot}

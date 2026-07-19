@@ -88,3 +88,86 @@ describe('AdminSidebar', () => {
     expect(document.activeElement).toBe(first);
   });
 });
+
+describe('AdminSidebar search (ADM-1)', () => {
+  // fees/features must be in `tabs` for their search results to show —
+  // AdminSidebar filters results against the visible-tabs gate.
+  const searchTabs: { id: AdminTabId; label: string }[] = [
+    ...tabs,
+    { id: 'features', label: 'Features' },
+    { id: 'fees', label: 'Fees' },
+  ];
+
+  it('replaces the grouped nav with a flat results list while searching', () => {
+    render(<AdminSidebar tabs={searchTabs} activeTab="queue-desks" onChange={() => {}} />);
+
+    fireEvent.change(screen.getByLabelText('Search settings'), { target: { value: 'triage' } });
+
+    expect(screen.queryByText('Get started')).not.toBeInTheDocument();
+    expect(screen.getByRole('listbox', { name: 'Search results' })).toBeInTheDocument();
+    expect(screen.getByText(/Enable triage desk/i)).toBeInTheDocument();
+    expect(screen.getByText(/in Queue & desks/i)).toBeInTheDocument();
+  });
+
+  it('calls onSelectField and clears the query on a field result click', () => {
+    const onSelectField = vi.fn();
+    render(
+      <AdminSidebar
+        tabs={searchTabs}
+        activeTab="queue-desks"
+        onChange={() => {}}
+        onSelectField={onSelectField}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText('Search settings'), { target: { value: 'triage' } });
+    fireEvent.click(screen.getByText(/Enable triage desk/i));
+
+    expect(onSelectField).toHaveBeenCalledWith('queue-desks', 'enable_triage');
+    expect(screen.getByLabelText('Search settings')).toHaveValue('');
+  });
+
+  it('calls onSelectDestination for a destination-only result (no field-def)', () => {
+    const onSelectDestination = vi.fn();
+    render(
+      <AdminSidebar
+        tabs={searchTabs}
+        activeTab="queue-desks"
+        onChange={() => {}}
+        onSelectDestination={onSelectDestination}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText('Search settings'), { target: { value: 'fee schedule' } });
+    fireEvent.click(screen.getByText('Fees'));
+
+    expect(onSelectDestination).toHaveBeenCalledWith('fees');
+  });
+
+  it('does not surface a result whose destination tab is gated off', () => {
+    // "features" is NOT in `tabs` here (only in the wider searchTabs fixture).
+    render(<AdminSidebar tabs={tabs} activeTab="queue-desks" onChange={() => {}} />);
+
+    fireEvent.change(screen.getByLabelText('Search settings'), { target: { value: 'billing back office hub' } });
+
+    expect(screen.queryByText(/Enable Billing Back Office hub/i)).not.toBeInTheDocument();
+  });
+
+  it('shows an empty state when nothing matches', () => {
+    render(<AdminSidebar tabs={searchTabs} activeTab="queue-desks" onChange={() => {}} />);
+
+    fireEvent.change(screen.getByLabelText('Search settings'), { target: { value: 'zzz-nonexistent-zzz' } });
+
+    expect(screen.getByText(/No settings match/i)).toBeInTheDocument();
+  });
+
+  it('clears the query via the clear button and restores the grouped nav', () => {
+    render(<AdminSidebar tabs={searchTabs} activeTab="queue-desks" onChange={() => {}} />);
+
+    fireEvent.change(screen.getByLabelText('Search settings'), { target: { value: 'triage' } });
+    fireEvent.click(screen.getByLabelText('Clear search'));
+
+    expect(screen.getByLabelText('Search settings')).toHaveValue('');
+    expect(screen.getByText('Clinic', { selector: 'p' })).toBeInTheDocument();
+  });
+});

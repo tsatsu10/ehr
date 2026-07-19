@@ -37,6 +37,9 @@ import { VisitTypesTab } from './tabs/VisitTypesTab';
 
 export interface AdminHubTabPanelsProps {
   activeTab: AdminTabId;
+  /** ADM-1: a field key to open its section, scroll to, and flash — set by the global sidebar search. */
+  highlightKey?: string | null;
+  onHighlightHandled?: () => void;
   ajaxUrl: string;
   csrfToken: string;
   webroot: string;
@@ -129,6 +132,8 @@ export interface AdminHubTabPanelsProps {
 
 export function AdminHubTabPanels({
   activeTab,
+  highlightKey,
+  onHighlightHandled,
   ajaxUrl,
   csrfToken,
   webroot,
@@ -253,6 +258,8 @@ export function AdminHubTabPanels({
         <QueueDesksTab
           settings={settings}
           onFieldChange={onFieldChange}
+          highlightKey={highlightKey}
+          onHighlightHandled={onHighlightHandled}
         />
       </AdminTabPanel>
 
@@ -272,6 +279,8 @@ export function AdminHubTabPanels({
           onImportGhanaLbfPack={onImportGhanaLbfPack}
           onImportReferralHospitalLbfPack={onImportReferralHospitalLbfPack}
           onImportAncillaryLbfPack={onImportAncillaryLbfPack}
+          highlightKey={highlightKey}
+          onHighlightHandled={onHighlightHandled}
         />
       </AdminTabPanel>
 
@@ -298,6 +307,8 @@ export function AdminHubTabPanels({
           weightsError={weightsError}
           onFieldChange={onFieldChange}
           onSaveWeights={onSaveWeights}
+          highlightKey={highlightKey}
+          onHighlightHandled={onHighlightHandled}
         />
       </AdminTabPanel>
 
@@ -314,6 +325,8 @@ export function AdminHubTabPanels({
           onApplyCashProfile={onApplyCashProfile}
           onRunReconciliation={onRunReconciliation}
           onEditFacility={onEditFacility}
+          highlightKey={highlightKey}
+          onHighlightHandled={onHighlightHandled}
         />
       </AdminTabPanel>
 

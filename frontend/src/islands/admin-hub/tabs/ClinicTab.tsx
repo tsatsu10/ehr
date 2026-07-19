@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Badge } from '@components/ui/badge';
 import { Button } from '@components/ui/button';
 import {
@@ -19,6 +20,7 @@ import {
 import type { CashProfileStatus, FacilityRow } from '../adminTypes';
 import { formatPrice } from '../adminUtils';
 import { AdminEmptyState, AdminSection, AdminStack } from '../adminUi';
+import { scrollToAndFlashField } from '../scrollToField';
 
 interface ClinicTabProps {
   settings: Record<string, unknown>;
@@ -32,6 +34,9 @@ interface ClinicTabProps {
   onApplyCashProfile: () => void;
   onRunReconciliation: () => void;
   onEditFacility: (row: FacilityRow) => void;
+  /** ADM-1: a field key to scroll to and flash — set by the global sidebar search. */
+  highlightKey?: string | null;
+  onHighlightHandled?: () => void;
 }
 
 function formatAppliedAt(value?: string | null): string {
@@ -68,7 +73,18 @@ export function ClinicTab({
   onApplyCashProfile,
   onRunReconciliation,
   onEditFacility,
+  highlightKey,
+  onHighlightHandled,
 }: ClinicTabProps) {
+  useEffect(() => {
+    if (!highlightKey) {
+      return;
+    }
+    scrollToAndFlashField(highlightKey);
+    onHighlightHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when the target key itself changes
+  }, [highlightKey]);
+
   // Single-clinic product: edit the one clinic you're in, not a list of sites.
   const clinic = facilities.find((f) => f.id === currentFacilityId) ?? facilities[0] ?? null;
   const address = clinic

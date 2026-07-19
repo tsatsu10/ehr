@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import {
   Building2,
@@ -5,15 +6,18 @@ import {
   Coins,
   FileText,
   ListChecks,
+  Search,
   Settings2,
   SlidersHorizontal,
   Tag,
   Upload,
   UserCog,
   Users,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { buildAdminTabUrl } from './adminUtils';
+import { searchAdminDestinations, searchAdminFields } from './adminSearchIndex';
 import type { AdminTabId } from './adminTypes';
 
 export interface AdminSidebarBadge {
@@ -53,14 +57,43 @@ export function AdminSidebar({
   activeTab,
   onChange,
   badges,
+  onSelectField,
+  onSelectDestination,
 }: {
   tabs: { id: AdminTabId; label: string }[];
   activeTab: AdminTabId;
   onChange: (id: AdminTabId) => void;
   badges?: Partial<Record<AdminTabId, AdminSidebarBadge>>;
+  /** ADM-1: jump to a specific setting from the global search. */
+  onSelectField?: (tab: AdminTabId, fieldKey: string) => void;
+  /** ADM-1: jump to a whole destination (non-field-def tabs) from search. */
+  onSelectDestination?: (tab: AdminTabId) => void;
 }) {
+  const [query, setQuery] = useState('');
   const visibleIds = new Set(tabs.map((tab) => tab.id));
   const labelById = new Map(tabs.map((tab) => [tab.id, tab.label]));
+
+  const trimmedQuery = query.trim();
+  const searching = trimmedQuery.length > 0;
+  const fieldResults = useMemo(
+    () => (searching ? searchAdminFields(trimmedQuery).filter((r) => visibleIds.has(r.tab)) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- visibleIds is a new Set every render; tabs is the real dep
+    [searching, trimmedQuery, tabs]
+  );
+  const destinationResults = useMemo(
+    () => (searching ? searchAdminDestinations(trimmedQuery).filter((r) => visibleIds.has(r.tab)) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- visibleIds is a new Set every render; tabs is the real dep
+    [searching, trimmedQuery, tabs]
+  );
+
+  const selectField = (tab: AdminTabId, fieldKey: string) => {
+    setQuery('');
+    onSelectField?.(tab, fieldKey);
+  };
+  const selectDestination = (tab: AdminTabId) => {
+    setQuery('');
+    onSelectDestination?.(tab);
+  };
 
   const handleItemClick = (event: MouseEvent<HTMLAnchorElement>, id: AdminTabId) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
@@ -94,6 +127,8 @@ export function AdminSidebar({
     items[nextIndex]?.focus();
   };
 
+  const totalResults = fieldResults.length + destinationResults.length;
+
   return (
     // The outer rail stretches to the grid row's full height (Console 26 —
     // the row is as tall as the content column) so the inner sticky nav has
@@ -105,7 +140,65 @@ export function AdminSidebar({
         aria-label="Admin sections"
         onKeyDown={handleNavKeyDown}
       >
-        {GROUP_ORDER.map((group) => {
+        <div className="nc-admin-sidebar__search">
+          <Search className="nc-admin-sidebar__search-icon" aria-hidden />
+          <input
+            type="search"
+            className="nc-admin-sidebar__search-input"
+            placeholder="Search settings…"
+            aria-label="Search settings"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') setQuery('');
+            }}
+          />
+          {searching && (
+            <button
+              type="button"
+              aria-label="Clear search"
+              className="nc-admin-sidebar__search-clear"
+              onClick={() => setQuery('')}
+            >
+              <X className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          )}
+        </div>
+
+        {searching ? (
+          totalResults === 0 ? (
+            <p className="nc-admin-sidebar__search-empty">No settings match “{trimmedQuery}”.</p>
+          ) : (
+            <ul className="nc-admin-sidebar__search-results" role="listbox" aria-label="Search results">
+              {fieldResults.map((result) => (
+                <li key={result.fieldKey}>
+                  <button
+                    type="button"
+                    className="nc-admin-sidebar__search-result"
+                    onClick={() => selectField(result.tab, result.fieldKey)}
+                  >
+                    <span className="nc-admin-sidebar__search-result-label">{result.label}</span>
+                    <span className="nc-admin-sidebar__search-result-path">
+                      in {result.tabLabel}{result.groupTitle ? ` › ${result.groupTitle}` : ''}
+                    </span>
+                  </button>
+                </li>
+              ))}
+              {destinationResults.map((result) => (
+                <li key={result.tab}>
+                  <button
+                    type="button"
+                    className="nc-admin-sidebar__search-result"
+                    onClick={() => selectDestination(result.tab)}
+                  >
+                    <span className="nc-admin-sidebar__search-result-label">{result.tabLabel}</span>
+                    <span className="nc-admin-sidebar__search-result-path">{result.description}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )
+        ) : GROUP_ORDER.map((group) => {
           const groupIds = group.ids.filter((id) => visibleIds.has(id));
           if (groupIds.length === 0) {
             return null;

@@ -29,9 +29,13 @@ export function AdminConfigField({ def, value, onChange }: AdminConfigFieldProps
     <p className="text-xs text-[var(--oe-nc-text-muted)] m-0">{def.hint}</p>
   ) : null;
 
+  // Stable per-field row id — the ADM-1 global search jump-and-highlight
+  // target, independent of the control's own id (which varies by type).
+  const rowId = `nc-admin-field-row-${def.key}`;
+
   if (def.type === 'bool') {
     return (
-      <div className="nc-admin-setting-row flex items-start justify-between gap-4 py-2" style={indentStyle}>
+      <div id={rowId} className="nc-admin-setting-row flex items-start justify-between gap-4 py-2" style={indentStyle}>
         <div className="min-w-0 flex-1 space-y-0.5">
           <Label htmlFor={id} className="font-normal normal-case cursor-pointer">
             {def.label}
@@ -50,7 +54,7 @@ export function AdminConfigField({ def, value, onChange }: AdminConfigFieldProps
 
   if (def.type === 'int') {
     return (
-      <div className="space-y-1.5 mb-3" style={indentStyle}>
+      <div id={rowId} className="space-y-1.5 mb-3" style={indentStyle}>
         <Label htmlFor={id}>{def.label}</Label>
         <Input
           type="number"
@@ -70,7 +74,7 @@ export function AdminConfigField({ def, value, onChange }: AdminConfigFieldProps
     const strValue = value === undefined || value === null ? '' : String(value);
 
     return (
-      <div className="space-y-1.5 mb-3" style={indentStyle}>
+      <div id={rowId} className="space-y-1.5 mb-3" style={indentStyle}>
         <Label htmlFor={id}>{def.label}</Label>
         <Select value={strValue} onValueChange={(next) => onChange(def.key, next)}>
           <SelectTrigger id={id} className="w-auto">
@@ -90,7 +94,7 @@ export function AdminConfigField({ def, value, onChange }: AdminConfigFieldProps
   }
 
   return (
-    <div className="space-y-1.5 mb-3" style={indentStyle}>
+    <div id={rowId} className="space-y-1.5 mb-3" style={indentStyle}>
       <Label htmlFor={id}>{def.label}</Label>
       <Input
         type="text"

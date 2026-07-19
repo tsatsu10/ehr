@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   Accordion,
@@ -12,6 +12,7 @@ import { Search, Settings2, X } from 'lucide-react';
 import { AdminConfigField } from './AdminConfigField';
 import type { AdminFieldDef, AdminFieldSection } from './adminFieldDefs';
 import { AdminEmptyState } from './adminUi';
+import { scrollToAndFlashField } from './scrollToField';
 
 interface FieldBlock {
   root: AdminFieldDef;
@@ -61,6 +62,10 @@ export interface SettingsSectionAccordionProps {
   onFieldChange: (key: string, value: unknown) => void;
   /** Slot for section-specific inline panels (e.g. LBF pack importers) rendered after the field list. */
   renderSectionExtra?: (sectionTitle: string | undefined) => ReactNode;
+  /** ADM-1: a field key to open its section, scroll to, and flash — set by the global sidebar search. */
+  highlightKey?: string | null;
+  /** Called once the highlight has been applied (or found nothing), so the caller can clear its pending state. */
+  onHighlightHandled?: () => void;
 }
 
 /**
@@ -79,6 +84,8 @@ export function SettingsSectionAccordion({
   settings,
   onFieldChange,
   renderSectionExtra,
+  highlightKey,
+  onHighlightHandled,
 }: SettingsSectionAccordionProps) {
   const [query, setQuery] = useState('');
   const [openSections, setOpenSections] = useState<string[]>(() =>
@@ -87,6 +94,26 @@ export function SettingsSectionAccordion({
 
   const trimmedQuery = query.trim().toLowerCase();
   const searching = trimmedQuery.length > 0;
+
+  useEffect(() => {
+    if (!highlightKey) {
+      return;
+    }
+    const idx = sections.findIndex((section) => section.fields.some((f) => f.key === highlightKey));
+    if (idx === -1) {
+      onHighlightHandled?.();
+      return;
+    }
+    const key = sectionKey(sections[idx], idx);
+    setOpenSections((prev) => (prev.includes(key) ? prev : [...prev, key]));
+    // Radix animates the section open — wait for it to mount before scrolling.
+    const timer = window.setTimeout(() => {
+      scrollToAndFlashField(highlightKey);
+      onHighlightHandled?.();
+    }, 120);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when the target key itself changes
+  }, [highlightKey]);
 
   const visibleSections = useMemo(() => sections.map((section, idx) => {
     const key = sectionKey(section, idx);

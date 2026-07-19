@@ -1,9 +1,11 @@
+import { useEffect } from 'react';
 import { ClipboardCheck } from 'lucide-react';
 import { COMPLETION_FIELDS } from '../adminFieldDefs';
 import { AdminConfigField } from '../AdminConfigField';
 import { CompletionWeightsEditor } from '../CompletionWeightsEditor';
 import type { CompletionFieldWeightPayload, CompletionFieldWeightRow } from '../adminTypes';
 import { AdminSection, AdminStack } from '../adminUi';
+import { scrollToAndFlashField } from '../scrollToField';
 
 interface CompletionTabProps {
   settings: Record<string, unknown>;
@@ -12,6 +14,9 @@ interface CompletionTabProps {
   weightsError: string | null;
   onFieldChange: (key: string, value: unknown) => void;
   onSaveWeights: (items: CompletionFieldWeightRow[]) => void;
+  /** ADM-1: a field key to scroll to and flash — set by the global sidebar search. */
+  highlightKey?: string | null;
+  onHighlightHandled?: () => void;
 }
 
 export function CompletionTab({
@@ -21,7 +26,18 @@ export function CompletionTab({
   weightsError,
   onFieldChange,
   onSaveWeights,
+  highlightKey,
+  onHighlightHandled,
 }: CompletionTabProps) {
+  useEffect(() => {
+    if (!highlightKey) {
+      return;
+    }
+    scrollToAndFlashField(highlightKey);
+    onHighlightHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when the target key itself changes
+  }, [highlightKey]);
+
   return (
     <AdminStack>
       <AdminSection
