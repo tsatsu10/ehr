@@ -3,11 +3,12 @@
 /**
  * Ensure two waiting visits for V1.2 doctor-ready notify E2E; emit JSON fixture.
  *
- * WARNING: CLI/E2E only — cancels non-fixture ready_for_doctor visits for today on the
- * pilot facility. Do not run against a live clinic queue.
- *
  * Usage:
- *   php interface/modules/custom_modules/oe-module-new-clinic/scripts/v12-doctor-notify-smoke-fixture.php
+ *   php interface/modules/custom_modules/oe-module-new-clinic/scripts/v12-doctor-notify-smoke-fixture.php [clear_queue=1]
+ *
+ * clear_queue=1 additionally cancels today's non-fixture ready_for_doctor visits and wipes
+ * today's notify log at the facility (fully deterministic toast target). Off by default so
+ * a hand-run smoke never swallows a visit someone is testing manually on this shared DB.
  */
 
 if (php_sapi_name() !== 'cli') {
@@ -98,21 +99,45 @@ $facilityId = (new VisitScopeService())->resolveDefaultFacilityId();
 $today = (new ClinicDateService())->today();
 
 // Reset tagged smoke visits + drop stale notify rows so Doctor Desk toast targets this fixture only.
-sqlStatement(
-    "DELETE n FROM new_visit_notify_log n
-     INNER JOIN new_visit v ON v.id = n.visit_id
-     WHERE v.facility_id = ? AND v.visit_date = ?",
-    [$facilityId, $today]
-);
-sqlStatement(
-    "UPDATE new_visit v
-     INNER JOIN patient_data pd ON pd.pid = v.pid
-     SET v.state = 'cancelled', v.updated_at = NOW()
-     WHERE v.facility_id = ? AND v.visit_date = ?
-       AND v.state = 'ready_for_doctor'
-       AND pd.lname NOT LIKE 'Notify%'",
-    [$facilityId, $today]
-);
+$clearQueue = in_array('clear_queue=1', array_slice($argv, 1), true);
+if ($clearQueue) {
+    sqlStatement(
+        "DELETE n FROM new_visit_notify_log n
+         INNER JOIN new_visit v ON v.id = n.visit_id
+         WHERE v.facility_id = ? AND v.visit_date = ?",
+        [$facilityId, $today]
+    );
+    sqlStatement(
+        "UPDATE new_visit v
+         INNER JOIN patient_data pd ON pd.pid = v.pid
+         SET v.state = 'cancelled', v.updated_at = NOW()
+         WHERE v.facility_id = ? AND v.visit_date = ?
+           AND v.state = 'ready_for_doctor'
+           AND pd.lname NOT LIKE 'Notify%'",
+        [$facilityId, $today]
+    );
+} else {
+    // Fixture-scoped by default: only this smoke's own visits lose their notify rows.
+    sqlStatement(
+        "DELETE n FROM new_visit_notify_log n
+         INNER JOIN new_visit v ON v.id = n.visit_id
+         INNER JOIN patient_data pd ON pd.pid = v.pid
+         WHERE v.facility_id = ? AND v.visit_date = ? AND pd.lname LIKE 'Notify%'",
+        [$facilityId, $today]
+    );
+    $othersReady = QueryUtils::querySingleRow(
+        "SELECT COUNT(*) AS n FROM new_visit v
+         INNER JOIN patient_data pd ON pd.pid = v.pid
+         WHERE v.facility_id = ? AND v.visit_date = ?
+           AND v.state = 'ready_for_doctor'
+           AND pd.lname NOT LIKE 'Notify%'",
+        [$facilityId, $today]
+    );
+    if ((int) ($othersReady['n'] ?? 0) > 0) {
+        fwrite(STDERR, "WARNING: {$othersReady['n']} non-fixture ready_for_doctor visit(s) present — "
+            . "notify toast may target the wrong visit. Re-run with clear_queue=1 to cancel them.\n");
+    }
+}
 sqlStatement(
     "UPDATE new_visit v
      INNER JOIN patient_data pd ON pd.pid = v.pid

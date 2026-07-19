@@ -27,7 +27,9 @@ function runModulePhp(relativePath) {
 function readRtFixture() {
   const php = process.env.PHP_BIN || 'C:\\xampp\\php\\php.exe';
   const script = path.join(MODULE_ROOT, 'scripts/v11-rt-smoke-fixture.php');
-  const raw = execSync(`"${php}" "${script}"`, { encoding: 'utf8' }).trim();
+  // clear_queue=1: e2e wants the fully deterministic queue (cancels non-fixture
+  // ready_for_doctor visits) — the destructive clear is opt-in for hand-run smokes.
+  const raw = execSync(`"${php}" "${script}" clear_queue=1`, { encoding: 'utf8' }).trim();
   return JSON.parse(raw);
 }
 
