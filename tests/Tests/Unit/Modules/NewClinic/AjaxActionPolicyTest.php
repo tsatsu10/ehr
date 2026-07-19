@@ -180,6 +180,9 @@ class AjaxActionPolicyTest extends TestCase
                 'clinical_doc.instructions_get', 'clinical_doc.screening_get',
                 'clinical_doc.vitals_get', 'clinical_doc.certificate_get',
                 'clinical_doc.eye_exam_get',
+                // People & Access board reads (admin-freeze fix, 2026-07-19).
+                'admin.acl.users', 'admin.acl.membership', 'admin.acl.groups',
+                'admin.staff.locked_list', 'admin.lists.catalog',
             ] as $action
         ) {
             $this->assertTrue($policy->isReadOnly($action), "$action should be read-only");
@@ -204,6 +207,8 @@ class AjaxActionPolicyTest extends TestCase
                 'patients.create', 'patients.preview', 'patients.chart.visits',
                 // config/admin writes
                 'admin.config.save', 'admin.fee.save', 'admin.backup.run',
+                'admin.acl.membership_add', 'admin.acl.group_permissions_remove',
+                'admin.staff.update', 'admin.staff.unlock',
                 // clinical writes + exports (inline work / session pid)
                 'encounter_note.save', 'encounter_note.sign', 'clinical_doc.open_form',
                 'clinical_doc.instructions_save', 'clinical_doc.screening_save',

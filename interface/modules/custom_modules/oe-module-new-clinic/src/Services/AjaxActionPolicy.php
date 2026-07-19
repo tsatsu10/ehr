@@ -149,6 +149,7 @@ class AjaxActionPolicy
         'admin.setup.complete' => 'new_admin',
         'admin.setup.reopen' => 'new_admin',
         'admin.setup.provision_staff' => 'new_admin',
+        'admin.setting.reset_override' => 'new_admin',
         'admin.config.export' => 'new_admin',
         'admin.config.import' => 'new_admin',
         'admin.patient_import.chunk' => 'new_admin',
@@ -832,6 +833,21 @@ class AjaxActionPolicy
         'admin.facility_user.matrix' => true,
         'admin.his_pack_status' => true,
         'admin.perf.summary' => true,
+        // People & Access board reads (the 2026-07-19 admin freeze: under load the
+        // membership view's serialized requests queued on the session lock for tens
+        // of seconds). Verified free of $_SESSION writes — AclAdminService /
+        // StaffAdminService / AdminListEditorService reads are pure ACL-checked
+        // queries; the matching _add/_remove/_save/unlock actions stay locked.
+        'admin.acl.users' => true,
+        'admin.acl.membership' => true,
+        'admin.acl.groups' => true,
+        'admin.acl.group_permissions' => true,
+        'admin.acl.return_values' => true,
+        'admin.staff.get' => true,
+        'admin.staff.locked_list' => true,
+        'admin.roles.templates' => true,
+        'admin.lists.catalog' => true,
+        'admin.lists.options' => true,
     ];
 
     /**
