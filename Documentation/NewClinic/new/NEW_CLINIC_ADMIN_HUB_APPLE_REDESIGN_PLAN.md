@@ -2,9 +2,9 @@
 
 | Field | Value |
 |-------|-------|
-| **Document version** | 1.1.0 |
-| **Date** | 2026-07-18 |
-| **Status** | In progress — ADM-7 and ADM-2 shipped; ADM-1, 3, 4, 5, 6, 8 remain |
+| **Document version** | 1.2.0 |
+| **Date** | 2026-07-19 |
+| **Status** | In progress — ADM-7, ADM-2, ADM-3 shipped (the navigation arc is done); ADM-1, 4, 5, 6, 8 remain |
 | **Companion to** | `done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md` (v0.1.9), `NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md`, the "New Clinic — Reimagined by Apple" artifact (Console 26 reference) |
 | **Scope** | The whole Admin Hub page (`admin.php`, `admin-hub` island): navigation model, information architecture, visual language, settings-page behaviors. Not the individual editors' internals (fee modal, visit-type modal, importer panel keep their logic). |
 | **Coordination** | ⚠️ A concurrent session is actively editing `AdminHub.tsx` / admin services. Execute this plan only in a quiet window, after a `git status` check on `frontend/src/islands/admin-hub/` + `src/Services/Admin*`. |
@@ -137,13 +137,32 @@ targets get the same mapping so the golden path survives.
   start` on the grid container has the opposite failure — the cell collapses to content
   height and the sidebar scrolls away with the page instead of sticking.
 
-### ADM-3 · IA rebalance
+### ADM-3 · IA rebalance — ✅ DONE (2026-07-19)
 - Split Queue & roles into **Queue & desks**, **Features**, and Clinic-bound tail groups per
   the table above; move the setup checklist to **Setup**; System keeps everything else.
 - Field-def `section` metadata gains the new destination ids; no backend changes (settings
   keys unchanged — this is presentation-layer regrouping only).
 - The 17-chip jump cloud dies; Features gets a compact in-section index instead (its groups
   are still accordions).
+- **Implementation note**: `QUEUE_DESK_SECTIONS`/`FEATURE_SECTIONS`/`CLINIC_REGIONAL_SECTION`
+  in `adminFieldDefs.ts` are derived from the original `QUEUE_FIELD_SECTIONS` array by title
+  match, not hand-copied — zero risk of a settings key getting dropped or duplicated in the
+  split. The accordion+search+jump-chip UI itself was extracted into a shared
+  `SettingsSectionAccordion` component used by both `QueueDesksTab` and `FeaturesTab`.
+- **Two bugs the move exposed, both fixed**: `SetupChecklistCard`'s "take me there" links
+  assumed the card only ever rendered inside System — a `link_tab` of `'system'` was
+  deliberately suppressed as "noise" (now a genuine cross-tab jump), and the `link_anchor`
+  scroll-to-runbooks link assumed same-tab (`scrollIntoView` alone) — now navigates to System
+  first, then scrolls after a short delay once that tab has mounted.
+- **Legacy links preserved**: `?tab=queue` → `queue-desks`; `?tab=system#nc-admin-setup-checklist`
+  (the old in-page anchor to the checklist) → `setup`; bare `?tab=system` still lands on System
+  untouched (runbook cards like RB-01/RB-19 that generically point there are unaffected).
+- Landing-redirect simplified from the original open-question wording: default tab is always
+  `queue-desks`, and a one-shot effect redirects to `setup` only when setup is incomplete AND
+  no explicit `?tab=` was in the URL. Skipped the "after completion, lands on Clinic" half of
+  the original open answer — Queue & desks is a perfectly good post-setup default and matches
+  pre-ADM-3 behavior (the old mega-tab was always the default); adding a second landing branch
+  for uncertain benefit wasn't worth the complexity.
 
 ### ADM-4 · Apple-theme visual pass
 - **One accent**: `cta`-green buttons in the admin island become the standard accent primary
