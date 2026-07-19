@@ -1824,6 +1824,11 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'enable_native_eye_exam', '0');
 #EndIf
 
+#IfNotRow2D new_clinic_config facility_id 0 config_key eye_exam_show_iop
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'eye_exam_show_iop', '1');
+#EndIf
+
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_debootstrap_shell
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_debootstrap_shell', '0');
@@ -1957,3 +1962,26 @@ DELETE FROM `new_clinic_config` WHERE `facility_id` != 0 AND `config_key` IN (
     'admin_hub_backup_retention_days',
     'backup_max_encrypt_mb'
 );
+
+-- IDX-1: every New Clinic audit-trail lookup by action name filters
+-- event='new_clinic' AND user=<action> (the module's own convention: the
+-- action string lives in log.user, not log.event/category — see
+-- AuditLogService, PatientImportService::logChunkAudit, AdminBackupService
+-- audit calls). With no index on (event, user), MySQL falls back to a full
+-- reverse scan of the PRIMARY key — proven via EXPLAIN at 2.26M existing log
+-- rows (type=index, key=PRIMARY, no possible_keys). id DESC is appended so
+-- the common "latest N events for this action" query is fully covered,
+-- including the sort, without a filesort.
+#IfNotIndex log new_idx_log_event_user_id
+CREATE INDEX `new_idx_log_event_user_id` ON `log` (`event`, `user`, `id` DESC);
+#EndIf
+
+-- IDX-2: MKT-MIG-1's old-clinic-number exact-match search
+-- (PatientSearchService::fetchCandidates ORs npm.old_clinic_number = ?
+-- into every search) had no supporting index — invisible on this dev box's
+-- 124-row new_patient_meta, but a full-table scan on every search keystroke
+-- once a clinic's patient list grows. Plain (non-unique) index: old clinic
+-- numbers from a messy paper register are not guaranteed unique pre-import.
+#IfNotIndex new_patient_meta new_idx_npm_old_clinic_number
+CREATE INDEX `new_idx_npm_old_clinic_number` ON `new_patient_meta` (`old_clinic_number`);
+#EndIf
