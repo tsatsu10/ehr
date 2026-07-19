@@ -2,9 +2,9 @@
 
 | Field | Value |
 |-------|-------|
-| **Document version** | 1.5.0 |
+| **Document version** | 1.6.0 |
 | **Date** | 2026-07-19 |
-| **Status** | In progress — ADM-7, ADM-2, ADM-3, ADM-1, ADM-4, ADM-6 shipped; ADM-5, 8 remain |
+| **Status** | In progress — ADM-7, ADM-2, ADM-3, ADM-1, ADM-4, ADM-6, ADM-5 shipped; ADM-8 remains |
 | **Companion to** | `done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md` (v0.1.9), `NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md`, the "New Clinic — Reimagined by Apple" artifact (Console 26 reference) |
 | **Scope** | The whole Admin Hub page (`admin.php`, `admin-hub` island): navigation model, information architecture, visual language, settings-page behaviors. Not the individual editors' internals (fee modal, visit-type modal, importer panel keep their logic). |
 | **Coordination** | ⚠️ A concurrent session is actively editing `AdminHub.tsx` / admin services. Execute this plan only in a quiet window, after a `git status` check on `frontend/src/islands/admin-hub/` + `src/Services/Admin*`. |
@@ -209,13 +209,37 @@ targets get the same mapping so the golden path survives.
 - bs:check dropped 342 → 338 colliding usages (the dead `border-bottom` removal); baseline
   lowered to lock it in, per the ratchet's own instructions.
 
-### ADM-5 · Override transparency (the best small settings-UX win)
+### ADM-5 · Override transparency (the best small settings-UX win) — ✅ DONE (2026-07-19)
 - Backend: `getSettingsPayload` additionally returns, per setting, whether a facility-level
   row exists (`overridden: true`) and the global/default value it shadows. (Read path only —
   bounded, single existing query reshaped.)
 - UI: overridden settings show a quiet "Overridden for this clinic" dot + a "Use global
   value" reset affordance (deletes the facility row via the existing save path, confirm on
   destructive reset). Global scope shows nothing new.
+- **Implementation**: `ClinicConfigService` gained `hasFacilityOverride()`/`getGlobalValue()`/
+  `deleteFacilityOverride()` (all reads via the existing per-request/cross-request cache, no
+  new queries in the hot path); `ClinicAdminService::getSettingsPayload()` builds a parallel
+  `settings_overrides` map alongside `settings`; `resetSettingOverride()` deletes the facility
+  row and re-returns the payload. New `admin.setting.reset_override` action (POST,
+  `new_admin` ACL). Frontend: `AdminConfigField` renders the dot + reset link for every field
+  type; `SettingsSectionAccordion`/`ClinicTab`/`CompletionTab` thread `settingsOverrides` down;
+  reset routes through the existing `pendingConfirm` pattern (new `reset_override` case,
+  "Use global value?" confirm).
+- **Audit-caught product bug, not just a UI bug**: live browser QA against the real dev
+  facility showed *every* setting marked "Overridden for this clinic" — not just the one field
+  seeded for the test. Root cause: the Admin Hub form has always round-tripped the **entire**
+  settings object on every Save (`collectAdminSettings()` sends all ~180 keys, not a diff of
+  what the admin actually touched), and `saveSettings()` wrote every key it received
+  unconditionally. So the very first Save at any facility silently gave every setting an
+  explicit facility-level row, forever — this predates ADM-5 but was invisible until ADM-5
+  gave it a UI. Confirmed on the dev box: 167/180 keys already "overridden" from ordinary
+  testing saves during earlier ADM batches. Fixed by only writing when the incoming value
+  actually differs from what the facility currently resolves to (get()'s fallback chain
+  already returns the identical value for an unwritten key, so this changes zero runtime
+  behavior — only which rows exist). Proven with a stash-and-test regression pair
+  (`testResavingUnchangedFullPayloadDoesNotCreateOverrideRows` /
+  `testSavingAGenuinelyChangedValueStillCreatesAnOverrideRow`) plus a live-DB smoke script
+  exercising the full override → payload → reset → payload cycle.
 
 ### ADM-6 · Unsaved-changes completeness — ✅ DONE (2026-07-19)
 - Extend the existing scope-switch confirm to **section switches** (same `pendingConfirm`
