@@ -1995,3 +1995,29 @@ CREATE INDEX `new_idx_log_event_user_id` ON `log` (`event`, `user`, `id` DESC);
 #IfNotIndex new_patient_meta new_idx_npm_old_clinic_number
 CREATE INDEX `new_idx_npm_old_clinic_number` ON `new_patient_meta` (`old_clinic_number`);
 #EndIf
+
+#IfMissingColumn new_visit_type is_review
+ALTER TABLE `new_visit_type` ADD COLUMN `is_review` TINYINT(1) NOT NULL DEFAULT 0 AFTER `referral_required`;
+#EndIf
+
+#IfNotRow2D new_fee_schedule facility_id 0 code REVIEW_CONSULT
+INSERT INTO `new_fee_schedule`
+    (`facility_id`, `code`, `name`, `category`, `price_amount`, `code_type`, `billing_code`, `sort_order`, `is_active`)
+VALUES
+    (0, 'REVIEW_CONSULT', 'Review consultation', 'consult', 0.00, 'CPT4', 'REVIEW_CONSULT', 11, 1);
+#EndIf
+
+#IfNotRow2D new_visit_type facility_id 0 label Review
+INSERT INTO `new_visit_type`
+    (`facility_id`, `label`, `pc_catid`, `service_profile`, `referral_required`, `is_review`, `default_fee_schedule_id`, `is_active`)
+SELECT 0, 'Review', 5, 'full_opd', 0, 1, f.id, 0
+FROM `new_fee_schedule` f
+WHERE f.facility_id = 0 AND f.code = 'REVIEW_CONSULT'
+LIMIT 1;
+#EndIf
+
+#IfNotRow2D new_clinic_config facility_id 0 config_key enable_review_visits
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'enable_review_visits', '0'),
+(0, 'review_window_days', '14');
+#EndIf

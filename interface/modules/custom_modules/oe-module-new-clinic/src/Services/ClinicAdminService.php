@@ -180,6 +180,8 @@ class ClinicAdminService
         'enable_documents_native' => ['type' => 'bool', 'default' => '0'],
         'enable_patient_chat' => ['type' => 'bool', 'default' => '0'],
         'enable_patient_import' => ['type' => 'bool', 'default' => '0'],
+        'enable_review_visits' => ['type' => 'bool', 'default' => '0'],
+        'review_window_days' => ['type' => 'int', 'default' => '14', 'min' => 0, 'max' => 365],
         'pediatric_exact_dob_age' => ['type' => 'int', 'default' => '5', 'min' => 0, 'max' => 18],
         'currency_code' => ['type' => 'currency_code', 'default' => 'GHS'],
         'currency_symbol' => ['type' => 'currency_symbol', 'default' => 'GH₵'],
@@ -256,6 +258,12 @@ class ClinicAdminService
     {
         $facilityId = $this->resolveSettingsFacilityId($scope, $requestedFacilityId);
         $settings = [];
+        // ADM-5 — per-setting override transparency: which EDITABLE_SETTINGS have
+        // an explicit row at this facility, and what the global default is
+        // underneath it. GLOBAL_ONLY_SETTINGS are never overridable by design
+        // (see the comment below) so they're left out entirely. Read-only from
+        // the maps get() already warmed for this loop — no extra queries.
+        $overrides = [];
 
         foreach (array_merge(self::EDITABLE_SETTINGS, self::READONLY_SETTINGS) as $key => $meta) {
             $default = $meta['default'];
@@ -268,19 +276,18 @@ class ClinicAdminService
             // facility-0 value whenever a settings request happened to resolve to
             // that facility. A whole-DB backup setting must never depend on which
             // facility a request resolves to.
-            $readFacilityId = in_array($key, self::GLOBAL_ONLY_SETTINGS, true) ? 0 : $facilityId;
+            $isGlobalOnly = in_array($key, self::GLOBAL_ONLY_SETTINGS, true);
+            $readFacilityId = $isGlobalOnly ? 0 : $facilityId;
             $raw = $this->config->get($key, $default, $readFacilityId) ?? $default;
-            if ($meta['type'] === 'bool') {
-                $settings[$key] = (int) $raw === 1;
-            } elseif (
-                $meta['type'] === 'string'
-                || $meta['type'] === 'currency_code'
-                || $meta['type'] === 'currency_symbol'
-                || $meta['type'] === 'currency_position'
-            ) {
-                $settings[$key] = (string) $raw;
-            } else {
-                $settings[$key] = (int) $raw;
+            $settings[$key] = $this->castSettingValue($meta, $raw);
+
+            if (!$isGlobalOnly && array_key_exists($key, self::EDITABLE_SETTINGS)) {
+                $overridden = $this->config->hasFacilityOverride($key, $facilityId);
+                $globalRaw = $this->config->getGlobalValue($key) ?? $default;
+                $overrides[$key] = [
+                    'overridden' => $overridden,
+                    'global_value' => $this->castSettingValue($meta, $globalRaw),
+                ];
             }
         }
 
@@ -298,6 +305,7 @@ class ClinicAdminService
             'clinic_facility_id' => $clinicFacilityId,
             'clinic_facility_label' => $this->facilityLabel($clinicFacilityId),
             'settings' => $settings,
+            'settings_overrides' => $overrides,
             'visit_types' => $this->visitTypeAdmin->listForAdmin(
                 $facilityId,
                 (int) ($this->config->get('default_visit_type_id', '0', $facilityId) ?? '0')
@@ -334,6 +342,48 @@ class ClinicAdminService
         }
 
         return $payload;
+    }
+
+    /** @param array{type: string, default: string, min?: int, max?: int} $meta */
+    private function castSettingValue(array $meta, mixed $raw): bool|string|int
+    {
+        if ($meta['type'] === 'bool') {
+            return (int) $raw === 1;
+        }
+        if (
+            $meta['type'] === 'string'
+            || $meta['type'] === 'currency_code'
+            || $meta['type'] === 'currency_symbol'
+            || $meta['type'] === 'currency_position'
+        ) {
+            return (string) $raw;
+        }
+
+        return (int) $raw;
+    }
+
+    /**
+     * ADM-5 — "Use global value": delete the facility-level row so this
+     * setting reverts to whatever the global default resolves to. True
+     * reset, not a copy — the facility row is gone, not overwritten with
+     * today's global value (so a later global change is inherited too).
+     * GLOBAL_ONLY_SETTINGS and unknown keys are rejected; there's nothing to
+     * "reset" for a setting that only ever lives at facility 0. There is no
+     * global-scope variant of this action — resolves to facility scope the
+     * same way every other facility-only admin action does.
+     *
+     * @return array<string, mixed>
+     */
+    public function resetSettingOverride(string $key, ?int $requestedFacilityId): array
+    {
+        if (!array_key_exists($key, self::EDITABLE_SETTINGS) || in_array($key, self::GLOBAL_ONLY_SETTINGS, true)) {
+            throw new \InvalidArgumentException('Setting is not eligible for a per-clinic reset: ' . $key);
+        }
+
+        $facilityId = $this->resolveSettingsFacilityId('facility', $requestedFacilityId);
+        $this->config->deleteFacilityOverride($key, $facilityId);
+
+        return $this->getSettingsPayload('facility', $facilityId);
     }
 
     /**
