@@ -2,9 +2,9 @@
 
 | Field | Value |
 |-------|-------|
-| **Document version** | 1.3.0 |
+| **Document version** | 1.4.0 |
 | **Date** | 2026-07-19 |
-| **Status** | In progress — ADM-7, ADM-2, ADM-3, ADM-1 shipped; ADM-4, 5, 6, 8 remain |
+| **Status** | In progress — ADM-7, ADM-2, ADM-3, ADM-1, ADM-4 shipped; ADM-5, 6, 8 remain |
 | **Companion to** | `done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md` (v0.1.9), `NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md`, the "New Clinic — Reimagined by Apple" artifact (Console 26 reference) |
 | **Scope** | The whole Admin Hub page (`admin.php`, `admin-hub` island): navigation model, information architecture, visual language, settings-page behaviors. Not the individual editors' internals (fee modal, visit-type modal, importer panel keep their logic). |
 | **Coordination** | ⚠️ A concurrent session is actively editing `AdminHub.tsx` / admin services. Execute this plan only in a quiet window, after a `git status` check on `frontend/src/islands/admin-hub/` + `src/Services/Admin*`. |
@@ -184,7 +184,7 @@ targets get the same mapping so the golden path survives.
   pre-ADM-3 behavior (the old mega-tab was always the default); adding a second landing branch
   for uncertain benefit wasn't worth the complexity.
 
-### ADM-4 · Apple-theme visual pass
+### ADM-4 · Apple-theme visual pass — ✅ DONE (2026-07-19)
 - **One accent**: `cta`-green buttons in the admin island become the standard accent primary
   ("Mark setup complete", any others found by a variant audit). Green stays for state
   (done checks, success callouts).
@@ -195,6 +195,19 @@ targets get the same mapping so the golden path survives.
   hairline border, two-layer soft shadow, white on `#f5f5f7`); accordion headers, chips, and
   the scope bar restyled to the same family; kill any remaining Bootstrap-ish borders.
 - Respect the bs:check ratchet (token arbitrary values / BEM, no new colliding classes).
+- **The variant audit found 5 violations, not 2**: beyond "Mark setup complete" and the forms
+  catalog's on/off toggle, the People sub-tab nav's active state, the guided-ACL-task cards'
+  "primary" tone (icon swatch + hover border — the icon color was hardcoded green for *all
+  three* tones, not tone-aware at all), and the add-staff wizard's current-step marker were
+  all green for a nav-position/current-step cue, not a done state. Fixed all five the same
+  way: green now means "finished," never "here" or "click me."
+- **Card family implementation note**: `--oe-nc-shadow-sm`/`--oe-nc-shadow-md` were never
+  actually defined anywhere in tokens.css — every `shadow-[var(--oe-nc-shadow-sm,...)]` usage
+  was silently running on its literal fallback the whole time. Switched to the real,
+  resolvable `--shadow-sm`/`--shadow-md`/`--shadow-lg` tokens instead of guessing at a new
+  fallback value.
+- bs:check dropped 342 → 338 colliding usages (the dead `border-bottom` removal); baseline
+  lowered to lock it in, per the ratchet's own instructions.
 
 ### ADM-5 · Override transparency (the best small settings-UX win)
 - Backend: `getSettingsPayload` additionally returns, per setting, whether a facility-level
