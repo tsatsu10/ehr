@@ -2000,11 +2000,28 @@ CREATE INDEX `new_idx_npm_old_clinic_number` ON `new_patient_meta` (`old_clinic_
 ALTER TABLE `new_visit_type` ADD COLUMN `is_review` TINYINT(1) NOT NULL DEFAULT 0 AFTER `referral_required`;
 #EndIf
 
+# REV-6 (A1): the Fees tab save path (FeeScheduleAdminService::assertBillingCodeExists)
+# refuses to save a fee whose billing code has no matching active `codes` row —
+# a stock install ships CPT4 empty, so without this seed the review price can
+# never actually be set (it would stay stuck at the seeded 0.00, i.e. free).
+#IfNotRow codes code REVIEW_CONSULT
+INSERT INTO `codes` (`code_type`, `code`, `modifier`, `active`, `code_text`)
+SELECT ct.ct_id, 'REVIEW_CONSULT', '', 1, 'Review consultation'
+FROM `code_types` ct
+WHERE ct.ct_key = 'CPT4'
+LIMIT 1;
+#EndIf
+
+# REV-6 (A2): seeded INACTIVE like the Review visit-type row below — an active
+# 0.00 fee would appear in every cashier fee picker regardless of the
+# enable_review_visits flag, breaking "flag OFF = 100% legacy". Pricing it via
+# the Fees tab (FeeScheduleAdminService::save) sets is_active=1 automatically,
+# so this doubles as the "clinic deliberately turned it on" signal.
 #IfNotRow2D new_fee_schedule facility_id 0 code REVIEW_CONSULT
 INSERT INTO `new_fee_schedule`
     (`facility_id`, `code`, `name`, `category`, `price_amount`, `code_type`, `billing_code`, `sort_order`, `is_active`)
 VALUES
-    (0, 'REVIEW_CONSULT', 'Review consultation', 'consult', 0.00, 'CPT4', 'REVIEW_CONSULT', 11, 1);
+    (0, 'REVIEW_CONSULT', 'Review consultation', 'consult', 0.00, 'CPT4', 'REVIEW_CONSULT', 11, 0);
 #EndIf
 
 #IfNotRow2D new_visit_type facility_id 0 label Review
