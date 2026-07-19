@@ -269,7 +269,7 @@ class VisitTypeAdminService
         $defaultId = (int) ($this->config->get('default_visit_type_id', '0', $facilityId) ?? '0');
 
         $rows = QueryUtils::fetchRecords(
-            "SELECT id, label, service_profile, pc_catid, facility_id, referral_required
+            "SELECT id, label, service_profile, pc_catid, facility_id, referral_required, is_review
              FROM new_visit_type
              WHERE is_active = 1 AND (facility_id = 0 OR facility_id = ?)
              ORDER BY label ASC",
@@ -319,6 +319,7 @@ class VisitTypeAdminService
                 'pc_catid' => (int) ($row['pc_catid'] ?? 0),
                 'is_default' => $defaultId > 0 && (int) ($row['id'] ?? 0) === $defaultId,
                 'referral_required' => (int) ($row['referral_required'] ?? 0) === 1,
+                'is_review' => (int) ($row['is_review'] ?? 0) === 1,
                 'allows_referral_upload' => $profile === 'lab_direct',
                 'service_profile_hint' => self::SERVICE_PROFILE_HINTS[$profile] ?? null,
             ];

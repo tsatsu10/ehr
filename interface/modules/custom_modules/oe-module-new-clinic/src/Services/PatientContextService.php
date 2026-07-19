@@ -32,6 +32,7 @@ class PatientContextService
         private readonly RevisitCompletionGateService $revisitGate = new RevisitCompletionGateService(),
         private readonly ClinicDateService $clinicDate = new ClinicDateService(),
         private readonly QueueBridgeSurfaceService $queueBridgeSurface = new QueueBridgeSurfaceService(),
+        private readonly ReviewVisitSuggestionService $reviewSuggestion = new ReviewVisitSuggestionService(),
     ) {
     }
 
@@ -319,6 +320,8 @@ class PatientContextService
                 [$pid]
             );
             $payload['unpaid_visits_count'] = is_array($unpaidRow) ? (int) ($unpaidRow['cnt'] ?? 0) : 0;
+
+            $payload['review_suggestion'] = $this->reviewSuggestion->suggestFor($pid, $facilityId);
         }
 
         return $payload;
