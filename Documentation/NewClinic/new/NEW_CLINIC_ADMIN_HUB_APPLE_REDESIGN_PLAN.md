@@ -128,6 +128,13 @@ targets get the same mapping so the golden path survives.
   the four field-def-driven tabs. `SettingsSectionAccordion` additionally opens the owning
   accordion section before scrolling (Radix doesn't mount collapsed content, so the target
   row isn't even in the DOM until its section is open).
+- **Audit-caught bug, fixed**: a tab's own local search box (Queue & desks / Features) drives
+  `accordionValue` directly whenever it has text — `openSections` is ignored while
+  `searching` is true, and the local filter can hide the target section from
+  `visibleSections` entirely. A global jump into a tab with a stale local query silently
+  failed (state said the section was "open," nothing was actually visible to scroll to).
+  Fixed by clearing the tab's local query as part of the jump. Proven with a test that fails
+  without the fix and a before/after live-browser repro.
 
 ### ADM-2 · Sidebar navigation shell — ✅ DONE (2026-07-18)
 - New `AdminSidebar` component (island-local): sticky, grouped, icon + label (Lucide),
