@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Document version** | 0.3.0 |
+| **Document version** | 0.4.0 |
 | **Status** | BUILT (Parts A + B) |
 | **Owner** | New Clinic engineering |
 | **Flags** | `enable_native_certificate` · `enable_native_eye_exam` (`new_clinic_config`, both default OFF) |
@@ -208,5 +208,6 @@ territory; a clinic that grows a real eye unit re-evaluates then.
 | Version | Date | Changes |
 |---|---|---|
 | 0.1.0 | 2026-07-17 | Initial draft — analysis of stock `note` (thin, fraud-prone: free-text doctor name, no date range, no numbering) and `eye_mag` (~13k lines/~16 tables subspecialty suite, disabled here); modern designs: numbered auditable medical certificate with letterhead print + verify line, and a WHO-primary-care-level eye exam (R/L chips, 6/x notation, refer bridge, optional spectacle Rx) |
+| 0.4.0 | 2026-07-19 | **Deferred polish + open questions closed.** Q1 answered — verify-by-number shipped: `CertificateService::verifyBySerial` + `front_desk.verify_certificate` (reception ACL) + a "Verify certificate" dialog on the Front Desk status bar (shown when the certificate flag is on; facility-scope misses read as "not found"). Q2 answered (product decision) — certificate can attract a fee: Clinic Setup toggle `certificate_auto_bill` (default OFF); the price lives on the fee schedule under reserved code `MED_CERT` (template row seeded inactive at facility 0); the charge posts to encounter billing on issue via `CertificateChargeService` (lab auto-bill pattern), idempotent per encounter so amend/supersede never double-charges; missing/inactive price row saves the certificate and warns the clinician. Q3 answered — `eye_exam_show_iop` toggle (default ON) hides the IOP section for clinics without a tonometer. Q4 answered — spectacle Rx prints as a slip (`clinical-doc/spectacle-print.php`, handout pattern, reprints allowed). Eye-exam refer bridge shipped: save with refer returns a referral URL; the drawer's "Write referral now" opens the chart-depth composer pre-filled with findings (`referrals.php?prefill=eye_exam`, only untouched fields seeded). |
 | 0.3.0 | 2026-07-17 | **Part B (Eye exam) BUILT.** `form_nc_eye_exam` + `EyeExamService` + `EyeExamDrawer` per spec (6/x acuity, R/L pairs, chips, honest not-examined, collapsible spectacle Rx, refer flag with save-toast reminder — the full referral-editor bridge deferred as a fast-follow). Implementation note: the specialty-pack filter (`clinical_doc_specialty_pack`) would have silently hidden the card; `nc_eye_exam` bypasses the pack — its own flag is the gate. IOP shown always in V1 (config toggle from open Q3 deferred). |
 | 0.2.0 | 2026-07-17 | **Part A (Medical certificate) BUILT.** Implementation notes vs spec: serial numbers derive from the unique row id (`MC-YYYY-NNNNN`, race-free) instead of a per-facility counter — simpler and equally verifiable; certificate card lives on the This-visit lens (promoted out of consult "More"); flag ON at the pilot facility for testing. Open Q1 (verify-by-number search) and Q2 (billable fee) remain open; Part B (eye exam) not started. |

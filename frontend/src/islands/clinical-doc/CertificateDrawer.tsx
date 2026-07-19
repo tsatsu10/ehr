@@ -164,7 +164,17 @@ export function CertificateDrawer({
     setSaving(true);
     setError(null);
     try {
-      const saved = await oeFetch<CertificateRow & { superseded?: boolean }>('clinical_doc.certificate_save', {
+      const saved = await oeFetch<CertificateRow & {
+        superseded?: boolean;
+        charge?: {
+          enabled: boolean;
+          posted: boolean;
+          already_billed: boolean;
+          missing_fee: boolean;
+          amount: number;
+          currency_symbol: string;
+        } | null;
+      }>('clinical_doc.certificate_save', {
         ajaxUrl,
         csrfToken,
         method: 'POST',
@@ -179,12 +189,21 @@ export function CertificateDrawer({
         },
       });
       certCache.delete(visitId);
+      const feeNote = saved.charge?.posted
+        ? ` — ${saved.charge.currency_symbol}${saved.charge.amount.toFixed(2)} fee added to the bill`
+        : '';
       showDeskToast(
         saved.superseded
-          ? `New certificate ${saved.cert_no} issued — the printed one is marked superseded`
-          : `Certificate ${saved.cert_no} saved`,
+          ? `New certificate ${saved.cert_no} issued — the printed one is marked superseded${feeNote}`
+          : `Certificate ${saved.cert_no} saved${feeNote}`,
         'success',
       );
+      if (saved.charge?.enabled && saved.charge.missing_fee) {
+        showDeskToast(
+          'Certificate fee is on, but no active MED_CERT price exists on the fee schedule — no charge was added',
+          'warning',
+        );
+      }
       onSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save the certificate.');

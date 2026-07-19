@@ -164,6 +164,8 @@ class ClinicAdminService
         'enable_native_referral_editor' => ['type' => 'bool', 'default' => '0'],
         'enable_native_certificate' => ['type' => 'bool', 'default' => '0'],
         'enable_native_eye_exam' => ['type' => 'bool', 'default' => '0'],
+        'eye_exam_show_iop' => ['type' => 'bool', 'default' => '1'],
+        'certificate_auto_bill' => ['type' => 'bool', 'default' => '0'],
         'enable_cashier_other_payments' => ['type' => 'bool', 'default' => '0'],
         'enable_native_patient_notes' => ['type' => 'bool', 'default' => '0'],
         'enable_lab_followup_views' => ['type' => 'bool', 'default' => '0'],

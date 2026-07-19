@@ -149,7 +149,11 @@ class CertificateService
                 [(int) $existing['id'], $encounter, $pid, self::FORMDIR]
             );
 
-            return $this->loadLatestActive($pid, $encounter) + ['saved' => true, 'superseded' => false];
+            return $this->loadLatestActive($pid, $encounter) + [
+                'saved' => true,
+                'superseded' => false,
+                'charge' => $this->postCharge($visit, $actorUserId),
+            ];
         }
 
         // First certificate, or amending a printed one -> new row + number.
@@ -185,7 +189,101 @@ class CertificateService
             $superseded = true;
         }
 
-        return $this->loadLatestActive($pid, $encounter) + ['saved' => true, 'superseded' => $superseded];
+        return $this->loadLatestActive($pid, $encounter) + [
+            'saved' => true,
+            'superseded' => $superseded,
+            'charge' => $this->postCharge($visit, $actorUserId),
+        ];
+    }
+
+    /**
+     * Certificate fee (Clinic Setup `certificate_auto_bill`). Idempotent per
+     * encounter, so update-in-place and supersede never double-charge; a
+     * failure to bill must never lose the saved certificate.
+     *
+     * @param array<string, mixed> $visit
+     * @return array<string, mixed>|null
+     */
+    private function postCharge(array $visit, int $actorUserId): ?array
+    {
+        try {
+            return (new CertificateChargeService())->postCertificateCharge(
+                (int) ($visit['pid'] ?? 0),
+                (int) ($visit['encounter'] ?? 0),
+                $actorUserId,
+                (int) ($visit['facility_id'] ?? 0),
+                $actorUserId
+            );
+        } catch (\Throwable $e) {
+            error_log('New Clinic certificate charge failed: ' . $e->getMessage());
+
+            return null;
+        }
+    }
+
+    /**
+     * Verify a certificate by its serial number (the "call the clinic and quote
+     * the number" flow — reception checks a paper someone presents).
+     *
+     * Returns enough to compare against the paper: patient, type, dates,
+     * clinician, and whether a newer certificate superseded it. ACL enforced by
+     * the ajax policy (reception/doctor/admin); facility-scope misses read as
+     * "not found" so cross-facility probing leaks nothing.
+     *
+     * @return array<string, mixed>
+     */
+    public function verifyBySerial(string $serial): array
+    {
+        $serial = strtoupper(preg_replace('/\s+/', '', $serial) ?? '');
+        if ($serial === '' || !preg_match('/^MC-\d{4}-\d{1,10}$/', $serial)) {
+            throw new \InvalidArgumentException('Enter a certificate number like MC-2026-00042');
+        }
+
+        $cert = QueryUtils::querySingleRow(
+            'SELECT c.*, p.fname, p.lname, p.pubpid
+             FROM form_nc_certificate c
+             JOIN patient_data p ON p.pid = c.pid
+             WHERE c.cert_no = ? LIMIT 1',
+            [$serial]
+        );
+        if (!is_array($cert)) {
+            return ['found' => false, 'cert_no' => $serial];
+        }
+
+        try {
+            (new FacilityScopeService())->assertPatientAccessible((int) $cert['pid']);
+        } catch (\Throwable) {
+            return ['found' => false, 'cert_no' => $serial];
+        }
+
+        $issuer = QueryUtils::querySingleRow(
+            'SELECT fname, lname FROM users WHERE id = ?',
+            [(int) ($cert['issued_by_user_id'] ?? 0)]
+        ) ?: [];
+
+        $supersededByNo = null;
+        if (!empty($cert['superseded_by'])) {
+            $newer = QueryUtils::querySingleRow(
+                'SELECT cert_no FROM form_nc_certificate WHERE id = ? LIMIT 1',
+                [(int) $cert['superseded_by']]
+            );
+            $supersededByNo = is_array($newer) ? (string) ($newer['cert_no'] ?? '') : null;
+        }
+
+        return [
+            'found' => true,
+            'cert_no' => (string) $cert['cert_no'],
+            'status' => ((int) ($cert['activity'] ?? 0)) === 1 ? 'valid' : 'superseded',
+            'superseded_by_no' => $supersededByNo,
+            'cert_type' => self::TYPES[(string) ($cert['cert_type'] ?? '')] ?? (string) ($cert['cert_type'] ?? ''),
+            'issued_on' => !empty($cert['date']) ? date('d/m/Y', strtotime((string) $cert['date'])) : '',
+            'rest_from' => !empty($cert['rest_from']) ? date('d/m/Y', strtotime((string) $cert['rest_from'])) : null,
+            'rest_to' => !empty($cert['rest_to']) ? date('d/m/Y', strtotime((string) $cert['rest_to'])) : null,
+            'patient_name' => trim(((string) ($cert['fname'] ?? '')) . ' ' . ((string) ($cert['lname'] ?? ''))),
+            'pubpid' => (string) ($cert['pubpid'] ?? ''),
+            'clinician' => trim(((string) ($issuer['fname'] ?? '')) . ' ' . ((string) ($issuer['lname'] ?? ''))),
+            'ever_printed' => ((int) ($cert['print_count'] ?? 0)) > 0,
+        ];
     }
 
     /**

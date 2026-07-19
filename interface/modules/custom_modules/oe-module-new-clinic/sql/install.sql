@@ -1829,6 +1829,16 @@ INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VA
 (0, 'eye_exam_show_iop', '1');
 #EndIf
 
+#IfNotRow2D new_clinic_config facility_id 0 config_key certificate_auto_bill
+INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
+(0, 'certificate_auto_bill', '0');
+#EndIf
+
+#IfNotRow2D new_fee_schedule facility_id 0 code MED_CERT
+INSERT INTO `new_fee_schedule` (`facility_id`, `code`, `name`, `category`, `price_amount`, `code_type`, `billing_code`, `is_active`, `sort_order`) VALUES
+(0, 'MED_CERT', 'Medical certificate', 'Administrative', 20.00, 'CPT4', 'MED_CERT', 0, 900);
+#EndIf
+
 #IfNotRow2D new_clinic_config facility_id 0 config_key enable_debootstrap_shell
 INSERT INTO `new_clinic_config` (`facility_id`, `config_key`, `config_value`) VALUES
 (0, 'enable_debootstrap_shell', '0');
