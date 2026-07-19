@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { vi } from 'vitest';
 import { SettingsSectionAccordion } from './SettingsSectionAccordion';
 import type { AdminFieldSection } from './adminFieldDefs';
@@ -59,6 +59,42 @@ describe('SettingsSectionAccordion highlight (ADM-1)', () => {
     expect(scrollSpy).toHaveBeenCalled();
     expect(row).toHaveClass('nc-admin-field-flash');
     expect(onHighlightHandled).toHaveBeenCalled();
+
+    vi.useRealTimers();
+  });
+
+  it('clears a stale local search query so the highlight jump can actually find its target', async () => {
+    vi.useFakeTimers();
+    const onHighlightHandled = vi.fn();
+
+    const { rerender } = render(
+      <SettingsSectionAccordion {...baseProps} onHighlightHandled={onHighlightHandled} />
+    );
+
+    // User had typed a local search that filters "Second group" out entirely.
+    fireEvent.change(screen.getByLabelText('Search test'), { target: { value: 'first' } });
+    expect(screen.queryByLabelText('Second field')).not.toBeInTheDocument();
+
+    // A global-sidebar jump to a field in the now-hidden section arrives.
+    rerender(
+      <SettingsSectionAccordion
+        {...baseProps}
+        highlightKey="second_field"
+        onHighlightHandled={onHighlightHandled}
+      />
+    );
+
+    const row = document.getElementById('nc-admin-field-row-second_field');
+    expect(row).toBeInTheDocument();
+    row!.scrollIntoView = vi.fn();
+
+    await act(async () => {
+      vi.advanceTimersByTime(150);
+    });
+
+    expect(row).toHaveClass('nc-admin-field-flash');
+    // The local search box itself is cleared, not just bypassed.
+    expect(screen.getByLabelText('Search test')).toHaveValue('');
 
     vi.useRealTimers();
   });

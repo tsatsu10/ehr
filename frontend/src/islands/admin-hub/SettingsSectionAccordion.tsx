@@ -104,6 +104,11 @@ export function SettingsSectionAccordion({
       onHighlightHandled?.();
       return;
     }
+    // A leftover local search query drives `accordionValue` instead of
+    // `openSections` (see below), and can filter the target section out of
+    // `visibleSections` entirely — either way the highlight would silently
+    // fail to find its row. The global sidebar search jump always wins.
+    setQuery('');
     const key = sectionKey(sections[idx], idx);
     setOpenSections((prev) => (prev.includes(key) ? prev : [...prev, key]));
     // Radix animates the section open — wait for it to mount before scrolling.
