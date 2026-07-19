@@ -1767,7 +1767,12 @@ class EncounterNoteService
             'ready_for_lab', 'in_lab', 'ready_for_pharmacy', 'in_pharmacy',
         ];
         if (!in_array($state, $clinicalStates, true)) {
-            throw new \InvalidArgumentException('Visit is not in an active clinical state');
+            // Managers with unlock rights (DR-08) may open a CLOSED visit's note to
+            // review, unlock, and correct it — post-visit correction is the whole
+            // point of the unlock flow, and the queue FSM no longer applies here.
+            if (!$this->canUnlockForClinicalCorrection()) {
+                throw new \InvalidArgumentException('Visit is not in an active clinical state');
+            }
         }
 
         if (

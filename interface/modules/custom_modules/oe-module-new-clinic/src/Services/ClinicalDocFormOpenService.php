@@ -68,6 +68,17 @@ class ClinicalDocFormOpenService
         }
 
         $visit = $this->queueService->getVisitForActor($visitId);
+        if (!$this->isActiveClinicalState((string) ($visit['state'] ?? ''))) {
+            // Closed visit (completed/paid/cancelled): post-visit corrections open
+            // through the same bridge-only route as visit-less encounters — doctor/
+            // admin ACL via the session bind, stock form history keeps the audit
+            // trail, native visit-keyed editors stay queue-only.
+            $encounterId = (int) ($visit['encounter'] ?? 0);
+            if ($encounterId <= 0) {
+                throw new \InvalidArgumentException('Visit has no encounter to open forms on');
+            }
+            return $this->openFormForEncounter($body, $actorUserId, $encounterId);
+        }
         $this->assertClinicalVisitState($visit, $actorUserId);
 
         $facilityId = (int) ($visit['facility_id'] ?? $this->visitScope->resolveDeskFacilityId());
@@ -411,14 +422,18 @@ class ClinicalDocFormOpenService
     /**
      * @param array<string, mixed> $visit
      */
+    private function isActiveClinicalState(string $state): bool
+    {
+        return in_array($state, [
+            'awaiting_triage', 'in_triage', 'with_doctor',
+            'ready_for_lab', 'in_lab', 'ready_for_pharmacy', 'in_pharmacy',
+        ], true);
+    }
+
     private function assertClinicalVisitState(array $visit, int $actorUserId): void
     {
         $state = (string) ($visit['state'] ?? '');
-        $clinicalStates = [
-            'awaiting_triage', 'in_triage', 'with_doctor',
-            'ready_for_lab', 'in_lab', 'ready_for_pharmacy', 'in_pharmacy',
-        ];
-        if (!in_array($state, $clinicalStates, true)) {
+        if (!$this->isActiveClinicalState($state)) {
             throw new \InvalidArgumentException('Visit is not in an active clinical state');
         }
 

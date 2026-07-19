@@ -216,6 +216,89 @@ class ClinicalDocFormOpenServiceTest extends TestCase
         ], 2);
     }
 
+    public function testClosedVisitRoutesOpenThroughBridgeOnlyEncounterPath(): void
+    {
+        // Post-visit corrections: a completed/paid/cancelled visit is off the queue
+        // FSM, so opening a form on it must take the same bridge-only route as a
+        // visit-less encounter instead of refusing with the clinical-state error.
+        $encounterId = 987600123;
+        $encRowId = (int) QueryUtils::sqlInsert(
+            'INSERT INTO form_encounter (date, reason, facility_id, pid, encounter) VALUES (NOW(), ?, 0, 1, ?)',
+            ['NC closed-visit open test', $encounterId]
+        );
+
+        try {
+            $visit = [
+                'id' => 77,
+                'state' => 'completed',
+                'pid' => 1,
+                'encounter' => $encounterId,
+                'facility_id' => 0,
+                'assigned_provider_id' => 0,
+            ];
+            $queueStub = new class ($visit) extends VisitQueueService {
+                /** @param array<string, mixed> $visit */
+                public function __construct(private readonly array $visit)
+                {
+                }
+
+                public function getVisitForActor(int $visitId): array
+                {
+                    return $this->visit;
+                }
+            };
+
+            $session = new class extends EncounterSessionService {
+                public function bindForEncounter(int $encounterId, int $actorUserId): EncounterSessionDto
+                {
+                    return new EncounterSessionDto(0, 1, $encounterId, 'completed');
+                }
+            };
+
+            $access = $this->hubEnabledDoctorAccess();
+            $catalog = new class ($access, $this->hubEnabledConfig()) extends ClinicalDocCatalogService {
+                public function __construct(ClinicalDocAccessService $access, ClinicConfigService $config)
+                {
+                    parent::__construct(access: $access, config: $config);
+                }
+
+                public function resolveRegistryDirectory(string $formdir): string
+                {
+                    return 'soap';
+                }
+
+                public function isQueueOnlyFormdir(string $formdir, ?int $facilityId = null): bool
+                {
+                    return false;
+                }
+
+                public function isBridgeableFormdir(string $formdir): bool
+                {
+                    return true;
+                }
+            };
+
+            $service = new ClinicalDocFormOpenService(
+                access: $access,
+                catalog: $catalog,
+                queueService: $queueStub,
+                encounterSession: $session,
+            );
+
+            $result = $service->openForm([
+                'visit_id' => 77,
+                'formdir' => 'soap',
+                'action' => 'new',
+            ], 1);
+
+            $this->assertStringContainsString('clinical-form-bridge.php', $result['redirect_url']);
+            $this->assertStringContainsString('encounter=' . $encounterId, $result['redirect_url']);
+            $this->assertSame('soap', $result['formdir']);
+        } finally {
+            QueryUtils::sqlStatementThrowException('DELETE FROM form_encounter WHERE id = ?', [$encRowId]);
+        }
+    }
+
     public function testNativeEngineRoutesConsultOpenToEncounterConsultPage(): void
     {
         $visit = $this->triageVisit(55);
