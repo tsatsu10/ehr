@@ -66,6 +66,49 @@ describe('EyeExamDrawer', () => {
     expect(toastMock).toHaveBeenCalledWith('Eye exam saved — remember to write the referral letter', 'success');
   });
 
+  it('hides the eye-pressure section when the clinic has show_iop off', async () => {
+    oeFetchMock.mockResolvedValueOnce({
+      enabled: true, visit_id: 72, exam_id: null, saved: false, values: {},
+      meta: { ...meta, show_iop: false },
+    });
+    render(<EyeExamDrawer {...baseProps} />);
+    await screen.findByText('Visual acuity');
+    expect(screen.queryByText('Eye pressure (mmHg)')).not.toBeInTheDocument();
+  });
+
+  it('offers the pre-filled referral after a refer save, and drops it on reopen', async () => {
+    oeFetchMock.mockResolvedValueOnce({
+      enabled: true, visit_id: 72, exam_id: null, saved: false, values: {}, meta,
+    });
+    oeFetchMock.mockResolvedValueOnce({
+      saved: true, exam_id: 4, refer: true, has_rx: false,
+      referral_url: '/referrals.php?pid=1&prefill=eye_exam',
+    });
+    const { rerender } = render(<EyeExamDrawer {...baseProps} />);
+    await screen.findByText('Visual acuity');
+    fireEvent.click(screen.getByRole('button', { name: /Save eye exam/i }));
+    await screen.findByRole('button', { name: 'Write referral now' });
+
+    // Reopen (possibly for another patient) — the stale link must not survive.
+    oeFetchMock.mockResolvedValueOnce({
+      enabled: true, visit_id: 73, exam_id: null, saved: false, values: {}, meta,
+    });
+    rerender(<EyeExamDrawer {...baseProps} open={false} />);
+    rerender(<EyeExamDrawer {...baseProps} open visitId={73} />);
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Write referral now' })).not.toBeInTheDocument());
+  });
+
+  it('shows the spectacle print button once a prescription is saved', async () => {
+    oeFetchMock.mockResolvedValueOnce({
+      enabled: true, visit_id: 72, exam_id: 4, saved: true, has_rx: true,
+      values: { rx_sph_r: '-2.25' }, meta,
+    });
+    render(<EyeExamDrawer {...baseProps} />);
+    await screen.findByText('Visual acuity');
+    expect(screen.getByRole('button', { name: 'Print spectacle slip' })).toBeInTheDocument();
+  });
+
   it('loads a saved exam with prior values', async () => {
     oeFetchMock.mockResolvedValueOnce({
       enabled: true, visit_id: 72, exam_id: 4, saved: true,

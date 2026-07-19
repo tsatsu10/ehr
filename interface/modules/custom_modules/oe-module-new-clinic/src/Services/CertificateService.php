@@ -261,6 +261,15 @@ class CertificateService
             [(int) ($cert['issued_by_user_id'] ?? 0)]
         ) ?: [];
 
+        // Verification reads patient identity by serial — audit like other PHI reads.
+        \OpenEMR\Common\Logging\EventAuditLogger::getInstance()->newEvent(
+            'new_clinic',
+            'front_desk.certificate_verified',
+            (int) ($_SESSION['authUserID'] ?? 0),
+            1,
+            'cert_no=' . $serial . ' pid=' . (int) $cert['pid']
+        );
+
         $supersededByNo = null;
         if (!empty($cert['superseded_by'])) {
             $newer = QueryUtils::querySingleRow(

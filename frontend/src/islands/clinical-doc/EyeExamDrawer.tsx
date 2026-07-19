@@ -14,6 +14,8 @@ interface EyeExamMeta {
   antseg_findings: Record<string, string>;
   fundus_findings: Record<string, string>;
   iop_methods: Record<string, string>;
+  /** Clinics without a tonometer hide the IOP section (admin toggle). */
+  show_iop?: boolean;
 }
 
 interface EyeExamPayload {
@@ -23,7 +25,14 @@ interface EyeExamPayload {
   values: Record<string, unknown>;
   saved: boolean;
   locked?: boolean;
+  has_rx?: boolean;
   meta: EyeExamMeta;
+}
+
+interface EyeExamSaveResult {
+  refer: boolean;
+  has_rx?: boolean;
+  referral_url?: string | null;
 }
 
 interface EyeExamDrawerProps {
@@ -69,11 +78,14 @@ export function EyeExamDrawer({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [locked, setLocked] = useState(false);
+  const [savedHasRx, setSavedHasRx] = useState(false);
+  const [referralUrl, setReferralUrl] = useState<string | null>(null);
   const dirtyRef = useRef(false);
 
   const applyPayload = useCallback((data: EyeExamPayload) => {
     setMeta(data.meta);
     setLocked(!!data.locked);
+    setSavedHasRx(!!data.has_rx);
     if (!dirtyRef.current) {
       const v = (data.values ?? {}) as Values;
       // A fresh exam defaults pupils to the normal finding — otherwise a quick
@@ -91,6 +103,9 @@ export function EyeExamDrawer({
     let cancelled = false;
     dirtyRef.current = false;
     setError(null);
+    // The referral link belongs to the save that produced it — a reopen (possibly
+    // for a DIFFERENT patient) must never show a stale wrong-patient link.
+    setReferralUrl(null);
 
     const cached = examCache.get(visitId);
     if (cached) {
@@ -153,15 +168,19 @@ export function EyeExamDrawer({
     setSaving(true);
     setError(null);
     try {
-      const saved = await oeFetch<{ refer: boolean }>('clinical_doc.eye_exam_save', {
+      const saved = await oeFetch<EyeExamSaveResult>('clinical_doc.eye_exam_save', {
         ajaxUrl,
         csrfToken,
         method: 'POST',
         json: { visit_id: visitId, values },
       });
       examCache.delete(visitId);
+      setSavedHasRx(!!saved.has_rx);
+      setReferralUrl(saved.refer ? (saved.referral_url ?? null) : null);
       showDeskToast(
-        saved.refer ? 'Eye exam saved — remember to write the referral letter' : 'Eye exam saved',
+        saved.refer
+          ? (saved.referral_url ? 'Eye exam saved' : 'Eye exam saved — remember to write the referral letter')
+          : 'Eye exam saved',
         'success',
       );
       onSaved();
@@ -266,6 +285,20 @@ export function EyeExamDrawer({
           This eye exam is signed — read only. Unlock the encounter to amend it.
         </div>
       )}
+      {referralUrl && (
+        <div className={deskCalloutClass('success', 'mb-3 flex flex-wrap items-center justify-between gap-2 py-2 text-sm')}>
+          <span>Exam saved with a referral flag — the letter is one tap away, pre-filled with these findings.</span>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              window.location.assign(referralUrl);
+            }}
+          >
+            Write referral now
+          </Button>
+        </div>
+      )}
 
       {loading || !meta ? (
         <p className="text-sm text-[var(--oe-nc-text-muted)]">Loading eye exam…</p>
@@ -319,7 +352,7 @@ export function EyeExamDrawer({
             </div>
           ))}
 
-          {section('Eye pressure (mmHg)', (
+          {meta.show_iop !== false && section('Eye pressure (mmHg)', (
             <div className="grid grid-cols-3 gap-2">
               <div className="space-y-1">
                 <Label htmlFor="nc-eye-iop_r" className="text-xs">Right</Label>
@@ -391,10 +424,23 @@ export function EyeExamDrawer({
             </div>
           ))}
 
-          <div className="mb-4">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
             <Button type="button" variant="outline" size="sm" aria-expanded={showRx} onClick={() => setShowRx((v) => !v)}>
               {showRx ? 'Hide spectacle prescription' : 'Spectacle prescription…'}
             </Button>
+            {savedHasRx && visitId && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  // Relative URL — this island only renders on clinical-doc/index.php.
+                  window.open(`spectacle-print.php?visit_id=${visitId}`, '_blank', 'noopener,noreferrer');
+                }}
+              >
+                Print spectacle slip
+              </Button>
+            )}
           </div>
           {showRx && section('Spectacle prescription', (
             <div className="space-y-2">
