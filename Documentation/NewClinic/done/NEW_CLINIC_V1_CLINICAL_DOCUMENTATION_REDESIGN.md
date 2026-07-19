@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Document version** | 0.1.3 |
+| **Document version** | 0.1.4 |
 | **Status** | **Built + always-on** — the M17 hub is a permanent surface since **2026-07-18** (`enable_clinical_doc_hub` retired, `encounter_note_engine` removed — **native consult engine is the only engine**; PRD §5.6 amendment). The hub opens **any** encounter (encounter-only mode) and offers the **full** form registry via the clinical-form-bridge; **every flag/rollback/legacy-fallback reference in this document is historical**. **NG5** (no form-engine rewrite) still stands — the bridge is the permanent seam |
 | **Companion to** | [NEW_CLINIC_V1_PRD.md](./NEW_CLINIC_V1_PRD.md) (v1.20.35), [NEW_CLINIC_V1_PAGE_DESIGNS.md](../NEW_CLINIC_V1_PAGE_DESIGNS.md) (v0.6.40), [NEW_CLINIC_V1_USER_WORKFLOWS.md](../NEW_CLINIC_V1_USER_WORKFLOWS.md) (v1.9.40), [MEDICAL_RECORD_DASHBOARD_REDESIGN.md](./MEDICAL_RECORD_DASHBOARD_REDESIGN.md) (v0.2.29), [NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md](./NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md) (v0.1.3), [NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md](./NEW_CLINIC_V1_LAB_OPERATIONS_REDESIGN.md) (v0.1.8) |
 | **Audience** | Product, design, clinical leads, doctors, nurses, implementers, QA |
@@ -753,6 +753,7 @@ clinical_doc_form_open (
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.1.4 | 2026-07-19 | **Post-visit corrections** — closed visits (completed/paid/cancelled) now open forms through the same bridge-only route as visit-less encounters (doctor/admin session bind, per-form ACL, stock form history as audit trail); DR-08 manager unlock works after the visit closes (state gate exempts unlock-rights holders); native visit-keyed editors stay queue-only on closed visits |
 | 0.1.3 | 2026-07-18 | **Flip (PRD §5.6 amendment)** — hub permanent (`enable_clinical_doc_hub` retired) and native consult engine the only engine (`encounter_note_engine` removed); encounter-only mode for visits without a queue row; Add form offers the full registry via the bridge; both stock 302 fall-throughs deleted; header marks all flag/rollback references historical |
 | 0.1.2 | 2026-06-22 | **Trilogy integration** — PRD v1.20.35 / PAGE_DESIGNS §7.30 / USER_WORKFLOWS §14.10 / MRD §8.9; §22.3 R-DOC-01–10 closed |
 | 0.1.1 | 2026-06-22 | **Consistency audit pass** — §22; D-FORM-6–10; M17-F01–F10; preflight/ACL/M15 fixes; §20.3 DOC tests; §23 DR runbooks |

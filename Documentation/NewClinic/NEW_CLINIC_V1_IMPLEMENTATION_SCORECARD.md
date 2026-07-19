@@ -259,6 +259,13 @@ hub links) targets the hub, the stock encounter URL builder deleted. Live smokes
 summary/sign/open + bridge renders + long-tail reviewofs edit round trip — all PASS. PRD →
 v1.20.56; clinical-doc spec → v0.1.3.
 
+**2026-07-19 — Post-visit corrections (clinical-doc spec → v0.1.4):** closed visits
+(completed/paid/cancelled) open forms through the bridge-only encounter route (doctor/admin
+bind, per-form ACL, stock form history as audit trail), and the DR-08 manager unlock works
+after the visit closes. Native visit-keyed editors stay queue-only. Proven by unit test +
+live smoke on a completed visit; consult e2e suite (golden path + native + variants) 6/6 green
+2026-07-18 after focus-mode spec repairs.
+
 **2026-07-18 — Flag retirement: five surfaces made permanent (PRD §5.6 amendment)**
 
 Seven flags deleted from code after parity sign-off; the surfaces are now always on with no
