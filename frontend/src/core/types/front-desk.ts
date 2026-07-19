@@ -62,6 +62,11 @@ export interface FrontDeskPreviewData {
     block_plain_start?: boolean;
     show_arrival_advisor?: boolean;
   };
+  review_suggestion?: {
+    days_ago: number;
+    last_visit_date: string;
+    review_visit_type_id: number;
+  } | null;
 }
 
 export interface TodayVisitRow {
@@ -113,6 +118,7 @@ export interface DeskVisitType {
   service_profile_hint?: string | null;
   referral_required?: boolean;
   allows_referral_upload?: boolean;
+  is_review?: boolean;
 }
 
 /** Priority flags set at registration — drives fast-track sorting */

@@ -395,6 +395,94 @@ describe('FrontDesk', () => {
     expect(await screen.findByText(/Switch patient\?/i)).toBeInTheDocument();
   });
 
+  it('prompts to book as Review when the preview suggests it, and one click selects the Review type', async () => {
+    mockFetch.mockImplementation(async (action: string) => {
+      if (action === 'front_desk.desk_stats') {
+        return { visits_started_today: 0, waiting_count: 0, recent_starts: [] };
+      }
+      if (action === 'front_desk.recently_viewed') {
+        return { recent: [] };
+      }
+      if (action === 'patients.search') {
+        return { patients: [searchRow] };
+      }
+      if (action === 'patients.preview') {
+        return {
+          ...previewData,
+          review_suggestion: {
+            days_ago: 5,
+            last_visit_date: '2026-07-14',
+            review_visit_type_id: 42,
+          },
+        };
+      }
+      if (action === 'visit.types') {
+        return {
+          visit_types: [
+            { id: 1, label: 'General OPD', is_default: true },
+            { id: 42, label: 'Review', is_review: true },
+          ],
+        };
+      }
+      if (action === 'front_desk.recently_viewed.remember') {
+        return { recent: [{ pid: 42, display_name: 'Kwame Boateng', pubpid: 'MRN042' }] };
+      }
+      return {};
+    });
+
+    render(<FrontDesk {...props} />);
+
+    const input = screen.getByPlaceholderText(/Search patient/i);
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'Kwame' } });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    });
+
+    expect(await screen.findByText(/Seen 5 days ago/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /book as review/i }));
+    expect(screen.getByLabelText(/visit type/i)).toHaveTextContent('Review');
+  });
+
+  it('shows no Review prompt when the preview has no suggestion', async () => {
+    mockFetch.mockImplementation(async (action: string) => {
+      if (action === 'front_desk.desk_stats') {
+        return { visits_started_today: 0, waiting_count: 0, recent_starts: [] };
+      }
+      if (action === 'front_desk.recently_viewed') {
+        return { recent: [] };
+      }
+      if (action === 'patients.search') {
+        return { patients: [searchRow] };
+      }
+      if (action === 'patients.preview') {
+        return { ...previewData, review_suggestion: null };
+      }
+      if (action === 'visit.types') {
+        return {
+          visit_types: [
+            { id: 1, label: 'General OPD', is_default: true },
+            { id: 42, label: 'Review', is_review: true },
+          ],
+        };
+      }
+      if (action === 'front_desk.recently_viewed.remember') {
+        return { recent: [{ pid: 42, display_name: 'Kwame Boateng', pubpid: 'MRN042' }] };
+      }
+      return {};
+    });
+
+    render(<FrontDesk {...props} />);
+
+    const input = screen.getByPlaceholderText(/Search patient/i);
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'Kwame' } });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    });
+
+    expect(await screen.findByRole('button', { name: /Start visit/i })).toBeInTheDocument();
+    expect(screen.queryByText(/book as review/i)).not.toBeInTheDocument();
+  });
+
   it('opens mobile preview sheet after selecting a patient', async () => {
     mockUseDeskViewport.mockReturnValue('mobile');
     mockFetch.mockImplementation(async (action: string) => {

@@ -3,6 +3,7 @@
  */
 
 import { DeskAlert } from '@components/DeskAlert';
+import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Button } from '@components/ui/button';
 import { Label } from '@components/ui/label';
 import { Textarea } from '@components/ui/textarea';
@@ -62,6 +63,7 @@ export interface StartVisitFormProps {
 export function StartVisitForm(props: StartVisitFormProps) {
   const {
     types, visitTypeId, setVisitTypeId, loadingTypes, selectedVisitType, showReferralUpload,
+    reviewSuggestion, applyReviewSuggestion,
     chiefComplaint, setChiefComplaint, priorityFlag, setPriorityFlag,
     hardAssignDoctorId, setHardAssignDoctorId,
     revisitPath, setRevisitPath, overrideReason, setOverrideReason,
@@ -208,6 +210,16 @@ export function StartVisitForm(props: StartVisitFormProps) {
 
       {canShowVisitFields && (
         <div className="space-y-4">
+          {reviewSuggestion && (
+            <div className={deskCalloutClass('info')} role="status">
+              <p className="m-0">
+                Seen {reviewSuggestion.daysAgo === 0 ? 'today' : `${reviewSuggestion.daysAgo} day${reviewSuggestion.daysAgo === 1 ? '' : 's'} ago`} — same complaint? Book as a Review visit at the clinic&apos;s review price.
+              </p>
+              <Button type="button" variant="outline" size="lg" onClick={applyReviewSuggestion}>
+                Book as Review
+              </Button>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="nc-visit-type">Visit type</Label>
             <Select value={visitTypeId} onValueChange={(val) => {

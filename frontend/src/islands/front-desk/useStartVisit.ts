@@ -45,6 +45,8 @@ export interface UseStartVisitReturn {
   loadingTypes: boolean;
   selectedVisitType: DeskVisitType | null;
   showReferralUpload: boolean;
+  reviewSuggestion: { daysAgo: number; reviewVisitTypeId: number } | null;
+  applyReviewSuggestion: () => void;
   // Form state
   chiefComplaint: string;
   setChiefComplaint: (v: string) => void;
@@ -150,6 +152,14 @@ export function useStartVisit({
   const showReferralUpload = !!selectedVisitType?.allows_referral_upload;
   const canShowVisitFields = !gateBlocked || revisitPath === 'manager_override';
 
+  const rawSuggestion = preview.review_suggestion ?? null;
+  const reviewTypeInList = rawSuggestion
+    ? types.find((t) => t.id === rawSuggestion.review_visit_type_id && t.is_review) ?? null
+    : null;
+  const reviewSuggestion = rawSuggestion && reviewTypeInList && String(reviewTypeInList.id) !== visitTypeId
+    ? { daysAgo: rawSuggestion.days_ago, reviewVisitTypeId: reviewTypeInList.id }
+    : null;
+
   const startLabel = fromAppointment ? 'Start visit & check in' : 'Start visit';
   const gateActionLabel = revisitPath === 'complete_now'
     ? 'Complete profile now'
@@ -210,6 +220,13 @@ export function useStartVisit({
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   const markDirty = useCallback(() => { onDirtyChange?.(true); }, [onDirtyChange]);
+
+  const applyReviewSuggestion = useCallback(() => {
+    if (rawSuggestion) {
+      setVisitTypeId(String(rawSuggestion.review_visit_type_id));
+      markDirty();
+    }
+  }, [markDirty, rawSuggestion]);
 
   const handleReferralFile = useCallback(async (file: File) => {
     setReferralUploading(true);
@@ -390,6 +407,7 @@ export function useStartVisit({
 
   return {
     types, visitTypeId, setVisitTypeId, loadingTypes, selectedVisitType, showReferralUpload,
+    reviewSuggestion, applyReviewSuggestion,
     chiefComplaint, setChiefComplaint, priorityFlag, setPriorityFlag,
     hardAssignDoctorId, setHardAssignDoctorId,
     revisitPath, setRevisitPath, overrideReason, setOverrideReason,
