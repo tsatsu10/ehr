@@ -12,10 +12,42 @@ namespace OpenEMR\Tests\Unit\Modules\NewClinic;
 require_once __DIR__ . '/ModuleAutoload.php';
 
 use OpenEMR\Modules\NewClinic\Services\AjaxActionPolicy;
+use OpenEMR\Modules\NewClinic\Services\ShellService;
 use PHPUnit\Framework\TestCase;
 
 class AjaxActionPolicyTest extends TestCase
 {
+    /**
+     * DESK_ACL_ANY is the shared "any clinic desk role" list — found duplicated
+     * verbatim across AjaxController, PageController, and ShellService during a
+     * self-review; those three now reference this constant instead of re-typing
+     * it. Pinning the content here so a future edit can't silently reshape what
+     * all three depend on, and cross-checking ShellService's Visit Board nav
+     * entry specifically because a plain array value (unlike the two methods,
+     * which iterate the constant directly) could be silently re-inlined without
+     * any type-level signal.
+     */
+    public function testDeskAclAnyContentAndShellServiceCrossReference(): void
+    {
+        $this->assertSame(
+            ['new_reception', 'new_nurse', 'new_doctor', 'new_lab', 'new_pharmacy', 'new_cashier', 'new_admin', 'reports'],
+            AjaxActionPolicy::DESK_ACL_ANY
+        );
+
+        // NAV_ITEMS is a private const; reflection reads it without needing the
+        // full app bootstrap ShellService's constructor otherwise requires.
+        $navItems = (new \ReflectionClass(ShellService::class))->getConstant('NAV_ITEMS');
+        $visitBoard = null;
+        foreach ($navItems as $item) {
+            if (($item['id'] ?? '') === 'clinicvb') {
+                $visitBoard = $item;
+                break;
+            }
+        }
+        $this->assertNotNull($visitBoard, 'Visit Board nav entry not found in ShellService::NAV_ITEMS');
+        $this->assertSame(AjaxActionPolicy::DESK_ACL_ANY, $visitBoard['acos']);
+    }
+
     public function testAdminHubActionAliasesNormalize(): void
     {
         $policy = new AjaxActionPolicy();

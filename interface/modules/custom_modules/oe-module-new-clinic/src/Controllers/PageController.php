@@ -17,6 +17,7 @@ use OpenEMR\Common\Twig\TwigContainer;
 use OpenEMR\Core\Header;
 use OpenEMR\Core\Kernel;
 use OpenEMR\Modules\NewClinic\ModuleAssetVersion;
+use OpenEMR\Modules\NewClinic\Services\AjaxActionPolicy;
 use OpenEMR\Modules\NewClinic\Services\ClinicConfigService;
 use OpenEMR\Modules\NewClinic\Services\MoneyFormatService;
 use OpenEMR\Modules\NewClinic\Services\OpenEmrProductRegistrationDismissService;
@@ -228,11 +229,7 @@ class PageController
 
     private function resolveShellAcoForNotesUser(): string
     {
-        $deskAcos = [
-            'new_reception', 'new_nurse', 'new_doctor', 'new_lab',
-            'new_pharmacy', 'new_cashier', 'new_admin', 'reports',
-        ];
-        foreach ($deskAcos as $aco) {
+        foreach (AjaxActionPolicy::DESK_ACL_ANY as $aco) {
             if (AclMain::aclCheckCore('new_clinic', $aco)) {
                 return $aco;
             }

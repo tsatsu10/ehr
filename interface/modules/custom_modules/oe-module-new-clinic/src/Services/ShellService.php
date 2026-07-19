@@ -116,10 +116,7 @@ class ShellService
             'id' => 'clinicvb',
             'label' => 'Visit Board',
             'path' => 'visit-board.php',
-            'acos' => [
-                'new_reception', 'new_nurse', 'new_doctor', 'new_lab',
-                'new_pharmacy', 'new_cashier', 'new_admin', 'reports',
-            ],
+            'acos' => AjaxActionPolicy::DESK_ACL_ANY,
             'group' => 'operations',
             'icon' => 'fa-th-large',
         ],

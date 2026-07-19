@@ -31,6 +31,7 @@ class AjaxActionPolicy
         'visit.send_back_to_doctor' => 'new_visit_return_to_doctor',
         'front_desk.revisit_awaiting_documents' => 'new_reception',
         'front_desk.upload_referral' => 'new_reception',
+        'front_desk.verify_certificate' => 'new_reception',
         'doctor.take' => 'new_doctor',
         'doctor.start_walk_in' => 'new_doctor',
         'doctor.active' => 'new_doctor',
@@ -167,8 +168,20 @@ class AjaxActionPolicy
         'reports.scheduling' => 'reports',
     ];
 
-    /** @var array<int, string> */
-    private const DESK_ACL_ANY = [
+    /**
+     * "Any clinic desk role" ACO set — the canonical list of who counts as
+     * clinic staff for a broad access check (any desk + reports). Public so
+     * AjaxController::requireClinicDeskAcl(), PageController's notes-shell
+     * resolver, and ShellService's Visit Board nav entry can share this one
+     * copy instead of re-typing it (found duplicated verbatim in all three
+     * during a self-review of an unrelated change). Do NOT fold
+     * SEARCH_ACL_ANY or MainMenuRestrictService::CLINIC_DESK_ACLS into this
+     * — both are deliberately narrower (no `reports`, and CLINIC_DESK_ACLS
+     * also excludes `new_admin`), not accidental near-duplicates of it.
+     *
+     * @var array<int, string>
+     */
+    public const DESK_ACL_ANY = [
         'new_reception', 'new_nurse', 'new_doctor', 'new_lab',
         'new_pharmacy', 'new_cashier', 'new_admin', 'reports',
     ];
