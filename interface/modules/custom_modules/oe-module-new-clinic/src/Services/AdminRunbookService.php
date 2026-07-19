@@ -1,7 +1,7 @@
 <?php
 
 /**
- * M15-F10 — Day-2 admin runbooks (RB-01–RB-21)
+ * M15-F10 — Day-2 admin runbooks (RB-01–RB-22)
  *
  * @package   OpenEMR
  * @link      https://www.open-emr.org

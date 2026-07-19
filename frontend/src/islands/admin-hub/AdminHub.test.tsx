@@ -309,6 +309,39 @@ describe('AdminHub', () => {
     expect(screen.getByRole('button', { name: /Choose M6 config JSON/i })).toBeInTheDocument();
   });
 
+  it('ADM-3: a scope switch does not bounce a user who left Setup back to it', async () => {
+    render(<AdminHub {...props} />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Default landing redirects to Setup (setup is incomplete in the fixture).
+    expect(await screen.findByText(/Setup checklist/i)).toBeInTheDocument();
+
+    // Deliberately navigate away.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('link', { name: 'Queue & desks' }));
+    });
+    expect(await screen.findByLabelText(/Enable triage desk/i)).toBeInTheDocument();
+
+    // Switch scope to global and back — this re-triggers the settings load
+    // (loading: false -> true -> false), which used to re-run the landing
+    // redirect and yank the user back to Setup even after they'd left it.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('combobox'));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText('All facilities (global default)'));
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByText(/Setup checklist/i)).not.toBeInTheDocument();
+    expect(await screen.findByLabelText(/Enable triage desk/i)).toBeInTheDocument();
+  }, 15000);
+
   it('ADM-3: opens on the Setup tab by default while setup is incomplete, and it holds the checklist', async () => {
     render(<AdminHub {...props} />);
 

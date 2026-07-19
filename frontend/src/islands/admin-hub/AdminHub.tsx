@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { deskCalloutClass } from '@components/deskCalloutStyles';
 import { Label } from '@components/ui/label';
 import {
@@ -375,11 +375,18 @@ export function AdminHub({
 
   // ADM-3 open question #1: while setup is incomplete, the page opens on
   // Setup — but only on a true default landing (no explicit ?tab= in the
-  // URL), never overriding a deep link the user actually followed.
+  // URL), never overriding a deep link the user actually followed. Fires
+  // once per page load only (setupLandingAppliedRef): switching the scope
+  // picker (global/facility) re-triggers `loading`, and without this guard
+  // a user who'd manually navigated away from Setup to Queue & desks (a
+  // clean URL, since that's the no-?tab= default) got yanked back to Setup
+  // on their next scope switch.
+  const setupLandingAppliedRef = useRef(false);
   useEffect(() => {
-    if (loading || !adminHubEnabled || !setupProgress) {
+    if (loading || !adminHubEnabled || !setupProgress || setupLandingAppliedRef.current) {
       return;
     }
+    setupLandingAppliedRef.current = true;
     const hadExplicitTab = new URL(window.location.href).searchParams.get('tab') != null;
     if (!hadExplicitTab && activeTab === 'queue-desks' && !setupProgress.setup_complete) {
       handleTabChange('setup');
