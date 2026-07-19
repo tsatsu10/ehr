@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { oeFetch } from './oeFetch';
+import { oeFetch, OeFetchError } from './oeFetch';
 import {
   clearDeskActiveVisitId,
   getDeskActiveVisitId,
@@ -159,10 +159,18 @@ export function useSharedDeviceSession({
       setProbeData(null);
       onSessionRestored?.();
       void probe();
+    } catch (err) {
+      // Stored visit no longer restorable (cancelled/completed elsewhere) —
+      // drop the stale reference so the banner and desk return to the queue.
+      if (err instanceof OeFetchError && err.status === 400) {
+        clearDeskActiveVisitId(storageKey);
+        setProbeData(null);
+        onReturnToQueue?.();
+      }
     } finally {
       setRestoring(false);
     }
-  }, [restoreAction, restoring, storageKey, ajaxUrl, csrfToken, onSessionRestored, probe]);
+  }, [restoreAction, restoring, storageKey, ajaxUrl, csrfToken, onSessionRestored, onReturnToQueue, probe]);
 
   const returnToQueue = useCallback(() => {
     clearActiveVisitId();

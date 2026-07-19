@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { oeFetch } from '@core/oeFetch';
+import { oeFetch, OeFetchError } from '@core/oeFetch';
 import { resolveActionConflict, type DeskInterrupt } from '@core/deskConflict';
 import { useInterval } from '@core/useInterval';
 import { useQueueVisibilityRefresh } from '@core/useQueueVisibilityRefresh';
@@ -323,6 +323,11 @@ export function CashierDesk({
         resetActivePane();
         void fetchQueueRef.current();
         return;
+      }
+      // Stored visit no longer selectable (e.g. cancelled elsewhere) — drop the
+      // stale reference so the next desk load doesn't re-fire the same failure.
+      if (err instanceof OeFetchError && err.status === 400) {
+        clearDeskActiveVisitId(STORAGE_KEY);
       }
       setMode('error');
       setPaneError(err instanceof Error ? err.message : 'Load failed');
