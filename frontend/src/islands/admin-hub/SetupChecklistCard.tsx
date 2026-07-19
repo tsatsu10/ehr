@@ -305,9 +305,9 @@ function SetupChecklistRow({
   onNavigateTab: (tab: AdminTabId) => void;
   extraAction?: ReactNode;
 }) {
-  // The card only renders on the System tab, so a "take me there" link to
-  // the System tab itself would be noise — the hint already says "below".
-  const linkTab = isAdminTab(item.link_tab) && item.link_tab !== 'system' ? item.link_tab : null;
+  // ADM-3: the card now renders on its own Setup tab, not System — every
+  // link_tab (including 'system') is a genuine cross-tab jump now.
+  const linkTab = isAdminTab(item.link_tab) ? item.link_tab : null;
 
   return (
     <li className="flex items-start border-b border-[var(--oe-nc-border)]/70 py-2 last:border-b-0">
@@ -351,10 +351,16 @@ function SetupChecklistRow({
                   size="sm"
                   className="h-auto p-0 align-baseline"
                   onClick={() => {
-                    document.getElementById(item.link_anchor!)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // The anchor targets live on System (runbooks board), a
+                    // different tab now that Setup isn't nested inside it —
+                    // navigate first, then scroll once that tab has mounted.
+                    onNavigateTab('system');
+                    window.setTimeout(() => {
+                      document.getElementById(item.link_anchor!)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 60);
                   }}
                 >
-                  {t('See runbooks below →')}
+                  {t('See runbooks on System →')}
                 </Button>
               </>
             )}

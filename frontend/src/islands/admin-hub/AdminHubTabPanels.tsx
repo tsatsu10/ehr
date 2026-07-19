@@ -25,11 +25,13 @@ import { AdminEmptyState, AdminTabPanel } from './adminUi';
 import { ClinicTab } from './tabs/ClinicTab';
 import { CompletionTab } from './tabs/CompletionTab';
 import { DirectoryTab } from './tabs/DirectoryTab';
+import { FeaturesTab } from './tabs/FeaturesTab';
 import { FeesTab } from './tabs/FeesTab';
 import { FormsTab } from './tabs/FormsTab';
 import { PatientImportPanel } from './patientImport/PatientImportPanel';
 import { PeopleAccessTab } from './tabs/PeopleAccessTab';
-import { QueueRolesTab } from './tabs/QueueRolesTab';
+import { QueueDesksTab } from './tabs/QueueDesksTab';
+import { SetupTab } from './tabs/SetupTab';
 import { SystemTab } from './tabs/SystemTab';
 import { VisitTypesTab } from './tabs/VisitTypesTab';
 
@@ -220,8 +222,42 @@ export function AdminHubTabPanels({
 
   return (
     <>
-      <AdminTabPanel tabId="queue" active={activeTab === 'queue'}>
-        <QueueRolesTab
+      <AdminTabPanel tabId="setup" active={activeTab === 'setup'}>
+        {setupProgress ? (
+          <SetupTab
+            setupProgress={setupProgress}
+            scopeLabel={scopeLabel}
+            setupMarkingKey={setupMarkingKey}
+            setupCompleting={setupCompleting}
+            setupReopening={setupReopening}
+            onMarkSetupItem={onMarkSetupItem}
+            onUnmarkSetupItem={onUnmarkSetupItem}
+            onMarkSetupComplete={onMarkSetupComplete}
+            onReopenSetup={onReopenSetup}
+            onNavigateTab={onNavigateTab}
+            onProvisionStaff={onProvisionStaff}
+            staffProvisioning={staffProvisioning}
+            staffProvisionResult={staffProvisionResult}
+            onDismissStaffProvisionResult={onDismissStaffProvisionResult}
+            setupGlobalScope={setupGlobalScope}
+          />
+        ) : (
+          <AdminEmptyState
+            title="Setup checklist unavailable"
+            description="Reload the page or confirm Admin Operations Hub is enabled for this clinic."
+          />
+        )}
+      </AdminTabPanel>
+
+      <AdminTabPanel tabId="queue-desks" active={activeTab === 'queue-desks'}>
+        <QueueDesksTab
+          settings={settings}
+          onFieldChange={onFieldChange}
+        />
+      </AdminTabPanel>
+
+      <AdminTabPanel tabId="features" active={activeTab === 'features'}>
+        <FeaturesTab
           ajaxUrl={ajaxUrl}
           csrfToken={csrfToken}
           facilityId={facilityId}
@@ -305,13 +341,12 @@ export function AdminHubTabPanels({
       </AdminTabPanel>
 
       <AdminTabPanel tabId="system" active={activeTab === 'system'}>
-        {systemHealth && runbooks && setupProgress ? (
+        {systemHealth && runbooks ? (
           <SystemTab
             ajaxUrl={ajaxUrl}
             csrfToken={csrfToken}
             health={systemHealth}
             runbooks={runbooks}
-            setupProgress={setupProgress}
             configExport={configExport}
             scopeLabel={scopeLabel}
             configExporting={configExporting}
@@ -325,24 +360,11 @@ export function AdminHubTabPanels({
             reconciliationRunning={reconciliationRunning}
             backupRunning={backupRunning}
             backupCompleting={backupCompleting}
-            setupMarkingKey={setupMarkingKey}
-            setupCompleting={setupCompleting}
-            setupReopening={setupReopening}
             onRunReconciliation={onRunReconciliation}
             onRunBackup={onRunBackup}
             onCompleteBackup={onCompleteBackup}
             onRefreshHealth={onRefreshHealth}
             healthRefreshing={healthRefreshing}
-            onMarkSetupItem={onMarkSetupItem}
-            onUnmarkSetupItem={onUnmarkSetupItem}
-            onMarkSetupComplete={onMarkSetupComplete}
-            onReopenSetup={onReopenSetup}
-            onNavigateTab={onNavigateTab}
-            onProvisionStaff={onProvisionStaff}
-            staffProvisioning={staffProvisioning}
-            staffProvisionResult={staffProvisionResult}
-            onDismissStaffProvisionResult={onDismissStaffProvisionResult}
-            setupGlobalScope={setupGlobalScope}
           />
         ) : (
           <AdminEmptyState

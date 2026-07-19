@@ -1009,8 +1009,8 @@
       "_dist-DcvEr_SB.js"
     ]
   },
-  "_useSharedDeviceSession-BlCpGnOX.js": {
-    "file": "chunks/useSharedDeviceSession-BlCpGnOX.js",
+  "_useSharedDeviceSession-DERV-p2y.js": {
+    "file": "chunks/useSharedDeviceSession-DERV-p2y.js",
     "name": "useSharedDeviceSession",
     "imports": [
       "_dist-DcvEr_SB.js",
@@ -1152,7 +1152,7 @@
       "_CompletionScorePill-C30C-jcT.js",
       "_dialog--9FUQWsc.js",
       "_SlideOver-DOcDqfIk.js",
-      "_useSharedDeviceSession-BlCpGnOX.js",
+      "_useSharedDeviceSession-DERV-p2y.js",
       "_deskConflict-2gPXW-qo.js",
       "_bannerPreviewProps-D7kf4PzH.js",
       "_label-D7fuYcIe.js",
@@ -1291,7 +1291,7 @@
       "_dialog--9FUQWsc.js",
       "_useModalDismiss-wavMyOB0.js",
       "_SlideOver-DOcDqfIk.js",
-      "_useSharedDeviceSession-BlCpGnOX.js",
+      "_useSharedDeviceSession-DERV-p2y.js",
       "_deskConflict-2gPXW-qo.js",
       "_FindPatientDrawer-mA5tSOAx.js",
       "_bannerPreviewProps-D7kf4PzH.js",
@@ -1420,7 +1420,7 @@
       "_ChipCloud-ugS6veaa.js",
       "_patientBannerUtils--Wf2pVIG.js",
       "_SlideOver-DOcDqfIk.js",
-      "_useSharedDeviceSession-BlCpGnOX.js",
+      "_useSharedDeviceSession-DERV-p2y.js",
       "_deskConflict-2gPXW-qo.js",
       "_bannerPreviewProps-D7kf4PzH.js",
       "_table-C1lhqnOd.js",
@@ -1719,7 +1719,7 @@
       "_ChipCloud-ugS6veaa.js",
       "_patientBannerUtils--Wf2pVIG.js",
       "_SlideOver-DOcDqfIk.js",
-      "_useSharedDeviceSession-BlCpGnOX.js",
+      "_useSharedDeviceSession-DERV-p2y.js",
       "_deskConflict-2gPXW-qo.js",
       "_bannerPreviewProps-D7kf4PzH.js",
       "_label-D7fuYcIe.js",
@@ -1918,7 +1918,7 @@
       "_patientBannerUtils--Wf2pVIG.js",
       "_dialog--9FUQWsc.js",
       "_SlideOver-DOcDqfIk.js",
-      "_useSharedDeviceSession-BlCpGnOX.js",
+      "_useSharedDeviceSession-DERV-p2y.js",
       "_deskConflict-2gPXW-qo.js",
       "_FindPatientDrawer-mA5tSOAx.js",
       "_bannerPreviewProps-D7kf4PzH.js",

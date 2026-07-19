@@ -4,6 +4,7 @@ import {
   Banknote,
   Building2,
   Coins,
+  Globe2,
   Printer,
   Scale,
 } from 'lucide-react';
@@ -13,6 +14,7 @@ import {
   CLINIC_CURRENCY_FIELDS,
   CLINIC_PRINT_FIELDS,
   CLINIC_RECONCILIATION_FIELDS,
+  CLINIC_REGIONAL_SECTION,
 } from '../adminFieldDefs';
 import type { CashProfileStatus, FacilityRow } from '../adminTypes';
 import { formatPrice } from '../adminUtils';
@@ -202,6 +204,21 @@ export function ClinicTab({
         >
           {reconciliationRunning ? 'Running…' : 'Run reconciliation now'}
         </Button>
+      </AdminSection>
+
+      <AdminSection
+        title={CLINIC_REGIONAL_SECTION.title}
+        description={CLINIC_REGIONAL_SECTION.description}
+        icon={<Globe2 className="h-4 w-4" aria-hidden />}
+      >
+        {CLINIC_REGIONAL_SECTION.fields.map((def) => (
+          <AdminConfigField
+            key={def.key}
+            def={def}
+            value={settings[def.key]}
+            onChange={onFieldChange}
+          />
+        ))}
       </AdminSection>
     </AdminStack>
   );

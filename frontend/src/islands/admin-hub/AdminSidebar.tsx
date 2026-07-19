@@ -1,10 +1,12 @@
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import {
   Building2,
+  CheckCircle2,
   Coins,
   FileText,
   ListChecks,
   Settings2,
+  SlidersHorizontal,
   Tag,
   Upload,
   UserCog,
@@ -20,7 +22,9 @@ export interface AdminSidebarBadge {
 }
 
 const ICONS: Record<AdminTabId, ReactNode> = {
-  queue: <Users className="h-4 w-4" aria-hidden />,
+  setup: <CheckCircle2 className="h-4 w-4" aria-hidden />,
+  'queue-desks': <Users className="h-4 w-4" aria-hidden />,
+  features: <SlidersHorizontal className="h-4 w-4" aria-hidden />,
   people: <UserCog className="h-4 w-4" aria-hidden />,
   completion: <ListChecks className="h-4 w-4" aria-hidden />,
   clinic: <Building2 className="h-4 w-4" aria-hidden />,
@@ -32,13 +36,10 @@ const ICONS: Record<AdminTabId, ReactNode> = {
   import: <Upload className="h-4 w-4" aria-hidden />,
 };
 
-/**
- * Presentation-only grouping — matches the target IA (ADM-3 will physically
- * move settings between destinations); groups with no visible items don't
- * render, so gating (system/forms/import) doesn't leave an empty heading.
- */
+/** Groups with no visible items don't render, so gating (system/forms/import) never leaves an empty heading. */
 const GROUP_ORDER: { label: string; ids: AdminTabId[] }[] = [
-  { label: 'Clinic', ids: ['queue', 'clinic', 'completion'] },
+  { label: 'Get started', ids: ['setup'] },
+  { label: 'Clinic', ids: ['queue-desks', 'clinic', 'features', 'completion'] },
   { label: 'People & money', ids: ['people', 'types', 'fees', 'directory', 'import'] },
   { label: 'Operations', ids: ['forms', 'system'] },
 ];

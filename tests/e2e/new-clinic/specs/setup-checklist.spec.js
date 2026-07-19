@@ -42,10 +42,11 @@ test.describe('Admin M15 setup checklist golden path', () => {
     test.setTimeout(180_000);
     await loginAsAdmin(page, ADMIN_USER, ADMIN_PASS);
 
-    // Deep link straight onto the System tab must survive the settings load
+    // Deep link straight onto the Setup tab must survive the settings load
     // (regression guard: the gated-tab kick used to bounce this to Queue &
-    // roles before the payload arrived).
-    await page.goto(`${MODULE_BASE}/admin.php?tab=system`);
+    // roles before the payload arrived). Also proves the legacy ?tab=system
+    // deep link (Setup used to live inside System) still resolves.
+    await page.goto(`${MODULE_BASE}/admin.php?tab=setup`);
     const card = page.locator('#nc-admin-setup-checklist');
     await expect(card).toBeVisible({ timeout: 30000 });
 

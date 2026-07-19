@@ -1,18 +1,20 @@
 export type AdminScope = 'facility' | 'global';
 
-export type AdminTabId = 'queue' | 'people' | 'completion' | 'clinic' | 'forms' | 'system' | 'types' | 'fees' | 'directory' | 'import';
+export type AdminTabId = 'setup' | 'queue-desks' | 'features' | 'people' | 'completion' | 'clinic' | 'forms' | 'system' | 'types' | 'fees' | 'directory' | 'import';
 
 export const ADMIN_TABS: { id: AdminTabId; label: string }[] = [
-  { id: 'queue', label: 'Queue & roles' },
-  { id: 'people', label: 'People & access' },
-  { id: 'completion', label: 'Completion' },
+  { id: 'setup', label: 'Setup' },
+  { id: 'queue-desks', label: 'Queue & desks' },
   { id: 'clinic', label: 'Clinic' },
-  { id: 'forms', label: 'Forms' },
-  { id: 'system', label: 'System' },
+  { id: 'features', label: 'Features' },
+  { id: 'completion', label: 'Completion' },
+  { id: 'people', label: 'People & access' },
   { id: 'types', label: 'Visit types' },
   { id: 'fees', label: 'Fees' },
   { id: 'directory', label: 'Address Book' },
   { id: 'import', label: 'Import patients' },
+  { id: 'forms', label: 'Forms' },
+  { id: 'system', label: 'System' },
 ];
 
 export interface AdminHubProps {

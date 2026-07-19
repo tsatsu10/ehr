@@ -1123,6 +1123,32 @@ export const QUEUE_FIELD_SECTIONS: AdminFieldSection[] = [
   },
 ];
 
+/**
+ * ADM-3 IA rebalance — presentation-layer split of QUEUE_FIELD_SECTIONS into the three
+ * new destinations (Queue & desks / Features / Clinic's regional tail group). Derived by
+ * title so the field defs themselves are never duplicated — same settings keys, same
+ * validation, just regrouped into where a first-time admin would actually look for them.
+ */
+const QUEUE_DESK_TITLES = new Set([
+  'Desks & queue basics',
+  'Multi-doctor & routing',
+  'Registration & duplicate detection (M1)',
+  'Safety & chart integration',
+]);
+const CLINIC_REGIONAL_TITLE = 'Regional, branding & advanced';
+
+export const QUEUE_DESK_SECTIONS: AdminFieldSection[] = QUEUE_FIELD_SECTIONS.filter(
+  (section) => QUEUE_DESK_TITLES.has(section.title ?? '')
+);
+
+export const FEATURE_SECTIONS: AdminFieldSection[] = QUEUE_FIELD_SECTIONS.filter(
+  (section) => !QUEUE_DESK_TITLES.has(section.title ?? '') && section.title !== CLINIC_REGIONAL_TITLE
+);
+
+export const CLINIC_REGIONAL_SECTION: AdminFieldSection =
+  QUEUE_FIELD_SECTIONS.find((section) => section.title === CLINIC_REGIONAL_TITLE)
+  ?? { title: CLINIC_REGIONAL_TITLE, fields: [] };
+
 export const COMPLETION_FIELDS: AdminFieldDef[] = [
   {
     key: 'completion_required_for_billing',

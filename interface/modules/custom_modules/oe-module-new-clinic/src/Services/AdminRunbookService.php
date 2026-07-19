@@ -196,8 +196,8 @@ class AdminRunbookService
                 'With your trainer, walk the opening-week questions: who covers each desk, '
                 . 'daily cash float and till-close routine, what to do when the internet or '
                 . 'power drops, and who to call for support. Write the answers down, then '
-                . 'tick "Go-live worksheet recorded" on the setup checklist above.',
-                null
+                . 'tick "Go-live worksheet recorded" on the Setup checklist.',
+                $adminHub . '?tab=setup'
             ),
             $this->card(
                 'RB-22',

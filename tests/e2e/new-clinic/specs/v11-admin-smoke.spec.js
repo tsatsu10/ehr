@@ -64,8 +64,9 @@ test.describe('V1.1-ADMIN smoke', () => {
     expect((configBody.data?.forms_catalog?.items ?? []).length).toBeGreaterThan(0);
 
     await expect(page.locator('#nc-admin-desk')).toBeVisible({ timeout: 20000 });
-    await expect(page.getByRole('tab', { name: 'System' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Forms' })).toBeVisible();
+    // ADM-2: the wrapped tab strip became a sidebar nav — items are links now.
+    await expect(page.getByRole('link', { name: 'System' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Forms' })).toBeVisible();
   });
 
   test('clinical role is denied admin hub access', async ({ page }) => {
@@ -89,11 +90,8 @@ test.describe('V1.1-ADMIN smoke', () => {
     await page.goto(`${MODULE_BASE}/admin.php`);
     await configResp;
 
-    await page.getByRole('tab', { name: 'System' }).click();
+    await page.getByRole('link', { name: 'System' }).click();
     await expect(page.locator('#nc-admin-runbooks')).toBeVisible({ timeout: 20000 });
-    await expect(page.locator('#nc-admin-setup-checklist, .card.border-success')).toBeVisible({
-      timeout: 15000,
-    });
     await expect(page.getByText('RB-01', { exact: false }).first()).toBeVisible();
 
     const search = page.getByRole('searchbox', { name: 'Search runbooks' });
@@ -112,7 +110,7 @@ test.describe('V1.1-ADMIN smoke', () => {
     await page.goto(`${MODULE_BASE}/admin.php`);
     await configResp;
 
-    await page.getByRole('tab', { name: 'Forms' }).click();
+    await page.getByRole('link', { name: 'Forms' }).click();
     await expect(page.locator('#nc-admin-forms-catalog')).toBeVisible({ timeout: 20000 });
     await expect(page.locator('#nc-admin-form-bundle-board')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('#nc-admin-forms-catalog tbody tr').first()).toBeVisible({

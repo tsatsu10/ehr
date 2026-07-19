@@ -71,4 +71,10 @@ describe('ClinicTab facility summary', () => {
     expect(screen.getByText('Clinic details unavailable')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit clinic details' })).not.toBeInTheDocument();
   });
+
+  it('ADM-3: includes the regional/branding fields moved out of the old Queue & roles tab', () => {
+    renderTab();
+    expect(screen.getByText('Regional, branding & advanced')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Clinic timezone/i)).toBeInTheDocument();
+  });
 });

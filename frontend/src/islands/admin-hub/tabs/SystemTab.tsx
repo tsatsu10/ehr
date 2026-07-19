@@ -1,12 +1,8 @@
 import type {
-  AdminTabId,
   RunbooksPayload,
-  SetupProgressPayload,
-  StaffProvisionResult,
   SystemHealthPayload,
 } from '../adminTypes';
 import { RunbooksBoard } from '../RunbooksBoard';
-import { SetupChecklistCard } from '../SetupChecklistCard';
 import { SystemHealthBoard } from '../SystemHealthBoard';
 import { ConfigExportCard } from '../ConfigExportCard';
 import { ConfigImportCard } from '../ConfigImportCard';
@@ -21,7 +17,6 @@ interface SystemTabProps {
   csrfToken: string;
   health: SystemHealthPayload;
   runbooks: RunbooksPayload;
-  setupProgress: SetupProgressPayload;
   configExport: ConfigExportMeta | null;
   scopeLabel: string;
   configExporting: boolean;
@@ -35,24 +30,11 @@ interface SystemTabProps {
   reconciliationRunning: boolean;
   backupRunning: boolean;
   backupCompleting: boolean;
-  setupMarkingKey: string | null;
-  setupCompleting: boolean;
-  setupReopening: boolean;
   onRunReconciliation: () => void;
   onRunBackup: () => void;
   onCompleteBackup: () => void;
   onRefreshHealth: () => void;
   healthRefreshing: boolean;
-  onMarkSetupItem: (key: string) => void;
-  onUnmarkSetupItem: (key: string) => void;
-  onMarkSetupComplete: () => void;
-  onReopenSetup: () => void;
-  onNavigateTab: (tab: AdminTabId) => void;
-  onProvisionStaff: () => void;
-  staffProvisioning: boolean;
-  staffProvisionResult: StaffProvisionResult | null;
-  onDismissStaffProvisionResult: () => void;
-  setupGlobalScope: boolean;
 }
 
 export function SystemTab({
@@ -60,7 +42,6 @@ export function SystemTab({
   csrfToken,
   health,
   runbooks,
-  setupProgress,
   configExport,
   scopeLabel,
   configExporting,
@@ -71,19 +52,6 @@ export function SystemTab({
   onConfigImportPreview,
   onConfigImportConfirm,
   onConfigImportClearPreview,
-  setupMarkingKey,
-  setupCompleting,
-  setupReopening,
-  onMarkSetupItem,
-  onUnmarkSetupItem,
-  onMarkSetupComplete,
-  onReopenSetup,
-  onNavigateTab,
-  onProvisionStaff,
-  staffProvisioning,
-  staffProvisionResult,
-  onDismissStaffProvisionResult,
-  setupGlobalScope,
   onRunReconciliation,
   onRunBackup,
   onCompleteBackup,
@@ -95,26 +63,6 @@ export function SystemTab({
 }: SystemTabProps) {
   return (
     <AdminStack>
-      {/* Always rendered — after completion the card shows its success state
-          with any residual items + Reopen (the old outer hide made the card's
-          success branch dead code). */}
-      <SetupChecklistCard
-        progress={setupProgress}
-        markingKey={setupMarkingKey}
-        completing={setupCompleting}
-        reopening={setupReopening}
-        scopeLabel={scopeLabel}
-        onMarkItem={onMarkSetupItem}
-        onUnmarkItem={onUnmarkSetupItem}
-        onMarkComplete={onMarkSetupComplete}
-        onReopen={onReopenSetup}
-        onNavigateTab={onNavigateTab}
-        onProvisionStaff={onProvisionStaff}
-        provisioning={staffProvisioning}
-        provisionResult={staffProvisionResult}
-        onDismissProvisionResult={onDismissStaffProvisionResult}
-        globalScope={setupGlobalScope}
-      />
       <SystemHealthBoard
         ajaxUrl={ajaxUrl}
         csrfToken={csrfToken}

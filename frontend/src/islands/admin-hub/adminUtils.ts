@@ -22,18 +22,30 @@ export function formatPrice(
   return formatMoney(amount, format);
 }
 
+/** ADM-3: 'queue' (the old Queue & roles mega-tab) split into 'queue-desks' + 'features'. */
+const LEGACY_TAB_REDIRECTS: Record<string, string> = {
+  roles: 'people',
+  queue: 'queue-desks',
+};
+
 export function initialAdminTab(): string {
   const fromUrl = new URL(window.location.href).searchParams.get('tab');
-  if (fromUrl === 'roles') {
-    return 'people';
+  // The setup checklist used to be a scroll-anchor inside System, not its own
+  // tab — an old `?tab=system#nc-admin-setup-checklist` link (runbook cards,
+  // bookmarks) should still land on the checklist, not bare System.
+  if (fromUrl === 'system' && window.location.hash === '#nc-admin-setup-checklist') {
+    return 'setup';
   }
-  return fromUrl ?? 'queue';
+  if (fromUrl && fromUrl in LEGACY_TAB_REDIRECTS) {
+    return LEGACY_TAB_REDIRECTS[fromUrl];
+  }
+  return fromUrl ?? 'queue-desks';
 }
 
 /** Shared by handleTabChange and the sidebar's real `<a href>`s so both stay in sync. */
 export function buildAdminTabUrl(tab: AdminTabId): string {
   const url = new URL(window.location.href);
-  if (tab !== 'queue') {
+  if (tab !== 'queue-desks') {
     url.searchParams.set('tab', tab);
     if (tab !== 'people') {
       url.searchParams.delete('sub');

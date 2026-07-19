@@ -86,7 +86,7 @@ export function AdminHub({
   const [scope, setScope] = useState<AdminScope>('facility');
   const [activeTab, setActiveTab] = useState<AdminTabId>(() => {
     const tab = initialAdminTab();
-    return isAdminTabId(tab) ? tab : 'queue';
+    return isAdminTabId(tab) ? tab : 'queue-desks';
   });
   // Mobile drill-in (ADM-2): land on the section list unless the page opened
   // on a deep-linked (?tab=) destination — a Setup-chip/runbook link on a
@@ -186,7 +186,7 @@ export function AdminHub({
   const patientImportEnabled = settings.enable_patient_import === true;
   const visibleTabs = useMemo(
     () => ADMIN_TABS.filter((tab) => {
-      if (tab.id === 'system' || tab.id === 'forms') {
+      if (tab.id === 'system' || tab.id === 'forms' || tab.id === 'setup') {
         return adminHubEnabled;
       }
       if (tab.id === 'import') {
@@ -204,11 +204,11 @@ export function AdminHub({
     if (loading) {
       return;
     }
-    if (!adminHubEnabled && (activeTab === 'system' || activeTab === 'forms')) {
-      setActiveTab('queue');
+    if (!adminHubEnabled && (activeTab === 'system' || activeTab === 'forms' || activeTab === 'setup')) {
+      setActiveTab('queue-desks');
     }
     if (!patientImportEnabled && activeTab === 'import') {
-      setActiveTab('queue');
+      setActiveTab('queue-desks');
     }
   }, [loading, adminHubEnabled, patientImportEnabled, activeTab]);
 
@@ -372,6 +372,20 @@ export function AdminHub({
     setMobileNavOpen(false);
     window.history.replaceState({}, '', buildAdminTabUrl(tab));
   }, []);
+
+  // ADM-3 open question #1: while setup is incomplete, the page opens on
+  // Setup — but only on a true default landing (no explicit ?tab= in the
+  // URL), never overriding a deep link the user actually followed.
+  useEffect(() => {
+    if (loading || !adminHubEnabled || !setupProgress) {
+      return;
+    }
+    const hadExplicitTab = new URL(window.location.href).searchParams.get('tab') != null;
+    if (!hadExplicitTab && activeTab === 'queue-desks' && !setupProgress.setup_complete) {
+      handleTabChange('setup');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot landing redirect; must not re-fire on later activeTab/setupProgress changes
+  }, [loading, adminHubEnabled]);
 
   const loadBillingCodes = useCallback(async (codeType: string, selected?: string) => {
     setBillingCodesLoading(true);
@@ -851,12 +865,11 @@ export function AdminHub({
   }, [applyPayload, facilityId, fetchOptions, scope]);
 
   // Jump target for the header Setup chip + the "finish setting up" banner.
-  // Goes through handleTabChange so the ?tab= URL stays truthful.
+  // ADM-3: Setup is its own tab now, so this is a plain tab switch — no
+  // scroll-to-anchor needed (that was only ever a workaround for the
+  // checklist being nested inside System).
   const goToSetupChecklist = useCallback(() => {
-    handleTabChange('system');
-    window.setTimeout(() => {
-      document.getElementById('nc-admin-setup-checklist')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 60);
+    handleTabChange('setup');
   }, [handleTabChange]);
 
   const exportConfig = useCallback(async () => {
@@ -1311,7 +1324,7 @@ export function AdminHub({
             onImportReferralHospitalLbfPack={(setAsConsultNote) => { void importReferralHospitalLbfPack(setAsConsultNote); }}
             onImportAncillaryLbfPack={(packKey) => { void importAncillaryLbfPack(packKey); }}
             onGrantSelf={() => setPendingConfirm({ type: 'grant_roles' })}
-            onGoQueueTab={() => handleTabChange('queue')}
+            onGoQueueTab={() => handleTabChange('queue-desks')}
             onSaveWeights={(items) => { void saveCompletionWeights(items); }}
             onApplyCashProfile={() => setPendingConfirm({ type: 'cash_profile' })}
             onRunReconciliation={() => { void runReconciliation(); }}

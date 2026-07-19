@@ -4,7 +4,7 @@ import { AdminSidebar } from './AdminSidebar';
 import type { AdminTabId } from './adminTypes';
 
 const tabs: { id: AdminTabId; label: string }[] = [
-  { id: 'queue', label: 'Queue & roles' },
+  { id: 'queue-desks', label: 'Queue & desks' },
   { id: 'clinic', label: 'Clinic' },
   { id: 'people', label: 'People & access' },
   { id: 'system', label: 'System' },
@@ -21,14 +21,14 @@ describe('AdminSidebar', () => {
 
     const activeLink = screen.getByRole('link', { name: 'Clinic' });
     expect(activeLink).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: 'Queue & roles' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Queue & desks' })).not.toHaveAttribute('aria-current');
   });
 
   it('drops a group heading entirely when none of its items are visible', () => {
     render(
       <AdminSidebar
         tabs={tabs.filter((tab) => tab.id !== 'system')}
-        activeTab="queue"
+        activeTab="queue-desks"
         onChange={() => {}}
       />
     );
@@ -38,7 +38,7 @@ describe('AdminSidebar', () => {
 
   it('calls onChange with the tab id on a plain click without a page navigation', () => {
     const onChange = vi.fn();
-    render(<AdminSidebar tabs={tabs} activeTab="queue" onChange={onChange} />);
+    render(<AdminSidebar tabs={tabs} activeTab="queue-desks" onChange={onChange} />);
 
     const link = screen.getByRole('link', { name: 'People & access' });
     fireEvent.click(link, { button: 0 });
@@ -48,7 +48,7 @@ describe('AdminSidebar', () => {
 
   it('leaves modified clicks (e.g. ctrl+click for a new tab) to the browser', () => {
     const onChange = vi.fn();
-    render(<AdminSidebar tabs={tabs} activeTab="queue" onChange={onChange} />);
+    render(<AdminSidebar tabs={tabs} activeTab="queue-desks" onChange={onChange} />);
 
     fireEvent.click(screen.getByRole('link', { name: 'People & access' }), {
       button: 0,
@@ -62,7 +62,7 @@ describe('AdminSidebar', () => {
     render(
       <AdminSidebar
         tabs={tabs}
-        activeTab="queue"
+        activeTab="queue-desks"
         onChange={() => {}}
         badges={{ system: { tone: 'warning', label: 'Warning' } }}
       />
@@ -74,9 +74,9 @@ describe('AdminSidebar', () => {
   });
 
   it('moves focus between items with the arrow keys', () => {
-    render(<AdminSidebar tabs={tabs} activeTab="queue" onChange={() => {}} />);
+    render(<AdminSidebar tabs={tabs} activeTab="queue-desks" onChange={() => {}} />);
 
-    const first = screen.getByRole('link', { name: 'Queue & roles' });
+    const first = screen.getByRole('link', { name: 'Queue & desks' });
     const second = screen.getByRole('link', { name: 'Clinic' });
     first.focus();
     expect(document.activeElement).toBe(first);

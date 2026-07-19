@@ -87,6 +87,34 @@ describe('SetupChecklistCard', () => {
     expect(h.onNavigateTab).toHaveBeenCalledWith('fees');
   });
 
+  it('ADM-3: a link_tab of "system" is a real cross-tab jump now that Setup has its own tab', () => {
+    const h = handlers();
+    render(
+      <SetupChecklistCard
+        progress={{
+          ...baseProgress,
+          items: [{
+            key: 'cron_configured',
+            label: 'Nightly background jobs running',
+            weight: 10,
+            completed: false,
+            manual: false,
+            hint: 'Schedule the job worker.',
+            link_tab: 'system',
+          }],
+        }}
+        markingKey={null}
+        completing={false}
+        reopening={false}
+        {...idleProvision}
+        {...h}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Open System/i }));
+    expect(h.onNavigateTab).toHaveBeenCalledWith('system');
+  });
+
   it('gives each Mark done button a per-item accessible name and shows Undo on ticked rows', () => {
     const h = handlers();
     render(
@@ -214,13 +242,15 @@ describe('SetupChecklistCard', () => {
     expect(screen.queryByText('Prices set for at least 3 services')).not.toBeInTheDocument();
   });
 
-  it('offers a see-runbooks anchor link for guide-based items', () => {
+  it('offers a see-runbooks link that navigates to System then scrolls to the anchor', async () => {
+    vi.useFakeTimers();
     const anchorTarget = document.createElement('div');
     anchorTarget.id = 'nc-admin-runbooks';
     const scrollSpy = vi.fn();
     anchorTarget.scrollIntoView = scrollSpy;
     document.body.appendChild(anchorTarget);
 
+    const h = handlers();
     render(
       <SetupChecklistCard
         progress={{
@@ -241,13 +271,20 @@ describe('SetupChecklistCard', () => {
         completing={false}
         reopening={false}
         {...idleProvision}
-        {...handlers()}
+        {...h}
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /See runbooks below/i }));
+    // ADM-3: Setup is its own tab now — the anchor lives on System, so the
+    // link must switch tabs first (this card doesn't unmount in the test,
+    // only a real AdminHub swap would, but the navigate call is what matters).
+    fireEvent.click(screen.getByRole('button', { name: /See runbooks on System/i }));
+    expect(h.onNavigateTab).toHaveBeenCalledWith('system');
+
+    vi.runAllTimers();
     expect(scrollSpy).toHaveBeenCalled();
 
     anchorTarget.remove();
+    vi.useRealTimers();
   });
 });

@@ -188,6 +188,9 @@ const props = {
 
 describe('AdminHub', () => {
   beforeEach(() => {
+    // Reset the URL between tests — handleTabChange persists ?tab= via
+    // history.replaceState, and the ADM-3 landing redirect reads it.
+    window.history.replaceState({}, '', '/admin.php');
     mockFetch.mockImplementation((action: string) => {
       if (action === 'admin.config') {
         return Promise.resolve(configPayload);
@@ -224,14 +227,30 @@ describe('AdminHub', () => {
       'admin.config',
       expect.objectContaining({ params: { scope: 'facility' } })
     );
+
+    // Setup is incomplete in the fixture, so the ADM-3 landing redirect opens
+    // on Setup by default — navigate to Queue & desks explicitly.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('link', { name: 'Queue & desks' }));
+    });
     expect(await screen.findByLabelText(/Enable triage desk/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Enable React Visit Board/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Enable React Front Desk/i)).not.toBeInTheDocument();
 
     // Settings groups are collapsed by default now — search to reveal a field
-    // outside the first (default-open) group.
-    const search = await screen.findByLabelText(/Search settings/i);
-    fireEvent.change(search, { target: { value: 'Enable Billing Back Office hub' } });
+    // outside the first (default-open) group (still within Queue & desks —
+    // ADM-3 moved the Billing back office group to the Features tab).
+    const search = await screen.findByLabelText(/Search queue and desk settings/i);
+    fireEvent.change(search, { target: { value: 'Shared-device session warning' } });
+    expect(await screen.findByLabelText(/Shared-device session warning/i)).toBeInTheDocument();
+
+    // Features tab (ADM-3 split): its own search box reaches module flags
+    // that used to live in the same mega-tab.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('link', { name: 'Features' }));
+    });
+    const featuresSearch = await screen.findByLabelText(/Search features/i);
+    fireEvent.change(featuresSearch, { target: { value: 'Enable Billing Back Office hub' } });
     expect(await screen.findByLabelText(/Enable Billing Back Office hub/i)).toBeInTheDocument();
   }, 15000);
 
@@ -242,6 +261,11 @@ describe('AdminHub', () => {
       await Promise.resolve();
     });
 
+    // Setup is incomplete in the fixture, so the ADM-3 landing redirect opens
+    // on Setup by default — navigate to Queue & desks explicitly.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('link', { name: 'Queue & desks' }));
+    });
     const triageCheckbox = await screen.findByLabelText(/Enable triage desk/i);
     await act(async () => {
       fireEvent.click(triageCheckbox);
@@ -280,9 +304,20 @@ describe('AdminHub', () => {
 
     expect(await screen.findByText(/System health/i)).toBeInTheDocument();
     expect(screen.getByText(/Day-2 runbooks/i)).toBeInTheDocument();
-    expect(screen.getByText(/Setup checklist/i)).toBeInTheDocument();
     expect(screen.getByText(/Backup requires administrator access/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Download M6 config JSON/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Choose M6 config JSON/i })).toBeInTheDocument();
+  });
+
+  it('ADM-3: opens on the Setup tab by default while setup is incomplete, and it holds the checklist', async () => {
+    render(<AdminHub {...props} />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // No explicit navigation — this is the default landing.
+    expect(await screen.findByText(/Setup checklist/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Setup' })).toHaveAttribute('aria-current', 'page');
   });
 });
