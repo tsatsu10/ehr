@@ -94,6 +94,13 @@ async function triageSendPatient(page, lname) {
     { timeout: 30000 },
   );
   await page.getByRole('button', { name: 'Send to doctor' }).click();
+  // Advisory-routing chooser (config can persist from the routing spec):
+  // confirm the pool send when the dialog appears.
+  const poolBtn = page.getByRole('button', { name: 'Send to doctor pool' });
+  await poolBtn.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
+  if (await poolBtn.isVisible().catch(() => false)) {
+    await poolBtn.click();
+  }
   await sendResp;
 
 }
