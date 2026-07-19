@@ -29,6 +29,20 @@ goldenPathReleaseStaleDeskWork('doctor2_user', 'with_doctor', 'ready_for_doctor'
 goldenPathReleaseStaleDeskWork('pharmacy_user', 'in_pharmacy', 'ready_for_pharmacy');
 goldenPathReleaseStaleDeskWork('lab_user', 'in_lab', 'ready_for_lab');
 
+// E2E janitor: earlier specs abandon UI-registered fixture patients (fname Etoe*)
+// mid-queue; with doctor-ready notify on, a leftover ready_for_doctor visit fires
+// a persistent Patient-ready toast on every later doctor-desk load that parks
+// over the queue toolbar and intercepts clicks in UNRELATED specs.
+sqlStatement(
+    "UPDATE new_visit v
+     INNER JOIN patient_data pd ON pd.pid = v.pid
+     SET v.state = 'cancelled', v.updated_at = NOW()
+     WHERE v.state NOT IN ('completed', 'cancelled')
+       AND (pd.fname LIKE 'Etoe%' OR pd.fname = 'EncInt' OR pd.fname LIKE 'DNE2E%'
+            OR pd.lname LIKE 'RtE2E%' OR pd.lname LIKE 'Notify%'
+            OR pd.lname LIKE 'LabOrd%' OR pd.lname LIKE 'PharmRx%')"
+);
+
 $config = new ClinicConfigService();
 $facilityIds = pharmOpsPilotFacilityIds();
 $defaultFacilityId = (new VisitScopeService())->resolveDefaultFacilityId();

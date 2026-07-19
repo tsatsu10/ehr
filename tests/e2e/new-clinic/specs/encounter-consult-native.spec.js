@@ -64,7 +64,7 @@ async function waitForQueueCard(page, lname) {
     }
     const refresh = page.locator('#nc-doctor-refresh, #nc-triage-refresh').first();
     if (await refresh.isVisible().catch(() => false)) {
-      await refresh.click();
+      await refresh.click({ timeout: 5000 }).catch(() => {}); // toast may briefly intercept
       await page.waitForResponse(
         (resp) => (resp.url().includes('doctor.queue') || resp.url().includes('triage.queue')) && resp.ok(),
         { timeout: 20000 },

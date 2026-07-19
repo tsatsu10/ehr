@@ -36,7 +36,7 @@ async function waitForQueueCard(page, lname) {
     }
     const refresh = page.getByRole('button', { name: 'Refresh' });
     if (await refresh.isVisible().catch(() => false)) {
-      await refresh.click();
+      await refresh.click({ timeout: 5000 }).catch(() => {}); // toast may briefly intercept
     }
     await page.waitForTimeout(2000);
   }

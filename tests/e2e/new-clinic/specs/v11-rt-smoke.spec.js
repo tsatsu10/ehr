@@ -41,7 +41,7 @@ async function waitForQueueCard(page, lname) {
     }
     const refresh = page.getByRole('button', { name: 'Refresh' });
     if (await refresh.isVisible().catch(() => false)) {
-      await refresh.click();
+      await refresh.click({ timeout: 5000 }).catch(() => {}); // toast may briefly intercept
     }
     await page.waitForTimeout(2000);
   }
@@ -90,13 +90,13 @@ async function triageSendPatient(page, lname) {
   await page.fill('#nc-vitals-weight', '65');
   await page.fill('#nc-vitals-respiration', '16');
 
-  const saveResp = page.waitForResponse(
-    (resp) => resp.url().includes('triage.save_vitals') && resp.ok(),
-    { timeout: 30000 },
-  );
-  await page.getByRole('button', { name: 'Save vitals' }).click();
-  const saveBody = await (await saveResp).json();
-  expect(saveBody.success, JSON.stringify(saveBody)).toBe(true);
+  // The triage desk auto-saves vitals — wait for the SAVED STATE (the
+  // response can race the auto-save).
+  const saveButton = page.getByRole('button', { name: 'Save vitals' });
+  if (await saveButton.isEnabled().catch(() => false)) {
+    await saveButton.click().catch(() => {});
+  }
+  await expect(page.getByText(/Vitals saved/i).first()).toBeVisible({ timeout: 30000 });
 
   const sendButton = page.getByRole('button', { name: 'Send to doctor' });
   await expect(sendButton).toBeVisible({ timeout: 20000 });
