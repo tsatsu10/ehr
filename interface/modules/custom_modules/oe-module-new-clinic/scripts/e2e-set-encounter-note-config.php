@@ -34,9 +34,15 @@ $config = new ClinicConfigService();
 
 if (($args['release_doctor'] ?? '') === '1') {
     // E2E janitor: earlier tests leave their visits in with_doctor, which makes the
-    // doctor desk block taking the next patient (hasActiveConsult). Cancel them.
-    sqlStatement("UPDATE new_visit SET state = 'cancelled' WHERE state = 'with_doctor'");
-    echo "Released with_doctor visits.\n";
+    // doctor desk block taking the next patient (hasActiveConsult). Cancel them —
+    // fixture patients only (specs generate fname Etoe*/EncInt*), so a visit someone
+    // is manually testing on this shared dev DB is never swallowed.
+    sqlStatement(
+        "UPDATE new_visit nv JOIN patient_data pd ON pd.pid = nv.pid
+         SET nv.state = 'cancelled'
+         WHERE nv.state = 'with_doctor' AND (pd.fname LIKE 'Etoe%' OR pd.fname = 'EncInt')"
+    );
+    echo "Released with_doctor fixture visits.\n";
 }
 
 foreach (pilotFacilityIds() as $facilityId) {
