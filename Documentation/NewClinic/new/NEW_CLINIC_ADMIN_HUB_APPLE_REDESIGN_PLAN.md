@@ -2,9 +2,9 @@
 
 | Field | Value |
 |-------|-------|
-| **Document version** | 1.4.0 |
+| **Document version** | 1.5.0 |
 | **Date** | 2026-07-19 |
-| **Status** | In progress — ADM-7, ADM-2, ADM-3, ADM-1, ADM-4 shipped; ADM-5, 6, 8 remain |
+| **Status** | In progress — ADM-7, ADM-2, ADM-3, ADM-1, ADM-4, ADM-6 shipped; ADM-5, 8 remain |
 | **Companion to** | `done/NEW_CLINIC_V1_ADMIN_CONFIGURATION_REDESIGN.md` (v0.1.9), `NEW_CLINIC_V1_UI_UX_DESIGN_PLAN.md`, the "New Clinic — Reimagined by Apple" artifact (Console 26 reference) |
 | **Scope** | The whole Admin Hub page (`admin.php`, `admin-hub` island): navigation model, information architecture, visual language, settings-page behaviors. Not the individual editors' internals (fee modal, visit-type modal, importer panel keep their logic). |
 | **Coordination** | ⚠️ A concurrent session is actively editing `AdminHub.tsx` / admin services. Execute this plan only in a quiet window, after a `git status` check on `frontend/src/islands/admin-hub/` + `src/Services/Admin*`. |
@@ -217,9 +217,16 @@ targets get the same mapping so the golden path survives.
   value" reset affordance (deletes the facility row via the existing save path, confirm on
   destructive reset). Global scope shows nothing new.
 
-### ADM-6 · Unsaved-changes completeness
+### ADM-6 · Unsaved-changes completeness — ✅ DONE (2026-07-19)
 - Extend the existing scope-switch confirm to **section switches** (same `pendingConfirm`
   pattern) and add a `beforeunload` guard while `dirty`.
+- **Implementation**: `handleTabChange` split into a raw `applyTabChange` (used by the
+  one-shot Setup landing redirect, which never needs a confirm — dirty is guaranteed false
+  that early) and a dirty-gated `handleTabChange` that every real navigation already funneled
+  through (sidebar clicks, ADM-1 search jumps, "go to X" links) — gating it once covers all
+  of them, no per-caller changes needed. New `tab_switch` confirm variant mirrors
+  `scope_switch` exactly (same discard-on-confirm behavior). `beforeunload` listener is only
+  attached while `dirty` is true.
 
 ### ADM-7 · Desk-title apostrophe fix (product-wide, 5 minutes) — ✅ DONE (2026-07-18)
 - `PersonalizedDeskLabelService`: stop passing an apostrophe through `xl()` — rephrase the
