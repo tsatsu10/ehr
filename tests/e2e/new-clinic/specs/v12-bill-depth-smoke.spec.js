@@ -115,7 +115,8 @@ test.describe('V1.2-BILL depth smoke', () => {
     const reverseBody = await (await reverseResp).json();
     expect(reverseBody.success, JSON.stringify(reverseBody)).toBe(true);
 
-    await expect(page.getByText('Reversed')).toBeVisible({ timeout: 20000 });
+    // The reused fixture visit accumulates one Reversed badge per suite run.
+    await expect(page.getByText('Reversed').first()).toBeVisible({ timeout: 20000 });
     await expect(page.getByRole('button', { name: /^Reverse payment$/i })).toHaveCount(0);
   });
 });

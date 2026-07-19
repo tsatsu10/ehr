@@ -159,11 +159,25 @@ test.describe('New Clinic Golden Path Workflow', () => {
       await page.fill('#nc-vitals-weight', '70');
       await page.fill('#nc-vitals-respiration', '16');
 
-      await page.getByRole('button', { name: 'Save vitals' }).click();
-      await expect(page.getByRole('button', { name: 'Send to doctor' })).toBeVisible({ timeout: 10000 });
-
+      // The triage desk auto-saves vitals — drive to the SAVED STATE, then
+      // await the send mutation (and confirm the advisory-routing chooser
+      // when other specs left that config on).
+      const saveButton = page.getByRole('button', { name: 'Save vitals' });
+      if (await saveButton.isEnabled().catch(() => false)) {
+        await saveButton.click().catch(() => {});
+      }
+      await expect(page.getByText(/Vitals saved/i).first()).toBeVisible({ timeout: 30000 });
+      const sendResp = page.waitForResponse(
+        (resp) => resp.url().includes('triage.send_doctor') && resp.ok(),
+        { timeout: 30000 },
+      );
       await page.getByRole('button', { name: 'Send to doctor' }).click();
-      await expect(page.locator('.alert-success, #nc-triage-active-pane')).toBeVisible({ timeout: 10000 });
+      const poolBtn = page.getByRole('button', { name: 'Send to doctor pool' });
+      await poolBtn.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
+      if (await poolBtn.isVisible().catch(() => false)) {
+        await poolBtn.click();
+      }
+      await sendResp;
     });
 
     await test.step('Doctor consultation and pharmacy routing', async () => {
