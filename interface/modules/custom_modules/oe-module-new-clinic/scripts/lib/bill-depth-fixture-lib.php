@@ -138,13 +138,16 @@ function billDepthSeedPaidVisit(string $lname, string $fname, int $facilityId, i
 
     billDepthBootstrapActorSession($actorUserId);
 
+    // Minimal fixture patients score under the billing completion gate —
+    // pass the manager-override reason (same path a real manager would use).
     $cashier->recordPayment(
         $visitId,
         $actorUserId,
         (int) ($current['row_version'] ?? 0),
         $totalDue,
         null,
-        'E2E bill depth fixture'
+        'E2E bill depth fixture',
+        'E2E bill depth fixture — completion override'
     );
 
     $paid = billDepthFindPaidVisit($lname);

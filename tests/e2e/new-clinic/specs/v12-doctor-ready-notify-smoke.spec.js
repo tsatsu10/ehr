@@ -138,6 +138,13 @@ test.describe('V1.2 doctor ready notify smoke', () => {
     execSync(`"${php}" "${seedScript}"`, { stdio: 'inherit' });
   });
 
+  test.afterAll(() => {
+    // A leftover ready_for_doctor Notify visit fires a persistent "Patient
+    // ready" toast on every later doctor-desk load, parking over the queue
+    // toolbar and intercepting clicks in unrelated specs.
+    runModulePhp('scripts/v12-doctor-notify-smoke-fixture.php', 'cleanup=1');
+  });
+
   test('debounced in-app toast; no notify when Taking patients OFF', async ({ page }) => {
     test.setTimeout(300_000);
     const fixture = readNotifyFixture();
@@ -175,34 +182,33 @@ test.describe('V1.2 doctor ready notify smoke', () => {
         { timeout: 30000 },
       );
 
-      const readyAlert = page.getByRole('status').filter({ hasText: /Patient ready/i });
-      await expect(readyAlert).toContainText(primary.lname, { timeout: 20000 });
-      await expect(readyAlert).toContainText(String(primary.queue_number));
-
-      await page.getByRole('button', { name: 'Dismiss' }).click();
-      await expect(readyAlert).toHaveCount(0);
+      // The notice is a sonner desk toast now (auto-dismisses; no Dismiss
+      // button, no role=status) — assert content, let it expire, then prove
+      // the once-per-session debounce holds across a queue refresh.
+      const readyToast = page.locator('[data-sonner-toast]').filter({ hasText: /Patient ready/i });
+      await expect(readyToast).toContainText(primary.lname, { timeout: 15000 });
+      await expect(readyToast).toContainText(String(primary.queue_number));
+      await expect(readyToast).toHaveCount(0, { timeout: 20000 });
 
       await page.locator('#nc-doctor-refresh').click();
       await page.waitForResponse(
         (resp) => resp.url().includes('doctor.queue') && resp.ok(),
         { timeout: 30000 },
       );
-      await expect(page.getByRole('status').filter({ hasText: /Patient ready/i })).toHaveCount(0);
+      await expect(page.locator('[data-sonner-toast]').filter({ hasText: /Patient ready/i })).toHaveCount(0);
     });
 
     await test.step('Doctor pauses Taking patients; nurse sends secondary — no new toast', async () => {
-      const roster = page.locator('#nc-doctor-roster');
-      await expect(roster).toBeVisible({ timeout: 15000 });
-
-      const takingBtn = roster.getByRole('button', { name: 'Taking' });
-      await expect(takingBtn).toBeVisible({ timeout: 10000 });
+      // Roster redesign: the personal duty toggle lives in the desk status bar.
+      const takingBtn = page.getByRole('button', { name: 'Taking patients' });
+      await expect(takingBtn).toBeVisible({ timeout: 15000 });
       const pauseResp = page.waitForResponse(
         (resp) => resp.url().includes('doctor.roster.set_taking') && resp.ok(),
         { timeout: 15000 },
       );
       await takingBtn.click();
       await pauseResp;
-      await expect(roster.getByRole('button', { name: 'Paused' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Paused' })).toBeVisible();
 
       await logout(page);
 
@@ -234,7 +240,7 @@ test.describe('V1.2 doctor ready notify smoke', () => {
         { timeout: 30000 },
       );
 
-      await expect(page.getByRole('status').filter({ hasText: /Patient ready/i })).toHaveCount(0);
+      await expect(page.locator('[data-sonner-toast]').filter({ hasText: /Patient ready/i })).toHaveCount(0);
 
       const secondaryCard = await waitForQueueCard(page, secondary.lname);
       await expect(secondaryCard).toBeVisible({ timeout: 20000 });

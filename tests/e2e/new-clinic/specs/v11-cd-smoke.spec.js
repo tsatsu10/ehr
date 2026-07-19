@@ -107,9 +107,10 @@ test.describe('V1.1-CD smoke', () => {
     expect(reprintBody.success, JSON.stringify(reprintBody)).toBe(true);
 
     await expect(page.getByRole('heading', { name: /Reprint receipt/i })).toBeVisible();
-    const modal = page.locator('.modal.show');
-    await expect(modal.getByText(/Patient:/i)).toBeVisible();
-    await expect(modal.getByText(/MRN/i)).toBeVisible();
+    // Radix dialog since the shadcn migration (was a Bootstrap .modal.show);
+    // identity banner renders "Name · … · MRN xxx" rather than "Patient:".
+    const modal = page.getByRole('dialog', { name: /Reprint receipt/i });
+    await expect(modal.getByText(/MRN/i).first()).toBeVisible();
     if (fixture.receipt_number) {
       await expect(modal).toContainText(fixture.receipt_number);
     }
@@ -133,7 +134,8 @@ test.describe('V1.1-CD smoke', () => {
     expect(Array.isArray(body.data?.items)).toBe(true);
 
     await expect(page.locator('[data-island="chart-depth"]')).toBeVisible({ timeout: 20000 });
-    await expect(page.getByRole('link', { name: /New referral/i })).toBeVisible({ timeout: 20000 });
+    // The create action is a button opening the wizard (was a link pre-wizard).
+    await expect(page.getByRole('button', { name: /New referral/i })).toBeVisible({ timeout: 20000 });
     await expect(page.getByText(/No referrals for this filter/i)).toBeVisible();
   });
 

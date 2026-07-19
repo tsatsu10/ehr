@@ -181,7 +181,8 @@ test.describe('New Clinic Pharm Ops Golden Path', () => {
         (resp) => resp.url().includes('formulary_rx_catalog') && resp.ok(),
         { timeout: 30000 },
       );
-      await page.getByRole('button', { name: 'Quick prescribe' }).click();
+      // Desk redesign renamed the shortcut: 'Quick prescribe' → 'Prescribe'.
+      await page.getByRole('button', { name: 'Prescribe' }).click();
       await expect(page.locator('#nc-doctor-formulary-rx-modal')).toBeVisible({ timeout: 10000 });
       await catalogResp;
 

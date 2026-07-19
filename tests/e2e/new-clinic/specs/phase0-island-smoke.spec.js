@@ -266,13 +266,32 @@ test.describe('React island bundle assets', () => {
     expect(body.length, 'bundle should not be empty').toBeGreaterThan(50);
   });
 
-  test('pharm-ops.css is served by Apache', async ({ request }) => {
-    const response = await request.get(`${ASSET_BASE}/pharm-ops.css`);
-    expect(response.status(), 'pharm-ops CSS should be reachable').toBe(200);
+  test('pharm-ops CSS (manifest-resolved) is served by Apache', async ({ request }) => {
+    // pharm-ops CSS merged into shared chunk css (no fixed pharm-ops.css since
+    // the V1.1-slices build); the page resolves its stylesheets from the
+    // manifest (PageController island_css), so the spec must do the same.
+    const manifestRes = await request.get(`${ASSET_BASE}/.vite/manifest.json`);
+    expect(manifestRes.status()).toBe(200);
+    const manifest = await manifestRes.json();
 
-    const body = await response.text();
-    expect(body.length, 'CSS should not be empty').toBeGreaterThan(100);
-    expect(body, 'CSS should contain pharm ops hub styles').toContain('nc-pharmops');
+    const entry = manifest['src/islands/pharm-ops/index.tsx'];
+    expect(entry, 'manifest should list pharm-ops').toBeDefined();
+
+    // Collect css from the entry and its imported chunks (shared css lives there).
+    const cssFiles = new Set(entry.css ?? []);
+    for (const importKey of entry.imports ?? []) {
+      for (const css of manifest[importKey]?.css ?? []) cssFiles.add(css);
+    }
+    expect(cssFiles.size, 'pharm-ops should resolve at least one stylesheet').toBeGreaterThan(0);
+
+    let combined = '';
+    for (const cssFile of cssFiles) {
+      const response = await request.get(`${ASSET_BASE}/${cssFile}`);
+      expect(response.status(), `${cssFile} should be reachable`).toBe(200);
+      combined += await response.text();
+    }
+    expect(combined.length, 'CSS should not be empty').toBeGreaterThan(100);
+    expect(combined, 'CSS should contain pharm ops hub styles').toContain('nc-pharmops');
   });
 
   test('pharm-ops lazy chunks resolve relative to the entry bundle', async ({ request }) => {

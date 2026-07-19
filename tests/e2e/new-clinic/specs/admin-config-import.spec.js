@@ -38,7 +38,11 @@ test.describe('Admin M6 config import', () => {
     await page.goto(`${MODULE_BASE}/admin.php`);
     await configResp;
 
-    await page.getByRole('tab', { name: 'System' }).click();
+    // Admin Hub redesign: the tab strip became a sidebar of links.
+    await page
+      .getByRole('navigation', { name: 'Admin sections' })
+      .getByRole('link', { name: /System/ })
+      .click();
     await expect(page.locator('#nc-admin-config-import')).toBeVisible({ timeout: 20000 });
 
     const previewResp = page.waitForResponse(

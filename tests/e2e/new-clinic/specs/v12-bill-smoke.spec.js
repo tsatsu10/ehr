@@ -211,19 +211,20 @@ test.describe('V1.2-BILL smoke', () => {
     });
   });
 
-  test('admin insurance vault shows legacy billing gateway cards', async ({ page }) => {
+  test('admin insurance tab shows scheme claims workspace', async ({ page }) => {
+    // The legacy-US-gateway "vault" cards (Billing Manager / ERA upload) were
+    // deliberately removed (US claims are a non-goal); the insurance tab is the
+    // scheme-claims workspace now.
     test.setTimeout(90_000);
     await loginAsAdmin(page, ADMIN_USER, ADMIN_PASS);
     await page.goto(`${BILL_OPS_URL}?tab=insurance`);
     await expect(page.locator('[data-island="bill-ops"]')).toBeVisible({ timeout: 30000 });
 
     const props = await readIslandProps(page);
-    expect(props.canInsurance, 'Admin should have insurance vault ACL after bill pilot prep').toBe(true);
+    expect(props.canInsurance, 'Admin should have insurance ACL after bill pilot prep').toBe(true);
 
     await expect(page.locator('#nc-billops-toolbar button[data-tab="insurance"]')).toBeVisible();
-    await expect(page.getByText(/Legacy US billing tools/i)).toBeVisible({ timeout: 20000 });
-    await expect(page.getByText('Billing Manager', { exact: true })).toBeVisible();
-    await expect(page.getByText('ERA upload', { exact: true })).toBeVisible();
+    await expect(page.getByText('Scheme claims to submit')).toBeVisible({ timeout: 20000 });
   });
 
   test('cashier main menu hides stock Billing Manager when bill ops ON', async ({ page }) => {

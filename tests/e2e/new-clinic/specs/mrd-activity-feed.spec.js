@@ -18,9 +18,10 @@ test.describe('MRD activity feed', () => {
     await loginAsAdmin(page, ADMIN_USER, ADMIN_PASS);
     await page.goto(`${MODULE_BASE}/patient-chart.php?pid=${CHART_PID}&tab=overview`);
     await expect(page.locator('#nc-patient-chart')).toBeVisible({ timeout: 20000 });
-    await expect(page.locator('#nc-chart-activity-feed-list, text=No recent visit activity')).toBeVisible({
-      timeout: 20000,
-    });
+    // Mixed CSS/text selector strings are rejected by current Playwright — use .or().
+    await expect(
+      page.locator('#nc-chart-activity-feed-list').or(page.getByText('No recent visit activity')),
+    ).toBeVisible({ timeout: 20000 });
 
     const ajaxUrl = await page.evaluate(() => {
       const root = document.querySelector('[data-island="patient-chart"]');

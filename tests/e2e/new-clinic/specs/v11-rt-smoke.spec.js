@@ -150,8 +150,10 @@ test.describe('V1.1-RT smoke', () => {
     await page.goto(`${MODULE_BASE}/doctor.php`);
 
     await expect(page.locator('[data-island="doctor-desk"]')).toBeVisible({ timeout: 30000 });
-    await expect(page.locator('#nc-doctor-roster')).toBeVisible({ timeout: 20000 });
-    await expect(page.getByText(/On-duty doctors/i)).toBeVisible();
+    // Roster redesign: the #nc-doctor-roster bar became a personal duty toggle
+    // in the status bar plus a team-roster summary in the queue header.
+    await expect(page.getByRole('button', { name: /Taking patients|Paused/ })).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText(/of \d+ taking patients/i)).toBeVisible();
     await expect(page.getByText(/Pilot Doctor/i).first()).toBeVisible();
   });
 

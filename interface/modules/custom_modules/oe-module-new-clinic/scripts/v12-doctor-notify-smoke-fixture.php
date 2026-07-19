@@ -9,6 +9,11 @@
  * clear_queue=1 additionally cancels today's non-fixture ready_for_doctor visits and wipes
  * today's notify log at the facility (fully deterministic toast target). Off by default so
  * a hand-run smoke never swallows a visit someone is testing manually on this shared DB.
+ *
+ * cleanup=1 (spec afterAll): cancel the Notify% fixture visits themselves. A leftover
+ * ready_for_doctor NotifyB (hard-assigned) makes every LATER doctor-desk load fire a
+ * persistent "Patient ready" toast that parks over the queue toolbar and intercepts
+ * clicks — it broke unrelated specs across a full-suite run.
  */
 
 if (php_sapi_name() !== 'cli') {
@@ -18,6 +23,17 @@ if (php_sapi_name() !== 'cli') {
 $_GET['site'] = 'default';
 $ignoreAuth = true;
 require_once dirname(__DIR__, 4) . '/globals.php';
+
+if (in_array('cleanup=1', array_slice($argv, 1), true)) {
+    sqlStatement(
+        "UPDATE new_visit v
+         INNER JOIN patient_data pd ON pd.pid = v.pid
+         SET v.state = 'cancelled', v.updated_at = NOW()
+         WHERE pd.lname LIKE 'Notify%' AND v.state NOT IN ('completed', 'cancelled')"
+    );
+    echo json_encode(['cleaned' => true]) . "\n";
+    exit(0);
+}
 
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Modules\NewClinic\Services\ClinicDateService;

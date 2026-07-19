@@ -121,7 +121,9 @@ test.describe('V1.1-COM smoke', () => {
     const messageRow = page.locator('.nc-comm-row').nth(rowIndex);
     await expect(messageRow).toBeVisible({ timeout: 30000 });
     await messageRow.click();
-    await expect(page.getByText(fixture.message_marker)).toBeVisible({ timeout: 20000 });
+    // The chat redesign renders the marker several times (row preview, bubble,
+    // header) — any visible instance proves the detail opened.
+    await expect(page.getByText(fixture.message_marker).first()).toBeVisible({ timeout: 20000 });
 
     const doneResp = page.waitForResponse(
       (resp) => resp.url().includes('communications.message_done') && resp.ok(),
@@ -156,13 +158,16 @@ test.describe('V1.1-COM smoke', () => {
     ).toBe(true);
 
     await page.getByText(fixture.reminder_marker).first().click();
-    await expect(page.locator('#nc-comm-reminder-complete')).toBeVisible({ timeout: 20000 });
+    // Chat redesign: "Mark completed" moved from the page footer into the
+    // reader header (the old #nc-comm-reminder-complete id is gone).
+    const completeBtn = page.getByRole('button', { name: 'Mark completed' });
+    await expect(completeBtn).toBeVisible({ timeout: 20000 });
 
     const completeResp = page.waitForResponse(
       (resp) => resp.url().includes('communications.reminder_done') && resp.ok(),
       { timeout: 45000 },
     );
-    await page.locator('#nc-comm-reminder-complete').click();
+    await completeBtn.click();
     const completeBody = await (await completeResp).json();
     expect(completeBody.success, JSON.stringify(completeBody)).toBe(true);
   });

@@ -50,7 +50,7 @@ test.describe('Scheduling recurring move', () => {
     await page.goto(`${MODULE_BASE}/scheduling/index.php?lens=calendar&provider_id=${fixtureProviderId}`);
     await rangeResp;
 
-    await page.getByRole('button', { name: 'Day grid' }).click();
+    await page.getByRole('tab', { name: 'Day grid' }).click();
     await expect(page.locator('.nc-calendar-day')).toBeVisible({ timeout: 15000 });
 
     const sourceEvent = page.locator('.nc-calendar-day-event').filter({ hasText: fixturePatientName });

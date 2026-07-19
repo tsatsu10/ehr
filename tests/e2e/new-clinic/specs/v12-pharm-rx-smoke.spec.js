@@ -161,7 +161,8 @@ test.describe('V1.2-PHARM-RX smoke', () => {
         timeout: 20000,
       });
 
-      const quickRx = page.getByRole('button', { name: 'Quick prescribe' });
+      // Desk redesign renamed the shortcut: 'Quick prescribe' → 'Prescribe'.
+      const quickRx = page.getByRole('button', { name: 'Prescribe' });
       await expect(quickRx).toBeVisible({ timeout: 15000 });
 
       const catalogResp = page.waitForResponse(

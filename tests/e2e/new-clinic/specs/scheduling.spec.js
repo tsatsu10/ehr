@@ -45,7 +45,8 @@ test.describe('Scheduling & Flow shell', () => {
 
     await expect(page.locator('#nc-scheduling-root')).toBeVisible({ timeout: 20000 });
     await expect(page.getByRole('tab', { name: 'Calendar' })).toBeVisible();
-    await expect(page.getByRole('group', { name: 'Calendar layout' })).toBeVisible();
+    // The layout switcher is a SegmentedControl tablist, not a group.
+    await expect(page.getByRole('tablist', { name: 'Calendar layout' })).toBeVisible();
   });
 
   test('admin loads recalls lens', async ({ page }) => {
@@ -91,9 +92,10 @@ test.describe('Scheduling & Flow shell', () => {
     await page.goto(`${MODULE_BASE}/scheduling/index.php?lens=flow`);
     await boardResp;
 
-    await page.getByRole('button', { name: 'List' }).click();
+    // SegmentedControl renders role=tab (was role=button pre-redesign).
+    await page.getByRole('tab', { name: 'List' }).click();
     await expect(page.getByRole('columnheader', { name: 'Patient' })).toBeVisible();
-    await page.getByRole('button', { name: 'Board' }).click();
+    await page.getByRole('tab', { name: 'Board' }).click();
     await expect(page.locator('.nc-flowboard-board')).toBeVisible();
   });
 
@@ -108,7 +110,8 @@ test.describe('Scheduling & Flow shell', () => {
     await page.goto(`${MODULE_BASE}/scheduling/index.php?lens=calendar`);
     await dayResp;
 
-    await page.getByRole('button', { name: 'Week' }).click();
+    // SegmentedControl renders role=tab (was role=button pre-redesign).
+    await page.getByRole('tab', { name: 'Week' }).click();
     await expect(page.locator('.nc-calendar-week')).toBeVisible();
     await expect(page.locator('.nc-calendar-week thead tr').nth(1).locator('th')).not.toHaveCount(0);
   });

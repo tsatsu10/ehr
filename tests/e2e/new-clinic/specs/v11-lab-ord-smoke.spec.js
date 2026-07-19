@@ -156,7 +156,8 @@ test.describe('V1.1-LAB-ORD smoke', () => {
         timeout: 20000,
       });
 
-      const quickLab = page.getByRole('button', { name: 'Quick lab order' });
+      // Desk redesign renamed the shortcut: 'Quick lab order' → 'Lab order'.
+      const quickLab = page.getByRole('button', { name: 'Lab order' });
       await expect(quickLab).toBeVisible({ timeout: 15000 });
 
       const catalogResp = page.waitForResponse(

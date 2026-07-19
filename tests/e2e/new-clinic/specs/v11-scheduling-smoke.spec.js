@@ -64,7 +64,7 @@ test.describe('S1 Scheduling smoke', () => {
 
     await expect(page.locator('#nc-scheduling-root')).toBeVisible({ timeout: 20000 });
     await expect(page.getByRole('tab', { name: 'Calendar' })).toBeVisible();
-    await expect(page.getByRole('group', { name: 'Calendar layout' })).toBeVisible();
+    await expect(page.getByRole('tablist', { name: 'Calendar layout' })).toBeVisible();
 
     const island = page.locator('[data-island="scheduling"]');
     const props = JSON.parse((await island.getAttribute('data-props')) ?? '{}');
