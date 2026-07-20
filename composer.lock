@@ -687,16 +687,16 @@
         },
         {
             "name": "digitickets/lalit",
-            "version": "3.4.0",
+            "version": "3.4.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/digitickets/lalit.git",
-                "reference": "b88856d0434bf3eb465b4ad872ee4eea6ccb582a"
+                "reference": "bdd435cf4d36ca8f75be7f042b31be0089a4a82f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/digitickets/lalit/zipball/b88856d0434bf3eb465b4ad872ee4eea6ccb582a",
-                "reference": "b88856d0434bf3eb465b4ad872ee4eea6ccb582a",
+                "url": "https://api.github.com/repos/digitickets/lalit/zipball/bdd435cf4d36ca8f75be7f042b31be0089a4a82f",
+                "reference": "bdd435cf4d36ca8f75be7f042b31be0089a4a82f",
                 "shasum": ""
             },
             "require": {
@@ -710,7 +710,7 @@
             "type": "library",
             "autoload": {
                 "psr-4": {
-                    "LaLit\\": "src"
+                    "LaLit\\": "src/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -728,16 +728,16 @@
                 }
             ],
             "description": "GitHub copy of LaLit's XML2Array and Array2XML",
-            "homepage": "http://www.lalit.org/lab",
+            "homepage": "https://github.com/digitickets/lalit/blob/master/README.md",
             "keywords": [
                 "array",
                 "xml"
             ],
             "support": {
                 "issues": "https://github.com/digitickets/lalit/issues",
-                "source": "https://github.com/digitickets/lalit/tree/3.4.0"
+                "source": "https://github.com/digitickets/lalit/tree/3.4.2"
             },
-            "time": "2024-03-08T20:59:04+00:00"
+            "time": "2026-06-04T16:09:01+00:00"
         },
         {
             "name": "doctrine/annotations",
@@ -16445,5 +16445,5 @@
         "ext-zlib": "8.2",
         "php": "8.2"
     },
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }
